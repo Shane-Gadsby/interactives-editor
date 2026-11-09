@@ -621,23 +621,81 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
     group: 'Design',
     summary: 'Screens with their own size, background, timelines and interactions. Called artboards in the settings and the file.',
     keywords: 'artboard artboards screen page pages scene size background start preset duplicate delete move resize clip',
-    body: `A page (an **artboard** in the file and in the advanced settings) is one screen of the interactive. Each has a size, a background, its layers, its timelines and its interactions. Variables, scripts, data and assets belong to the whole project and are shared.
+    body: `A page (also called an **artboard**) is one screen of the interactive. The file, the advanced settings and a few menus (**Duplicate artboard**, **Delete artboard**) use the name artboard.
 
-- Make a new one with the **Page** tool (<kbd>A</kbd>), the **+ Add page** button at the bottom of the **Layers** panel, or by right-clicking empty canvas and choosing **New page here**.
-- Click an artboard's name above it on the canvas, or its row in the **Layers** panel, to select it. Drag the name to move the artboard around the canvas, and drag its corners to resize it.
-- To select several artboards, hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click their names on the canvas or their rows in the **Layers** panel. <kbd>Ctrl</kbd>+click on one that is already chosen takes it out again. <kbd>Shift</kbd>+click on a name adds it, and <kbd>Shift</kbd>+click on a row selects every row between it and the one you had. Chosen artboards have a gold name and row, and the same blue outline as one. Drag any chosen artboard's name to move them all together. With several chosen, the Inspector shows what you can do to all of them: align their edges or centres, distribute them evenly (three or more), **Group pages…**, **Ungroup**, **Tidy up**, duplicate and delete. <kbd>Del</kbd> deletes them after asking, and <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicates them. Each is one undo step.
-- Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) and drag a page's name, or an empty part of the page, to drag a **copy** of the page: it keeps its layers, timelines and interactions, and the original stays where it was. Do it on several selected pages, or on a group's name, to copy them all together.
-- **Artboard groups** keep a big project organised. Select some artboards and choose **Group pages…** (in the right-click menu, in the Inspector, or on the Layers panel) and give the group a name. The Layers panel lists the group as a folder row with its artboards under it, and its arrow folds them away (the artboards stay on the canvas). On the canvas the group gets a dashed frame with its name on a chip above its top left corner. Click the chip, or the group's row, to select all its artboards, and drag the chip to move the group. Right-click either for **Select all in group**, **Rename group…** (double-clicking the row does too), **Ungroup** (the artboards stay where they are), **Tidy up**, **Duplicate** and **Delete**. An artboard is in one group at most, and a responsive set goes into a group as a whole. Duplicating every artboard of a group makes a new group of the copies. A group is also a chapter when the project plays: **Go to artboard → Next artboard** and **Previous artboard** stay inside the artboard's group, in the project's order, and \`pageNumber\` and \`pageCount\` count its pages (see [Interactions](interactions)).
-- With an artboard selected, the Inspector shows **Name**, **W** and **H** (and **Size presets…** such as Desktop, Tablet or Phone), **Background**, **Clip content to artboard** (the parts of layers outside it still show faintly on the canvas, see [Preferences](preferences)), **Make start page**, **Duplicate artboard** and **Delete artboard**. Then come its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**.
-- **Tidy up pages** (at the bottom of the **Layers** panel, and in the right-click menu on the canvas) lays all the artboards out in a neat grid, in the order of the Artboards list, with even gaps and room for each name. The start artboard goes first if it isn't already, a responsive variant stays beside its main artboard, and an artboard that only exists to be used inside others (a component) goes last. Artboards you have hidden from the canvas stay where they are. It is one undo step (<kbd>Ctrl</kbd>+<kbd>Z</kbd>), and the group stays where it was on the canvas. An artboard group is laid out as a block of its own, with room for its frame, so a group's artboards stay together wherever they are in the list. With several artboards selected, **Tidy up** (in their right-click menu and the Inspector) lays out just those, among themselves, where their top left corner is now. To change the order, drag the artboards in the **Layers** panel, then tidy up again.
-- **Fit page to selection** (right-click the selected layers on the canvas, the command palette, or <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>) resizes the artboard to just those layers; **Fit page to selection with space around…** leaves the room you ask for on every side, and **Fit page to its layers** (right-click the page) does it for everything on the page. Nothing moves on the canvas: the artboard's corner goes to the selection's, and every layer and its X and Y keyframes shift to match. Layers outside the new edge are still there, just outside the artboard. It isn't offered while several artboards are selected. One undo step.
-- The **start artboard** is the one the player shows first. It has a **start** badge in the Layers panel. Use **Make start page** (also in the right-click menu) to change it.
-- Drag layers and let go over another artboard and you're asked whether to move them there. See [Moving layers to another artboard](layers-panel#moving-layers-to-another-artboard).
-- To show a different arrangement of an artboard on narrow or wide pages, add a variant: see [Responsive artboards](responsive).
-- Move between artboards at runtime with the **Go to a page** action (with a transition) or \`ix.goTo('Name', 'fade')\`.
-- An artboard can also be placed inside another as an [instance](instances), like a reusable component. The **Use in** menu in the Inspector does it in one step.
-- To see what an artboard asks a learner to download, open **Download size** in its Inspector. See [Download size and lite versions](download-size).
-- To bring a design file in as an artboard, see [Importing](import).`,
+Each page has its own size, background, layers, timelines and interactions. Variables, scripts, data and assets belong to the whole project, so every artboard shares them.
+
+## Adding and selecting
+- Make a new page with the **Page** tool (<kbd>A</kbd>), the **+ Add page** button at the bottom of the **Layers** panel, or by right-clicking empty canvas and choosing **New page here**.
+- Click a page's name above it on the canvas, or its row in the **Layers** panel, to select it.
+- Drag the name to move the page around the canvas. Drag its corners to resize it.
+
+## Selecting several pages
+Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click page names on the canvas, or rows in the **Layers** panel. <kbd>Ctrl</kbd>+click on a chosen page takes it out again. <kbd>Shift</kbd>+click on a name adds it, and <kbd>Shift</kbd>+click on a row selects every row between it and the one you clicked before.
+
+Chosen pages have a gold name and row, and the same blue outline as a single page. Drag any chosen page's name to move them all together.
+
+With several chosen, the Inspector shows what you can do to all of them:
+- align their edges or centres, and distribute them evenly (three or more);
+- **Group pages…**, **Ungroup** and **Tidy up**;
+- duplicate (<kbd>Ctrl</kbd>+<kbd>D</kbd>) and delete (<kbd>Del</kbd>, which asks first).
+
+Each is one undo step.
+
+## Copying a page
+Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) and drag a page's name, or an empty part of the page. You drag a **copy**: it keeps its layers, timelines and interactions, and the original stays where it was. Do it on several chosen pages, or on a group's name, to copy them all together. The pointer shows a **+** while Alt is down, and the first few plain drags carry a reminder.
+
+## Page groups
+**Group pages…** (also called **Group artboards**) keeps a big project organised. Select some pages, choose **Group pages…** (in the right-click menu, the Inspector or the **Layers** panel) and name the group.
+
+- The **Layers** panel lists the group as a folder row with its pages under it. Its arrow folds them away (the pages stay on the canvas).
+- On the canvas the group gets a dashed frame, with its name on a gold chip above the top left corner.
+- Click the chip, or the group's row, to select all its pages. Drag the chip to move the group.
+- Right-click either for **Select all in group**, **Rename group…** (double-clicking the row does too), **Ungroup** (the pages stay where they are), **Tidy up**, **Duplicate** and **Delete**.
+
+A page is in one group at most, and a [responsive set](responsive) goes into a group as a whole. Duplicating every page of a group makes a new group of the copies.
+
+A group is also a chapter when the project plays. The **Next page** and **Previous page** actions of **Go to a page** stay inside the page's group, in the project's order, and \`pageNumber\` and \`pageCount\` count its pages (see [Interactions](interactions)).
+
+## Tidy up the pages
+**Tidy up pages** (also called **Tidy up artboards**) is at the bottom of the **Layers** panel and in the right-click menu on the canvas. It lays all the pages out in a neat grid, in the order of the Layers list, with even gaps and room for each name. It is one undo step.
+
+- The start page goes first if it isn't already.
+- A responsive variant stays beside its main page.
+- A page that only exists to be used inside others (a [component](instances)) goes last.
+- Pages you have hidden from the canvas stay where they are.
+- A page group is laid out as a block of its own, so its pages stay together wherever they are in the list.
+
+With several pages selected, **Tidy up** (in their right-click menu and the Inspector) lays out only those, among themselves, from where their top left corner is now. To change the order, drag the pages in the **Layers** panel, then tidy up again.
+
+Starters, and projects you build from them, open already laid out this way, in order, with each responsive variant beside its page.
+
+## Fit page to selection
+**Fit page to selection** shrinks the page to the layers you have selected. Use it on the canvas right-click menu, from the command palette, or with <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>.
+
+- **Fit page to selection with space around…** leaves the room you ask for on every side.
+- **Fit page to its layers** (right-click the page) does it for everything on the page.
+
+Nothing moves on the canvas. The page's corner goes to the selection's, and every layer and its position keyframes shift to match. Layers outside the new edge are still there, just outside the page. It isn't offered while several pages are selected. It is one undo step.
+
+## Page settings
+With a page selected, the Inspector shows:
+- **Name**, **W** and **H**, and **Size presets…** such as Desktop, Tablet or Phone;
+- **Background**;
+- **Clip content to artboard**: the parts of layers outside the page still show faintly on the canvas (see [Preferences](preferences));
+- **Make start page**, **Duplicate artboard** and **Delete artboard**;
+- then its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**.
+
+The **start page** is the one the player shows first. It has a **start** badge in the **Layers** panel. **Make start page** (also in the right-click menu) changes it.
+
+## Related
+- Let go of dragged layers over another page and you're asked whether to move them there: see [Moving layers to another artboard](layers-panel#moving-layers-to-another-artboard).
+- For a different arrangement on narrow or wide screens, add a variant: see [Responsive artboards](responsive).
+- Move between pages while the project plays with the **Go to a page** action (with a transition), or \`ix.goTo('Name', 'fade')\` in a script.
+- A page can be placed inside another as a reusable component: see [Instances](instances). The **Use in** menu in the Inspector does it in one step.
+- To see what a page asks a learner to download, open **Download size** in its Inspector: see [Download size and lite versions](download-size).
+- To bring a design file in as a page, see [Importing](import).
+- To share the logo, footer and other repeated layers between pages, see [Page masters](page-master).`,
   },
   {
     id: 'layers-panel',
@@ -650,18 +708,38 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 ![The Layers panel. Sun is hidden, so its name is faded. Backdrop is locked.](help/layers-panel.png)
 
 ## Working with the list
-- Click a layer to select it. Click one layer, hold <kbd>Shift</kbd> and click another, and every layer between them in the list is selected too (a folded group counts as one row, and the range stays on one artboard). <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click adds one layer or takes it out, and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+click adds a whole range to what you already have. With a layer focused in the list, <kbd>Shift</kbd>+<kbd>Up</kbd> and <kbd>Shift</kbd>+<kbd>Down</kbd> grow the selection a row at a time.
-- The same works on the artboard rows: <kbd>Ctrl</kbd>+click adds an artboard to the selection or takes it out, and <kbd>Shift</kbd>+click selects the rows from the one you had to this one. Chosen rows are gold. Right-click a chosen row for **Group pages…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete** on all of them; **Tidy up pages** at the bottom becomes **Tidy up N selected artboards**.
-- A named **artboard group** is a folder row above its artboards, which sit one step in under it. Click the arrow to fold it, click the row to select its artboards, double-click to rename it, and right-click it for **Select all in group**, **Rename group…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete**. Folding is just for this panel. The artboards stay on the canvas inside a dashed frame with the group's name. See [Artboards](artboards).
-- Click the arrow beside a group, a frame or an artboard to open or close it. The artboard marked **start** is the one the player shows first.
-- Double-click a name to rename it. <kbd>Enter</kbd> finishes and <kbd>Esc</kbd> cancels.
-- Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag a layer and a **copy** goes where the line is, and the original stays. The pointer shows a **+** while Alt is down. The same works on the canvas: <kbd>Alt</kbd>-drag a layer or a group to drag a copy of it.
-- Drag a row to reorder. A line shows where the layer will land, and how far it is indented shows which list it joins. Over the top or bottom third of a row the layer goes before or after it. Over the middle of a group or frame row the group is outlined and the layer goes inside it, at the front.
-- Where a group ends, move the pointer left to drop the layer under the group instead of inside it: the line steps out one level for each step left. The empty space under the last row is the end of the list, so you can always drop at the very bottom without landing in a group that happens to be last. Drop on the artboard's own row to bring the layer to the top level, in front.
-- From the keyboard, select one layer and press <kbd>Alt</kbd>+<kbd>Up</kbd> or <kbd>Down</kbd> to step it past a neighbour (and out of its group at the end), <kbd>Alt</kbd>+<kbd>Right</kbd> to put it inside the group just above it and <kbd>Alt</kbd>+<kbd>Left</kbd> to take it out, under that group.
-- Type in **Filter layers** above the list to show only the layers whose name has those letters. The groups and artboards they sit in stay, faded, so you can see where each one is, and a collapsed group doesn't hide a match. Press **Text** beside the box to match the words in text layers, buttons and links as well, rich text included. <kbd>Esc</kbd> clears the box. While a filter is on, the rows can't be dragged.
-- Right-click a layer for **Select same fill** and **Select same font**. They select every unlocked layer on the same artboard with that fill (any of a layer's fills counts, and a text layer's colour counts as a fill) or set in that font (a rich-text run in it counts). Then change them all at once in the Inspector. To change a colour or font across the whole project, use the named colour and text styles in [Libraries](libraries#styles) instead: layers that follow a style change with it.
-- **+ Add page** and **+ Import file as artboard** are at the bottom, with **Tidy up pages**, which puts the artboards in a tidy grid in list order. See [Artboards](artboards) and [Importing](import).
+- Click a layer to select it. Double-click a name to rename it: <kbd>Enter</kbd> finishes and <kbd>Esc</kbd> cancels.
+- Click the arrow beside a group, a frame or a page to open or close it. The page marked **start** is the one the player shows first.
+- **+ Add page** and **+ Import file as artboard** are at the bottom, with **Tidy up pages** (also called **Tidy up artboards**), which puts the pages in a tidy grid in list order. See [Pages](artboards) and [Importing](import).
+
+### Selecting several layers
+- **Shift-click a range**: click one layer, hold <kbd>Shift</kbd> and click another, and every layer between them in the list is selected too. A folded group counts as one row, and the range stays on one page.
+- <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click adds one layer or takes it out.
+- <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+click adds a whole range to what you already have.
+- With a layer focused in the list, <kbd>Shift</kbd>+<kbd>Up</kbd> and <kbd>Shift</kbd>+<kbd>Down</kbd> grow the selection a row at a time.
+- Right-click a layer for **Select same fill** and **Select same font**. They select every unlocked layer on the same page with that fill (any of a layer's fills counts, and a text layer's colour counts as a fill) or set in that font (a rich-text run in it counts). Then change them all at once in the Inspector. To change a colour or font across the whole project, use the named colour and text styles in [Libraries](libraries#styles) instead: layers that follow a style change with it.
+
+### Selecting several pages
+The same keys work on the page rows: <kbd>Ctrl</kbd>+click adds a page to the selection or takes it out, and <kbd>Shift</kbd>+click selects the rows from the one you had to this one. Chosen rows are gold. Right-click a chosen row for **Group pages…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete** on all of them. **Tidy up pages** at the bottom becomes **Tidy up N selected pages**.
+
+A named **page group** is a folder row above its pages, which sit one step in under it. Click the arrow to fold it, click the row to select its pages and double-click to rename it. Right-click it for **Select all in group**, **Rename group…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete**. Folding only changes this panel: the pages stay on the canvas inside a dashed frame with the group's name. See [Pages](artboards#page-groups).
+
+### Copying with Alt
+Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag a row, and a **copy** goes where the line is while the original stays. This works for layers, groups, pages and page groups. The pointer shows a **+** while Alt is down, and the first few plain drags carry a reminder. On the canvas, <kbd>Alt</kbd>-drag a layer or a group the same way.
+
+### Reordering
+- Drag a row to reorder. A line shows where the layer will land, and how far it is indented shows which list it joins.
+- Over the top or bottom third of a row, the layer goes before or after it. Over the middle of a group or frame row, the group is outlined and the layer goes inside it, at the front.
+- Where a group ends, move the pointer left to drop the layer under the group instead of inside it: the line steps out one level for each step left.
+- The empty space under the last row is the end of the list, so you can always drop at the very bottom without landing in a group that happens to be last.
+- Drop on the page's own row to bring the layer to the top level, in front.
+- From the keyboard, select one layer and press <kbd>Alt</kbd>+<kbd>Up</kbd> or <kbd>Down</kbd> to step it past a neighbour (and out of its group at the end). <kbd>Alt</kbd>+<kbd>Right</kbd> puts it inside the group just above it and <kbd>Alt</kbd>+<kbd>Left</kbd> takes it out, under that group.
+
+### Filtering
+Type in **Filter layers** above the list to show only the layers whose name has those letters. The groups and pages they sit in stay, faded, so you can see where each one is, and a collapsed group doesn't hide a match. Press **Text** beside the box to match the words in text layers, buttons and links as well, rich text included. <kbd>Esc</kbd> clears the box. While a filter is on, the rows can't be dragged.
+
+### Deleting
+<kbd>Delete</kbd> removes the selected layers and shows a message with **Undo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd> does the same). Deleting a page with the keyboard asks first, and the page's own delete button shows **Undo** afterwards. Keys pressed after clicking in the interactions graph go to the graph, so <kbd>Delete</kbd> there removes the node and never the layer.
 
 ## Hide and lock
 Hover a row and two small buttons appear at its right: a padlock (**Lock** / **Unlock**) and an eye (**Hide** / **Show**). They stay visible for any layer that is locked or hidden. The **Visible** and **Locked** ticks in the Inspector do the same.
@@ -669,7 +747,7 @@ Hover a row and two small buttons appear at its right: a padlock (**Lock** / **U
 - **Hidden** layers are not drawn by the player or in Preview. In the editor they show as a faint **ghost** on the canvas, so you can still see where they are and pick them. Their names are faded in the Layers panel. Hide a mask layer and its clipping stops.
 - **Outside a clipping artboard**: when an artboard has **Clip content to artboard** on, the part of a layer that hangs past its edge is also drawn as a faint, diagonally striped ghost on the canvas, and clicking it selects the layer. Preview and exports still cut it off. You can switch this off in [Preferences](preferences).
 - **Locked** layers can't be selected or moved by clicking on the canvas, so a backdrop never gets in your way. You can still select one in the Layers panel and edit it in the Inspector.
-- The **brand layers** of a [branded project](branded-starters) (the logo, the sweeps, the footer line) are locked harder. They are skipped by clicking, dragging, the selection box and Select all, and in the Layers panel they show a padlock you can't turn off and can't be selected there either, so there is nothing on them to change by accident.
+- **Brand-locked layers** are the brand layers of a [branded project](branded-starters) (the logo, the sweeps, the footer line). They are really locked: you can't select or drag them on the canvas or in the Layers panel, and the selection box and Select all skip them. Their padlock in the list can't be turned off. Projects made before this was added are locked when you open them. That leaves nothing on them to change by accident.
 - A layer that is hidden only because its parent is a [Solo group](groups-frames#solo-groups) and it isn't the active child looks the same. Its eye says **Hidden by Solo on …: show this one instead**, and pressing it makes it the active child.
 
 ### Quick badges on the canvas
@@ -695,8 +773,8 @@ Select layers and drag them on the canvas. If you let go over a **different artb
 
 ## Right-click menus
 - **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**When clicked…**, **When hovered…**, or an empty **On click** or **On hover** event) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
-- **An artboard**: **New** (a menu of layers to add where you clicked), **Paste**, **Make start page**, **Duplicate artboard**, **Zoom to page** and **Delete artboard**.
-- **Empty canvas**: **New page here**, **Paste**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`,
+- **A page**: **New** (a menu of layers to add where you clicked), **Paste**, **Insert component here…**, **Make start page**, **Duplicate artboard**, **Zoom to page**, **Fit page to its layers** and **Delete artboard**. See [Instances](instances) and [Pages](artboards#fit-page-to-selection).
+- **Empty canvas**: **New page here**, **Paste**, **Tidy up pages**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`,
   },
   {
     id: 'properties-panel',
@@ -704,19 +782,29 @@ Select layers and drag them on the canvas. If you let go over a **different artb
     group: 'Design',
     summary: 'What the right-hand panel shows for a layer, an artboard and the project, and how to find a property with the search box.',
     keywords: 'move reorder rearrange drag order sections tools groups arrange properties inspector panel right search find filter property fuzzy synonym transparency opacity alpha pivot origin anchor scale rotation round corner radius alt description hide visible colour color z-order draw order aria typo did you mean slash ctrl f',
-    body: `The **Properties** panel is on the right. It shows the settings of whatever is selected: a layer (or several), an artboard, or, with nothing selected, the artboard's and the project's settings. Each group of settings is a **section** with a title. Click the title to fold it, and the **?** beside it opens that section's page.
+    body: `The **Properties** panel is on the right. It shows the settings of whatever is selected: a layer (or several), an artboard, or, with nothing selected, the artboard's and the project's settings. Each group of settings is a **section** with a title. Click the title to fold it, and the **?** beside it opens that section's page in the help.
+
+Under many sections there is a one-line note that ends with **More about …**. It opens the help at the place with the full explanation. The notes stay short on purpose, so the detail is here in the help.
 
 ## Folding sections
-Click a section's title to fold it or open it. The editor remembers: fold **Accessibility** on one layer and it stays folded on the next layer, and after you reload (it is kept with your preferences, so it follows you to any machine you sign in on; only the sections you changed are kept, so a section you never touched still follows the editor's own default. Without a signed in session it is kept in this browser instead). **Alt**-click a title to open only that section and fold the rest. Right-click a title, or use the arrow button beside the search box, to **fold all** or **unfold all**; the menu also has **Back to the default folds**. Searching still opens every section so nothing is hidden from it, and your folds come back when you clear the box. The **+** buttons open their section so you can see what you added.
+Click a section's title to fold it or open it. The editor remembers your folds. Fold **Accessibility** on one layer and it stays folded on the next layer, and after you reload.
+
+- Folds are kept with your preferences, so they follow you to any computer you sign in on. Without a signed in session they are kept in this browser instead.
+- Only the sections you changed are kept. A section you never touched follows the editor's own default.
+- **Alt**-click a title to open only that section and fold the rest.
+- Right-click a title, or use the arrow button beside the search box, for **fold all**, **unfold all** and **Back to the default folds**.
+- Searching opens every section so nothing is hidden from it, and your folds come back when you clear the box.
+- The **+** buttons open their section so you can see what you added.
 
 ## Moving sections
 Put the sections of the Properties panel in the order you work in. Drag a section by its title (a small grip shows in the margin as you point at it) and let go where the gold line is, or click a title and press <kbd>Alt</kbd>+<kbd>Up</kbd> or <kbd>Alt</kbd>+<kbd>Down</kbd>. Right-click a title for **Move this section up**, **Move this section down** and **Back to the default section order**. A screen reader says where it went ("Fill moved to position 3 of 12"). <kbd>Esc</kbd> while dragging puts it back.
 
-- Each kind of panel keeps its own order: one for rectangles, one for text, one for the page, and so on. Move **Accessibility** to the bottom for text and it stays there for every text layer.
-- The order is saved with you (in your preferences, so it follows you to any machine you sign in on), never in the project, so nobody else sees it. Without a signed in session it is kept in this browser.
+- Each kind of layer keeps its own order: one for rectangles, one for text, one for the page, one for Libraries, and so on. Move **Accessibility** to the bottom for text and it stays there for every text layer.
+- The order is saved with you, never in the project, so nobody else sees it. It is kept with your preferences, so it follows you to any computer you sign in on (without a signed in session, it is kept in this browser).
+- The tool bar works the same way: drag its groups, and the tools inside them, by their titles.
 - A section the editor adds later turns up in its own default place instead of being thrown to the bottom. A section that only shows for some layers keeps its place relative to the others when it appears.
 - Folding, searching and the help links work the same wherever a section sits. While you search the properties the sections sort by how well they match, and your order comes back when you clear the box.
-- **Preferences → Reset section and tool order** puts every panel and the tool bar back. It's the same order for the whole editor: there is no per-project copy.
+- **Preferences** has **Reset section and tool order**, which puts every panel and the tool bar back. The order is the same for the whole editor: there is no per-project copy.
 
 ## Searching the properties
 The box at the top of the panel finds a property by what it does or what it is called. Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> while the focus is in the panel (or click the box).
@@ -762,14 +850,23 @@ Boolean operations (union, subtract, intersect, exclude) turn several shapes int
     group: 'Design',
     summary: 'Solid, gradient and image fills; several fills and strokes per shape; strokes, dashes and trim; feather and drop shadows; shadow, blur and blend modes; parallax depth.',
     keywords: 'parallax depth tilt layered postcard pointer shift colour color palette swatch preset toolbox brand gradient linear radial image fill stroke border dash cap join align inside outside shadow blur blend opacity trim path layers several multiple feather glow drop shadow eye hide reorder',
-    body: `## Fill
-Choose the type from the dropdown at the top of a fill: **None** (removes it), **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. Colours accept hex, \`rgb()\`, \`hsl()\` and names; the number box beside a colour is its opacity.
+    body: `This topic covers how a layer is painted: fills, strokes and effects, and the layer settings next to them (opacity, scale, pivot and blend). Further down, **Depth (parallax)** makes layers shift as the viewer moves the pointer.
+
+## Fill
+Choose the type from the dropdown at the top of a fill: **None** (removes it), **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. You can type a colour as hex (such as #ffcc00), \`rgb()\`, \`hsl()\` or a colour name. The number box beside a colour is its opacity.
 
 #### Exact gradient points
-By default a linear gradient runs corner to corner along its angle, and a radial one from the middle of the layer to its farthest corner, so both stretch with the layer. **Set start and end points** (linear) or **Set centre and radius** (radial) pins the gradient to numbers instead: **From** and **To** (or **Centre** and **Radius**) in pixels from the layer's top-left corner. Pinned gradients stay where they are when the layer is resized, which is how Rive and Lottie place them. With the layer selected, the points also show on the canvas as dots joined by a dashed line (a radial one has a dot at its centre and one on its radius): drag them. **Use angle instead of points** (or **Use the box…**) goes back to the stretching kind. Points can be animated like any other number: choose \`Fill gradient start X\`, \`Fill gradient end Y\`, \`Fill gradient centre X\`, \`Fill gradient radius\` and so on in a timeline (the same for strokes and for the later fills), and a gradient stop's colour and position as \`fill.stops.1.color\` or \`fill.stops.1.offset\`. While recording, dragging a point on the canvas makes the keyframe.
+By default a linear gradient runs corner to corner along its angle, and a radial one from the middle of the layer to its farthest corner, so both stretch with the layer. **Set start and end points** (linear) or **Set centre and radius** (radial) pins the gradient to numbers instead: **From** and **To** (or **Centre** and **Radius**) in pixels from the layer's top-left corner. Pinned gradients stay where they are when the layer is resized, which is how Rive and Lottie place them. With the layer selected, the points also show on the canvas as dots joined by a dashed line (a radial one has a dot at its centre and one on its radius): drag them. **Use angle instead of points** (or **Use the box…**) goes back to the stretching kind. Points can be animated like any other number. In a timeline's property list choose the gradient's start, end, centre or radius (the same for strokes and for the later fills), or a stop's colour or position. While recording, dragging a point on the canvas makes the keyframe.
 
 ### Toolbox palette
-The small arrow beside every colour box (fills, strokes, gradient stops, text colours, variables, styles) opens the StudyDesk toolbox palette: the brand colours, greys, link and status colours, feature colours and gradient stops used across the suite. Hover a swatch for its name. A colour is named after its property (\`--ilar-swatch-yellow-dark\` is *Yellow dark*) unless the stylesheet gives it a name with a comment of three stars each side, \`/***name: Gold***/\`, written after the declaration on the same line, or on its own line just above it; the property name is still shown beside it. Picking one sets an ordinary colour on the layer (opacity is kept), so exports never depend on the palette. The palette is read from the toolbox's \`/styles/palette.css\` (or the minified \`palette.min.css\`, which has the colours but not the names, because minifying removes comments) when the editor opens, so changes to it appear after a reload. Where that stylesheet isn't available (a copy running outside the suite) the arrow simply isn't shown.
+The small arrow beside every colour box (fills, strokes, gradient stops, text colours, variables, styles) opens the StudyDesk toolbox palette. It holds the brand colours, greys, link and status colours, feature colours and gradient stops used across the suite. Hover a swatch for its name.
+
+Picking one sets an ordinary colour on the layer (the opacity is kept), so exports never depend on the palette. If the palette isn't available (a copy of the editor running outside the suite), the arrow isn't shown.
+
+#### Where the palette comes from
+The editor reads the toolbox's \`/styles/palette.css\` stylesheet when it opens, so changes to it appear after a reload. It also accepts the minified \`palette.min.css\`, which has the colours but not the names, because minifying removes comments.
+
+A colour is named after its property (\`--ilar-swatch-yellow-dark\` is *Yellow dark*). To give it a nicer name, write a comment of three stars each side, \`/***name: Gold***/\`, after the declaration on the same line, or on its own line just above it. The property name is still shown beside it.
 
 ## Several fills and strokes
 A shape can have as many fills and strokes as you like. The **+** in the **Fill** or **Stroke** header adds one on top of the others; the list shows the front-most first, like the layers panel. Each entry has:
@@ -778,15 +875,18 @@ A shape can have as many fills and strokes as you like. The **+** in the **Fill*
 - its own paint (solid, gradient or image) and, for a stroke, **W**idth, **Dash**, **Trim**, **Cap**, **Join** and **Align** (centre, inside or outside the outline; boxes default to inside, vector shapes to the centre);
 - **Opacity** (how solid that paint is on its own, as a percent), **Blend** (how it mixes with what is under it), **Feather** (a soft blur of that paint, in pixels) and an **X / Y** offset.
 
-Fills are drawn under strokes unless you change the paint order (below). Layers are numbered from the bottom: **Fill 1** is the shape's own fill (the one \`fill.color\` and a style refer to), **Fill 2** the next, and so on.
+Fills are drawn under strokes unless you change the paint order (below). Fills are numbered from the bottom: **Fill 1** is the shape's own fill (the one a style refers to), **Fill 2** the next, and so on.
 
 Some things to build with it:
 
 - **Layered gradients**: a solid fill under a see-through gradient with **Blend** set to *multiply* or *overlay*.
 - **An outline plus a glow**: a thin dark stroke over a wide, see-through stroke with a **Feather**.
-- **A drop shadow that follows a shape's fill or stroke**: add a fill, make it dark and see-through (alpha in its colour or **Opacity**), set **Feather** to 12 or so and **Y** to a few pixels, and move it down the list so it sits under the real fill. It is the way a Rive drop shadow is built, and Rive files import that way.
+- **A drop shadow that follows a shape's fill or stroke**: add a fill, make it dark and see-through (transparency in its colour, or **Opacity**), set **Feather** to 12 or so and **Y** to a few pixels, and move it down the list so it sits under the real fill. Rive files import their drop shadows this way.
 
-Each paint's numbers can be animated: look for the diamond next to a field. The property names are \`fill.opacity\`, \`fills.0.color\`, \`fills.0.opacity\`, \`fills.0.feather\`, \`fills.0.offsetX\`, \`strokes.0.width\`, \`strokes.0.paint.color\`, \`strokes.0.trimEnd\` and so on (\`fills.0\` is the second fill, \`strokes.1\` the third stroke); bindings, **Change a layer's setting** nodes and scripts use the same names. A shape with one plain fill and stroke is drawn as before; a shape with layers, or with opacity, blend, feather, an offset, a cap, join or align on a paint, is drawn as SVG. Buttons and inputs draw only their first fill and stroke. Lottie export keeps every fill and stroke with their opacity, and leaves out the blend modes, feathered and offset paints (shadows), which Lottie cannot hold.
+## Animating a paint
+Each paint's numbers can be animated: look for the diamond next to a field. That covers a paint's colour, opacity, feather and offset, and a stroke's width and trim. Bindings, **Change a layer's setting** nodes and scripts reach them by name. The names are in [Animatable properties](animatable-properties).
+
+Buttons and inputs draw only their first fill and stroke. Lottie export keeps every fill and stroke with their opacity, and leaves out the blend modes, feathered and offset paints (shadows), which Lottie cannot hold.
 
 ### Paint order
 Some shapes need a stroke *under* a fill, or between two fills: an outline that shows only where a fill leaves it uncovered, or a fill that overlaps the inner half of its own stroke. Select one shape that has both a fill and a stroke and a **Paint order** section appears under **Stroke**, listing every paint in one list, front-most first (buttons and inputs, and several layers selected at once, don't have it). Press **↑** or **↓**, or drag a row, to move a paint in front of or behind the others. Each row shows a swatch and what the paint is (its colour, the kind of gradient, a stroke's width). Moving a fill past another fill swaps those two fills, so the numbers stay where they are while their colours trade places; the list in the **Fill** section follows. The moved row is highlighted and the arrow you pressed keeps the keyboard focus, so pressing it again keeps moving the same paint. A shape you have not reordered keeps all its fills under all its strokes, as before.
@@ -795,13 +895,13 @@ Some shapes need a stroke *under* a fill, or between two fills: an outline that 
 
 ![Pressing the arrows in the Paint order list: the wide stroke goes under the fill and comes back, and the picture follows.](help/paint-order-reorder.mp4)
 
-On a frame, rectangle or ellipse the strokes that end up in front of the last fill are still drawn above the shape's children; strokes placed under a fill are drawn under the children with it. In a saved project the order is the shape's \`paintOrder\`, a list of \`"fill"\` and \`"stroke"\` entries from the bottom up (for example \`["fill", "stroke", "fill"]\`); it is left out when every fill is under every stroke. Rive files import with the order they were drawn in, and Lottie export follows it.
+On a frame, rectangle or ellipse, strokes that end up in front of the last fill are still drawn above the shape's children. Strokes placed under a fill are drawn under the children with it. Rive files import with the order they were drawn in, and Lottie export follows it.
 
 ## Stroke
-Colour, width, **cap** (butt, round, square), **join** (miter, round, bevel), **align** (centre, inside, outside) and **dash** (e.g. \`8 4\` for 8 on, 4 off).
+A stroke has a colour, a width, a **cap** (butt, round, square), a **join** (miter, round, bevel), an **align** (centre, inside, outside) and a **dash**. Type the dash as a pair of numbers: \`8 4\` is 8 pixels on, then 4 off.
 
 ### Trim path
-The **Trim** row in the Stroke section has a start (**Trim**), an end (**to**) and an offset (**Off**), all 0–100%. They draw only part of a stroke. Animate the end (the *Trim end %* property) from 0 to 100 to make a line draw itself on. Works on every shape with a stroke.
+The **Trim** row in the Stroke section has a start (**Trim**), an end (**to**) and an offset (**Off**), all 0 to 100%. They draw only part of a stroke. Animate the end from 0 to 100 to make a line draw itself on. Works on every shape with a stroke.
 
 ## Effects
 Use **+** in the **Effects** section to add a shadow or a layer blur; each one has a **×** to remove it.
@@ -810,24 +910,29 @@ Use **+** in the **Effects** section to add a shadow or a layer blur; each one h
 - **Layer blur**: blurs the whole layer by an **Amount** in pixels.
 - **Shader filter** (image layers only): draws the picture through a GPU shader, such as wave distortion, CRT scanlines, halftone dots or film grain. See [Shader layers](shader-layers#shader-filter-on-an-image).
 
-Two related settings are in the **Layer** section at the top of the Inspector, with the position fields:
+These settings are in the **Layer** section at the top of the Inspector, with the position fields:
 
-- **Opacity** is how solid the whole layer is, as a percent (100% solid, 0% invisible). The file keeps it as 0 to 1 (the property \`opacity\`, shown as α in older notes).
-- **Scale W** and **Scale H** are the layer's scale as percents of its drawn size (100% is as drawn, -100% flips it). The chain between them keeps the shape. The file keeps them as 1 = 100% (\`scaleX\`, \`scaleY\`, called Sx and Sy in older notes).
-- **Pivot** is the point the layer turns and scales around. Pick one of the nine dots, or type a percent across and down for anywhere between. The file keeps it as \`originX\` and \`originY\` (0 to 1, called Ox and Oy in older notes).
+- **Opacity** is how solid the whole layer is, as a percent (100% solid, 0% invisible).
+- **Scale W** and **Scale H** are the layer's scale as percents of its drawn size (100% is as drawn, -100% flips it). The chain between them keeps the shape.
+- **Pivot** is the point the layer turns and scales around. Pick one of the nine dots, or type a percent across and down for anywhere between.
 - **Blend** is how the layer mixes with what is under it: *Normal*, *Dissolve*, *Darken*, *Multiply*, *Colour burn*, *Lighten*, *Screen*, *Colour dodge*, *Add (linear dodge)*, *Overlay*, *Soft light*, *Hard light*, *Difference*, *Exclusion*, *Hue*, *Saturation*, *Colour* or *Luminosity*. **Dissolve** draws each pixel either solid or not at all, with the layer's opacity as the odds: at 40% opacity, 40% of the pixels show at full strength, scattered, instead of everything fading. Animate the opacity for a speckled fade in or out. A single fill or stroke (in the paint list) can use every mode except Dissolve.
 
 ## Depth (parallax)
-The **Depth** section gives a layer a depth, so it shifts as the viewer moves the pointer across the page, or tilts their phone, for a layered-postcard look. Pick **Small**, **Medium** or **Large**, or type your own **Amount** as a percent. A nearer layer (a bigger amount) moves further than a far one, so a background might be Small and the foreground Large. A negative amount moves the other way, with the pointer. Everything inside a frame or group goes with it.
+The **Depth** section gives a layer a depth, so it shifts as the viewer moves the pointer across the page (or tilts their phone), for a layered-postcard look. Nearer layers move further than far ones, so a background might have a Small depth and the foreground a Large one.
 
-- **How far:** 100% is the project's **Depth range** (40 px unless you change it in the Project settings). A layer at 50% moves half that.
-- **Only when playing:** the canvas stays still while you edit, and the shift shows in Preview and the exported player. Clicks and hovers land where the layer is drawn.
+1. Select a layer and open **Depth** in the Properties panel.
+2. Pick **Small**, **Medium** or **Large**, or type your own **Amount** as a percent. **None** keeps the layer still.
+3. Open **Preview** and move the pointer over the page.
+
+A negative amount moves the layer the other way, with the pointer. Everything inside a frame or group goes with it.
+
+- **How far:** 100% is the project's **Depth range** (40 px unless you change it in [Project settings](project-settings)). A layer at 50% moves half that.
+- **Only when playing:** the canvas stays still while you edit. The shift shows in Preview and in the exported player. Clicks and hovers land where the layer is drawn.
 - **Reduced motion:** nothing moves for a viewer whose device asks for less motion, whatever the project settings say.
-- **Tilt:** turn on **Tilt moves depth layers** in the Project settings (off by default). On an iPhone or iPad the viewer's first tap asks permission for the motion sensor, never before; if they say no, or the device has no sensor, the layers follow the pointer only.
-- **Draggable layers** hold still, so they don't slide about under a finger, and a connector joining two moving layers does not follow the shift.
-- The file keeps it as \`depth\` on the layer (-100 to 100) and \`parallax: {range, tilt}\` in the project settings.
+- **Tilt:** turn on **Tilt moves depth layers** in the Project settings (off by default). On an iPhone or iPad the viewer's first tap asks permission for the motion sensor, never before. If they say no, or the device has no sensor, the layers follow the pointer only.
+- **Draggable layers** hold still, so they don't slide about under a finger. A connector joining two moving layers does not follow the shift.
 
-Most of these can be animated: look for the diamond next to a field. See [Animatable properties](animatable-properties).`,
+Depth can be animated: look for the diamond next to a field. See [Animatable properties](animatable-properties).`,
   },
   {
     id: 'text',
@@ -838,11 +943,33 @@ Most of these can be animated: look for the diamond next to a field. See [Animat
     body: `Use the **Text** tool (<kbd>T</kbd>): click for text that grows as you type, or drag a box for wrapping text. Double-click text to edit it, and <kbd>Escape</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to finish.
 
 - **Sizing**: *Auto width* (one line, grows sideways), *Auto height* (fixed width, wraps and grows down) or *Fixed* (you set both). With *Fixed*, **Overflow** says what happens to lines that don't fit: *Show* them anyway, *Clip* them at the box, or cut the last line that fits with an *Ellipsis …*. Untick **Wrap lines** to keep the lines as written (long ones run on, or are clipped or cut by the overflow setting).
-- **Fit text to box**: tick it and the size of the text is chosen for you, as the largest that makes the text fit the box (width and height, wrapping as usual), so a short word fills the box and a long sentence shrinks to fit it. **Smallest** and **Largest** keep the size between two limits, in pixels; leave one blank (it says *any*) for no limit on that side: *any* Smallest goes down to 1, *any* Largest goes as big as the box height allows. If the Smallest is higher than the Largest, the Largest wins. It follows the text as it changes, including \`{variables}\` and text a binding sets, and it re-fits when you resize the box, change the font or switch to another [responsive variant](responsive), in the editor and in the player alike. Things to know: fitting needs a box that stays put, so **Sizing** is *Fixed* (and greyed out) while it is on; the **Size** field is greyed out too, and neither it nor a timeline or binding on the font size does anything while it is on (the fitted size wins); words that are styled with their own size in [rich text](text#several-styles-in-one-text-layer) scale along with the rest; a long word is never broken to make it fit, so a narrow box ends up with a smaller size instead; and if the text is too long even at the Smallest, it overflows by the layer's **Overflow** setting (and a long word is broken). It also works on a [button](web-elements)'s label and a link's text, which have no Sizing to switch.
-- **Animating the box**: a text layer's **Height**, **Width** and **Pivot X / Y** (\`originX\`, \`originY\`) can be keyed in a timeline like any other layer's. With *Fixed* sizing a changing height clips or ellipsises the lines that no longer fit, and the vertical alignment keeps following the box. *Auto width* and *Auto height* text work their size out from the text, so keys on the size they work out have no effect. **Origin Y** moves the pivot of the layer's turn and scale (0 top, 1 bottom).
-- **Font**: a search box over every Google font. Click it and type to filter ("playf" finds Playfair Display), then use <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> or click to pick, <kbd>Esc</kbd> to close. Each row is drawn in its own font. The chips above the list narrow it to Sans, Serif, Display, Handwriting or Mono. The project's own fonts come first (tagged *In project* or *Uploaded*), then a few system fonts, then the rest. Picking a Google font the project doesn't have yet adds it to the project's **Fonts** with the weights the text uses, so the player and exports load it; one undo takes both back. Changing the **Weight** later loads that weight too. A name that isn't on the list can still be used as typed (it is not added to the project's fonts, so add it there if it is a Google font). A font file you upload in the [Assets panel](assets) is added to the fonts for you and shows in the list as *Uploaded*. New text starts in your [default font](preferences), Open Sans unless you changed it.
+- **Fit text to box**: tick it and the editor picks the size for you, the largest that fits the box. See [Fit text to box](#fit-text-to-box).
+- **Animating the box**: a text layer's **Height**, **Width** and **Pivot X / Y** can be keyed in a timeline like any other layer's. With *Fixed* sizing, a changing height clips or ellipsises the lines that no longer fit, and the vertical alignment keeps following the box. *Auto width* and *Auto height* text work their size out from the text, so keys on the size they work out have no effect. The pivot is the point the layer turns and scales around (0 is the top, 1 the bottom).
+- **Font**: a search box over every Google font. Click it and type to filter ("playf" finds Playfair Display), then use <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> or click to pick, <kbd>Esc</kbd> to close. Each row is drawn in its own font. The chips above the list narrow it to Sans, Serif, Display, Handwriting or Mono. The project's own fonts come first (tagged *In project* or *Uploaded*), then a few system fonts, then the rest. See [Fonts](#fonts).
 - Weight, italic, size, line height, letter spacing, alignment, vertical alignment, case and decoration.
 - **Paragraph spacing**: extra space, in pixels, between paragraphs (the pieces of text between line breaks), on top of the line height. An *Auto height* or *Auto width* box grows to fit it. It does not apply to text with [modifiers](text-modifiers).
+
+## Fit text to box
+Tick **Fit text to box** on a text layer, a button or a link, and the size of the text is chosen for you. It is the largest size that makes the text fit the box, wrapping as usual. A short word fills the box and a long sentence shrinks to fit it.
+
+- **Smallest** and **Largest** keep the size between two limits, in pixels. Leave one blank (it says *any*) for no limit on that side: *any* Smallest goes down to 1, and *any* Largest goes as big as the box height allows. If the Smallest is higher than the Largest, the Largest wins.
+- It follows the text as it changes, including \`{variables}\` and text a binding sets. It re-fits when you resize the box, change the font or switch to another [responsive variant](responsive), in the editor and in the player alike.
+- **Sizing** is *Fixed* (and greyed out) while it is on, because fitting needs a box that stays put. A button's label and a link's text have no Sizing to switch.
+- The **Size** field is greyed out too. Neither it nor a timeline or binding on the font size does anything while Fit text to box is on, because the fitted size wins.
+- Words styled with their own size in [rich text](text#several-styles-in-one-text-layer) scale along with the rest.
+- A long word is never broken to make it fit, so a narrow box ends up with a smaller size instead. If the text is too long even at the Smallest, it overflows by the layer's **Overflow** setting (and a long word is broken).
+
+## Fonts
+Picking a Google font the project doesn't have yet adds it to the project's **Fonts** with the weights the text uses, so the player and exports load it. One undo takes both back. Changing the **Weight** later loads that weight too.
+
+- A name that isn't on the list can still be used as typed. It isn't added to the project's fonts, so add it there if it is a Google font.
+- A font file you upload in the [Assets panel](assets) is added to the fonts for you and shows in the list as *Uploaded*.
+- New text starts in your [default font](preferences), Open Sans unless you changed it.
+
+### No flash of the wrong font
+Google fonts are fetched once and then served from the same place as the editor, so the editor, Preview, share pages and the StudyDesk learner page never contact Google. Open Sans is ready from the start.
+
+Text doesn't pop from one font to another. The player waits up to 1.5 seconds for the first page's fonts before it shows anything. The canvas waits for a page's fonts, and a page's picture is never made with a stand-in font.
 
 ## Several styles in one text layer
 Double-click a text layer to edit it. A small **toolbar floats over the text** while you do, like the one in a word processor:
@@ -904,7 +1031,7 @@ Both create a new timeline named after the preset and open it, so you can change
 A unit halfway into the range gets half of each change. Several modifiers stack, top to bottom.
 
 ## Animating them
-**Start**, **End**, **Offset**, **Strength** and the amounts all have a key button (◆) like any other property: turn on recording in the [timeline](timelines) and change them, or key them by hand. The tracks are named like \`modifiers.0.offset\`, the number being the modifier's position in the list. Deleting a modifier removes its tracks and renumbers the later ones. Bindings, *Change a layer's setting* actions and scripts can set the same paths.
+**Start**, **End**, **Offset**, **Strength** and the amounts all have a key button (◆) like any other property: turn on recording in the [timeline](timelines) and change them, or key them by hand. Each modifier's values are numbered by its place in the list, so deleting a modifier removes its tracks and renumbers the later ones. Bindings, *Change a layer's setting* actions and scripts can set the same values by name (see [Animatable properties](animatable-properties)).
 
 ## Things to know
 - Everything except **Spacing** is purely visual: it does not change how the text wraps or the layer's auto size. Letter spacing really spaces the letters, so the text may reflow.
@@ -1015,7 +1142,7 @@ Copyright reporting for a course is run at course level, and this tab does not r
 
 An icon arrives as a group named for it (*Bell icon*) holding two path layers, **Ring** and **Icon**. They are ordinary vector layers, so select one and change its colour, switch it to a token from the colour picker's Tokens tab, or edit its points. The group is marked **decorative**, like the icons the Toolbox inserts, because an icon usually sits beside text that says the same thing. If an icon stands alone and means something, untick that in **Accessibility** and give it a text alternative.
 
-The icons are bundled with the editor and only fetched when the tab is first opened. They are copied from the Toolbox's files by \`scripts/gen-stock-icons.mjs\`; run it again if the Toolbox's icons change.`,
+The icons come with the editor and only load when you first open the tab. They are copies of the Toolbox's own icons, so if the Toolbox's icons change, the copies need refreshing by whoever maintains the editor.`,
   },
   {
     id: 'images-media',
@@ -1038,7 +1165,10 @@ Put a photo in a 300 by 200 frame and the face may be cut off. **Crop** moves an
 - <kbd>Enter</kbd>, <kbd>Escape</kbd>, **Done**, or a click outside the frame finishes. **Reset** (or <kbd>0</kbd>) puts the picture back as **Fit** draws it. Each drag is one undo step.
 - The settings have the same three numbers: **Zoom** (100% is as **Fit** draws it, 200% shows the middle quarter) and **Picture X** and **Picture Y**, how far it is moved as percents of the frame. The picture always keeps covering the frame, so no empty edge shows.
 
-The crop is stored on the layer as \`crop\`: \`{x, y, zoom}\`, where \`x\` and \`y\` are fractions of the frame's width and height (0.1 is a tenth to the right) and \`zoom\` is 1 to 20. It is drawn scaled about the middle of the frame and then moved, and the frame (with its corner radius) clips the rest. A 9-slice or a mesh ignores it, a shader filter reads it, and the Lottie export shows the whole picture (it lists that in its notes). Older files and players show the picture uncropped.
+The crop belongs to the layer, not the file, and the frame (with its corner radius) clips whatever sticks out. A few things ignore it:
+- A 9-slice picture or a mesh ignores the crop. A shader filter reads it.
+- The Lottie export shows the whole picture (it lists that in its notes).
+- Older files and players show the picture uncropped.
 
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
@@ -1050,15 +1180,31 @@ Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video
 **Poster** is a picture shown before the video plays. It also stays up the whole time when the file is sound only (choose a sound in the **Video** list and the layer becomes a player with the browser's own controls, speed and captions), under the controls. It counts in the download size and goes with exports. A video with no file or address shows a grey **Choose a video** panel while you edit; learners see a plain grey box, or the words in **Text when empty**. The accessibility check warns about a video with nothing to play, so it gets filled in or deleted before you share.
 
 ### Cue points and chapters
-**Add a cue** puts a named point on the video, in seconds. When the video plays across it the **When a video reaches a cue point** event fires (\`event.name\`, \`event.time\`, \`event.index\`), and a cue ticked **Pause the video here** has already paused it, so a question can appear. Play on with a **Control video** node when it is answered, or bind the layer's **Hold paused** to something like \`!answered\` to keep the video paused until then (the controls cannot start it). Jumping past a cue (dragging the bar, a chapter, a **Control video** seek) fires nothing, and jumping back arms it again, so you never need to keep count of which questions were asked. **Chapters** are named sections: the video's own controls list them in browsers that show chapters, \`self.chapters\` and \`layer("Clip").chapters\` give the list to formulas, and the **Chapter showing** binding says which one the video is in (1 is the first, 0 before it).
+A **cue** is a named point on the video, in seconds. **Add a cue** puts one on. When the video plays across a cue, the **When a video reaches a cue point** event fires (also called **On video cue**). It tells you the cue's name, time and place in the list (\`event.name\`, \`event.time\`, \`event.index\`).
+
+- Tick **Pause the video here** on a cue and the video has already paused when the event fires, so a question can appear. Play on with a [Control video](interaction-nodes#control-video) node when it is answered.
+- To keep the video paused until something happens, bind the layer's **Hold paused** to something like \`!answered\`. While it is true, the video can't be started, even from its own controls.
+- Jumping past a cue (dragging the bar, a chapter, a **Control video** seek) fires nothing, and jumping back arms it again. You never need to keep count of which questions were asked.
+
+**Chapters** are named sections of the video. The video's own controls list them in browsers that show chapters. The **Chapter showing** binding says which one the video is in (1 is the first, 0 is before it), and \`self.chapters\` and \`layer("Clip").chapters\` give the list to formulas.
 
 ### Speed and frame step
-**Speed** sets how fast the video plays: 1 is normal, 0.5 is half speed, 2 is double. The pitch stays where it was, so slowed speech still sounds like the speaker. Tick **Speed buttons** to put Slower, a speed readout (press it to go back to normal) and Faster over the video for the viewer, and **Frame step** for Back and Forward one frame (the video pauses first). Set **Frames per second** to the video's own rate (most are 24, 25 or 30) so a step is one real frame. Everything is a real button, so Tab and Enter or Space work, and with focus on the video or the buttons, <kbd>,</kbd> and <kbd>.</kbd> step a frame and <kbd>&lt;</kbd> and <kbd>&gt;</kbd> change the speed.
+**Speed** sets how fast the video plays: 1 is normal, 0.5 is half speed, 2 is double. The pitch stays where it was, so slowed speech still sounds like the speaker.
 
-To drive it from the project, use a **Playback speed** [data binding](bindings) (it goes both ways, so a variable shows the speed the viewer chose and can set it too), or the **Control video** [node](interaction-nodes): play, pause, play or pause, go to a time, skip forward or back, step a frame, set the speed, or move to the next speed up or down. In an expression, \`layer("Clip").rate\` is the speed it is playing at right now.
+- Tick **Speed buttons** to put Slower, a speed readout (press it to go back to normal) and Faster over the video for the viewer.
+- Tick **Frame step** for Back and Forward one frame buttons (the video pauses first). Set **Frames per second** to the video's own rate (most are 24, 25 or 30) so a step is one real frame.
+- Everything is a real button, so <kbd>Tab</kbd> and <kbd>Enter</kbd> or <kbd>Space</kbd> work. With focus on the video or the buttons, <kbd>,</kbd> and <kbd>.</kbd> step a frame and <kbd>&lt;</kbd> and <kbd>&gt;</kbd> change the speed.
+
+To drive it from the project, use a **Playback speed** [data binding](bindings) (it goes both ways, so a variable shows the speed the viewer chose and can set it too), or the [Control video](interaction-nodes#control-video) node. That node can play, pause, play or pause, go to a time, skip forward or back, step a frame, set the speed, or move to the next speed up or down. In an expression, \`layer("Clip").rate\` is the speed it is playing at right now.
 
 ## Video playback in variables
-Add a [data binding](bindings) on the video layer: **Playback position (s)**, **Playing**, **Playback speed**, **Length (s)**, **Ended**, **Chapter showing** (read only) or **Hold paused** (while true the video cannot play), and pick which way it goes. **Out** keeps a variable up to date with the video (show the time in text, \`{videoTime} s\`, or bind a progress bar's width to \`videoTime / videoLength\`). **Both** lets the variable drive the video too: set the position variable from a slider, a **Change a value or counter** node or a script and the video jumps there; set **Playing** to false and it pauses. **In** drives it from a formula: to scrub the video with a dragged knob, bind the knob's **X** out to \`knobX\`, **Length (s)** out to \`videoLength\`, and **Playback position (s)** in to \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, videoLength, true)\`. For the position as a percentage, use \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, 100, true)\` (in a text layer, or another binding). Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`,
+Add a [data binding](bindings) on the video layer and pick what to watch: **Playback position (s)**, **Playing**, **Playback speed**, **Length (s)**, **Ended**, **Chapter showing** (read only) or **Hold paused**. Then pick which way it goes.
+
+- **Out** keeps a variable up to date with the video. Show the time in text (\`{videoTime} s\`), or bind a progress bar's width to \`videoTime / videoLength\`.
+- **Both** lets the variable drive the video too. Set the position variable from a slider, a **Change a value or counter** node or a script and the video jumps there. Set **Playing** to false and it pauses.
+- **In** drives it from a formula. To scrub the video with a dragged knob, bind the knob's **X** out to \`knobX\`, **Length (s)** out to \`videoLength\`, and **Playback position (s)** in to \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, videoLength, true)\`. For the position as a percentage, use \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, 100, true)\` (in a text layer, or another binding).
+
+Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`,
   },
   {
     id: 'groups-frames',
@@ -1080,7 +1226,7 @@ Tick **Use as mask** on a shape or group and it clips the layers above it in the
 Tick **Solo** on a group or frame and it shows only one child at a time, the one chosen under **Active child**. Use it for states of a character or a button: build each state as a child, then switch between them. The active child can be keyed on a timeline (a step change, like a cut) or set from interactions with **Change a layer's setting** and the property *Solo: active child*, whose value can be a quoted layer name such as \`"Happy"\`. Children that are not active take no room in auto layout.
 
 ## Draw order
-A group's **Draw order** section lists its children front to back with arrows to move them. With **Record** on, or with the diamond, a change becomes a keyframe on the *Draw order (children)* property, so layers can pass in front of and behind each other during an animation. Keys always step from one order to the next. Layers you do not list keep their place. From interactions or scripts, set the property \`drawOrder\` to a list of layer names, back to front.
+A group's **Draw order** section lists its children front to back with arrows to move them. With **Record** on, or with the diamond, a change becomes a keyframe on the *Draw order (children)* property, so layers can pass in front of and behind each other during an animation. Keys always step from one order to the next. Layers you do not list keep their place. From interactions or scripts, set **Draw order (children)** to a list of layer names, back to front (scripts call this setting \`drawOrder\`).
 
 ## Scrolling frames
 Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scroll both*. Content beyond the frame can then be scrolled with the wheel, a trackpad or touch in the player, like a scrollable panel. A **When scrolled** event set to *Is scrolled* fires as it scrolls, with \`event.scrollTop\`, \`event.scrollLeft\` and \`event.progress\` (0 to 1). In the editor the frame stays still so you can edit it; scroll it in Preview.`,
@@ -1185,13 +1331,16 @@ Turn on **Animate changes** in the frame's Auto layout section and, while the pr
 With several layers selected, the bar at the top of the inspector aligns their edges or centres, and distributes three or more evenly. With one layer selected it aligns to the parent.
 
 ## Snapping
-Things snap while you drag. The **Snap** button on the tool bar opens the choices: **Grid**, **Artboard** (edges and centre), **Layers** (other layers' edges and centres), **Guides**, **Spacing** (equal gaps), **Pixels** and **Points**, and a **Snapping** switch for all of them. Lines in a colour for each kind show what snapped and a chip in the corner names it. Hold <kbd>Ctrl</kbd> to drag without snapping. See [The grid and snapping](grid). Rulers (<kbd>Shift</kbd>+<kbd>R</kbd>) show positions: drag **down** out of the top ruler for a horizontal guide and **right** out of the left ruler for a vertical one, and layers snap to it. Drag a guide back onto the ruler it came from to remove it.
+Things snap while you drag. The **Snap** button on the tool bar opens the choices: **Grid**, **Artboard** (edges and centre), **Layers** (other layers' edges and centres), **Guides**, **Spacing** (equal gaps), **Pixels** and **Points**, and a **Snapping** switch for all of them. Lines in a colour for each kind show what snapped and a chip in the corner names it. Hold <kbd>Ctrl</kbd> to drag without snapping. See [The grid and snapping](grid). Rulers (<kbd>Shift</kbd>+<kbd>R</kbd>) show positions: drag **down** out of the top ruler for a horizontal guide and **right** out of the left ruler for a vertical one, and layers snap to it. Drag a guide back onto the ruler it came from to remove it. A guide can be for every page or for one page only: see [Rulers and guides](canvas#rulers-and-guides).
 
 ## Order
 <kbd>]</kbd> and <kbd>[</kbd> move a layer up and down; add <kbd>Ctrl</kbd> to go to the top or bottom. Or drag in the Layers panel.
 
 ## Boolean operations
-Select two or more shapes and press **Union**, **Subtract**, **Intersect** or **Exclude** in the Inspector (the four buttons in the shape section), or right-click and choose **Combine shapes**. *Subtract* takes the other shapes away from the bottom-most one. The result is a single path; the originals are replaced.`,
+Select two or more shapes and press **Union**, **Subtract**, **Intersect** or **Exclude** in the Inspector (the four buttons in the shape section), or right-click and choose **Combine shapes**. *Subtract* takes the other shapes away from the bottom-most one. The result is a single path, and the originals are replaced.
+
+## Pages
+Several pages can be aligned, distributed, tidied and grouped together: see [Pages](artboards#selecting-several-pages).`,
   },
   {
     id: 'grid',
@@ -1208,9 +1357,9 @@ The **Snap** button on the tool bar (the magnet) opens a menu that stays open wh
 - **Artboard**: the artboard's edges and centre. Moving an artboard on the canvas, it goes to the other artboards' edges and centres.
 - **Layers**: the edges and centres of other layers. By default it means the layers beside the one you drag (the same parent); tick **Layers: all, not just siblings** to reach every layer on the artboard.
 - **Guides**: guides made from the rulers (the ones for every page and the page's own). See [Rulers and guides](canvas#rulers-and-guides).
-- **Spacing**: equal gaps. Drag a layer beside two that have a gap between them and it snaps to the same gap (or centres between them), and the distances show as orange measures. Moving layers only.
-- **Pixels**: whole-pixel positions and sizes. Untick it to let a layer sit between pixels.
-- **Points**: the anchor points of paths and the joints of bones. The pen, and dragging a path point, snap to them: a ring shows the one it caught. Off to begin with.
+- **Spacing** (equal gaps): drag a layer beside two that have a gap between them and it snaps to the same gap (or centres between them), and the distances show as orange measures. It only works while moving layers.
+- **Pixels** (whole pixels): positions and sizes land on whole pixels. Untick it to let a layer sit between pixels.
+- **Points** (path points): the anchor points of paths and the joints of bones. The pen, and dragging a path point, snap to them: a ring shows the one it caught. Off to begin with.
 - **Snap distance**: how close (2 to 24 screen pixels, 6 to begin with) something has to be. It is in screen pixels, so zooming in makes it finer.
 
 Artboard, Layers, Guides and Pixels are on to begin with, which is how snapping behaved before the menu. Show grid, Spacing and Points are off.
@@ -1222,6 +1371,7 @@ The nearest target inside the snap distance wins. A line in the target's colour 
 - The **Show grid** button on the tool bar (beside Snap) draws it; <kbd>Shift</kbd>+<kbd>G</kbd> shows or hides it. Snapping to the grid works whether or not it is showing.
 - Right-click an empty part of the canvas for **Show grid**, **Snapping** and **Grid size**, or open **Preferences**, which has a **Canvas** block with the same settings.
 - While **Grid** is ticked a gold chip in the corner of the canvas says so with the size; click it to change the size or open the snapping choices.
+- The grid buttons live on the **Tools** rail. Drag its **Tools** title over the left, right, bottom or top edge of the canvas to dock it there (see [The editor at a glance](interface)).
 
 ## Size and stronger lines
 **Grid size** is the width of one cell in pixels: pick 1, 2, 4, 5, 8, 10, 12, 16, 20, 24, 32, 48, 50 or 64, or choose **Custom…** for anything from 1 to 512. **Stronger line every** draws every Nth line heavier (4 by default; 1 draws them all alike). They are yours, kept with your account, and the size shows in the chip while snapping is on.
@@ -1309,7 +1459,9 @@ A page has a **Score** variable, a bar chart that grows on a timeline called **I
 - A change to the wide artboard's interactions is not copied to the narrow one. If both should behave alike, change both (the report tells you when layers have drifted apart).
 - Only small things are lost on a switch, but a viewer part-way through dragging a card or typing in a field can notice it. Breakpoints between 600 and 900 px are the ones people cross by turning a tablet.
 - The **Fit width** setting in Project settings suits a set: each artboard fills the width of the page and the page height follows the artboard that is showing.
-- A host page can listen for the switch: \`player.on('variantchange', ({ from, to, set, width }) => ...)\`, or \`ix-variant\` on the \`<interactives-player>\` element. \`player.resize()\` makes the player re-measure its box if the page changes its size without the browser reporting it.`,
+
+## For web developers
+A page that embeds the player can listen for the switch: \`player.on('variantchange', ({ from, to, set, width }) => ...)\`, or \`ix-variant\` on the \`<interactives-player>\` element. \`player.resize()\` makes the player re-measure its box if the page changes its size without the browser reporting it.`,
   },
   {
     id: 'page-master',
@@ -1352,26 +1504,37 @@ Pictures (PNG, SVG, PDF, animated GIF), thumbnails, the single-file export, \`.i
     group: 'Design',
     summary: 'Place one artboard inside another, with its own timelines, interactions and inputs.',
     keywords: 'component nested artboard reuse symbol instance inputs',
-    body: `Any artboard can be placed inside another as a **component** (the layer it makes is called an **instance**, and the Inspector shows it as **Component**): a live copy that runs its own timelines and interactions on the parent's clock. Edit the source artboard and every instance updates.
+    body: `Any page can be placed inside another as a **component**. The layer it makes is called an **instance**, and the Inspector shows it as **Component**. It is a live copy that runs its own timelines and interactions on the parent's clock. Edit the source page and every instance updates.
 
-A page placed inside another is a **component**. There are four ways to place one, and all of them make the same instance layer:
+## Placing a component
+There are four ways, and all of them make the same instance layer.
 
-- **From the page you are working on:** right-click an empty part of the page (or a layer on it) and choose **Insert component here…**. A box lists the other pages, type a few letters of the name to find one and press <kbd>Enter</kbd>. It lands centred where you right-clicked. **Insert a component here…** is also in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>), where it puts the component in the middle of the open page.
-- **By dragging:** drag a page's row from the **Layers** list onto another page on the canvas. The page it would land in is outlined in gold, and the component lands centred under the pointer.
-- **From the page you want to reuse:** right-click it (its name on the canvas, or its row in **Layers**) and choose **Place in…**, then the page to put it in. Or select it and pick the page from **Use in** (it says **Component in…**).
-- Or choose an artboard in an instance layer's **Artboard** field.
+- **From the page you are working on**: right-click an empty part of the page (or a layer on it) and choose **Insert component here…**. A box lists the other pages. Type a few letters of a name to find one and press <kbd>Enter</kbd>. It lands centred where you right-clicked. **Insert a component here…** is also in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>), where it puts the component in the middle of the open page.
+- **By dragging**: drag a page's row from the **Layers** list onto another page on the canvas. The page it would land in is outlined in gold, and the component lands centred under the pointer.
+- **From the page you want to reuse**: right-click it (its name on the canvas, or its row in **Layers**) and choose **Place in…**, then the page to put it in. Or select it and pick the page from **Use in** (it says **Component in…**).
+- **In the instance itself**: choose a page in an instance layer's **Artboard** field.
 
-A component bigger than the page it goes on is shrunk to fit. Pages that would contain each other, and library copies (read-only until detached), aren't offered.
-- **Fit** decides how the artboard sits in the instance's box: **Stretch to the box**, **Contain**, **Cover** or **Actual size, centred**. **Reset size** puts the box back to the artboard's own size, and **Edit** followed by the artboard's name jumps to the source artboard.
+A component bigger than the page it goes on is shrunk to fit. Pages that would contain each other, and library copies (read-only until detached), aren't offered. Instances can be nested up to six deep, and a page that contains itself stops at that limit.
+
+## Settings on an instance
+- **Fit** decides how the page sits in the instance's box: **Stretch to the box**, **Contain**, **Cover** or **Actual size, centred**.
+- **Reset size** puts the box back to the page's own size.
+- **Edit** followed by the page's name jumps to the source page.
 - **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. Write them as JSON, such as \`{"level": 3}\`.
 - Messages sent inside an instance (**Send message**, \`ix.emit\`) bubble up to the parent.
-- The parent can steer an instance while it plays. **Give an embedded page a value** (an action) sets one of the instance's variables by name: pick the instance layer, write the variable's name as it is in the instance's artboard, and give a value (an expression). **Trigger something in an embedded page** sends a message into that instance only, so its *When a message arrives* nodes and scripts run, and the parent's own nodes do not hear it. Scripts do the same with \`ix.setInstanceInput('Badge', 'level', 3)\` and \`ix.fireInstanceTrigger('Badge', 'ping', payload)\`; both return \`false\` when no such instance is showing. A repeated instance answers in every copy.
-- Read an instance's input back with \`instanceInput('Badge', 'level')\` in any expression (so *Give an embedded page a value* can flip a true/false input with \`!instanceInput('Badge', 'flag')\`) or \`ix.getInstanceInput('Badge', 'level')\` in a script. It gives the first copy's current value, and nothing when the instance is not showing.
-- Inputs can be **animated**. Select the instance, pick *Input level* (any number or true/false variable of the project, and the inputs the layer already sets) in the Timeline's property list and press **+ Key**: a number tweens between keys inside the instance, a true/false or text input steps. Blends mix input tracks like any other number, and a [binding](bindings) can drive an input too. A value you set with *Give an embedded page a value* or a script stays until the track's next key changes it.
 
-Instances can be nested up to six deep. An artboard that contains itself stops at that limit.
+## Steering an instance while it plays
+The parent can change an instance while the project plays.
 
-Components can also be shared between projects: see [Libraries](libraries).`,
+- **Give an embedded page a value** (an action) sets one of the instance's variables by name. Pick the instance layer, write the variable's name as it is in the instance's page, and give a value (an expression).
+- **Trigger something in an embedded page** sends a message into that instance only. Its *When a message arrives* nodes and scripts run, and the parent's own nodes do not hear it.
+- Scripts do the same with \`ix.setInstanceInput('Badge', 'level', 3)\` and \`ix.fireInstanceTrigger('Badge', 'ping', payload)\`. Both return \`false\` when no such instance is showing. A repeated instance answers in every copy.
+- Read an input back with \`instanceInput('Badge', 'level')\` in any expression (so *Give an embedded page a value* can flip a true/false input with \`!instanceInput('Badge', 'flag')\`), or \`ix.getInstanceInput('Badge', 'level')\` in a script. It gives the first copy's current value, and nothing when the instance is not showing.
+
+## Animating inputs
+Inputs can be **animated**. Select the instance, pick *Input level* (any number or true/false variable of the project, and the inputs the layer already sets) in the Timeline's property list and press **+ Key**. A number tweens between keys inside the instance. A true/false or text input steps. Blends mix input tracks like any other number, and a [binding](bindings) can drive an input too. A value you set with *Give an embedded page a value* or a script stays until the track's next key changes it.
+
+Components can also be shared between projects: see [Libraries](libraries). To repeat shared layers such as a logo or footer on every page, a [page master](page-master) is lighter.`,
   },
   {
     id: 'constraints',
