@@ -10512,6 +10512,8 @@ Every panel can go anywhere: the left, right, bottom or top area, or a window of
 - Onto the canvas: it opens in its own window there (an outline shows where). While you drag, **Dock left**, **Dock right**, **Dock at the bottom** and **Dock at the top** strips appear on the canvas's edges, so an area can be docked into even when nothing is in it yet.
 - Onto a floating window's tabs: it joins that window.
 
+The **bottom** area's height follows the window until you set one: on a taller window it opens taller (up to about 440 pixels), so the Timeline and its Keyframe panel have room. Drag its top edge (or focus the edge and use the arrow keys) to set your own height, which is then kept, and double-click the edge to go back to following the window. It never takes more than the window less 200 pixels, so the canvas keeps some room on a short one.
+
 A floating window moves by its title bar and resizes from its bottom-right corner. Its **×** closes it and sends its panels back to where they started. An area nothing is docked in takes no room.
 
 The **Essentials** workspace (Preferences > Workspace) goes a step further: it puts panels and tool groups away until they are wanted, with **More panels** at the right of the bottom tabs and **More tools** in the tool bar to bring them back, and **Show all panels and tools** to leave it. A panel your project already uses keeps its tab. See [Your first five minutes](welcome#your-first-five-minutes).
@@ -11036,7 +11038,7 @@ The **start page** is the one the player shows first. It has a **start** badge i
 - <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click adds one layer or takes it out.
 - <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+click adds a whole range to what you already have.
 - With a layer focused in the list, <kbd>Shift</kbd>+<kbd>Up</kbd> and <kbd>Shift</kbd>+<kbd>Down</kbd> grow the selection a row at a time.
-- Right-click a layer for **Select same fill** and **Select same font**. They select every unlocked layer on the same page with that fill (any of a layer's fills counts, and a text layer's colour counts as a fill) or set in that font (a rich-text run in it counts). Then change them all at once in the Inspector. To change a colour or font across the whole project, use the named colour and text styles in [Libraries](libraries#styles) instead: layers that follow a style change with it.
+- Right-click a layer for **Fit page to selection** (and **Fit page to selection with space around…**), which shrinks the open page to the picked layers, the same as on the canvas. It sits above **Select same fill** and **Select same font**, and is left out when layers are picked on more than one page. The two **Select same** items select every unlocked layer on the same page with that fill (any of a layer's fills counts, and a text layer's colour counts as a fill) or set in that font (a rich-text run in it counts). Then change them all at once in the Inspector. To change a colour or font across the whole project, use the named colour and text styles in [Libraries](libraries#styles) instead: layers that follow a style change with it.
 
 ### Selecting several pages
 The same keys work on the page rows: <kbd>Ctrl</kbd>+click adds a page to the selection or takes it out, and <kbd>Shift</kbd>+click selects the rows from the one you had to this one. Chosen rows are gold. Right-click a chosen row for **Group pages…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete** on all of them. **Tidy up pages** at the bottom becomes **Tidy up N selected pages**.
@@ -12238,6 +12240,8 @@ A hard switch can look abrupt. Right-click a text key (or select it and press th
 Choose **Fade out and in**, **Blur out and in** or **Fade and blur**, and how long each side lasts: **Quick** (150 ms), **Normal** (300 ms) or **Slow** (600 ms), or type your own in the Keyframe panel.
 
 The dip is made of ordinary keys on the layer's *Opacity* and *Blur*, so you can move or reshape them afterwards. It is cut short where another text key is close. For viewers who ask for less motion the dip is left out and the words change at once. The first text key has no earlier words to change from, so it has no dip.
+
+The **Keyframe** panel at the right of the timeline holds the selected key's settings. When they are taller than the bottom panel it scrolls by itself (the lanes stay where they are), so the last setting is always reachable.
 
 **Swap text stays with its text key.** Drag the text key, or type a new time for it, and its dip moves by the same amount. Delete the text key and its dip goes too. The dip's keys that are tied to the text key are drawn as hollow diamonds.
 
