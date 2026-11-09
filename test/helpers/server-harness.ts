@@ -55,6 +55,8 @@ const sessionHeader = (u: User | null | undefined) => (u ? JSON.stringify({ user
 export async function startServer(): Promise<Harness> {
   const storage = fs.mkdtempSync(path.join(os.tmpdir(), 'ix-storage-'));
   process.env.INTERACTIVES_STORAGE = storage;
+  // The background compressing of dist would burn seconds of cpu in every test file that starts a server
+  process.env.INTERACTIVES_PRECOMPRESS ??= '0';
   const db = new FakeDb();
   const realExpress = req('express');
   let captured: any = null;
