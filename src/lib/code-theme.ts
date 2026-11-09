@@ -91,9 +91,22 @@ const lightTheme = EditorView.theme(
   { dark: false },
 );
 
-/** What an editor gets for the colours: the light theme, or oneDark (a theme and its highlight style together). */
+/** oneDark's cursor, find matches and matching brackets are blue; the editor's chosen things are gold, so those are put right. The token colours stay as they are. */
+const darkGold = EditorView.theme(
+  {
+    '.cm-content': { caretColor: '#ffb448' },
+    '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#ffb448' },
+    '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': { backgroundColor: '#4d3a17' },
+    '&.cm-focused .cm-matchingBracket': { backgroundColor: '#ffb44840', outline: 'none' },
+    '.cm-searchMatch': { backgroundColor: '#ffb44840', outline: '1px solid #ffb448' },
+    '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: '#ffb44880' },
+  },
+  { dark: true },
+);
+
+/** What an editor gets for the colours: the light theme, or oneDark (a theme and its highlight style together) with the gold touches. */
 export function codeThemeExtension(dark: boolean): Extension {
-  return dark ? oneDark : [lightTheme, syntaxHighlighting(lightHighlight)];
+  return dark ? [oneDark, darkGold] : [lightTheme, syntaxHighlighting(lightHighlight)];
 }
 
 const LIGHT_QUERY = '(prefers-color-scheme: light)';

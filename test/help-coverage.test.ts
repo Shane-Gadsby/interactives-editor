@@ -116,10 +116,11 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'New starters: Listening lab,': [['branded-starters', 'Listening lab']],
   'New branded set Listen,': [['branded-starters', 'Observe and tag']],
   'Property fields line up': [['properties-panel', 'How fields line up']],
+  'Gold instead of blue': [['preferences', 'the same gold with a thin dark edge']],
 };
 
 //Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone
-const UPCOMING = new Set<string>([]);
+const UPCOMING = new Set<string>(['Gold instead of blue']);
 
 const section = (): string[] => {
   const text = readFileSync(join(__dirname, '..', 'CHANGELOG.md'), 'utf8');

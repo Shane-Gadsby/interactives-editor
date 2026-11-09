@@ -1,4 +1,4 @@
-import { LIGHT_LOOK, type TextRun, type TextStyle } from 'interactives-player';
+import type { TextRun, TextStyle } from 'interactives-player';
 
 /**
  * DOM side of the in-place rich text editor: a contenteditable holding one span per run,
@@ -17,7 +17,7 @@ export function runEditCss(node: TextStyle, run: TextRun, zoom: number): Record<
   if (run.color) css.color = run.color;
   if (run.letterSpacing !== undefined) css['letter-spacing'] = `${run.letterSpacing * zoom}px`;
   //a link has no look of its own in the player, but the editor has to show where it is
-  if (run.link?.url) css['box-shadow'] = `inset 0 -1px 0 var(--accent, ${LIGHT_LOOK.link})`;
+  if (run.link?.url) css['box-shadow'] = 'inset 0 -2px 0 var(--primary-bg, #ffb448), inset 0 -3px 0 var(--focus-edge, #1e1e1e)';
   const underline = run.underline ?? node.textDecoration === 'underline';
   const strike = run.strike ?? node.textDecoration === 'line-through';
   css['text-decoration'] = underline || strike ? [underline ? 'underline' : '', strike ? 'line-through' : ''].filter(Boolean).join(' ') : 'none';
