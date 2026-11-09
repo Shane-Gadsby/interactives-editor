@@ -6,6 +6,7 @@ import { confirmDialog } from '../components/dialogs';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
 import { ExprField } from '../components/ExprField';
 import { CodeEditor } from '../components/CodeEditor';
+import { CodeThemeSwitch } from '../components/CodeThemeSwitch';
 import { Icons } from '../components/icons';
 import { SplitColumns } from '../components/SplitColumns';
 import { analyzeUsage, type Usage } from '../lib/dependencies';
@@ -57,6 +58,8 @@ export function ScriptsPanel() {
           <div className="script-bar">
             <TextField value={active.name} commitOnBlur onChange={(v) => setScript(active.id, { name: v || active.name })} />
             <CheckField label="Run on start" value={active.runOnStart} onChange={(v) => setScript(active.id, { runOnStart: v })} />
+            <div className="spacer" />
+            <CodeThemeSwitch />
             <IconButton
               icon={<Icons.trash />}
               title="Delete script"

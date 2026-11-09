@@ -4,6 +4,7 @@ import { dataCache } from '../lib/data';
 import { csvToGrid, delimiterOf, gridToCsv, gridToJson, guiFor, hasError, indentOf, isFlatTable, jsonText, jsonToGrid, layoutOf, problemsOf, textOfValue, type Grid, type Json, type Problem, type Scalar } from '../lib/data-edit';
 import { giveOwnFile, makeEditableCopy, readAssetText, saveDataText, sharersOf } from '../lib/data-save';
 import { DataRawEditor } from './DataRawEditor';
+import { CodeThemeSwitch } from '../components/CodeThemeSwitch';
 import { DataTable } from './DataTable';
 import { DataTree } from './DataTree';
 
@@ -210,6 +211,7 @@ export function DataFileEditor({ source }: { source: DataSource }) {
             Tidy up
           </button>
         )}
+        {showing === 'raw' && <CodeThemeSwitch />}
         <span className={`data-file-status${broken || saveFailed ? ' bad' : ''}`} role="status" aria-live="polite">
           {status}
         </span>
