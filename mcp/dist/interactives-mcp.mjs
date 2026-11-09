@@ -9723,7 +9723,7 @@ function requireReact() {
 requireReact();
 const DEFAULT_GRID = { size: 8, subdivisions: 4 };
 const DEFAULT_FONT = "Open Sans";
-const DEFAULTS = { technicalWording: false, askPictureDescription: true, wheel: "zoom", tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: "dark", codeTheme: "follow", defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true };
+const DEFAULTS = { technicalWording: false, askPictureDescription: true, wheel: "zoom", tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: "dark", codeTheme: "follow", defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
 const LAST_USER = "ix-prefs-user";
 const keyFor = (user2) => `ix-prefs:${user2}`;
 const read = (key) => {
@@ -11695,11 +11695,27 @@ To **do something when playback reaches a marker**, select it and press **+ When
 
 ![The timeline bar and tracks. The flag on the ruler is a marker.](help/timeline-markers.png)
 
+## The list of timelines
+Beside the Timeline is a list of every timeline on the open artboard (or component), so you can see what is there and what is missing without opening a dropdown. Each row shows the timeline's length, whether it plays once, loops or ping-pongs, how many layers it animates, and what plays it (an interaction, a joystick, a blend, or its own autoplay). **Nothing plays it** means no interaction, joystick, blend or autoplay starts it yet.
+- Click a row to open that timeline. The first row, **Design view**, goes back to the layers as they are.
+- Select a layer on the canvas and the rows of timelines that animate it are marked **Animates ...** with a bar at their left.
+- The open timeline's row shows its buttons (move, rename, duplicate, delete); every row has the same actions on right-click.
+- Double-click a name, or use the pencil, to rename it. Two timelines on one artboard cannot share a name.
+- Drag a row, or use the arrows, to reorder. The order matters for timelines that **hold their end pose**: a later one wins over an earlier one on the properties both key.
+- The copy button makes a duplicate right after it (it does not autoplay, so the two do not both start). The bin deletes it and warns first when something plays it: those interactions will stop working until you point them at another timeline.
+- On a component (an artboard that other artboards place as a layer) the list suggests the usual states, **Idle**, **Hover** and **Pressed**, and adds an empty timeline for any that is missing. A timeline named with a word like rest, over, click or down counts as that state.
+- The **List** button on the Timeline bar, the **x** on the list and the **View** menu all show and hide the list, and your choice is remembered for you.
+
+## Sound and captions rows
+Sound, Captions and Descriptions sit under the ruler in one group. When a timeline has no sound, captions or descriptions the group is folded to a single row, **Sound and captions**, that says what is in it. When it has some, the group is open. Click the arrow on that row to open or fold it by hand. Folded, the row still draws a mark for each clip and each cue along the time axis, so you can see where they are.
+
+The **View** button (the eye) on the Timeline bar lets you hide the Sound, Captions or Descriptions lane altogether, and turn off folding an empty group. Hiding a lane also hides its Add controls: turn it back on in the same menu. These choices are kept for you across projects.
+
 ## Design view and timeline view
 There are two ways to look at an artboard.
 
 - **Design view**: the canvas shows the layers as they really are, with no animation applied. This is where you place and style things. Opening an artboard starts here, and the Timeline tab says **Design view: the canvas shows the layers as they are. Choose a timeline to see and edit its animation.**
-- **Timeline view**: choose a timeline from the dropdown at the top left of the Timeline tab and the canvas shows that timeline at the playhead. Drag the playhead to see any frame, and with **Record** on, changes become keyframes.
+- **Timeline view**: choose a timeline from [the list](timelines#the-list-of-timelines) beside the Timeline (or the dropdown at the top left of the Timeline tab) and the canvas shows that timeline at the playhead. Drag the playhead to see any frame, and with **Record** on, changes become keyframes.
 
 Choose **Design view (no timeline)** in the same dropdown to go back. Record turns itself off when you do.
 
