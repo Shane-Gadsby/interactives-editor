@@ -9753,7 +9753,7 @@ function requireReact() {
 requireReact();
 const DEFAULT_GRID = { size: 8, subdivisions: 4 };
 const DEFAULT_FONT = "Open Sans";
-const DEFAULTS = { singleKeys: true, technicalWording: false, askPictureDescription: true, wheel: "zoom", tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: "dark", codeTheme: "follow", defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
+const DEFAULTS = { singleKeys: true, technicalWording: false, showNewInteractions: true, askPictureDescription: true, wheel: "zoom", tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: "dark", codeTheme: "follow", defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
 const LAST_USER = "ix-prefs-user";
 const keyFor = (user2) => `ix-prefs:${user2}`;
 const read = (key) => {
@@ -9949,7 +9949,7 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 
 1. With the button selected, scroll the Inspector to its **Interactions** section and press **+ When clicked…**.
 2. A short list of things that can happen opens. Choose **Play an animation**, then pick your timeline under **Which animation**. The line at the bottom reads back what it will do: *When clicked: play “Timeline”*.
-3. Press **Add**. The section now says it in a sentence: **When clicked: play “Timeline”.**
+3. Press **Add**. The **Interactions** graph opens at the bottom, zoomed in on the two new nodes (more on them in step 4), and the section now says it in a sentence: **When clicked: play “Timeline”.**
 
 That is the whole interaction. The same list can go to another page, show or hide a layer, play a sound, open a link, add 1 to a counter or switch something on or off. Every one is added to the **Interactions** graph as ordinary nodes, so you can always take it further.
 
@@ -9957,7 +9957,7 @@ That is the whole interaction. The same list can go to another page, show or hid
 
 ## 4. See what it made
 
-1. Under the sentence press **Show in graph**. The bottom panel switches to **Interactions** and picks the new node.
+1. The bottom panel has switched to **Interactions** and picked the new nodes. (If you look away, **Show in graph** under the sentence brings you back to them.)
 2. There are two nodes, joined: a **When clicked or hovered** event (its settings say **Layer: Slide button** and **Event: Click / tap**) and a **Play or stop an animation** action. The Inspector's sentence is made from exactly these.
 3. The **Read as sentences** button above the graph shows the whole page this way. Use it to read a graph somebody else built.
 
@@ -10530,6 +10530,7 @@ Open **Preferences** from the gear in the top bar (or on the projects page). The
 - **Getting started strip**: the five jobs along the top of the editor that tick themselves. On until you put it away or tick all five; turning it on again brings it back (with the ticks kept, or cleared if all five were done). See [Your first five minutes](welcome#your-first-five-minutes).
 - **Accessibility features**: on by default. Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview (and in the exports you make, which always keep them on). Switch it off to check whether a problem comes from it. See [Accessibility](accessibility).
 - **Technical wording**: off by default. The interaction nodes and their choices read as what happens (*When clicked or hovered*, *Change a value or counter*, *Flip on or off*). Turn it on to see the names they have in the file (*On pointer*, *Set variable*, *Toggle (boolean)*), which is what an agent or a script sees. Search and help find either name whichever is showing. Pages are still called artboards in the advanced settings.
+- **Show new interactions in the graph**: on by default. After **+ When clicked…** (or hovered, an empty event, or **When the playhead reaches this…**) the Interactions tab opens, frames the new nodes and puts keyboard focus on the new event. Turn it off if you build only from the Inspector and want the view left alone: the new nodes are then only picked in the graph. See [Interactions](interactions).
 - **Ask what a picture shows**: on by default. When you add a picture or video, a small box at the top of its settings asks what it shows. See [Describing a picture as you add it](accessibility#describing-a-picture-as-you-add-it). Switch it off if you add a lot of pictures at once.
 - **Recording**: there is none to set. See [What the editor records](what-is-recorded).
 - **Screen reader strip**: off by default. A strip under Preview that shows what a screen reader would be told by Announce nodes, as it is spoken. It only shows while Accessibility features is on. The same switch is in the Preview header, next to Accessibility.
@@ -12322,6 +12323,8 @@ A short list asks what should happen:
 Pick one, answer the question it asks (the line at the bottom reads back what it will do), and press **Add**. It is added in one step, so one undo takes it all back, including a new variable or the layer set to start hidden. A behaviour is just a **When clicked or hovered** event joined to an action (and the variable it needs), the same nodes you would have drawn: select the new node in the graph to change anything about it. Nothing special marks them, and nothing hidden runs.
 
 The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the event, for building the flow by hand in the graph.
+
+**It shows you what it made.** The moment you press **Add** (or add an empty event, or a **When the playhead reaches this…** from a marker), the bottom panel opens on **Interactions** (unfolded if it was put away, and switched over if another tab was showing), the graph pans and zooms so the new nodes fit with a little room round them (never closer than 100%), they are picked together, and they glow for a moment (no glow, and no animated pan, if your computer is set to reduce motion). Keyboard focus moves to the new **When clicked or hovered** event, so <kbd>Del</kbd> and the arrow keys now act on the graph, and a screen reader is told, for example, **Added When clicked: go to the next page**. Nothing moves when the change is someone else's live edit, an undo or redo, or an agent's. If you build only from the Inspector and want the view left alone, untick **Show new interactions in the graph** in Preferences: the nodes are then just picked in the graph, as before.
 
 ## What a layer does, in sentences
 The Inspector's **Interactions** section lists what the layer does as sentences made from its graph: **When clicked: show Hint text, then wait 2 s, then hide Hint text.** A check reads **check whether score is at least 5 (if so: …; if not: …)**, and a long chain stops with **and 4 more steps**. An event with nothing joined to it says **nothing happens yet**, so a click that does nothing is no longer a mystery. Under each sentence:
