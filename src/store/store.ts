@@ -67,6 +67,8 @@ function hasAutoLayout(list: SceneNode[]): boolean {
 // Per artboard object (immer shares the ones a change didn't touch, so this is only worked out again for what changed)
 const layoutFlag = new WeakMap<object, boolean>();
 const fitChecked = new WeakSet<object>();
+// Artboards already laid out (a second layout changes nothing, so the same object never needs another one)
+const layoutSettled = new WeakSet<object>();
 
 /** Groups that size to their contents (fit-groups.ts), before auto layout so frames lay out the groups' real sizes. */
 function settleGroups(project: Project): Project {
@@ -91,14 +93,17 @@ function settleLayout(project: Project, fitGroups = false): Project {
   if (fitGroups) project = settleGroups(project);
   const withLayout = new Set<string>();
   for (const ab of project.artboards) {
+    if (layoutSettled.has(ab)) continue;
     let has = layoutFlag.get(ab);
     if (has === undefined) layoutFlag.set(ab, (has = hasAutoLayout(ab.children)));
     if (has) withLayout.add(ab.id);
   }
   if (!withLayout.size) return project;
-  return produce(project, (d) => {
+  const next = produce(project, (d) => {
     for (const ab of d.artboards) if (withLayout.has(ab.id)) relayoutTree(ab.children as SceneNode[]);
   });
+  for (const ab of next.artboards) layoutSettled.add(ab);
+  return next;
 }
 
 /**
