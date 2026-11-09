@@ -81,27 +81,24 @@ describe('field markup', () => {
     expect(line.classList.contains('stacked')).toBe(false);
   });
 
-  it('marks a one or two letter label so a pair row can give it the narrow column', () => {
+  it('marks a field with no label so its control starts at the left edge', () => {
     act(() =>
       root.render(
         <>
           <NumberField label="X" value={0} onChange={noop} />
-          <NumberField label="Sx" value={0} onChange={noop} />
           <NumberField label="Rotation" value={0} onChange={noop} />
           <NumberField value={0} onChange={noop} />
         </>,
       ),
     );
     const f = [...host.querySelectorAll('.field')];
-    expect(f.map((e) => e.classList.contains('lbl-xs'))).toEqual([true, true, false, false]);
-    expect(f[3].classList.contains('unlabelled')).toBe(true);
-    expect(f[3].querySelector('.field-label')).toBeNull();
-    expect(f[2].classList.contains('unlabelled')).toBe(false);
+    expect(f.map((e) => e.classList.contains('unlabelled'))).toEqual([false, false, true]);
+    expect(f[2].querySelector('.field-label')).toBeNull();
   });
 
   it('names every field kind with the same classes', () => {
     expect(fieldClass('number-field', 'Speed')).toBe('field number-field');
-    expect(fieldClass('number-field', 'X')).toBe('field number-field lbl-xs');
+    expect(fieldClass('number-field', 'X')).toBe('field number-field');
     expect(fieldClass('select-field', undefined)).toBe('field select-field unlabelled');
     expect(fieldClass('text-field', 'Text', true, 'multiline stacked')).toBe('field text-field multiline stacked ps-hide');
     expect(unbroken('V-align')).toBe('V‑align');
@@ -174,24 +171,129 @@ describe('every field in the properties panel', () => {
   }
 });
 
+/** The shapes a line in the panel can take. The stylesheet knows each of them, so a new one has to be added there too. */
+describe('the lines of the properties panel', () => {
+  const TYPES: NodeType[] = ['rect', 'text', 'video', 'input', 'button', 'frame', 'image', 'ellipse'];
+  function mount(type: NodeType) {
+    const p = createProject('T');
+    const n = createNode(type, { name: 'one' } as never) as SceneNode;
+    p.artboards[0].children.push(n);
+    const s = new EditorStore(p);
+    setCurrentStore(s);
+    s.select([n.id]);
+    act(() => root.render(<Inspector />));
+    for (let i = 0; i < 5; i++) {
+      const closed = [...host.querySelectorAll<HTMLElement>('.section-title[aria-expanded="false"]')];
+      if (!closed.length) break;
+      act(() => closed.forEach((b) => b.click()));
+    }
+  }
+  const isField = (e: Element) => e.classList.contains('field') || e.classList.contains('keyed');
+  const kind = (e: Element) => (e.classList.contains('keyed') ? [...e.children].map((c) => (c.classList.contains('field') ? (c.classList.contains('check-field') ? 'check' : 'field') : 'key')).join('+') : e.classList.contains('check-field') ? 'check' : e.classList.contains('field') ? 'field' : e.classList.contains('link-toggle') || e.classList.contains('link-gap') ? 'chain' : e.classList.contains('btn') || e.classList.contains('link-btn') ? 'button' : 'other');
+  for (const type of TYPES) {
+    it(`${type}: a pair is two fields, with the chain between them at most`, () => {
+      mount(type);
+      const rows = [...host.querySelectorAll<HTMLElement>('.inspector .row')];
+      expect(rows.length).toBeGreaterThan(3);
+      for (const r of rows) {
+        const kids = [...r.children];
+        const fields = kids.filter(isField);
+        const chains = kids.filter((c) => kind(c) === 'chain');
+        // the chain is between two fields and there is one of it at most
+        if (chains.length) {
+          expect(chains).toHaveLength(1);
+          expect(fields).toHaveLength(2);
+          expect(kids.indexOf(chains[0])).toBe(1);
+        }
+        // a keyed wrapper is the field and its diamond, in that order
+        for (const k of kids.filter((c) => c.classList.contains('keyed'))) {
+          expect(kind(k), r.textContent ?? '').toMatch(/^(field|check)(\+key)?$/);
+        }
+      }
+    });
+  }
+
+  it('Layer: X Y, W H, Rotation Opacity and Scale are pair rows of two keyed number fields, W H and Scale with the chain', () => {
+    mount('rect');
+    const pairs = [...host.querySelectorAll<HTMLElement>('.inspector .row')].filter((r) => [...r.children].filter(isField).length === 2 && !r.querySelector('select, textarea, .unit-field, .check-field'));
+    const labels = pairs.map((r) => [...r.querySelectorAll('.field-label')].map((l) => l.textContent?.replace(/\u00a0/g, ' ')).join('|'));
+    for (const want of ['X|Y', 'W|H', 'Rotation|Opacity', 'Scale W|Scale H']) expect(labels).toContain(want);
+    for (const r of pairs.filter((r) => /^(W\|H|Scale W\|Scale H)$/.test([...r.querySelectorAll('.field-label')].map((l) => l.textContent).join('|')))) {
+      expect(r.querySelector(':scope > .link-toggle')).not.toBeNull();
+    }
+  });
+});
+
 describe('the stylesheet', () => {
   const css = readFileSync(`${__dirname}/../src/styles.css`, 'utf8');
-  const block = css.slice(css.indexOf('/* ---------------------------------------------------------------- field rows'), css.indexOf('/* ---------------------------------------------------------------- sections'));
+  const block = css.slice(css.indexOf('/* ---------------------------------------------------------------- field rows'), css.indexOf('/* ---------------------------------------------------------------- sections */'));
+  const decl = (name: string) => new RegExp(`${name}:\\s*([^;]+);`).exec(block)?.[1];
 
-  it('has one label column width, a narrow one for pairs and a trailing slot, all set once on :root', () => {
+  it('sets every width and spacing of the grid once on :root', () => {
     const root = /:root\s*\{([^}]*)\}/.exec(block)![1];
-    for (const v of ['--label-w', '--label-w-sm', '--label-w-xs', '--field-trail', '--field-key', '--field-h']) expect(root).toContain(v + ':');
+    for (const v of ['--label-w', '--label-w-2', '--field-trail', '--field-key', '--field-chain', '--field-gap', '--field-h', '--row-gap', '--group-gap']) expect(root).toContain(v + ':');
+    // the old per-row label widths are gone
+    expect(css).not.toMatch(/--label-w-(sm|xs)|--pair-channel|--ctl-min/);
   });
 
-  it('lays a field out on a grid of label, control and trailing slot', () => {
-    expect(block).toMatch(/grid-template-columns:\s*var\(--fl, var\(--label-w\)\) minmax\(var\(--ctl-min, \d+px\), 1fr\) var\(--field-trail\)/);
+  it('is nine tracks: label, control, unit, key, chain, label, control, unit, key', () => {
+    expect(decl('--cols-8')).toBe('var(--label-w) minmax(0, 1fr) var(--field-trail) var(--field-key) var(--field-chain) var(--label-w-2) minmax(0, 1fr) var(--field-trail)');
+    expect(decl('--cols')).toBe('var(--cols-8) var(--field-key)');
+    // the key slot goes with the field before it, so a panel with no keys (the node settings) has none
+    expect(block).toMatch(/:is\(\.param-form, \.key-editor\)\s*\{\s*--field-key:\s*0px/);
+  });
+
+  it('hands the label, control and unit of a field the same tracks wherever the field is', () => {
+    expect(block).toMatch(/\.field > \.field-label\s*\{\s*grid-column:\s*1;/);
+    expect(block).toMatch(/\.field > :not\(\.field-label, \.field-trail, \.unit-toggle\)\s*\{\s*grid-column:\s*2 \/ -2;/);
+    expect(block).toMatch(/\.field > \.field-trail\s*\{\s*grid-column:\s*-2 \/ -1;/);
+    // a row of fields is the nine tracks, and its fields and keyed pairs are subgrids of them
+    expect(block).toMatch(/grid-template-columns:\s*subgrid/);
     // the key diamond has its own slot, kept when it is not showing
-    expect(block).toMatch(/\.keyed\s*\{[^}]*padding-right:\s*var\(--field-key\)/);
-    expect(block).toMatch(/\.key-btn\s*\{[^}]*width:\s*var\(--field-key\)/);
+    expect(block).toMatch(/\.keyed\s*\{[^}]*padding-right:\s*calc\(var\(--field-key\) \+ var\(--field-gap\)\)/);
+    expect(block).toMatch(/\.keyed > \.key-btn\s*\{[^}]*width:\s*var\(--field-key\)/);
+  });
+
+  it('puts the second field of a pair in track six, and the chain in five, in every pair row', () => {
+    const q = block.slice(block.indexOf('@container panel'));
+    expect(q).toMatch(/@container panel \(min-width: \d+px\)/);
+    // a plain field: 1-3 then 6-8 (a keyed one takes its key slot too: 1-4 then 6-9)
+    expect(q).toMatch(/:is\(\.field:not\(\.check-field\)\)\s*\{\s*grid-column:\s*1 \/ 4;/);
+    expect(q).toMatch(/:is\(\.field:not\(\.check-field\)\)\s*\{\s*grid-column:\s*6 \/ 9;/);
+    expect(q).toMatch(/\{\s*grid-column:\s*1 \/ 5;/);
+    expect(q).toMatch(/\{\s*grid-column:\s*6 \/ 10;/);
+    expect(q).toMatch(/link-gap\)\s*\{[^}]*grid-column:\s*5;/);
+    // checkboxes: under the first control, and under the second
+    expect(q).toMatch(/\.check-field\)\s*\{\s*grid-column:\s*2 \/ 7;/);
+    expect(q).toMatch(/\{\s*grid-column:\s*7 \/ -1;/);
+    // only fields that fit half a row pair up
+    expect(q).toContain(':not(:has(.select-field, .text-field, .unit-field, .color-field))');
+  });
+
+  it('starts a single checkbox under the controls and a button group at the left edge in equal cells', () => {
+    expect(block).toMatch(/> \.check-field\s*\{\s*grid-column:\s*2 \/ -1;/);
+    expect(block).toMatch(/> \.check-field\s*\{\s*padding-left:\s*calc\(var\(--label-w\) \+ var\(--field-gap\)\)/);
+    expect(block).toMatch(/grid-template-columns:\s*repeat\(auto-fit, minmax\(\d+px, 1fr\)\)/);
+  });
+
+  it('has one height for the controls, one gap between lines and one between groups', () => {
+    expect(block).toMatch(/:is\(input:not\(\[type='checkbox'\], \[type='color'\], \.alpha\), select\)\s*\{[^}]*height:\s*var\(--field-h\)/);
+    expect(block).toMatch(/\.check-field\.field\s*\{[^}]*min-height:\s*var\(--field-h\)/);
+    expect(block).toMatch(/row-gap:\s*var\(--row-gap\)/);
+    expect(block).toMatch(/:is\(\.field-label\.block, \.q-sub\):not\(:first-child\)\s*\{\s*margin-top:\s*calc\(var\(--group-gap\) - var\(--row-gap\)\)/);
+    expect(block).toMatch(/\.inspector \.section\s*\{\s*padding:\s*4px 12px 12px/);
+  });
+
+  it('has a line for a blend entry (timeline, value, remove button) that keeps the button on the line', () => {
+    expect(block).toMatch(/\.row\.blend-entry > \.icon-btn\s*\{[^}]*grid-column:\s*8 \/ -1;[^}]*grid-row:\s*1;/);
+    expect(readFileSync(`${__dirname}/../src/panels/Inspector.tsx`, 'utf8')).toContain('className="blend-entry"');
+  });
+
+  it('keeps a block that is not a field (the picture quality slider) from wearing the field class', () => {
+    expect(readFileSync(`${__dirname}/../src/panels/OptimiseOutput.tsx`, 'utf8')).not.toMatch(/className="field /);
   });
 
   it('gives dropdowns, text, number and colour boxes one height', () => {
-    expect(block).toMatch(/\{[^}]*height:\s*var\(--field-h\)/);
     expect(css).toMatch(/\.field input:not\(\[type='checkbox'\]\):not\(\[type='color'\]\),\s*\.field select,\s*\.field textarea\s*\{[^}]*height:\s*26px/);
   });
 
