@@ -162,3 +162,46 @@ describe('project guides (for every page)', () => {
     expect(guides()).toEqual({ x: [], y: [] });
   });
 });
+
+describe('dragging a guide off its page', () => {
+  const makeGuide = () => {
+    const top = host.querySelector('.canvas-ruler.top')!;
+    mouse(top, 'pointerdown', 100, 5);
+    mouse(top, 'pointerup', 100, 150);
+    expect(guides().y).toEqual([150]);
+    return host.querySelector('.guide-line.y')!;
+  };
+  const below = () => s.get().project.artboards[0].height + 120;
+
+  it('keeps the guide until you let go, with a note by the pointer, and removes it on release out there', () => {
+    const line = makeGuide();
+    mouse(line, 'pointerdown', 300, 150);
+    mouse(window as unknown as Element, 'pointermove', 300, below());
+    // nothing has gone yet: the guide is where it last was on the page, faded, and the note says what letting go does
+    expect(guides().y).toEqual([150]);
+    expect(host.querySelector('.guide-line.y.removing')).not.toBeNull();
+    expect(host.querySelector('.guide-remove-hint')?.textContent).toBe('Let go to remove this guide');
+    mouse(window as unknown as Element, 'pointerup', 300, below());
+    expect(guides().y).toEqual([]);
+    expect(host.querySelector('.guide-remove-hint')).toBeNull();
+  });
+
+  it('coming back onto the page and letting go there keeps it, at the new place', () => {
+    const line = makeGuide();
+    mouse(line, 'pointerdown', 300, 150);
+    mouse(window as unknown as Element, 'pointermove', 300, below());
+    mouse(window as unknown as Element, 'pointermove', 300, 220);
+    expect(host.querySelector('.guide-remove-hint')).toBeNull();
+    mouse(window as unknown as Element, 'pointerup', 300, 220);
+    expect(guides().y).toEqual([220]);
+  });
+
+  it('a new guide let go off the page is not made', () => {
+    const top = host.querySelector('.canvas-ruler.top')!;
+    mouse(top, 'pointerdown', 100, 5);
+    mouse(window as unknown as Element, 'pointermove', 100, below());
+    expect(host.querySelector('.guide-remove-hint')?.textContent).toBe('Let go here and no guide is made');
+    mouse(window as unknown as Element, 'pointerup', 100, below());
+    expect(guides().y).toEqual([]);
+  });
+});

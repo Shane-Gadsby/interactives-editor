@@ -20,7 +20,7 @@ function stepFor(zoom: number): number {
  * choose, and Alt while dragging out a new one gives the other kind. The guides of the other pages are drawn by the canvas.
  */
 export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard | undefined; zoom: number; panX: number; panY: number; width: number; height: number }) {
-  const [drag, setDrag] = useState<{ axis: Axis; index: number | null; at: number; scope: GuideScope } | null>(null);
+  const [drag, setDrag] = useState<{ axis: Axis; index: number | null; at: number; scope: GuideScope; out: boolean; cx: number; cy: number } | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const project = useEditor((st) => st.project);
   const root = useRef<HTMLDivElement>(null);
@@ -37,6 +37,10 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
     return axis === 'x' ? clientX - r.left < SIZE : clientY - r.top < SIZE;
   };
 
+  //Past the page (or over the ruler) is where letting go removes a guide, or drops a new one. It is only decided on
+  //release: while the pointer is out there the guide stays where it last was on the page, so nothing goes mid-drag
+  const outside = (axis: Axis, clientX: number, clientY: number, at: number) => overRuler(axis, clientX, clientY) || at < 0 || at > (axis === 'x' ? ab.width : ab.height);
+
   const start = (e: React.PointerEvent, axis: Axis, ref: GuideRef | null) => {
     e.stopPropagation();
     e.preventDefault();
@@ -45,35 +49,39 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
       store().toast('The guides are locked. Unlock them from the button in the corner of the rulers.', 'info');
       return;
     }
-    const el = e.currentTarget as HTMLElement;
-    try {
-      el.setPointerCapture(e.pointerId);
-    } catch {
-      /* synthetic */
-    }
     const key = `guide-${ab.id}-${Date.now()}`;
     // a new guide is the kind the corner menu says, or the other kind with Alt held
     const base = getGuideScope();
     const scope: GuideScope = ref ? ref.scope : e.altKey ? (base === 'project' ? 'page' : 'project') : base;
+    //on the window, not the guide's own element: a guide can stop being drawn while it is dragged, and the drag must not
+    //go with it
     const move = (ev: PointerEvent) => {
       const at = toLocal(axis, ev.clientX, ev.clientY);
-      setDrag({ axis, index: ref ? ref.index : null, at, scope });
-      if (ref && !overRuler(axis, ev.clientX, ev.clientY)) store().update((d) => moveGuide(d, ab.id, ref, at), { coalesce: key });
+      const out = outside(axis, ev.clientX, ev.clientY, at);
+      setDrag({ axis, index: ref ? ref.index : null, at, scope, out, cx: ev.clientX, cy: ev.clientY });
+      if (ref && !out) store().update((d) => moveGuide(d, ab.id, ref, at), { coalesce: key });
     };
     const up = (ev: PointerEvent) => {
-      el.removeEventListener('pointermove', move);
-      el.removeEventListener('pointerup', up);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
       setDrag(null);
       const at = toLocal(axis, ev.clientX, ev.clientY);
-      if (overRuler(axis, ev.clientX, ev.clientY)) {
-        if (ref) store().update((d) => removeGuide(d, ab.id, ref));
-      } else if (!ref) {
-        store().update((d) => addGuide(d, ab.id, scope, axis, at));
-      }
+      const out = outside(axis, ev.clientX, ev.clientY, at);
+      if (ref && out) store().update((d) => removeGuide(d, ab.id, ref));
+      else if (!ref && !out) store().update((d) => addGuide(d, ab.id, scope, axis, at));
       store().commit();
     };
-    el.addEventListener('pointermove', move);
-    el.addEventListener('pointerup', up);
+    const cancel = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
+      setDrag(null);
+      store().commit();
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', cancel);
   };
 
   const guideMenu = (e: React.MouseEvent, g: GuideRef) => {
@@ -111,15 +119,15 @@ const step = stepFor(zoom);
     return (
       <div
         key={`${g.scope}-${g.axis}${g.index}`}
-        className={`guide-line ${g.axis} ${g.scope}${locked ? ' locked' : ''}`}
+        className={`guide-line ${g.axis} ${g.scope}${locked ? ' locked' : ''}${drag?.out && drag.index === g.index && drag.axis === g.axis && drag.scope === g.scope ? ' removing' : ''}`}
         style={{ ...(g.axis === 'x' ? { left: pos - 3 } : { top: pos - 3 }), ...along }}
-        title={`${g.scope === 'project' ? 'Guide for every page' : 'Guide for this page only'} at ${g.at}px: ${locked ? 'locked. Right-click for the guides menu' : 'drag to move, drag onto the ruler to remove, right-click for more'}`}
+        title={`${g.scope === 'project' ? 'Guide for every page' : 'Guide for this page only'} at ${g.at}px: ${locked ? 'locked. Right-click for the guides menu' : 'drag to move, drag off the page (or onto the ruler) and let go to remove, right-click for more'}`}
         onPointerDown={(e) => start(e, g.axis, g)}
         onContextMenu={(e) => guideMenu(e, g)}
       />
     );
   });
-  const preview = drag && drag.index === null && (
+  const preview = drag && drag.index === null && !drag.out && (
     <div
       className={`guide-line ${drag.axis} ${drag.scope} preview`}
       style={{ ...(drag.axis === 'x' ? { left: ox + drag.at * zoom - 3, top: oy - reach, height: ab.height * zoom + reach * 2, bottom: 'auto' } : { top: oy + drag.at * zoom - 3, left: ox - reach, width: ab.width * zoom + reach * 2, right: 'auto' }) }}
@@ -129,7 +137,12 @@ const step = stepFor(zoom);
     <div ref={root} className="rulers">
       {lines}
       {preview}
-      {drag && (
+      {drag?.out && root.current && (
+        <div className="guide-remove-hint" role="status" style={{ left: drag.cx - root.current.getBoundingClientRect().left + 14, top: drag.cy - root.current.getBoundingClientRect().top + 14 }}>
+          {drag.index === null ? 'Let go here and no guide is made' : 'Let go to remove this guide'}
+        </div>
+      )}
+      {drag && !drag.out && (
         <div className="guide-pos" style={drag.axis === 'x' ? { left: ox + drag.at * zoom + 6, top: SIZE + 4 } : { top: oy + drag.at * zoom + 6, left: SIZE + 4 }}>
           {drag.at}
         </div>

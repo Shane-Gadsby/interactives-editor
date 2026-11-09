@@ -6215,6 +6215,21 @@ kbd {
   font: 10px ui-monospace, monospace;
   z-index: 4;
 }
+/* a guide dragged off its page, that letting go will remove: faded, with a note by the pointer saying so */
+.guide-line.removing {
+  opacity: 0.35;
+}
+.guide-remove-hint {
+  position: absolute;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
 
 /* ---------------------------------------------------------------- history and share */
 .history-modal {
