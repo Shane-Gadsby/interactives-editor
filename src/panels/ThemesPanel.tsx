@@ -8,6 +8,7 @@ import { linkColoursCommand } from '../lib/link-colours-action';
 import { confirmDialog, promptDialog } from '../components/dialogs';
 import { ALL_COLOURWAYS, addColourwayTheme } from '../lib/branded/colourway';
 import { addTheme, addToken, checkThemePairs, convertStylesToTokens, ensureThemes, removeTheme, removeToken, setTokenValue, starterUpgrade, themeCounts, upgradeStarterTokens, type PairResult } from '../lib/themes';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /** The Themes tab: tokens down the side, themes across, a colour in each cell. */
 export function ThemesPanel() {
@@ -24,10 +25,15 @@ export function ThemesPanel() {
     return (
       <div className="themes-panel">
         <div className="themes-empty">
-          <p>
-            <strong>Themes</strong> let one interactive look right in light, dark and high contrast. A colour token is a name (like <code>color/primary</code>) with a colour for each theme; a fill, stroke or text colour that uses it changes when the theme does.
-          </p>
-          <p className="muted small">Nothing changes until a layer uses a token. Imported files keep their own colours.</p>
+          <SectionBlurb
+            text={
+              <>
+                <strong>Themes</strong> let one interactive look right in light, dark and high contrast, using named colour tokens.
+              </>
+            }
+            name="themes"
+            help={['themes', 'the-themes-panel']}
+          />
           <button className="btn primary" title="Add Light, Dark and High contrast themes with starter tokens in the toolbox look: greys, gold buttons with black text, outlines, the focus ring and the right, wrong and missed colours" onClick={() => edit((d) => void ensureThemes(d))}>
             <Icons.plus width={13} /> Add Light, Dark and High contrast
           </button>

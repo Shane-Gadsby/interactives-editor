@@ -6,6 +6,7 @@ import { alertDialog } from '../components/dialogs';
 import { ensureCaptionVariable } from '../lib/captions-edit';
 import { download, fileSafe } from '../lib/export';
 import { pickFiles } from '../lib/insert';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /** Edit the project's caption settings, dropping a key when it goes back to its default so the document stays small. */
 export function patchCaptions(project: Project, patch: Partial<CaptionSettings>): CaptionSettings | undefined {
@@ -53,7 +54,7 @@ export function CaptionsSection({ project }: { project: Project }) {
   };
   return (
     <Section help="captions" title="Captions and narration" defaultOpen={hasMedia}>
-      <p className="hint">Sound and captions are put on a timeline (Timeline tab: Sound and Captions rows). These settings are for how they show.</p>
+      <SectionBlurb text="Sound and captions go on a timeline (the Sound and Captions rows). These settings are for how they show." name="captions and narration" help={['captions']} />
       <CheckField label="Captions on to start" title="Captions show until the viewer turns them off. Their choice is remembered in their browser" value={c.defaultOn !== false} onChange={(v) => set({ defaultOn: v })} />
       <CheckField
         label="Descriptions on to start"
@@ -130,7 +131,7 @@ export function VideoCaptions({ node, set }: { node: VideoNode; set: (patch: Par
   return (
     <>
       <div className="field-label block">Captions</div>
-      <p className="hint">{cues.length ? `${cues.length} caption${cues.length === 1 ? '' : 's'}, timed from the start of the video. The viewer's captions button turns them on and off.` : 'Import a WebVTT or SRT file made for this video. Without captions, the accessibility check asks you to confirm the video has them.'}</p>
+      <SectionBlurb text={cues.length ? `${cues.length} caption${cues.length === 1 ? '' : 's'}, timed from the start of the video.` : 'Import a WebVTT or SRT file made for this video.'} name="video captions" help={['captions', 'captions']} />
       <Row k="Import captions" words={['webvtt', 'srt', 'subtitles', 'export', 'transcript']}>
         <button className="btn small-btn" onClick={importFile}>
           Import…
@@ -180,11 +181,11 @@ export function VideoDescriptions({ node, set }: { node: VideoNode; set: (patch:
   return (
     <>
       <div className="field-label block">Descriptions (what is on screen)</div>
-      <p className="hint">
-        {cues.length
-          ? `${cues.length} description${cues.length === 1 ? '' : 's'}, timed from the start of the video. They are not drawn. With the viewer's Descriptions button on, a voice on their device reads each one while the video plays and the video is turned down. They are in the transcript too. This is a cheaper aid, not a recorded described version.`
-          : 'Short sentences saying what the picture shows when it matters, placed in the gaps between speech. Read aloud by the viewer\'s own voice if they turn it on, and listed in the transcript. A cheaper aid, not a recorded described version.'}
-      </p>
+      <SectionBlurb
+        text={cues.length ? `${cues.length} description${cues.length === 1 ? '' : 's'}, read aloud, not drawn. A cheaper aid, not a recorded described version.` : 'What the picture shows, in the gaps between speech. A cheaper aid, not a recorded described version.'}
+        name="descriptions"
+        help={['describe-what-you-see', 'timelines-and-video-layers']}
+      />
       <Row k="Add a description" words={['audio description', 'describe', 'what is on screen', 'import']}>
         <button className="btn small-btn" onClick={add}>
           Add one

@@ -12,6 +12,7 @@ import { audioDuration, barsFor, loadWaveform, type Waveform } from '../lib/wave
 import { alertDialog, confirmDialog } from '../components/dialogs';
 import { CheckField, NumberField, SelectField, TextField } from '../components/ui';
 import { Modal } from '../components/ProjectModals';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /**
  * The sound and caption rows of the timeline panel: a lane per sound with its waveform, volume keys and trim handles, and a
@@ -564,7 +565,7 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
           onChange={(v) => set((t) => void (t.keepPitch = v ? undefined : false))}
         />
         <div className="field-label block">Volume keys</div>
-        <p className="hint">Double-click the clip to add one; drag it up and down for the level, sideways for the time. They multiply the volume above, so a fade is two keys.</p>
+        <SectionBlurb text="Double-click the clip to add one; drag it up and down for the level, sideways for the time." name="volume keys" help={['captions', 'sound']} />
         <div className="row">
           <button
             className="btn small-btn"
@@ -714,9 +715,7 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
         {track.cues.length === 1 ? '' : 's'}.
       </p>
       {described && (
-        <p className="hint">
-          When the viewer has descriptions on, a voice on their device reads each one as the timeline reaches it and the sound is turned down while it speaks. Keep them in gaps between speech, one clear sentence each. They are also listed in the transcript, which works with no voice. This is a cheaper aid, not a recorded described version.
-        </p>
+        <SectionBlurb text="A voice on the viewer's device reads each one in the gaps. A cheaper aid, not a recorded described version." name="descriptions" help={['describe-what-you-see', 'how-it-works-for-the-viewer']} />
       )}
       <div className="row wrap">
         {!described && (
@@ -742,9 +741,11 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
         onChange={(v) => setTrack((t) => void (t.speak = v ? true : undefined))}
       />}
       {(track.speak || described) && (
-        <p className="hint">
-          {voices.length ? `${voices.length} voice${voices.length === 1 ? '' : 's'} on this device can read ${described ? 'them' : 'it'} (none of them send anything anywhere).` : `No voice that runs on this device was found, so nothing will be read. Viewers with one will hear ${described ? 'them' : 'it'}. Voices that need the internet are never used.`}
-        </p>
+        <SectionBlurb
+          text={voices.length ? `${voices.length} voice${voices.length === 1 ? '' : 's'} on this device can read ${described ? 'them' : 'it'}.` : `No voice that runs on this device was found, so nothing will be read here. Viewers with one will hear ${described ? 'them' : 'it'}.`}
+          name="the draft voice"
+          help={['captions', 'draft-voice']}
+        />
       )}
       <div className="row wrap">
         <button
@@ -797,7 +798,7 @@ export function TranscriptDialog({ tl, track, onClose, onDone }: { tl: TL; track
   return (
     <Modal title="Paste a transcript" help="captions" onClose={onClose}>
       <div className="share-body transcript-dialog">
-        <p className="hint">Paste the words that are spoken. They are cut into captions (a sentence each, long ones split at a comma) and timed for you; then drag the edges to fine-tune. A transcript with times at the start of its lines ("0:12 Welcome") keeps them.</p>
+        <SectionBlurb text="Paste the words that are spoken. They are cut into captions and timed for you; then drag the edges to fine-tune." name="pasting a transcript" help={['captions']} />
         <textarea className="transcript-text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste or type the transcript here" aria-label="Transcript" rows={9} autoFocus />
         <div className="row wrap">
           <SelectField<PasteTiming>

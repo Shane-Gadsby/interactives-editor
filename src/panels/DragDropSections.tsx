@@ -269,7 +269,7 @@ function DropZoneSection({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artbo
               />
             </>
           )}
-          {single && zoneOverItems(n, ab) && <div className="drag-warn small">This zone is drawn over draggable layers next to it, so they cannot be picked up where they overlap it. Move the zone behind them in the layers list.</div>}
+          {single && zoneOverItems(n, ab) && <div className="drag-warn small">This zone is drawn over draggable layers, so they cannot be picked up where they overlap it. Move it behind them.</div>}
           <Hint>Layers go in the zone when their centre is over it (change this on the draggable layer). Put zones behind the layers that go in them.</Hint>
         </>
       )}

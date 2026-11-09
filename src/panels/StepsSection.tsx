@@ -4,6 +4,7 @@ import { getArtboard } from '../store/doc';
 import { CheckField, IconButton, Row, Section, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { addScrollColumn, addStepBar, addStepsExample, enableSteps } from '../lib/steps';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /** Edit a step-through setting, dropping the key when it goes back to its default so the document stays small. */
 export function patchSteps(cfg: StepsConfig, patch: Partial<StepsConfig>): StepsConfig {
@@ -71,7 +72,7 @@ export function StepsSection({ ab, project }: { ab: Artboard; project: Project }
   if (!cfg) {
     return (
       <Section help="steps" title="Steps" defaultOpen={false}>
-        <p className="hint">Turn the markers of a timeline into the steps of an explainer: Next plays to the next marker, Back plays back, and a step bar does the clicking.</p>
+        <SectionBlurb text="Turn the markers of a timeline into the steps of an explainer, with Next, Back and a step bar." name="Steps" help={['steps']} />
         <Row k="Turn on Steps" words={['explainer', 'markers', 'build an example', 'slides', 'next previous']}>
           <button className="btn" data-track="steps-enable" title="Use a timeline's markers as steps. Adds a marker at the start and the step variables" onClick={() => setAb((a, p) => void enableSteps(p, a, store().get().activeTimelineId ?? undefined))}>
             Turn on Steps
@@ -138,9 +139,15 @@ export function StepsSection({ ab, project }: { ab: Artboard; project: Project }
           Add a scroll column
         </button>
       </Row>
-      <p className="hint">
-        Variables kept up to date: <span className="mono">{varName(cfg.stepVar)}</span> (the step number, from 1), <span className="mono">{varName(cfg.countVar)}</span>, <span className="mono">{varName(cfg.titleVar)}</span>, <span className="mono">{varName(cfg.captionVar)}</span>. Tick Remember on the step variable to bring learners back to where they were. A frame repeating <span className="mono">steps</span> draws a dot per step.
-      </p>
+      <SectionBlurb
+        text={
+          <>
+            Variables kept up to date: <span className="mono">{varName(cfg.stepVar)}</span> (the step number, from 1), <span className="mono">{varName(cfg.countVar)}</span>, <span className="mono">{varName(cfg.titleVar)}</span>, <span className="mono">{varName(cfg.captionVar)}</span>.
+          </>
+        }
+        name="step variables"
+        help={['steps', 'step-variables-and-the-step-list']}
+      />
       <Row k="Add a step bar" words={['progress', 'select the bar', 'dots']}>
         <button className="btn" data-track="steps-bar" title="Add a step bar to this artboard: Back, Next, a dot per step, the counter, title and caption. It is made once as ordinary layers and nodes, so restyle it freely" onClick={() => setAb((a, p) => void addStepBar(p, a))}>
           {barHere ? 'Add another step bar' : 'Add a step bar'}

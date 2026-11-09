@@ -518,7 +518,7 @@ describe('the outline', () => {
 describe('structure changes stay in Tree', () => {
   it('says so in a line, with a button that opens Tree', async () => {
     await mount(project(files()));
-    expect(host.querySelector('.data-formview-note')?.textContent).toContain('add a new field, rename one, or change what a field holds, use Tree');
+    expect(host.querySelector('.data-formview-note')?.textContent).toContain('To add or rename a field, use Tree');
     await click(button('Open Tree'));
     expect(button('Tree')?.getAttribute('aria-pressed')).toBe('true');
     expect(host.querySelector('[role="tree"]')).toBeTruthy();

@@ -3,6 +3,7 @@ import { store, useEditor } from '../store/store';
 import { ICON_COLOURS, defaultIconColour, iconNode, iconPaints, loadStockIcons, searchIcons, type IconColour, type StockIcon } from '../lib/stock-icons';
 import { track } from '../lib/analytics';
 import type { Project } from 'interactives-player';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /**
  * The Icons tab: the Toolbox's own Icon Set (the 25 icons it puts on StudyDesk pages), searched by plain words and added to
@@ -110,7 +111,7 @@ export function IconsPanel() {
           ))}
         </ul>
       )}
-      <p className="hint">The Toolbox’s own Icon Set. They arrive as vector layers: select the ring or the icon to give it another colour.</p>
+      <SectionBlurb text="The Toolbox’s own Icon Set, added as vector layers you can recolour." name="icons" help={['icons']} />
     </div>
   );
 }

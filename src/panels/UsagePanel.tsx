@@ -226,10 +226,10 @@ export function UsagePanel() {
                   )}
                 </div>
                 {active.usedBy.length === 0 ? (
-                  <p className="hint">Nothing uses this{active.kind === 'asset' ? '. Use "Remove unused assets" to delete it with the others, or leave it for later.' : '.'}</p>
+                  <p className="hint">Nothing uses this{active.kind === 'asset' ? '. Use "Remove unused assets" to delete it with the others.' : '.'}</p>
                 ) : (
                   <>
-                    <div className="hint">Used by, click to jump there{active.usedBy.some((u) => u.loose) ? ' (a "?" means found by reading code or text, so it may be a false hit)' : ''}:</div>
+                    <div className="hint">Used by, click to jump there{active.usedBy.some((u) => u.loose) ? ' (a "?" may be a false hit)' : ''}:</div>
                     {active.usedBy.map((u, n) => {
                       const l = sourceLabel(u.by, multi);
                       const can = u.by.type !== 'font' && u.by.type !== 'project';

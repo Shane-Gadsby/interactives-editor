@@ -5,6 +5,7 @@ import { store } from '../store/store';
 import { questionFrames, syncReportScores } from '../lib/question-kit';
 import { CheckField, NumberField, Row, Section, SelectField } from '../components/ui';
 import { ResultsModal } from '../components/ProjectModals';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 type Completion = NonNullable<ReportingSettings['completion']>;
 
@@ -73,7 +74,7 @@ export function ReportingSection({ project }: { project: Project }) {
         <>
           <CheckField label="Pass mark" title="Report pass or fail as well as the score" value={r.passMark !== undefined} onChange={(v) => set({ passMark: v ? 80 : undefined })} />
           {r.passMark !== undefined && <NumberField label="Pass at" title="The percentage of all the questions' points a learner needs to pass" value={r.passMark} min={0} max={100} suffix="%" onChange={(v) => set({ passMark: v }, 'reporting-pass')} />}
-          <p className="hint">The score is the total of all the questions out of the most they can score, so adding a question needs nothing more here. Questions marked on the server count the mark the server keeps.</p>
+          <SectionBlurb text="The score is the total of all the questions' points, out of the most they can score." name="results and progress" help={['results', 'set-it-up']} />
         </>
       )}
       {r.scoreVariable && (
@@ -105,12 +106,11 @@ export function ReportingSection({ project }: { project: Project }) {
       {completion === 'steps' && !project.artboards.some((a) => a.steps) && <p className="hint">No artboard has Steps turned on yet (select an artboard, Steps section), or this never completes.</p>}
       {completion === 'pass' && !((r.scoreVariable || fromQuestions) && r.passMark !== undefined) && <p className="hint">Pick a score variable and set a pass mark above, or this never completes.</p>}
       <CheckField label="Resume on the same artboard" title="A learner who comes back opens on the artboard they left, not the start artboard" value={!!r.resumeArtboard} onChange={(v) => set({ resumeArtboard: v ? true : undefined })} />
-      <p className="hint">
-        {remembered
-          ? `${remembered} variable${remembered === 1 ? ' is' : 's are'} remembered between visits (the Remember column in Variables).`
-          : 'Tick Remember on a variable in the Variables tab to keep its value between visits.'}{' '}
-        Results are kept for learners who open the project from the Link for StudyDesk in Share link.
-      </p>
+      <SectionBlurb
+        text={remembered ? `${remembered} variable${remembered === 1 ? ' is' : 's are'} remembered between visits.` : 'Tick Remember on a variable in the Variables tab to keep its value between visits.'}
+        name="results and progress"
+        help={['results', 'where-it-goes']}
+      />
       <Row k="View results" words={['scores', 'who has played', 'analytics', 'learners']}>
         <button className="btn" onClick={() => setResultsOpen(true)} title="Who has played, and how they did">
           View results…

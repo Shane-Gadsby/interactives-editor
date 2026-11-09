@@ -12,6 +12,7 @@ import { SplitColumns } from '../components/SplitColumns';
 import { analyzeUsage, type Usage } from '../lib/dependencies';
 import { VARIABLE_KINDS, TYPE_LABELS, variableFor, type VariableKind } from '../lib/variable-kinds';
 import { go, sourceLabel } from './UsagePanel';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const SCRIPT_TEMPLATE = `// Runs with \`ix\` (the player API), \`event\` (what triggered it) and \`vars\`.
 // Tick "Run on start" to register handlers when the player starts.
@@ -75,7 +76,7 @@ export function ScriptsPanel() {
         </div>
       ) : (
         <div className="panel-empty">
-          <p>Scripts are custom JavaScript with the <code>ix</code> API: read and set variables, move layers, play timelines, react to messages and run code every frame.</p>
+          <SectionBlurb text="Scripts are custom JavaScript with the ix API: read and set variables, move layers and react to messages." name="scripts" help={['scripts']} />
           <button className="btn primary" onClick={add}>
             + New script
           </button>
@@ -84,8 +85,8 @@ export function ScriptsPanel() {
       <div className="script-help">
         <div className={`sandbox-note${s.sandbox ? '' : ' off'}`}>
           {s.sandbox
-            ? 'Sandboxed: scripts run in a WASM VM with only ix, setTimeout/setInterval and console. No DOM, cookies or network (use data sources).'
-            : 'In-page: scripts run with full page access (node.element, fetch, DOM). Turn the sandbox on in Project settings for untrusted code.'}
+            ? 'Sandboxed: scripts only get ix, timers and console. No page, cookies or network (use data sources).'
+            : 'In-page: scripts have full page access (DOM, fetch). Turn the sandbox on in Project settings for untrusted code.'}
         </div>
         <div className="field-label block">ix API</div>
         <pre className="api-ref">{`ix.vars.score += 1
@@ -235,10 +236,7 @@ export function VariablesPanel() {
           </div>
         )}
       </div>
-      <p className="hint">
-        A variable is something the activity remembers while it runs: a count, a score, whether something is on. Use one in text as <code>{'{name}'}</code>, in expressions and bindings by name, bind inputs to
-        them, and change them with the Set variable action or <code>ix.vars</code>.
-      </p>
+      <SectionBlurb text="A variable is something the activity remembers while it runs: a count, a score, whether something is on." name="variables" help={['variables', 'using-variables']} />
     </div>
   );
 }
@@ -391,7 +389,7 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
             value={!!v.persist}
             onChange={(x) => setVar(v.id, { persist: x })}
           />
-          <p className="hint">Keeps the value when the learner comes back, in their record when results are kept and otherwise in their browser.</p>
+          <SectionBlurb text="Keeps the value when the learner comes back." name="remembering variables" help={['variables', 'putting-variables-back']} />
           <CheckField
             label="Save as user data"
             title="Keep this value for the person playing: it is loaded before the project starts, saved a moment after it changes and when they leave the page or move to another artboard (the same place Save user data and Load user data use). userData.loaded is true in expressions once it has been looked for. Not for live variables."
@@ -399,7 +397,7 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
             disabled={isLive(v)}
             onChange={(x) => setVar(v.id, { userData: x ? true : undefined })}
           />
-          <p className="hint">Saves the value for each person on the server, so it follows them to another device. Switched off for a variable that is kept up to date.</p>
+          <SectionBlurb text="Saves the value for each person on the server, so it follows them to another device." name="user data" help={['variables', 'save-as-user-data']} />
         </details>
       </td>
       <td>

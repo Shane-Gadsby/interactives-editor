@@ -20,6 +20,7 @@ import {
   type LibraryInfo,
 } from '../lib/libraries';
 import { COMPONENT_DRAG, addLibraryToProject, applyUpdates, detach, dropLibrary, known, reviewUpdates, startWithKit, syncBrandFlag, useComponent, waitSaved, type UpdateReview } from '../lib/library-actions';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
@@ -165,7 +166,7 @@ function PublishSection({ project, onChanged }: { project: Project; onChanged: (
   if (!isLibrary) {
     return (
       <Section help="libraries" title="Publish this project">
-        <p className="hint">Make this project a library to share its artboards, styles and assets as components other projects can use.</p>
+        <SectionBlurb text="Make this project a library to share its artboards, styles and assets as components." name="libraries" help={['libraries', 'making-a-library']} />
         <button className="btn" onClick={() => store().update((d) => void ((d as Project).settings.library = true))}>
           Make this project a library
         </button>
@@ -291,7 +292,7 @@ function BrandCheck({ project }: { project: Project }) {
   const clean = report && !report.colors.length && !report.fonts.length;
   return (
     <Section help="brand-kits" title="Brand check">
-      <p className="hint">Lists the colours and fonts in your own artboards that {kits.map((k) => k.name).join(', ')} {kits.length === 1 ? "doesn't" : "don't"} have. It is only a list: nothing is blocked.</p>
+      <SectionBlurb text={`Lists the colours and fonts you use that ${kits.map((k) => k.name).join(', ')} ${kits.length === 1 ? "doesn't" : "don't"} have; nothing is blocked.`} name="the brand check" help={['brand-kits', 'off-brand-check']} />
       <Row>
         <button className="btn small-btn" onClick={() => setReport(offBrand(project))}>
           {report ? 'Check again' : 'Check against the brand kit'}
@@ -604,7 +605,7 @@ function StylesSection({ project }: { project: Project }) {
 
   return (
     <Section help="libraries" title="Styles" actions={<StyleAdd onColor={() => void newColor()} onText={() => void newText()} />}>
-      {!colors.length && !texts.length && <p className="hint">Named colours and text styles. Layers that follow a style change with it, and a library's styles update with the library.</p>}
+      {!colors.length && !texts.length && <SectionBlurb text="Named colours and text styles. Layers that follow a style change with it." name="styles" help={['libraries', 'styles']} />}
       {colors.map((c: ColorStyle) => (
         <div key={c.id} className="style-row">
           {c.library ? (

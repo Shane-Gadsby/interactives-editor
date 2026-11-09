@@ -33,6 +33,7 @@ import { extendLayers, pickLayer } from '../lib/layer-range';
 import { ALT_DRAG_HINT, ALT_DRAG_TIP, altHintDue } from '../lib/alt-drag';
 import { PAGE_DRAG, setDraggedPage } from '../lib/components';
 import { INDENT, ROW_H, ROW_PAD, depthAtX, dropRows, slotAt, type DropSlot } from '../lib/layer-drop';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 export function LeftPanel() {
   const [tab, setTab] = useState<'layers' | 'assets' | 'libraries' | 'comments'>('layers');
@@ -869,7 +870,7 @@ export function Assets() {
       <button className="btn wide" onClick={upload}>
         <Icons.upload width={14} /> Upload files
       </button>
-      <p className="hint">Images, video, audio, fonts and data files (JSON/CSV/TSV/text, used from the Data tab). Drop files here to add them, or on the canvas to place them.</p>
+      <SectionBlurb text="Images, video, audio, fonts and data files. Drop files here to add them, or on the canvas to place them." name="Assets" help={['assets', 'adding-files']} />
       <DesignFiles />
       {assets.length > 1 && (
         <button className="link-btn small" onClick={() => void findDuplicates()} title="Look for files that were added more than once (the same bytes), and keep one copy">

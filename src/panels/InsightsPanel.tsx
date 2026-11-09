@@ -3,6 +3,7 @@ import { store, useEditor } from '../store/store';
 import { getInsights, type Insights } from '../lib/db';
 import { funnel, heatFor, insightsCsv, questionRows, stepRows } from '../lib/insights';
 import { download } from '../lib/export';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const RANGES: { days: number; label: string }[] = [
   { days: 7, label: 'Last 7 days' },
@@ -103,10 +104,10 @@ export function InsightsPanel() {
       <div className="insights-body">
         {error && <p className="error">{error}</p>}
         {!data && !error && <p className="muted">Loading…</p>}
-        {data && !data.shared && data.records === 0 && <p className="hint">Records come from learners who open the project from the Link for StudyDesk in Share link. There is no share link on yet.</p>}
+        {data && !data.shared && data.records === 0 && <SectionBlurb text="Records come from the Link for StudyDesk in Share link, and there is none on yet." name="Insights" help={['insights', 'what-you-see']} />}
         {empty && (
           <p className="muted">
-            Nothing recorded {data.days ? `in the last ${data.days} days` : 'yet'}. Learners who open the project from the Link for StudyDesk, signed in to StudyDesk, are counted. A project that switched recording off in Learner records (Project section of the Inspector) records nothing.
+            Nothing recorded {data.days ? `in the last ${data.days} days` : 'yet'}. Learners who open the project from the Link for StudyDesk are counted, unless Learner records is off.
           </p>
         )}
         {data && view && !empty && (
@@ -133,7 +134,7 @@ export function InsightsPanel() {
                 <span>records</span>
               </div>
             </div>
-            {data.truncated && <p className="hint">There are more records than Insights reads at once. These counts cover the most recent ones; choose a shorter period for the whole of it.</p>}
+            {data.truncated && <SectionBlurb text="These counts cover only the most recent records. Choose a shorter period to cover all of it." name="Insights" help={['insights', 'good-to-know']} />}
             {data.learners < 5 && <p className="hint">With so few learners a count can be one person. Wait for more before reading anything into it.</p>}
             <div className="ins-grid">
               <section className="ins-card">

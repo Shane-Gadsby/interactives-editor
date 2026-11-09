@@ -1,6 +1,7 @@
 import { isMasterArtboard, masterLayerNames, masterOf, masterSlotNames, pagesOfMaster, type Artboard, type Project } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, Row, Section, SelectField, TextField } from '../components/ui';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /**
  * The artboard's Page master settings. A page picks the artboard whose layers (logo, accent bar, footer) are drawn under its own,
@@ -20,7 +21,7 @@ export function MasterSection({ ab, project }: { ab: Artboard; project: Project 
     const choices = project.artboards.filter((a) => a.id !== ab.id && !a.master && !a.library && a.isMaster);
     return (
       <Section help="page-master" title="Page master" defaultOpen={false}>
-        <p className="hint">Share a logo, accent bar or footer between pages: put them on one artboard (the master) and every page draws it under its own layers. Change the master and every page follows.</p>
+        <SectionBlurb text="Put a logo, bar or footer on one artboard (the master) and every page draws it under its own layers." name="page masters" help={['page-master', 'quick-start']} />
         <SelectField
           label="Master"
           title="The artboard whose layers are drawn under this page"
@@ -87,9 +88,7 @@ function MasterOfPages({ ab, project, used }: { ab: Artboard; project: Project; 
   const candidates = project.artboards.filter((a) => a.id !== ab.id && !a.isMaster && !a.library && !a.master && !pagesOfMaster(project.artboards, a).length);
   return (
     <Section help="page-master" title="Page master">
-      <p className="hint">
-        This artboard is a page master. Its layers are drawn on {used.length || 'no'} page{used.length === 1 ? '' : 's'}, read-only, under each page&rsquo;s own layers unless you send them over.
-      </p>
+      <SectionBlurb text={`This artboard is a page master, drawn on ${used.length || 'no'} page${used.length === 1 ? '' : 's'}.`} name="page masters" help={['page-master', 'on-the-master']} />
       {used.length > 0 && (
         <ul className="master-list" aria-label="Pages that use this master">
           {used.map((p) => (
@@ -136,7 +135,7 @@ function MasterOfPages({ ab, project, used }: { ab: Artboard; project: Project; 
           </button>
         </Row>
       )}
-      <p className="hint">Buttons, inputs, video, embeds and instances are not drawn from a master. Its timelines and interactions do not run.</p>
+      <SectionBlurb text="Buttons, inputs, video, embeds and instances are not drawn from a master." name="what a master layer is" help={['page-master', 'what-a-master-layer-is']} />
     </Section>
   );
 }

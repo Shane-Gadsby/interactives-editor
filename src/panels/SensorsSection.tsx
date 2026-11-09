@@ -1,6 +1,7 @@
 import { consentText, declaresSensors, recordingCap, usesLine, type Project, type SensorSettings } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, NumberField, Row, Section, TextField } from '../components/ui';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /** Edit the project's declared sensors, dropping a key when it goes back to its default so the document stays small. */
 export function patchSensors(project: Project, patch: Partial<SensorSettings>): SensorSettings | undefined {
@@ -31,7 +32,7 @@ export function SensorsSection({ project }: { project: Project }) {
   const text = used ? consentText(s) : null;
   return (
     <Section help="sensors" title="Microphone and camera" defaultOpen={used}>
-      <p className="hint">Tick what this project uses. The page it plays in only lets it ask for these, and builds the screen that asks the learner from your choices. Update the share link after changing them.</p>
+      <SectionBlurb text="Tick what this project uses. The page it plays in asks the learner, and only for these." name="Microphone and camera" help={['sensors', 'turn-it-on']} />
       <CheckField label="Microphone" title="Record sound, play it back, and read the level (Start recording, Play recording, micLevel)" value={!!s.microphone} onChange={(v) => set(v ? { microphone: true } : { microphone: false, listen: false, listenOnly: false })} />
       {s.microphone && (
         <>
@@ -72,9 +73,15 @@ export function SensorsSection({ project }: { project: Project }) {
             commitOnBlur
             onChange={(v) => set({ noAlternative: v }, 'sensors-why')}
           />
-          <p className="hint">
-            <strong>{usesLine(s)}</strong> Learners can choose "Do not use my microphone or camera" once, and every activity then shows its plain version, so build that version: read <code>microphone</code> and <code>camera</code> (unavailable, denied, ready, off) in a condition or binding and show a typing or button way to finish.
-          </p>
+          <SectionBlurb
+            text={
+              <>
+                <strong>{usesLine(s)}</strong> Learners can opt out, so build a plain version too.
+              </>
+            }
+            name="the plain version"
+            help={['sensors', 'build-the-plain-version-first']}
+          />
           <div className="consent-preview" aria-label="What learners are asked">
             <div className="field-label block">What learners are asked</div>
             <p>

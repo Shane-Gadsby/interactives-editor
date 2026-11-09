@@ -76,6 +76,7 @@ import { labelOfKind, nodeAka, nodeHeading, nodeLabel, nodeTip, plainParam, pw, 
 import { finishReveal, frameRects, onReveal, pendingReveal, reducedMotion, type RevealRequest } from '../lib/graph-reveal';
 import { setLastKeyArea } from '../lib/key-area';
 import { addGraphNote, anchorOrigin, graphNotePlace, patchGraphNote, removeGraphNotes, attachGraphNote } from '../lib/graph-notes';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 type IxNodeData = { logic: LogicNode; summary: string; revealed?: boolean };
 
@@ -1137,9 +1138,7 @@ export function LogicGraph() {
       </div>
       <div className="logic-settings">
         {chosen.length > 1 ? (
-          <p className="hint">
-            {chosen.length} selected. Drag any of them to move them all. <b>Ctrl+C</b> copies them with the connections between them (pasted copies are wired to each other the same way), <b>Ctrl+D</b> duplicates, <b>Ctrl+G</b> puts them in a new group and <b>Del</b> deletes them. Ctrl+click adds or removes one.
-          </p>
+          <SectionBlurb text={`${chosen.length} selected. Drag any of them to move them all. Right-click for more.`} name="selecting nodes" help={['interactions', 'selecting-moving-around-and-copying']} />
         ) : s.sel && ab.logic.notes?.some((n) => n.id === s.sel) ? (
           <GraphNoteForm note={ab.logic.notes!.find((n) => n.id === s.sel)!} logic={ab.logic} />
         ) : selected ? <ParamForm node={selected} ab={ab} project={s.project} onChange={(params) => updateLogic((a) => {
@@ -1149,7 +1148,7 @@ export function LogicGraph() {
           const n = a.logic.nodes.find((x) => x.id === selected.id);
           if (n) n.note = note || undefined;
         }, `logic-note-${selected.id}`)} /> : s.sel && ab.logic.groups?.some((g) => g.id === s.sel) ? (
-          <p className="hint">A group. Drag it (its title or the empty space inside) to move it with the nodes in it, drag its edges to resize it, double-click the title to rename it, and right-click it to add a node inside or change its colour. Delete asks whether to keep the nodes inside or delete them too.</p>
+          <SectionBlurb text="A group. Drag it to move it with its nodes, or its edges to resize it. Double-click the title to rename it." name="groups" help={['interactions', 'groups']} />
         ) : (
           <p className="hint">Select a node to edit its settings.</p>
         )}

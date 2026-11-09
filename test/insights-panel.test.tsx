@@ -265,7 +265,7 @@ describe('Insights tab', () => {
     mount(() => <InsightsPanel />);
     await flush();
     expect(host.textContent).toContain('Nothing recorded in the last 30 days');
-    expect(host.textContent).toContain('There is no share link on yet');
+    expect(host.textContent).toContain('there is none on yet');
     expect((Array.from(host.querySelectorAll('button')).find((b) => b.textContent === 'Export CSV') as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -275,7 +275,7 @@ describe('Insights tab', () => {
     mount(() => <InsightsPanel />);
     await flush();
     expect(host.textContent).toContain('a count can be one person');
-    expect(host.textContent).toContain('more records than Insights reads at once');
+    expect(host.textContent).toContain('cover only the most recent records');
   });
 
   it('shows the server error instead of numbers', async () => {

@@ -12,6 +12,7 @@ import { reportCsv, reportHtml, type ReviewedMap } from '../lib/a11y/report';
 import { loadReviewed, toggleReviewed } from '../lib/a11y/reviewed';
 import type { A11yReport, Finding, Fix, Severity } from '../lib/a11y/types';
 import type { Project } from 'interactives-player';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const SEVERITY: { id: Severity; label: string; plural: string; tip: string }[] = [
   { id: 'issue', label: 'Problem', plural: 'problems', tip: 'A check found a problem' },
@@ -138,7 +139,7 @@ export function AccessibilityPanel() {
           {!groups.length && (
             <div className="panel-empty">
               <p>{total ? 'Nothing matches the filters.' : 'The checks found nothing to look at.'}</p>
-              <p className="hint">That is not the same as accessible: some things can only be checked by a person. The exported report lists what these checks cannot see.</p>
+              <SectionBlurb text="That is not the same as accessible: a person still has to check some things." name="what the checks cannot see" help={['accessibility-checker', 'what-it-cannot-see']} />
             </div>
           )}
           {groups.map((g) => (

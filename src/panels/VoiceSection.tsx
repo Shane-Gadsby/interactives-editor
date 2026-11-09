@@ -30,6 +30,8 @@ import {
   voiceWordsIn,
   type VoiceStatus,
 } from '../lib/voice';
+import { SectionBlurb } from '../components/SectionBlurb';
+import { openHelp } from '../help/Help';
 
 type Note = { kind: 'info' | 'error'; text: string } | null;
 
@@ -379,9 +381,7 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
       )}
       {!v.device && own && (
         <>
-          <div className="muted small">
-            Your own sound goes in this word&apos;s Play sound node, the same node the made voice uses. The word is then only in your audio, so it has to be said clearly and its file must not be named after it. Marking on the server and the word being kept off the learner&apos;s page work as before.
-          </div>
+          <SectionBlurb text="Your own sound goes in this word's Play sound node. Say the word clearly, and don't name the file after it." name="the spoken word" help={['question-kit', 'spelling-tests']} />
           <SelectField
             label="Sound"
             title="A sound from this project's Assets, or add one"
@@ -432,9 +432,7 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
       )}
       {!v.device && !own && (
         <>
-          <div className="muted small">
-            Turns the first accepted spelling into speech here, while you are authoring, and saves it as a sound in this word&apos;s Play sound node. The learner&apos;s page only gets the sound, never the word.
-          </div>
+          <SectionBlurb text="Turns the first accepted spelling into speech and saves it as a sound. The learner's page only gets the sound." name="the spoken word" help={['question-kit', 'spelling-tests']} />
           {status === null && <div className="muted small">Asking the server about the voice...</div>}
           {status?.state === 'unsupported' && <div className="q-problem">{status.error}</div>}
           {(status?.state === 'missing' || status?.state === 'failed') && (
@@ -485,7 +483,7 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
               <button className="btn" disabled={!words.length || !!busy} title="Uses this voice and speed for every spelling word in the project. Each word keeps its own Say it like and sentence. Words set to My own audio are skipped" onClick={() => void make(words, true)}>
                 {busy === 'all' ? 'Making them...' : `Make the audio for all ${words.length} ${words.length === 1 ? 'word' : 'words'}`}
               </button>
-              {v.asset && <div className="muted small">The audio for this word is in the project&apos;s Assets. Change the word or how it is said, then make it again to replace it.</div>}
+              {v.asset && <div className="muted small">The audio for this word is in the project&apos;s Assets. Make it again after a change to replace it.</div>}
             </>
           )}
         </>
@@ -503,7 +501,10 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
       />
       {v.device && (
         <div className="q-problem" role="alert">
-          The word is in the page. Anyone can read it in their browser&apos;s developer tools, so this is for practice, not a graded test. This question is marked in the page and sends no grade, and Mark answers on the server is off. The voice is whatever the learner&apos;s device has, and with none for the language nothing is said. For a graded test turn this off and make the audio with the voice above.
+          The word is in the page, so anyone can read it in developer tools: this is for practice, not a graded test, and sends no grade.{' '}
+          <button type="button" className="link-btn" onClick={() => openHelp('question-kit', 'spelling-tests')} aria-label="More about practice mode, in the help">
+            More about practice mode →
+          </button>
         </div>
       )}
     </>

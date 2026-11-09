@@ -5,6 +5,7 @@ import { CheckField, IconButton, SelectField, TextField } from '../components/ui
 import { Icons } from '../components/icons';
 import { track } from '../lib/analytics';
 import { addAttribution, addForUncovered, linkAsset, moveAttribution, removeAttribution, setAttribution, focusEntryNext, peekFocusEntry, setCredits, subscribeFocusEntry, unlinkAsset } from '../lib/attributions';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const edit = (recipe: (p: Project) => void, coalesce?: string) => store().update((d) => recipe(d as Project), coalesce ? { coalesce } : {});
 
@@ -171,9 +172,12 @@ export function CreditsPanel() {
           <CreditsSettingsFields />
         </div>
         {list.length === 0 ? (
-          <p className="cr-empty">
-            Nothing here yet, and nothing needs to be. Add an entry for each picture, sound, passage of text or data set you did not make yourself, and for any book or page the project draws on, with who made it, where to find it and the licence. Link an entry to the files it covers and the Assets panel shows which files still have no credit. Then choose whether learners get a Credits button.
-          </p>
+          <SectionBlurb
+            className="cr-empty"
+            text="Nothing here yet, and nothing needs to be. Add an entry for each picture, sound or text you did not make yourself."
+            name="attributions"
+            help={['attributions', 'adding-entries']}
+          />
         ) : (
           list.map((e, i) => <EntryCard key={e.id} entry={e} index={i} count={list.length} project={project} focus={focusId === e.id} />)
         )}
