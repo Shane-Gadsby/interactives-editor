@@ -30,6 +30,7 @@ import { artboardMenuItems, renameGroupCommand, tidyTheseCommand } from '../lib/
 import { brandHeldIds } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
 import { extendLayers, pickLayer } from '../lib/layer-range';
+import { ALT_DRAG_HINT, ALT_DRAG_TIP, altHintDue } from '../lib/alt-drag';
 import { INDENT, ROW_H, ROW_PAD, depthAtX, dropRows, slotAt, type DropSlot } from '../lib/layer-drop';
 
 export function LeftPanel() {
@@ -110,9 +111,12 @@ export function Layers() {
     setCollapsed(next);
   };
 
+  //The first few plain drags say what Alt would do (lib/alt-drag.ts)
+  const [altNote, setAltNote] = useState(false);
   const endDrag = () => {
     setDragId(null);
     setDrop(null);
+    setAltNote(false);
   };
 
   // Where a drag over the list would land. Works from the pointer, not from the row under it, so the space below the
@@ -153,7 +157,8 @@ export function Layers() {
       return;
     }
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    //Alt (Option) held: the layer is copied into the spot, so the pointer says so
+    e.dataTransfer.dropEffect = e.altKey ? 'copy' : 'move';
     setDrop((prev) => (sameSlot(prev, slot) ? prev : slot));
   };
   const onListDragLeave = (e: DragEvent) => {
@@ -163,7 +168,8 @@ export function Layers() {
     if (!dragId) return;
     e.preventDefault();
     const slot = slotFor(e);
-    if (slot && !slot.noop) store().moveNode(dragId, slot.parentId, slot.at);
+    if (slot && e.altKey) store().copyNodeTo(dragId, slot.parentId, slot.at);
+    else if (slot && !slot.noop) store().moveNode(dragId, slot.parentId, slot.at);
     endDrag();
   };
 
@@ -451,7 +457,8 @@ export function Layers() {
         }}
         onDragStart={(e) => {
           setDragId(n.id);
-          e.dataTransfer.effectAllowed = 'move';
+          if (!e.altKey) setAltNote(altHintDue());
+          e.dataTransfer.effectAllowed = 'copyMove';
           e.dataTransfer.setData('text/plain', n.id);
         }}
         onDragEnd={endDrag}
@@ -505,7 +512,7 @@ export function Layers() {
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className="layer-name" title={nodeTypeLabel(n.type)}>
+          <span className="layer-name" title={filtering || brand ? nodeTypeLabel(n.type) : `${nodeTypeLabel(n.type)}. Drag to reorder. ${ALT_DRAG_TIP}`}>
             {n.name}
           </span>
         )}
@@ -570,6 +577,11 @@ export function Layers() {
         Text
       </button>
     </div>
+    {altNote && (
+      <div className="layers-search-count" role="status">
+        {ALT_DRAG_HINT}
+      </div>
+    )}
     {filtering && (
       <div className="layers-search-count" role="status">
         {hitCount === 0 ? 'No layers match' : `${hitCount} ${hitCount === 1 ? 'match' : 'matches'}`}

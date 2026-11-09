@@ -1052,6 +1052,33 @@ export class EditorStore {
     });
   }
 
+  /** Alt-drag in the Layers list: a copy of the layer lands in the drop spot (the same arguments as `moveNode`) and the original stays. */
+  copyNodeTo(id: string, parentId: string | null, index: number): string | null {
+    const ab = this.artboard();
+    if (!ab) return null;
+    track('doc', 'duplicate', { thing: 'layers-drag' });
+    let made: string | null = null;
+    this.update((d) => {
+      const dab = getArtboard(d as Project, ab.id)!;
+      const loc = locate(dab, id);
+      if (!loc) return;
+      if (parentId && (parentId === id || locate(dab, parentId)?.ancestors.some((a) => a.id === id))) return; // a group can't be copied into itself
+      const oldOffset = loc.ancestors.reduce((o, a) => ({ x: o.x + a.x, y: o.y + a.y }), { x: 0, y: 0 });
+      const target = parentId ? locate(dab, parentId) : null;
+      const list = target && isContainer(target.node) ? target.node.children : dab.children;
+      const newOffset = target ? [...target.ancestors, target.node].reduce((o, a) => ({ x: o.x + a.x, y: o.y + a.y }), { x: 0, y: 0 }) : { x: 0, y: 0 };
+      const copy = cloneWithNewIds(JSON.parse(JSON.stringify(loc.node)) as SceneNode);
+      copy.x += oldOffset.x - newOffset.x;
+      copy.y += oldOffset.y - newOffset.y;
+      copy.name = uniqueName(nodeNames(dab), loc.node.name);
+      list.splice(Math.max(0, Math.min(list.length, index)), 0, copy);
+      made = copy.id;
+      adoptQuestions(d as Project, ab.id, [copy.id]);
+    });
+    if (made) this.select([made]);
+    return made;
+  }
+
   /**
    * Align the selection's top-level layers: to each other when several are selected, to their
    * container (or the artboard) when one is.
@@ -1468,12 +1495,13 @@ export class EditorStore {
   /**
    * Duplicate several artboards in one undo step. The copies keep their layout among themselves and sit to the right of the
    * originals; they are selected afterwards. A copy joins the group of its original, except when a whole group is duplicated:
-   * then the copies are a new group of their own ("Quiz copy").
+   * then the copies are a new group of their own ("Quiz copy"). Answers with each original's id and its copy's, `inPlace`
+   * leaves the copies on top of the originals (Alt-drag then carries them away).
    */
-  duplicateArtboards(ids: string[]): void {
+  duplicateArtboards(ids: string[], opts: { inPlace?: boolean } = {}): Map<string, string> {
     const p = this.state.project;
     const srcs = p.artboards.filter((a) => ids.includes(a.id));
-    if (!srcs.length || srcs.some((a) => this.brandCopyRefused(a))) return;
+    if (!srcs.length || srcs.some((a) => this.brandCopyRefused(a))) return new Map();
     track('doc', 'artboard-duplicate', { sum: { artboards: srcs.length } });
     const copies = srcs.map((a) => ({ src: a, copy: this.copyArtboard(a) }));
     if (srcs.length > 1) {
@@ -1491,6 +1519,13 @@ export class EditorStore {
         taken.add(c.copy.name);
       }
     }
+    //an Alt-drag copy starts under the original and the drag carries it away
+    if (opts.inPlace) {
+      for (const c of copies) {
+        c.copy.canvasX = c.src.canvasX;
+        c.copy.canvasY = c.src.canvasY;
+      }
+    }
     //a group copied whole becomes a group of copies
     const wholeGroups = (p.artboardGroups ?? []).filter((g) => p.artboards.filter((a) => a.group === g.id).every((a) => ids.includes(a.id)) && srcs.some((a) => a.group === g.id));
     const fresh = new Map(wholeGroups.map((g) => [g.id, { id: uid('abg'), name: freshGroupName(p, `${g.name} copy`) }]));
@@ -1505,6 +1540,7 @@ export class EditorStore {
       }
     });
     this.pickArtboards(copies.map((c) => c.copy.id));
+    return new Map(copies.map((c) => [c.src.id, c.copy.id]));
   }
 
   /** A copy of an artboard with new ids all through (layers, timelines, joysticks, blends and the interactions that point at them), next to it on the canvas. Not added to the project. */

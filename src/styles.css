@@ -1946,6 +1946,12 @@ body.col-resizing * {
   stroke-dasharray: 7 5;
   pointer-events: none;
 }
+/* Alt down: what Alt-drag copies shows the copy cursor (Canvas altHeld) */
+.canvas.alt-held .ab-label,
+.canvas.alt-held .ab-label-chip,
+.canvas.alt-held .ab-group-chip {
+  cursor: copy;
+}
 .ab-group-chip {
   fill: var(--panel-2);
   stroke: var(--line-2);
