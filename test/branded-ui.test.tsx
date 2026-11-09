@@ -114,7 +114,8 @@ describe('the Branded starter packs section', () => {
       expect(made.brandLook?.id).toBe('blue');
       expect(made.themes?.default).toBe('theme-blue');
       expect(made.template?.builtin).toBe('branded:assessment/fake-quiz');
-      expect(made.template?.checklist).toHaveLength(1);
+      //the starter's one item, and the Credits button's
+      expect(made.template?.checklist).toHaveLength(2);
       expect(opened).toEqual([made.id]);
       expect(sessionStorage.getItem('ix.checklist')).toBeDefined();
     } finally {
@@ -185,17 +186,19 @@ describe('switching colourway', () => {
     const sets = start.logic.nodes.filter((n) => n.kind === 'action.setTheme');
     expect(sets.map((n) => JSON.parse(String(n.params.theme)))).toEqual(['Gold', 'Purple', 'Blue', 'Green', 'Orange', 'Red']);
     for (const n of sets) expect(findTheme(p.themes!, JSON.parse(String(n.params.theme)))).toBeTruthy();
-    const clicks = start.logic.nodes.filter((n) => n.kind === 'event.pointer');
+    //(the Credits button every starter has is not a swatch)
+    const clicks = start.logic.nodes.filter((n) => n.kind === 'event.pointer' && n.params.target !== start.children.find((c) => c.name === 'Credits button')?.id);
     expect(clicks.map((n) => n.params.target)).toEqual(group.children.map((c) => c.id));
-    expect(start.logic.edges).toHaveLength(6);
+    expect(start.logic.edges).toHaveLength(7);
     //adding again replaces, not doubles
     addLearnerSwitcher(p);
     expect(start.children.filter((n) => n.name === 'Colourway switcher')).toHaveLength(1);
     expect(start.logic.nodes.filter((n) => n.kind === 'action.setTheme')).toHaveLength(6);
     removeLearnerSwitcher(p);
     expect(hasLearnerSwitcher(p)).toBe(false);
-    expect(start.logic.nodes).toHaveLength(0);
-    expect(start.logic.edges).toHaveLength(0);
+    //only the Credits button's click and Open credits are left
+    expect(start.logic.nodes.map((n) => n.kind)).toEqual(['event.pointer', 'action.credits']);
+    expect(start.logic.edges).toHaveLength(1);
     let left = 0;
     for (const ab of p.artboards) walk(ab.children, (n) => void (n.name.startsWith('Colourway') && left++));
     expect(left).toBe(0);

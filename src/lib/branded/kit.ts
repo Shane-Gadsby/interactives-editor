@@ -232,6 +232,11 @@ export function logo(ctx: BrandedCtx, x: number, y: number, width = 150, onConte
 /** The logo's height for a width (the artwork's own proportions), so a page can place it by its bottom edge. */
 const logoHeight = (width: number) => round1((logoShapes().height * width) / logoShapes().width);
 
+/** The height, on a page of this height, of the line the logo and the footer text sit on (the middle of the small logo). */
+export const footerMidY = (height: number): number => round1(height - LOGO_BOTTOM - logoHeight(80) / 2);
+/** The page's side margin, for what lines up with the content's edge. */
+export const SIDE_MARGIN = SIDE;
+
 /**
  * The page master for a kind of page at a size: the chrome (logo, accent bar, sweeps, web address) built once per project and
  * named by every page of that kind, instead of copied onto each. Masters sit after the pages in the artboard list. On the white

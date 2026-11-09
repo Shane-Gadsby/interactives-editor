@@ -11,6 +11,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Credits on every starter': [['attributions', 'A Credits button of your own'], ['branded-starters', 'button in a corner']],
   'Smaller saves and a faster first load': [['interface', 'sent squeezed']],
   'Shorter Inspector wording': [['properties-panel', 'More about']],
   'Preferences, redesigned': [['preferences', 'Reset this page']],
@@ -122,7 +123,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
 };
 
 //Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone
-const UPCOMING = new Set<string>(['Smaller saves and a faster first load']);
+const UPCOMING = new Set<string>(['Smaller saves and a faster first load', 'Credits on every starter']);
 
 const section = (): string[] => {
   const text = readFileSync(join(__dirname, '..', 'CHANGELOG.md'), 'utf8');

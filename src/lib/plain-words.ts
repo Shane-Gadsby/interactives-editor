@@ -43,6 +43,7 @@ export const PLAIN_NODE: Record<string, string> = {
   'action.artboard': 'Go to a page',
   'action.moveView': 'Move the view to a layer',
   'action.url': 'Open a web address',
+  'action.credits': 'Show the credits',
   'action.cursor': 'Change the mouse pointer',
   'action.saveUserData': 'Save progress',
   'action.loadUserData': 'Load saved progress',
