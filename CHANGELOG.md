@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Shorter Inspector wording**: the explainers in the Properties panel and side panels are now one short line with a **More about …** link that opens the help at the right place. The longer detail lives in the help, and a test keeps the lines short.
 - **Preferences, redesigned**: Preferences is now one window with pages down the left: General, Canvas and guides, Timeline, Interactions, Text and fonts, Accessibility, Keyboard shortcuts, and Workspace (in the editor). Changes apply at once. Search across every setting takes you to it, there's Reset this page and Reset everything, and you can drag the corner to resize it. The keyboard shortcuts sheet is now the Keyboard shortcuts page (**?** still opens it), and the Timeline's lane switches are there too.
 - **Keyboard sets**: keep several named sets of keys and switch between them (Default and Illustration style are built in). Save as, rename, duplicate and delete your own, export one to a file, and share one as a code or a link. Import shows what a set would do, and any keys that clash, before it is added. Sets are saved with you, never in a project.
 - **Reorder the Properties panel and tool bar**: drag any section by its title (or press Alt+Up / Alt+Down, or right-click it) and each kind of layer, the page and Libraries remember their own order; drag the tool bar's groups and the tools inside them the same way. The order is saved with you, never in the project, and Preferences has Reset section and tool order.
