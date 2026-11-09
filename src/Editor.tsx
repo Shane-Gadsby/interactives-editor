@@ -9,6 +9,7 @@ import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from '.
 import { assetUrls } from './lib/assets';
 import { ensureFonts } from './lib/fonts';
 import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, standaloneHtml } from './lib/export';
+import { warmPlayerSource } from './lib/player-source';
 import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
 import { importGiftFile } from './lib/gift-import';
@@ -29,6 +30,8 @@ import { Canvas } from './canvas/Canvas';
 import { ThemeFixedHint } from './components/ThemeFixedHint';
 import { ReferenceModal } from './panels/InterfacePanel';
 import { MotionExportModal } from './components/MotionExportModal';
+import { Shell } from './components/Shell';
+import { warmLater } from './lib/warm';
 import { exportProblems, typeDefinitions } from 'interactives-player';
 import { confirmDialog } from './components/dialogs';
 import { Icons, type IconName } from './components/icons';
@@ -170,7 +173,7 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
         </button>
       </div>
     );
-  if (!ready) return <div className="center-msg muted">Opening project…</div>;
+  if (!ready) return <Shell />;
   return <Workspace key={ready.get().project.id} home={home} />;
 }
 
@@ -465,6 +468,7 @@ function Workspace({ home }: { home: () => void }) {
   useThumbnails();
   useShortcuts();
   useBrandOverride();
+  useEffect(() => warmLater(), []);
   const s = useEditor((st) => ({ toast: st.toast, report: st.report, brandOverride: st.brandOverride }));
   const [widths, setWidth] = usePanelWidths();
   useDockSync();
@@ -738,11 +742,11 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       {motionOpen && <MotionExportModal onClose={() => setMotionOpen(false)} />}
       {reviewOpen && <ShareForReviewModal onClose={() => setReviewOpen(false)} />}
       {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} />}
-      <button className="btn primary" onClick={onPreview} title="Play the project exactly as the exported file will">
+      <button className="btn primary" onClick={onPreview} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Play the project exactly as the exported file will">
         <Icons.preview width={14} /> Preview
       </button>
       <div className="menu-wrap">
-        <button className="btn" onClick={() => setMenu(!menu)} title="Export: save the project, or a picture or animation of it, as files">
+        <button className="btn" onClick={() => setMenu(!menu)} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Export: save the project, or a picture or animation of it, as files">
           <Icons.download width={14} /> Export
         </button>
         {menu && (
@@ -795,7 +799,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         )}
       </div>
       <div className="menu-wrap">
-        <button className="btn" onClick={() => setShareMenu(!shareMenu)} title="Share the project: a link to play it, people to edit it with, reviewers to comment on it">
+        <button className="btn" onClick={() => setShareMenu(!shareMenu)} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Share the project: a link to play it, people to edit it with, reviewers to comment on it">
           <Icons.share width={14} /> Share
         </button>
         {shareMenu && (

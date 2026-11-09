@@ -5,7 +5,7 @@ import { FontField } from './FontPicker';
 import { SelectField, CheckField, NumberField } from './ui';
 import { cleanGrid, GRID_PRESETS, GRID_SIZE_RANGE, GRID_SUBDIV_RANGE } from '../lib/grid';
 import { restartTips, stripShown } from '../lib/onboarding';
-import { CODE_THEMES, type CodeTheme } from '../lib/code-theme';
+import { CODE_THEMES, type CodeTheme } from '../lib/code-theme-prefs';
 import { HIDE_PREF, LANE_KINDS, LANE_NAME } from '../lib/timeline-view';
 import { PAGES, type PageId } from '../lib/prefs-window';
 import { KeymapList } from './KeymapPrefs';

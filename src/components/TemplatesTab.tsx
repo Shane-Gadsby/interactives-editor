@@ -4,7 +4,10 @@ import { track } from '../lib/analytics';
 import { changeTemplate, createProjectRecord, deleteTemplate, putAsset, exampleAssetBytes, exampleThumbUrl, getExample, listExamples, listTemplates, setProjectMeta, templateThumbUrl, useExample, useTemplate, type ExampleInfo } from '../lib/db';
 import { standaloneHtml } from '../lib/export';
 import { STARTERS, projectFromStarter, type Starter } from '../lib/template-starters';
-import { BRANDED_STARTERS, projectFromBrandedStarter, takeInlineAssets, type BrandedStarter, type Colourway } from '../lib/branded';
+import { projectFromBrandedStarter, takeInlineAssets } from '../lib/branded/project';
+import type { Colourway } from '../lib/branded/looks';
+import type { BrandedStarter } from '../lib/branded/kit';
+import { brandedStarters } from '../lib/branded-lazy';
 import { GOALS, goalsOf, plainTags, starterMatches, type Goal } from '../lib/starter-goals';
 import { starterPlayHtml, type StarterPick } from '../lib/starter-pick';
 import { STARTER_FINDER_HELP } from '../help/context';
@@ -259,7 +262,11 @@ const groupsOf = (list: ExampleInfo[]): [string, ExampleInfo[]][] => {
   return [...out.entries()];
 };
 
+const NO_STARTERS: BrandedStarter[] = [];
+
 export function TemplatesTab({ folder, folders, open }: { folder: string | null; folders: string[]; open: (id: string) => void }) {
+  //the branded starters are a chunk of their own: the plain ones show at once, the branded packs and the counts join when it is in
+  const startersIn = brandedStarters.use();
   const [list, setList] = useState<TemplateInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sub, setSub] = useState<Sub | null>(null);
@@ -303,6 +310,7 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
   // The built-in starters the search and the goal chip leave. Each chip's count is what it would show with the same search
   const fits = (s: { key: string; name: string; description: string; tags: string[] }, g: Goal | null) => (!g || goalsOf(s.key).includes(g)) && starterMatches(query, s);
   const plain = STARTERS.filter((s) => fits(s, goal));
+  const BRANDED_STARTERS = startersIn?.BRANDED_STARTERS ?? NO_STARTERS;
   const branded = BRANDED_STARTERS.filter((s) => fits(s, goal));
   const total = plain.length + branded.length;
   const countFor = (g: Goal | null) => STARTERS.filter((s) => fits(s, g)).length + BRANDED_STARTERS.filter((s) => fits(s, g)).length;

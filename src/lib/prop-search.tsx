@@ -1,5 +1,5 @@
 import { createContext, useContext, useId, useLayoutEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
-import { scoreWord, wordsOf } from '../help/search';
+import { scoreWord, wordsOf } from '../help/match';
 import { FIELD_TIPS } from '../components/tips';
 import { queryVariants } from './plain-words';
 

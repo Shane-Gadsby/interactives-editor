@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, beforeAll } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createArtboard, createNode, createProject } from 'interactives-player';
@@ -12,6 +12,10 @@ import { CommandPalette } from '../src/components/CommandPalette';
 import { closePalette, openPalette } from '../src/lib/command-palette';
 import { COMMANDS } from '../src/lib/keymap';
 import { RECIPES } from '../src/lib/recipes';
+import { warmHelp } from './lazy-chunks';
+
+//the editor loads these in chunks of their own; the test starts with them in
+beforeAll(() => warmHelp());
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 

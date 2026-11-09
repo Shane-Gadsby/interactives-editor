@@ -1,4 +1,4 @@
-import playerSource from '@player-iife?raw';
+import { loadPlayerSource } from './player-source';
 import { buildStandaloneHtml, PACKAGE_EXTENSION, withPublishedCredits, type Asset, type ContextValues, type Project } from 'interactives-player';
 import { hasScriptLayers } from './draw-templates';
 import { assetBytes, exportPackage } from './db';
@@ -72,7 +72,7 @@ export async function standaloneHtml(
   // The swapped assets carry their bytes as data: urls, which the builder embeds as they are (assetBytes reads them too)
   const p = opts.optimise && !opts.bytesFor ? await withOptimisedAssets(named) : named;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;
-  const html = await buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: withFetched(fetched, opts.bytesFor ?? ((a) => assetBytes(project.id, a))), debug: opts.debug, accessibility: opts.accessibility, context: opts.context, preconnectFonts: !opts.embedFonts, fontsBase: opts.embedFonts ? undefined : fontsBase() });
+  const html = await buildStandaloneHtml(p, { playerSource: await loadPlayerSource(), sandboxSource: sandbox, bytesFor: withFetched(fetched, opts.bytesFor ?? ((a) => assetBytes(project.id, a))), debug: opts.debug, accessibility: opts.accessibility, context: opts.context, preconnectFonts: !opts.embedFonts, fontsBase: opts.embedFonts ? undefined : fontsBase() });
   // The player skips a Google font whose element id is already in the page, so these go in ahead of its script
   return opts.embedFonts ? inHead(html, await embeddedFontStyles(p, opts.onWarning)) : html;
 }
@@ -107,8 +107,6 @@ export async function downloadPackage(project: Project): Promise<void> {
 export function downloadJson(project: Project): void {
   download(new Blob([JSON.stringify(withoutLinks(project), null, 2)], { type: 'application/json' }), `${fileSafe(project.name)}.json`);
 }
-
-export { playerSource };
 
 /** Runs an export step; if it throws, the fault is reported (the format and the kind of failure, nothing of the project) and goes on up. */
 async function failsAs<T>(kind: string, format: string, step: () => Promise<T>): Promise<T> {

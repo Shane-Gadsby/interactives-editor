@@ -1,0 +1,88 @@
+/* The first screen: the editor's frames with nothing in them yet. It is plain html in index.html (so it paints before any script
+   has arrived) and the same markup is components/Shell.tsx (the Editor's "opening" state), so the swap to the real one is
+   only the panels filling in. Same colour variables as the editor; no motion. */
+.ix-shell {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 72px 300px 1fr 320px;
+  grid-template-rows: 44px 1fr 220px;
+  grid-template-areas:
+    'top top top top'
+    'tools left stage right'
+    'bottom bottom bottom bottom';
+  color: var(--text);
+  background: var(--bg);
+}
+.ix-shell > div {
+  background: var(--panel);
+  min-width: 0;
+}
+.ix-shell-top {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 2px solid var(--brand);
+}
+.ix-shell-tools {
+  grid-area: tools;
+  border-right: 1px solid var(--line);
+}
+.ix-shell-left {
+  grid-area: left;
+  border-right: 1px solid var(--line);
+}
+.ix-shell-right {
+  grid-area: right;
+  border-left: 1px solid var(--line);
+}
+.ix-shell-bottom {
+  grid-area: bottom;
+  border-top: 1px solid var(--line);
+}
+.ix-shell > .ix-shell-stage {
+  grid-area: stage;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--canvas);
+}
+.ix-shell-stage p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+/* Anything that isn't a project (the projects list, help, review pages): just the bar and a quiet line */
+.ix-shell.ix-plain {
+  grid-template-columns: 1fr;
+  grid-template-rows: 44px 1fr;
+  grid-template-areas:
+    'top'
+    'stage';
+}
+.ix-shell.ix-plain > .ix-shell-tools,
+.ix-shell.ix-plain > .ix-shell-left,
+.ix-shell.ix-plain > .ix-shell-right,
+.ix-shell.ix-plain > .ix-shell-bottom {
+  display: none;
+}
+.ix-shell.ix-plain > .ix-shell-stage {
+  background: var(--bg);
+}
+@media (max-width: 900px) {
+  .ix-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: 44px 1fr;
+    grid-template-areas:
+      'top'
+      'stage';
+  }
+  .ix-shell > .ix-shell-tools,
+  .ix-shell > .ix-shell-left,
+  .ix-shell > .ix-shell-right,
+  .ix-shell > .ix-shell-bottom {
+    display: none;
+  }
+}

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, beforeAll } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createProject } from 'interactives-player';
@@ -31,6 +31,10 @@ import { GettingStarted } from '../src/components/GettingStarted';
 import { FIRST_RUN } from '../src/lib/starter-goals';
 import { JOBS, jobDone, markJob, wantsEssentials } from '../src/lib/onboarding';
 import { prefs, setPrefs } from '../src/lib/prefs';
+import { warmStarters, warmHelp } from './lazy-chunks';
+
+//the editor loads these in chunks of their own; the test starts with them in
+beforeAll(() => Promise.all([warmStarters(), warmHelp()]));
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver ??= class {

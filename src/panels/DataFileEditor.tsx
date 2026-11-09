@@ -4,7 +4,8 @@ import { dataCache } from '../lib/data';
 import { csvToGrid, delimiterOf, gridToCsv, gridToJson, guiFor, hasError, indentOf, isFlatTable, jsonText, jsonToGrid, layoutOf, problemsOf, textOfValue, type Grid, type Json, type Path, type Problem, type Scalar } from '../lib/data-edit';
 import { giveOwnFile, makeEditableCopy, readAssetText, saveDataText, sharersOf } from '../lib/data-save';
 import { DataForm } from './DataForm';
-import { DataRawEditor } from './DataRawEditor';
+import { lazyModule } from '../lib/lazy-module';
+import type { DataRawEditor as RawEditorType } from './DataRawEditor';
 import { CodeThemeSwitch } from '../components/CodeThemeSwitch';
 import { DataTable } from './DataTable';
 import { DataTree } from './DataTree';
@@ -14,6 +15,18 @@ const SAVE_AFTER = 700;
 
 /** A draft that could not be saved (it has an error in it) kept for when the person comes back to the source. */
 const stashed = new Map<string, { assetId: string; text: string }>();
+
+//the text view is CodeMirror, which comes in a chunk of its own (with the code boxes): a read-only copy stands in for the moment it takes
+export const rawEditor = lazyModule(() => import('./DataRawEditor'));
+function DataRawEditor(props: Parameters<typeof RawEditorType>[0]) {
+  const m = rawEditor.use();
+  if (m) return <m.DataRawEditor {...props} />;
+  return (
+    <div className="code-editor code-editor-loading" style={{ height: '100%' }} onKeyDown={(e) => e.stopPropagation()}>
+      <pre aria-label={`${props.label} (the editor is loading)`} tabIndex={0}>{props.value}</pre>
+    </div>
+  );
+}
 
 /**
  * Edit the file behind a data source: a form (JSON opens in it), a table or tree of it, or its own text with highlighting

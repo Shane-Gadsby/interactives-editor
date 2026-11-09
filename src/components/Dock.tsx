@@ -3,7 +3,7 @@ import { onPanelRequest, store, useEditor, type BottomTab } from '../store/store
 import { BOTTOM_DEFAULT, bottomHeightFor, dockFloat, FOLDED_HEIGHT, showAll, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, TOP_HEIGHT, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
 import { Icons, type IconName } from './icons';
 import { openHelp, setContextHelp } from '../help/Help';
-import { getTopic } from '../help/topics';
+import { helpTopics } from '../help/lazy';
 import { ContextMenu, type MenuItem } from './ContextMenu';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Layers, Assets } from '../panels/LeftPanel';
@@ -11,7 +11,7 @@ import { LibrariesPanel } from '../panels/LibrariesPanel';
 import { CommentsPanel } from '../panels/CommentsPanel';
 import { Inspector } from '../panels/Inspector';
 import { TimelinePanel } from '../panels/Timeline';
-import { LogicGraph } from '../panels/LogicGraph';
+import { lazyModule } from '../lib/lazy-module';
 import { ScriptsPanel, VariablesPanel } from '../panels/ScriptsVariables';
 import { DataPanel } from '../panels/DataPanel';
 import { UsagePanel } from '../panels/UsagePanel';
@@ -52,6 +52,13 @@ function CommentsBody() {
   return <CommentsPanel project={project} onJump={jumpToThread} hint />;
 }
 
+//The interaction graph (React Flow and the node forms, a big chunk) comes in when its tab is first shown
+export const logicGraph = lazyModule(() => import('../panels/LogicGraph'));
+function LogicGraphPanel() {
+  const m = logicGraph.use();
+  return m ? <m.LogicGraph /> : <p className="panel-empty muted" role="status">Loading the interaction graph…</p>;
+}
+
 const PANELS: Record<PanelId, PanelDef> = {
   layers: { label: 'Layers', help: 'layers-panel', tip: 'The pages and the layers on them', body: () => <Layers /> },
   assets: { label: 'Assets', help: 'assets', tip: 'Every file in the project: pictures, video, sound, fonts, data and design files', body: () => <Assets /> },
@@ -60,7 +67,7 @@ const PANELS: Record<PanelId, PanelDef> = {
   comments: { label: 'Comments', help: 'comments', tip: 'Review comments: notes pinned on the canvas by you and by reviewers, with replies, resolve and assignees', body: () => <CommentsBody /> },
   inspector: { label: 'Properties', help: 'properties-panel', tip: 'The settings of the selected layers, or of the page and project', body: () => <Inspector /> },
   timeline: { label: 'Timeline', icon: 'timeline', help: 'timelines', tip: 'Animate properties with keyframes', tool: true, body: () => <TimelinePanel /> },
-  logic: { label: 'Interactions', icon: 'logic', help: 'interactions', tip: 'Events, actions and logic as a node graph', tool: true, body: () => <LogicGraph /> },
+  logic: { label: 'Interactions', icon: 'logic', help: 'interactions', tip: 'Events, actions and logic as a node graph', tool: true, body: () => <LogicGraphPanel /> },
   scripts: { label: 'Scripts', icon: 'code', help: 'scripts', tip: 'JavaScript with the ix API', tool: true, body: () => <ScriptsPanel /> },
   variables: { label: 'Variables', icon: 'variable', help: 'variables', tip: 'Named values shared by the whole project', tool: true, body: () => <VariablesPanel /> },
   data: { label: 'Data', icon: 'table', help: 'data-sources', tip: 'JSON, CSV, TSV or text from files or URLs', tool: true, body: () => <DataPanel /> },
@@ -351,7 +358,9 @@ export function openPanelHelp(p: PanelId): void {
   openHelp(topic, anchor);
 }
 const panelHelpTip = (p: PanelId) => {
-  const t = getTopic(PANELS[p].help.split('#')[0]);
+  //the topics are in a chunk of their own: a menu opened before they've come in gets the plain line (and starts them)
+  void helpTopics.ensure().catch(() => undefined);
+  const t = helpTopics.get()?.getTopic(PANELS[p].help.split('#')[0]);
   return t ? `${t.title}: ${t.summary}` : 'Open the help for this panel';
 };
 

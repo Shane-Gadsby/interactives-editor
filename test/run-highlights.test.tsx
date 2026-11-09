@@ -137,6 +137,8 @@ describe('Preview and the events it reports', () => {
     document.body.appendChild(host);
     root = createRoot(host);
     const { PreviewModal } = await import('../src/Editor');
+    //the player's source is a lazy chunk the editor warms up after its first paint: Preview's frame appears once it is in
+    await (await import('../src/lib/player-source')).warmPlayerSource();
     await act(async () => root.render(<PreviewModal onClose={() => undefined} />));
   });
   afterEach(() => {
