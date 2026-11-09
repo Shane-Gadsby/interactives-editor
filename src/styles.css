@@ -1638,16 +1638,16 @@ hr.item-sep {
   opacity: 0.4;
 }
 .dock-tabs.drop-over {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 10%, transparent);
 }
 .dock-tabs button.drop-before {
-  box-shadow: inset 3px 0 0 var(--accent);
+  box-shadow: inset 3px 0 0 var(--primary-bg);
 }
 .dock-tabs .drop-end {
   flex: none;
   width: 3px;
   align-self: stretch;
-  background: var(--accent);
+  background: var(--primary-bg);
 }
 body.dock-dragging,
 body.dock-dragging * {
@@ -1660,9 +1660,9 @@ body.dock-dragging * {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--primary-bg) 60%, transparent);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 8%, transparent);
   color: var(--text);
   font-size: 11px;
   font-weight: 600;
@@ -1674,7 +1674,7 @@ body.dock-dragging * {
   writing-mode: vertical-rl;
 }
 .dock-edge.over {
-  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 28%, transparent);
   border-style: solid;
 }
 .dock-float-ghost {
@@ -1682,9 +1682,9 @@ body.dock-dragging * {
   z-index: var(--z-dock-ghost);
   width: 380px;
   height: 320px;
-  border: 2px dashed var(--accent);
+  border: 2px dashed var(--primary-bg);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 6%, transparent);
   pointer-events: none;
 }
 .dock-drag-tab {
@@ -2516,9 +2516,9 @@ div.text-editor {
   white-space: nowrap;
 }
 .assets.dropping {
-  outline: 2px dashed var(--accent-2);
+  outline: 2px dashed var(--primary-bg);
   outline-offset: -4px;
-  background: color-mix(in srgb, var(--accent-2) 8%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 8%, transparent);
 }
 .layer-row,
 .artboard-row {
@@ -2613,8 +2613,8 @@ div.text-editor {
   opacity: 0.4;
 }
 .layer-row.drop-inside {
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
-  outline: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--primary-bg) 22%, transparent);
+  outline: 2px solid var(--primary-bg);
   outline-offset: -2px;
   border-radius: 3px;
 }
@@ -2622,7 +2622,7 @@ div.text-editor {
   position: absolute;
   right: 6px;
   height: 2px;
-  background: var(--accent);
+  background: var(--primary-bg);
   border-radius: 1px;
   pointer-events: none;
   z-index: 2;
@@ -2635,7 +2635,7 @@ div.text-editor {
   width: 8px;
   height: 8px;
   box-sizing: border-box;
-  border: 2px solid var(--accent);
+  border: 2px solid var(--primary-bg);
   border-radius: 50%;
   background: var(--panel, var(--bg));
 }
@@ -7010,7 +7010,7 @@ code {
   cursor: grab;
 }
 .paint-head.drop {
-  outline: 1px dashed var(--accent);
+  outline: 1px dashed var(--primary-bg);
 }
 .paint-head .mini {
   border: none;

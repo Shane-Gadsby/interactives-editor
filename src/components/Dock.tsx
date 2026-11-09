@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
 import { onPanelRequest, store, useEditor, type BottomTab } from '../store/store';
 import { BOTTOM_DEFAULT, bottomHeightFor, dockFloat, FOLDED_HEIGHT, showAll, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, TOP_HEIGHT, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
 import { Icons, type IconName } from './icons';
@@ -562,7 +561,7 @@ function MorePanels() {
         More panels
       </button>
       {/* out in the body: inside the tab strip its buttons would take the tabs' look */}
-      {at && createPortal(<ContextMenu x={at.x} y={at.y} items={items} onClose={() => setAt(null)} />, document.body)}
+      {at && <ContextMenu x={at.x} y={at.y} items={items} onClose={() => setAt(null)} />}
     </>
   );
 }
