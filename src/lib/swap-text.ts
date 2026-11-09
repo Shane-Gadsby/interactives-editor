@@ -1,5 +1,6 @@
 import { animatableProp, getPath, holdsText, type SceneNode, type Timeline } from 'interactives-player';
 import { setKey, valueAt } from '../store/store';
+import { dropDipOf } from './dip-sync';
 
 /** What goes down around a text change: the layer fades out and back in, blurs out and back, or both. */
 export type DipStyle = 'fade' | 'blur' | 'both';
@@ -44,10 +45,11 @@ export function isTextTrack(prop: string, node?: SceneNode): boolean {
  * on it, and back to normal `ms` after, so the old words fade out, the text swaps while it is hidden, and the new words fade
  * in. Each side is cut short to half the gap to the neighbouring text key (so two changes close together do not fight), and to
  * the timeline. Plain keys on the layer's own tracks (a track that is new is marked `dip`, so reduced motion leaves it out).
- * Run it again and it replaces what it keyed before. Returns false when there is nothing to do: no earlier text for this key to
+ * Run it again and it replaces what it keyed before. With `link` the keys remember the text key (see dip-sync.ts) so they follow
+ * it when it moves and go when it does. Returns false when there is nothing to do: no earlier text for this key to
  * change from, or no room.
  */
-export function addTextDip(tl: Timeline, node: SceneNode, trackId: string, keyId: string, style: DipStyle, ms: number): boolean {
+export function addTextDip(tl: Timeline, node: SceneNode, trackId: string, keyId: string, style: DipStyle, ms: number, link = false): boolean {
   const track = tl.tracks.find((t) => t.id === trackId);
   if (!track || !isTextTrack(track.prop, node)) return false;
   const i = track.keys.findIndex((k) => k.id === keyId);
@@ -59,6 +61,8 @@ export function addTextDip(tl: Timeline, node: SceneNode, trackId: string, keyId
   const before = Math.floor(Math.min(ms, half(prevGap, true), t));
   const after = Math.floor(Math.min(ms, half(nextGap, i + 1 < track.keys.length), tl.duration - t));
   if (before < 1 && after < 1) return false;
+  // Run again, the old linked keys are the dip being replaced, wherever they ended up
+  if (link) dropDipOf(tl, keyId);
   for (const { prop, low, fallback } of PROPS[style]) {
     const mine = getPath(node, prop);
     const rest = typeof mine === 'number' && Number.isFinite(mine) ? mine : fallback;
@@ -74,7 +78,9 @@ export function addTextDip(tl: Timeline, node: SceneNode, trackId: string, keyId
     if (before >= 1) setKey(tl, node.id, prop, t - before, was);
     setKey(tl, node.id, prop, t, low);
     if (after >= 1) setKey(tl, node.id, prop, t + after, will);
-    if (!existing) tl.tracks.find((x) => x.nodeId === node.id && x.prop === prop)!.dip = true;
+    const made = tl.tracks.find((x) => x.nodeId === node.id && x.prop === prop)!;
+    if (!existing) made.dip = true;
+    if (link) for (const k of made.keys) if (k.t >= t - before && k.t <= t + after) Object.assign(k, { dipOf: keyId, dipOff: k.t - t });
   }
   return true;
 }

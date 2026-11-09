@@ -24,6 +24,7 @@ import { setPrefs, usePrefs } from '../lib/prefs';
 import { HIDE_PREF, LANE_KINDS, LANE_NAME, groupOpen, laneShow } from '../lib/timeline-view';
 import { promptDialog } from '../components/dialogs';
 import { magnetNudge, staggerSelected } from '../lib/key-edit';
+import { applyDipDrag, dipSyncOn, planDipDrag, removeKeysAndDips, setDipSync, followText, hasDip, isDipKey, letGo } from '../lib/dip-sync';
 import { addTextDip, isHoldTrack, isTextTrack, DIP_LENGTHS, DIP_STYLES, type DipStyle } from '../lib/swap-text';
 
 /** How close (in screen pixels) a dragged key has to get to the playhead or a marker to snap onto it. */
@@ -122,6 +123,7 @@ export function TimelinePanel() {
   // How long and what kind of dip the Keyframe panel adds around a text change
   const [dipStyle, setDipStyle] = useState<DipStyle>('fade');
   const [dipMs, setDipMs] = useState(300);
+  const [dipSync, setDipSyncState] = useState(dipSyncOn);
   // The tween (span between a key and the next) whose easing is being edited, named by its starting key
   const [tween, setTween] = useState<{ trackId: string; keyId: string } | null>(null);
   // Shape-key point groups opened or folded by hand (otherwise by how many there are)
@@ -424,8 +426,8 @@ export function TimelinePanel() {
     const node = tr ? nodeIndex.get(tr.nodeId) : undefined;
     if (!tr || !node) return;
     let done = false;
-    setTl((d) => void (done = addTextDip(d, node, trackId, keyId, style, ms)));
-    store().toast(done ? `Added a ${DIP_STYLES.find((x) => x.value === style)!.label.toLowerCase()} dip around the text change. The new keys are ordinary keys: move or edit them like any other` : 'Nothing to dip: this key is the first text on the layer, so there is no change to soften (or there is no room either side of it)');
+    setTl((d) => void (done = addTextDip(d, node, trackId, keyId, style, ms, dipSync)));
+    store().toast(done ? `Added a ${DIP_STYLES.find((x) => x.value === style)!.label.toLowerCase()} dip around the text change. ${dipSync ? 'The dip stays with the text key: move or delete the text key and it follows. Edit one of its keys by hand and that key lets go' : 'The new keys are ordinary keys: move or edit them like any other'}` : 'Nothing to dip: this key is the first text on the layer, so there is no change to soften (or there is no room either side of it)');
   };
   const keyMenuItems = (trackId: string, key: Keyframe): MenuItem[] => [
     { heading: 'Swap text' },
@@ -458,18 +460,25 @@ export function TimelinePanel() {
     }
     const starts = new Map<string, number>();
     for (const tr of tl.tracks) for (const k of tr.keys) if (sel.includes(`${tr.id}:${k.id}`)) starts.set(k.id, k.t);
+    // Dips tied to a text key in the drag go with it, and a dip key dragged by itself lets go of its text key
+    const dips = planDipDrag(tl, starts);
     const move = (ev: PointerEvent) => {
       const dt = (ev.clientX - startX) / pxPerMs;
       // Close to the playhead or a marker, the whole drag shifts onto it (so the keys keep their spacing); otherwise the grid
       const nudge = ev.altKey ? null : magnetNudge([...starts.values()], dt, snapPoints, MAGNET_PX / pxPerMs);
       setTl((d) => {
+        const moved = new Map<string, number>();
         for (const tr of d.tracks) {
           for (const k of tr.keys) {
             const t0 = starts.get(k.id);
-            if (t0 !== undefined) k.t = Math.max(0, Math.min(d.duration, nudge === null ? snap(t0 + dt, ev) : Math.round(t0 + dt + nudge)));
+            if (t0 !== undefined) {
+              k.t = Math.max(0, Math.min(d.duration, nudge === null ? snap(t0 + dt, ev) : Math.round(t0 + dt + nudge)));
+              moved.set(k.id, k.t);
+            }
           }
           tr.keys.sort((a, b) => a.t - b.t);
         }
+        applyDipDrag(d, dips, starts, moved);
       }, 'move-keys');
     };
     const up = () => {
@@ -727,7 +736,13 @@ export function TimelinePanel() {
                 setTl((d) => {
                   const k = findKey(d, s.selectedKeys[0]);
                   if (k) {
+                    const was = k.key.t;
                     k.key.t = Math.round(v);
+                    if (k.key.t !== was) {
+                      // A text key takes its dip along; a dip key typed to a new time is a hand edit
+                      followText(d, k.key.id, was, k.key.t);
+                      if (isDipKey(k.key)) letGo(k.key);
+                    }
                     k.track.keys.sort((a, b) => a.t - b.t);
                   }
                 }, 'key-t')
@@ -744,7 +759,10 @@ export function TimelinePanel() {
               onChange={(v) =>
                 setTl((d) => {
                   const k = findKey(d, s.selectedKeys[0]);
-                  if (k) k.key.value = v;
+                  if (k) {
+                    k.key.value = v;
+                    if (isDipKey(k.key)) letGo(k.key);
+                  }
                 }, 'key-v')
               }
             />
@@ -756,6 +774,8 @@ export function TimelinePanel() {
                     <div className="field-label block">Swap text</div>
                     <SelectField<DipStyle> label="Dip" title="What goes down around the change: the old words fade or blur out, the text swaps while it is hidden, and the new words come back in" value={dipStyle} options={DIP_STYLES} onChange={setDipStyle} />
                     <NumberField label="Each side" title="How long the dip lasts before and after the change. Cut short where the next text key is close" value={dipMs} min={10} step={50} suffix="ms" onChange={(v) => setDipMs(Math.max(10, Math.round(v)))} />
+                    <CheckField label="Keep the dip with this text key" title="On: moving this text key, or changing its time, moves the dip with it, and deleting it deletes the dip. Editing one of the dip's own keys by hand makes that key ordinary. Off: the dip is ordinary keys from the start" value={dipSync} onChange={(v) => (setDipSyncState(v), setDipSync(v))} />
+                    {hasDip(tl, selectedKey.key.id) && <p className="hint">This text key has a dip that moves with it.</p>}
                     <button className="btn" title="Key the dip as ordinary keys on this layer's opacity and blur, which you can then edit. With reduced motion the text just changes" onClick={() => dipAround(selectedKey.track.id, selectedKey.key.id, dipStyle, dipMs)}>
                       Add the dip
                     </button>
@@ -938,12 +958,12 @@ const TrackLanes = memo(
         {tr.keys.map((k) => (
           <span
             key={k.id}
-            className={`key${hold ? ' hold' : ''}${selectedKeys.includes(`${tr.id}:${k.id}`) ? ' selected' : ''}`}
+            className={`key${hold ? ' hold' : ''}${isDipKey(k) ? ' tied' : ''}${selectedKeys.includes(`${tr.id}:${k.id}`) ? ' selected' : ''}`}
             style={{ left: X(k.t) }}
-            title={hold ? `${k.t} ms: switches to “${String(k.value)}” here and holds${isTextTrack(tr.prop) ? '. Right-click for Swap text dips' : ''}` : `${k.t} ms: ${String(k.value)}`}
+            title={hold ? `${k.t} ms: switches to “${String(k.value)}” here and holds${isTextTrack(tr.prop) ? '. Right-click for Swap text dips' : ''}` : `${k.t} ms: ${String(k.value)}${isDipKey(k) ? '. Part of a text dip: it moves with its text key. Edit it by hand and it lets go' : ''}`}
             tabIndex={0}
             role="button"
-            aria-label={`Key at ${k.t} ms: ${String(k.value)}${hold ? ' (a hold key)' : ''}`}
+            aria-label={`Key at ${k.t} ms: ${String(k.value)}${hold ? ' (a hold key)' : ''}${isDipKey(k) ? ' (tied to a text key)' : ''}`}
             onPointerDown={(e) => h.keyDown(e, tr.id, k)}
             onContextMenu={
               hold && isTextTrack(tr.prop)
@@ -1049,10 +1069,7 @@ export function deleteSelectedKeys(): boolean {
   const st = store().get();
   if (!st.selectedKeys.length) return false;
   const refs = new Set(st.selectedKeys);
-  store().updateTimeline((d) => {
-    for (const tr of d.tracks) tr.keys = tr.keys.filter((k) => !refs.has(`${tr.id}:${k.id}`));
-    d.tracks = d.tracks.filter((t) => t.keys.length);
-  });
+  store().updateTimeline((d) => void removeKeysAndDips(d, refs));
   store().set({ selectedKeys: [] });
   return true;
 }
