@@ -348,6 +348,9 @@ export function LogicGraph() {
   const press = useRef<{ id: string; x: number; y: number; was: boolean; mod: boolean } | null>(null);
   const pointerDown = (e: React.PointerEvent) => {
     press.current = null;
+    //React Flow swallows the mousedown, so nothing takes focus on its own: without this Delete lands on whatever had it before (the canvas)
+    const el = e.target as HTMLElement;
+    if (!el.closest('input, textarea, select, button, [contenteditable], .cm-editor') && !canvasRef.current?.contains(document.activeElement)) canvasRef.current?.focus({ preventScroll: true });
     const id = e.button === 0 ? (e.target as HTMLElement).closest<HTMLElement>('.react-flow__node')?.dataset.id : undefined;
     if (!id) return;
     const mod = e.ctrlKey || e.metaKey;

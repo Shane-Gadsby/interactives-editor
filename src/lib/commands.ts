@@ -181,7 +181,7 @@ export function buildCommands(): Command[] {
   const selCmd = (id: string, title: string, run: () => void, extra: Partial<Command> = {}) => add({ id: `sel:${id}`, title, group: 'Selection', disabled: noSel, run, ...extra });
   selCmd('all', 'Select all on this page', () => s.select(ab!.children.filter((l) => !l.locked).map((l) => l.id)), { hint: 'Ctrl+A', disabled: noPage });
   selCmd('duplicate', 'Duplicate', () => s.duplicateSelection(), { hint: 'Ctrl+D', words: 'copy' });
-  selCmd('delete', 'Delete', () => deleteSelectionCommand(), { hint: 'Del', words: 'remove' });
+  selCmd('delete', 'Delete', () => void deleteSelectionCommand(), { hint: 'Del', words: 'remove' });
   selCmd('group', 'Group', () => s.groupSelection(), { hint: 'Ctrl+G', words: 'together' });
   selCmd('ungroup', 'Ungroup', () => s.ungroupSelection(), { hint: 'Ctrl+Shift+G', disabled: one && (one.type === 'group' || one.type === 'frame') ? undefined : 'Select a group or frame first' });
   selCmd('front', 'Bring to front', () => s.reorder(Infinity), { hint: 'Ctrl+]', words: 'order top' });

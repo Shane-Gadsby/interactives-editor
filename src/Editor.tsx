@@ -14,6 +14,7 @@ import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
 import { importGiftFile } from './lib/gift-import';
 import { TOOL_KEYS } from './lib/tool-keys';
+import { routeToGraph, watchKeyArea } from './lib/key-area';
 import { CommandPalette } from './components/CommandPalette';
 import { BeforeYouShareModal } from './components/BeforeShare';
 import { checkBeforeShare } from './lib/before-share';
@@ -302,6 +303,8 @@ function useShortcuts() {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target instanceof HTMLElement ? e.target : null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || t.closest('.cm-editor') || t.closest('.react-flow') || t.closest('.note'))) return;
+      //The graph was the last place pressed: its keys are its own, never the canvas selection's
+      if (routeToGraph(e)) return;
       const s = store();
       const st = s.get();
       const mod = e.ctrlKey || e.metaKey;
@@ -375,7 +378,7 @@ function useShortcuts() {
       }
       if (k === 'delete' || k === 'backspace') {
         e.preventDefault();
-        if (!deleteSelectedKeys()) deleteSelectionCommand();
+        if (!deleteSelectedKeys()) void deleteSelectionCommand({ keyboard: true });
         return;
       }
       if (k === 'escape') {
@@ -451,9 +454,11 @@ function useShortcuts() {
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('paste', onPaste);
-    const unwatch = watchKeyContext();
+    const unwatchCtx = watchKeyContext();
+    const unwatchArea = watchKeyArea();
     return () => {
-      unwatch();
+      unwatchCtx();
+      unwatchArea();
       window.removeEventListener('keydown', onSave, true);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('paste', onPaste);
