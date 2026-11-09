@@ -71,6 +71,13 @@ describe('candidates per target', () => {
     expect(t.rects).toEqual([]);
   });
 
+  it('Guides: the project guides that fall on the page snap too, the others do not', () => {
+    const { ab } = board();
+    const t = buildTargets(ab, only('guides'), new Set(), null, { x: [100, 900], y: [300, -5] });
+    expect(t.xs).toEqual([{ at: 250, kind: 'guides' }, { at: 100, kind: 'guides' }]);
+    expect(t.ys).toEqual([{ at: 420, kind: 'guides' }, { at: 300, kind: 'guides' }]);
+  });
+
   it('Guides: the ruler guides', () => {
     const { ab } = board();
     const t = buildTargets(ab, only('guides'), new Set());

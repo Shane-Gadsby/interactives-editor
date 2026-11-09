@@ -118,10 +118,10 @@ const edges = (r: Rect, kind: SnapKind, xs: Target[], ys: Target[]) => {
 };
 
 /**
- * The candidate lines for a drag on an artboard: the artboard, ruler guides, other layers (the siblings of `parentId`, or
+ * The candidate lines for a drag on an artboard: the artboard, ruler guides (the page's, and the project's when given), other layers (the siblings of `parentId`, or
  * all of them) and their gaps, and path points. `exclude` is what is being dragged (and what it holds).
  */
-export function buildTargets(ab: Artboard, s: SnapSettings, exclude: Set<string>, parentId: string | null = null): SnapSet {
+export function buildTargets(ab: Artboard, s: SnapSettings, exclude: Set<string>, parentId: string | null = null, projectGuides?: { x: number[]; y: number[] }): SnapSet {
   const xs: Target[] = [];
   const ys: Target[] = [];
   const rects: Rect[] = [];
@@ -134,6 +134,9 @@ export function buildTargets(ab: Artboard, s: SnapSettings, exclude: Set<string>
   if (s.guides) {
     for (const x of ab.guides?.x ?? []) xs.push({ at: x, kind: 'guides' });
     for (const y of ab.guides?.y ?? []) ys.push({ at: y, kind: 'guides' });
+    // the project's guides snap on every page they show on (the ones that fall on it)
+    for (const x of projectGuides?.x ?? []) if (x >= 0 && x <= ab.width) xs.push({ at: x, kind: 'guides' });
+    for (const y of projectGuides?.y ?? []) if (y >= 0 && y <= ab.height) ys.push({ at: y, kind: 'guides' });
   }
   if (s.layers || s.spacing) {
     const visit = (list: SceneNode[], deep: boolean) => {

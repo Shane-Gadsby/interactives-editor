@@ -1946,6 +1946,29 @@ body.col-resizing * {
   stroke-dasharray: 7 5;
   pointer-events: none;
 }
+/* the guides of a page that is not the open one (Canvas): dimmer, and they can't be grabbed until that page is open */
+.guide-mark {
+  stroke: #ff4fa3;
+  stroke-width: 1;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.guide-mark.project {
+  stroke-dasharray: 6 4;
+}
+/* the page a page dragged from the Layers list would be placed in (Canvas dropHost) */
+.drop-host {
+  fill: color-mix(in srgb, var(--primary-bg) 14%, transparent);
+  stroke: var(--primary-bg);
+  stroke-width: 3;
+  pointer-events: none;
+}
+/* Alt down: what Alt-drag copies shows the copy cursor (Canvas altHeld) */
+.canvas.alt-held .ab-label,
+.canvas.alt-held .ab-label-chip,
+.canvas.alt-held .ab-group-chip {
+  cursor: copy;
+}
 .ab-group-chip {
   fill: var(--panel-2);
   stroke: var(--line-2);
@@ -5376,10 +5399,26 @@ kbd {
   top: 0;
   width: 20px;
   height: 20px;
+  padding: 0;
   background: var(--panel);
+  border: 0;
   border-right: 1px solid var(--line-2);
   border-bottom: 1px solid var(--line-2);
   z-index: 3;
+  pointer-events: auto;
+  cursor: pointer;
+}
+/* a small guide mark in the corner: the way in to the guides menu */
+.ruler-corner::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-left: 1px dashed #ff4fa3;
+  border-top: 1px solid #ff4fa3;
+}
+.ruler-corner:hover,
+.ruler-corner:focus-visible {
+  background: var(--primary-bg);
 }
 .guide-line {
   position: absolute;
@@ -5414,6 +5453,16 @@ kbd {
   left: 0;
   right: 0;
   height: 1px;
+}
+/* a guide for every page is dashed, one for a single page is solid; locked ones can't be grabbed */
+.guide-line.project::after {
+  background: repeating-linear-gradient(to bottom, #ff4fa3 0 6px, transparent 6px 10px);
+}
+.guide-line.project.y::after {
+  background: repeating-linear-gradient(to right, #ff4fa3 0 6px, transparent 6px 10px);
+}
+.guide-line.locked {
+  cursor: not-allowed;
 }
 .guide-line.preview {
   pointer-events: none;

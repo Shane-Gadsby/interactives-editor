@@ -6,6 +6,7 @@ import type { MenuItem } from '../components/ContextMenu';
 import { freshGroupName, groupOf, pickedArtboardIds } from './artboard-groups';
 import { tidyArtboardsCommand } from './tidy-command';
 import { linkColoursCommand } from './link-colours-action';
+import { placeInMenu } from './components';
 
 /** Delete artboards. Several at once is asked about first (one undo brings them back); one is deleted straight away as it always was. */
 export async function deleteArtboardsCommand(ids: string[]): Promise<void> {
@@ -91,6 +92,8 @@ export function artboardMenuItems(ids: string[], gid?: string): MenuItem[] {
     }
   }
   items.push({ label: 'Link colours to tokens…', title: 'Turn the plain colours on these pages that are the same as a token\'s colour into that token, so they change with the theme', onClick: () => void linkColoursCommand(target) });
+  const place = !gid && boards.length === 1 ? placeInMenu(boards[0].id) : null;
+  if (place) items.push(place);
   items.push({ label: 'Duplicate', onClick: () => s.duplicateArtboards(target) });
   items.push({ label: gid ? 'Delete pages in group' : boards.length > 1 ? 'Delete pages' : 'Delete page', hint: gid ? undefined : 'Del', danger: true, onClick: () => void deleteArtboardsCommand(target) });
   return items;
