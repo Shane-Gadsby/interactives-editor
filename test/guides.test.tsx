@@ -160,3 +160,15 @@ describe('guides in the editor', () => {
     expect(clear.disabled).toBe(true);
   });
 });
+
+describe('the guide right-click menu takes clicks', () => {
+  it('a context menu sets pointer-events back on, since the rulers layer lets the pointer through', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const css = readFileSync(join(__dirname, '../src/styles.css'), 'utf8');
+    const rule = (sel: string) => new RegExp(`(^|\\n)${sel.replace('.', '\\.')} \\{([^}]*)\\}`).exec(css)?.[2] ?? '';
+    // the rulers overlay is see-through to the pointer, and the guide menu is drawn inside it
+    expect(rule('.rulers')).toMatch(/pointer-events:\s*none/);
+    expect(rule('.ctx-menu')).toMatch(/pointer-events:\s*auto/);
+  });
+});
