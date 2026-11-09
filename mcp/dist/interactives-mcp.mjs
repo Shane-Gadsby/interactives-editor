@@ -11102,10 +11102,21 @@ Select layers and drag them on the canvas. If you let go over a **different artb
     title: "The Properties panel and its search",
     group: "Design",
     summary: "What the right-hand panel shows for a layer, an artboard and the project, and how to find a property with the search box.",
-    keywords: "move reorder rearrange drag order sections tools groups arrange properties inspector panel right search find filter property fuzzy synonym transparency opacity alpha pivot origin anchor scale rotation round corner radius alt description hide visible colour color z-order draw order aria typo did you mean slash ctrl f",
+    keywords: "align alignment aligned line up label column dropdown field width layout move reorder rearrange drag order sections tools groups arrange properties inspector panel right search find filter property fuzzy synonym transparency opacity alpha pivot origin anchor scale rotation round corner radius alt description hide visible colour color z-order draw order aria typo did you mean slash ctrl f",
     body: `The **Properties** panel is on the right. It shows the settings of whatever is selected: a layer (or several), an artboard, or, with nothing selected, the artboard's and the project's settings. Each group of settings is a **section** with a title. Click the title to fold it, and the **?** beside it opens that section's page in the help.
 
 Under many sections there is a one-line note that ends with **More about …**. It opens the help at the place with the full explanation. The notes stay short on purpose, so the detail is here in the help.
+
+## How fields line up
+Every field has its name on the left, in one column, and its box to the right. The boxes in a section all start in the same place and end in the same place, so a dropdown never sits further along than the number box above it.
+
+- A long name wraps onto a second line inside its column instead of pushing the box along.
+- Dropdowns, text boxes, number boxes and colour boxes are the same height.
+- A small unit (%, px, ms) or a key diamond (the ◆ that adds a keyframe) has its own space at the right end. The space is kept whether or not the row has one, so the right edges match.
+- Two number boxes can share a line (X and Y, W and H, Rotation and Opacity), with a narrower name column. A dropdown or a text box always has a line to itself.
+- A name goes above its box only for a text area, code and lists.
+- Tick boxes sit on the left edge, two to a line.
+- The Interactions settings column and the Timeline's Keyframe column use the same layout.
 
 ## Folding sections
 Click a section's title to fold it or open it. The editor remembers your folds. Fold **Accessibility** on one layer and it stays folded on the next layer, and after you reload.
