@@ -29,6 +29,9 @@ import { artboardEntries, groupOf, pickedArtboardIds } from '../lib/artboard-gro
 import { artboardMenuItems, renameGroupCommand, tidyTheseCommand } from '../lib/artboard-commands';
 import { brandHeldIds } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
+import { extendLayers, pickLayer } from '../lib/layer-range';
+import { ALT_DRAG_HINT, ALT_DRAG_TIP, altHintDue } from '../lib/alt-drag';
+import { PAGE_DRAG, setDraggedPage } from '../lib/components';
 import { INDENT, ROW_H, ROW_PAD, depthAtX, dropRows, slotAt, type DropSlot } from '../lib/layer-drop';
 
 export function LeftPanel() {
@@ -115,9 +118,12 @@ export function Layers() {
     setCollapsed(next);
   };
 
+  //The first few plain drags say what Alt would do (lib/alt-drag.ts)
+  const [altNote, setAltNote] = useState(false);
   const endDrag = () => {
     setDragId(null);
     setDrop(null);
+    setAltNote(false);
   };
 
   // Where a drag over the list would land. Works from the pointer, not from the row under it, so the space below the
@@ -158,7 +164,8 @@ export function Layers() {
       return;
     }
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    //Alt (Option) held: the layer is copied into the spot, so the pointer says so
+    e.dataTransfer.dropEffect = e.altKey ? 'copy' : 'move';
     setDrop((prev) => (sameSlot(prev, slot) ? prev : slot));
   };
   const onListDragLeave = (e: DragEvent) => {
@@ -168,7 +175,8 @@ export function Layers() {
     if (!dragId) return;
     e.preventDefault();
     const slot = slotFor(e);
-    if (slot && !slot.noop) store().moveNode(dragId, slot.parentId, slot.at);
+    if (slot && e.altKey) store().copyNodeTo(dragId, slot.parentId, slot.at);
+    else if (slot && !slot.noop) store().moveNode(dragId, slot.parentId, slot.at);
     endDrag();
   };
 
@@ -247,6 +255,10 @@ export function Layers() {
   const last = Math.min(flat.length, Math.ceil((view.top + view.height) / ROW_H) + 10);
 
   /** The artboard rows as listed, in order: what Shift+click ranges over. */
+  //The anchor Shift+click and Shift+arrow range from: the last layer picked with a plain or Ctrl/Cmd click
+  const anchor = useRef<{ ab: string; id: string } | null>(null);
+  /** The layer rows of one artboard as listed (a collapsed group is one row), for ranges. */
+  const layerRows = (abId: string) => flat.filter((r) => r.kind === 'node' && r.ab.id === abId).map((r) => ({ id: (r as { n: SceneNode }).n.id, held: held.has((r as { n: SceneNode }).n.id) }));
   const boardRows = () => flat.filter((r): r is { kind: 'artboard'; ab: Artboard } => r.kind === 'artboard').map((r) => r.ab.id);
   const pickBoard = (ab: Artboard, e: { ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }) => {
     const st = store();
@@ -331,6 +343,15 @@ export function Layers() {
       <div
         key={`ab-${ab.id}`}
         className={`artboard-row${pickedAbs.includes(ab.id) ? ' selected' : ''}${active ? ' active' : ''}${ab.variantOf ? ' variant' : ''}${grouped ? ' in-group' : ''}`}
+        draggable
+        title="Drag onto another page on the canvas to place this page in it as a component"
+        onDragStart={(e) => {
+          e.dataTransfer.setData(PAGE_DRAG, ab.id);
+          e.dataTransfer.setData('text/plain', ab.name);
+          e.dataTransfer.effectAllowed = 'copy';
+          setDraggedPage(ab.id);
+        }}
+        onDragEnd={() => setDraggedPage(null)}
         onClick={(e) => pickBoard(ab, e)}
         onContextMenu={(e) => boardMenu(e, ab)}
       >
@@ -414,6 +435,7 @@ export function Layers() {
     return (
       <div
         key={n.id}
+        data-layer={n.id}
         className={`layer-row${selected ? ` selected${s.selection.length > 1 ? ' multi' : ''}` : ''}${brand ? ' brand-held' : ''}${shown ? '' : ' hidden-layer'}${filtering && !found.hits.has(n.id) ? ' not-a-hit' : ''}${dropClass}`}
         style={{ paddingLeft: 8 + depth * 14 }}
         draggable={renaming !== n.id && !filtering && !brand}
@@ -424,6 +446,17 @@ export function Layers() {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             e.currentTarget.click();
+          } else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            //Shift+arrow grows the selection a row at a time, from the same anchor Shift+click uses
+            e.preventDefault();
+            const st = store().get();
+            const next = extendLayers(layerRows(ab.id), n.id, e.key === 'ArrowDown' ? 1 : -1, anchor.current?.ab === ab.id ? anchor.current.id : n.id);
+            if (!next) return;
+            anchor.current = { ab: ab.id, id: next.anchor };
+            store().set({ activeArtboardId: ab.id, selection: next.selection, artboardSelected: false, activeTimelineId: ab.id === st.activeArtboardId ? st.activeTimelineId : null });
+            const parent = e.currentTarget.parentElement;
+            //the row may not be drawn yet (the list only draws what is in view), so focus it once it is
+            requestAnimationFrame(() => parent?.querySelector<HTMLElement>(`.layer-row[data-layer="${next.focus}"]`)?.focus());
           } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
             e.preventDefault();
             const rows = Array.from(e.currentTarget.parentElement?.querySelectorAll<HTMLElement>('.layer-row:not(.brand-held)') ?? []);
@@ -440,7 +473,8 @@ export function Layers() {
         }}
         onDragStart={(e) => {
           setDragId(n.id);
-          e.dataTransfer.effectAllowed = 'move';
+          if (!e.altKey) setAltNote(altHintDue());
+          e.dataTransfer.effectAllowed = 'copyMove';
           e.dataTransfer.setData('text/plain', n.id);
         }}
         onDragEnd={endDrag}
@@ -449,8 +483,9 @@ export function Layers() {
           if (brand) return;
           const st = store().get();
           let sel = ab.id === st.activeArtboardId ? st.selection : [];
-          if (e.shiftKey || e.metaKey || e.ctrlKey) sel = sel.includes(n.id) ? sel.filter((x) => x !== n.id) : [...sel, n.id];
-          else sel = [n.id];
+          const picked = pickLayer(layerRows(ab.id), n.id, sel, anchor.current?.ab === ab.id ? anchor.current.id : null, e);
+          sel = picked.selection;
+          anchor.current = { ab: ab.id, id: picked.anchor };
           store().set({ activeArtboardId: ab.id, selection: sel, artboardSelected: false, activeTimelineId: ab.id === st.activeArtboardId ? st.activeTimelineId : null });
         }}
         onDoubleClick={() => !brand && setRenaming(n.id)}
@@ -493,7 +528,7 @@ export function Layers() {
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className="layer-name" title={nodeTypeLabel(n.type)}>
+          <span className="layer-name" title={filtering || brand ? nodeTypeLabel(n.type) : `${nodeTypeLabel(n.type)}. Drag to reorder. ${ALT_DRAG_TIP}`}>
             {n.name}
           </span>
         )}
@@ -558,6 +593,11 @@ export function Layers() {
         Text
       </button>
     </div>
+    {altNote && (
+      <div className="layers-search-count" role="status">
+        {ALT_DRAG_HINT}
+      </div>
+    )}
     {filtering && (
       <div className="layers-search-count" role="status">
         {hitCount === 0 ? 'No layers match' : `${hitCount} ${hitCount === 1 ? 'match' : 'matches'}`}

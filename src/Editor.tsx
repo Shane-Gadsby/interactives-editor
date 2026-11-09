@@ -17,6 +17,7 @@ import { keyHint, keyHints, keysSuspended, withKey } from './lib/keymap';
 import { handleEditorKey, installEditorKeys } from './lib/editor-keys';
 import { installTimelineKeys } from './lib/timeline-keys';
 import { CommandPalette } from './components/CommandPalette';
+import { ComponentPicker } from './components/ComponentPicker';
 import { BeforeYouShareModal } from './components/BeforeShare';
 import { checkBeforeShare } from './lib/before-share';
 import { openPalette } from './lib/command-palette';
@@ -519,6 +520,7 @@ function Workspace({ home }: { home: () => void }) {
       <DockDragLayer />
       {preview && <PreviewModal onClose={() => setPreview(false)} />}
       <CommandPalette />
+      <ComponentPicker />
       {s.toast && <ToastView toast={s.toast} />}
       {s.report && <ReportModal title={s.report.title} lines={s.report.lines} undo={!!s.report.undo} />}
     </div>

@@ -413,10 +413,11 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
           loop: (c.loop as 'once' | 'loop' | 'pingpong') ?? 'once',
           autoplay: !!c.autoplay,
           speed: 1,
-          tracks: ((c.tracks as { node_id: string; prop: string; keys: { t: number; value: unknown; ease?: unknown }[] }[]) ?? []).map((tr) => ({
+          tracks: ((c.tracks as { node_id: string; prop: string; dip?: boolean; keys: { t: number; value: unknown; ease?: unknown }[] }[]) ?? []).map((tr) => ({
             id: uid('tr'),
             nodeId: ref(tr.node_id),
             prop: tr.prop,
+            ...(tr.dip === true ? { dip: true } : {}),
             keys: tr.keys.map((k) => ({ id: uid('k'), t: k.t, value: k.value as never, ease: (k.ease as never) ?? 'easeInOut' })),
           })),
         };
@@ -694,7 +695,7 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       'add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; ' +
       'add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); ' +
       'add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; ' +
-      'add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; ' +
+      'add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, dip?, keys: [{t, value, ease}]}], ref?} (text, label and true/false keys hold until the next key and never ease; to soften a text change key opacity and/or blur dipping to 0 / 8 either side of it on separate tracks marked dip: true, which reduced motion leaves out); ' +
       'add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; ' +
       'add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; ' +
       'add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; ' +

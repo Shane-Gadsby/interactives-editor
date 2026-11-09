@@ -8,7 +8,7 @@ import { FontField, type FontPick } from '../components/FontPicker';
 import { ensureGoogleFont } from '../lib/font-catalog';
 import { lookFor } from '../lib/themes';
 import { previewScope } from '../lib/data';
-import { Color, Num, PaintField, useSetter } from './Inspector';
+import { Color, KeyRow, Num, PaintField, useSetter } from './Inspector';
 import { PropRow } from '../lib/prop-search';
 
 /** A progress layer: the value it shows, how it grows, its bar, and what assistive tech is told. The track is the Fill and Stroke sections. */
@@ -39,6 +39,7 @@ export function ProgressSection({ nodes, project }: { nodes: ProgressNode[]; pro
       <div className="field-label block">Bar</div>
       <PropRow k="Bar fill" words={['bar colour', 'progress colour', 'fill']}>
         <PaintField paint={n.barFill} allowNone={false} project={project} box={{ w: n.width, h: n.height }} onChange={(p) => set({ barFill: p })} />
+        {n.barFill?.type === 'solid' && <KeyRow node={n} ids={ids} prop="barFill.color" />}
       </PropRow>
       <SelectField<'progressbar' | 'meter' | 'none'>
         label="Tells screen readers"

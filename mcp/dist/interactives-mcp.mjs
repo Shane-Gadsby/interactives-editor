@@ -568,7 +568,37 @@ const SPECS = [
         default: "0",
         showIf: { key: "op", values: ["set", "add", "push", "remove", "toggleItem", "removeValue", "setItem"] },
         help: 'Expression, e.g. 1, "hi", score * 2. For a list: the item to append ({name: "Ann"}), the position to remove (0 is the first), the value to add or take out, or what to put in the item (item and index are available: item.count + 1).'
-      }
+      },
+      {
+        key: "over",
+        label: "Over (ms)",
+        type: "expr",
+        default: "0",
+        showIf: { key: "op", values: ["set", "add"] },
+        help: "For a number: ease to the new value over this long instead of jumping. 0 is at once. A newer change to the same variable takes over from wherever it has got to. Anything that reads the variable (a blend, a binding) follows it as it moves. Skipped when the viewer asks for less motion."
+      },
+      {
+        key: "overEase",
+        label: "Easing",
+        type: "easing",
+        default: "easeInOut",
+        showIf: { key: "op", values: ["set", "add"] },
+        help: "How the number eases while it moves"
+      },
+      {
+        key: "continue",
+        label: "Continue",
+        type: "select",
+        options: [
+          { value: "start", label: "Straight away" },
+          { value: "percent", label: "Part-way through" },
+          { value: "end", label: "When it arrives" }
+        ],
+        default: "start",
+        showIf: { key: "op", values: ["set", "add"] },
+        help: "When the next node runs: straight away, part-way through the ease, or when the number has arrived"
+      },
+      { key: "continueAt", label: "At (%)", type: "number", default: 50, showIf: { key: "continue", values: ["percent"] }, help: "How far through, 0 to 100" }
     ]
   },
   {
@@ -9723,7 +9753,7 @@ function requireReact() {
 requireReact();
 const DEFAULT_GRID = { size: 8, subdivisions: 4 };
 const DEFAULT_FONT = "Open Sans";
-const DEFAULTS = { technicalWording: false, askPictureDescription: true, wheel: "zoom", tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: "dark", codeTheme: "follow", defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true };
+const DEFAULTS = { technicalWording: false, askPictureDescription: true, wheel: "zoom", tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: "dark", codeTheme: "follow", defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
 const LAST_USER = "ix-prefs-user";
 const keyFor = (user2) => `ix-prefs:${user2}`;
 const read = (key) => {
@@ -10414,7 +10444,7 @@ Drag the left and right panels' inner edges (beside the canvas) to make them wid
 All artboards side by side. See [Moving around the canvas](canvas). Right-click for menus: see [Layers, hidden and locked layers](layers-panel#right-click-menus).
 
 ## Inspector (right)
-Settings for the selection. The search box at the top finds a property by name or by what it does ([The Properties panel](properties-panel)). A layer's settings start with **Layer** (name, position, size, rotation, opacity, scale, pivot, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. Click a section's title to fold it away or open it again; the arrow beside the title points down when it's open and right when it's folded. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard and its **Responsive**, **Steps**, **Joysticks**, **Blends** and **Bones** sections, then the **Project** settings and the **Fonts**. The chain between **W** and **H** (and between **Scale W** and **Scale H**, and on an artboard's size) links the two: linked, changing one changes the other and keeps their ratio, and the canvas's resize handles keep it too (hold <kbd>Shift</kbd> to resize freely). Each layer remembers its own. The Inspector starts 320 px wide. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
+Settings for the selection. The search box at the top finds a property by name or by what it does ([The Properties panel](properties-panel)). A layer's settings start with **Layer** (name, position, size, rotation, opacity, scale, pivot, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. Click a section's title to fold it away or open it again; the arrow beside the title points down when it's open and right when it's folded. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard and its **Responsive**, **Steps**, **Blends**, **Joysticks** and **Bones** sections, then the **Project** settings and the **Fonts**. The chain between **W** and **H** (and between **Scale W** and **Scale H**, and on an artboard's size) links the two: linked, changing one changes the other and keeps their ratio, and the canvas's resize handles keep it too (hold <kbd>Shift</kbd> to resize freely). Each layer remembers its own. The Inspector starts 320 px wide. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
 
 ## Bottom panel
 **Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility**, **Insights**, **Public interface**, **Themes** and **Usage**. A project made from a template also has a **Checklist** tab, and one made from a starter a **Fill in** tab (the content as a plain form, see [Fill in this starter](fill-in-starter)). Click a tab to open it, click the open one again to fold the bottom panel down to its tabs, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker), [Insights](insights), [Public interface](public-interface), [Themes](themes), [Usage](usage) and [Templates](templates#use-a-template).
@@ -10451,8 +10481,8 @@ When the project has [responsive artboards](responsive), a **Page width** slider
     id: "canvas",
     title: "Moving around the canvas",
     group: "Getting started",
-    summary: "Zoom, pan, fit, and the wheel preference.",
-    keywords: "zoom pan scroll wheel trackpad pinch fit hand space middle mouse ctrl",
+    summary: "Zoom, pan, fit, the wheel preference, rulers and guides.",
+    keywords: "zoom pan scroll wheel trackpad pinch fit hand space middle mouse ctrl rulers guides project every page lock clear",
     body: `| Do this | To |
 |---|---|
 | Scroll the mouse wheel | Zoom in and out around the pointer (default) |
@@ -10463,6 +10493,14 @@ When the project has [responsive artboards](responsive), a **Page width** slider
 | <kbd>Shift</kbd>+<kbd>1</kbd> or <kbd>Ctrl</kbd>+<kbd>0</kbd> | Fit everything |
 | <kbd>Shift</kbd>+<kbd>2</kbd> | Zoom to the selection |
 | <kbd>Ctrl</kbd>+<kbd>1</kbd> | 100% |
+
+## Rulers and guides
+Turn the rulers on with <kbd>Shift</kbd>+<kbd>R</kbd> (or **Show rulers** in Preferences). Drag out of the top ruler for a horizontal guide and out of the left ruler for a vertical one. The number beside the pointer is the guide's position in page pixels. Layers snap to guides when **Guides** is ticked in the Snap menu. Drag it to move it, drop it back on its ruler to remove it, and right-click it for more.
+
+- **Every page or this page only.** A guide for **every page** (a project guide, drawn dashed) is measured from each page's own top left corner, so it lines up on every page of the same size, and it shows on each page it falls inside. A guide for **this page only** (drawn solid) stays on the page it was made on. Guides don't disappear when you open another page: each page keeps showing its own, a little dimmer, until you open it.
+- **Choosing.** The small button in the corner of the rulers opens the **guides menu**: **New guides go on** *Every page* or *This page only* (it starts as every page and your choice is remembered in this browser). Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag a new guide out to get the other kind for just that one. Right-click a guide and choose **Show on every page** or **Keep on this page only** to change it later, or **Show this page's guides on every page** in the guides menu to change them all at once.
+- **Lock and clear.** **Lock guides** stops guides being moved, removed or added by accident (they still snap). **Clear this page's guides**, **Clear the every-page guides** and **Clear all guides** are in the same menu, and **Lock the guides** and **Clear all guides** are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Undo brings cleared guides back.
+- Guides are for you while you edit: they never show in Preview, downloads, share links or embeds.
 
 ## Big projects and artboard pictures
 Artboards you aren't working on are shown as a *still*: a picture of themselves. That keeps panning and zooming smooth in projects with many artboards. Click an artboard (or a layer in it) and it comes alive for editing. The still updates by itself shortly after anything in it changes, so you never need to refresh it. If an artboard looks slightly soft while you pan, that is the still; click it to see it sharp. Stills are kept in this browser between sessions, so a big project opens with its artboards already showing instead of filling in one by one. An artboard that was changed since (by you or someone else) is just drawn again. While a project with several artboards opens, the canvas waits for the artboards in view (a moment) and then fades them in together.
@@ -10654,8 +10692,10 @@ Double-click a text layer to edit it. Select some of the text, then:
 | Click the Snap button on the tool bar | Open the snapping menu: the switch and a tick for each target |
 | Right-click the grid or snap button on the tool bar, or an empty part of the canvas | Snapping choices, the grid size and how often a stronger line shows |
 | Drag the **Tools** title over an edge of the canvas | Dock the tool bar there (left, right or a strip along the bottom or the top) |
+| Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) and drag a layer, a group, or a page's name | Drag a copy of it: the original stays put and the pointer shows a **+**. Also works in the Layers list (drop the copy where the line is) |
 | <kbd>Alt</kbd>-click a path point | Switch it between curve and corner |
 | <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a layer | Add it to the selection, or take it out (it picks the deepest layer inside groups, so you can gather layers from different groups) |
+| <kbd>Shift</kbd>-click a layer in the Layers list | Select every layer between the one you last clicked and this one |
 | Double-click a group | Select inside it |
 
 While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kbd> resizes from the centre. In number fields, drag the label to scrub (<kbd>Shift</kbd> ×10, <kbd>Alt</kbd> ×0.1), use arrow keys to step, or type sums like \`100/2\`.`
@@ -10672,6 +10712,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 - Make a new one with the **Page** tool (<kbd>A</kbd>), the **+ Add page** button at the bottom of the **Layers** panel, or by right-clicking empty canvas and choosing **New page here**.
 - Click an artboard's name above it on the canvas, or its row in the **Layers** panel, to select it. Drag the name to move the artboard around the canvas, and drag its corners to resize it.
 - To select several artboards, hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click their names on the canvas or their rows in the **Layers** panel. <kbd>Ctrl</kbd>+click on one that is already chosen takes it out again. <kbd>Shift</kbd>+click on a name adds it, and <kbd>Shift</kbd>+click on a row selects every row between it and the one you had. Chosen artboards have a gold name and row, and the same blue outline as one. Drag any chosen artboard's name to move them all together. With several chosen, the Inspector shows what you can do to all of them: align their edges or centres, distribute them evenly (three or more), **Group pages…**, **Ungroup**, **Tidy up**, duplicate and delete. <kbd>Del</kbd> deletes them after asking, and <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicates them. Each is one undo step.
+- Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) and drag a page's name, or an empty part of the page, to drag a **copy** of the page: it keeps its layers, timelines and interactions, and the original stays where it was. Do it on several selected pages, or on a group's name, to copy them all together.
 - **Artboard groups** keep a big project organised. Select some artboards and choose **Group pages…** (in the right-click menu, in the Inspector, or on the Layers panel) and give the group a name. The Layers panel lists the group as a folder row with its artboards under it, and its arrow folds them away (the artboards stay on the canvas). On the canvas the group gets a dashed frame with its name on a chip above its top left corner. Click the chip, or the group's row, to select all its artboards, and drag the chip to move the group. Right-click either for **Select all in group**, **Rename group…** (double-clicking the row does too), **Ungroup** (the artboards stay where they are), **Tidy up**, **Duplicate** and **Delete**. An artboard is in one group at most, and a responsive set goes into a group as a whole. Duplicating every artboard of a group makes a new group of the copies. A group is also a chapter when the project plays: **Go to artboard → Next artboard** and **Previous artboard** stay inside the artboard's group, in the project's order, and \`pageNumber\` and \`pageCount\` count its pages (see [Interactions](interactions)).
 - With an artboard selected, the Inspector shows **Name**, **W** and **H** (and **Size presets…** such as Desktop, Tablet or Phone), **Background**, **Clip content to artboard** (the parts of layers outside it still show faintly on the canvas, see [Preferences](preferences)), **Make start page**, **Duplicate artboard** and **Delete artboard**. Then come its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**.
 - **Tidy up pages** (at the bottom of the **Layers** panel, and in the right-click menu on the canvas) lays all the artboards out in a neat grid, in the order of the Artboards list, with even gaps and room for each name. The start artboard goes first if it isn't already, a responsive variant stays beside its main artboard, and an artboard that only exists to be used inside others (a component) goes last. Artboards you have hidden from the canvas stay where they are. It is one undo step (<kbd>Ctrl</kbd>+<kbd>Z</kbd>), and the group stays where it was on the canvas. An artboard group is laid out as a block of its own, with room for its frame, so a group's artboards stay together wherever they are in the list. With several artboards selected, **Tidy up** (in their right-click menu and the Inspector) lays out just those, among themselves, where their top left corner is now. To change the order, drag the artboards in the **Layers** panel, then tidy up again.
@@ -10695,11 +10736,12 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 ![The Layers panel. Sun is hidden, so its name is faded. Backdrop is locked.](help/layers-panel.png)
 
 ## Working with the list
-- Click a layer to select it. Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) or <kbd>Shift</kbd> and click to select several.
+- Click a layer to select it. Click one layer, hold <kbd>Shift</kbd> and click another, and every layer between them in the list is selected too (a folded group counts as one row, and the range stays on one artboard). <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click adds one layer or takes it out, and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+click adds a whole range to what you already have. With a layer focused in the list, <kbd>Shift</kbd>+<kbd>Up</kbd> and <kbd>Shift</kbd>+<kbd>Down</kbd> grow the selection a row at a time.
 - The same works on the artboard rows: <kbd>Ctrl</kbd>+click adds an artboard to the selection or takes it out, and <kbd>Shift</kbd>+click selects the rows from the one you had to this one. Chosen rows are gold. Right-click a chosen row for **Group pages…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete** on all of them; **Tidy up pages** at the bottom becomes **Tidy up N selected artboards**.
 - A named **artboard group** is a folder row above its artboards, which sit one step in under it. Click the arrow to fold it, click the row to select its artboards, double-click to rename it, and right-click it for **Select all in group**, **Rename group…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete**. Folding is just for this panel. The artboards stay on the canvas inside a dashed frame with the group's name. See [Artboards](artboards).
 - Click the arrow beside a group, a frame or an artboard to open or close it. The artboard marked **start** is the one the player shows first.
 - Double-click a name to rename it. <kbd>Enter</kbd> finishes and <kbd>Esc</kbd> cancels.
+- Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag a layer and a **copy** goes where the line is, and the original stays. The pointer shows a **+** while Alt is down. The same works on the canvas: <kbd>Alt</kbd>-drag a layer or a group to drag a copy of it.
 - Drag a row to reorder. A line shows where the layer will land, and how far it is indented shows which list it joins. Over the top or bottom third of a row the layer goes before or after it. Over the middle of a group or frame row the group is outlined and the layer goes inside it, at the front.
 - Where a group ends, move the pointer left to drop the layer under the group instead of inside it: the line steps out one level for each step left. The empty space under the last row is the end of the list, so you can always drop at the very bottom without landing in a group that happens to be last. Drop on the artboard's own row to bring the layer to the top level, in front.
 - From the keyboard, select one layer and press <kbd>Alt</kbd>+<kbd>Up</kbd> or <kbd>Down</kbd> to step it past a neighbour (and out of its group at the end), <kbd>Alt</kbd>+<kbd>Right</kbd> to put it inside the group just above it and <kbd>Alt</kbd>+<kbd>Left</kbd> to take it out, under that group.
@@ -11242,7 +11284,7 @@ The **Snap** button on the tool bar (the magnet) opens a menu that stays open wh
 - **Grid**: land on the grid lines (this is Snap to grid: <kbd>Ctrl</kbd>+<kbd>'</kbd> ticks and unticks it). Off to begin with.
 - **Artboard**: the artboard's edges and centre. Moving an artboard on the canvas, it goes to the other artboards' edges and centres.
 - **Layers**: the edges and centres of other layers. By default it means the layers beside the one you drag (the same parent); tick **Layers: all, not just siblings** to reach every layer on the artboard.
-- **Guides**: guides made from the rulers.
+- **Guides**: guides made from the rulers (the ones for every page and the page's own). See [Rulers and guides](canvas#rulers-and-guides).
 - **Spacing**: equal gaps. Drag a layer beside two that have a gap between them and it snaps to the same gap (or centres between them), and the distances show as orange measures. Moving layers only.
 - **Pixels**: whole-pixel positions and sizes. Untick it to let a layer sit between pixels.
 - **Points**: the anchor points of paths and the joints of bones. The pen, and dragging a path point, snap to them: a ring shows the one it caught. Off to begin with.
@@ -11387,9 +11429,16 @@ Pictures (PNG, SVG, PDF, animated GIF), thumbnails, the single-file export, \`.i
     group: "Design",
     summary: "Place one artboard inside another, with its own timelines, interactions and inputs.",
     keywords: "component nested artboard reuse symbol instance inputs",
-    body: `Any artboard can be placed inside another as an **instance**: a live copy that runs its own timelines and interactions on the parent's clock. Edit the source artboard and every instance updates.
+    body: `Any artboard can be placed inside another as a **component** (the layer it makes is called an **instance**, and the Inspector shows it as **Component**): a live copy that runs its own timelines and interactions on the parent's clock. Edit the source artboard and every instance updates.
 
-- Select the artboard you want to reuse and pick the artboard to put it in from **Use in** (it says **Instance in…**). Or choose an artboard in an instance layer's **Artboard** field.
+A page placed inside another is a **component**. There are four ways to place one, and all of them make the same instance layer:
+
+- **From the page you are working on:** right-click an empty part of the page (or a layer on it) and choose **Insert component here…**. A box lists the other pages, type a few letters of the name to find one and press <kbd>Enter</kbd>. It lands centred where you right-clicked. **Insert a component here…** is also in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>), where it puts the component in the middle of the open page.
+- **By dragging:** drag a page's row from the **Layers** list onto another page on the canvas. The page it would land in is outlined in gold, and the component lands centred under the pointer.
+- **From the page you want to reuse:** right-click it (its name on the canvas, or its row in **Layers**) and choose **Place in…**, then the page to put it in. Or select it and pick the page from **Use in** (it says **Component in…**).
+- Or choose an artboard in an instance layer's **Artboard** field.
+
+A component bigger than the page it goes on is shrunk to fit. Pages that would contain each other, and library copies (read-only until detached), aren't offered.
 - **Fit** decides how the artboard sits in the instance's box: **Stretch to the box**, **Contain**, **Cover** or **Actual size, centred**. **Reset size** puts the box back to the artboard's own size, and **Edit** followed by the artboard's name jumps to the source artboard.
 - **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. Write them as JSON, such as \`{"level": 3}\`.
 - Messages sent inside an instance (**Send message**, \`ix.emit\`) bubble up to the parent.
@@ -11644,7 +11693,7 @@ Buttons go on the page itself. A [page master](page-master) can hold the logo an
     title: "Timelines and keyframes",
     group: "Motion",
     summary: "Animate properties with keyframes, record mode, looping and playback.",
-    keywords: "animation animate keyframe key record playhead loop ping pong autoplay speed duration track copy paste snap stagger offset",
+    keywords: "animation animate keyframe key record playhead loop ping pong autoplay speed duration track copy paste snap stagger offset text change words swap hold square dip fade blur typewriter",
     body: `Each artboard can have any number of timelines. A timeline has **tracks**; each track animates one property of one layer through **keyframes**.
 
 For the common cases there is no need to build one: [Animation presets](animation-presets) (Fade in, Slide in, Pop, Pulse, Shake, Fade out) write a timeline and its trigger for you.
@@ -11688,6 +11737,17 @@ A timeline can also carry **sound** (a voice-over that follows the playhead, wit
 
 The line between two keys is a **tween**: it shows its [easing](easing) as a little curve. Click it to choose how the value moves from the first key to the second (or *Use for all tweens*). In the Tween panel, drag the two handles on the graph to make your own curve; the dashed lines mark the start (0) and end (1) values, and the graph grows to show overshoot. Select a key to change its time or value.
 
+## Changing text over time
+Words can change on a timeline too: a title that says *hello* at 0 and *world* at 1 second. Every field that can be animated has the diamond, and that includes **Text** (and a button's **Label**, **Visible**, **Disabled**, a link's address and so on). To change text:
+1. Open the Timeline, select the text layer and put the playhead where the first words should show. Click the diamond beside **Text**.
+2. Move the playhead to when it should change, type the new words in the **Text** field (or turn on **Record** first), and click the diamond again.
+
+Text does not glide: it holds the old words until the next key and then switches. So text keys are drawn as **squares** joined by a flat bar, not as diamonds with a curve. (True/false values such as **Visible** and **Disabled** are drawn the same way.) There is no easing to set for them.
+
+**Swap text.** A hard switch can look abrupt. Right-click a text key (or select it and press the menu key, or open its **Keyframe** panel) to add a **dip**: the old words fade or blur out, the words change while they are hidden, and the new words come back in. Choose **Fade out and in**, **Blur out and in** or **Fade and blur**, and how long each side lasts: **Quick** (150 ms), **Normal** (300 ms) or **Slow** (600 ms), or type your own in the Keyframe panel. The dip is made of ordinary keys on the layer's *Opacity* and *Blur* (so you can move or reshape them afterwards), cut short where another text key is close. It is made once: if you later move the text key, move the dip keys with it (select them together with <kbd>Shift</kbd>-click). Running it again on the same key replaces the dip. For viewers who ask for less motion the dip is left out and the words simply change.
+
+The first text key has no earlier words to change from, so it has no dip.
+
 ## Markers
 A **marker** is a named point in time. Press **+ Marker** to add one at the playhead; it shows as a flag on the ruler and is called *Marker 1*, *Marker 2* and so on until you rename it. **Click** a marker to select it: it turns yellow, a dashed line runs down through the tracks, and a **Marker** panel appears at the right of the timeline with its name, its time, and (when [Steps](steps) use the timeline) its title and caption. Drag it to move it, press the <kbd>←</kbd> and <kbd>→</kbd> arrow keys to nudge it (10 ms, 100 ms with Shift, or one frame when the timeline has a frame rate), and press <kbd>Delete</kbd> to remove it. Right-click a marker for the same things as a menu, and right-click the ruler to add a marker there.
 
@@ -11695,11 +11755,27 @@ To **do something when playback reaches a marker**, select it and press **+ When
 
 ![The timeline bar and tracks. The flag on the ruler is a marker.](help/timeline-markers.png)
 
+## The list of timelines
+Beside the Timeline is a list of every timeline on the open artboard (or component), so you can see what is there and what is missing without opening a dropdown. Each row shows the timeline's length, whether it plays once, loops or ping-pongs, how many layers it animates, and what plays it (an interaction, a joystick, a blend, or its own autoplay). **Nothing plays it** means no interaction, joystick, blend or autoplay starts it yet.
+- Click a row to open that timeline. The first row, **Design view**, goes back to the layers as they are.
+- Select a layer on the canvas and the rows of timelines that animate it are marked **Animates ...** with a bar at their left.
+- The open timeline's row shows its buttons (move, rename, duplicate, delete); every row has the same actions on right-click.
+- Double-click a name, or use the pencil, to rename it. Two timelines on one artboard cannot share a name.
+- Drag a row, or use the arrows, to reorder. The order matters for timelines that **hold their end pose**: a later one wins over an earlier one on the properties both key.
+- The copy button makes a duplicate right after it (it does not autoplay, so the two do not both start). The bin deletes it and warns first when something plays it: those interactions will stop working until you point them at another timeline.
+- On a component (an artboard that other artboards place as a layer) the list suggests the usual states, **Idle**, **Hover** and **Pressed**, and adds an empty timeline for any that is missing. A timeline named with a word like rest, over, click or down counts as that state.
+- The **List** button on the Timeline bar, the **x** on the list and the **View** menu all show and hide the list, and your choice is remembered for you.
+
+## Sound and captions rows
+Sound, Captions and Descriptions sit under the ruler in one group. When a timeline has no sound, captions or descriptions the group is folded to a single row, **Sound and captions**, that says what is in it. When it has some, the group is open. Click the arrow on that row to open or fold it by hand. Folded, the row still draws a mark for each clip and each cue along the time axis, so you can see where they are.
+
+The **View** button (the eye) on the Timeline bar lets you hide the Sound, Captions or Descriptions lane altogether, and turn off folding an empty group. Hiding a lane also hides its Add controls: turn it back on in the same menu. These choices are kept for you across projects.
+
 ## Design view and timeline view
 There are two ways to look at an artboard.
 
 - **Design view**: the canvas shows the layers as they really are, with no animation applied. This is where you place and style things. Opening an artboard starts here, and the Timeline tab says **Design view: the canvas shows the layers as they are. Choose a timeline to see and edit its animation.**
-- **Timeline view**: choose a timeline from the dropdown at the top left of the Timeline tab and the canvas shows that timeline at the playhead. Drag the playhead to see any frame, and with **Record** on, changes become keyframes.
+- **Timeline view**: choose a timeline from [the list](timelines#the-list-of-timelines) beside the Timeline (or the dropdown at the top left of the Timeline tab) and the canvas shows that timeline at the playhead. Drag the playhead to see any frame, and with **Record** on, changes become keyframes.
 
 Choose **Design view (no timeline)** in the same dropdown to go back. Record turns itself off when you do.
 
@@ -11853,7 +11929,7 @@ Examples: a dial that turns with a variable, a character whose eyes follow the p
     title: "Blends",
     group: "Motion",
     summary: "Mix several timelines at once, weighted by numbers: idle, walk and run by speed, or a lean on top of a loop.",
-    keywords: "blend mix weight 1d direct additive layer timelines locomotion speed rive blend state input",
+    keywords: "blend mix weight 1d direct additive layer timelines locomotion speed rive blend state input transition smooth ease exit time gradually jump",
     body: `A **blend** plays several [timelines](timelines) together and mixes their poses. How much each one counts comes from number [variables](variables), so a single number can turn *idle* into *walk* into *run*.
 
 Add one in the **Blends** section of the artboard (select the artboard), then start it with a **Start a blend** node (or tick *Start with the artboard*). **Stop a blend** ends it.
@@ -11891,6 +11967,11 @@ Use **Direct** when each pose should have its own weight (e.g. a *smile* and a *
 
 ## How it plays
 While a blend is on, each of its timelines plays on a playhead of the blend's own, following the timeline's loop setting. The same timeline can also play normally. Every frame the order is: normal timelines, [joysticks](joysticks), blends (in the order listed), then Animate property tweens. A blend therefore wins over a normal timeline animating the same property, except that Additive blends add to what the timeline wrote. *Start a blend* does nothing if the blend is already on; *Stop a blend* leaves the mixed pose where it is (Additive blends excepted).
+
+## Easing a jump: Transition
+A number that jumps (a counter going from 0 to 1 when a button is pressed) makes the mix jump too. Give the blend a **Transition (ms)** and it eases its own mix to the new number over that long instead, say 250 for a quarter of a second. **Transition easing** shapes it (linear sweeps evenly). The variable itself changes at once and is not touched, so anything else that reads it is unaffected. If the number changes again half way, the mix turns round from wherever it has got to. With the viewer's reduced motion setting on, the mix follows the number at once. There is no setting on a connector in the graph: connections carry no values here, so the time lives on the blend.
+
+To ease the number itself, so that everything reading it moves smoothly (a bar bound to it, a text showing it), use **Over (ms)** on **Change a value or counter** (Set variable) with *Set to* or *Add*. Use that when you want the number visible as it moves, and a blend's Transition when only the pose should be smooth.
 
 ## Imported blend states
 Importing a Rive file turns its 1D and direct blend states into blends. Entering the state plays the blend; leaving stops it. Direct blend inputs run 0 to 100 as in Rive.`
@@ -12673,6 +12754,9 @@ Choice variables show as a dropdown wherever you set them, so you can't type a v
 
 ## Lists
 A list variable holds the items a [repeater](repeaters) draws: put its name in **Repeat → Items**, and \`item\`/\`index\` are the current one. The starting items are JSON text in the Variables tab. Change the list while it runs with **Change a value or counter**: *Append to list* adds an item (\`{name: "Cy"}\`), *Remove from list* takes out the item at a position (0 is the first), *Empty* clears it, and *Set to* replaces it. The other list ops are *Add to list, or take out if there* (a tick-list: adds the value, or removes it when it is already in), *Remove from list (value)* (every item equal to the value, objects compared by what they hold) and *Change one list item*: give the item's position (left empty it is \`event.index\`, the item the event came from), an optional **Field** to change only that field of an object item, and the new value, which can read \`item\` (what is there now) and \`index\` (\`item.count + 1\`). A position that is not in the list changes nothing. In scripts use \`ix.toggleItem('picked', 'b')\`, \`ix.removeValue('picked', 'b')\` and \`ix.setItem('cards', 2, 'down', 'state')\`, or assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`. Text that is not a JSON array makes an empty list.
+
+## Easing a number to a new value
+**Change a value or counter** with *Set to* or *Add* on a number has **Over (ms)** and **Easing**. Over 0 jumps, as always. Over 400 the number runs up (or down) to the new value in 0.4 s, and anything reading it moves with it: a bar, a text, a [blend](blends). **Continue** says whether the next node runs straight away, part-way, or once the number has arrived. A newer change to the same variable takes over from wherever it has got to, and so does any other write to it. With reduced motion it sets at once.
 
 ## Worked out from a formula
 Instead of typing a starting value, give a variable a **formula** (the line under its value in the Variables tab): an [expression](expressions) over the variables above it in the list. The player works it out each time the project starts (and after **Start over**), and the canvas preview works it out too, so what you see while editing follows the variables it depends on. The typed value is only what it falls back to if the formula fails. It is an ordinary variable once it plays, so Set variable can change it, unless you tick **Keep up to date** (see *Live variables* below): then it is read only and is worked out again whenever what it reads changes. The branded Crossword and Word search starters use this: you edit a plain list of words (and clues) and the grid is laid out from it, with \`crossword(words, 10)\` and \`wordSearch(words, 12)\` (see [Expressions](expressions)). Clear the formula to type or lay the value out yourself.
@@ -15055,6 +15139,7 @@ function applyChanges(p0, changes) {
             id: uid("tr"),
             nodeId: ref(tr.node_id),
             prop: tr.prop,
+            ...tr.dip === true ? { dip: true } : {},
             keys: tr.keys.map((k) => ({ id: uid("k"), t: k.t, value: k.value, ease: k.ease ?? "easeInOut" }))
           }))
         };
@@ -15307,7 +15392,7 @@ ${JSON.stringify(loc.node, null, 1)}`);
   },
   {
     name: "edit",
-    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
+    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, dip?, keys: [{t, value, ease}]}], ref?} (text, label and true/false keys hold until the next key and never ease; to soften a text change key opacity and/or blur dipping to 0 / 8 either side of it on separate tracks marked dip: true, which reduced motion leaves out); add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
     inputSchema: S({ project_id: str("Project id"), changes: { type: "array", items: { type: "object" } }, explain: str("One line saying what this does (shown in the editor log)") }, ["project_id", "changes"]),
     run: async (a) => {
       const s = join(String(a.project_id));

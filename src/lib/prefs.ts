@@ -66,6 +66,14 @@ export interface Prefs {
   sectionFolds?: Record<string, boolean>;
   /** The "Getting started" strip in the editor (lib/onboarding.ts). On by default; it also puts itself away once every job on it is done. */
   gettingStarted: boolean;
+  /** The Timeline's side list of the artboard's timelines is open (lib/timeline-list.ts). On by default. */
+  timelineList: boolean;
+  /** The Sound and captions lanes start folded to one row on a timeline that has no clips or cues (lib/timeline-view.ts). On by default. */
+  timelineFoldEmpty: boolean;
+  /** Lanes the Timeline's View menu has hidden. Off by default, so all three show. */
+  timelineHideSound?: boolean;
+  timelineHideCaptions?: boolean;
+  timelineHideDescriptions?: boolean;
   /** What first-run remembers, as short keys to booleans: `job-<id>` for a ticked job, `dismissed`, `fresh`, `essentials`, `welcomed` (lib/onboarding.ts). */
   onboarding?: Record<string, boolean>;
   /** Keys the person set themselves, by command id (lib/keymap.ts). Only what differs from the default, so a new default still reaches everyone. */
@@ -79,7 +87,7 @@ export interface Prefs {
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { singleKeys: true, technicalWording: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', codeTheme: 'follow', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true };
+const DEFAULTS: Prefs = { singleKeys: true, technicalWording: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', codeTheme: 'follow', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 

@@ -8,6 +8,7 @@ import {
   createArtboard,
   frameTime,
   sampleKeys,
+  holdsText,
   cloneWithNewIds,
   remapConnectorIds,
   getPath,
@@ -1052,6 +1053,33 @@ export class EditorStore {
     });
   }
 
+  /** Alt-drag in the Layers list: a copy of the layer lands in the drop spot (the same arguments as `moveNode`) and the original stays. */
+  copyNodeTo(id: string, parentId: string | null, index: number): string | null {
+    const ab = this.artboard();
+    if (!ab) return null;
+    track('doc', 'duplicate', { thing: 'layers-drag' });
+    let made: string | null = null;
+    this.update((d) => {
+      const dab = getArtboard(d as Project, ab.id)!;
+      const loc = locate(dab, id);
+      if (!loc) return;
+      if (parentId && (parentId === id || locate(dab, parentId)?.ancestors.some((a) => a.id === id))) return; // a group can't be copied into itself
+      const oldOffset = loc.ancestors.reduce((o, a) => ({ x: o.x + a.x, y: o.y + a.y }), { x: 0, y: 0 });
+      const target = parentId ? locate(dab, parentId) : null;
+      const list = target && isContainer(target.node) ? target.node.children : dab.children;
+      const newOffset = target ? [...target.ancestors, target.node].reduce((o, a) => ({ x: o.x + a.x, y: o.y + a.y }), { x: 0, y: 0 }) : { x: 0, y: 0 };
+      const copy = cloneWithNewIds(JSON.parse(JSON.stringify(loc.node)) as SceneNode);
+      copy.x += oldOffset.x - newOffset.x;
+      copy.y += oldOffset.y - newOffset.y;
+      copy.name = uniqueName(nodeNames(dab), loc.node.name);
+      list.splice(Math.max(0, Math.min(list.length, index)), 0, copy);
+      made = copy.id;
+      adoptQuestions(d as Project, ab.id, [copy.id]);
+    });
+    if (made) this.select([made]);
+    return made;
+  }
+
   /**
    * Align the selection's top-level layers: to each other when several are selected, to their
    * container (or the artboard) when one is.
@@ -1468,12 +1496,13 @@ export class EditorStore {
   /**
    * Duplicate several artboards in one undo step. The copies keep their layout among themselves and sit to the right of the
    * originals; they are selected afterwards. A copy joins the group of its original, except when a whole group is duplicated:
-   * then the copies are a new group of their own ("Quiz copy").
+   * then the copies are a new group of their own ("Quiz copy"). Answers with each original's id and its copy's, `inPlace`
+   * leaves the copies on top of the originals (Alt-drag then carries them away).
    */
-  duplicateArtboards(ids: string[]): void {
+  duplicateArtboards(ids: string[], opts: { inPlace?: boolean } = {}): Map<string, string> {
     const p = this.state.project;
     const srcs = p.artboards.filter((a) => ids.includes(a.id));
-    if (!srcs.length || srcs.some((a) => this.brandCopyRefused(a))) return;
+    if (!srcs.length || srcs.some((a) => this.brandCopyRefused(a))) return new Map();
     track('doc', 'artboard-duplicate', { sum: { artboards: srcs.length } });
     const copies = srcs.map((a) => ({ src: a, copy: this.copyArtboard(a) }));
     if (srcs.length > 1) {
@@ -1491,6 +1520,13 @@ export class EditorStore {
         taken.add(c.copy.name);
       }
     }
+    //an Alt-drag copy starts under the original and the drag carries it away
+    if (opts.inPlace) {
+      for (const c of copies) {
+        c.copy.canvasX = c.src.canvasX;
+        c.copy.canvasY = c.src.canvasY;
+      }
+    }
     //a group copied whole becomes a group of copies
     const wholeGroups = (p.artboardGroups ?? []).filter((g) => p.artboards.filter((a) => a.group === g.id).every((a) => ids.includes(a.id)) && srcs.some((a) => a.group === g.id));
     const fresh = new Map(wholeGroups.map((g) => [g.id, { id: uid('abg'), name: freshGroupName(p, `${g.name} copy`) }]));
@@ -1505,6 +1541,7 @@ export class EditorStore {
       }
     });
     this.pickArtboards(copies.map((c) => c.copy.id));
+    return new Map(copies.map((c) => [c.src.id, c.copy.id]));
   }
 
   /** A copy of an artboard with new ids all through (layers, timelines, joysticks, blends and the interactions that point at them), next to it on the canvas. Not added to the project. */
@@ -1621,7 +1658,7 @@ export class EditorStore {
 
   // ---------------------------------------------------------------- timelines
 
-  addTimeline(): string {
+  addTimeline(name = 'Timeline'): string {
     track('feature', 'timeline-add');
     const ab = this.artboard();
     if (!ab) return '';
@@ -1629,7 +1666,7 @@ export class EditorStore {
       id: uid('tl'),
       name: uniqueName(
         ab.timelines.map((t) => t.name),
-        'Timeline',
+        name,
       ),
       duration: 1000,
       loop: 'once',
@@ -1642,6 +1679,72 @@ export class EditorStore {
     });
     this.set({ activeTimelineId: tl.id, playhead: 0, bottomTab: 'timeline' });
     return tl.id;
+  }
+
+  /** Rename a timeline of the open artboard. Empty names and names another timeline has are refused (returns false). */
+  renameTimeline(id: string, name: string): boolean {
+    const ab = this.artboard();
+    const clean = name.trim();
+    if (!ab || !clean) return false;
+    if (ab.timelines.some((t) => t.id !== id && t.name === clean)) return false;
+    const tl = ab.timelines.find((t) => t.id === id);
+    if (!tl) return false;
+    if (tl.name === clean) return true;
+    track('feature', 'timeline-rename');
+    this.update((d) => {
+      const t = getArtboard(d as Project, ab.id)?.timelines.find((x) => x.id === id);
+      if (t) t.name = clean;
+    });
+    return true;
+  }
+
+  /** Move a timeline to a place in the open artboard's list (the order is what "after the timelines that play before it" means for held poses). */
+  moveTimeline(id: string, to: number): void {
+    const ab = this.artboard();
+    const from = ab?.timelines.findIndex((t) => t.id === id) ?? -1;
+    if (!ab || from < 0) return;
+    const at = Math.max(0, Math.min(ab.timelines.length - 1, to));
+    if (at === from) return;
+    track('feature', 'timeline-reorder');
+    this.update((d) => {
+      const list = getArtboard(d as Project, ab.id)!.timelines;
+      const [t] = list.splice(from, 1);
+      list.splice(at, 0, t);
+    });
+  }
+
+  /** A copy of a timeline right after it, with new ids, named "<name> copy", not set to autoplay (so the two don't both start). Returns the copy's id. */
+  duplicateTimeline(id: string): string {
+    const ab = this.artboard();
+    const src = ab?.timelines.find((t) => t.id === id);
+    if (!ab || !src) return '';
+    track('feature', 'timeline-duplicate');
+    const copy = JSON.parse(JSON.stringify(src)) as Timeline;
+    copy.id = uid('tl');
+    copy.name = uniqueName(
+      ab.timelines.map((t) => t.name),
+      `${src.name} copy`,
+    );
+    copy.autoplay = false;
+    for (const tr of copy.tracks) tr.id = uid('tr');
+    for (const m of copy.markers ?? []) m.id = uid('mk');
+    this.update((d) => {
+      const list = getArtboard(d as Project, ab.id)!.timelines;
+      list.splice(list.findIndex((t) => t.id === id) + 1, 0, copy);
+    });
+    this.set({ activeTimelineId: copy.id, playhead: 0, selectedKeys: [] });
+    return copy.id;
+  }
+
+  /** Delete a timeline of the open artboard. Things that played it by name or id are left to the Usage tab to flag. */
+  deleteTimeline(id: string): void {
+    const ab = this.artboard();
+    if (!ab?.timelines.some((t) => t.id === id)) return;
+    track('feature', 'timeline-delete');
+    this.update((d) => {
+      const a = getArtboard(d as Project, ab.id);
+      if (a) a.timelines = a.timelines.filter((t) => t.id !== id);
+    });
   }
 
   updateTimeline(fn: (tl: Draft<Timeline>) => void, coalesce?: string): void {
@@ -1908,7 +2011,7 @@ export function keyTime(tl: Pick<Timeline, 'duration' | 'fps' | 'snap'>, t: numb
 /** A layer property's value at time t of a timeline: its track's value there when the timeline animates it, otherwise the layer's own. */
 export function valueAt(tl: Timeline | undefined, node: SceneNode, prop: string, t: number): unknown {
   const track = tl?.tracks.find((x) => x.nodeId === node.id && x.prop === prop);
-  return track?.keys.length ? sampleKeys(track.keys, frameTime(tl!, t)) : getPath(node, prop);
+  return track?.keys.length ? sampleKeys(track.keys, frameTime(tl!, t), holdsText(prop, node)) : getPath(node, prop);
 }
 
 /** Set a keyframe value at time t (within 1ms an existing key is replaced). Keys made at the playhead pass keyTime(tl, playhead). */
