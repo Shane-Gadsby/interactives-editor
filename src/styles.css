@@ -12134,8 +12134,9 @@ button.flow-text:focus-visible {
 .pivot-row .li-picker-field {
   flex: none;
 }
-.pivot-row .pivot-nums {
-  margin-top: var(--row-gap);
+.prop-row.pivot-row .row.pivot-nums {
+  /* clear space between the dots and the Pivot X and Y boxes */
+  margin-top: var(--group-gap);
 }
 
 /* ---------------------------------------------------------------- a message with an Undo or Redo button */

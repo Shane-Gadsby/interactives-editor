@@ -5,7 +5,7 @@ import { useSyncExternalStore } from 'react';
  * about this screen, so they're kept in this browser rather than with the other preferences.
  */
 export type Side = 'left' | 'right';
-export const PANEL_WIDTH = { left: { def: 300, min: 180, max: 560 }, right: { def: 320, min: 240, max: 640 } } as const;
+export const PANEL_WIDTH = { left: { def: 300, min: 180, max: 560 }, right: { def: 380, min: 240, max: 640 } } as const;
 // Only widths someone dragged to are kept (the old key also saved the defaults on every load, so a new default never
 // reached anyone who had opened the editor before)
 const KEY = 'ix-panel-widths-v2';
@@ -20,7 +20,10 @@ export const clampWidth = (side: Side, w: number): number => {
 function load(): Record<Side, number> {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Record<Side, number>>;
-    return { left: Number(v.left) || PANEL_WIDTH.left.def, right: Number(v.right) || PANEL_WIDTH.right.def };
+    //320 was the old default, so a right panel still at exactly that was never sized by hand: it gets the new one, roomy
+    //enough for X and Y of 8888 side by side
+    const right = Number(v.right) === 320 ? PANEL_WIDTH.right.def : Number(v.right) || PANEL_WIDTH.right.def;
+    return { left: Number(v.left) || PANEL_WIDTH.left.def, right };
   } catch {
     return { left: PANEL_WIDTH.left.def, right: PANEL_WIDTH.right.def };
   }
