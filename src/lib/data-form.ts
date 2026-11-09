@@ -9,6 +9,9 @@ import { isContainer, kindOf, type Json, type Kind, type Path } from './data-edi
 const isAcronym = (w: string) => w.length > 1 && w === w.toUpperCase() && /[A-Z]/.test(w);
 
 /** A key name as a label: startLabel, start_label and start-label all become "Start label"; ID and URL keep their capitals. */
+/** Short words that read as capitals even when the key is written in lower case (ai, id, url). */
+const KNOWN_ACRONYMS = new Set(['ai', 'id', 'ids', 'url', 'urls', 'uri', 'html', 'css', 'json', 'csv', 'api', 'pdf', 'faq', 'lti', 'gpa']);
+
 export function labelOf(key: string): string {
   if (!/[A-Za-z]/.test(key)) return key === '' ? '(no name)' : key;
   // SHOUTED_NAMES are sentence case too; a single ID or URL keeps its capitals
@@ -20,7 +23,7 @@ export function labelOf(key: string): string {
     .replace(/([A-Za-z]{2,})(\d)/g, '$1 $2')
     .trim()
     .split(/\s+/);
-  return words.map((w, i) => (isAcronym(w) ? w : i === 0 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase())).join(' ');
+  return words.map((w, i) => (isAcronym(w) ? w : KNOWN_ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : i === 0 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase())).join(' ');
 }
 
 const IRREGULAR: Record<string, string> = { people: 'person', children: 'child', men: 'man', women: 'woman', data: 'datum', criteria: 'criterion', media: 'medium' };

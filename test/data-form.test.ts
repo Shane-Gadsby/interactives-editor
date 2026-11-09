@@ -18,6 +18,10 @@ describe('labels from key names', () => {
     ['item2', 'Item 2'],
     ['feedback style', 'Feedback style'],
     ['allow_retry', 'Allow retry'],
+    ['ai', 'AI'],
+    ['id', 'ID'],
+    ['image_url', 'Image URL'],
+    ['aid', 'Aid'],
     ['7', '7'],
     ['', '(no name)'],
   ])('%s is %s', (key, label) => expect(labelOf(key)).toBe(label));
