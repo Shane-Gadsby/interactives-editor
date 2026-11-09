@@ -12,6 +12,7 @@ import { ChildOrder } from '../components/ChildOrder';
 import { CurveEditor, bezierFor } from '../components/CurveEditor';
 import { MarkerStepFields } from './StepsSection';
 import { enableSteps } from '../lib/steps';
+import { revealAdded } from '../lib/graph-reveal';
 import { addMarkerInteraction, markerEvents, nextMarkerName, nudgeMarker, renameMarker } from '../lib/marker-actions';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import type { Project } from 'interactives-player';
@@ -339,9 +340,10 @@ export function TimelinePanel() {
 
   /** "+ When the playhead reaches this…": the On timeline marker event with a Set variable action, opened in Interactions. */
   const addInteraction = (m: { id: string }) => {
-    let made: { actionId: string } | null = null;
+    let made: { eventId: string; actionId: string } | null = null;
     store().update((d) => void (made = addMarkerInteraction(d as Project, ab.id, tl.id, m.id)));
-    if (made) store().set({ bottomTab: 'logic', logicSelection: (made as { actionId: string }).actionId });
+    const w = made as { eventId: string; actionId: string } | null;
+    if (w) revealAdded({ abId: ab.id, ids: [w.eventId, w.actionId], focusId: w.eventId, say: 'Added When an animation reaches a marker: change a value', quiet: () => store().set({ bottomTab: 'logic', logicSelection: w.actionId }) });
   };
 
   const removeMarker = (id: string) => {

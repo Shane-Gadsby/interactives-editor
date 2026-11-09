@@ -131,6 +131,12 @@ export function PrefsModal({ onClose, workspace = false }: { onClose: () => void
             onChange={(v) => setPrefs({ technicalWording: v })}
           />
           <CheckField
+            label="Show new interactions in the graph"
+            title="When you add something with + When clicked… (or hovered, or an empty event), open the Interactions graph, frame what was added and move focus to it, so you can see what was made. Switch it off if you build only from the Inspector and want the view left alone"
+            value={p.showNewInteractions}
+            onChange={(v) => setPrefs({ showNewInteractions: v })}
+          />
+          <CheckField
             label="Ask what a picture shows"
             title="When you add a picture or video, a small box on its settings asks what it shows, so it gets a text alternative for screen readers. You can skip it or mark the picture decorative, and it never stops you carrying on. Switch it off if you add a lot of pictures at once"
             value={p.askPictureDescription}

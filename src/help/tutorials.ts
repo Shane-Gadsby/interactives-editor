@@ -95,7 +95,7 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 
 1. With the button selected, scroll the Inspector to its **Interactions** section and press **+ When clicked…**.
 2. A short list of things that can happen opens. Choose **Play an animation**, then pick your timeline under **Which animation**. The line at the bottom reads back what it will do: *When clicked: play “Timeline”*.
-3. Press **Add**. The section now says it in a sentence: **When clicked: play “Timeline”.**
+3. Press **Add**. The **Interactions** graph opens at the bottom, zoomed in on the two new nodes (more on them in step 4), and the section now says it in a sentence: **When clicked: play “Timeline”.**
 
 That is the whole interaction. The same list can go to another page, show or hide a layer, play a sound, open a link, add 1 to a counter or switch something on or off. Every one is added to the **Interactions** graph as ordinary nodes, so you can always take it further.
 
@@ -103,7 +103,7 @@ That is the whole interaction. The same list can go to another page, show or hid
 
 ## 4. See what it made
 
-1. Under the sentence press **Show in graph**. The bottom panel switches to **Interactions** and picks the new node.
+1. The bottom panel has switched to **Interactions** and picked the new nodes. (If you look away, **Show in graph** under the sentence brings you back to them.)
 2. There are two nodes, joined: a **When clicked or hovered** event (its settings say **Layer: Slide button** and **Event: Click / tap**) and a **Play or stop an animation** action. The Inspector's sentence is made from exactly these.
 3. The **Read as sentences** button above the graph shows the whole page this way. Use it to read a graph somebody else built.
 
