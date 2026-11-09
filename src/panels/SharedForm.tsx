@@ -4,6 +4,7 @@ import { store } from '../store/store';
 import { getSharedResponses, hideSharedAnswer, removeSharedAnswers, type SharedCourse, type SharedSourceInfo } from '../lib/db';
 import { NumberField, SelectField, TextField } from '../components/ui';
 import { confirmDialog } from '../components/dialogs';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const WHO: { value: SharedWho; label: string }[] = [
   { value: 'class', label: 'Everyone in this class' },
@@ -42,9 +43,15 @@ export function SharedForm({ source, variables, setSource }: { source: DataSourc
       <NumberField label="Look again" suffix="s" title="How often the page asks for what the class has added while it is open (at least 2 seconds). 0 reads it once" value={s.refresh} min={0} onChange={(v) => set({ refresh: Math.round(v) }, `sh-ref-${source.id}`)} />
       <TextField label="Blocked words" multiline rows={3} commitOnBlur value={lines(s.blocked)} placeholder="one word or phrase a line" title="Nobody can add an answer with one of these words in it, whatever the capitals, and answers already in stop showing. Whole words only: blocking ass leaves class alone" onChange={(v) => set({ blocked: fromLines(v) })} />
       <TextField label="Sample answers" multiline rows={3} commitOnBlur value={lines(s.sample)} placeholder="one a line, for the canvas" title="Answers the canvas and Preview show for this source so you can lay a page out without a class. Learners never see them" onChange={(v) => set({ sample: fromLines(v) })} />
-      <p className="hint">
-        In expressions <code>{source.name}.answers</code> is the counted list (<code>text</code>, <code>count</code>, <code>weight</code>), with <code>{source.name}.ready</code>, <code>.mine</code>, <code>.left</code>, <code>.people</code> and <code>.problem</code>. Add with the <em>Add to shared responses</em> node or <code>ix.shared.add</code>. Answers are anonymous: counts come back, never names.
-      </p>
+      <SectionBlurb
+        text={
+          <>
+            <code>{source.name}.answers</code> is the counted list. Answers are anonymous: counts come back, never names.
+          </>
+        }
+        name="shared responses"
+        help={['shared-responses', 'adding-one']}
+      />
       <Moderation source={source} />
     </>
   );
@@ -92,7 +99,7 @@ function Moderation({ source }: { source: DataSource }) {
       </div>
       {error && <p className="error small">{error}</p>}
       {info === undefined && !error && <p className="muted small">Loading…</p>}
-      {info === null && !error && <p className="hint">Nothing to moderate yet. Answers are collected through the StudyDesk learner page, and only after the project is shared with this data source in it (Share dialog, Update to the latest version).</p>}
+      {info === null && !error && <SectionBlurb text="Nothing to moderate yet. Answers arrive through the StudyDesk learner page, once the project is shared." name="moderating" help={['shared-responses', 'moderating']} />}
       {info && !courses.length && <p className="hint">Nobody has added anything yet.</p>}
       {here && (
         <>

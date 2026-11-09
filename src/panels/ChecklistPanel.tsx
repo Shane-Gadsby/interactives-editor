@@ -89,7 +89,7 @@ export function ChecklistPanel() {
         </button>
       </div>
       {use.checklist.length === 0 ? (
-        <p className="muted pad">The author did not list anything to change. Read through the project before you share it: the words and pictures in it are theirs.</p>
+        <p className="muted pad">The author did not list anything to change. Read through the project before you share it.</p>
       ) : (
         <ol className="checklist">
           {use.checklist.map((item) => {

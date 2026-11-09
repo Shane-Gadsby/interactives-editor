@@ -1,13 +1,16 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { formatColor, isTokenRef, parseColor, speedOf, TRANSITION_SPEEDS, type Project } from 'interactives-player';
+import { formatColor, isTokenRef, parseColor, speedOf, TRANSITION_SPEEDS, type GridTrack, type Project } from 'interactives-player';
 import { HelpLink } from '../help/Help';
 import { paletteTip, usePalette } from '../lib/palette';
 import { Icons } from './icons';
 import { TokensTab, tokenSummary, linked, useBrandLocked, useThemeState } from './TokenPicker';
 import { FIELD_TIPS } from './tips';
 import { useRowSearch, useSectionSearch, RowScope, SectionScope } from '../lib/prop-search';
-import { ContextMenu } from './ContextMenu';
+import { ContextMenu, type MenuItem } from './ContextMenu';
+import { moveSection, sectionDragStart, sectionKeyMove, sectionPlace, useSectionOrder } from '../lib/section-order';
+import { resetOrder } from '../lib/reorder';
+import { formatTracks, parseTracks, trackProblems } from '../lib/grid-tracks';
 import { isSectionOpen, onlySectionOpen, registerSection, resetSectionFolds, sectionKey, setAllSections, setSectionOpen, useSectionFoldVersion } from '../lib/section-fold';
 
 /** An explicit title, or the standard explanation for a field label. */
@@ -16,8 +19,21 @@ export function tipFor(label: ReactNode, title?: string): string | undefined {
   return typeof label === 'string' ? FIELD_TIPS[label.replace(/\u00a0/g, ' ')] : undefined;
 }
 
-/** A field label that never breaks after a hyphen ("V-align" would wrap to "V-" and "align" in a tight row). */
-export const unbroken = (label: ReactNode): ReactNode => (typeof label === 'string' ? label.replace(/-/g, '\u2011') : label);
+/** A field label that never breaks after a short hyphenated start ("V-align" would wrap to "V-" and "align" in a tight row). A longer one ("Bottom-right") may, since the label column is narrow. */
+export const unbroken = (label: ReactNode): ReactNode => (typeof label === 'string' ? label.replace(/\b(\w{1,2})-/g, '$1\u2011') : label);
+
+/**
+ * The classes every field carries, so one stylesheet block lays them all out on the panel's grid (label column, control, trailing slot).
+ * `unlabelled` has no label column, so its control starts at the left edge.
+ */
+export function fieldClass(kind: string, label: ReactNode, hide = false, extra = ''): string {
+  return `field ${kind}${extra ? ' ' + extra : ''}${label === undefined ? ' unlabelled' : ''}${hide ? ' ps-hide' : ''}`;
+}
+
+/** The fixed slot at the end of a field: a unit or suffix goes in it, and it is there (empty) when there is none, so the boxes in a column end together */
+export function FieldTrail({ children }: { children?: ReactNode }) {
+  return <span className="field-trail">{children}</span>;
+}
 
 /** Number input whose label can be dragged left/right to scrub the value. */
 export function NumberField({
@@ -83,7 +99,7 @@ export function NumberField({
     el.addEventListener('pointerup', up);
   };
   return (
-    <label className={`field number-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
+    <label className={fieldClass('number-field', label, ps.hide)} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && (
         <span className="field-label scrub" onPointerDown={scrub}>
           {unbroken(label)}
@@ -113,7 +129,7 @@ export function NumberField({
           e.stopPropagation();
         }}
       />
-      {suffix && <span className="field-suffix">{suffix}</span>}
+      <FieldTrail>{suffix}</FieldTrail>
     </label>
   );
 }
@@ -168,7 +184,7 @@ export function UnitField({
     onChange(clamp(Math.round(v * 100) / 100), to);
   };
   return (
-    <label className={`field number-field unit-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
+    <label className={fieldClass('number-field', label, ps.hide, 'unit-field')} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
       <input
         value={text}
@@ -202,6 +218,7 @@ export function UnitField({
       >
         {unit === 'percent' ? '%' : 'px'}
       </button>
+      <FieldTrail />
     </label>
   );
 }
@@ -279,14 +296,91 @@ export function TextField({
       if (!multiline && e.key === 'Enter') (e.target as HTMLInputElement).blur();
     },
   };
-  // A long label would squeeze its own box to nothing at the inspector's width, so it goes above it, like a text area's
-  const stacked = multiline || (typeof label === 'string' && label.length > 14);
+  // Only a text area puts its label above it. A long label wraps inside the label column like any other
   return (
-    <label className={`field text-field${stacked ? ' multiline' : ''}${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
+    <label className={fieldClass('text-field', label, ps.hide, multiline ? 'multiline stacked' : '')} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
       {multiline ? <textarea rows={rows ?? 3} {...props} /> : <input {...props} />}
+      {!multiline && <FieldTrail />}
     </label>
   );
+}
+
+/**
+ * The sizes of a grid's columns or rows, written as text (`100px 25% 1fr auto`). What you type stays exactly as typed until you
+ * leave the box or press Enter, since tidying it on every key turned "1" into "1px" under your cursor. Then it is read and
+ * written back tidily. If a word is not a size nothing is saved: the box keeps what you typed and says which word it did
+ * not understand. Escape puts back what was saved.
+ */
+export function TrackField({ label, title, tracks, onChange }: { label?: ReactNode; title?: string; tracks: GridTrack[]; onChange: (t: GridTrack[]) => void }) {
+  const ps = useRowSearch(label, tipFor(label, title));
+  const saved = formatTracks(tracks);
+  const [text, setText] = useState(saved);
+  const [editing, setEditing] = useState(false);
+  const focused = useRef(false);
+  const revert = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setText(saved);
+  }, [saved]);
+  // a word still being typed is not a mistake yet
+  const bad = trackProblems(text, editing);
+  const finish = () => {
+    focused.current = false;
+    setEditing(false);
+    if (revert.current) {
+      revert.current = false;
+      setText(saved);
+      return;
+    }
+    if (trackProblems(text).length) return;
+    const next = parseTracks(text);
+    const tidy = formatTracks(next);
+    setText(tidy);
+    if (tidy !== saved) onChange(next);
+  };
+  return (
+    <>
+      <label className={fieldClass('text-field track-field', label, ps.hide)} data-prop={ps.prop} title={tipFor(label, title)}>
+        {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
+        <input
+          value={text}
+          spellCheck={false}
+          aria-invalid={bad.length > 0 || undefined}
+          onFocus={() => {
+            focused.current = true;
+            setEditing(true);
+          }}
+          onBlur={finish}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+            if (e.key === 'Escape') {
+              revert.current = true;
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+        />
+        <FieldTrail />
+      </label>
+      {bad.length > 0 && (
+        <div className="field-problem" role="status">
+          {bad.length === 1 ? `"${bad[0]}" is not a size.` : `${bad.map((w) => `"${w}"`).join(', ')} are not sizes.`} Use px, %, fr or auto.{!editing && text !== saved && ' Not saved yet.'}
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * A dropdown cuts a long choice off with "…" when its box is narrow, so the box's own tooltip says the whole thing (and then the
+ * field's explanation, if it has one). A short choice always fits, so it gets no tooltip of its own. It is `data-tip` and not
+ * `title` so a screen reader is not handed a stale copy of the choice as the box's description (it reads the choice itself).
+ */
+const LONG_CHOICE = 10;
+export function fullName(choice: string | undefined, tip: string | undefined): string | undefined {
+  if (!choice || choice.length < LONG_CHOICE) return undefined;
+  return tip ? `${choice} (${tip})` : choice;
 }
 
 export function SelectField<T extends string>({
@@ -307,15 +401,16 @@ export function SelectField<T extends string>({
   const ps = useRowSearch(label, tipFor(label, title));
   const opts = (options as (T | { value: T; label: string })[]).map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
   return (
-    <label className={`field select-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
+    <label className={fieldClass('select-field', label, ps.hide)} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
-      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value as T)} onKeyDown={(e) => e.stopPropagation()}>
+      <select value={value} disabled={disabled} data-tip={fullName(opts.find((o) => o.value === value)?.label, tipFor(label, title))} onChange={(e) => onChange(e.target.value as T)} onKeyDown={(e) => e.stopPropagation()}>
         {opts.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
         ))}
       </select>
+      <FieldTrail />
     </label>
   );
 }
@@ -496,107 +591,113 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
   const [text, setText] = useState(value);
   useEffect(() => setText(value), [value]);
   const tokenTab = (tokens || locked) && ts ? { ts, onToken: (ref: string) => (onChange(ref), onCommit?.()) } : undefined;
+  // The label is a real one for the hex box when there is one
+  const hexId = useId();
+  const labelEl = (forHex: boolean) =>
+    label !== undefined && (
+      <label className="field-label" htmlFor={forHex ? hexId : undefined} title={tipFor(label, title)}>
+        {unbroken(label)}
+      </label>
+    );
   if (link) {
     return (
-      <div className={`field color-field linked${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop}>
-        {label !== undefined && (
-          <span className="field-label" title={tipFor(label, title)}>
-            {label}
+      <div className={fieldClass('color-field', label, ps.hide, 'linked')} data-prop={ps.prop}>
+        {labelEl(false)}
+        <span className="field-control">
+          <span className="swatch linked" style={{ background: link.shown }} title={link.token ? `Follows ${link.token.name}: changes with the theme` : 'Follows a token that no longer exists'}>
+            <Icons.link width={9} height={9} />
           </span>
-        )}
-        <span className="swatch linked" style={{ background: link.shown }} title={link.token ? `Follows ${link.token.name}: changes with the theme` : 'Follows a token that no longer exists'}>
-          <Icons.link width={9} height={9} />
+          <PaletteButton value={value} onPick={(v) => (onChange(v), onCommit?.())} tokenTab={tokenTab} tokensOnly={locked} />
+          <span className={`token-chip${link.token ? '' : ' missing'}`} title={link.token ? `Follows the token ${link.token.name}${ts ? ` (${tokenSummary(ts.project, link.token)})` : ''}. Edit its colours in the Themes panel` : 'This token was deleted. Detach it to keep the colour'}>
+            <span className="token-chip-name">{link.token?.name ?? 'missing token'}</span>
+            {!locked && (
+            <button
+              type="button"
+              className="token-detach"
+              title="Detach: keep the colour as it is now, as a plain colour that no longer follows the theme"
+              aria-label="Detach from the token"
+              onClick={() => {
+                onChange(formatColor(parseColor(link.shown) ?? [0, 0, 0, 1]));
+                onCommit?.();
+              }}
+            >
+              <Icons.close width={9} height={9} />
+            </button>
+            )}
+          </span>
         </span>
-        <PaletteButton value={value} onPick={(v) => (onChange(v), onCommit?.())} tokenTab={tokenTab} tokensOnly={locked} />
-        <span className={`token-chip${link.token ? '' : ' missing'}`} title={link.token ? `Follows the token ${link.token.name}${ts ? ` (${tokenSummary(ts.project, link.token)})` : ''}. Edit its colours in the Themes panel` : 'This token was deleted. Detach it to keep the colour'}>
-          <span className="token-chip-name">{link.token?.name ?? 'missing token'}</span>
-          {!locked && (
-          <button
-            type="button"
-            className="token-detach"
-            title="Detach: keep the colour as it is now, as a plain colour that no longer follows the theme"
-            aria-label="Detach from the token"
-            onClick={() => {
-              onChange(formatColor(parseColor(link.shown) ?? [0, 0, 0, 1]));
-              onCommit?.();
-            }}
-          >
-            <Icons.close width={9} height={9} />
-          </button>
-          )}
-        </span>
+        <FieldTrail />
       </div>
     );
   }
   if (locked && tokenTab) {
     return (
-      <div className={`field color-field linked${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop}>
-        {label !== undefined && (
-          <span className="field-label" title={tipFor(label, title)}>
-            {label}
-          </span>
-        )}
-        <span className="swatch" style={{ background: value }} title="Not a theme colour. Pick one from the Tokens tab" />
-        <PaletteButton value={value} onPick={() => undefined} tokenTab={tokenTab} tokensOnly />
-        <span className="muted small">Theme colours only</span>
+      <div className={fieldClass('color-field', label, ps.hide, 'linked')} data-prop={ps.prop}>
+        {labelEl(false)}
+        <span className="field-control">
+          <span className="swatch" style={{ background: value }} title="Not a theme colour. Pick one from the Tokens tab" />
+          <PaletteButton value={value} onPick={() => undefined} tokenTab={tokenTab} tokensOnly />
+          <span className="muted small">Theme colours only</span>
+        </span>
+        <FieldTrail />
       </div>
     );
   }
   return (
-    <div className={`field color-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop}>
-      {label !== undefined && (
-        <span className="field-label" title={tipFor(label, title)}>
-          {label}
+    <div className={fieldClass('color-field', label, ps.hide)} data-prop={ps.prop}>
+      {labelEl(true)}
+      <span className="field-control">
+        <span className="swatch" style={{ background: value }}>
+          <input
+            type="color"
+            value={hex}
+            onChange={(e) => {
+              const c = parseColor(e.target.value)!;
+              onChange(formatColor([c[0], c[1], c[2], rgba[3]]));
+            }}
+            onBlur={onCommit}
+          />
         </span>
-      )}
-      <span className="swatch" style={{ background: value }}>
-        <input
-          type="color"
-          value={hex}
-          onChange={(e) => {
-            const c = parseColor(e.target.value)!;
+        <PaletteButton
+          value={value}
+          tokenTab={tokenTab}
+          onPick={(v) => {
+            // Keeps the opacity already set, like the native picker does
+            const c = parseColor(v)!;
             onChange(formatColor([c[0], c[1], c[2], rgba[3]]));
+            onCommit?.();
           }}
-          onBlur={onCommit}
+        />
+        <input
+          id={hexId}
+          className="mono color-text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={() => {
+            if (parseColor(text)) onChange(text.trim());
+            else setText(value);
+            onCommit?.();
+          }}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+          }}
+        />
+        <input
+          className="alpha"
+          type="number"
+          min={0}
+          max={100}
+          value={alpha}
+          title="Opacity %"
+          onChange={(e) => {
+            const a = Math.max(0, Math.min(100, Number(e.target.value))) / 100;
+            onChange(formatColor([rgba[0], rgba[1], rgba[2], a]));
+          }}
+          onKeyDown={(e) => e.stopPropagation()}
         />
       </span>
-      <PaletteButton
-        value={value}
-        tokenTab={tokenTab}
-        onPick={(v) => {
-          // Keeps the opacity already set, like the native picker does
-          const c = parseColor(v)!;
-          onChange(formatColor([c[0], c[1], c[2], rgba[3]]));
-          onCommit?.();
-        }}
-      />
-      <input
-        className="mono color-text"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => {
-          if (parseColor(text)) onChange(text.trim());
-          else setText(value);
-          onCommit?.();
-        }}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-        }}
-      />
-      <input
-        className="alpha"
-        type="number"
-        min={0}
-        max={100}
-        value={alpha}
-        title="Opacity %"
-        onChange={(e) => {
-          const a = Math.max(0, Math.min(100, Number(e.target.value))) / 100;
-          onChange(formatColor([rgba[0], rgba[1], rgba[2], a]));
-        }}
-        onKeyDown={(e) => e.stopPropagation()}
-      />
+      <FieldTrail />
     </div>
   );
 }
@@ -627,11 +728,16 @@ export function Section({
   useLayoutEffect(() => (key ? registerSection(key, defaultOpen) : undefined), [key, defaultOpen]);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const ps = useSectionSearch(title);
+  const secRef = useRef<HTMLElement>(null);
+  const orderKey = sectionKey(id, title);
+  const scope = useSectionOrder(secRef, orderKey);
+  // the properties search sorts the sections itself while it is open, so they can't be moved then
+  const movable = !!scope && !!orderKey && !ps.searching;
   // While searching every section opens, so its rows are there to be matched; the ones with no match hide
   const shown = open || ps.searching;
   const titleText = typeof title === 'string' ? title : '';
   return (
-    <section className={`section${shown ? '' : ' closed'}${ps.hidden ? ' ps-hide' : ''}${ps.hit ? ' ps-hit' : ''}`} style={ps.searching ? { order: ps.order } : undefined} data-section={key || undefined} data-help={help} data-section-title={titleText || undefined}>
+    <section ref={secRef} className={`section${shown ? '' : ' closed'}${ps.hidden ? ' ps-hide' : ''}${ps.hit ? ' ps-hit' : ''}`} style={ps.searching ? { order: ps.order } : undefined} data-reorder-key={scope && orderKey ? orderKey : undefined} data-section={key || undefined} data-help={help} data-section-title={titleText || undefined}>
       <header className="section-head">
         <div
           className="section-title-row"
@@ -640,13 +746,25 @@ export function Section({
             if (e.altKey) onlySectionOpen(key);
             else setOpen(!open);
           }}
+          onPointerDown={(e) => movable && sectionDragStart(e, secRef.current)}
           onContextMenu={(e) => {
-            if (!collapsible) return;
+            if (!collapsible && !movable) return;
             e.preventDefault();
             setMenu({ x: e.clientX, y: e.clientY });
           }}
         >
-          <button className="section-title" aria-expanded={collapsible ? shown : undefined} title={collapsible ? `${open ? 'Collapse' : 'Expand'} (Alt-click: only this one open. Right-click: fold or unfold them all)` : undefined}>
+          {movable && <span className="section-grip" aria-hidden="true" />}
+          <button
+            className="section-title"
+            aria-expanded={collapsible ? shown : undefined}
+            aria-keyshortcuts={movable ? 'Alt+ArrowUp Alt+ArrowDown' : undefined}
+            onKeyDown={(e) => movable && sectionKeyMove(e, secRef.current)}
+            title={
+              collapsible || movable
+                ? `${collapsible ? `${open ? 'Collapse' : 'Expand'} (Alt-click: only this one open. Right-click: fold or unfold them all)` : ''}${movable ? `${collapsible ? '. ' : ''}Drag to move this section, or press Alt+Up or Alt+Down` : ''}`
+                : undefined
+            }
+          >
             {/* the chevron says it folds, and which way it is now: pointing down when open, right when closed */}
             {collapsible && <span className="section-chev" aria-hidden="true" />}
             {title}
@@ -664,11 +782,16 @@ export function Section({
           y={menu.y}
           onClose={() => setMenu(null)}
           items={[
-            { label: 'Fold all sections', onClick: () => setAllSections(false) },
-            { label: 'Unfold all sections', onClick: () => setAllSections(true) },
-            { label: 'Only this one open', hint: 'Alt-click', onClick: () => onlySectionOpen(key) },
-            { separator: true },
-            { label: 'Back to the default folds', onClick: resetSectionFolds },
+            ...(collapsible
+              ? [
+                  { label: 'Fold all sections', onClick: () => setAllSections(false) },
+                  { label: 'Unfold all sections', onClick: () => setAllSections(true) },
+                  { label: 'Only this one open', hint: 'Alt-click', onClick: () => onlySectionOpen(key) },
+                  { separator: true as const },
+                  { label: 'Back to the default folds', onClick: resetSectionFolds },
+                ]
+              : []),
+            ...(movable ? orderMenu(secRef.current, collapsible) : []),
           ]}
         />
       )}
@@ -683,9 +806,21 @@ export function Section({
   );
 }
 
-export function IconButton({ icon, title, onClick, active, disabled, className, pressed, onContextMenu, popup, expanded }: { icon: ReactNode; title: string; onClick?: (e: React.MouseEvent) => void; active?: boolean; disabled?: boolean; className?: string; pressed?: boolean; onContextMenu?: (e: React.MouseEvent) => void; popup?: 'menu'; expanded?: boolean }) {
+/** The move items of a section's right-click menu (the keyboard way is Alt+Up and Alt+Down on its header). */
+function orderMenu(el: HTMLElement | null, after: boolean): MenuItem[] {
+  const at = sectionPlace(el);
+  if (!el || !at) return [];
+  return [
+    ...(after ? [{ separator: true as const }] : []),
+    { label: 'Move this section up', hint: 'Alt+Up', disabled: at.index === 0, onClick: () => void moveSection(el, -1) },
+    { label: 'Move this section down', hint: 'Alt+Down', disabled: at.index >= at.count - 1, onClick: () => void moveSection(el, 1) },
+    { label: 'Back to the default section order', title: 'Put every section in this panel back where the editor puts it', onClick: () => resetOrder('sectionOrder', at.scope) },
+  ];
+}
+
+export function IconButton({ icon, title, onClick, active, disabled, className, pressed, onContextMenu, popup, expanded, reorderKey }: { reorderKey?: string; icon: ReactNode; title: string; onClick?: (e: React.MouseEvent) => void; active?: boolean; disabled?: boolean; className?: string; pressed?: boolean; onContextMenu?: (e: React.MouseEvent) => void; popup?: 'menu'; expanded?: boolean }) {
   return (
-    <button type="button" className={`icon-btn${active ? ' active' : ''}${className ? ' ' + className : ''}`} title={title} aria-label={title} aria-pressed={pressed} aria-haspopup={popup} aria-expanded={popup ? !!expanded : undefined} onClick={onClick} onContextMenu={onContextMenu} disabled={disabled}>
+    <button type="button" className={`icon-btn${active ? ' active' : ''}${className ? ' ' + className : ''}`} title={title} aria-label={title} aria-pressed={pressed} aria-haspopup={popup} aria-expanded={popup ? !!expanded : undefined} data-reorder-key={reorderKey} onClick={onClick} onContextMenu={onContextMenu} disabled={disabled}>
       {icon}
     </button>
   );

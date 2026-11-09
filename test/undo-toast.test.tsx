@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createArtboard, createNode, createProject } from 'interactives-player';
@@ -22,6 +22,39 @@ const names = (s: EditorStore) => s.get().project.artboards.map((a) => a.name);
 const positions = (s: EditorStore) => JSON.stringify(s.get().project.artboards.map((a) => [a.canvasX, a.canvasY]));
 
 describe('a message with an Undo button', () => {
+  it('still goes away on its own after the Undo button has gone stale', () => {
+    vi.useFakeTimers();
+    try {
+      const { s } = make();
+      const mark = s.historyMark();
+      s.tidyArtboards();
+      s.toastUndo('Tidied.', mark);
+      // something else changes the document, which turns the button off (a new toast object)
+      s.update((d) => void (d.artboards[0].name = 'Start'));
+      expect(s.get().toast?.action?.stale).toBe(true);
+      vi.advanceTimersByTime(9100);
+      expect(s.get().toast).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a newer message is not cleared by the older one running out', () => {
+    vi.useFakeTimers();
+    try {
+      const { s } = make();
+      s.toast('First');
+      vi.advanceTimersByTime(2000);
+      s.toast('Second');
+      vi.advanceTimersByTime(600);
+      expect(s.get().toast?.text).toBe('Second');
+      vi.advanceTimersByTime(2000);
+      expect(s.get().toast).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('Undo takes back exactly the change and offers Redo', () => {
     const { s } = make();
     const before = positions(s);

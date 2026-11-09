@@ -5,6 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Interactives</title>
     <link rel="icon" href="./favicon.svg" />
+    <!-- First, before any other request: the person's preferences and (at #/p/<id>) the project are asked for now, so they are on their way while the bundle downloads.
+         The app takes the responses from window.__ixEarly (src/lib/early-fetch.ts). Only with a session already in hand: opened directly, the editor signs in first and asks the ordinary way.
+         The saved theme goes on <html> here too, so the first paint is already the right colours. -->
+    <script>
+      (function () {
+        try {
+          var d = document.documentElement;
+          var saved = {};
+          try {
+            saved = JSON.parse(localStorage.getItem('ix-prefs:' + (localStorage.getItem('ix-prefs-user') || 'guest')) || '{}');
+          } catch (e) {}
+          d.dataset.theme = saved.theme || 'dark';
+          var m = /^#\/p\/([\w-]+)/.exec(location.hash);
+          var id = new URLSearchParams(location.search).get('sessionID');
+          try {
+            id = id || sessionStorage.getItem('sessionID');
+          } catch (e) {}
+          if (id && id !== 'null' && window.fetch) {
+            var req = {};
+            var go = function (path) {
+              var url = new URL(path, document.baseURI).href;
+              req[url] = fetch(url, { credentials: 'same-origin', headers: { 'X-Session-ID': id } });
+              req[url].catch(function () {});
+            };
+            go('api/prefs');
+            if (m) go('api/projects/' + m[1]);
+            window.__ixEarly = { id: id, at: Date.now(), req: req };
+          }
+          window.__ixEditorRoute = !!m;
+        } catch (e) {}
+      })();
+    </script>
     <!-- Open Sans, every branded starter's font, comes from this server's own font route (fonts-proxy.js): start its stylesheet before the scripts have run -->
     <link rel="preload" as="style" href="./fonts/css2?family=Open+Sans:wght@400;600;700" />
     <!-- the shared StudyDesk palette (si-studydesk-styles): the editor's colours are its variables, see styles.css -->
@@ -13,10 +45,28 @@
     <script src="/utilities.js"></script>
     <!-- the suite's power user (god mode) rule and toggle keys, hosted by the toolbox -->
     <script src="/ilar-toolbox/sys/js/powerUser.js"></script>
-    <script type="module" crossorigin src="./assets/index-AD0MbosW.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Dld9Sy27.css">
+    <script type="module" crossorigin src="./assets/index-ODuJ1kW_.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BNHHeoXx.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- the editor's frames with nothing in them yet, painted before the bundle arrives (src/components/Shell.tsx is the same markup) -->
+      <div class="ix-shell" role="status" aria-label="Loading Interactives">
+        <div class="ix-shell-top">Interactives</div>
+        <div class="ix-shell-tools"></div>
+        <div class="ix-shell-left"></div>
+        <div class="ix-shell-stage"><p>Opening project…</p></div>
+        <div class="ix-shell-right"></div>
+        <div class="ix-shell-bottom"></div>
+      </div>
+      <script>
+        //anything that isn't a project (the projects list, help, review) gets the bar and a quiet line, not panels
+        if (!window.__ixEditorRoute) {
+          var shell = document.querySelector('.ix-shell');
+          shell.className += ' ix-plain';
+          shell.querySelector('p').textContent = 'Loading…';
+        }
+      </script>
+    </div>
   </body>
 </html>

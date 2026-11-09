@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, beforeAll } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createProject } from 'interactives-player';
@@ -8,6 +8,10 @@ import { Icons } from '../src/components/icons';
 import { closeHelp, HelpHost } from '../src/help/Help';
 import { getTopic, topicBody } from '../src/help/topics';
 import { slug } from '../src/help/markdown';
+import { warmHelp } from './lazy-chunks';
+
+//the editor loads these in chunks of their own; the test starts with them in
+beforeAll(() => warmHelp());
 
 vi.mock('../src/lib/export', () => ({ download: vi.fn(), fileSafe: (n: string) => n }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

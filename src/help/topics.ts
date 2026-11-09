@@ -38,9 +38,9 @@ export const TOPICS: HelpTopic[] = [
     group: 'Getting started',
     summary: 'What Interactives is, how a project fits together, and where to start.',
     keywords: 'intro overview start getting started tutorial beginner first learn new user onboarding glossary words',
-    body: `Interactives builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on artboards, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
+    body: `Interactives builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on pages, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
 
-![The editor: tools down the left edge, then Layers, Assets, Libraries and Comments, the artboards in the middle, the Inspector on the right, and the Timeline, Interactions, Scripts, Variables, Data and other tabs along the bottom. Share and Export are at the top right.](help/editor-overview.png)
+![The editor: tools down the left edge, then Layers, Assets, Libraries and Comments, the pages in the middle, the Properties panel on the right, and the Timeline, Interactions, Scripts, Variables, Data and other tabs along the bottom. Share and Export are at the top right.](help/editor-overview.png)
 
 ## Your first five minutes
 
@@ -59,10 +59,10 @@ Thank you for trying Interactives 0.5. It is a beta: the main parts work, a few 
 About half an hour, in this order. Each step says what should happen, so you can tell when it doesn't.
 
 1. **Play something finished.** On the projects page open the **Templates** tab, then **Examples**. Press **Play** on *Lamp*, *Bones and IK*, *Matching question* and *Hotspot question*. They should run with nothing to set up. Press **Make my copy** on one and change something in it. See [Templates, examples and remix](templates).
-2. **Build something small.** Do [Tutorial 1](tutorial-first-animation) and [Tutorial 2](tutorial-first-interaction). A box should slide across the artboard, then a button should make it slide.
+2. **Build something small.** Do [Tutorial 1](tutorial-first-animation) and [Tutorial 2](tutorial-first-interaction). A box should slide across the page, then a button should make it slide.
 3. **Add a question.** Open **Web** in the tool bar, press **Add question** and choose **Matching (drag and drop)**. Press **Preview**, drop two terms in the wrong places and press **Check answer**, then fix them and check again. See [Questions and quizzes](question-kit).
 4. **Start from a template.** Press **New project**: the **Start a new project** window opens. Choose **Built-in template**, then **Quiz**, then **Create project**. Work down the **Checklist** tab along the bottom, ticking things off as you change them. (The **Templates** tab has the same starters.) Also try the other choices in that window: **Copy a project or template** and **Copy an example** each have a search box, and the arrow keys move through the list.
-5. **Share it.** Choose **Share**, then **Share link**, and open the link in a private window: it should play. Then choose **Share for review**, press **Create review link** and open it (tick **Let people comment without signing in** if you open it somewhere you aren't signed in to StudyDesk). Click on the artboard and write a note. Back in the editor the **Comments** tab shows it. See [Exporting](export#sharing) and [Review comments](comments).
+5. **Share it.** Choose **Share → Share…**, pick **Anyone with a link**, press **Create the link** and open the link in a private window: it should play. Then choose **Share → Share for review…**, press **Create review link** and open it (in a tab of its own it asks you to sign in with StudyDesk first). Click on the page and write a note. Back in the editor the **Comments** tab shows it. See [Exporting](export#sharing) and [Review comments](comments).
 6. **Bring in a file of your own.** Use **Import** on the projects page with a Rive, Photoshop, Illustrator, SVG or Lottie file you already have. The import report lists anything that didn't come across exactly. See [Importing](import).
 
 ### What is new to look at
@@ -70,7 +70,7 @@ About half an hour, in this order. Each step says what should happen, so you can
 Everything here is new or much changed in 0.5, and each has a page in this help:
 
 - [Themes and colour tokens](themes): name a colour once and give it a value for Light, Dark and High contrast.
-- Layers that hang outside a clipping artboard now show as a faint, diagonally striped copy beside it on the canvas, and a hidden layer in an auto-layout frame takes no space. See [Layers](layers-panel) and [Auto layout](auto-layout).
+- Layers that hang outside a clipping page now show as a faint, diagonally striped copy beside it on the canvas, and a hidden layer in an auto-layout frame takes no space. See [Layers](layers-panel) and [Auto layout](auto-layout).
 - [Questions and quizzes](question-kit): matching and hotspot questions. [Bones and skinning](bones): **Build an example to try**.
 - [Auto layout](auto-layout#percent-padding-margin-and-gap): percent padding, margin and gap.
 - [Review comments](comments), [inviting people by name](live-editing#inviting-people) and the **Share** menu next to **Export**.
@@ -94,14 +94,14 @@ Send it straight to whoever invited you to the beta, by email or Teams. The edit
 
 ### Known limits in 0.5
 
-- **Browser.** Use a current Chrome or Edge. Linking design files (so changes in Photoshop or Illustrator flow in) needs the browser's file access, which only those two have. Everything else is meant to work in any current browser.
-- **Results are the Toolbox's own.** A learner's score and completion are kept per learner and course in the Toolbox, not sent to the StudyDesk gradebook yet. Results and Insights only come from the **Link for StudyDesk**, and only for learners signed in to StudyDesk. See [Results and progress](results) and [Insights](insights).
+- **Browser.** Use a current Chrome or Edge. Other current browsers are meant to work too.
+- **Results are the Toolbox's own.** A learner's score and completion are kept per learner and course in the Toolbox. A mark reaches the StudyDesk gradebook only when you share the project **In the StudyDesk gradebook, with a mark** (see [Sharing](export#where-will-people-use-it)). Results and Insights only come from the **Link for StudyDesk**, and only for learners signed in to StudyDesk. See [Results and progress](results) and [Insights](insights).
 - **Share links are snapshots.** After you change a project, press **Update to the latest version** in the Share link dialog, or learners keep seeing the old one.
 - **Undo is yours alone.** In a live session it only undoes your own changes. Use the revision history to go further back. See [Live editing and saving](live-editing).
-- **Comments have no email.** You are told in the editor (and by the bell on the projects page), not by mail. Anyone with a review link can read the whole project.
-- **Libraries** carry artboards, styles, variables, fonts, data and assets, not project scripts, and only the latest version is kept. See [Libraries](libraries).
+- **Comments have no email.** You are told in the editor (and by the bell on the projects page), not by mail. Anyone with a review link who signs in can read the whole project.
+- **Libraries** carry pages, styles, variables, fonts, data and assets, not project scripts, and only the latest version is kept. See [Libraries](libraries).
 - **Themes are colours only.** Fonts, sizes and spacing don't follow a theme yet, and colours inside script and shader layers don't either.
-- **Bones** have no weight painting brush yet: set weights per point in the Inspector.
+- **Bones** have no weight painting brush yet: set weights per point in the Properties panel.
 - **Imports are close, not exact.** Lottie expressions, masks and mattes, and some Rive and Photoshop effects, can't be carried over, and \`.dwg\` files have to be saved as \`.dxf\` first. The import report is the whole list.
 - **The accessibility checker reports what it found**, never that a project is compliant. See [Accessibility checker](accessibility-checker).
 
@@ -119,10 +119,10 @@ Prefer to start from something finished? The **Templates** tab on the projects p
 
 ## How a project fits together
 
-- **Artboards** are the screens. Each has its own layers, timelines and interactions. See [Artboards](artboards).
+- **Pages** are the screens. Each has its own layers, timelines and interactions. See [Pages](artboards).
 - **Layers** are shapes, text, images, groups, frames, script layers and real web elements (buttons, inputs, links, embeds, video). See [Layers, hidden and locked layers](layers-panel).
 - **Timelines** animate layer properties through keyframes. See [Timelines and keyframes](timelines).
-- **Interactions** are a node graph: an event (a click, a key, a timer, a variable change) runs actions (play a timeline, set a variable, go to another artboard). See [Interactions](interactions).
+- **Interactions** are a node graph: an event (a click, a key, a timer, a variable change) runs actions (play a timeline, set a variable, go to another page). See [Interactions](interactions).
 - **Variables** and **data sources** hold values that text, bindings and lists read. See [Variables](variables) and [Data sources](data-sources).
 - **Scripts** are JavaScript for anything the nodes can't do. See [Scripts](scripts).
 - **Assets** are the files in the project: images, video, audio, fonts and data. See [The Assets panel](assets).
@@ -131,9 +131,9 @@ Prefer to start from something finished? The **Templates** tab on the projects p
 
 | Word | Means |
 |---|---|
-| Page | One screen of the interactive, with its own size, background, layers, timelines and interactions. The settings, the file and the help for advanced features call it an *artboard* |
+| Page | One screen of the interactive, with its own size, background, layers, timelines and interactions. The settings, the file and the help for advanced features call it an *artboard*. Both words mean the same thing |
 | Layer | One thing on a page: a shape, some text, a button, a group... |
-| Inspector | The panel on the right that edits whatever is selected |
+| Properties panel | The panel on the right that edits whatever is selected |
 | Timeline | A set of tracks that animate layer properties over time |
 | Keyframe (key) | A moment on a track with a value. The player works out the in-between |
 | Record | The red button that turns every property change into a keyframe |
@@ -143,9 +143,24 @@ Prefer to start from something finished? The **Templates** tab on the projects p
 | Instance | One page placed inside another, like a reusable component |
 | Preview | Plays the project exactly as the exported file will |
 
+The editor talks like an author, not a programmer. These **plain words** are the default:
+
+- **Pages** rather than artboards, and nodes with names such as **When clicked or hovered**, **Go to a page**, **Change a value or counter** and **Show or hide a layer**.
+- Opacity and scale are shown as **percents**, and a layer's pivot is a 3×3 picker.
+- Variables come as Counter, Switch, Score, Text or List.
+
+The technical name of a node is in its tooltip and in search, and **Technical wording** in [Preferences](preferences#interactions) shows the technical names everywhere. See [The interaction nodes](interaction-nodes) for both names.
+
 ## Where to get help
 
-Press <kbd>F1</kbd> anywhere to search these pages, <kbd>Ctrl</kbd>+<kbd>K</kbd> to find a command and do it (it lists matching help pages too, see [The command palette](command-palette)), or <kbd>?</kbd> for the page about what you have selected. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
+- <kbd>F1</kbd> searches these pages from anywhere in the editor.
+- <kbd>Shift</kbd>+<kbd>F1</kbd>, or the **Help** button in the top bar, opens the page about what you have selected.
+- <kbd>Ctrl</kbd>+<kbd>K</kbd> opens the [command palette](command-palette). It does things for you, and lists matching help pages under its commands.
+- <kbd>?</kbd> lists every [keyboard shortcut](shortcuts).
+- Many sections in the Properties panel have a **?** beside the title and a short line with a **More about …** link. Both open the page for that section. Hovering a button or field shows a short explanation.
+- The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem.
+
+See [Using this help](help) for the detail.
 
 > Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`,
   },
@@ -156,22 +171,25 @@ Press <kbd>F1</kbd> anywhere to search these pages, <kbd>Ctrl</kbd>+<kbd>K</kbd>
     group: 'Getting started',
     summary: 'Start a new project (blank, a copy, a built-in template or an example), open, duplicate, import and delete projects, and organise them with folders, tags, search and sort.',
     keywords: 'home new project start blank chooser copy clone import duplicate delete package ixp god mode power user folder folders tag tags search sort organise organize filter bin trash undelete restore recover deleted',
-    body: `The projects page lists the projects you own. Each card shows a picture of the project's start artboard, its name, when it last changed, how many artboards it has, its tags and a folder menu.
+    body: `The projects page lists the projects you own. Each card shows a picture of the project's start page, its name, when it last changed, how many pages it has, its tags and a folder menu.
 
 ![The projects page: the folder list on the left, the search box, sort menu and tag filter along the top, and a card for each project.](help/projects-page.png)
 
 ## Making and opening projects
 
 - **New project** (top right, or the **+** card) opens **Start a new project**, one window with four ways to begin. Pick one on the left (<kbd>Up</kbd> and <kbd>Down</kbd> move between them), then give the project a name and a folder at the bottom and press **Create project**. It opens straight away.
-  - **Blank project**: one empty artboard called **Home**, with the Light, Dark and High contrast themes. Your default font (Open Sans unless you changed it) is added to it. See [Preferences](preferences).
+  - **Blank project**: one empty page called **Home**, with the Light, Dark and High contrast themes. Your default font (Open Sans unless you changed it) is added to it. See [Preferences](preferences).
   - **Copy a project or template**: a list of your own projects, your own templates and the ones shared with you. A project is copied whole, with its pictures, and the copy is called **Copy of ...**. A template opens with its checklist, as under [Templates](templates).
   - **Built-in template**: the starters that come with Interactives, shown with their pictures.
   - **Copy an example**: the finished examples, shown with their pictures. You get your own copy to change.
   
   The search box above each list filters it as you type. Press <kbd>Down</kbd> to move from the search box to the list, the arrow keys to move through it, and <kbd>Enter</kbd> to create the project from the one you picked. <kbd>Esc</kbd> closes the window without making anything. The name starts as something sensible and follows what you pick until you type your own. The folder starts as the one you were looking at, and you can change it.
 - Click a card's picture to open the project. **Help** and the gear (**Preferences**) are at the top right too.
+- **All projects** (the house in the editor's top bar) brings you back here, with the project you left highlighted for a moment.
 - The **Templates** tab (next to **Projects**) starts a project from a template, or from one of the finished examples. See [Templates, examples and remix](templates).
-- **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`, \`.rev\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`), PhotoCraft (\`.pcraft\`) or PowerPoint (\`.pptx\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
+- **Import** (also the **import a file** link on the **+** card) brings in a file. You can choose:
+  - A \`${PACKAGE_EXTENSION}\` package (a whole project with its assets) or a project JSON file. It comes back as a project of its own, and importing the same file twice gives you two copies.
+  - A design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`, \`.rev\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`), PhotoCraft (\`.pcraft\`) or PowerPoint (\`.pptx\`). It becomes a **new project**, and a design file remembers which file it came from so you can update it later. See [Importing](import) and [Tutorial 4](tutorial-import-design).
 - Each card has three icon buttons: **Duplicate** (a copy of the project and its assets), **Export** a \`${PACKAGE_EXTENSION}\` package (a download of the whole project) and **Delete**. Delete asks first, then moves the project to the [Bin](projects#the-bin), with an **Undo** straight after. If its share or review link is on, or learners have results or progress in it, the question says so, with the courses, how many learners each has and when they were last active.
 - With no projects yet the page shows **Create your first project**, which opens the same **Start a new project** window.
 
@@ -225,39 +243,85 @@ You see your own projects and the ones other people have invited you to collabor
 ## Top bar
 From left to right:
 
-- **All projects** (the house): back to the projects page.
+- **All projects** (the house): back to your [projects page](projects), with the project you left highlighted for a moment.
 - The **project name**. Click to rename.
-- The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason). A save that failed because of the network or the server tries again by itself, and says **Saved again** when it gets there.
+- The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason). A save that failed because of the network or the server tries again by itself, and says **Saved again** when it gets there. A big project is sent squeezed (compressed), so saving it takes far less of a slow upload, and there is nothing to switch on.
 - **Live**: the project's live connection, **Live**, **Reconnecting** or **Deleted**. When other people are in the project too, their initials show beside it. See [Live editing and saving](live-editing).
 - **Revision history** (the clock): earlier saved versions of the project.
 - **Undo** and **Redo**.
 - Zoom: **−**, the percentage (click it to fit everything) and **+**.
-- **Preferences** (the gear, with the version **(i)** icon in its title bar) and **Help**. Help opens the page for whatever you have highlighted, and its tooltip says which ("Help: Chart layer"): the Properties field you are in, the selected layer's type, the selected node in Interactions or key in the Timeline, the tool you picked, a selected artboard or page master, or the panel you last worked in; with none of those it is the general help. See [Using this help](help).
-- **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
+- **Preferences** (the gear, with the version **(i)** icon in its title bar). See [Preferences](preferences).
+- **Help**: opens the page for whatever you have highlighted, and its tooltip says which ("Help: Chart layer"). With nothing highlighted it opens the general help. See [Using this help](help).
+- **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share…**, **Invite to collaborate…**, **Save as template…** and **Share for review…**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge, unless you move it)
-**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, connector, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image and the Media Catalogue), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. Beside it are **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), both lit gold while on (right-click either for the grid size, see [The grid and snapping](grid)). The **Media Catalogue** button sits in the **Media** group with image and video: it opens the photo library in a window and puts the photo you choose on the artboard (see [The Media Catalogue](media-catalogue)). It is an action rather than a tool, so it doesn't stay lit after you use it. There is no Help button on the tool bar: **Help** is in the top bar, and right-clicking the tool bar has **Help for the tools**. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
+**Select** and **Hand** sit at the top. Below them the tools are in groups. Click a group's name to fold it or open it. The editor remembers which groups you keep open, and a folded group still shows the tool you're using.
+
+- **Shapes** (page, frame, rectangle, ellipse, polygon, star) and **Draw** (line, connector, pen, pencil, bend) start open.
+- **Media** (text, script layer, shader layer, video, image and the Media Catalogue), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded.
+
+Hover a tool to see its name and shortcut. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
+
+### Putting the tools in your own order
+You can put the groups, and the tools inside a group, in the order you like.
+
+1. Drag a group by its name, or a tool by its button.
+2. Let go at the gold line.
+
+With the keyboard, focus a group's name or a tool and press <kbd>Alt</kbd> with an arrow key. Up and left move it earlier, down and right move it later. You can also right-click a group or a tool for **Move … up** and **Move … down** (or **earlier** and **later**) and **Reset tool order**.
+
+The order is saved with you, never in the project, so it follows you between browsers. **Reset section and tool order** in [Preferences](preferences#workspace) puts everything back. The Properties panel's sections can be moved the same way: see [Moving sections](properties-panel#moving-sections).
+
+### Below the groups
+- **Comment** (<kbd>C</kbd>) pins a review note where you click. See [Review comments](comments).
+- **Note** (<kbd>S</kbd>) draws a sticky note for the people editing. Players never see it. An eye button next to it shows or hides notes. See [Notes](notes).
+- **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>) are lit gold while on. Right-click either for the grid size. See [The grid and snapping](grid).
+- The **Media Catalogue** button sits in the **Media** group with image and video. It opens the photo library in a window and puts the photo you choose on the page. It is an action rather than a tool, so it doesn't stay lit after you use it. See [The Media Catalogue](media-catalogue).
+
+There is no Help button on the tool bar. **Help** is in the top bar, and right-clicking the tool bar has **Help for the tools**.
 
 ## What the pointer shows
-The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, the Connector tool a crosshair (the layer it would join lights up with a dot on each side), and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
+The pointer tells you what a press will do.
 
-When pressing will ask you something first, a note beside the pointer says so before you press: over a rectangle, ellipse, polygon or star the **Bend** tool says it will ask to turn it into a path, and dragging layers over another artboard says letting go will offer to move them there.
+- Over a selected layer it is the **move** cross. Over a page's name it is the move cross too.
+- Over a resize handle it is a double arrow along the way that handle drags, turned with the layer if the layer is turned.
+- Just outside a corner it is the **rotate** arrows, turned to sit round that corner.
+- Over a gradient handle it is an open hand.
+- In point-edit mode a point shows the move cross, and the outline shows an arrow with a **+** (double-click adds a point there).
+- The **Pen** is a nib, with a ring over the first point (a click there closes the shape). The **Pencil** is a pencil. The **Hand** is an open hand that closes while you pan.
+- The **Connector** tool is a crosshair, and the layer it would join lights up with a dot on each side. The **Bone** tool is a crosshair too, with a ring over a tip (a click there continues the chain).
+- Edges between panels show the resize arrows. The Timeline's empty lanes and ruler show a sideways arrow (a press scrubs). A port in the interaction graph shows a crosshair.
+- While you hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) over something you can drag, the pointer shows a copy cursor. See [Alt-drag](shortcuts#mouse).
+
+When pressing will ask you something first, a note beside the pointer says so before you press: over a rectangle, ellipse, polygon or star the **Bend** tool says it will ask to turn it into a path, and dragging layers over another page says letting go will offer to move them there.
 
 ## Left panel
 Four tabs:
 
-- **Layers**: every artboard in the project, with its layer tree. Click to select, drag to reorder or nest, hover for the lock and the eye. See [Layers, hidden and locked layers](layers-panel).
+- **Layers**: every page in the project, with its layer tree. Click to select, drag to reorder or nest, hover for the lock and the eye. See [Layers, hidden and locked layers](layers-panel).
 - **Assets**: images, video, audio, fonts and data files in the project. See [The Assets panel](assets).
 - **Libraries**: components and styles shared between projects. See [Libraries](libraries).
 - **Comments**: the review notes pinned on the project, with filters. See [Review comments](comments).
 
-Drag the left and right panels' inner edges (beside the canvas) to make them wider or narrower; double-click an edge to put it back. With an edge focused, the arrow keys move it (<kbd>Shift</kbd> for bigger steps). The widths are remembered in this browser.
+Drag the left and right panels' inner edges (beside the canvas) to make them wider or narrower. Double-click an edge to put it back. With an edge focused, the arrow keys move it (<kbd>Shift</kbd> for bigger steps). The left panel starts 300 px wide so its tabs and the help button aren't clipped. Any width you drag a panel to is remembered in this browser.
 
 ## Canvas
-All artboards side by side. See [Moving around the canvas](canvas). Right-click for menus: see [Layers, hidden and locked layers](layers-panel#right-click-menus).
+All pages side by side. See [Moving around the canvas](canvas). Right-click for menus: see [Layers, hidden and locked layers](layers-panel#right-click-menus).
 
-## Inspector (right)
-Settings for the selection. The search box at the top finds a property by name or by what it does ([The Properties panel](properties-panel)). A layer's settings start with **Layer** (name, position, size, rotation, opacity, scale, pivot, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. Click a section's title to fold it away or open it again; the arrow beside the title points down when it's open and right when it's folded. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard and its **Responsive**, **Steps**, **Joysticks**, **Blends** and **Bones** sections, then the **Project** settings and the **Fonts**. The chain between **W** and **H** (and between **Scale W** and **Scale H**, and on an artboard's size) links the two: linked, changing one changes the other and keeps their ratio, and the canvas's resize handles keep it too (hold <kbd>Shift</kbd> to resize freely). Each layer remembers its own. The Inspector starts 320 px wide. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
+## Properties panel (right)
+The settings for whatever is selected. See [The Properties panel](properties-panel) for everything in it.
+
+- The search box at the top finds a property by name or by what it does.
+- A layer's settings start with **Layer** (name, position, size, rotation, opacity, scale, pivot, visibility, blend). Then comes a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has.
+- Click a section's title to fold it away or open it again. The arrow beside the title points down when it's open and right when it's folded.
+- Drag a section by its title, or press <kbd>Alt</kbd>+<kbd>Up</kbd> or <kbd>Alt</kbd>+<kbd>Down</kbd> on it, to put the sections in your own order. See [Moving sections](properties-panel#moving-sections).
+- With several layers selected, the bar of align buttons at the top lines them up.
+- With nothing selected, or only a page, it shows the page and its **Responsive**, **Steps**, **Blends**, **Joysticks** and **Bones** sections, then the **Project** settings and the **Fonts**.
+- A **?** beside a section's title opens that section's page in this help. The diamonds beside fields key them on the timeline.
+
+The chain between **W** and **H** (and between **Scale W** and **Scale H**, and on a page's size) links the two. Linked, changing one changes the other and keeps their ratio, and the canvas's resize handles keep it too (hold <kbd>Shift</kbd> to resize freely). Each layer remembers its own.
+
+The panel starts 320 px wide.
 
 ## Bottom panel
 **Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility**, **Insights**, **Public interface**, **Themes** and **Usage**. A project made from a template also has a **Checklist** tab, and one made from a starter a **Fill in** tab (the content as a plain form, see [Fill in this starter](fill-in-starter)). Click a tab to open it, click the open one again to fold the bottom panel down to its tabs, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker), [Insights](insights), [Public interface](public-interface), [Themes](themes), [Usage](usage) and [Templates](templates#use-a-template).
@@ -268,35 +332,69 @@ Every panel can go anywhere: the left, right, bottom or top area, or a window of
 - Onto the canvas: it opens in its own window there (an outline shows where). While you drag, **Dock left**, **Dock right**, **Dock at the bottom** and **Dock at the top** strips appear on the canvas's edges, so an area can be docked into even when nothing is in it yet.
 - Onto a floating window's tabs: it joins that window.
 
+The **bottom** area's height follows the window until you set one: on a taller window it opens taller (up to about 440 pixels), so the Timeline and its Keyframe panel have room. Drag its top edge (or focus the edge and use the arrow keys) to set your own height, which is then kept, and double-click the edge to go back to following the window. It never takes more than the window less 200 pixels, so the canvas keeps some room on a short one.
+
 A floating window moves by its title bar and resizes from its bottom-right corner. Its **×** closes it and sends its panels back to where they started. An area nothing is docked in takes no room.
 
 The **Essentials** workspace (Preferences > Workspace) goes a step further: it puts panels and tool groups away until they are wanted, with **More panels** at the right of the bottom tabs and **More tools** in the tool bar to bring them back, and **Show all panels and tools** to leave it. A panel your project already uses keeps its tab. See [Your first five minutes](welcome#your-first-five-minutes).
 
-The **top** area sits under the header and above the canvas and its rulers, across the page, and takes no height until a panel is docked in it (so nothing looks different until you use it). Drag its bottom edge (or focus the edge and use the arrow keys) to resize it, double-click the edge to reset its height, click the open tab or the arrow at the end of its tabs to fold it down to its tabs, and click a tab to open it again. Its height and whether it is folded are kept with the layout, so saved workspaces carry them too. Old layouts and workspaces open the same as before, with an empty top area. The canvas gets whatever room is left, and the rulers stay on the canvas.
+The **top** area sits under the header and above the canvas and its rulers, across the page, and takes no height until a panel is docked in it (so nothing looks different until you use it).
 
-Right-click a tab (or press Shift+F10 on it) for **Dock on the left / right / at the bottom / at the top**, **Float in its own window**, **Help for this panel** and **Reset panel layout** (everything back where it started). The tool bar docks the same way. Drag its **Tools** title out onto the page to float it (a floating tool bar moves by the same title), and drag it over an edge of the canvas to dock it there: the same **Dock left**, **Dock right**, **Dock at the bottom** and **Dock at the top** strips show, labelled for the tools, and the one you are over lights up. Along the bottom or the top it becomes a strip across the page with its groups side by side (at the top it sits under the header, over the top panels). It is a bar, not a tab, so it can't join a panel's tabs (the drag says so over them). <kbd>Esc</kbd> while dragging leaves it floating where it is. Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock at the bottom**, **Dock at the top** or **Floating**. Saved workspaces remember where the tool bar was. The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
+Drag its bottom edge (or focus the edge and use the arrow keys) to resize it, double-click the edge to reset its height, click the open tab or the arrow at the end of its tabs to fold it down to its tabs, and click a tab to open it again. Its height and whether it is folded are kept with the layout, so saved workspaces carry them too. Old layouts and workspaces open the same as before, with an empty top area. The canvas gets whatever room is left, and the rulers stay on the canvas.
+
+Right-click a tab (or press <kbd>Shift</kbd>+<kbd>F10</kbd> on it) for **Dock on the left / right / at the bottom / at the top**, **Float in its own window**, **Help for this panel** and **Reset panel layout** (everything back where it started).
+
+The tool bar docks the same way. Drag its **Tools** title out onto the page to float it (a floating tool bar moves by the same title). Drag it over an edge of the canvas to dock it there: the same **Dock left**, **Dock right**, **Dock at the bottom** and **Dock at the top** strips show, labelled for the tools, and the one you are over lights up.
+
+Along the bottom or the top the tool bar becomes a strip across the page with its groups side by side (at the top it sits under the header, over the top panels). It is a bar, not a tab, so it can't join a panel's tabs (the drag says so over them). <kbd>Esc</kbd> while dragging leaves it floating where it is.
+
+Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock at the bottom**, **Dock at the top** or **Floating**. Saved workspaces remember where the tool bar was.
+
+The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
-**Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
+**Preview** runs the project exactly as the exported file will, from the start page or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
 
-- **Now showing**: the artboard on screen and how many instances it contains.
+- **Now showing**: the page on screen and how many instances it contains.
 - **Timelines**: the ones running, with a progress bar (green dot = playing).
 - **Variables (live)**: every value as it changes. Type a new value and press <kbd>Enter</kbd> (or tick, or choose) to set it while it runs; filter by name when there are many.
 - **Events** (underneath): each interaction event as it fires, which layer it came from, and what it set off, including events inside instances. Messages sent to the host page are listed too, and so are errors from script layers. With **Auto-scroll** ticked (the default) the list keeps the newest event in view; untick it to read back through earlier ones while the preview keeps running.
 
 ![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)
 
-**Watch it run.** Press **Beside editor** in the top bar and Preview moves up to the right, leaving the canvas and the Interactions graph underneath showing. While you click through it, every node that runs lights up green (with the word *ran*), an event whose **Only if** said no goes grey (*held back*), the wires it followed pulse, and a ring flashes round the layer your click landed on (green when the click started something, red when it started nothing). When a click starts nothing, the Events list says why under **Why did nothing happen?**: nothing listens for a click on that layer, the click landed on empty space, or an **Only if** said no. Click an event's name in the list to select its node in the graph. The lights are only in the editor; exports and shared links never carry them, and with reduced motion on they hold still instead of pulsing.
+When the project has [responsive pages](responsive), a **Page width** slider appears under the top bar. Drag it to resize the page the project runs in; the breakpoints are marked on the track and the player switches page as you cross them.
 
-When the project has [responsive artboards](responsive), a **Page width** slider appears under the top bar. Drag it to resize the page the project runs in; the breakpoints are marked on the track and the player switches artboard as you cross them.`,
+## See what ran
+Press **Beside editor** in the Preview's header and Preview moves up to the right, leaving the canvas and the Interactions graph underneath showing. Then you can see what your clicks set off:
+
+- Every node that runs lights up green, with the word *ran*.
+- An event whose **Only if** said no goes grey (*held back*).
+- The wires the flow followed pulse.
+- A ring flashes round the layer your click landed on. It is green when the click started something and red when it started nothing.
+
+When a click starts nothing, the Events list says why under **Why did nothing happen?**. Either nothing listens for a click on that layer, the click landed on empty space, or an **Only if** said no. Click an event's name in the list to select its node in the graph.
+
+The lights are only in the editor. Exports and shared links never carry them, and with reduced motion on they hold still instead of pulsing. See [Interactions](interactions) for the graph.
+
+## Big projects
+
+The editor stays quick on large projects: a change only lays out again the pages it touched, even with auto layout on every page, and picking or dragging a node in a big Interactions graph only redraws that node. What slows a big project down most is how much is on screen at once, so fold away panels and pages you are not using, and zoom in on the page you are working on.
+
+## Opening the editor
+
+The editor draws its frames straight away and fills them in as your project arrives. Help, the starter templates, the code boxes, the Interactions graph and the Preview player are fetched the first time you use them, and the editor fetches the likely ones quietly a moment after opening, so they are usually there before you ask. On a slow connection the first use of one of them can show a short **Loading** line where it will appear.`,
   },
   {
     id: 'canvas',
     title: 'Moving around the canvas',
     group: 'Getting started',
-    summary: 'Zoom, pan, fit, and the wheel preference.',
-    keywords: 'zoom pan scroll wheel trackpad pinch fit hand space middle mouse ctrl',
-    body: `| Do this | To |
+    summary: 'Zoom, pan, fit, the wheel preference, rulers and guides.',
+    keywords: 'zoom pan scroll wheel trackpad pinch fit hand space middle mouse ctrl rulers guides endless line across canvas universal attached page alt lock clear round nearest 5 10 multiple',
+    body: `You move around the canvas with the mouse wheel, the Hand tool or the keyboard.
+
+## Zoom and pan
+
+| Do this | To |
 |---|---|
 | Scroll the mouse wheel | Zoom in and out around the pointer (default) |
 | <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + wheel, or pinch on a trackpad | Zoom (always) |
@@ -307,8 +405,34 @@ When the project has [responsive artboards](responsive), a **Page width** slider
 | <kbd>Shift</kbd>+<kbd>2</kbd> | Zoom to the selection |
 | <kbd>Ctrl</kbd>+<kbd>1</kbd> | 100% |
 
+## Choosing things on the canvas
+- Click a layer to select it. <kbd>Shift</kbd>+click or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+click adds a layer to the selection, or takes it out if it is already in. <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+click picks the deepest layer inside groups, so you can gather layers from different groups.
+- Double-click a group to select inside it.
+- <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+click or <kbd>Shift</kbd>+click page names to choose several pages, then move, align, distribute, tidy, duplicate or delete them together. See [Pages](artboards).
+- Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag to drag a copy. See [Alt-drag](shortcuts#mouse).
+
+## Rulers and guides
+Turn the rulers on with <kbd>Shift</kbd>+<kbd>R</kbd> (or **Show rulers** in Preferences). Drag out of the top ruler for a horizontal guide and out of the left ruler for a vertical one. The number beside the pointer is the guide's position on the open page, in page pixels. Layers snap to guides when **Guides** is ticked in the Snap menu. Drag a guide to move it, drag it onto its ruler and let go to remove it (a note by the pointer says so), and right-click it for more.
+
+- **Two kinds.** A **universal** guide is fixed on the canvas itself, so it stays exactly where it is when you move pages. It is one endless dashed line across the whole canvas, drawn through every page it crosses and the gaps between them. This is what a new guide is, unless you change that in Preferences. An **attached** guide belongs to one page (it is measured from that page's top left corner and moves when you move that page). It is a short dashed line: it runs across its own page and only a little past the edges, so it never looks like it crosses the pages beside it. Both are the same pink.
+- **Telling them apart.** An endless line is universal and a short one is attached. A guide's tooltip and the first line of its right-click menu say which it is.
+- **Which kind a new guide is.** **Attach new guides to the page they're dropped on** in Preferences (Canvas and guides) is off by default, so a new guide is universal. Turn it on and a new guide attaches to the page under the pointer (that page becomes the open one). Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag to get the other kind for that one guide; a note by the pointer says which kind you are making and what Alt would do.
+- **Rounding while you drag.** Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) while dragging a guide, new or existing, and it goes to the nearest multiple of **5** px. Hold <kbd>Ctrl</kbd>+<kbd>Shift</kbd> and it goes to the nearest multiple of **10**. The number beside the pointer is the rounded one and ends in *nearest 5* or *nearest 10*, and it is measured where the ruler measures: from the open page for a universal guide, from its own page for an attached one. Let go and it stays on that number. These holds are in **Keyboard shortcuts** under **Guides**, where you can give each one other keys (see [Keyboard shortcuts](shortcuts#keys-you-hold-while-dragging)). Ctrl does not turn snapping off here: guides are not layers, so they never snap to anything but these multiples.
+- **Changing your mind.** Right-click a guide: **Make it universal** (for an attached one) fixes it on the canvas where it is, and **Attach to** the page (for a universal one) ties it to the page it crosses (the open page if it crosses that, otherwise the first page it crosses). The line does not move.
+- **Grabbing.** A universal guide can be grabbed anywhere along its length, over any page and the space between. An attached guide can only be grabbed over its own page (and a little past it), where its line is; the attached guides of other pages are drawn a little dimmer and can be grabbed once you open their page.
+- **Removing.** Drag a guide onto its ruler and let go to remove either kind. An attached guide is also removed by letting go off its page, and a universal one by letting go off the edge of the canvas. Nothing goes until you let go.
+- **Snapping.** A layer snaps to the universal guides that cross its page and to its own page's attached guides. An attached guide does not pull layers on other pages, because it is not drawn there.
+- **Old projects.** Guides already attached to a page stay attached. Very old projects had guides for every page; opening one moves them onto its start page (any with a negative position are dropped, since they never showed anywhere).
+- **Lock and clear.** The small button in the corner of the rulers opens the **guides menu**, which is also at the bottom of a guide's right-click menu. **Lock guides** stops guides being moved, removed or added by accident (they still snap). **Clear this page's guides**, **Clear universal guides** and **Clear all guides** are in the same menu, and **Lock the guides**, **Clear universal guides** and **Clear all guides** are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Undo brings cleared guides back.
+- Guides are for you while you edit: they never show in Preview, downloads, share links or embeds.
+
 ## Big projects and artboard pictures
-Artboards you aren't working on are shown as a *still*: a picture of themselves. That keeps panning and zooming smooth in projects with many artboards. Click an artboard (or a layer in it) and it comes alive for editing. The still updates by itself shortly after anything in it changes, so you never need to refresh it. If an artboard looks slightly soft while you pan, that is the still; click it to see it sharp. Stills are kept in this browser between sessions, so a big project opens with its artboards already showing instead of filling in one by one. An artboard that was changed since (by you or someone else) is just drawn again. While a project with several artboards opens, the canvas waits for the artboards in view (a moment) and then fades them in together.
+Pages you aren't working on are shown as a *still*: a picture of themselves. That keeps panning and zooming smooth in projects with many pages. Click a page (or a layer in it) and it comes alive for editing. The still updates by itself shortly after anything in it changes, so you never need to refresh it. If a page looks slightly soft while you pan, that is the still; click it to see it sharp. Stills are kept in this browser between sessions, so a big project opens with its pages already showing instead of filling in one by one. A page that was changed since (by you or someone else) is drawn again. While a project with several pages opens, the canvas waits for the pages in view (a moment) and then fades them in together.
+
+## What the canvas shows
+- **Notes** are drawn at the canvas's own zoom. Zoomed out, they no longer spread over neighbouring notes and pages. **Tidy up pages** leaves room for each page's notes.
+- A results page that reads \`quiz\` (the score, the most you can score, the questions) shows numbers on the canvas instead of its formula in huge type.
+- A page master's locked brand sweeps no longer show their faint overhang across the canvas.
 
 ## Wheel preference
 If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in the top bar) and set **Mouse wheel** to *Pan (Ctrl+wheel zooms)*. With that setting the wheel and two-finger trackpad scrolling pan, and <kbd>Ctrl</kbd>+wheel or a pinch zooms. The setting is kept in this browser.`,
@@ -317,27 +441,72 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     id: 'preferences',
     title: 'Preferences',
     group: 'Getting started',
-    summary: 'Your own editor settings: wheel, theme, default font, rulers, grid and snapping, tooltips, layers outside clipped artboards.',
-    keywords: 'settings options wheel tooltips',
-    body: `![The Preferences dialog.](help/preferences.png)
+    summary: 'Your own editor settings in one window, in pages: look, canvas and snapping, timeline, interactions, fonts, accessibility, keyboard shortcuts and sets of keys, and your workspace.',
+    keywords: 'settings options wheel tooltips preferences window pages tabs search reset',
+    body: `![The Preferences window, on the General page.](help/preferences.png)
 
-Open **Preferences** from the gear in the top bar (or on the projects page). They are yours: saved with your account, so they follow you to any browser you sign in on. The small **(i)** icon in the title bar shows the version of Interactives you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. It is the first thing to put in a problem report, and the same icon is beside **Help** on the help and projects pages.
+Preferences are your own settings for the editor. Open **Preferences** from the gear in the top bar (or on the projects page), or press <kbd>?</kbd> to go straight to the **Keyboard shortcuts** page.
 
-- **Mouse wheel**: *Zoom (Shift+wheel pans)* or *Pan (Ctrl+wheel zooms)*. See [Moving around the canvas](canvas).
-- **Theme**: *Dark*, *Light*, or *Auto (follow the system)*. Both are made from the StudyDesk palette (the same colours as the rest of the Toolbox): its greys, its blue for selection and focus, and UniSQ gold on primary buttons, the open tab and the line under the top bar. In Light, the palette's grey for secondary text is a little under the usual contrast guideline (4.4:1 on panels, 4.1:1 on the background, against 4.5:1); it is left as the palette has it so the editor matches the Toolbox.
-- **Workspace** (in the editor only): switch every panel's place in one go. **Standard** is where everything starts; **Essentials** puts away every panel and tool group a first project does not need (see [Your first five minutes](welcome#your-first-five-minutes)); **Animate** has a tall timeline; **Interactions** has a big interaction graph with Variables and Scripts beside the properties; **Big canvas** puts all the panels in one column on the right and folds the bottom away; **Review** opens Comments and the accessibility checker. **Save current layout as…** keeps the way you've arranged things (see [Arranging the panels](interface#arranging-the-panels)) under a name of your own, up to 12, with rename and delete beside each. Saved workspaces follow you to any browser you sign in on.
-- **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. It is Open Sans unless you change it. Click the box and type to search every Google font (the chips narrow it by Sans, Serif, Display, Handwriting or Mono), then pick one with <kbd>Enter</kbd> or a click; <kbd>Esc</kbd> closes the list. A name that isn't on the list can be used as typed. It applies to projects and text you make from now on, not to ones that exist.
-- **Canvas**: **Show rulers** (rulers and guides on the canvas, also <kbd>Shift</kbd>+<kbd>R</kbd>), **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>), **Snapping** and a switch for each target (**Snap to grid** is <kbd>Ctrl</kbd>+<kbd>'</kbd>; the others are artboard, layers, guides, spacing, pixels and points), **Snap distance**, **Grid size** (1 to 512 px, with presets under it) and **Stronger line every** (cells, 1 to 32). See [The grid and snapping](grid). These follow you with your account like the rest.
-- **Show layers outside clipped artboards**: on by default. When an artboard has **Clip content to artboard** on, the parts of layers that hang outside it are drawn faintly, in diagonal stripes, beside it on the canvas, so you can still see them and click them to select. It is only how the canvas looks: Preview and exports still clip. Switch it off if the faint shapes get in the way.
+It is one window with a list of **pages** down the left and the settings of one page on the right. Your settings are saved with your account, so they follow you to any browser you sign in on.
+
+The small **(i)** icon in the title bar shows the version of Interactives you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. Put it in every problem report. The same icon is beside **Help** on the help and projects pages.
+
+## Using the window
+- **Changes apply at once.** There is no OK and no Cancel: tick a box and the editor changes. <kbd>Esc</kbd> or the **×** closes the window.
+- **Search all preferences** (the box in the title bar) finds a setting on any page by its name, by what it does or by another word for it (try *dark*, *alt text*, *pan*, *typeface*). Pick a result, or press <kbd>Enter</kbd> for the first, and the window goes to that page, scrolls to the setting, marks it for a moment and puts focus on it. When shortcuts match too, the last result opens the Keyboard shortcuts page with your search filled in. <kbd>Esc</kbd> clears the search first.
+- **Reset this page** puts every setting on the page you are looking at back to how the editor starts (it asks first, and is greyed out when the page is already as it starts). **Reset everything** does it for every page, and puts your keys back to the Default set. The keyboard sets and workspace layouts you saved stay, and so do your projects.
+- Drag the corner of the window to make it bigger or smaller (double-click the corner to put it back). On a phone or a narrow window it fills the screen and the pages become a row of tabs along the top.
+- With the keyboard: <kbd>Tab</kbd> goes into the list of pages, <kbd>↑</kbd> and <kbd>↓</kbd> (<kbd>←</kbd> and <kbd>→</kbd> in the narrow row) move between pages, <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last, and <kbd>Tab</kbd> again goes to the settings. A screen reader hears a list of tabs, one panel, and each field with its name. The editor's own keys stand down while the window is open.
+
+## General
+- **Theme**: *Dark*, *Light*, or *Auto (follow the system)*. Both are made from the StudyDesk palette, the same colours as the rest of the Toolbox: its greys and UniSQ gold. Gold is every chosen thing (the open tab, a selected row, a ticked option, a selected layer on the canvas) and every keyboard focus ring, so wherever you are the ring is the same gold with a thin dark edge that keeps it visible on white panels, gold rows and dark ones. Links are underlined: dark text in the light theme, gold in the dark one.
+  - In Light, the palette's grey for secondary text is a little under the usual contrast guideline (4.4:1 on panels and 4.1:1 on the background, against 4.5:1). It is left as the palette has it so the editor matches the Toolbox.
+- **Code editor colours**: *Follow the editor* (the default), *Light* or *Dark*. It sets the colours of every code box: the **Scripts** tab, the raw text of a data file, and the HTML and code fields in the Properties panel.
+  - *Follow the editor* draws code light when the editor is light (or Auto on a light system) and dark when it is dark, and switches the moment the theme does.
+  - *Light* or *Dark* keeps the code that way whatever the editor does, so you can have a dark editor with light code or the other way round. The light colours are all at least 4.5:1 on their background.
+  - The same choice is a **Code colours** switch (**Follow**, **Light**, **Dark**) in the header of the Scripts tab and of a data file's raw text, so you can change it where you are typing.
+  - It is yours, not the project's: nobody else sees it, and it follows you between browsers.
 - **Show tooltips**: explanations when you hover buttons and fields.
 - **Getting started strip**: the five jobs along the top of the editor that tick themselves. On until you put it away or tick all five; turning it on again brings it back (with the ticks kept, or cleared if all five were done). See [Your first five minutes](welcome#your-first-five-minutes).
+- **Always show the Alt-drag hint**: off by default. Dragging a layer, a page, a page group or a row in Layers says "Alt: drag a copy" for your first three drags, then goes quiet. Tick this to see it on every drag. See [Alt-drag](shortcuts#mouse).
+- **Comment notices**: a bell on the projects page, and a message while a project is open, when a review comment is handed to you, mentions you or gets a reply in a conversation you are in.
+
+## Canvas and guides
+- **Mouse wheel**: *Zoom (Shift+wheel pans)* or *Pan (Ctrl+wheel zooms)*. See [Moving around the canvas](canvas).
+- **Canvas**: **Show rulers** (rulers and guides on the canvas, also <kbd>Shift</kbd>+<kbd>R</kbd>), **Attach new guides to the page they're dropped on** (off: new guides are universal, fixed on the canvas), **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>), **Snapping** and a switch for each target (**Snap to grid** is <kbd>Ctrl</kbd>+<kbd>'</kbd>; the others are artboard, layers, guides, spacing, pixels and points), **Layers: all, not just siblings**, **Snap distance**, **Grid size** (1 to 512 px, with presets under it) and **Stronger line every** (cells, 1 to 32). See [The grid and snapping](grid). These follow you with your account like the rest.
+- **Show layers outside clipped artboards**: on by default. When a page has **Clip content to page** on, the parts of layers that hang outside it are drawn faintly, in diagonal stripes, beside it on the canvas. You can still see them and click them to select. It only changes how the canvas looks: Preview and exports still clip. Switch it off if the faint shapes get in the way.
+- **Show notes on the canvas**: the sticky notes authors leave, including the explanations a template comes with. Players, Preview and exports never show them.
+
+## Timeline
+- **Show the list of timelines** (the column beside the Timeline), **Fold Sound and captions when empty**, and **Show the Sound lane**, **Show the Captions lane** and **Show the Descriptions lane**. The Timeline's own **View** menu has the same switches. See [Timelines](timelines).
+
+## Interactions
+- **Technical wording**: off by default. The interaction nodes and their choices read as what happens (*When clicked or hovered*, *Change a value or counter*, *Flip on or off*). Turn it on to see the names they have in the file (*On pointer*, *Set variable*, *Toggle (boolean)*), which is what an agent or a script sees. Search and help find either name whichever is showing. Pages are called artboards in the advanced settings.
+- **Show new interactions in the graph**: on by default. After you add one with **+ When clicked…** (or **When hovered…**, an empty event, or **When the playhead reaches this…**), the Interactions tab opens and zooms to the new nodes. They are picked and glow for a moment, and keyboard focus goes to the new event, so Delete and the arrows act on the graph. Nothing moves for undo, redo, someone else's live edit or an agent.
+  - Turn it off if you build only from the Properties panel and want the view left alone. The new nodes are then only picked in the graph.
+  - See [Interactions](interactions).
+
+## Text and fonts
+- **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. It is Open Sans unless you change it. Click the box and type to search every Google font (the chips narrow it by Sans, Serif, Display, Handwriting or Mono), then pick one with <kbd>Enter</kbd> or a click; <kbd>Esc</kbd> closes the list. A name that isn't on the list can be used as typed. It applies to projects and text you make from now on, not to ones that exist.
+
+## Accessibility
 - **Accessibility features**: on by default. Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview (and in the exports you make, which always keep them on). Switch it off to check whether a problem comes from it. See [Accessibility](accessibility).
-- **Technical wording**: off by default. The interaction nodes and their choices read as what happens (*When clicked or hovered*, *Change a value or counter*, *Flip on or off*). Turn it on to see the names they have in the file (*On pointer*, *Set variable*, *Toggle (boolean)*), which is what an agent or a script sees. Search and help find either name whichever is showing. Pages are still called artboards in the advanced settings.
 - **Ask what a picture shows**: on by default. When you add a picture or video, a small box at the top of its settings asks what it shows. See [Describing a picture as you add it](accessibility#describing-a-picture-as-you-add-it). Switch it off if you add a lot of pictures at once.
-- **Recording**: there is none to set. See [What the editor records](what-is-recorded).
 - **Screen reader strip**: off by default. A strip under Preview that shows what a screen reader would be told by Announce nodes, as it is spoken. It only shows while Accessibility features is on. The same switch is in the Preview header, next to Accessibility.
 
-Press <kbd>Esc</kbd> or the **×** to close. Project-wide settings (start artboard, fit, sandbox) are in the inspector with nothing selected. See [Project settings](project-settings).`,
+## Keyboard shortcuts
+The whole shortcuts sheet is this page: a **Keyboard set** picker at the top (see [Keyboard shortcuts](shortcuts#keyboard-sets)), **One-key shortcuts** (switches off every shortcut that is a single letter, number or Space), and then every command with its keys, to search and change. The <kbd>?</kbd> key and **Keyboard shortcuts** in the command palette open the window on this page. See [Keyboard shortcuts](shortcuts).
+
+![The Keyboard shortcuts page.](help/preferences-keys.png)
+
+## Workspace
+*(In the editor only.)*
+- **Panel layouts**: switch every panel's place in one go. **Standard** is where everything starts; **Essentials** puts away every panel and tool group a first project does not need (see [Your first five minutes](welcome#your-first-five-minutes)); **Animate** has a tall timeline; **Interactions** has a big interaction graph with Variables and Scripts beside the properties; **Big canvas** puts all the panels in one column on the right and folds the bottom away; **Review** opens Comments and the accessibility checker. **Save current layout as…** keeps the way you've arranged things (see [Arranging the panels](interface#arranging-the-panels)) under a name of your own, up to 12, with rename and delete beside each. Saved workspaces follow you to any browser you sign in on.
+- **Section and tool order**: **Reset section and tool order** puts the Properties panel's sections and the tool bar's groups and tools back in the editor's own order, after you have dragged them about. See [Moving sections](properties-panel#moving-sections).
+
+## Not in Preferences
+- **What the editor records** has no setting. See [What the editor records](what-is-recorded).
+- **Project-wide settings** (start page, fit, sandbox) are in the Properties panel with nothing selected. See [Project settings](project-settings).`,
   },
   {
     id: 'what-is-recorded',
@@ -362,13 +531,13 @@ Nothing is sent for every click. Events are added up and sent about once a minut
 
 ## What is never recorded
 
-- Anything you type: text in layers, names of projects, layers, variables, artboards, libraries or files, search words, comments, captions, code, shader code.
+- Anything you type: text in layers, names of projects, layers, variables, pages, libraries or files, search words, comments, captions, code, shader code.
 - The contents of your projects, your images and your files. Only the *type* of a file you import or export is kept, never its name.
 - The values you give properties (only that you changed *fill*, not to what).
 
 ## Published projects
 
-A project shown through the **Link for StudyDesk** (in the Share link dialog) also reports how it ran: how long it took to show, and any script, shader, picture or data fault, with a short scrubbed description and the player version. This is for fixing bugs. This part records nothing a learner did or typed. What learners do (artboards reached, clicks, steps, answers) is a separate thing that you can read and switch off in the project, see [Insights](insights). A project exported as a file, or opened through the plain *Share link*, sends nothing anywhere.
+A project shown through the **Link for StudyDesk** (in the Share link dialog) also reports how it ran: how long it took to show, and any script, shader, picture or data fault, with a short scrubbed description and the player version. This is for fixing bugs. This part records nothing a learner did or typed. What learners do (pages reached, clicks, steps, answers) is a separate thing that you can read and switch off in the project, see [Insights](insights). A project exported as a file, or opened through the plain *Share link*, sends nothing anywhere.
 
 ## Who sees it
 
@@ -397,27 +566,94 @@ The people who make the product, as counts and lists of errors. If you are one o
 |---|---|
 | **Delete project**, **Delete folder** | On the projects page: move a project to the Bin (restorable for 30 days) or delete a folder (its projects are kept) |
 | **New folder**, **Rename folder** | Moving a project to **New folder…**, or renaming with the pencil |
-| **Move to artboard** | You dropped layers over a different artboard. See [Layers](layers-panel#moving-layers-to-another-artboard) |
+| **Move to page** | You dropped layers over a different page. See [Layers](layers-panel#moving-layers-to-another-artboard) |
 | **Delete asset**, **Delete N assets**, **Remove unused assets** | Deleting from the [Assets panel](assets) or the [Usage](usage) tab. They list the files and warn about any still in use |
 | **Delete timeline**, **Delete script** | The bin beside a timeline or script |
 | **New variable** | Choosing **+ Create new variable…** in a node's settings |
 | **Restore version** | Restoring from the [revision history](live-editing#revision-history) |
 | **Turn off share link** | Stopping a [share link](export#share-link) |
 
-The **Import design file** dialog has a **Link** / **Embed** switch for each file, plus **Embed all** and **Link all** buttons and **Cancel**. Files that can only be embedded (and every file in a browser without file linking) say so under their name. The dialog remembers your last choice.`,
+## Messages at the bottom
+Not everything asks. When something small happens, a message appears at the bottom of the editor and goes away by itself. An ordinary one stays for a few seconds, and an error (such as **Not saved**) for a little longer.
+
+A message about a big change has an **Undo** button: tidying the pages, linking colours to tokens, deleting a page, moving layers to another page, replacing a file, importing a file, changing the colourway, applying accessibility fixes, or updating from a template.
+
+- The button takes back exactly that change, even if it took several steps. Then the message says **Undone** with a **Redo** button.
+- The moment you change anything else, the button greys out, so it can never take back something you did afterwards. <kbd>Ctrl</kbd>+<kbd>Z</kbd> still undoes the latest change as always.
+- A message with an **Undo** button stays for nine seconds, whatever else you do.
+- While a dialog such as Preferences is open, the message sits underneath it so it never covers the dialog. Errors still show on top.
+
+Deleting with the keyboard works the same way: the message says what went (*Deleted Blend ball.*) with an **Undo** button. See [Keyboard shortcuts](shortcuts#safer-delete).`,
   },
   {
     id: 'shortcuts',
     title: 'Keyboard shortcuts',
     group: 'Getting started',
-    summary: 'Every keyboard shortcut in the editor.',
-    keywords: 'keys hotkeys keyboard',
-    body: `## Tools
+    summary: 'Every keyboard shortcut in the editor, and how to change the keys to your own.',
+    keywords: 'keys hotkeys keyboard rebind customise remap keymap shortcuts sheet single key wcag',
+    body: `Press <kbd>?</kbd> (or <kbd>Ctrl</kbd>+<kbd>/</kbd>) anywhere to open the **Keyboard shortcuts** page of [Preferences](preferences). It lists every shortcut in plain words, grouped, with the part of the editor it works in. Press it again to close.
+
+The tables below are the keys the editor starts with. On a Mac, <kbd>Ctrl</kbd> is <kbd>Cmd</kbd> and <kbd>Alt</kbd> is <kbd>Option</kbd>. The sheet, the tooltips, the menus and the [command palette](command-palette) all show **your** keys, if you have changed any.
+
+## Every panel, tool and action can have a key
+The sheet lists **everything** you can do in the editor, not only the commands that start with a key. That includes every tool, every panel (Open Layers, Open Timeline, Open Accessibility...), the windows (Preferences, Share, Export, Revision history), the layers you can add, the page commands, the animation presets, the interaction recipes, the question types, the workspaces and the export types.
+
+Most of them start with **No key**. To give one a key:
+
+1. Search for it. The search matches what the command does, not only its name.
+2. Press **Set key**.
+3. Press the keys you want.
+
+**Only ones with a key** hides the rest when you only want a reminder of the keys you have. If a command depends on what you have picked, pressing its key with nothing picked tells you what to pick first (*Select one layer first*).
+
+A few new commands do start with a key: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> fits the page to the selected layers (below), <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> hides or shows the selected layers and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd> locks or unlocks them. Zoom in, zoom out, zoom to the page, three more exports and several page and graph commands can be given keys too.
+
+## Changing the keys
+- Open the page with <kbd>?</kbd>, or **Preferences → Keyboard shortcuts**, or **Keyboard shortcuts** in the command palette.
+- **Search** by what a command is called, or press **Find a key** and then the keys to see what they do.
+- **Add key** (or **Set key** on a command with none) listens for the next keys you press; <kbd>Esc</kbd> cancels. The **×** beside a key takes it off. **Reset** puts that command back to its default; **Reset this page** (at the bottom of the window) does it for every key, back to the Default set.
+- If another command in the same place already uses the keys you pressed, the sheet says which and asks whether to move it over. A key used twice shows a warning at the top; only the command earlier in the list works.
+- The **Keyboard set** at the top picks a set of keys to begin with: *Default*, or *Illustration style* (shapes on the keys drawing programs usually use). Your own changes stay on top of whichever you pick, and you can keep them as a set of your own (see [Keyboard sets](shortcuts#keyboard-sets)).
+- Your keys are saved with **you**, like your other preferences. They follow you between browsers and are never saved in a project. New default keys still reach you for anything you did not change.
+- **One-key shortcuts** turns off every shortcut that is a single letter, number or Space (V, H, P, S, Space...). Shortcuts with <kbd>Ctrl</kbd> or <kbd>Alt</kbd>, and keys such as <kbd>Delete</kbd>, the arrows and <kbd>F2</kbd>, keep working, and the tool bar and menus do the same jobs. It is there for people who use speech input or press keys by accident.
+- A one-key shortcut never fires while you are typing in a box.
+
+## Keyboard sets
+**Keyboard sets** are named collections of keys. Keep more than one and swap between them, for example one for drawing and one for animating. The **Keyboard set** box at the top of the page picks the set in use, and applies it the moment you pick:
+
+![The set picker and its More menu.](help/keyboard-sets.png)
+
+- **Default** and **Illustration style** are built in and never change. Change a key while one of them is picked and the box reads *Default (changed)*: your changes sit on top of it until you save them.
+- **Save as…** keeps the keys in use under a name of your own and carries on with that set. From then on every key you change is kept in it. Sets are listed under **Mine** in the box, up to 16.
+- **More** has **Rename…**, **Duplicate** (a copy to change without touching the first), **Delete…** (your keys go back to the Default set), **Export to a file**, **Share…** and **Import…**. Rename, Duplicate and Delete are for your own sets only.
+- Switching away from keys you changed but did not save asks first, and offers to save them as a set.
+- **Export to a file** saves a small \`.keymap.json\` file to keep or send.
+- **Share…** gives a **share code** to copy and a **link**. Anyone signed in to the editor can paste the code into **Import…**, or open the link, and see the keys before they are added. The set travels inside the code and the link, so nothing is kept on a server, and what you share is a copy.
+- **Import…** takes a share code, a link or the text of an exported file (or **Choose a file…**). It shows what it would do **before anything is added**: how many commands it gives keys to, any commands this editor does not have (left out), keys that are not keys (left out), and any key that two commands in the same place would share. It is always added as a new set, never over one of yours. Choose **Add and use it** or **Add, keep my keys**.
+
+![Importing a set: what it would do, and the key two commands would share.](help/keyboard-sets-import.png)
+
+Your sets, like your keys, are saved with you: they follow you between browsers and are never saved in a project.
+
+## Keys you hold while dragging
+A few commands are not a key you press but keys you **hold** while the mouse does something. They sit under **Guides** on the page, marked *While dragging a guide*: **Round a guide to the nearest 5 px** (<kbd>Ctrl</kbd>), **Round a guide to the nearest 10 px** (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>) and **Make a new guide the other kind** (<kbd>Alt</kbd>). See [Rulers and guides](canvas#rulers-and-guides).
+
+To change one, press **Add key** (or **Set key**) and then **hold** the keys you want, <kbd>Ctrl</kbd>, <kbd>Shift</kbd> and <kbd>Alt</kbd> in any mix, and let go. The most you held together is taken. They are at-least keys: with Ctrl held for 5 and Ctrl+Shift held for 10, holding both Ctrl and Shift gives 10, because it asks for more. If you give a hold keys that another hold already has, the page asks, as it does for any key.
+
+## Where a key works
+The same letter can mean different things in different places, because a key looks first at the panel you last clicked in. Click in the Timeline and <kbd>P</kbd>, <kbd>S</kbd>, <kbd>R</kbd>, <kbd>T</kbd> and <kbd>A</kbd> take you to a property (see [Timeline](shortcuts#timeline)). Click the canvas, the Layers list or anywhere else and they are tools again.
+
+## Changed keys
+- <kbd>?</kbd> now opens this sheet. Help for the selection is <kbd>Shift</kbd>+<kbd>F1</kbd>.
+- <kbd>Shift</kbd>+letter no longer picks a tool.
+- <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Shift</kbd>+arrow no longer nudges by 10. <kbd>Shift</kbd>+arrow does. <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+arrow nudges by 1 and ignores the grid.
+
+## Tools
 | Key | Tool |
 |---|---|
 | <kbd>V</kbd> | Select |
 | <kbd>H</kbd> | Hand (or hold <kbd>Space</kbd>) |
-| <kbd>A</kbd> | Artboard |
+| <kbd>A</kbd> | Page |
 | <kbd>F</kbd> | Frame |
 | <kbd>R</kbd> | Rectangle |
 | <kbd>O</kbd> | Ellipse |
@@ -438,35 +674,64 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd> | Copy / cut / paste (pasting image files inserts them). After clicking in the timeline they copy and paste the selected keys, see [Copy, snap and stagger keys](timelines#copy-snap-and-stagger-keys) |
 | <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate |
 | <kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> | Group / ungroup |
-| <kbd>Ctrl</kbd>+<kbd>A</kbd> | Select all on the artboard |
+| <kbd>Ctrl</kbd>+<kbd>A</kbd> | Select all on the page |
 | <kbd>Delete</kbd> / <kbd>Backspace</kbd> | Delete the selection (or the selected keyframes) |
-| Arrow keys (<kbd>Shift</kbd> for 10px) | Nudge. With Snap to grid on they step to the next grid line instead (<kbd>Shift</kbd>: a stronger line), and <kbd>Ctrl</kbd> + arrow nudges by 1px or 10px as usual |
+| Arrow keys (<kbd>Shift</kbd> for 10px) | Nudge. With Snap to grid on they step to the next grid line instead (<kbd>Shift</kbd>: a stronger line). <kbd>Ctrl</kbd> + arrow nudges by 1px and ignores the grid |
 | <kbd>Alt</kbd>+arrow keys | Move the selected layer in the Layers list: up or down past a neighbour, right into the group above, left out of its group |
 | <kbd>]</kbd> / <kbd>[</kbd> | Bring forward / send backward (<kbd>Ctrl</kbd> for front / back) |
 | <kbd>Enter</kbd> | Go into a group or frame, edit a path's points, or edit text |
 | <kbd>Escape</kbd> | Stop editing, go up a level, clear the selection, then back to Select |
+| <kbd>I</kbd> | **Insert a component here…**: pick a page (a component) to place on the open page |
+| <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> | **Fit page to selection**: the open page shrinks (or grows) to the selected layers, which stay where they were on the canvas. One undo step. **Fit page to selection with space around…** and **Fit page to its layers** are in the command palette and the right-click menus, with no key until you give them one |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd> | Hide or show / lock or unlock the selected layers |
+| <kbd>F2</kbd> | Rename the selected layer in the Layers list |
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> | Save now |
 
-After a big change (tidying the artboards, linking colours to tokens, deleting a page, moving layers to another page, replacing a file, importing a file, changing the colourway, applying accessibility fixes, updating from a template) the message at the bottom carries an **Undo** button. It takes back exactly that change, even if it took several steps, and then says **Undone** with a **Redo** button. The moment you change anything else the button greys out, so it can never take back something you did afterwards; <kbd>Ctrl</kbd>+<kbd>Z</kbd> still undoes the latest change as always. The messages go away after a few seconds.
+## Safer Delete
+- Deleting a layer with the keyboard tells you what went (*Deleted Blend ball.*) with an **Undo** button.
+- Deleting a page from the keyboard asks first.
+- After you click in the Interactions graph, keys always go to the graph. <kbd>Delete</kbd> removes the selected node and never the layer.
+
+A message after a big change also carries an **Undo** button. See [Messages at the bottom](dialogs#messages-at-the-bottom).
 
 ## View
 | Key | Does |
 |---|---|
 | <kbd>Shift</kbd>+<kbd>1</kbd>, <kbd>Ctrl</kbd>+<kbd>0</kbd> | Fit everything |
-| <kbd>Shift</kbd>+<kbd>2</kbd> | Zoom to selection |
+| <kbd>Shift</kbd>+<kbd>2</kbd> | Zoom to selection (the whole page when nothing is selected). **Zoom to the open page**, **Zoom in** and **Zoom out** have no key until you give them one |
 | <kbd>Ctrl</kbd>+<kbd>1</kbd> | 100% |
 | <kbd>Shift</kbd>+<kbd>R</kbd> | Show or hide rulers |
 | <kbd>Shift</kbd>+<kbd>G</kbd> | Show or hide the grid |
 | <kbd>Ctrl</kbd>+<kbd>'</kbd> | Turn the Grid snap target on or off (it switches snapping on too, if it was off) |
 
+## Timeline
+These work after you click in the Timeline. See [Timelines and keyframes](timelines) for what the Timeline does.
+
+| Key | Does |
+|---|---|
+| <kbd>Space</kbd> or <kbd>K</kbd> | Play or pause the Timeline |
+| <kbd>L</kbd> | Play |
+| <kbd>J</kbd> or <kbd>Home</kbd> / <kbd>End</kbd> | Go to the start / the end |
+| <kbd>,</kbd> / <kbd>.</kbd> | Step back / forward one frame (on the timeline's frame rate, 30 per second if it has none) |
+| <kbd>Shift</kbd>+<kbd>L</kbd> | Show or hide the list of this page's timelines beside the Timeline |
+| <kbd>Shift</kbd>+<kbd>,</kbd> / <kbd>Shift</kbd>+<kbd>.</kbd> | Jump to the previous / next key of the selected layers (of every layer when none is selected) |
+| <kbd>P</kbd> / <kbd>S</kbd> / <kbd>R</kbd> / <kbd>T</kbd> / <kbd>A</kbd> | Go to the selected layer's **P**osition, **S**cale, **R**otation, opacity (**T**ransparency) or **A**nchor point: the Properties panel opens that field and focuses it, and the Timeline track for it, if the layer has one, is marked |
+
+## Properties
+| Key | Does |
+|---|---|
+| <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> | Go to the property search box (it is the **/** in the box) |
+| <kbd>Alt</kbd>+<kbd>Up</kbd> / <kbd>Alt</kbd>+<kbd>Down</kbd> on a section's title | Move that section up or down the Properties panel. See [Moving sections](properties-panel#moving-sections) |
+| <kbd>Alt</kbd>+arrow keys on a tool bar group's name or a tool | Move it earlier or later on the tool bar. See [The editor at a glance](interface#putting-the-tools-in-your-own-order) |
+
 ## Help
 | Key | Does |
 |---|---|
+| <kbd>?</kbd> or <kbd>Ctrl</kbd>+<kbd>/</kbd> | This sheet of keyboard shortcuts |
 | <kbd>F1</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
-| <kbd>?</kbd> | Open the help for what is highlighted (the Help button); <kbd>?</kbd> again closes it |
+| <kbd>Shift</kbd>+<kbd>F1</kbd> | Open the help for what you have selected (the same as the **Help** button); press it again to close |
 | <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) | The [command palette](command-palette): type what you want to do (add a button, go to a page, turn the grid on, share) and press <kbd>Enter</kbd>. Matching help pages are listed under the commands. While editing text it is the link shortcut instead |
 | <kbd>Alt</kbd>+<kbd>Left</kbd> / <kbd>Alt</kbd>+<kbd>Right</kbd> | Back and forward through the pages you have read, in the help drawer |
-| <kbd>?</kbd> | Open the help |
 
 ## Text
 Double-click a text layer to edit it. Select some of the text, then:
@@ -482,22 +747,30 @@ Double-click a text layer to edit it. Select some of the text, then:
 ## Interactions, dialogs and Preview
 | Key | Does |
 |---|---|
-| <kbd>Del</kbd> / <kbd>Backspace</kbd> | Delete the selected node or connection in the graph |
+| <kbd>Del</kbd> / <kbd>Backspace</kbd> | Delete the selected node or connection in the graph. After you click in the graph this is always the graph's, never the selected layer's |
 | <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate the selected node |
-| <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>Ctrl</kbd>+<kbd>X</kbd> / <kbd>Ctrl</kbd>+<kbd>V</kbd> | Copy, cut or paste the selected node in the graph (it pastes into another artboard's graph too) |
+| <kbd>Ctrl</kbd>+<kbd>A</kbd> / <kbd>Ctrl</kbd>+<kbd>G</kbd> | Select everything in the graph / group the picked nodes |
+| <kbd>/</kbd> | Go to the node search |
+| <kbd>Alt</kbd>+<kbd>Up</kbd> / <kbd>Down</kbd> (or <kbd>Ctrl</kbd>+<kbd>[</kbd> / <kbd>]</kbd>) | The previous / next page's graph |
+| <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>Ctrl</kbd>+<kbd>X</kbd> / <kbd>Ctrl</kbd>+<kbd>V</kbd> | Copy, cut or paste the selected node in the graph (it pastes into another page's graph too) |
 | <kbd>Enter</kbd> / <kbd>Esc</kbd> | Accept / cancel a [dialog](dialogs) |
 | <kbd>Esc</kbd> | Close the Preview, Preferences or any open box |
 
 ## Mouse
 | Do this | To |
 |---|---|
+| Menu key or <kbd>Shift</kbd>+<kbd>F10</kbd> on a key in the Timeline | Open its right-click menu (a text key has **Swap text**) |
 | Hold <kbd>Alt</kbd> while drawing or resizing | Work from the centre |
 | Hold <kbd>Ctrl</kbd> while dragging | Move, resize or draw without snapping to anything (grid, artboard, layers, guides, spacing, points) |
+| Hold <kbd>Ctrl</kbd> or <kbd>Ctrl</kbd>+<kbd>Shift</kbd> while dragging a guide | Round it to the nearest 5 px, or the nearest 10 px (rebindable under **Guides**, see [Rulers and guides](canvas#rulers-and-guides)) |
 | Click the Snap button on the tool bar | Open the snapping menu: the switch and a tick for each target |
 | Right-click the grid or snap button on the tool bar, or an empty part of the canvas | Snapping choices, the grid size and how often a stronger line shows |
 | Drag the **Tools** title over an edge of the canvas | Dock the tool bar there (left, right or a strip along the bottom or the top) |
+| Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) and drag a layer, a group, a page, a page group or a row in the Layers list | Drag a copy of it. The original stays put and the pointer shows a copy cursor. In the Layers list, drop the copy where the line is. The first few plain drags say "Alt: drag a copy"; **Always show the Alt-drag hint** in [Preferences](preferences) shows it on every drag |
 | <kbd>Alt</kbd>-click a path point | Switch it between curve and corner |
 | <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a layer | Add it to the selection, or take it out (it picks the deepest layer inside groups, so you can gather layers from different groups) |
+| <kbd>Shift</kbd>-click a layer in the Layers list | Select every layer between the one you last clicked and this one. <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click toggles one layer, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>-click adds a range, and <kbd>Shift</kbd>+<kbd>Up</kbd> / <kbd>Down</kbd> extend the pick a row at a time |
+| <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a node in the Interactions graph | Add it to the selection, or take it out |
 | Double-click a group | Select inside it |
 
 While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kbd> resizes from the centre. In number fields, drag the label to scrub (<kbd>Shift</kbd> ×10, <kbd>Alt</kbd> ×0.1), use arrow keys to step, or type sums like \`100/2\`.`,
@@ -510,22 +783,81 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
     group: 'Design',
     summary: 'Screens with their own size, background, timelines and interactions. Called artboards in the settings and the file.',
     keywords: 'artboard artboards screen page pages scene size background start preset duplicate delete move resize clip',
-    body: `A page (an **artboard** in the file and in the advanced settings) is one screen of the interactive. Each has a size, a background, its layers, its timelines and its interactions. Variables, scripts, data and assets belong to the whole project and are shared.
+    body: `A page (also called an **artboard**) is one screen of the interactive. The file, the advanced settings and a few menus (**Duplicate artboard**, **Delete artboard**) use the name artboard.
 
-- Make a new one with the **Page** tool (<kbd>A</kbd>), the **+ Add page** button at the bottom of the **Layers** panel, or by right-clicking empty canvas and choosing **New page here**.
-- Click an artboard's name above it on the canvas, or its row in the **Layers** panel, to select it. Drag the name to move the artboard around the canvas, and drag its corners to resize it.
-- To select several artboards, hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click their names on the canvas or their rows in the **Layers** panel. <kbd>Ctrl</kbd>+click on one that is already chosen takes it out again. <kbd>Shift</kbd>+click on a name adds it, and <kbd>Shift</kbd>+click on a row selects every row between it and the one you had. Chosen artboards have a gold name and row, and the same blue outline as one. Drag any chosen artboard's name to move them all together. With several chosen, the Inspector shows what you can do to all of them: align their edges or centres, distribute them evenly (three or more), **Group pages…**, **Ungroup**, **Tidy up**, duplicate and delete. <kbd>Del</kbd> deletes them after asking, and <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicates them. Each is one undo step.
-- **Artboard groups** keep a big project organised. Select some artboards and choose **Group pages…** (in the right-click menu, in the Inspector, or on the Layers panel) and give the group a name. The Layers panel lists the group as a folder row with its artboards under it, and its arrow folds them away (the artboards stay on the canvas). On the canvas the group gets a dashed frame with its name on a chip above its top left corner. Click the chip, or the group's row, to select all its artboards, and drag the chip to move the group. Right-click either for **Select all in group**, **Rename group…** (double-clicking the row does too), **Ungroup** (the artboards stay where they are), **Tidy up**, **Duplicate** and **Delete**. An artboard is in one group at most, and a responsive set goes into a group as a whole. Duplicating every artboard of a group makes a new group of the copies. A group is also a chapter when the project plays: **Go to artboard → Next artboard** and **Previous artboard** stay inside the artboard's group, in the project's order, and \`pageNumber\` and \`pageCount\` count its pages (see [Interactions](interactions)).
-- With an artboard selected, the Inspector shows **Name**, **W** and **H** (and **Size presets…** such as Desktop, Tablet or Phone), **Background**, **Clip content to artboard** (the parts of layers outside it still show faintly on the canvas, see [Preferences](preferences)), **Make start page**, **Duplicate artboard** and **Delete artboard**. Then come its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**.
-- **Tidy up pages** (at the bottom of the **Layers** panel, and in the right-click menu on the canvas) lays all the artboards out in a neat grid, in the order of the Artboards list, with even gaps and room for each name. The start artboard goes first if it isn't already, a responsive variant stays beside its main artboard, and an artboard that only exists to be used inside others (a component) goes last. Artboards you have hidden from the canvas stay where they are. It is one undo step (<kbd>Ctrl</kbd>+<kbd>Z</kbd>), and the group stays where it was on the canvas. An artboard group is laid out as a block of its own, with room for its frame, so a group's artboards stay together wherever they are in the list. With several artboards selected, **Tidy up** (in their right-click menu and the Inspector) lays out just those, among themselves, where their top left corner is now. To change the order, drag the artboards in the **Layers** panel, then tidy up again.
-- **Fit page to selection** (right-click the selected layers on the canvas) resizes the artboard to just those layers. Nothing moves on the canvas: the artboard's corner goes to the selection's, and every layer and its X and Y keyframes shift to match. Layers outside the new edge are still there, just outside the artboard. It isn't offered while several artboards are selected. One undo step.
-- The **start artboard** is the one the player shows first. It has a **start** badge in the Layers panel. Use **Make start page** (also in the right-click menu) to change it.
-- Drag layers and let go over another artboard and you're asked whether to move them there. See [Moving layers to another artboard](layers-panel#moving-layers-to-another-artboard).
-- To show a different arrangement of an artboard on narrow or wide pages, add a variant: see [Responsive artboards](responsive).
-- Move between artboards at runtime with the **Go to a page** action (with a transition) or \`ix.goTo('Name', 'fade')\`.
-- An artboard can also be placed inside another as an [instance](instances), like a reusable component. The **Use in** menu in the Inspector does it in one step.
-- To see what an artboard asks a learner to download, open **Download size** in its Inspector. See [Download size and lite versions](download-size).
-- To bring a design file in as an artboard, see [Importing](import).`,
+Each page has its own size, background, layers, timelines and interactions. Variables, scripts, data and assets belong to the whole project, so every artboard shares them.
+
+## Adding and selecting
+- Make a new page with the **Page** tool (<kbd>A</kbd>), the **+ Add page** button at the bottom of the **Layers** panel, or by right-clicking empty canvas and choosing **New page here**.
+- Click a page's name above it on the canvas, or its row in the **Layers** panel, to select it.
+- Drag the name to move the page around the canvas. Drag its corners to resize it.
+
+## Selecting several pages
+Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click page names on the canvas, or rows in the **Layers** panel. <kbd>Ctrl</kbd>+click on a chosen page takes it out again. <kbd>Shift</kbd>+click on a name adds it, and <kbd>Shift</kbd>+click on a row selects every row between it and the one you clicked before.
+
+Chosen pages have a gold name and row, and the same gold outline as a single page. Drag any chosen page's name to move them all together.
+
+With several chosen, the Inspector shows what you can do to all of them:
+- align their edges or centres, and distribute them evenly (three or more);
+- **Group pages…**, **Ungroup** and **Tidy up**;
+- duplicate (<kbd>Ctrl</kbd>+<kbd>D</kbd>) and delete (<kbd>Del</kbd>, which asks first).
+
+Each is one undo step.
+
+## Copying a page
+Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) and drag a page's name, or an empty part of the page. You drag a **copy**: it keeps its layers, timelines and interactions, and the original stays where it was. Do it on several chosen pages, or on a group's name, to copy them all together. The pointer shows a **+** while Alt is down, and the first few plain drags carry a reminder.
+
+## Page groups
+**Group pages…** (also called **Group artboards**) keeps a big project organised. Select some pages, choose **Group pages…** (in the right-click menu, the Inspector or the **Layers** panel) and name the group.
+
+- The **Layers** panel lists the group as a folder row with its pages under it. Its arrow folds them away (the pages stay on the canvas).
+- On the canvas the group gets a dashed frame, with its name on a gold chip above the top left corner.
+- Click the chip, or the group's row, to select all its pages. Drag the chip to move the group.
+- Right-click either for **Select all in group**, **Rename group…** (double-clicking the row does too), **Ungroup** (the pages stay where they are), **Tidy up**, **Duplicate** and **Delete**.
+
+A page is in one group at most, and a [responsive set](responsive) goes into a group as a whole. Duplicating every page of a group makes a new group of the copies.
+
+A group is also a chapter when the project plays. The **Next page** and **Previous page** actions of **Go to a page** stay inside the page's group, in the project's order, and \`pageNumber\` and \`pageCount\` count its pages (see [Interactions](interactions)).
+
+## Tidy up the pages
+**Tidy up pages** (also called **Tidy up artboards**) is at the bottom of the **Layers** panel and in the right-click menu on the canvas. It lays all the pages out in a neat grid, in the order of the Layers list, with even gaps and room for each name. It is one undo step.
+
+- The start page goes first if it isn't already.
+- A responsive variant stays beside its main page.
+- A page that only exists to be used inside others (a [component](instances)) goes last.
+- Pages you have hidden from the canvas stay where they are.
+- A page group is laid out as a block of its own, so its pages stay together wherever they are in the list.
+
+With several pages selected, **Tidy up** (in their right-click menu and the Inspector) lays out only those, among themselves, from where their top left corner is now. To change the order, drag the pages in the **Layers** panel, then tidy up again.
+
+Starters, and projects you build from them, open already laid out this way, in order, with each responsive variant beside its page.
+
+## Fit page to selection
+**Fit page to selection** shrinks the page to the layers you have selected. Use it on the canvas right-click menu, from the command palette, or with <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>.
+
+- **Fit page to selection with space around…** leaves the room you ask for on every side.
+- **Fit page to its layers** (right-click the page) does it for everything on the page.
+
+Nothing moves on the canvas. The page's corner goes to the selection's, and every layer and its position keyframes shift to match. Layers outside the new edge are still there, just outside the page. It isn't offered while several pages are selected. It is one undo step.
+
+## Page settings
+With a page selected, the Inspector shows:
+- **Name**, **W** and **H**, and **Size presets…** such as Desktop, Tablet or Phone;
+- **Background**;
+- **Clip content to artboard**: the parts of layers outside the page still show faintly on the canvas (see [Preferences](preferences));
+- **Make start page**, **Duplicate artboard** and **Delete artboard**;
+- then its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**.
+
+The **start page** is the one the player shows first. It has a **start** badge in the **Layers** panel. **Make start page** (also in the right-click menu) changes it.
+
+## Related
+- Let go of dragged layers over another page and you're asked whether to move them there: see [Moving layers to another artboard](layers-panel#moving-layers-to-another-artboard).
+- For a different arrangement on narrow or wide screens, add a variant: see [Responsive artboards](responsive).
+- Move between pages while the project plays with the **Go to a page** action (with a transition), or \`ix.goTo('Name', 'fade')\` in a script.
+- A page can be placed inside another as a reusable component: see [Instances](instances). The **Use in** menu in the Inspector does it in one step.
+- To see what a page asks a learner to download, open **Download size** in its Inspector: see [Download size and lite versions](download-size).
+- To bring a design file in as a page, see [Importing](import).
+- To share the logo, footer and other repeated layers between pages, see [Page masters](page-master).`,
   },
   {
     id: 'layers-panel',
@@ -538,17 +870,38 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 ![The Layers panel. Sun is hidden, so its name is faded. Backdrop is locked.](help/layers-panel.png)
 
 ## Working with the list
-- Click a layer to select it. Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) or <kbd>Shift</kbd> and click to select several.
-- The same works on the artboard rows: <kbd>Ctrl</kbd>+click adds an artboard to the selection or takes it out, and <kbd>Shift</kbd>+click selects the rows from the one you had to this one. Chosen rows are gold. Right-click a chosen row for **Group pages…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete** on all of them; **Tidy up pages** at the bottom becomes **Tidy up N selected artboards**.
-- A named **artboard group** is a folder row above its artboards, which sit one step in under it. Click the arrow to fold it, click the row to select its artboards, double-click to rename it, and right-click it for **Select all in group**, **Rename group…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete**. Folding is just for this panel. The artboards stay on the canvas inside a dashed frame with the group's name. See [Artboards](artboards).
-- Click the arrow beside a group, a frame or an artboard to open or close it. The artboard marked **start** is the one the player shows first.
-- Double-click a name to rename it. <kbd>Enter</kbd> finishes and <kbd>Esc</kbd> cancels.
-- Drag a row to reorder. A line shows where the layer will land, and how far it is indented shows which list it joins. Over the top or bottom third of a row the layer goes before or after it. Over the middle of a group or frame row the group is outlined and the layer goes inside it, at the front.
-- Where a group ends, move the pointer left to drop the layer under the group instead of inside it: the line steps out one level for each step left. The empty space under the last row is the end of the list, so you can always drop at the very bottom without landing in a group that happens to be last. Drop on the artboard's own row to bring the layer to the top level, in front.
-- From the keyboard, select one layer and press <kbd>Alt</kbd>+<kbd>Up</kbd> or <kbd>Down</kbd> to step it past a neighbour (and out of its group at the end), <kbd>Alt</kbd>+<kbd>Right</kbd> to put it inside the group just above it and <kbd>Alt</kbd>+<kbd>Left</kbd> to take it out, under that group.
-- Type in **Filter layers** above the list to show only the layers whose name has those letters. The groups and artboards they sit in stay, faded, so you can see where each one is, and a collapsed group doesn't hide a match. Press **Text** beside the box to match the words in text layers, buttons and links as well, rich text included. <kbd>Esc</kbd> clears the box. While a filter is on, the rows can't be dragged.
-- Right-click a layer for **Select same fill** and **Select same font**. They select every unlocked layer on the same artboard with that fill (any of a layer's fills counts, and a text layer's colour counts as a fill) or set in that font (a rich-text run in it counts). Then change them all at once in the Inspector. To change a colour or font across the whole project, use the named colour and text styles in [Libraries](libraries#styles) instead: layers that follow a style change with it.
-- **+ Add page** and **+ Import file as artboard** are at the bottom, with **Tidy up pages**, which puts the artboards in a tidy grid in list order. See [Artboards](artboards) and [Importing](import).
+- Click a layer to select it. Double-click a name to rename it: <kbd>Enter</kbd> finishes and <kbd>Esc</kbd> cancels.
+- Click the arrow beside a group, a frame or a page to open or close it. The page marked **start** is the one the player shows first.
+- **+ Add page** and **+ Import file as artboard** are at the bottom, with **Tidy up pages** (also called **Tidy up artboards**), which puts the pages in a tidy grid in list order. See [Pages](artboards) and [Importing](import).
+
+### Selecting several layers
+- **Shift-click a range**: click one layer, hold <kbd>Shift</kbd> and click another, and every layer between them in the list is selected too. A folded group counts as one row, and the range stays on one page.
+- <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click adds one layer or takes it out.
+- <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+click adds a whole range to what you already have.
+- With a layer focused in the list, <kbd>Shift</kbd>+<kbd>Up</kbd> and <kbd>Shift</kbd>+<kbd>Down</kbd> grow the selection a row at a time.
+- Right-click a layer for **Fit page to selection** (and **Fit page to selection with space around…**), which shrinks the open page to the picked layers, the same as on the canvas. It sits above **Select same fill** and **Select same font**, and is left out when layers are picked on more than one page. The two **Select same** items select every unlocked layer on the same page with that fill (any of a layer's fills counts, and a text layer's colour counts as a fill) or set in that font (a rich-text run in it counts). Then change them all at once in the Inspector. To change a colour or font across the whole project, use the named colour and text styles in [Libraries](libraries#styles) instead: layers that follow a style change with it.
+
+### Selecting several pages
+The same keys work on the page rows: <kbd>Ctrl</kbd>+click adds a page to the selection or takes it out, and <kbd>Shift</kbd>+click selects the rows from the one you had to this one. Chosen rows are gold. Right-click a chosen row for **Group pages…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete** on all of them. **Tidy up pages** at the bottom becomes **Tidy up N selected pages**.
+
+A named **page group** is a folder row above its pages, which sit one step in under it. Click the arrow to fold it, click the row to select its pages and double-click to rename it. Right-click it for **Select all in group**, **Rename group…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete**. Folding only changes this panel: the pages stay on the canvas inside a dashed frame with the group's name. See [Pages](artboards#page-groups).
+
+### Copying with Alt
+Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag a row, and a **copy** goes where the line is while the original stays. This works for layers, groups, pages and page groups. The pointer shows a **+** while Alt is down, and the first few plain drags carry a reminder. On the canvas, <kbd>Alt</kbd>-drag a layer or a group the same way.
+
+### Reordering
+- Drag a row to reorder. A line shows where the layer will land, and how far it is indented shows which list it joins.
+- Over the top or bottom third of a row, the layer goes before or after it. Over the middle of a group or frame row, the group is outlined and the layer goes inside it, at the front.
+- Where a group ends, move the pointer left to drop the layer under the group instead of inside it: the line steps out one level for each step left.
+- The empty space under the last row is the end of the list, so you can always drop at the very bottom without landing in a group that happens to be last.
+- Drop on the page's own row to bring the layer to the top level, in front.
+- From the keyboard, select one layer and press <kbd>Alt</kbd>+<kbd>Up</kbd> or <kbd>Down</kbd> to step it past a neighbour (and out of its group at the end). <kbd>Alt</kbd>+<kbd>Right</kbd> puts it inside the group just above it and <kbd>Alt</kbd>+<kbd>Left</kbd> takes it out, under that group.
+
+### Filtering
+Type in **Filter layers** above the list to show only the layers whose name has those letters. The groups and pages they sit in stay, faded, so you can see where each one is, and a collapsed group doesn't hide a match. Press **Text** beside the box to match the words in text layers, buttons and links as well, rich text included. <kbd>Esc</kbd> clears the box. While a filter is on, the rows can't be dragged.
+
+### Deleting
+<kbd>Delete</kbd> removes the selected layers and shows a message with **Undo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd> does the same). Deleting a page with the keyboard asks first, and the page's own delete button shows **Undo** afterwards. Keys pressed after clicking in the interactions graph go to the graph, so <kbd>Delete</kbd> there removes the node and never the layer.
 
 ## Hide and lock
 Hover a row and two small buttons appear at its right: a padlock (**Lock** / **Unlock**) and an eye (**Hide** / **Show**). They stay visible for any layer that is locked or hidden. The **Visible** and **Locked** ticks in the Inspector do the same.
@@ -556,7 +909,7 @@ Hover a row and two small buttons appear at its right: a padlock (**Lock** / **U
 - **Hidden** layers are not drawn by the player or in Preview. In the editor they show as a faint **ghost** on the canvas, so you can still see where they are and pick them. Their names are faded in the Layers panel. Hide a mask layer and its clipping stops.
 - **Outside a clipping artboard**: when an artboard has **Clip content to artboard** on, the part of a layer that hangs past its edge is also drawn as a faint, diagonally striped ghost on the canvas, and clicking it selects the layer. Preview and exports still cut it off. You can switch this off in [Preferences](preferences).
 - **Locked** layers can't be selected or moved by clicking on the canvas, so a backdrop never gets in your way. You can still select one in the Layers panel and edit it in the Inspector.
-- The **brand layers** of a [branded project](branded-starters) (the logo, the sweeps, the footer line) are locked harder. They are skipped by clicking, dragging, the selection box and Select all, and in the Layers panel they show a padlock you can't turn off and can't be selected there either, so there is nothing on them to change by accident.
+- **Brand-locked layers** are the brand layers of a [branded project](branded-starters) (the logo, the sweeps, the footer line). They are really locked: you can't select or drag them on the canvas or in the Layers panel, and the selection box and Select all skip them. Their padlock in the list can't be turned off. Projects made before this was added are locked when you open them. That leaves nothing on them to change by accident.
 - A layer that is hidden only because its parent is a [Solo group](groups-frames#solo-groups) and it isn't the active child looks the same. Its eye says **Hidden by Solo on …: show this one instead**, and pressing it makes it the active child.
 
 ### Quick badges on the canvas
@@ -572,9 +925,9 @@ Clicking selects the layer afterwards, ready to edit.
 ![Hovering the locked backdrop shows an Unlock badge at its top right.](help/locked-layer-badge.png)
 
 ## Moving layers to another artboard
-Select layers and drag them on the canvas. If you let go over a **different artboard**, a dialog asks **Move to artboard**: *Move “Card” to the artboard “Menu”?* Press **Move** to do it or **Cancel** to put them back.
+Select layers and drag them on the canvas. If you let go over a **different page**, a dialog asks **Move to page**: *Move “Card” to the page “Menu”?* It adds that the layer's keys in this page's timelines are removed and interactions here that use it will need fixing. Press **Move** to do it or **Cancel** to put them back.
 
-![The Move to artboard dialog.](help/move-to-artboard.png)
+![The Move to page dialog.](help/move-to-artboard.png)
 
 - The layers keep their place on the canvas, but now belong to the other artboard.
 - Their keys in the old artboard's timelines are removed.
@@ -582,19 +935,53 @@ Select layers and drag them on the canvas. If you let go over a **different artb
 
 ## Right-click menus
 - **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**When clicked…**, **When hovered…**, or an empty **On click** or **On hover** event) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
-- **An artboard**: **New** (a menu of layers to add where you clicked), **Paste**, **Make start page**, **Duplicate artboard**, **Zoom to page** and **Delete artboard**.
-- **Empty canvas**: **New page here**, **Paste**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`,
+- **A page**: **New** (a menu of layers to add where you clicked), **Paste**, **Insert component here…**, **Make start page**, **Duplicate artboard**, **Zoom to page**, **Fit page to its layers** and **Delete artboard**. See [Instances](instances) and [Pages](artboards#fit-page-to-selection).
+- **Empty canvas**: **New page here**, **Paste**, **Tidy up pages**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`,
   },
   {
     id: 'properties-panel',
     title: 'The Properties panel and its search',
     group: 'Design',
     summary: 'What the right-hand panel shows for a layer, an artboard and the project, and how to find a property with the search box.',
-    keywords: 'properties inspector panel right search find filter property fuzzy synonym transparency opacity alpha pivot origin anchor scale rotation round corner radius alt description hide visible colour color z-order draw order aria typo did you mean slash ctrl f',
-    body: `The **Properties** panel is on the right. It shows the settings of whatever is selected: a layer (or several), an artboard, or, with nothing selected, the artboard's and the project's settings. Each group of settings is a **section** with a title. Click the title to fold it, and the **?** beside it opens that section's page.
+    keywords: 'align alignment aligned line up label column dropdown field width layout move reorder rearrange drag order sections tools groups arrange properties inspector panel right search find filter property fuzzy synonym transparency opacity alpha pivot origin anchor scale rotation round corner radius alt description hide visible colour color z-order draw order aria typo did you mean slash ctrl f',
+    body: `The **Properties** panel is on the right. It shows the settings of whatever is selected: a layer (or several), an artboard, or, with nothing selected, the artboard's and the project's settings. Each group of settings is a **section** with a title. Click the title to fold it, and the **?** beside it opens that section's page in the help.
+
+Under many sections there is a one-line note that ends with **More about …**. It opens the help at the place with the full explanation. The notes stay short on purpose, so the detail is here in the help.
+
+## How fields line up
+Every field has its name on the left, in one column, and its box to the right. The boxes in a section all start in the same place and end in the same place, so a dropdown never sits further along than the number box above it.
+
+- A long name wraps onto a second line inside its column instead of pushing the box along.
+- Dropdowns, text boxes, number boxes and colour boxes are the same height.
+- A small unit (%, px, ms) or a key diamond (the ◆ that adds a keyframe) has its own space at the right end. The space is kept whether or not the row has one, so the right edges match.
+- The whole panel is one grid of four columns: a name, a box, a second name, a second box. A single field has its name in the first column and its box running across the other three. Two number boxes share a line (X and Y, W and H, Rotation and Opacity), and the second name is in the same place in every pair, so the second boxes line up too. A dropdown or a text box always has a line to itself.
+- A name goes above its box only for a text area, code and lists.
+- Tick boxes start under the boxes, not under the names. Two of them share a line, side by side, each as wide as its words (**Hug width** and **Hug height** stay on one line); if they would not fit the second drops to its own line.
+- A dropdown that cuts a long choice short with … shows the whole choice when you hover over it. In **Blends**, each timeline's dropdown takes all the room the number and the remove button leave, and a weight per timeline has its weight on a second line.
+- Rows of buttons are equal-width cells from the left edge, and wrap onto a new line when they would be squeezed.
+- Every line is the same height and the same distance from the next. A group of settings starts a little lower than the line before it.
+- Make the panel narrow (drag its edge) and the pairs turn into one field per line, so nothing is squeezed.
+- The Interactions settings column and the Timeline's Keyframe column use the same layout.
 
 ## Folding sections
-Click a section's title to fold it or open it. The editor remembers: fold **Accessibility** on one layer and it stays folded on the next layer, and after you reload (it is kept with your preferences, so it follows you to any machine you sign in on; only the sections you changed are kept, so a section you never touched still follows the editor's own default. Without a signed in session it is kept in this browser instead). **Alt**-click a title to open only that section and fold the rest. Right-click a title, or use the arrow button beside the search box, to **fold all** or **unfold all**; the menu also has **Back to the default folds**. Searching still opens every section so nothing is hidden from it, and your folds come back when you clear the box. The **+** buttons open their section so you can see what you added.
+Click a section's title to fold it or open it. The editor remembers your folds. Fold **Accessibility** on one layer and it stays folded on the next layer, and after you reload.
+
+- Folds are kept with your preferences, so they follow you to any computer you sign in on. Without a signed in session they are kept in this browser instead.
+- Only the sections you changed are kept. A section you never touched follows the editor's own default.
+- **Alt**-click a title to open only that section and fold the rest.
+- Right-click a title, or use the arrow button beside the search box, for **fold all**, **unfold all** and **Back to the default folds**.
+- Searching opens every section so nothing is hidden from it, and your folds come back when you clear the box.
+- The **+** buttons open their section so you can see what you added.
+
+## Moving sections
+Put the sections of the Properties panel in the order you work in. Drag a section by its title (a small grip shows in the margin as you point at it) and let go where the gold line is, or click a title and press <kbd>Alt</kbd>+<kbd>Up</kbd> or <kbd>Alt</kbd>+<kbd>Down</kbd>. Right-click a title for **Move this section up**, **Move this section down** and **Back to the default section order**. A screen reader says where it went ("Fill moved to position 3 of 12"). <kbd>Esc</kbd> while dragging puts it back.
+
+- Each kind of layer keeps its own order: one for rectangles, one for text, one for the page, one for Libraries, and so on. Move **Accessibility** to the bottom for text and it stays there for every text layer.
+- The order is saved with you, never in the project, so nobody else sees it. It is kept with your preferences, so it follows you to any computer you sign in on (without a signed in session, it is kept in this browser).
+- The tool bar works the same way: drag its groups, and the tools inside them, by their titles.
+- A section the editor adds later turns up in its own default place instead of being thrown to the bottom. A section that only shows for some layers keeps its place relative to the others when it appears.
+- Folding, searching and the help links work the same wherever a section sits. While you search the properties the sections sort by how well they match, and your order comes back when you clear the box.
+- **Preferences** has **Reset section and tool order**, which puts every panel and the tool bar back. The order is the same for the whole editor: there is no per-project copy.
 
 ## Searching the properties
 The box at the top of the panel finds a property by what it does or what it is called. Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> while the focus is in the panel (or click the box).
@@ -640,14 +1027,18 @@ Boolean operations (union, subtract, intersect, exclude) turn several shapes int
     group: 'Design',
     summary: 'Solid, gradient and image fills; several fills and strokes per shape; strokes, dashes and trim; feather and drop shadows; shadow, blur and blend modes; parallax depth.',
     keywords: 'parallax depth tilt layered postcard pointer shift colour color palette swatch preset toolbox brand gradient linear radial image fill stroke border dash cap join align inside outside shadow blur blend opacity trim path layers several multiple feather glow drop shadow eye hide reorder',
-    body: `## Fill
-Choose the type from the dropdown at the top of a fill: **None** (removes it), **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. Colours accept hex, \`rgb()\`, \`hsl()\` and names; the number box beside a colour is its opacity.
+    body: `This topic covers how a layer is painted: fills, strokes and effects, and the layer settings next to them (opacity, scale, pivot and blend). Further down, **Depth (parallax)** makes layers shift as the viewer moves the pointer.
+
+## Fill
+Choose the type from the dropdown at the top of a fill: **None** (removes it), **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. You can type a colour as hex (such as #ffcc00), \`rgb()\`, \`hsl()\` or a colour name. The number box beside a colour is its opacity.
 
 #### Exact gradient points
-By default a linear gradient runs corner to corner along its angle, and a radial one from the middle of the layer to its farthest corner, so both stretch with the layer. **Set start and end points** (linear) or **Set centre and radius** (radial) pins the gradient to numbers instead: **From** and **To** (or **Centre** and **Radius**) in pixels from the layer's top-left corner. Pinned gradients stay where they are when the layer is resized, which is how Rive and Lottie place them. With the layer selected, the points also show on the canvas as dots joined by a dashed line (a radial one has a dot at its centre and one on its radius): drag them. **Use angle instead of points** (or **Use the box…**) goes back to the stretching kind. Points can be animated like any other number: choose \`Fill gradient start X\`, \`Fill gradient end Y\`, \`Fill gradient centre X\`, \`Fill gradient radius\` and so on in a timeline (the same for strokes and for the later fills), and a gradient stop's colour and position as \`fill.stops.1.color\` or \`fill.stops.1.offset\`. While recording, dragging a point on the canvas makes the keyframe.
+By default a linear gradient runs corner to corner along its angle, and a radial one from the middle of the layer to its farthest corner, so both stretch with the layer. **Set start and end points** (linear) or **Set centre and radius** (radial) pins the gradient to numbers instead: **From** and **To** (or **Centre** and **Radius**) in pixels from the layer's top-left corner. Pinned gradients stay where they are when the layer is resized, which is how Rive and Lottie place them. With the layer selected, the points also show on the canvas as dots joined by a dashed line (a radial one has a dot at its centre and one on its radius): drag them. **Use angle instead of points** (or **Use the box…**) goes back to the stretching kind. Points can be animated like any other number. In a timeline's property list choose the gradient's start, end, centre or radius (the same for strokes and for the later fills), or a stop's colour or position. While recording, dragging a point on the canvas makes the keyframe.
 
 ### Toolbox palette
-The small arrow beside every colour box (fills, strokes, gradient stops, text colours, variables, styles) opens the StudyDesk toolbox palette: the brand colours, greys, link and status colours, feature colours and gradient stops used across the suite. Hover a swatch for its name. A colour is named after its property (\`--ilar-swatch-yellow-dark\` is *Yellow dark*) unless the stylesheet gives it a name with a comment of three stars each side, \`/***name: Gold***/\`, written after the declaration on the same line, or on its own line just above it; the property name is still shown beside it. Picking one sets an ordinary colour on the layer (opacity is kept), so exports never depend on the palette. The palette is read from the toolbox's \`/styles/palette.css\` (or the minified \`palette.min.css\`, which has the colours but not the names, because minifying removes comments) when the editor opens, so changes to it appear after a reload. Where that stylesheet isn't available (a copy running outside the suite) the arrow simply isn't shown.
+The small arrow beside every colour box (fills, strokes, gradient stops, text colours, variables, styles) opens the StudyDesk toolbox palette. It holds the brand colours, greys, link and status colours, feature colours and gradient stops used across the suite. Hover a swatch for its name.
+
+Picking one sets an ordinary colour on the layer (the opacity is kept), so exports never depend on the palette. If the palette isn't available (a copy of the editor running outside the suite), the arrow isn't shown.
 
 ## Several fills and strokes
 A shape can have as many fills and strokes as you like. The **+** in the **Fill** or **Stroke** header adds one on top of the others; the list shows the front-most first, like the layers panel. Each entry has:
@@ -656,15 +1047,18 @@ A shape can have as many fills and strokes as you like. The **+** in the **Fill*
 - its own paint (solid, gradient or image) and, for a stroke, **W**idth, **Dash**, **Trim**, **Cap**, **Join** and **Align** (centre, inside or outside the outline; boxes default to inside, vector shapes to the centre);
 - **Opacity** (how solid that paint is on its own, as a percent), **Blend** (how it mixes with what is under it), **Feather** (a soft blur of that paint, in pixels) and an **X / Y** offset.
 
-Fills are drawn under strokes unless you change the paint order (below). Layers are numbered from the bottom: **Fill 1** is the shape's own fill (the one \`fill.color\` and a style refer to), **Fill 2** the next, and so on.
+Fills are drawn under strokes unless you change the paint order (below). Fills are numbered from the bottom: **Fill 1** is the shape's own fill (the one a style refers to), **Fill 2** the next, and so on.
 
 Some things to build with it:
 
 - **Layered gradients**: a solid fill under a see-through gradient with **Blend** set to *multiply* or *overlay*.
 - **An outline plus a glow**: a thin dark stroke over a wide, see-through stroke with a **Feather**.
-- **A drop shadow that follows a shape's fill or stroke**: add a fill, make it dark and see-through (alpha in its colour or **Opacity**), set **Feather** to 12 or so and **Y** to a few pixels, and move it down the list so it sits under the real fill. It is the way a Rive drop shadow is built, and Rive files import that way.
+- **A drop shadow that follows a shape's fill or stroke**: add a fill, make it dark and see-through (transparency in its colour, or **Opacity**), set **Feather** to 12 or so and **Y** to a few pixels, and move it down the list so it sits under the real fill. Rive files import their drop shadows this way.
 
-Each paint's numbers can be animated: look for the diamond next to a field. The property names are \`fill.opacity\`, \`fills.0.color\`, \`fills.0.opacity\`, \`fills.0.feather\`, \`fills.0.offsetX\`, \`strokes.0.width\`, \`strokes.0.paint.color\`, \`strokes.0.trimEnd\` and so on (\`fills.0\` is the second fill, \`strokes.1\` the third stroke); bindings, **Change a layer's setting** nodes and scripts use the same names. A shape with one plain fill and stroke is drawn as before; a shape with layers, or with opacity, blend, feather, an offset, a cap, join or align on a paint, is drawn as SVG. Buttons and inputs draw only their first fill and stroke. Lottie export keeps every fill and stroke with their opacity, and leaves out the blend modes, feathered and offset paints (shadows), which Lottie cannot hold.
+## Animating a paint
+Each paint's numbers can be animated: look for the diamond next to a field. That covers a paint's colour, opacity, feather and offset, and a stroke's width and trim. Bindings, **Change a layer's setting** nodes and scripts reach them by name. The names are in [Animatable properties](animatable-properties).
+
+Buttons and inputs draw only their first fill and stroke. Lottie export keeps every fill and stroke with their opacity, and leaves out the blend modes, feathered and offset paints (shadows), which Lottie cannot hold.
 
 ### Paint order
 Some shapes need a stroke *under* a fill, or between two fills: an outline that shows only where a fill leaves it uncovered, or a fill that overlaps the inner half of its own stroke. Select one shape that has both a fill and a stroke and a **Paint order** section appears under **Stroke**, listing every paint in one list, front-most first (buttons and inputs, and several layers selected at once, don't have it). Press **↑** or **↓**, or drag a row, to move a paint in front of or behind the others. Each row shows a swatch and what the paint is (its colour, the kind of gradient, a stroke's width). Moving a fill past another fill swaps those two fills, so the numbers stay where they are while their colours trade places; the list in the **Fill** section follows. The moved row is highlighted and the arrow you pressed keeps the keyboard focus, so pressing it again keeps moving the same paint. A shape you have not reordered keeps all its fills under all its strokes, as before.
@@ -673,13 +1067,13 @@ Some shapes need a stroke *under* a fill, or between two fills: an outline that 
 
 ![Pressing the arrows in the Paint order list: the wide stroke goes under the fill and comes back, and the picture follows.](help/paint-order-reorder.mp4)
 
-On a frame, rectangle or ellipse the strokes that end up in front of the last fill are still drawn above the shape's children; strokes placed under a fill are drawn under the children with it. In a saved project the order is the shape's \`paintOrder\`, a list of \`"fill"\` and \`"stroke"\` entries from the bottom up (for example \`["fill", "stroke", "fill"]\`); it is left out when every fill is under every stroke. Rive files import with the order they were drawn in, and Lottie export follows it.
+On a frame, rectangle or ellipse, strokes that end up in front of the last fill are still drawn above the shape's children. Strokes placed under a fill are drawn under the children with it. Rive files import with the order they were drawn in, and Lottie export follows it.
 
 ## Stroke
-Colour, width, **cap** (butt, round, square), **join** (miter, round, bevel), **align** (centre, inside, outside) and **dash** (e.g. \`8 4\` for 8 on, 4 off).
+A stroke has a colour, a width, a **cap** (butt, round, square), a **join** (miter, round, bevel), an **align** (centre, inside, outside) and a **dash**. Type the dash as a pair of numbers: \`8 4\` is 8 pixels on, then 4 off.
 
 ### Trim path
-The **Trim** row in the Stroke section has a start (**Trim**), an end (**to**) and an offset (**Off**), all 0–100%. They draw only part of a stroke. Animate the end (the *Trim end %* property) from 0 to 100 to make a line draw itself on. Works on every shape with a stroke.
+The **Trim** row in the Stroke section has a start (**Trim**), an end (**to**) and an offset (**Off**), all 0 to 100%. They draw only part of a stroke. Animate the end from 0 to 100 to make a line draw itself on. Works on every shape with a stroke.
 
 ## Effects
 Use **+** in the **Effects** section to add a shadow or a layer blur; each one has a **×** to remove it.
@@ -688,24 +1082,29 @@ Use **+** in the **Effects** section to add a shadow or a layer blur; each one h
 - **Layer blur**: blurs the whole layer by an **Amount** in pixels.
 - **Shader filter** (image layers only): draws the picture through a GPU shader, such as wave distortion, CRT scanlines, halftone dots or film grain. See [Shader layers](shader-layers#shader-filter-on-an-image).
 
-Two related settings are in the **Layer** section at the top of the Inspector, with the position fields:
+These settings are in the **Layer** section at the top of the Inspector, with the position fields:
 
-- **Opacity** is how solid the whole layer is, as a percent (100% solid, 0% invisible). The file keeps it as 0 to 1 (the property \`opacity\`, shown as α in older notes).
-- **Scale W** and **Scale H** are the layer's scale as percents of its drawn size (100% is as drawn, -100% flips it). The chain between them keeps the shape. The file keeps them as 1 = 100% (\`scaleX\`, \`scaleY\`, called Sx and Sy in older notes).
-- **Pivot** is the point the layer turns and scales around. Pick one of the nine dots, or type a percent across and down for anywhere between. The file keeps it as \`originX\` and \`originY\` (0 to 1, called Ox and Oy in older notes).
+- **Opacity** is how solid the whole layer is, as a percent (100% solid, 0% invisible).
+- **Scale W** and **Scale H** are the layer's scale as percents of its drawn size (100% is as drawn, -100% flips it). The chain between them keeps the shape.
+- **Pivot** is the point the layer turns and scales around. Pick one of the nine dots, or type a percent across and down for anywhere between.
 - **Blend** is how the layer mixes with what is under it: *Normal*, *Dissolve*, *Darken*, *Multiply*, *Colour burn*, *Lighten*, *Screen*, *Colour dodge*, *Add (linear dodge)*, *Overlay*, *Soft light*, *Hard light*, *Difference*, *Exclusion*, *Hue*, *Saturation*, *Colour* or *Luminosity*. **Dissolve** draws each pixel either solid or not at all, with the layer's opacity as the odds: at 40% opacity, 40% of the pixels show at full strength, scattered, instead of everything fading. Animate the opacity for a speckled fade in or out. A single fill or stroke (in the paint list) can use every mode except Dissolve.
 
 ## Depth (parallax)
-The **Depth** section gives a layer a depth, so it shifts as the viewer moves the pointer across the page, or tilts their phone, for a layered-postcard look. Pick **Small**, **Medium** or **Large**, or type your own **Amount** as a percent. A nearer layer (a bigger amount) moves further than a far one, so a background might be Small and the foreground Large. A negative amount moves the other way, with the pointer. Everything inside a frame or group goes with it.
+The **Depth** section gives a layer a depth, so it shifts as the viewer moves the pointer across the page (or tilts their phone), for a layered-postcard look. Nearer layers move further than far ones, so a background might have a Small depth and the foreground a Large one.
 
-- **How far:** 100% is the project's **Depth range** (40 px unless you change it in the Project settings). A layer at 50% moves half that.
-- **Only when playing:** the canvas stays still while you edit, and the shift shows in Preview and the exported player. Clicks and hovers land where the layer is drawn.
+1. Select a layer and open **Depth** in the Properties panel.
+2. Pick **Small**, **Medium** or **Large**, or type your own **Amount** as a percent. **None** keeps the layer still.
+3. Open **Preview** and move the pointer over the page.
+
+A negative amount moves the layer the other way, with the pointer. Everything inside a frame or group goes with it.
+
+- **How far:** 100% is the project's **Depth range** (40 px unless you change it in [Project settings](project-settings)). A layer at 50% moves half that.
+- **Only when playing:** the canvas stays still while you edit. The shift shows in Preview and in the exported player. Clicks and hovers land where the layer is drawn.
 - **Reduced motion:** nothing moves for a viewer whose device asks for less motion, whatever the project settings say.
-- **Tilt:** turn on **Tilt moves depth layers** in the Project settings (off by default). On an iPhone or iPad the viewer's first tap asks permission for the motion sensor, never before; if they say no, or the device has no sensor, the layers follow the pointer only.
-- **Draggable layers** hold still, so they don't slide about under a finger, and a connector joining two moving layers does not follow the shift.
-- The file keeps it as \`depth\` on the layer (-100 to 100) and \`parallax: {range, tilt}\` in the project settings.
+- **Tilt:** turn on **Tilt moves depth layers** in the Project settings (off by default). On an iPhone or iPad the viewer's first tap asks permission for the motion sensor, never before. If they say no, or the device has no sensor, the layers follow the pointer only.
+- **Draggable layers** hold still, so they don't slide about under a finger. A connector joining two moving layers does not follow the shift.
 
-Most of these can be animated: look for the diamond next to a field. See [Animatable properties](animatable-properties).`,
+Depth can be animated: look for the diamond next to a field. See [Animatable properties](animatable-properties).`,
   },
   {
     id: 'text',
@@ -716,16 +1115,38 @@ Most of these can be animated: look for the diamond next to a field. See [Animat
     body: `Use the **Text** tool (<kbd>T</kbd>): click for text that grows as you type, or drag a box for wrapping text. Double-click text to edit it, and <kbd>Escape</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to finish.
 
 - **Sizing**: *Auto width* (one line, grows sideways), *Auto height* (fixed width, wraps and grows down) or *Fixed* (you set both). With *Fixed*, **Overflow** says what happens to lines that don't fit: *Show* them anyway, *Clip* them at the box, or cut the last line that fits with an *Ellipsis …*. Untick **Wrap lines** to keep the lines as written (long ones run on, or are clipped or cut by the overflow setting).
-- **Fit text to box**: tick it and the size of the text is chosen for you, as the largest that makes the text fit the box (width and height, wrapping as usual), so a short word fills the box and a long sentence shrinks to fit it. **Smallest** and **Largest** keep the size between two limits, in pixels; leave one blank (it says *any*) for no limit on that side: *any* Smallest goes down to 1, *any* Largest goes as big as the box height allows. If the Smallest is higher than the Largest, the Largest wins. It follows the text as it changes, including \`{variables}\` and text a binding sets, and it re-fits when you resize the box, change the font or switch to another [responsive variant](responsive), in the editor and in the player alike. Things to know: fitting needs a box that stays put, so **Sizing** is *Fixed* (and greyed out) while it is on; the **Size** field is greyed out too, and neither it nor a timeline or binding on the font size does anything while it is on (the fitted size wins); words that are styled with their own size in [rich text](text#several-styles-in-one-text-layer) scale along with the rest; a long word is never broken to make it fit, so a narrow box ends up with a smaller size instead; and if the text is too long even at the Smallest, it overflows by the layer's **Overflow** setting (and a long word is broken). It also works on a [button](web-elements)'s label and a link's text, which have no Sizing to switch.
-- **Animating the box**: a text layer's **Height**, **Width** and **Pivot X / Y** (\`originX\`, \`originY\`) can be keyed in a timeline like any other layer's. With *Fixed* sizing a changing height clips or ellipsises the lines that no longer fit, and the vertical alignment keeps following the box. *Auto width* and *Auto height* text work their size out from the text, so keys on the size they work out have no effect. **Origin Y** moves the pivot of the layer's turn and scale (0 top, 1 bottom).
-- **Font**: a search box over every Google font. Click it and type to filter ("playf" finds Playfair Display), then use <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> or click to pick, <kbd>Esc</kbd> to close. Each row is drawn in its own font. The chips above the list narrow it to Sans, Serif, Display, Handwriting or Mono. The project's own fonts come first (tagged *In project* or *Uploaded*), then a few system fonts, then the rest. Picking a Google font the project doesn't have yet adds it to the project's **Fonts** with the weights the text uses, so the player and exports load it; one undo takes both back. Changing the **Weight** later loads that weight too. A name that isn't on the list can still be used as typed (it is not added to the project's fonts, so add it there if it is a Google font). A font file you upload in the [Assets panel](assets) is added to the fonts for you and shows in the list as *Uploaded*. New text starts in your [default font](preferences), Open Sans unless you changed it.
+- **Fit text to box**: tick it and the editor picks the size for you, the largest that fits the box. See [Fit text to box](#fit-text-to-box).
+- **Animating the box**: a text layer's **Height**, **Width** and **Pivot X / Y** can be keyed in a timeline like any other layer's. With *Fixed* sizing, a changing height clips or ellipsises the lines that no longer fit, and the vertical alignment keeps following the box. *Auto width* and *Auto height* text work their size out from the text, so keys on the size they work out have no effect. The pivot is the point the layer turns and scales around (0 is the top, 1 the bottom).
+- **Font**: a search box over every Google font. Click it and type to filter ("playf" finds Playfair Display), then use <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> or click to pick, <kbd>Esc</kbd> to close. Each row is drawn in its own font. The chips above the list narrow it to Sans, Serif, Display, Handwriting or Mono. The project's own fonts come first (tagged *In project* or *Uploaded*), then a few system fonts, then the rest. See [Fonts](#fonts).
 - Weight, italic, size, line height, letter spacing, alignment, vertical alignment, case and decoration.
 - **Paragraph spacing**: extra space, in pixels, between paragraphs (the pieces of text between line breaks), on top of the line height. An *Auto height* or *Auto width* box grows to fit it. It does not apply to text with [modifiers](text-modifiers).
+
+## Fit text to box
+Tick **Fit text to box** on a text layer, a button or a link, and the size of the text is chosen for you. It is the largest size that makes the text fit the box, wrapping as usual. A short word fills the box and a long sentence shrinks to fit it.
+
+- **Smallest** and **Largest** keep the size between two limits, in pixels. Leave one blank (it says *any*) for no limit on that side: *any* Smallest goes down to 1, and *any* Largest goes as big as the box height allows. If the Smallest is higher than the Largest, the Largest wins.
+- It follows the text as it changes, including \`{variables}\` and text a binding sets. It re-fits when you resize the box, change the font or switch to another [responsive variant](responsive), in the editor and in the player alike.
+- **Sizing** is *Fixed* (and greyed out) while it is on, because fitting needs a box that stays put. A button's label and a link's text have no Sizing to switch.
+- The **Size** field is greyed out too. Neither it nor a timeline or binding on the font size does anything while Fit text to box is on, because the fitted size wins.
+- Words styled with their own size in [rich text](text#several-styles-in-one-text-layer) scale along with the rest.
+- A long word is never broken to make it fit, so a narrow box ends up with a smaller size instead. If the text is too long even at the Smallest, it overflows by the layer's **Overflow** setting (and a long word is broken).
+
+## Fonts
+Picking a Google font the project doesn't have yet adds it to the project's **Fonts** with the weights the text uses, so the player and exports load it. One undo takes both back. Changing the **Weight** later loads that weight too.
+
+- A name that isn't on the list can still be used as typed. It isn't added to the project's fonts, so add it there if it is a Google font.
+- A font file you upload in the [Assets panel](assets) is added to the fonts for you and shows in the list as *Uploaded*.
+- New text starts in your [default font](preferences), Open Sans unless you changed it.
+
+### No flash of the wrong font
+Google fonts are fetched once and then served from the same place as the editor, so the editor, Preview, share pages and the StudyDesk learner page never contact Google. Open Sans is ready from the start.
+
+Text doesn't pop from one font to another. The player waits up to 1.5 seconds for the first page's fonts before it shows anything. The canvas waits for a page's fonts, and a page's picture is never made with a stand-in font.
 
 ## Several styles in one text layer
 Double-click a text layer to edit it. A small **toolbar floats over the text** while you do, like the one in a word processor:
 
-![The toolbar over a text layer being edited, with "big" bold and a colour, size and link set on other words.](help/text-toolbar.png)
+![The toolbar over a text layer being edited: bold, italic, underline, strike-through, colour, size and font, with a word in bold on the layer.](help/text-toolbar.png)
 
 Select some of the text (or just put the caret in a word) and use:
 
@@ -782,7 +1203,7 @@ Both create a new timeline named after the preset and open it, so you can change
 A unit halfway into the range gets half of each change. Several modifiers stack, top to bottom.
 
 ## Animating them
-**Start**, **End**, **Offset**, **Strength** and the amounts all have a key button (◆) like any other property: turn on recording in the [timeline](timelines) and change them, or key them by hand. The tracks are named like \`modifiers.0.offset\`, the number being the modifier's position in the list. Deleting a modifier removes its tracks and renumbers the later ones. Bindings, *Change a layer's setting* actions and scripts can set the same paths.
+**Start**, **End**, **Offset**, **Strength** and the amounts all have a key button (◆) like any other property: turn on recording in the [timeline](timelines) and change them, or key them by hand. Each modifier's values are numbered by its place in the list, so deleting a modifier removes its tracks and renumbers the later ones. Bindings, *Change a layer's setting* actions and scripts can set the same values by name (see [Animatable properties](animatable-properties)).
 
 ## Things to know
 - Everything except **Spacing** is purely visual: it does not change how the text wraps or the layer's auto size. Letter spacing really spaces the letters, so the text may reflow.
@@ -868,11 +1289,14 @@ Use the arrows to reorder entries and the bin to delete one. **Copy as text** pu
 Link each entry to the files it covers. Once the list has entries, the [Assets](assets) panel marks every file that no entry covers (**no attribution** in the details view, a **No attribution** tag on a thumbnail) and says how many there are. **Add for files without one** in this tab makes one entry for each of them, named after the file, for you to fill in. Deleting a file takes it off the entries that listed it.
 
 ## Showing it to learners
-- **Show a Credits button to learners** adds a small **Credits** button in the bottom left corner of the player. It opens a dialog with the list as readable citations, under the heading you choose (the default is *Credits and references*). Links open in a new tab. It works from the keyboard: the dialog takes focus, <kbd>Tab</kbd> stays inside it, <kbd>Esc</kbd> or **Close** shuts it and focus goes back to the button. It also works on a shared link, where the page runs in its sandbox.
+- **Show a Credits button to learners** adds a small, quiet **Credits** button in the bottom left corner of the page. It sits inside the page, so when the page does not fill the player (a wide page in a tall frame) it stays on the page and never out in the empty space round it. It opens a dialog with the list as readable citations, under the heading you choose (the default is *Credits and references*). Links open in a new tab. It works from the keyboard: the dialog takes focus, <kbd>Tab</kbd> stays inside it, <kbd>Esc</kbd> or **Close** shuts it and focus goes back to the button. It also works on a shared link, where the page runs in its sandbox.
 - **Keep the list in exported and shared pages** puts the list (without your notes) into pages you download or share even when there is no button, for anyone who reads the page's data. While the button is on this is always the case, since the button needs the list.
 - With both off, the list is your own record. It stays in the editor, in the project file (**Export** as \`.ixp\` or JSON) and in templates made from the project, notes included, and the pages you export and share carry none of it.
 
 The same two settings are in the **Credits** section of the project settings (see [Project settings](project-settings)). Preview shows the button when it is on.
+
+## A Credits button of your own
+The automatic button has one fixed place. To put Credits where it suits the page, draw a small button or link, give it an **On pointer** click and wire that to **Open credits** (Navigation, in the Interactions tab). It opens the same list, with the same keyboard behaviour, and focus goes back to your button when the list closes. A page that has an **Open credits** node does not also get the automatic button, so there are never two. Pages without one still get it while the setting is on, and the list is kept in exported pages whenever a page opens it. With no entries yet, the list says no credits have been added. Every starter on the Templates tab comes with one of these on its first page: see [Branded starter packs](branded-starters).
 
 ## Working together
 The list is part of the project, so people editing it live see each other's changes like any other edit, and undo covers it.
@@ -893,7 +1317,7 @@ Copyright reporting for a course is run at course level, and this tab does not r
 
 An icon arrives as a group named for it (*Bell icon*) holding two path layers, **Ring** and **Icon**. They are ordinary vector layers, so select one and change its colour, switch it to a token from the colour picker's Tokens tab, or edit its points. The group is marked **decorative**, like the icons the Toolbox inserts, because an icon usually sits beside text that says the same thing. If an icon stands alone and means something, untick that in **Accessibility** and give it a text alternative.
 
-The icons are bundled with the editor and only fetched when the tab is first opened. They are copied from the Toolbox's files by \`scripts/gen-stock-icons.mjs\`; run it again if the Toolbox's icons change.`,
+The icons come with the editor and only load when you first open the tab. They are copies of the Toolbox's own icons, so if the Toolbox's icons change, the copies need refreshing by whoever maintains the editor.`,
   },
   {
     id: 'images-media',
@@ -916,7 +1340,10 @@ Put a photo in a 300 by 200 frame and the face may be cut off. **Crop** moves an
 - <kbd>Enter</kbd>, <kbd>Escape</kbd>, **Done**, or a click outside the frame finishes. **Reset** (or <kbd>0</kbd>) puts the picture back as **Fit** draws it. Each drag is one undo step.
 - The settings have the same three numbers: **Zoom** (100% is as **Fit** draws it, 200% shows the middle quarter) and **Picture X** and **Picture Y**, how far it is moved as percents of the frame. The picture always keeps covering the frame, so no empty edge shows.
 
-The crop is stored on the layer as \`crop\`: \`{x, y, zoom}\`, where \`x\` and \`y\` are fractions of the frame's width and height (0.1 is a tenth to the right) and \`zoom\` is 1 to 20. It is drawn scaled about the middle of the frame and then moved, and the frame (with its corner radius) clips the rest. A 9-slice or a mesh ignores it, a shader filter reads it, and the Lottie export shows the whole picture (it lists that in its notes). Older files and players show the picture uncropped.
+The crop belongs to the layer, not the file, and the frame (with its corner radius) clips whatever sticks out. A few things ignore it:
+- A 9-slice picture or a mesh ignores the crop. A shader filter reads it.
+- The Lottie export shows the whole picture (it lists that in its notes).
+- Older files and players show the picture uncropped.
 
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
@@ -928,15 +1355,31 @@ Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video
 **Poster** is a picture shown before the video plays. It also stays up the whole time when the file is sound only (choose a sound in the **Video** list and the layer becomes a player with the browser's own controls, speed and captions), under the controls. It counts in the download size and goes with exports. A video with no file or address shows a grey **Choose a video** panel while you edit; learners see a plain grey box, or the words in **Text when empty**. The accessibility check warns about a video with nothing to play, so it gets filled in or deleted before you share.
 
 ### Cue points and chapters
-**Add a cue** puts a named point on the video, in seconds. When the video plays across it the **When a video reaches a cue point** event fires (\`event.name\`, \`event.time\`, \`event.index\`), and a cue ticked **Pause the video here** has already paused it, so a question can appear. Play on with a **Control video** node when it is answered, or bind the layer's **Hold paused** to something like \`!answered\` to keep the video paused until then (the controls cannot start it). Jumping past a cue (dragging the bar, a chapter, a **Control video** seek) fires nothing, and jumping back arms it again, so you never need to keep count of which questions were asked. **Chapters** are named sections: the video's own controls list them in browsers that show chapters, \`self.chapters\` and \`layer("Clip").chapters\` give the list to formulas, and the **Chapter showing** binding says which one the video is in (1 is the first, 0 before it).
+A **cue** is a named point on the video, in seconds. **Add a cue** puts one on. When the video plays across a cue, the **When a video reaches a cue point** event fires (also called **On video cue**). It tells you the cue's name, time and place in the list (\`event.name\`, \`event.time\`, \`event.index\`).
+
+- Tick **Pause the video here** on a cue and the video has already paused when the event fires, so a question can appear. Play on with a [Control video](interaction-nodes#control-video) node when it is answered.
+- To keep the video paused until something happens, bind the layer's **Hold paused** to something like \`!answered\`. While it is true, the video can't be started, even from its own controls.
+- Jumping past a cue (dragging the bar, a chapter, a **Control video** seek) fires nothing, and jumping back arms it again. You never need to keep count of which questions were asked.
+
+**Chapters** are named sections of the video. The video's own controls list them in browsers that show chapters. The **Chapter showing** binding says which one the video is in (1 is the first, 0 is before it), and \`self.chapters\` and \`layer("Clip").chapters\` give the list to formulas.
 
 ### Speed and frame step
-**Speed** sets how fast the video plays: 1 is normal, 0.5 is half speed, 2 is double. The pitch stays where it was, so slowed speech still sounds like the speaker. Tick **Speed buttons** to put Slower, a speed readout (press it to go back to normal) and Faster over the video for the viewer, and **Frame step** for Back and Forward one frame (the video pauses first). Set **Frames per second** to the video's own rate (most are 24, 25 or 30) so a step is one real frame. Everything is a real button, so Tab and Enter or Space work, and with focus on the video or the buttons, <kbd>,</kbd> and <kbd>.</kbd> step a frame and <kbd>&lt;</kbd> and <kbd>&gt;</kbd> change the speed.
+**Speed** sets how fast the video plays: 1 is normal, 0.5 is half speed, 2 is double. The pitch stays where it was, so slowed speech still sounds like the speaker.
 
-To drive it from the project, use a **Playback speed** [data binding](bindings) (it goes both ways, so a variable shows the speed the viewer chose and can set it too), or the **Control video** [node](interaction-nodes): play, pause, play or pause, go to a time, skip forward or back, step a frame, set the speed, or move to the next speed up or down. In an expression, \`layer("Clip").rate\` is the speed it is playing at right now.
+- Tick **Speed buttons** to put Slower, a speed readout (press it to go back to normal) and Faster over the video for the viewer.
+- Tick **Frame step** for Back and Forward one frame buttons (the video pauses first). Set **Frames per second** to the video's own rate (most are 24, 25 or 30) so a step is one real frame.
+- Everything is a real button, so <kbd>Tab</kbd> and <kbd>Enter</kbd> or <kbd>Space</kbd> work. With focus on the video or the buttons, <kbd>,</kbd> and <kbd>.</kbd> step a frame and <kbd>&lt;</kbd> and <kbd>&gt;</kbd> change the speed.
+
+To drive it from the project, use a **Playback speed** [data binding](bindings) (it goes both ways, so a variable shows the speed the viewer chose and can set it too), or the [Control video](interaction-nodes#control-video) node. That node can play, pause, play or pause, go to a time, skip forward or back, step a frame, set the speed, or move to the next speed up or down. In an expression, \`layer("Clip").rate\` is the speed it is playing at right now.
 
 ## Video playback in variables
-Add a [data binding](bindings) on the video layer: **Playback position (s)**, **Playing**, **Playback speed**, **Length (s)**, **Ended**, **Chapter showing** (read only) or **Hold paused** (while true the video cannot play), and pick which way it goes. **Out** keeps a variable up to date with the video (show the time in text, \`{videoTime} s\`, or bind a progress bar's width to \`videoTime / videoLength\`). **Both** lets the variable drive the video too: set the position variable from a slider, a **Change a value or counter** node or a script and the video jumps there; set **Playing** to false and it pauses. **In** drives it from a formula: to scrub the video with a dragged knob, bind the knob's **X** out to \`knobX\`, **Length (s)** out to \`videoLength\`, and **Playback position (s)** in to \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, videoLength, true)\`. For the position as a percentage, use \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, 100, true)\` (in a text layer, or another binding). Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`,
+Add a [data binding](bindings) on the video layer and pick what to watch: **Playback position (s)**, **Playing**, **Playback speed**, **Length (s)**, **Ended**, **Chapter showing** (read only) or **Hold paused**. Then pick which way it goes.
+
+- **Out** keeps a variable up to date with the video. Show the time in text (\`{videoTime} s\`), or bind a progress bar's width to \`videoTime / videoLength\`.
+- **Both** lets the variable drive the video too. Set the position variable from a slider, a **Change a value or counter** node or a script and the video jumps there. Set **Playing** to false and it pauses.
+- **In** drives it from a formula. To scrub the video with a dragged knob, bind the knob's **X** out to \`knobX\`, **Length (s)** out to \`videoLength\`, and **Playback position (s)** in to \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, videoLength, true)\`. For the position as a percentage, use \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, 100, true)\` (in a text layer, or another binding).
+
+Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`,
   },
   {
     id: 'groups-frames',
@@ -958,7 +1401,7 @@ Tick **Use as mask** on a shape or group and it clips the layers above it in the
 Tick **Solo** on a group or frame and it shows only one child at a time, the one chosen under **Active child**. Use it for states of a character or a button: build each state as a child, then switch between them. The active child can be keyed on a timeline (a step change, like a cut) or set from interactions with **Change a layer's setting** and the property *Solo: active child*, whose value can be a quoted layer name such as \`"Happy"\`. Children that are not active take no room in auto layout.
 
 ## Draw order
-A group's **Draw order** section lists its children front to back with arrows to move them. With **Record** on, or with the diamond, a change becomes a keyframe on the *Draw order (children)* property, so layers can pass in front of and behind each other during an animation. Keys always step from one order to the next. Layers you do not list keep their place. From interactions or scripts, set the property \`drawOrder\` to a list of layer names, back to front.
+A group's **Draw order** section lists its children front to back with arrows to move them. With **Record** on, or with the diamond, a change becomes a keyframe on the *Draw order (children)* property, so layers can pass in front of and behind each other during an animation. Keys always step from one order to the next. Layers you do not list keep their place. From interactions or scripts, set **Draw order (children)** to a list of layer names, back to front (scripts call this setting \`drawOrder\`).
 
 ## Scrolling frames
 Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scroll both*. Content beyond the frame can then be scrolled with the wheel, a trackpad or touch in the player, like a scrollable panel. A **When scrolled** event set to *Is scrolled* fires as it scrolls, with \`event.scrollTop\`, \`event.scrollLeft\` and \`event.progress\` (0 to 1). In the editor the frame stays still so you can edit it; scroll it in Preview.`,
@@ -1003,7 +1446,7 @@ A frame that hugs its width measures a percent against the width it had before t
 ## Grids and stacks
 Set **Layout** to **Grid** to put the children in the cells of a table instead of along a line, or to **Stack** to put them all on top of each other.
 
-- **Columns** and **Rows** list the size of each track, separated by spaces, like \`100px 25% 1fr auto\`. A track is a size in px (a bare number is px too), a percent of the frame's inner size, \`fr\` (a share of what is left once the other tracks are taken, so \`1fr 2fr\` gives the second twice the first), or \`auto\` (as big as the biggest thing in it). Rows past the ones you list are \`auto\`, so an empty **Rows** box makes a row for every line of children. Words that are not sizes are dropped. With no columns listed there is one column; a frame that hugs its width has \`%\` and \`fr\` tracks only as big as what is in them.
+- **Columns** and **Rows** list the size of each track, separated by spaces, like \`100px 25% 1fr auto\`. A track is a size in px (a bare number is px too), a percent of the frame's inner size, \`fr\` (a share of what is left once the other tracks are taken, so \`1fr 2fr\` gives the second twice the first), or \`auto\` (as big as the biggest thing in it). Rows past the ones you list are \`auto\`, so an empty **Rows** box makes a row for every line of children. What you type stays as you typed it until you leave the box or press Enter, then it is tidied (\`120 1fr\` becomes \`120px 1fr\`). If a word is not a size the box says which one and saves nothing yet, so fix it or press Escape to put back what was saved. With no columns listed there is one column; a frame that hugs its width has \`%\` and \`fr\` tracks only as big as what is in them.
 - **Column gap** and **Row gap** are the spaces between tracks. (A grid has no **Wrap** or **Direction**: children fill the cells in layer order, left to right and then down, unless a child is given its own cell in **Layout item**.)
 - **Cell alignment** is a 3x3 picker. A child smaller than its cell sits where you click: the top left corner, the centre, the bottom right and so on. A child set to **Fill** stretches to the whole cell instead.
 - **Justify content** (*Start*, *Centre*, *Space between*) and **Align content** (*Start*, *Centre*) place the tracks when they don't add up to the frame's size, for example fixed-size tracks in a larger frame.
@@ -1063,13 +1506,16 @@ Turn on **Animate changes** in the frame's Auto layout section and, while the pr
 With several layers selected, the bar at the top of the inspector aligns their edges or centres, and distributes three or more evenly. With one layer selected it aligns to the parent.
 
 ## Snapping
-Things snap while you drag. The **Snap** button on the tool bar opens the choices: **Grid**, **Artboard** (edges and centre), **Layers** (other layers' edges and centres), **Guides**, **Spacing** (equal gaps), **Pixels** and **Points**, and a **Snapping** switch for all of them. Lines in a colour for each kind show what snapped and a chip in the corner names it. Hold <kbd>Ctrl</kbd> to drag without snapping. See [The grid and snapping](grid). Rulers (<kbd>Shift</kbd>+<kbd>R</kbd>) show positions: drag **down** out of the top ruler for a horizontal guide and **right** out of the left ruler for a vertical one, and layers snap to it. Drag a guide back onto the ruler it came from to remove it.
+Things snap while you drag. The **Snap** button on the tool bar opens the choices: **Grid**, **Artboard** (edges and centre), **Layers** (other layers' edges and centres), **Guides**, **Spacing** (equal gaps), **Pixels** and **Points**, and a **Snapping** switch for all of them. Lines in a colour for each kind show what snapped and a chip in the corner names it. Hold <kbd>Ctrl</kbd> to drag without snapping. See [The grid and snapping](grid). Rulers (<kbd>Shift</kbd>+<kbd>R</kbd>) show positions: drag **down** out of the top ruler for a horizontal guide and **right** out of the left ruler for a vertical one, and layers snap to it. A new guide goes on whichever page you drag it over, so there's no need to pick the page first; that page becomes the open one. To remove a guide, drag it off the page (or back onto the ruler) and let go: while it's out there it stays put, faded, with a note saying **Let go to remove this guide**, and bringing it back onto the page keeps it. A guide can be for every page or for one page only: see [Rulers and guides](canvas#rulers-and-guides).
 
 ## Order
 <kbd>]</kbd> and <kbd>[</kbd> move a layer up and down; add <kbd>Ctrl</kbd> to go to the top or bottom. Or drag in the Layers panel.
 
 ## Boolean operations
-Select two or more shapes and press **Union**, **Subtract**, **Intersect** or **Exclude** in the Inspector (the four buttons in the shape section), or right-click and choose **Combine shapes**. *Subtract* takes the other shapes away from the bottom-most one. The result is a single path; the originals are replaced.`,
+Select two or more shapes and press **Union**, **Subtract**, **Intersect** or **Exclude** in the Inspector (the four buttons in the shape section), or right-click and choose **Combine shapes**. *Subtract* takes the other shapes away from the bottom-most one. The result is a single path, and the originals are replaced.
+
+## Pages
+Several pages can be aligned, distributed, tidied and grouped together: see [Pages](artboards#selecting-several-pages).`,
   },
   {
     id: 'grid',
@@ -1085,10 +1531,10 @@ The **Snap** button on the tool bar (the magnet) opens a menu that stays open wh
 - **Grid**: land on the grid lines (this is Snap to grid: <kbd>Ctrl</kbd>+<kbd>'</kbd> ticks and unticks it). Off to begin with.
 - **Artboard**: the artboard's edges and centre. Moving an artboard on the canvas, it goes to the other artboards' edges and centres.
 - **Layers**: the edges and centres of other layers. By default it means the layers beside the one you drag (the same parent); tick **Layers: all, not just siblings** to reach every layer on the artboard.
-- **Guides**: guides made from the rulers.
-- **Spacing**: equal gaps. Drag a layer beside two that have a gap between them and it snaps to the same gap (or centres between them), and the distances show as orange measures. Moving layers only.
-- **Pixels**: whole-pixel positions and sizes. Untick it to let a layer sit between pixels.
-- **Points**: the anchor points of paths and the joints of bones. The pen, and dragging a path point, snap to them: a ring shows the one it caught. Off to begin with.
+- **Guides**: guides made from the rulers: a universal guide is an endless line and snaps layers on every page it crosses, an attached guide is a short line and snaps layers on its own page. See [Rulers and guides](canvas#rulers-and-guides).
+- **Spacing** (equal gaps): drag a layer beside two that have a gap between them and it snaps to the same gap (or centres between them), and the distances show as orange measures. It only works while moving layers.
+- **Pixels** (whole pixels): positions and sizes land on whole pixels. Untick it to let a layer sit between pixels.
+- **Points** (path points): the anchor points of paths and the joints of bones. The pen, and dragging a path point, snap to them: a ring shows the one it caught. Off to begin with.
 - **Snap distance**: how close (2 to 24 screen pixels, 6 to begin with) something has to be. It is in screen pixels, so zooming in makes it finer.
 
 Artboard, Layers, Guides and Pixels are on to begin with, which is how snapping behaved before the menu. Show grid, Spacing and Points are off.
@@ -1100,12 +1546,13 @@ The nearest target inside the snap distance wins. A line in the target's colour 
 - The **Show grid** button on the tool bar (beside Snap) draws it; <kbd>Shift</kbd>+<kbd>G</kbd> shows or hides it. Snapping to the grid works whether or not it is showing.
 - Right-click an empty part of the canvas for **Show grid**, **Snapping** and **Grid size**, or open **Preferences**, which has a **Canvas** block with the same settings.
 - While **Grid** is ticked a gold chip in the corner of the canvas says so with the size; click it to change the size or open the snapping choices.
+- The grid buttons live on the **Tools** rail. Drag its **Tools** title over the left, right, bottom or top edge of the canvas to dock it there (see [The editor at a glance](interface)).
 
 ## Size and stronger lines
 **Grid size** is the width of one cell in pixels: pick 1, 2, 4, 5, 8, 10, 12, 16, 20, 24, 32, 48, 50 or 64, or choose **Custom…** for anything from 1 to 512. **Stronger line every** draws every Nth line heavier (4 by default; 1 draws them all alike). They are yours, kept with your account, and the size shows in the chip while snapping is on.
 
 ## A grid for one artboard
-A 1920 wide slide and a 375 wide phone page want different grids. Right-click an artboard (its empty area) and open **Grid for this artboard** to give it its own size and stronger line, or **My default** to go back to yours. It is saved in the project, so people editing with you see it, and it is never exported.
+A 1920 wide slide and a 375 wide phone page want different grids. Right-click a page (its empty area) and open **Grid for this page** to give it its own size and stronger line, or **My default** to go back to yours. It is saved in the project, so people editing with you see it, and it is never exported.
 
 ## What snaps
 Moving layers, resizing them, drawing new shapes (and artboards), moving artboards, placing pen points, dragging a path's points, and the arrow keys. A moved or resized layer's edges (a rotated layer's outer bounds) land on a grid line. The other targets work with it: if another layer's edge or centre or a ruler guide is as close as the grid line, or closer, that wins and shows its line. Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) while dragging to skip all snapping.
@@ -1153,7 +1600,7 @@ Photos in the catalogue have their own terms of use. Check them before you publi
 ![The Responsive section, with a base artboard and its narrow variant.](help/responsive-section.png)
 
 ## How a set works
-- Each member has a **from** width in the Responsive section. The player shows the member with the largest *from* that the box reaches, and the narrowest member when the box is narrower than all of them. *Narrow 0–599 px* and *Wide 600+ px* is the usual pair.
+- Each member has a **from** width in the Responsive section. The player shows the member with the largest *from* that the box reaches, and the narrowest member when the box is narrower than all of them. *Narrow 0 to 599 px* and *Wide 600+ px* is the usual pair.
 - In the **Layers** panel the variants sit under their base, each with the range it is shown at. On the canvas every member of a set has a pill for each of the others above it: click one to go and edit it.
 - **Add narrower** and **Add wider** put a new member below the narrowest or above the widest. Change a breakpoint at any time. **Make standalone** takes an artboard out of the set; **Make a variant of…** puts a loose artboard into one. Deleting the base promotes its narrowest variant.
 - Everything else treats the set as one artboard. **Go to a page**, the start artboard, the completion artboard, remembered progress and learner results all name the base, and the player shows whichever member fits. They are listed once in the pickers, as *Name (responsive)*.
@@ -1187,7 +1634,9 @@ A page has a **Score** variable, a bar chart that grows on a timeline called **I
 - A change to the wide artboard's interactions is not copied to the narrow one. If both should behave alike, change both (the report tells you when layers have drifted apart).
 - Only small things are lost on a switch, but a viewer part-way through dragging a card or typing in a field can notice it. Breakpoints between 600 and 900 px are the ones people cross by turning a tablet.
 - The **Fit width** setting in Project settings suits a set: each artboard fills the width of the page and the page height follows the artboard that is showing.
-- A host page can listen for the switch: \`player.on('variantchange', ({ from, to, set, width }) => ...)\`, or \`ix-variant\` on the \`<interactives-player>\` element. \`player.resize()\` makes the player re-measure its box if the page changes its size without the browser reporting it.`,
+
+## For web developers
+A page that embeds the player can listen for the switch: \`player.on('variantchange', ({ from, to, set, width }) => ...)\`, or \`ix-variant\` on the \`<interactives-player>\` element. \`player.resize()\` makes the player re-measure its box if the page changes its size without the browser reporting it.`,
   },
   {
     id: 'page-master',
@@ -1230,19 +1679,37 @@ Pictures (PNG, SVG, PDF, animated GIF), thumbnails, the single-file export, \`.i
     group: 'Design',
     summary: 'Place one artboard inside another, with its own timelines, interactions and inputs.',
     keywords: 'component nested artboard reuse symbol instance inputs',
-    body: `Any artboard can be placed inside another as an **instance**: a live copy that runs its own timelines and interactions on the parent's clock. Edit the source artboard and every instance updates.
+    body: `Any page can be placed inside another as a **component**. The layer it makes is called an **instance**, and the Inspector shows it as **Component**. It is a live copy that runs its own timelines and interactions on the parent's clock. Edit the source page and every instance updates.
 
-- Select the artboard you want to reuse and pick the artboard to put it in from **Use in** (it says **Instance in…**). Or choose an artboard in an instance layer's **Artboard** field.
-- **Fit** decides how the artboard sits in the instance's box: **Stretch to the box**, **Contain**, **Cover** or **Actual size, centred**. **Reset size** puts the box back to the artboard's own size, and **Edit** followed by the artboard's name jumps to the source artboard.
+## Placing a component
+There are four ways, and all of them make the same instance layer.
+
+- **From the page you are working on**: right-click an empty part of the page (or a layer on it) and choose **Insert component here…**. A box lists the other pages. Type a few letters of a name to find one and press <kbd>Enter</kbd>. It lands centred where you right-clicked. **Insert a component here…** is also in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>), where it puts the component in the middle of the open page.
+- **By dragging**: drag a page's row from the **Layers** list onto another page on the canvas. The page it would land in is outlined in gold, and the component lands centred under the pointer.
+- **From the page you want to reuse**: right-click it (its name on the canvas, or its row in **Layers**) and choose **Place in…**, then the page to put it in. Or select it and pick the page from **Use in** (it says **Component in…**).
+- **In the instance itself**: choose a page in an instance layer's **Artboard** field.
+
+A component bigger than the page it goes on is shrunk to fit. Pages that would contain each other, and library copies (read-only until detached), aren't offered. Instances can be nested up to six deep, and a page that contains itself stops at that limit.
+
+## Settings on an instance
+- **Fit** decides how the page sits in the instance's box: **Stretch to the box**, **Contain**, **Cover** or **Actual size, centred**.
+- **Reset size** puts the box back to the page's own size.
+- **Edit** followed by the page's name jumps to the source page.
 - **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. Write them as JSON, such as \`{"level": 3}\`.
 - Messages sent inside an instance (**Send message**, \`ix.emit\`) bubble up to the parent.
-- The parent can steer an instance while it plays. **Give an embedded page a value** (an action) sets one of the instance's variables by name: pick the instance layer, write the variable's name as it is in the instance's artboard, and give a value (an expression). **Trigger something in an embedded page** sends a message into that instance only, so its *When a message arrives* nodes and scripts run, and the parent's own nodes do not hear it. Scripts do the same with \`ix.setInstanceInput('Badge', 'level', 3)\` and \`ix.fireInstanceTrigger('Badge', 'ping', payload)\`; both return \`false\` when no such instance is showing. A repeated instance answers in every copy.
-- Read an instance's input back with \`instanceInput('Badge', 'level')\` in any expression (so *Give an embedded page a value* can flip a true/false input with \`!instanceInput('Badge', 'flag')\`) or \`ix.getInstanceInput('Badge', 'level')\` in a script. It gives the first copy's current value, and nothing when the instance is not showing.
-- Inputs can be **animated**. Select the instance, pick *Input level* (any number or true/false variable of the project, and the inputs the layer already sets) in the Timeline's property list and press **+ Key**: a number tweens between keys inside the instance, a true/false or text input steps. Blends mix input tracks like any other number, and a [binding](bindings) can drive an input too. A value you set with *Give an embedded page a value* or a script stays until the track's next key changes it.
 
-Instances can be nested up to six deep. An artboard that contains itself stops at that limit.
+## Steering an instance while it plays
+The parent can change an instance while the project plays.
 
-Components can also be shared between projects: see [Libraries](libraries).`,
+- **Give an embedded page a value** (an action) sets one of the instance's variables by name. Pick the instance layer, write the variable's name as it is in the instance's page, and give a value (an expression).
+- **Trigger something in an embedded page** sends a message into that instance only. Its *When a message arrives* nodes and scripts run, and the parent's own nodes do not hear it.
+- Scripts do the same with \`ix.setInstanceInput('Badge', 'level', 3)\` and \`ix.fireInstanceTrigger('Badge', 'ping', payload)\`. Both return \`false\` when no such instance is showing. A repeated instance answers in every copy.
+- Read an input back with \`instanceInput('Badge', 'level')\` in any expression (so *Give an embedded page a value* can flip a true/false input with \`!instanceInput('Badge', 'flag')\`), or \`ix.getInstanceInput('Badge', 'level')\` in a script. It gives the first copy's current value, and nothing when the instance is not showing.
+
+## Animating inputs
+Inputs can be **animated**. Select the instance, pick *Input level* (any number or true/false variable of the project, and the inputs the layer already sets) in the Timeline's property list and press **+ Key**. A number tweens between keys inside the instance. A true/false or text input steps. Blends mix input tracks like any other number, and a [binding](bindings) can drive an input too. A value you set with *Give an embedded page a value* or a script stays until the track's next key changes it.
+
+Components can also be shared between projects: see [Libraries](libraries). To repeat shared layers such as a logo or footer on every page, a [page master](page-master) is lighter.`,
   },
   {
     id: 'constraints',
@@ -1254,7 +1721,7 @@ Components can also be shared between projects: see [Libraries](libraries).`,
 
 | Constraint | What it does |
 |---|---|
-| Follow path | Places the layer along a path. **Distance** (0–100%) is how far along; animate it to move along the path. **Orient** turns the layer to face along the path. |
+| Follow path | Places the layer along a path. **Distance** (0 to 100%) is how far along; animate it to move along the path. **Orient** turns the layer to face along the path. |
 | Copy position | Takes another layer's position (plus an offset). Untick **Copy x** or **Copy y** to take only one axis. |
 | Copy rotation | Takes another layer's rotation. |
 | Copy scale | Takes another layer's scale (untick **Copy x** or **Copy y** for one axis). |
@@ -1262,7 +1729,7 @@ Components can also be shared between projects: see [Libraries](libraries).`,
 
 The three copy constraints share some options. **Read** chooses *World values* (where the other layer ends up on the artboard) or *Local values* (its own position, rotation or scale inside its parent). **Factor** multiplies what is copied (0.5 follows half as far, -1 mirrors it). **Add to own** adds the copied value to the layer's own instead of replacing it (for scale it multiplies). **Limit** keeps the result within a range: *Min* and *Max* for x or rotation or horizontal scale, and *Min y* and *Max y* for the vertical ones.
 
-Every constraint has a **Strength** (0–100%) that mixes between the layer's own value and the constrained one, and it can be animated. Constraints are applied in the player and on the canvas.`,
+Every constraint has a **Strength** (0 to 100%) that mixes between the layer's own value and the constrained one, and it can be animated. Constraints are applied in the player and on the canvas.`,
   },
 
   {
@@ -1271,13 +1738,13 @@ Every constraint has a **Strength** (0–100%) that mixes between the layer's ow
     group: 'Motion',
     summary: 'Rig a character with bones, bend paths and images with them, and pose limbs with IK.',
     keywords: 'bone skeleton rig rigging skin skinning weights bind mesh deform ik inverse kinematics distance constraint character puppet example demo try tutorial arm',
-    body: `A **bone** is a layer that only exists to be posed. Draw a chain of bones, **bind** paths and images to them, and the shapes bend where the bones turn. Bones are drawn on the canvas as blue glyphs while you edit; the player never shows them.
+    body: `A **bone** is a layer that only exists to be posed. Draw a chain of bones, **bind** paths and images to them, and the shapes bend where the bones turn. Bones are drawn on the canvas as gold glyphs while you edit; the player never shows them.
 
 ## Try bones in two minutes
 Not sure where to start? Let the editor build a working rig, then take it apart.
 
 1. With nothing selected, open the **Bones** section in the Inspector (the right panel) and click **Build an example to try**. (A selected bone has the same button.)
-2. On the artboard you get a three-bone arm with a shape skinned to it, an **orange dot**, a **Wave** button and the instruction *Drag the orange dot*. The blue lines inside the arm are the bones; they show in the editor, never in the player. Click a bone in **Layers** (*Upper arm*, *Forearm*, *Hand*) to see it.
+2. On the artboard you get a three-bone arm with a shape skinned to it, an **orange dot**, a **Wave** button and the instruction *Drag the orange dot*. The gold lines inside the arm are the bones; they show in the editor, never in the player. Click a bone in **Layers** (*Upper arm*, *Forearm*, *Hand*) to see it.
 3. Click **Preview** (top right) and **drag the orange dot**. The arm bends to follow it: the dot is the target of an **IK** constraint on the *Hand* bone, three bones long. Drag it out of reach and the arm straightens toward it.
 4. Press **Wave**. A timeline called *Example: wave* swings the bones by hand for two seconds, with the IK **Strength** keyed down to 0 so the keyed poses win. As the strength comes back to 1 the arm returns to the dot.
 5. Close Preview, select the *Hand* bone and look at **Constraints**: *IK*, target *IK target (drag me)*, 3 bones. Try **Bend the other way**, or drop the bones to 2 to see the hand end swing free. Select *Arm* to see its **Skin**, and a point's weights in **Weights of**.
@@ -1291,6 +1758,8 @@ The finished result is also on the **Templates** tab, under **Examples**, as **B
 The example is ordinary layers, bones, a timeline and two interaction nodes, so everything in it can be changed, copied or deleted. Press **Build an example to try** again for another copy.
 
 ## Drawing bones
+A bone points along its own x axis from its base (**X**, **Y**), for its length. Turn it with **rotation** or drag it on the canvas; child bones and layers inside it follow.
+
 Pick the **Bone** tool (<kbd>J</kbd>) and drag from a bone's base to its tip. To carry on a chain, start the next drag on the tip of the last bone: the new bone becomes its child, and turning a parent moves everything below it. A drag that starts anywhere else begins a new bone (inside the group you went into, if you double-clicked into one). Hold <kbd>Shift</kbd> to snap angles to 15°. The eye button in the toolbar (<kbd>Shift</kbd>+<kbd>J</kbd>) hides the glyphs.
 
 With the Select tool, click a glyph to select the bone, drag its body or tip to turn it, and drag its round base to move it. A bone is posed like any layer: **X, Y**, **rotation**, **scale** and **length** (the *Len* field, which is the layer's width) can all be keyed on the [timeline](timelines), so turning a bone while recording makes a keyframe. Layers dropped inside a bone ride on it, which is the quickest rig of all: a hand shape inside the forearm bone needs no skinning.
@@ -1328,11 +1797,29 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
     keywords: 'button input text field checkbox slider range select dropdown link embed iframe html video aria accessibility',
     body: `Web elements are real HTML controls, so they work with keyboards, screen readers and forms.
 
-- **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react. Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)). **Disabled** (also bindable, for a Next button that waits for an answer) greys it out and takes it out of the Tab sequence, and a disabled button or input looks dimmed by itself: **Disabled look** sets how opaque it is (0.5 by default, 1 for no dimming). A layer whose Opacity is bound keeps doing its own dimming.
-- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). **Bind to a variable…** (under *Value*) ties the box to a variable with an ordinary [data binding](bindings) on its **Value**, set to **⇄ Both**: typing writes the variable and the variable fills the box. Change the way, or the variable, under **Data bindings**; choose **Out →** to only write the variable and keep the box's own value. (Older projects that had a *Variable* setting on an input are changed to this when they open.) **When a value changes** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test. **Block paste and drop** refuses pasted or dragged text, so the answer has to be typed. To do something when Enter is pressed in a text box, use a **When a key is pressed** node set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions)).
-- **Link**: text that opens a URL. **Fit text to box** works here too.
-- **Embed**: an iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
-- **Video**: a video file or URL.
+## Button
+Press <kbd>B</kbd> to draw one. A button has a label (which can use \`{expressions}\`), fill, stroke and corner radius. Add a **When clicked or hovered** event to react to a click.
+- Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)).
+- **Disabled** (also bindable, for a Next button that waits for an answer) greys it out and takes it out of the Tab sequence.
+- **Disabled look** sets how dimmed a disabled button or input looks: 0.5 by default, 1 for no dimming. A layer whose Opacity is bound keeps doing its own dimming.
+- **Small buttons** keep the size you draw. A button narrower than about 80 px no longer grows by its padding, so a dot-sized button really is dot-sized.
+
+## Input
+An input is one of: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select).
+- **Bind to a variable…** (under *Value*) ties the box to a variable with an ordinary [data binding](bindings) on its **Value**, set to **⇄ Both**: typing writes the variable and the variable fills the box. Change the way, or the variable, under **Data bindings**. Choose **Out →** to only write the variable and keep the box's own value. Older projects that had a *Variable* setting on an input are changed to this when they open.
+- **When a value changes** reacts to what was typed.
+- **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test.
+- **Block paste and drop** refuses pasted or dragged text, so the answer has to be typed.
+- To do something when Enter is pressed in a text box, use a **When a key is pressed** event set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions#when-a-key-is-pressed)).
+
+## Link
+Text that opens a URL. **Fit text to box** works here too. For making any other layer a link, see [Links and cursors](links-cursors).
+
+## Embed
+An iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
+
+## Video
+A video file or URL.
 
 ## Accessibility
 Every layer has an **Accessibility** section (roles, text alternative, keyboard reach, hiding decorative layers): see [Accessibility](accessibility). The **CSS class** is in the Advanced section. The [Accessibility checker](accessibility-checker) lists the layers that need a text alternative. The player honours the viewer's *reduce motion* setting when the project setting **Respect reduced motion** is on.`,
@@ -1354,6 +1841,8 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - A **Checkbox** role needs its state told: bind **Checked (checkbox role)** in Data bindings to the variable that holds it (see [Bindings](bindings)).
 - **Pressed state** and **Current**: see [Pressed and current](accessibility#pressed-and-current).
 - **Shortcut**: a key that clicks the layer, see [Shortcuts](accessibility#shortcuts).
+- **Disabled look**: how dimmed a disabled button or input looks. See [Web elements](web-elements).
+- A frame can be a **dialog**: see [Dialogs](accessibility#dialogs). A list, grid or radio group can use **Keyboard navigation**: see [Keyboard navigation](accessibility#keyboard-navigation).
 - Buttons, inputs and links show only the text alternative and description. They already have the right role and keyboard behaviour.
 
 ## Describing a picture as you add it
@@ -1363,8 +1852,13 @@ The box never stops you doing anything else. Its example text comes from the fil
 
 Turn the box off in [Preferences](preferences) (**Ask what a picture shows**) if you add many pictures at once and would rather describe them later from the checker.
 
+## The focus ring
+**Keyboard focus you can always see.** Whenever the keyboard moves to a layer, a ring shows which one. It appears for the keyboard only, not after a mouse click.
+
+The ring is two-tone: the colourway's focus colour with a thin black or white edge. That way it shows on white pages, dark gradients and deep panels alike. Buttons, inputs and links show the same ring instead of the browser's own, so every tab stop looks the same. Nothing needs setting up. The focus colour follows the colourway you picked.
+
 ## What the keyboard does
-- **Tab** and **Shift+Tab** move between tab stops, in layer order unless you set a tab order (below). A visible ring shows where the focus is (only for the keyboard, not after a mouse click). It is two tones, the theme's focus colour with a black or white halo either side of it, so it can be seen on any background.
+- **Tab** and **Shift+Tab** move between tab stops, in layer order unless you set a tab order (below). A visible ring shows where the focus is (see [The focus ring](accessibility#the-focus-ring)).
 - **Enter** clicks the focused layer, **Space** clicks it when released, the same way a real button does. It runs the layer's *When clicked or hovered → Click* nodes exactly like a mouse click, with the pointer position at the layer's centre.
 - Only the layer itself is activated. A button or input inside a clickable frame does its own thing, so nothing runs twice.
 - An Enter or Space that clicked a layer, or that was pressed on a button or link, does not also run a *When a key is pressed* node for the same key, so a game's "press Space" and a button's click can't both fire from one press.
@@ -1377,12 +1871,22 @@ A button that is on or off (a toggle, a segmented control, a filter chip) should
 **Current** marks the one layer of a set that is where you are: the open tab, the current page in a list, the step you are on. *Yes* is aria-current true, and *Current page*, *Current step* and *Current location* say which kind. It works on any layer, buttons and links included. Bind **Current (true, or page, step, location)** in Data bindings, for example \`tab == 2\`, or an expression that gives \`"page"\` for the current one and false for the rest. Use it instead of describing the state in the text alternative ("Showing now").
 
 ## Shortcuts
-A layer's **Shortcut** is a key, or a key with modifiers (\`r\`, \`1\`, \`Ctrl+Enter\`, \`Alt+N\`, \`Shift+/\`), that clicks the layer from anywhere on the page: it runs the layer's *When clicked or hovered → Click* flows, presses a button or follows a link, the way Enter on the layer does. It follows the same rules as a *When a key is pressed* node: keys typed into a text box are left alone (unless the shortcut holds Ctrl, Alt or Meta, so Ctrl+Enter can submit from a text area), holding a key does not repeat it, and an extra Ctrl, Alt or Meta means a browser shortcut, so it is ignored. A hidden or disabled layer ignores its shortcut, and while a modal [dialog](accessibility#dialogs) is open the layers behind it do too. A layer that repeats uses its first copy. Screen readers are told the key (aria-keyshortcuts); show it in the label too, such as "Replay (R)". The field warns when two layers use the same keys, or when a *When a key is pressed* node listens for them as well. Shortcuts count as the key way to a clickable shape for the [Accessibility checker](accessibility-checker).
+A layer's **Shortcut** is a key, or a key with modifiers (\`r\`, \`1\`, \`Ctrl+Enter\`, \`Alt+N\`, \`Shift+/\`), that clicks the layer from anywhere on the page: it runs the layer's *When clicked or hovered → Click* flows, presses a button or follows a link, the way Enter on the layer does.
+
+It follows the same rules as a *When a key is pressed* node: keys typed into a text box are left alone (unless the shortcut holds Ctrl, Alt or Meta, so Ctrl+Enter can submit from a text area), holding a key does not repeat it, and an extra Ctrl, Alt or Meta means a browser shortcut, so it is ignored.
+
+A hidden or disabled layer ignores its shortcut, and while a modal [dialog](accessibility#dialogs) is open the layers behind it do too. A layer that repeats uses its first copy.
+
+Screen readers are told the key (aria-keyshortcuts); show it in the label too, such as "Replay (R)". The field warns when two layers use the same keys, or when a *When a key is pressed* node listens for them as well. Shortcuts count as the key way to a clickable shape for the [Accessibility checker](accessibility-checker).
 
 ## Dialogs
 Select a **frame** and tick **This frame is a dialog** in its *Dialog* section. The player then announces it as a dialog (role dialog, with aria-modal when **Modal**, and the frame's **Text alternative** as its name, so give it one). The dialog is **open while the frame is visible**, so show it however you like: bind its Visible to a variable, use a *Show or hide a layer* node, or pick an **Open variable** and the frame shows while that variable is on (true, not 0, not empty).
 
-When it opens, focus moves inside: to the **Initial focus** layer if you picked one, otherwise the first button, field or clickable layer in it, otherwise the dialog itself. While a **modal** dialog is open, Tab and Shift+Tab stay inside it, focus that slips behind it is brought back, and clicks on the rest of the artboard are ignored (tick **Close on click outside** to make them close it instead). **Escape** closes the dialog on top: it turns the Open variable off (false, 0 or empty) or, with no variable, hides the frame. When it closes, **Return focus** puts focus back on the layer that had it when the dialog opened. A dialog that is showing from the start does not take focus. A **Scrim** paints a colour over the rest of the artboard behind the dialog (it is drawn as a shadow, so it follows the frame and goes when the frame hides).
+When it opens, focus moves inside: to the **Initial focus** layer if you picked one, otherwise the first button, field or clickable layer in it, otherwise the dialog itself.
+
+While a **modal** dialog is open, Tab and Shift+Tab stay inside it, focus that slips behind it is brought back, and clicks on the rest of the artboard are ignored (tick **Close on click outside** to make them close it instead).
+
+**Escape** closes the dialog on top: it turns the Open variable off (false, 0 or empty) or, with no variable, hides the frame. When it closes, **Return focus** puts focus back on the layer that had it when the dialog opened. A dialog that is showing from the start does not take focus. A **Scrim** paints a colour over the rest of the artboard behind the dialog (it is drawn as a shadow, so it follows the frame and goes when the frame hides).
 
 A dialog works inside an iframe or a page that embeds the player: the trap, Escape and focus use the player's own document. Keep the dialog at the top level of the artboard, not inside a clipping frame, so the scrim and the "outside" are the whole artboard. The [checker](accessibility-checker) flags a dialog with no name or nothing inside it a keyboard can reach.
 
@@ -1395,7 +1899,9 @@ A list of options is one Tab stop, not one per option. Select a **repeater**, or
 
 **Focused item** writes the focused item's number (from 0) to a number variable, and setting that variable moves the Tab stop, and the focus itself when it is inside the list at the time (so typing a letter that moves a cursor along a word moves the keyboard focus with it, and the next arrow goes on from there). To move focus into the list from outside (a clue button that picks a square), use *Focus layer* on the list: it lands on the Tab stop.
 
-**Count hidden items** keeps every copy's number even when some are hidden (a square whose *Visible* is bound to false, a blank in a crossword), so item 12 stays item 12 and the index variable can be used straight as a position in your list. A hidden item is never focused, and in a grid the arrows step over it to the next shown item in the same row or column. Without it hidden copies are not counted, so the numbers shift. The number also arrives as \`event.index\` in *When a layer is focused*, *When clicked or hovered* and *When a key is pressed* events for the items (as it already does for a repeater's copies). Keys typed into a text box and the arrows of a [draggable](drag-and-drop) item are left alone, and **a *When a key is pressed* node you wired for an arrow wins**: the navigation does nothing for a key that one of your nodes names, so nothing fires twice.
+**Count hidden items** keeps every copy's number even when some are hidden (a square whose *Visible* is bound to false, a blank in a crossword), so item 12 stays item 12 and the index variable can be used straight as a position in your list. A hidden item is never focused, and in a grid the arrows step over it to the next shown item in the same row or column. Without it hidden copies are not counted, so the numbers shift.
+
+The number also arrives as \`event.index\` in *When a layer is focused*, *When clicked or hovered* and *When a key is pressed* events for the items (as it already does for a repeater's copies). Keys typed into a text box and the arrows of a [draggable](drag-and-drop) item are left alone, and **a *When a key is pressed* node you wired for an arrow wins**: the navigation does nothing for a key that one of your nodes names, so nothing fires twice.
 
 ## Tab order
 With nothing selected, the **Tab order** section in the inspector lists every tab stop on the artboard in the order Tab visits them. Use the arrows to move a layer earlier or later, or click its name to select it. **Reset to layer order** goes back to the default. The order only applies within the player; stops you haven't placed follow the others in layer order.
@@ -1404,7 +1910,11 @@ With nothing selected, the **Tab order** section in the inspector lists every ta
 The **Announce** action says something to screen readers without showing anything: write the text as an expression, such as \`"Correct, " + score + " of 5"\`. *Polite* waits for the current speech to finish; *Assertive* interrupts, for errors and urgent feedback. Scripts do the same with \`ix.announce(text, 'polite' | 'assertive')\`. In **Preview**, a strip under the preview shows what would be said, once you switch **Screen reader** on (a button in the Preview header, or Preferences; it is off by default).
 
 ## Turning it off
-**Preferences → Accessibility features** (also a button in Preview) switches all of the above off in Preview: no extra tab stops, no keyboard clicks, no roles, no announcements, as projects played before these features existed. It is on by default. The **Screen reader** strip under Preview, which shows what would be announced, is a separate preference (also a button in the Preview header) and is off by default. If something looks wrong, check it with the setting off; if it goes away, report it. Exported files and embedded players keep the features on. A page embedding the player can pass \`accessibility: false\` (or \`accessibility="off"\` on the web component) to turn them off.
+**Preferences → Accessibility features** (also a button in Preview) switches all of the above off in Preview: no extra tab stops, no keyboard clicks, no roles, no announcements, as projects played before these features existed. It is on by default.
+
+The **Screen reader** strip under Preview, which shows what would be announced, is a separate preference (also a button in the Preview header) and is off by default.
+
+If something looks wrong, check it with the setting off; if it goes away, report it. Exported files and embedded players keep the features on. A page embedding the player can pass \`accessibility: false\` (or \`accessibility="off"\` on the web component) to turn them off.
 
 ## What it doesn't do
 Reading order is the layer order (rearrange layers to change it). Moving focus after a button changes the artboard isn't automatic; use *Focus layer* to put it somewhere sensible. Colour contrast, missing descriptions and other problems are for an accessibility checker, not these settings.`,
@@ -1421,10 +1931,40 @@ In the **Link** section, give any layer a **URL** and it becomes a real link. **
 The **Open a web address** action does the same from an interaction.
 
 ## Go to a page
-The **Go to page** section links a layer to another page. Choose the page from the list, or drag the round **Go to page** handle that sits on the selected layer on the canvas onto the page you want: the page lights up as you pass over it, and letting go makes the link. Choosing **No page** (or dragging it onto the empty canvas) takes the link away. There is nothing special behind it: the editor writes a **When clicked or hovered** event on the layer and a **Go to a page** node after it, which you can see and change in **Interactions**, and the list follows if you edit them there. A click that has an **Only if**, or one that does something else first, is left as you built it (the link is added after the existing click). Faint arrows between the pages on the canvas show every route the project can take, from these links and from Next and Previous steps; switch them off from the canvas's right-click menu. They are only in the editor. **How the page changes** picks the look: a fade, a slide, a wipe in any of four directions or diagonally, a push, an **iris** (a circle that opens, from the clicked layer by default), a **zoom** into the clicked layer, a **star**, **diamond** or **heart** that opens out (from the clicked layer too), a **clock** sweep, **barn doors**, **blinds**, a **grid of squares**, **crosshatch**, **dots**, **dissolve** or a **cube** that turns. **Speed** (Slow, Medium, Fast or Custom) says how long it takes, and shows for every look but instant. A learner whose device asks for less motion always gets an instant change.
+The **Go to page** section links a layer to another page, so clicking it opens that page.
+
+**Link a page by dragging.** Select the layer. A round **Go to page** handle sits on it on the canvas. Drag the handle onto the page you want: the page lights up as you pass over it, and letting go makes the link. Or choose the page from the **Goes to** list in the section. **No page** (or dragging the handle onto empty canvas) takes the link away.
+
+Nothing special is behind it. The editor writes a **When clicked or hovered** event on the layer and a **Go to a page** node after it. You can see and change both in [Interactions](interactions), and the list follows if you edit them there. A click that has an **Only if**, or that does something else first, is left as you built it, and the link is added after what is there.
+
+Faint arrows between the pages on the canvas show every route the project can take, from these links and from Next and Previous steps. Switch them off from the canvas's right-click menu. They show only in the editor.
+
+For Back, Next and a page counter along the bottom of your pages, see [Page navigation](page-navigation).
+
+## How the page changes
+**How the page changes** picks the look of a change of page. It appears wherever you choose one: here, **Go to a page** in the graph (where it is called **Transition**), **+ When clicked…**, [Page navigation](page-navigation) and a layer's **Go to page**. These are the looks, by the names the editor shows:
+- **Instant** and **Fade**.
+- **Slide left**, **Slide right** and **Slide up**.
+- **Wipe left**, **Wipe right**, **Wipe up** and **Wipe down**: the new page is uncovered from that edge. **Wipe diagonally** starts from the top left corner.
+- **Push left**, **Push right**, **Push up** and **Push down**: the new page shoves the old one off, which dims as it goes.
+- **Iris (a circle opens)** and **Zoom in** (the old page grows round a point as it fades, and the new one grows in).
+- **Star (opens out)**, **Diamond (opens out)** and **Heart (opens out)**, and **Clock (sweeps round)**, a hand that sweeps the new page in.
+- **Barn doors (open from the middle)**, **Blinds**, **Grid of squares**, **Crosshatch** and **Dots**: shapes or lines that grow until they meet.
+- **Dissolve**: the new page appears a scatter of pixels at a time.
+- **Cube (turns)**: both pages turn like the sides of a box.
+
+Dissolve is the heaviest for the device to draw, so on a big stage or an older laptop it is the one most likely to stutter.
+
+Iris, Zoom in, Star, Diamond, Heart and Clock start from **Opens from**: **The clicked layer** (the middle of the page when nothing was clicked, say from a timer), **The middle of the page**, or **A point on the page** that you give as percentages.
+
+**Speed** says how long the change takes: **Slow** (600 ms), **Medium** (300 ms), **Fast** (150 ms) or **Custom**, which shows a box for the milliseconds. It sits beside the look and is left out for Instant. Medium is what every page change already had, so nothing in an existing project plays differently. The Inspector's sentences say it too, as in "go to the next page (iris, slow)".
+
+A learner whose device asks for less motion always gets an instant change.
+
+In a script, \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer named Door, and a point is \`{ x: 25, y: 50, percent: true }\`. See [Scripts](scripts).
 
 ## Cursor
-**Cursor on hover** sets the cursor shown while the pointer is over the layer and its children, the way CSS \`:hover { cursor: pointer }\` works. *Automatic* gives links and layers with a click, press or release interaction a pointer. Choose the cursor shown over the layer (pointer, grab, crosshair, text, not-allowed, …) or **Custom image** with a hotspot (the point of the image that clicks). Change it at runtime with **Change the mouse pointer** or \`ix.setCursor('grab')\`.`,
+**Cursor on hover** sets the cursor shown while the pointer is over the layer and its children, the way CSS \`:hover { cursor: pointer }\` works. *Automatic* gives links and layers with a click, press or release interaction a pointer. Choose the cursor shown over the layer (pointer, grab, crosshair, text, not-allowed, …) or **Custom image** with a hotspot (the point of the image that clicks). Change it at runtime with **Change the mouse pointer**, \`ix.setCursor('grab')\` or \`node.set('cursor', …)\`. Browsers may ignore a custom image over 32×32 px.`,
   },
 
   {
@@ -1443,8 +1983,14 @@ The **Go to page** section links a layer to another page. Choose the page from t
 
 It all goes along the bottom of the page, in a bottom bar. Back is hidden on the first page and Next on the last, and the number and bar follow the order of your pages (see **Go to a page** in [Interactions](interactions)), so adding, removing or moving a page needs no rewiring. The colours come from your project's colours, so they follow the theme and a branded project's look, and on a branded page the bar sits inside the content box, clear of the logo and footer.
 
-Nothing is hidden: you get ordinary buttons, text, a progress bar and the clicks and **Go to a page** nodes in **Interactions**, all of which you can restyle, move or rewire. They are tagged, so adding navigation again with another style swaps the old one for the new (and **Remove** takes it away). A page that already has its own Next or Back button is left alone, and the message says which. Page dots are drawn for the number of pages there are now: press **Add** again after adding or removing pages to refresh them. **How the page changes**, above the buttons, is the look Back and Next use (a fade unless you choose another), and **Speed** under it is how long that takes (Slow, Medium, Fast or Custom milliseconds); both are written into the **Go to a page** nodes, where you can change it afterwards.
+Nothing is hidden: you get ordinary buttons, text, a progress bar and the clicks and **Go to a page** nodes in **Interactions**, all of which you can restyle, move or rewire. They are tagged, so adding navigation again with another style swaps the old one for the new (and **Remove** takes it away). A page that already has its own Next or Back button is left alone, and the message says which.
 
+Page dots are drawn for the number of pages there are now: press **Add** again after adding or removing pages to refresh them.
+
+## How the page changes
+**How the page changes**, above the buttons, is the look Back and Next use (a fade unless you choose another), and **Speed** under it is how long that takes. Both are written into the **Go to a page** nodes, where you can change them afterwards. The looks and speeds are listed in [How the page changes](links-cursors#how-the-page-changes).
+
+## Where it goes
 Buttons go on the page itself. A [page master](page-master) can hold the logo and the footer but not buttons, so the master is not where this goes.`,
   },
   {
@@ -1460,6 +2006,8 @@ Buttons go on the page itself. A [page master](page-master) can hold the logo an
 1. Draw the whole thing on one page: the map with a layer for each place, or the comic page with a layer around each panel. Give the layers names you will recognise.
 2. Select a button (or any layer) and press **+ When clicked…** in its **Interactions** section. Choose **Move the view to a layer…** and pick the layer to travel to.
 3. Add a second one on a button that brings the learner back: **Show the whole page again**.
+
+The same choices are in the Interactions palette under Navigation, as the **Move the view to a layer** node (its technical name is **Move view**).
 
 ## The settings
 
@@ -1490,7 +2038,7 @@ Buttons go on the page itself. A [page master](page-master) can hold the logo an
     title: 'Timelines and keyframes',
     group: 'Motion',
     summary: 'Animate properties with keyframes, record mode, looping and playback.',
-    keywords: 'animation animate keyframe key record playhead loop ping pong autoplay speed duration track copy paste snap stagger offset',
+    keywords: 'animation animate keyframe key record playhead loop ping pong autoplay speed duration track copy paste snap stagger offset text change words swap hold square dip fade blur typewriter',
     body: `Each artboard can have any number of timelines. A timeline has **tracks**; each track animates one property of one layer through **keyframes**.
 
 For the common cases there is no need to build one: [Animation presets](animation-presets) (Fade in, Slide in, Pop, Pulse, Shake, Fade out) write a timeline and its trigger for you.
@@ -1516,6 +2064,13 @@ Pressing <kbd>Ctrl</kbd>+<kbd>C</kbd> copies keys while your last click was in t
 
 **Stagger.** Select two or more layers that have keys on the timeline and press **Stagger…** in the Timeline bar. Enter a step in milliseconds: the first layer stays where it is, the next one's keys move later by the step, the next by twice the step, and so on. The order is the Layers panel's, top to bottom; layers with no keys on the timeline are skipped. A negative step runs the other way. Run it again and the offsets add up. If any key would leave the timeline, nothing moves and the message says how long to make it. It is one undo step.
 
+## Keys on the keyboard
+These work after you click in the Timeline. The full list is on the [Keyboard shortcuts](shortcuts#timeline) page.
+- <kbd>Space</kbd> or <kbd>K</kbd> plays and pauses. <kbd>J</kbd> or <kbd>Home</kbd> goes to the start.
+- <kbd>,</kbd> and <kbd>.</kbd> step back and forward one frame. Add <kbd>Shift</kbd> to jump between keys instead.
+- <kbd>P</kbd>, <kbd>S</kbd>, <kbd>R</kbd>, <kbd>T</kbd> and <kbd>A</kbd> take you to the selected layer's **P**osition, **S**cale, **R**otation, opacity (**T**ransparency) and **A**nchor point. The Properties panel opens that field and focuses it, and the Timeline marks that property's track if the layer has one.
+- <kbd>Shift</kbd>+<kbd>L</kbd> shows or hides [the list of timelines](timelines#the-list-of-timelines).
+
 ## Timeline settings
 The Timeline bar shows a short summary (length, loop, speed, autoplay, frame rate). Click the **gear** beside it to change them, and to rename the timeline; Esc or a click outside closes it.
 
@@ -1534,18 +2089,60 @@ A timeline can also carry **sound** (a voice-over that follows the playhead, wit
 
 The line between two keys is a **tween**: it shows its [easing](easing) as a little curve. Click it to choose how the value moves from the first key to the second (or *Use for all tweens*). In the Tween panel, drag the two handles on the graph to make your own curve; the dashed lines mark the start (0) and end (1) values, and the graph grows to show overshoot. Select a key to change its time or value.
 
-## Markers
-A **marker** is a named point in time. Press **+ Marker** to add one at the playhead; it shows as a flag on the ruler and is called *Marker 1*, *Marker 2* and so on until you rename it. **Click** a marker to select it: it turns yellow, a dashed line runs down through the tracks, and a **Marker** panel appears at the right of the timeline with its name, its time, and (when [Steps](steps) use the timeline) its title and caption. Drag it to move it, press the <kbd>←</kbd> and <kbd>→</kbd> arrow keys to nudge it (10 ms, 100 ms with Shift, or one frame when the timeline has a frame rate), and press <kbd>Delete</kbd> to remove it. Right-click a marker for the same things as a menu, and right-click the ruler to add a marker there.
+## Changing text over time
+Words can change on a timeline too: a title that says *hello* at 0 and *world* at 1 second. Every field that can be animated has the diamond, and that includes **Text** (and a button's **Label**, **Visible**, **Disabled**, a link's address and so on). To change text:
+1. Open the Timeline, select the text layer and put the playhead where the first words should show. Click the diamond beside **Text**.
+2. Move the playhead to when it should change, type the new words in the **Text** field (or turn on **Record** first), and click the diamond again.
 
-To **do something when playback reaches a marker**, select it and press **+ When the playhead reaches this…**. That adds a **When an animation reaches a marker** node for the marker and a **Change a value or counter** node after it, and opens the Interactions tab on the Set variable node: pick the variable and the value there. The Marker panel says how many interactions already use the marker and has an **Open** link to them. If you rename the marker the nodes follow it. A **When an animation reaches a marker** node runs its flow whenever playback passes the marker: going forwards or in reverse, and on every lap of a loop or ping-pong. Leave *Marker name* empty to react to every marker on the timeline; \`event.marker\` and \`event.time\` say which one fired. Scrubbing and seeking do not fire markers, only playing.
+Text does not glide: it holds the old words until the next key and then switches. So text keys are drawn as **squares** joined by a flat bar, not as diamonds with a curve. (True/false values such as **Visible** and **Disabled** are drawn the same way.) There is no easing to set for them. Words are never mixed in between, even when they look like a colour, such as *red*.
+
+## Swap text
+A hard switch can look abrupt. Right-click a text key (or select it and press the menu key, or open its **Keyframe** panel) to add a **Swap text** dip: the old words fade or blur out, the words change while they are hidden, and the new words come back in.
+
+Choose **Fade out and in**, **Blur out and in** or **Fade and blur**, and how long each side lasts: **Quick** (150 ms), **Normal** (300 ms) or **Slow** (600 ms), or type your own in the Keyframe panel.
+
+The dip is made of ordinary keys on the layer's *Opacity* and *Blur*, so you can move or reshape them afterwards. It is cut short where another text key is close. For viewers who ask for less motion the dip is left out and the words change at once. The first text key has no earlier words to change from, so it has no dip.
+
+The **Keyframe** panel at the right of the timeline holds the selected key's settings. When they are taller than the bottom panel it scrolls by itself (the lanes stay where they are), so the last setting is always reachable.
+
+**Swap text stays with its text key.** Drag the text key, or type a new time for it, and its dip moves by the same amount. Delete the text key and its dip goes too. The dip's keys that are tied to the text key are drawn as hollow diamonds.
+
+Edit one of the dip's own keys by hand (drag it on its own, or change its time or value) and that key lets go and is an ordinary key from then on, while the rest still follow. To make the dip as plain keys that never follow, turn off **Keep the dip with this text key** in the Keyframe panel.
+
+Moving the dip does not re-fit it: it keeps its length, so if it lands on another text key, run **Swap text** again. Running it again on the same key replaces the dip.
+
+## Markers
+A **marker** is a named point in time. Press **+ Marker** to add one at the playhead; it shows as a flag on the ruler and is called *Marker 1*, *Marker 2* and so on until you rename it. **Click** a marker to select it: it turns yellow, a dashed line runs down through the tracks, and a **Marker** panel appears at the right of the timeline with its name, its time, and (when [Steps](steps) use the timeline) its title and caption.
+
+Drag it to move it, press the <kbd>←</kbd> and <kbd>→</kbd> arrow keys to nudge it (10 ms, 100 ms with Shift, or one frame when the timeline has a frame rate), and press <kbd>Delete</kbd> to remove it. Right-click a marker for the same things as a menu, and right-click the ruler to add a marker there.
+
+To **do something when playback reaches a marker**, select it and press **+ When the playhead reaches this…**. That adds a **When an animation reaches a marker** node for the marker and a **Change a value or counter** node after it, and opens the Interactions tab on the Set variable node: pick the variable and the value there. The Marker panel says how many interactions already use the marker and has an **Open** link to them. If you rename the marker the nodes follow it.
+
+A **When an animation reaches a marker** node runs its flow whenever playback passes the marker: going forwards or in reverse, and on every lap of a loop or ping-pong. Leave *Marker name* empty to react to every marker on the timeline; \`event.marker\` and \`event.time\` say which one fired. Scrubbing and seeking do not fire markers, only playing.
 
 ![The timeline bar and tracks. The flag on the ruler is a marker.](help/timeline-markers.png)
+
+## The list of timelines
+Beside the Timeline is a list of every timeline on the open artboard (or component), so you can see what is there and what is missing without opening a dropdown. Each row shows the timeline's length, whether it plays once, loops or ping-pongs, how many layers it animates, and what plays it (an interaction, a joystick, a blend, or its own autoplay). **Nothing plays it** means no interaction, joystick, blend or autoplay starts it yet.
+- Click a row to open that timeline. The first row, **Design view**, goes back to the layers as they are.
+- Select a layer on the canvas and the rows of timelines that animate it are marked **Animates ...** with a bar at their left.
+- The open timeline's row shows its buttons (move, rename, duplicate, delete); every row has the same actions on right-click.
+- Double-click a name, or use the pencil, to rename it. Two timelines on one artboard cannot share a name.
+- Drag a row, or use the arrows, to reorder. The order matters for timelines that **hold their end pose**: a later one wins over an earlier one on the properties both key.
+- The copy button makes a duplicate right after it (it does not autoplay, so the two do not both start). The bin deletes it and warns first when something plays it: those interactions will stop working until you point them at another timeline.
+- On a component (a page that other pages place as a layer) the list says *Components usually have a timeline for each state. Missing:* and offers **+ Idle**, **+ Hover** and **+ Pressed** buttons for any that are missing. Each adds an empty timeline with that name. A timeline named with a word like rest, over, click or down counts as that state.
+- To hide the list, press the **x** at its top. To bring it back, press **Show the list** on the Timeline bar (in Design view), tick **Show the list of timelines** in the **View** menu, or press <kbd>Shift</kbd>+<kbd>L</kbd>. Your choice is remembered for you.
+
+## Sound and captions rows
+Sound, Captions and Descriptions sit under the ruler in one group. When a timeline has no sound, captions or descriptions the group is folded to a single row, **Sound and captions**, that says what is in it. When it has some, the group is open. Click the arrow on that row to open or fold it by hand. Folded, the row still draws a mark for each clip and each cue along the time axis, so you can see where they are.
+
+The **View** button (the eye) on the Timeline bar opens a menu with **Show the Sound lane**, **Show the Captions lane** and **Show the Descriptions lane**, which hide a lane altogether, and **Fold Sound and captions when empty**, which you can untick to keep the group open. Hiding a lane also hides its Add controls: tick it again in the same menu. These choices are kept for you across projects.
 
 ## Design view and timeline view
 There are two ways to look at an artboard.
 
 - **Design view**: the canvas shows the layers as they really are, with no animation applied. This is where you place and style things. Opening an artboard starts here, and the Timeline tab says **Design view: the canvas shows the layers as they are. Choose a timeline to see and edit its animation.**
-- **Timeline view**: choose a timeline from the dropdown at the top left of the Timeline tab and the canvas shows that timeline at the playhead. Drag the playhead to see any frame, and with **Record** on, changes become keyframes.
+- **Timeline view**: choose a timeline from [the list](timelines#the-list-of-timelines) beside the Timeline (or the dropdown at the top left of the Timeline tab) and the canvas shows that timeline at the playhead. Drag the playhead to see any frame, and with **Record** on, changes become keyframes.
 
 Choose **Design view (no timeline)** in the same dropdown to go back. Record turns itself off when you do.
 
@@ -1553,7 +2150,9 @@ Choose **Design view (no timeline)** in the same dropdown to go back. Record tur
 Two properties are not numbers. **Solo: active child** on a [solo group](groups-frames) switches which child shows, and **Draw order (children)** changes which child is in front. Both step at their keys instead of blending. Key them from the group's Solo and Draw order sections in the inspector.
 
 ## Playing from interactions
-**Play or stop an animation** plays, restarts, pauses, stops, reverses, toggles or jumps to a time in a timeline. Give *Play*, *Restart* or *Reverse* a **Blend in** time (ms) to fade the timeline's pose in over the pose the layers have now instead of cutting to it: numbers and colours mix, anything else switches once the new pose weighs more. That is how to switch between looks (idle to wave) smoothly. Blend-in is off with reduced motion. For what the look being left does meanwhile, the easing of the blend and cutting in on one, see [Transitions between looks](timelines#transitions-between-looks). From scripts: \`ix.timeline('Intro').play()\`. **When an animation finishes** fires when one finishes, and **When an animation reaches a marker** fires at each [marker](timelines#markers).
+**Play or stop an animation** plays, restarts, pauses, stops, reverses, toggles or jumps to a time in a timeline. Give *Play*, *Restart* or *Reverse* a **Blend in** time (ms) to fade the timeline's pose in over the pose the layers have now instead of cutting to it: numbers and colours mix, anything else switches once the new pose weighs more. That is how to switch between looks (idle to wave) smoothly. Blend-in is off with reduced motion.
+
+For what the look being left does meanwhile, the easing of the blend and cutting in on one, see [Transitions between looks](timelines#transitions-between-looks). From scripts: \`ix.timeline('Intro').play()\`. **When an animation finishes** fires when one finishes, and **When an animation reaches a marker** fires at each [marker](timelines#markers).
 
 ## Transitions between looks
 A transition is a **Blend in** on the node that starts the next look (**Play or stop an animation**, or **Start a blend** for a [blend](blends)). These settings shape it:
@@ -1581,7 +2180,9 @@ Put **Wait for time in timeline** after a condition to leave "no sooner than" a 
     group: 'Motion',
     summary: 'Fade in, Slide in, Pop, Pulse, Shake and Fade out on any layer, with one click.',
     keywords: 'animate animation preset fade in slide in pop pulse shake fade out entrance appear intro attention wiggle bounce click page opens delay reduced motion',
-    body: `Select a layer and open **Animate** in the Properties panel (or right-click the layer and choose **Animate**). Pick a preset and the layer is animated.
+    body: `**Animation presets** are ready-made movements for a layer: Fade in, Slide in, Pop, Pulse, Shake and Fade out, each added with one click and no timeline to build.
+
+Select a layer and open **Animate** in the Properties panel (or right-click the layer and choose **Animate**). Pick a preset and the layer is animated.
 
 ![The Animate section of the Properties panel: the six preset buttons, When, Slide in from, Delay and Length.](help/animation-presets.png)
 
@@ -1700,10 +2301,10 @@ Examples: a dial that turns with a variable, a character whose eyes follow the p
     title: 'Blends',
     group: 'Motion',
     summary: 'Mix several timelines at once, weighted by numbers: idle, walk and run by speed, or a lean on top of a loop.',
-    keywords: 'blend mix weight 1d direct additive layer timelines locomotion speed rive blend state input',
+    keywords: 'blend mix weight 1d direct additive layer timelines locomotion speed rive blend state input transition smooth ease exit time gradually jump',
     body: `A **blend** plays several [timelines](timelines) together and mixes their poses. How much each one counts comes from number [variables](variables), so a single number can turn *idle* into *walk* into *run*.
 
-Add one in the **Blends** section of the artboard (select the artboard), then start it with a **Start a blend** node (or tick *Start with the artboard*). **Stop a blend** ends it.
+Add one in the **Blends** section of the artboard (select the artboard; it sits directly above **Joysticks**), then start it with a **Start a blend** node (or tick *Start with the artboard*). **Stop a blend** ends it.
 
 ![The Blends section with the example blend: Mode, Input, Start with the artboard and two timelines.](help/blends-section.png)
 
@@ -1738,6 +2339,13 @@ Use **Direct** when each pose should have its own weight (e.g. a *smile* and a *
 
 ## How it plays
 While a blend is on, each of its timelines plays on a playhead of the blend's own, following the timeline's loop setting. The same timeline can also play normally. Every frame the order is: normal timelines, [joysticks](joysticks), blends (in the order listed), then Animate property tweens. A blend therefore wins over a normal timeline animating the same property, except that Additive blends add to what the timeline wrote. *Start a blend* does nothing if the blend is already on; *Stop a blend* leaves the mixed pose where it is (Additive blends excepted).
+
+## Easing a jump: Transition
+A number that jumps (a counter going from 0 to 1 when a button is pressed) makes the mix jump too. Give the blend a **Transition (ms)** and it eases its own mix to the new number over that long instead, say 250 for a quarter of a second. **Transition easing** shapes it (linear sweeps evenly).
+
+The variable itself changes at once and is not touched, so anything else that reads it is unaffected. If the number changes again half way, the mix turns round from wherever it has got to. With the viewer's reduced motion setting on, the mix follows the number at once. There is no setting on a connector in the graph: connections carry no values here, so the time lives on the blend.
+
+To ease the number itself, so that everything reading it moves smoothly (a bar bound to it, a text showing it), use **Over (ms)** on **Change a value or counter** (Set variable) with *Set to* or *Add*. Use that when you want the number visible as it moves, and a blend's Transition when only the pose should be smooth.
 
 ## Imported blend states
 Importing a Rive file turns its 1D and direct blend states into blends. Entering the state plays the blend; leaving stops it. Direct blend inputs run 0 to 100 as in Rive.`,
@@ -1826,23 +2434,39 @@ Pick a frame under **Scroll to scrub** and scrolling it moves the timeline: the 
 ## Sound
 - **Moving and trimming.** Drag a clip to start it later or earlier. Drag its left edge to skip the start of the file, its right edge to stop it sooner. The fields beside the timeline give exact milliseconds.
 - **Volume.** The clip has a level, and **volume keys** that multiply it over time: double-click the clip to add one, drag it up and down for the level and sideways for the time. **Fade out** adds two keys for you.
-- **Role.** **Narration** (the default) is speech and needs captions. **Music** and **Sound effect** do not. Muting a clip (the **M** button) keeps it in step but silent.
+- **Role.** **Narration** (the default) is speech and needs captions. **Music** and **Sound effect** do not. For music that runs across pages, see [Soundtrack music](captions#soundtrack-music). Muting a clip (the **M** button) keeps it in step but silent.
 - **It follows the timeline.** The sound plays when the timeline plays forwards inside the clip. It is silent when the timeline is paused, reversed or outside the clip, and it follows the timeline's speed (between a quarter and four times). When a timeline blends in, its sound comes in with it. A timeline that never started stays silent.
 - **Speed and pitch.** At another speed a clip keeps its pitch (it is time-stretched, like a browser's own audio player does it), so a voice at 1.25x sounds quicker, not higher. Untick **Keep pitch at other speeds** in the clip's settings for the record-player effect instead: faster is higher, slower is lower.
 - **Play sound, with options.** The **Play sound** node has a **Volume** (0 to 1), a **Speed** (0.25 to 4, 1 is as recorded) and a **Loop**. Each one takes a plain value or an expression, so a variable can drive them (a speed slider, a "looping" toggle). **Keep the pitch when the speed changes** is on by default, so a slowed clip stays at its own pitch where the browser allows it. **Stop other sounds first** is for comparing two clips: only one is heard at a time. Leave all of these alone and the node plays the sound once at full volume, as it always did.
-- **Soundtrack (music across pages).** Tick **Soundtrack: keep playing on the next pages** on a **Play sound** node (tick **Loop** too for music that goes round) and that sound is the project's music. It carries on when the page changes, instead of ending with the page. It goes quiet (to a quarter) while a narration clip, a description or **Speak** is heard over it, and comes back up after. It ends at a **Stop sound** node (it fades out), when the project is closed, or when the viewer starts over. There is one soundtrack at a time: a page that starts the one already playing just carries on (no second copy, so every page can start it safely), and a different one is crossfaded to. A paused project or a hidden tab keeps the music going silently and brings it back with the page. In a **When clicked…** behaviour, choose **Play music that carries on across pages** or **Stop the music**. Starting it inside an instance still makes it the project's. The viewer's sound button silences it like any other sound.
 - **Which sound.** Pick it in **Sound**, or fill **Sound from expression** to work it out while the project runs: a list item's sound field (an asset's name or id), say, so one button and one node can play any clip in a repeater. When the expression is filled it wins, and an empty answer plays nothing.
 - **Stopped, and what is playing.** **Play sound** and **Play recording** have a **Stopped** output. Wire it and **When it finishes** only continues when the sound really ends; if a **Stop sound** node (or another sound with **Stop other sounds first**) cuts it short, the flow goes out of **Stopped** instead. With the next node set to run straight away, or a loop, **Stopped** still fires later when it is stopped. Leave it unwired and nothing changes from before. In formulas, \`soundPlaying()\` is true while any Play sound sound is going (\`soundPlaying("Ding")\` for one asset by name), and \`soundsPlaying\` lists their names, so one button can read "Stop" while its sound plays. Scripts have \`ix.soundPlaying()\` and \`ix.soundsPlaying()\`.
 - **Stopping a loop.** A looping sound plays until a **Stop sound** node ends it (all of them, or just one sound), or until the viewer leaves the page, pauses the project or the tab goes to the background (the soundtrack is the exception: it carries on across pages). A loop never finishes, so the next node runs straight away. **Stop sound** also cuts a sound that is still playing once. It does not touch timeline audio, which follows its timeline.
 - **Media keys don't touch it.** Sound plays through the browser's Web Audio, not an audio player of its own, so the keyboard's play/pause key, headphone buttons and the system's media controls don't stop it behind the project's back. Only the project (its timelines and **Play sound**) decides what sounds.
 - **When the browser says no.** Browsers will not start sound until the viewer has clicked, tapped or pressed a key. Then the player shows **Sound is waiting. Press to start it**, and any click or key press on the page starts it too. That includes a **Play sound** that runs before anyone has clicked (from **When the page is shown** or a timer): it waits and plays at that first press. If several are waiting, only the latest plays, so a run of hover sounds doesn't all go off at once. Put a **Start** button in front of an autoplaying narration if the first seconds matter.
 
+## Soundtrack music
+Music that carries on from page to page, instead of ending when the page changes.
+
+1. In **Interactions**, add a **Play sound** node and pick the music.
+2. Tick **Soundtrack: keep playing on the next pages**, and **Loop** too if the music should go round.
+3. Start it from the first page (or any page). Every page can safely start it.
+
+Without the nodes, **+ When clicked…** on a layer has **Play music that carries on across pages** and **Stop the music**.
+
+What it does:
+- It carries on when the page changes, and keeps going silently if the project is paused or the tab is hidden, coming back with the page.
+- It goes quiet (to a quarter) while a narration clip, a description or **Speak** is heard over it, and comes back up after.
+- There is one soundtrack at a time. A page that starts the one already playing carries on, with no second copy. Starting a different one crossfades to it.
+- It ends at a **Stop sound** node (it fades out), when the project is closed, or when the viewer starts over.
+- Starting it inside an embedded page still makes it the project's.
+- The viewer's sound button silences it like any other sound.
+
 ## Captions
 - **Typing, pasting, importing.** Double-click empty space in a caption lane for a new caption, or use the **Captions** menu: **New caption at the playhead**, **Paste a transcript…**, **Import WebVTT or SRT…**, **Export WebVTT**, **Export SRT** and **Add a language…**.
 - **Pasting.** Cut by sentence, line or paragraph. Time them **across the narration** (or the whole timeline), **one per marker** (a [marker](timelines) at the start of each new caption), or **at reading speed**. A transcript with times at the start of its lines ("0:12 Welcome", "[01:05] Next") keeps them.
 - **Each caption** has its words, an optional **speaker** (shown as "Dr Lee: …"), and a start and end. **Split at playhead** and **Merge with next** reshape them.
 - **Languages.** Add a track per language. With more than one the viewer gets a language menu; the transcript follows.
-- **Video layers** take captions too: select the layer and use **Captions** in its settings. They show through the video's own caption display and follow the viewer's CC button.
+- **Video layers** take captions too: select the layer and use **Captions** in its settings. They show through the video's own caption display and follow the viewer's CC button. Import a WebVTT or SRT file made for this video; its times are seconds from the start of the video. A video with no captions makes the accessibility check ask you to confirm it has them.
 - **Describing the picture.** Captions say what is heard. For what is only in the picture, see [Describe what you see](describe-what-you-see).
 
 ## What viewers see
@@ -1925,7 +2549,9 @@ Reading **while the video waits** (it pauses itself for a description that does 
 ## Three ways to use it
 - **Project setting.** In Project settings open **Read aloud** and tick **Offer read-aloud**. Every artboard gets one **Listen** button, a pause and a speed choice in the same corner. It reads the text layers that show, in layer order. Set **Language** (such as *en* or *fr-CA*) so only a voice for that language is used.
 - **A Listen button layer.** Press **Add a Listen button to this artboard** in the same section. It is an ordinary button with two nodes behind it (one reads the artboard, one stops it), and a line that shows when the device has no voice. Restyle and move it as you like.
-- **The Read aloud node.** In the Interactions tab, **Read aloud** says a text expression, a question and its options, the feedback after a check, or the whole artboard. The same node can **stop**, **pause**, **carry on**, say the **last thing again**, and make the learner's speed **slower** or **faster**. **Continue when it finishes** holds the next node until the words are said. **With no voice** set to *Announce the same words to screen readers* sends the words to the live region when the device has no voice for the language, so nobody misses feedback; **Only speak when** takes a condition (a "spoken prompts" variable, say) and while it is false the voice stays quiet and the words are announced instead if that choice is on.
+- **The Read aloud node.** In the Interactions tab, **Read aloud** says a text expression, a question and its options, the feedback after a check, or the whole artboard.
+
+The same node can **stop**, **pause**, **carry on**, say the **last thing again**, and make the learner's speed **slower** or **faster**. **Continue when it finishes** holds the next node until the words are said. **With no voice** set to *Announce the same words to screen readers* sends the words to the live region when the device has no voice for the language, so nobody misses feedback; **Only speak when** takes a condition (a "spoken prompts" variable, say) and while it is false the voice stays quiet and the words are announced instead if that choice is on.
 
 ## What the learner gets
 **Listen** starts it, the same button pauses and carries on, and a speed menu offers 0.75, 1, 1.25 and 1.5. The speed is remembered in their browser with their caption and sound choices. Reading never starts by itself: iOS only lets the first words start from a tap, and a voice starting uninvited clashes with a screen reader. Speech stops when the learner moves to another artboard.
@@ -1949,6 +2575,7 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
 - Maths, drug names, abbreviations and mixed-language text read badly: use **Say it like**.
 - A screen reader user already has a reader, and two voices at once is worse than one. The Listen button is a plain button they can skip, and it is not the route to offer them.
 - The first words must start from a click or tap, so put a Read aloud node behind a button or key, not a timer.
+- Music marked as a **Soundtrack** goes quiet under the voice and comes back after it: see [Soundtrack music](captions#soundtrack-music).
 - The **Audio-first quiz** starter (Templates, Built-in, Quizzes and questions) is a whole quiz built on this: it reads each question and its options, the keys 1 to 4 answer, R repeats, S slows, H gives a hint and Space pauses, and the score page speaks the score and offers the missed questions again. With no voice it is an ordinary keyboard quiz.`,
   },
   {
@@ -1959,37 +2586,72 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
     keywords: 'interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing behaviour recipe when clicked hovered show hide next page sound counter switch sentences read explain condition picker only if turn off remove',
     body: `Open the **Interactions** tab. Each page has its own graph. The nodes are named for what happens (*When clicked or hovered*, *Play or stop an animation*); hover one to see the technical name it has in the file (*On pointer*, *Control timeline*), which is also in the [node reference](interaction-nodes) and what search finds. Preferences has a **Technical wording** switch if you would rather see those.
 
-**Room for the graph.** The bottom panel is a short strip, so opening **Interactions** (from a layer's **+ On click**, one of its interaction chips, or the tab itself) lifts the panel to a comfortable height, and puts it back when you move to another tab. It only does that when the panel is still at its normal height: one you sized yourself is left alone. Drag the top edge of the panel while the graph is open and that height is remembered for next time (in this browser).
+## Room for the graph
+The bottom panel is a short strip, so opening **Interactions** (from a layer's **+ When clicked…**, one of its interaction chips, or the tab itself) lifts the panel to a comfortable height, and puts it back when you move to another tab. It only does that when the panel is still at its normal height: one you sized yourself is left alone. Drag the top edge of the panel while the graph is open and that height is remembered for next time (in this browser).
 
-**See-through layers don't take clicks.** While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
+## See-through layers don't take clicks
+While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
 
 ![The Interactions section of a layer whose opacity is 50%: the note says it can't be clicked while playing until it is fully showing, and the Clickable while see-through tick overrides that.](help/see-through-toggle.png)
 
+## The three kinds of node
 - **Events** (green) start a flow: a click, a key, a timer, a variable changing, a timeline ending, a message from the host page, scrolling, data loading, the artboard starting, or the activity loading.
 - **Actions** (blue) do something and continue: **Play or stop an animation**, **Start a blend**, **Wait** (milliseconds, or an expression such as \`pace <= 4 ? 4000 : 8000\`, worked out when the wait starts), **Wait for blend-in**, **Wait for time in timeline**, **Change a value or counter**, **Put values back to the start**, **Change a layer's setting**, **Animate a layer's setting**, **Show or hide a layer**, **Go to a page**, **Open a web address**, **Play sound**, **Control video**, **Run script**, **Send message**, **Wait** and more.
 - **Logic** (purple) chooses where to go: **Check a condition** (a **true** and a **false** output), **Alternate between two paths** (alternates between **a** and **b**), **Only the first time**, **Do these in order** (runs **1**, then **2**, then **3**) and **Random** (continues down one of up to six outputs, picked at random; *Weights* is a list that sets each output's chance, [1, 3] making the second three times as likely, and *Only if* is a list of conditions, so an output whose condition is false is never picked).
 
 ![The Interactions tab: the node palette, the graph and the settings of the selected node.](help/interactions-panel.png)
 
-**When clicked or hovered** reacts to a click, double click, press, release, hover start and end, the pointer **moving over** a layer, and **dragging** it: *Drag starts* (once the pointer has moved a few pixels with the button held), *Dragging* (on every move after that, even outside the layer) and *Drag ends*. Moves and drags give \`event.x\` and \`event.y\` (artboard coordinates) and \`event.stepX\`, \`event.stepY\` (movement since the last event); drags also give \`event.dx\` and \`event.dy\` (movement since the press), so *Change a layer's setting* with \`x\` and an expression like \`start + event.dx\` moves a layer with the pointer. Drags also give \`event.index\`, the [repeated](repeaters) copy the pointer is over right now (\`null\` over anything else), and \`event.startIndex\`, the copy it was pressed on, so a word-search grid or a board of cells can tell which cell the learner has reached without any maths on positions.
+## When clicked or hovered
+This event reacts to a click, double click, press, release, hover start and end, the pointer **moving over** a layer, and **dragging** it: *Drag starts* (once the pointer has moved a few pixels with the button held), *Dragging* (on every move after that, even outside the layer) and *Drag ends*. 
 
-**Which layer inside was hit.** With a layer picked, *When clicked or hovered*, *When a key is pressed* and *When a layer is focused* also give \`event.child\`, the name of the layer's own child (the direct child, however deep the hit) that the event landed in, and \`event.childIndex\`, that child's place in the layer from 0 (they are \`null\` and \`-1\` when it landed on the layer itself). For a [repeater](repeaters) the children are its copies, so \`event.childIndex\` is the copy. Put one *When clicked or hovered* on the group that holds a row of hotspots, dots or cards and use \`event.child\` or \`event.childIndex\` in the flow, instead of one event and one chain of nodes for each. Adding an item is then duplicating a layer. Tick **Only when a child is hit** to leave out clicks that land on the group's own background.
+Moves and drags give \`event.x\` and \`event.y\` (artboard coordinates) and \`event.stepX\`, \`event.stepY\` (movement since the last event); drags also give \`event.dx\` and \`event.dy\` (movement since the press), so *Change a layer's setting* with \`x\` and an expression like \`start + event.dx\` moves a layer with the pointer.
 
-**When a key is pressed** reacts to a key going down or up anywhere on the page (the page itself, not only the artboard). Leave **Key** empty for any key, or write a name such as \`ArrowLeft\`, \`Enter\`, \`a\` or \`Space\`. Tick **Shift held**, **Ctrl held**, **Alt held** or **Meta held** to ask for a chord; they must all be down. A key held down fires once, unless **Fire again while held** is ticked. \`event.key\`, \`event.code\` and \`event.shift\`, \`event.ctrl\`, \`event.alt\`, \`event.meta\` say what was pressed. Pick a layer in **Only while this layer has focus** to hear the key only while that layer, or a layer inside it, has keyboard focus (the layer becomes a tab stop, and you can use the [Focus layer node](interaction-nodes) to move the focus there); leave it empty to react wherever the focus is. Keys typed into a text box or text area are left alone, so typing never sets a flow off. To run something when the learner presses **Enter in a box** (an answer box that checks, a search that runs), set **Key** to \`Enter\`, pick the box (or the frame around it) in **Only while this layer has focus**, and tick **Also while typing in a text box**. A key that runs a flow is not also used by the browser: an arrow key, <kbd>Space</kbd>, Page Up and Down, Home, End, Enter, Backspace or a letter that a *When a key is pressed* node handled does not also scroll the page, so a game or a grid can use them. Tab, Escape, the function keys and anything held with Ctrl, Alt or Meta are never taken, and a *When a key is pressed* with no key and no layer picked (it hears everything) takes nothing. Tick **Let the browser act too** on a node that should leave the key to the page as well.
+Drags also give \`event.index\`, the [repeated](repeaters) copy the pointer is over right now (\`null\` over anything else), and \`event.startIndex\`, the copy it was pressed on, so a word-search grid or a board of cells can tell which cell the learner has reached without any maths on positions.
 
-**Before activity loads** and **When the activity has loaded** run once each time the activity is opened, unlike **When the page is shown**, which runs every time an artboard is shown. *Before activity loads* runs first, before anything is on screen, and the activity waits for everything it sets off to finish (up to 10 seconds) before it shows: the place for a **Load saved progress** or a **Change a value or counter** that the first frame should already have. *When the activity has loaded* runs once the activity is showing, just before the first *When the page is shown*. Both fire on the artboard the activity opens on, so put them in that artboard's graph. **Start over** doesn't run them again.
+### Which layer inside was hit
+With a layer picked, *When clicked or hovered*, *When a key is pressed* and *When a layer is focused* also give \`event.child\`, the name of the layer's own child (the direct child, however deep the hit) that the event landed in, and \`event.childIndex\`, that child's place in the layer from 0 (they are \`null\` and \`-1\` when it landed on the layer itself). For a [repeater](repeaters) the children are its copies, so \`event.childIndex\` is the copy. Put one *When clicked or hovered* on the group that holds a row of hotspots, dots or cards and use \`event.child\` or \`event.childIndex\` in the flow, instead of one event and one chain of nodes for each. Adding an item is then duplicating a layer. Tick **Only when a child is hit** to leave out clicks that land on the group's own background.
 
-**When a layer is focused** reacts to a layer gaining or losing keyboard focus, which is what tabbing, clicking or the **Focus layer** action does. A layer with a *When a layer is focused* node becomes a tab stop; buttons, inputs and links already are, and so is any layer with a click or a button role (see [Accessibility](accessibility)). **Focus layer** gives a layer focus, or clears whatever has it (for example on <kbd>Escape</kbd>). It draws any change that has not been drawn yet first, so a layer an earlier node has just shown can take the focus straight away without a **Wait** in front of it. A layer that is still hidden or disabled is tried again for a few frames, then left alone.
+## When a key is pressed
+This event reacts to a key going down or up anywhere on the page (the page itself, not only the artboard). Leave **Key** empty for any key, or write a name such as \`ArrowLeft\`, \`Enter\`, \`a\` or \`Space\`. Tick **Shift held**, **Ctrl held**, **Alt held** or **Meta held** to ask for a chord; they must all be down. A key held down fires once, unless **Fire again while held** is ticked. \`event.key\`, \`event.code\` and \`event.shift\`, \`event.ctrl\`, \`event.alt\`, \`event.meta\` say what was pressed.
 
-**Only if.** Every event node has an **Only if** field. Leave it empty and the event always runs its flow. Write an expression and the flow runs only when it is true: \`running\` on a timer, \`event.value >= 0\` on a variable change, \`selected >= 0\` on a key. \`event\` is in scope, so it can look at what fired. The condition is on the node, with a short \`if …\` under its name, so the graph reads without a guard **Check a condition** after every event. A key whose condition is false is not taken from the browser either, so the page still scrolls.
+Pick a layer in **Only while this layer has focus** to hear the key only while that layer, or a layer inside it, has keyboard focus (the layer becomes a tab stop, and you can use the [Focus layer node](interaction-nodes) to move the focus there); leave it empty to react wherever the focus is. Keys typed into a text box or text area are left alone, so typing never sets a flow off.
 
-**On timer.** *Every (ms)* is an expression read again every time round, so a pace can follow a variable (\`1500 - level * 100\`). **Only while** is a condition: while it is false the timer does not fire and its time does not count, and when it turns true the wait starts over, so \`running\` makes a timer you can stop and start. Tick **Steady** for a clock or a beat: each fire is planned from the start, so a slow moment is made up for and the timer does not drift. \`event.count\` is how many times it has fired and \`event.elapsed\` how many milliseconds it has been running. The editor's canvas does not run timers; Preview does.
+To run something when the learner presses **Enter in a box** (an answer box that checks, a search that runs), set **Key** to \`Enter\`, pick the box (or the frame around it) in **Only while this layer has focus**, and tick **Also while typing in a text box**.
 
-**Countdown / clock** keeps time for you. Pick a number variable, then **Start** it counting **down** from a number of seconds, or **up** (to a limit, or without end when the limit is 0). It writes the variable about four times a second, as whole seconds by default, so a text layer showing \`{left}\` is a countdown. **Pause** holds it, **Resume** carries on, **Reset** puts the variable back and stops it. When a countdown reaches 0 (or a clock its limit) the **Time up** output continues. Leaving the artboard holds the clock still where it was; a new **Start** or **Resume** takes it up again. There is one clock for each variable.
+A key that runs a flow is not also used by the browser: an arrow key, <kbd>Space</kbd>, Page Up and Down, Home, End, Enter, Backspace or a letter that a *When a key is pressed* node handled does not also scroll the page, so a game or a grid can use them. Tab, Escape, the function keys and anything held with Ctrl, Alt or Meta are never taken, and a *When a key is pressed* with no key and no layer picked (it hears everything) takes nothing. Tick **Let the browser act too** on a node that should leave the key to the page as well.
 
-**Go to a page** goes to the artboard you pick, or to **Next artboard** or **Previous artboard**, or **Back** to where the learner came from (their own path, however they got there), or to the artboard an **expression** names (a name or an id). Next and previous follow the artboards in the project's order, in the artboard's [group](artboards) when it is in one (an artboard in no group counts every page), leaving out the narrow and wide versions of a [responsive set](responsive) and a library component's own copy. Duplicating or reordering a page keeps the links right, with no neighbours to rewire. When there is nowhere to go (the last page, the first, nothing to go back to, a name that matches nothing) the flow continues from the **No artboard** output, so a Next button can do something else on the last page. In an expression, \`pageNumber\` is the page's place from 1 and \`pageCount\` how many pages there are, for a footer like \`Page {pageNumber} of {pageCount}\`; \`artboard.index\` (from 0), \`artboard.count\` and \`artboard.group\` say the same. **Go to step** is the other kind of Next: it moves through the steps of one artboard. Its **Transition** is one of: instant, fade, slide left, right or up, wipe left, right, up or down (the new page is uncovered from that edge), push left, right, up or down (the new page shoves the old one off, which dims), **iris** (a circle opens over the old page), **zoom** (the old page grows round a point as it fades, the new one grows in), **wipe diagonally** (from the top left corner), **barn doors** (opening from the middle), a **star**, **diamond** or **heart** that opens out, a **clock** hand that sweeps round, **blinds**, a **grid of squares**, **crosshatch** lines or **dots** that grow until they meet, **dissolve** (the new page appears a scatter of pixels at a time, the same noise as the Dissolve blend mode) and **cube** (both pages turn like the sides of a box; what is behind the stage shows round it as it turns). Dissolve is the heaviest for the device to draw, so on a big stage or an older laptop it is the one most likely to stutter. Iris, zoom, star, diamond, heart and clock start from **Opens from**: the layer that was clicked (the middle of the page when nothing was clicked, say from a timer), the middle of the page, or a point you give as percentages. Scripts use the same names: \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer named Door, and a point is \`{ x: 25, y: 50, percent: true }\`. **Speed** (the \`duration\`, in milliseconds) is offered as **Slow** (600), **Medium** (300, what it has always been), **Fast** (150) or **Custom**, which shows the number; it is stored as that plain number, so a project saved before the choice existed shows the right one, and it is not asked for an instant change. Reduced motion makes every one instant.
+## When the activity opens
+**Before activity loads** and **When the activity has loaded** run once each time the activity is opened, unlike **When the page is shown**, which runs every time an artboard is shown.
 
-Drag from an output port to the next node's input to connect them. Actions that take time (**Play or stop an animation**, **Animate a layer's setting**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away. Let go on empty space instead and a menu offers only the nodes that fit (actions and logic when you drag from an output, anything with an output when you drag backwards from an input); the one you pick is added where you let go and connected for you, and one <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes the node and its connection back together (clicking a node only selects it, which is not an undo step). Press <kbd>Escape</kbd> or click away to cancel.
+*Before activity loads* runs first, before anything is on screen, and the activity waits for everything it sets off to finish (up to 10 seconds) before it shows: the place for a **Load saved progress** or a **Change a value or counter** that the first frame should already have. *When the activity has loaded* runs once the activity is showing, just before the first *When the page is shown*. Both fire on the artboard the activity opens on, so put them in that artboard's graph. **Start over** doesn't run them again.
+
+## When a layer is focused
+This event reacts to a layer gaining or losing keyboard focus, which is what tabbing, clicking or the **Focus layer** action does. A layer with a *When a layer is focused* node becomes a tab stop; buttons, inputs and links already are, and so is any layer with a click or a button role (see [Accessibility](accessibility)). **Focus layer** gives a layer focus, or clears whatever has it (for example on <kbd>Escape</kbd>). It draws any change that has not been drawn yet first, so a layer an earlier node has just shown can take the focus straight away without a **Wait** in front of it. A layer that is still hidden or disabled is tried again for a few frames, then left alone.
+
+## Only if
+Every event node has an **Only if** field. Leave it empty and the event always runs its flow. Write an expression and the flow runs only when it is true: \`running\` on a timer, \`event.value >= 0\` on a variable change, \`selected >= 0\` on a key. \`event\` is in scope, so it can look at what fired. The condition is on the node, with a short \`if …\` under its name, so the graph reads without a guard **Check a condition** after every event. A key whose condition is false is not taken from the browser either, so the page still scrolls.
+
+## On timer
+*Every (ms)* is an expression read again every time round, so a pace can follow a variable (\`1500 - level * 100\`). **Only while** is a condition: while it is false the timer does not fire and its time does not count, and when it turns true the wait starts over, so \`running\` makes a timer you can stop and start. Tick **Steady** for a clock or a beat: each fire is planned from the start, so a slow moment is made up for and the timer does not drift. \`event.count\` is how many times it has fired and \`event.elapsed\` how many milliseconds it has been running. The editor's canvas does not run timers; Preview does.
+
+## Countdown / clock
+The **Countdown / clock** node keeps time for you. Pick a number variable, then **Start** it counting **down** from a number of seconds, or **up** (to a limit, or without end when the limit is 0). It writes the variable about four times a second, as whole seconds by default, so a text layer showing \`{left}\` is a countdown. **Pause** holds it, **Resume** carries on, **Reset** puts the variable back and stops it. When a countdown reaches 0 (or a clock its limit) the **Time up** output continues. Leaving the artboard holds the clock still where it was; a new **Start** or **Resume** takes it up again. There is one clock for each variable.
+
+## Go to a page
+The **Go to a page** node goes to the page you pick, or to **Next artboard** or **Previous artboard**, or **Back** to where the learner came from (their own path, however they got there), or to the artboard an **expression** names (a name or an id). Next and previous follow the artboards in the project's order, in the artboard's [group](artboards) when it is in one (an artboard in no group counts every page), leaving out the narrow and wide versions of a [responsive set](responsive) and a library component's own copy. Duplicating or reordering a page keeps the links right, with no neighbours to rewire.
+
+When there is nowhere to go (the last page, the first, nothing to go back to, a name that matches nothing) the flow continues from the **No artboard** output, so a Next button can do something else on the last page.
+
+In an expression, \`pageNumber\` is the page's place from 1 and \`pageCount\` how many pages there are, for a footer like \`Page {pageNumber} of {pageCount}\`; \`artboard.index\` (from 0), \`artboard.count\` and \`artboard.group\` say the same.
+
+**Go to step** is the other kind of Next: it moves through the steps of one artboard.
+
+Its **Transition** is how the page changes, and **Speed** is how long that takes: see [How the page changes](links-cursors#how-the-page-changes) for every look, **Opens from** and the speeds.
+
+## Connecting and adding nodes
+Drag from an output port to the next node's input to connect them. Actions that take time (**Play or stop an animation**, **Animate a layer's setting**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away.
+
+Let go on empty space instead and a menu offers only the nodes that fit (actions and logic when you drag from an output, anything with an output when you drag backwards from an input); the one you pick is added where you let go and connected for you, and one <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes the node and its connection back together (clicking a node only selects it, which is not an undo step). Press <kbd>Escape</kbd> or click away to cancel.
 
 ![Dragging a connection into empty space adds a node and joins it.](help/drag-to-connect.mp4)
 
@@ -2003,8 +2665,10 @@ A **graph note** is the same sticky note as on the canvas, but it lives in a gra
 - The **eye button** that hides the notes on the canvas hides graph notes too, and its count includes them. Copying a node or group copies the notes that follow it.
 
 ## The palette, search and the artboard picker
+The left column of the **Interactions panel** holds the artboard picker, the node search and the palette.
 - The **artboard picker** at the top of the left column says whose graph you are looking at, with its node count (**Word · 12 nodes**, or **no nodes yet**). Open it to switch: the artboards are grouped as in the Layers panel, and page masters are listed apart at the end. With many artboards it has a search box. It is the same thing as selecting the artboard on the canvas or in Layers, so each follows the other, and picking one also brings the canvas to that artboard. <kbd>Alt</kbd>+<kbd>Up</kbd> and <kbd>Alt</kbd>+<kbd>Down</kbd> (or <kbd>Ctrl</kbd>+<kbd>[</kbd> and <kbd>Ctrl</kbd>+<kbd>]</kbd>) step to the previous or next artboard's graph while you are in the Interactions tab. Choosing an artboard changes what you see, never the project, so nobody else editing is disturbed.
 - **Search nodes** finds a node by what it does, not only by its name: *goto*, *navigate* or *page* find **Go to a page**; *condition* finds **Check a condition**; *wait*, *delay* or *pause* find **Wait**; *audio* finds **Play sound**; *tap* finds **When clicked or hovered**. Small typos are forgiven. Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> anywhere in the tab to go to it, <kbd>Esc</kbd> to clear it, <kbd>Enter</kbd> to add the best match, or the down arrow to move onto the matches. The menu you get from right-clicking the graph, or from dragging a connection into empty space, searches the same way.
+- Select a node and its settings open with a one-sentence description and a **More about … →** link to its full entry in the [node reference](interaction-nodes).
 - The **Events**, **Actions** and **Logic** chips show just that kind, and **Topics** has a chip for each topic (Pointer and keys, Variables, Questions, Dragging and so on). Chips combine with each other and with what you type.
 - Each topic heading folds. Click it (or press <kbd>Enter</kbd> or <kbd>Space</kbd> on it) to fold or open it; a folded one still shows how many nodes it holds. <kbd>Alt</kbd>+click, or right-click and **Only this one open**, leaves just that topic open, and the right-click menu also has **Fold all** and **Open all**. Which are open is remembered in this browser, with the common ones open to begin with. While you search or use a chip, every topic with a hit opens for as long as you do, and your folds come back when you clear it.
 
@@ -2045,6 +2709,13 @@ Pick one, answer the question it asks (the line at the bottom reads back what it
 
 The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the event, for building the flow by hand in the graph.
 
+### See what you just added
+**See what you just added.** The moment you press **Add** (or add an empty event, or a **When the playhead reaches this…** from a marker), the bottom panel opens on **Interactions** (unfolded if it was put away, and switched over if another tab was showing), the graph pans and zooms so the new nodes fit with a little room round them (never closer than 100%), they are picked together, and they glow for a moment (no glow, and no animated pan, if your computer is set to reduce motion).
+
+Keyboard focus moves to the new **When clicked or hovered** event, so <kbd>Del</kbd> and the arrow keys now act on the graph, and a screen reader is told, for example, **Added When clicked: go to the next page**.
+
+Nothing moves when the change is someone else's live edit, an undo or redo, or an agent's. If you build only from the Inspector and want the view left alone, untick **Show new interactions in the graph** in Preferences: the nodes are then just picked in the graph, as before.
+
 ## What a layer does, in sentences
 The Inspector's **Interactions** section lists what the layer does as sentences made from its graph: **When clicked: show Hint text, then wait 2 s, then hide Hint text.** A check reads **check whether score is at least 5 (if so: …; if not: …)**, and a long chain stops with **and 4 more steps**. An event with nothing joined to it says **nothing happens yet**, so a click that does nothing is no longer a mystery. Under each sentence:
 - **Show in graph** opens the Interactions tab with that event picked.
@@ -2055,9 +2726,22 @@ The Inspector's **Interactions** section lists what the layer does as sentences 
 The **Read as sentences** button over the graph (beside **Graph**) shows the whole page as sentences, one block per event, with the steps and the ways a check splits underneath. It is read only and made from the graph each time, so it cannot say something the graph does not. Pick a line to see that node's settings, **Show in graph** to go back to it, or **Copy as text** for all of it. Steps nothing starts are listed at the end as **Not joined to anything, so these never run**. It is the quickest way to understand a template someone else built.
 
 ## Conditions with pickers
-Wherever the graph asks for a yes/no condition (a **Check a condition** node's condition, an event's **Only if**, a timer's **Only while**, and the formula of a yes/no binding such as visible), the field is three pickers: a value (a variable), how to compare it (**is**, **is not**, **is at least**, **is at most**, **is more than**, **is less than**, **contains**, **is empty**, **is not empty**, **is on**, **is off**) and what to compare it with (a number, a piece of text, on or off, or another value). **+ and** and **+ or** add rows. **Edit as formula** shows the formula the pickers write (\`score >= 5 && !done\`) and lets you type it. A formula the pickers cannot show in full, such as one with arithmetic, brackets or a function, simply opens as a formula and is never rewritten. The line under it says what it works out to now.
+Wherever the graph asks for a yes/no condition (a **Check a condition** node's condition, an event's **Only if**, a timer's **Only while**, and the formula of a yes/no binding such as visible), the field is three pickers: a value (a variable), how to compare it (**is**, **is not**, **is at least**, **is at most**, **is more than**, **is less than**, **contains**, **is empty**, **is not empty**, **is on**, **is off**) and what to compare it with (a number, a piece of text, on or off, or another value).
 
-Test in **Preview**: the event list shows each event as it fires. Every node is listed in [Interaction node reference](interaction-nodes). For a walk-through, see [Tutorial 2](tutorial-first-interaction).
+**+ and** and **+ or** add rows. **Edit as formula** shows the formula the pickers write (\`score >= 5 && !done\`) and lets you type it. A formula the pickers cannot show in full, such as one with arithmetic, brackets or a function, simply opens as a formula and is never rewritten. The line under it says what it works out to now.
+
+## See what ran
+Press **Preview** to test. The Events list shows each event as it fires. For the whole picture, press **Beside editor** in the Preview's top bar and Preview moves up to the right, leaving the canvas and this graph showing underneath.
+
+While you click through it:
+- Every node that runs lights up green, with the word *ran*.
+- An event whose **Only if** said no goes grey (*held back*).
+- The wire that was followed pulses.
+- A ring flashes round the layer you clicked: green when the click started something, red when it started nothing.
+
+When a click starts nothing, the Events list says why under **Why did nothing happen?**. See [Preview](interface#preview) for the rest. The lights show only in the editor, never in exports or shared links.
+
+Every node is listed in [Interaction node reference](interaction-nodes). For a walk-through, see [Tutorial 2](tutorial-first-interaction).
 
 ## What's in scope
 Expression fields can use every variable and data source by name, \`event\` (details of what fired: \`event.key\`, \`event.x\`, \`event.index\` for a repeated copy, \`event.child\` for the layer inside that was hit, \`event.count\` and \`event.elapsed\` on a timer, \`event.payload\` for a message), \`pageNumber\` and \`pageCount\`, and \`Math\`.
@@ -2148,20 +2832,30 @@ Everyone should be able to finish the activity, so every drag has two ways that 
             return [`### ${nodeHeading(d)}`, pw(d.summary, false), rest, gives, params].filter(Boolean).join('\n\n');
           })
           .join('\n\n');
-      return [section('Events', 'event'), section('Actions', 'action'), section('Logic', 'logic')].join('\n\n');
+      const intro = `This is every node you can use in the **Interactions** tab, with its settings. There are three kinds. **Events** start a flow: a click, a key, a timer. **Actions** do something: play a sound, go to a page, change a value. **Logic** chooses the way through: check a condition, do things in order. To build flows, see [Interactions](interactions).
+
+Nodes are named for what happens, for example *Go to a page*. The name in brackets after it is the technical name the node has in the file, which search also finds. Preferences has a **Technical wording** switch if you would rather see those names.
+
+Settings that take an expression are worked out as a formula: see [Expressions](expressions). In them, \`event\` holds what started the flow, and a node's **Gives** line lists what it adds.`;
+      const outro = `## Related
+
+Two actions have more detail elsewhere. **Play sound** (volume, speed, loop, **Stop other sounds first**, music that carries across pages) and **Stop sound** are described under [Sound](captions#sound). **Change a value or counter** (with **Over (ms)** and **Easing**) and **Put values back to the start** are described in [Variables](variables).`;
+      return [intro, section('Events', 'event'), section('Actions', 'action'), section('Logic', 'logic'), outro].join('\n\n');
     },
   },
   {
     id: 'question-kit',
     title: 'Questions and quizzes',
     group: 'Interactivity',
-    summary: 'Add multiple choice, true/false, fill in the blank (typed or dragged), ordering, matching and categorise (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file or paste them from Word or Excel.',
+    summary: 'Questions that mark themselves: choices, blanks, ordering, matching, hotspots, banks and spelling tests.',
     keywords: 'question quiz test assessment import gift moodle converter multiple choice true false fill blank ordering sequence matching match drag drop categorise sort groups word bank distractor extra pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning',
-    body: `Quizzes without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
+    body: `A question that checks itself, without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open page from ordinary layers, with the variables it keeps and a few interaction nodes. The **Question** section in the Inspector then changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
+
+Already have the questions in Word, Excel or Moodle? You can [paste them in](paste-questions) or import a GIFT file instead of typing them again.
 
 ## Add one
 
-Click **Add question**, pick a type, and a card appears with a prompt, the answers, a Check answer button, a Hint button, feedback text, a score and a Try again button. Edit the prompt and answers in the **Question** section, then press **Preview**.
+Click **Add question** and pick a type. A card appears with a prompt, the answers, a Check answer button, a Hint button, feedback text, a score and a Try again button. Edit the prompt and answers in the **Question** section, then press **Preview**.
 
 | Type | The learner | Right when |
 |---|---|---|
@@ -2176,54 +2870,140 @@ Click **Add question**, pick a type, and a card appears with a prompt, the answe
 
 ## What gets built
 
-Nothing is hidden. The question is a **frame** (named Question 1, Question 2, ...) holding:
+Nothing is hidden. A question is a **frame** (named Question 1, Question 2 and so on) made of ordinary layers:
 
-- a **Prompt** text, \`{q1_prompt}\`;
-- an **answer area**: for choices, one **Option** layer repeated once per option (a [repeater](repeaters) over \`q1_items\`, so you restyle the one template and every option follows); for blanks, a label and an input per blank; for ordering, an **Item** layer with Move up and Move down buttons;
-- for matching, a **Terms** pile of draggable layers (one per pair) and a **Matches** column with, per pair, a definition text and a dashed **Slot** (a [drop zone](drag-and-drop) that holds one term); for a hotspot, a **Picture** and, over it, one invisible **Area** layer per area;
+- a **Prompt** text;
+- an **answer area**. For choices it is one **Option** layer repeated once per option (a [repeater](repeaters), so you restyle the one template and every option follows). For blanks it is a label and an input per blank. For ordering it is an **Item** layer with Move up and Move down buttons;
+- for matching, a **Terms** pile of draggable layers (one per pair) and a **Matches** column with, per pair, a definition text and a dashed **Slot** (a [drop zone](drag-and-drop) that holds one term);
+- for a hotspot, a **Picture** and, over it, one invisible **Area** layer per area;
 - **Hint text**, **Feedback**, and a row of **Check answer**, **Hint**, **Try again** and **Score**.
 
-Every layer is yours: recolour it, change the font, move things around, swap a rectangle for an image, add animation. The layers are bound to the question's variables (for example the option fill follows \`item.selected\` and \`item.state\`), so they keep working. The **Restyle a part** buttons at the bottom of the Question section select a part for you; selecting any part shows a note saying it belongs to the question.
+Every layer is yours: recolour it, change the font, move things around, swap a rectangle for an image, add animation. The layers are bound to the question's variables, so they keep working.
 
-The behaviour is a handful of nodes in the **Interactions** tab, in rows of an event and what it runs: *When the page is shown* then **Reset question**; a click on the option then **Choose option**; a click on Check answer then **Check answer**; and so on. Add your own nodes after them. **Check answer** has three outputs: *right*, *wrong*, and *finished* (once the question is locked, because it is right or out of tries), so "when it is right, play the confetti timeline" is one wire.
+The **Restyle a part** buttons at the bottom of the Question section select a part for you. Selecting any part shows a note saying it belongs to the question.
+
+## How a question behaves
+
+The behaviour is a handful of nodes in the **Interactions** tab, each a row of an event and what it runs. *When the page is shown* runs **Reset question**. A click on an option runs **Choose option**. A click on Check answer runs **Check answer**. Add your own nodes after them.
+
+**Check answer** has three outputs: *right*, *wrong* and *finished* (once the question is locked, because it is right or out of tries). So "when it is right, play the confetti animation" is one wire.
+
+## The button row on a question card
+
+A question's own button leads the row, in the accent colour: **Play the word** on a spelling test, **Repeat**, or a clip's **Play**. **Submit answer** sits at the far right. The two are at opposite ends so they never look alike, in any theme.
 
 ## Listening and number keys
-Three settings in the Question section's **Listening and keys** group:
-- **Listen button** adds a Listen button beside Check. It reads the question and its numbered options aloud, and once the answer has been checked it reads the feedback and the spoken explanation instead. It uses a voice installed on the learner's own device, never starts by itself, and hides itself when the device has no voice. See [Read it to me](read-aloud).
-- **Say the prompt like** and **Spoken explanation** are text only a voice says. The first replaces the prompt when it is read (the options still follow it); the second is said after the feedback. For a data bank, the columns *spoken* and *explain* do the same per row.
-- **Number keys 1 to 9 choose** lets the learner press 1 to 9 to choose the option in that place (several choices toggle; other keys do nothing). A small line under the options says so. Choosing still needs **Check answer**. It listens on the whole page, so use it on one question at a time. It is offered for single choice, multiple choice and true or false.
+
+Three settings in the Question section's **Listening and keys** group let a learner hear a question, or answer it from the keyboard.
+
+- **Listen button** adds a Listen button beside Check. It reads the question and its numbered options aloud. Once the answer has been checked it reads the feedback and the spoken explanation instead. It uses a voice installed on the learner's own device, never starts by itself, and hides itself when the device has no voice. See [Read it to me](read-aloud).
+- **Say the prompt like** and **Spoken explanation** are words only a voice says. The first replaces the prompt when it is read (the options still follow it). The second is said after the feedback. For a data bank, the columns \`spoken\` and \`explain\` do the same for each row.
+- **Number keys 1 to 9 choose** lets the learner press 1 to 9 to choose the option in that place (several choices toggle; other keys do nothing). A small line under the options says so. Choosing still needs **Check answer**.
+
+Number keys listen on the whole page, so use them on one question at a time. They are offered for single choice, multiple choice and true or false.
 
 ## Variables
 
-Each question keeps its state in variables named from its **Name prefix** (\`q1\` by default): \`q1_answered\`, \`q1_correct\`, \`q1_attempts\`, \`q1_triesLeft\`, \`q1_score\`, \`q1_locked\`, \`q1_feedback\`, \`q1_hint\`, \`q1_hintsUsed\`, \`q1_hintsLeft\`, \`q1_prompt\` and \`q1_items\` (what is shown, with \`selected\` and \`state\` per row). Use them anywhere: \`q1_score + q2_score\`, a progress bar bound to \`q1_attempts\`, a Next button shown when \`q1_correct\`. Renaming the prefix renames the variables and everything that reads them.
+Each question keeps its progress in variables, named from its **Name prefix** (\`q1\` by default). Renaming the prefix renames the variables and everything that reads them. Use them anywhere: \`q1_score + q2_score\`, a progress bar bound to \`q1_attempts\`, or a Next button shown when \`q1_correct\`.
 
-**Score** is the question's points times the share that is right, less **Retry −%** for each check after the first and **Hint −%** for each hint taken. With **Part marks** on, a multiple response, ordering or fill in the blank question is worth the share it got right.
+| Variable | Holds |
+|---|---|
+| \`q1_prompt\`, \`q1_items\` | the question text, and the options shown (each has \`selected\` and \`state\`) |
+| \`q1_answered\`, \`q1_correct\`, \`q1_locked\` | whether it has been checked, whether it is right, and whether it is finished (right, or out of tries) |
+| \`q1_attempts\`, \`q1_triesLeft\` | checks so far, and how many are left |
+| \`q1_hint\`, \`q1_hintsUsed\`, \`q1_hintsLeft\` | the hint showing, hints taken, hints left |
+| \`q1_score\`, \`q1_feedback\` | the score, and the feedback showing |
+
+A question's score is its **Points** times the share that is right, less **Retry −%** for each check after the first and **Hint −%** for each hint taken. With **Part marks** on, a multiple response, ordering or fill in the blank question is worth the share it got right.
 
 ## Worked examples
 
-Two finished ones to play first: **Matching question** and **Hotspot question** on the **Templates** tab, under **Examples**. Press **Make my copy** and change the pairs, or the picture and the right area.
+Each type has its own settings in the **Question** section. Two finished ones are ready to play first: **Matching question** and **Hotspot question** on the **Templates** tab, under **Examples**. Press **Make my copy** and change the pairs, or the picture and the right area.
 
-**Multiple choice.** Add question, *Multiple choice*. Type the prompt, type each option, and tick the right one. Set **Tries** to 2 and write a hint. In Preview pick a wrong option and press **Check answer**: the feedback says *Not quite*, and with a try left you can pick again. The second miss locks the question and (if **Show the right answer** is on) marks the right option.
+### Multiple choice
 
-**Multiple response.** Tick every right option. Turn **Part marks** on to give a share of the points for a half-right answer, and write **Partly right** feedback.
+Add question, *Multiple choice (one answer)*. Type the prompt, type each option, and tick the right one.
 
-**True or false.** Write the statement as the prompt and set **Statement is** to True or False. Edit the two labels for other wording ("Agree" and "Disagree").
+Set **Tries** to 2 and write a hint. In Preview, pick a wrong option and press **Check answer**. The feedback says *Not quite*, and with a try left you can pick again. The second miss locks the question and, if **Show the right answer when finished wrong** is on, marks the right option.
 
-**Fill in the blank.** The accepted answers go one per line: \`Paris\`, \`city of light\`. Case and extra spaces are ignored unless you tick **Match case**. A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses. A line written \`/colou?r/i\` is a pattern. **Add blank** adds another input in the look of the last one. Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).
+### Multiple response
 
-**Put in order.** List the items in the **right** order; the learner sees them shuffled (the first deal is never already right). Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
+Tick every right option. Turn **Part marks** on to give a share of the points for a half-right answer, and write **Partly right** feedback.
 
-**Extra terms and extra words.** Matching has an **Extra terms** list in the Question section, and fill the blanks a list of **Extra words**. They are dragged like the others but belong nowhere, so the learner has to leave them alone. Left in the pile is right. One dropped into a matching slot is marked wrong and takes that pair's slot, and with part marks each extra in a slot takes one pair's share off.
+### True or false
 
-**Categorise.** Add question, *Categorise (drag into groups)*. The Question section lists the **groups** and the **items**, and each item says which group it belongs in. The learner drags every item into a group box (a box takes any number of items, and an item stays where it is let go), or uses the keyboard as for matching. Every box takes every item, so a wrong drop is allowed and **Check answer** says how it went: right when every item is in its own group, part marks give the share in the right group, and the feedback says how many (*3 of 4 in the right group*). An item can have **Feedback if put in the wrong group**, said with the result. Tick **Say right or wrong as each item is dropped** and each drop answers straight away (*Eagle goes in Birds. Right.*) without using a try, through an *Item dropped in a group* node the kit wires to each box. Categorise questions are marked in the page, not on the server, because which group an item belongs in is part of how the layers are set up. Finished, the items stop moving, and (with **Show the right answer**) the wrong ones are listed with their group.
+Write the statement as the prompt and set **Statement is** to True or False. Edit the two labels for other wording ("Agree" and "Disagree").
 
-**Fill the blanks by dragging.** On *Fill in the blank* set **Answer by** to *Dragging words from a word bank*. Each blank becomes a slot, and a bank of word chips appears: the first plain (not a /pattern/) accepted answer of each blank, plus any **Extra words**. Check reads the word in each slot as what was typed, so accepted answers, case, tolerance, part marks and retries all work as for typing. Because only the answer words are in the page (not which blank each fits), a drag the blanks question can still be marked on the server. **Shuffle the word bank** deals the chips again each time it starts.
+### Fill in the blank
 
-**Matching.** Add question, *Matching (drag and drop)*. Each pair in the Question section is a term and what it matches (a country and its capital, a word and its meaning, a label and a place on a diagram). The learner drags each term into the slot beside a definition, or uses the keyboard: Tab to a term, Space to pick it up, the arrow keys to choose a slot, Space to drop, Escape to put it back (see [Drag and drop](drag-and-drop)). A slot holds one term; dropping another on it swaps them. **Check answer** is right when every term is in its own slot. With **Part marks** the score is the share of terms in the right place, and the feedback says how many (*2 of 4 matched correctly*). When the question finishes, each slot is marked ✓ Right or ✗ Wrong and (with **Show the right answer**) says which term belongs there; the terms stop moving. **Try again** puts the terms back. **Shuffle** deals the terms to different places each time it starts. Add or remove a pair and the layers follow; a new one takes the look of the others. To match labels to a diagram, move the slots over the picture and restyle the terms: they are ordinary layers.
+The learner types into one or more inputs. Write the accepted answers one per line: \`Paris\`, \`city of light\`.
+
+- Case and extra spaces are ignored unless you tick **Match case**.
+- A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses.
+- A line written \`/colou?r/i\` is a pattern.
+- **Add blank** adds another input in the look of the last one.
+- Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).
+
+### Put in order
+
+List the items in the **right** order. The learner sees them shuffled (the first deal is never already right) and moves them up and down.
+
+Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
+
+### Extra terms and extra words
+
+Matching has an **Extra terms** list in the Question section. A fill the blanks question answered by dragging has **Extra words**. They are dragged like the others but belong nowhere, so the learner has to leave them alone.
+
+Left in the pile is right. One dropped into a matching slot is marked wrong and takes that pair's slot. With part marks, each extra in a slot takes one pair's share off.
+
+### Categorise
+
+Add question, *Categorise (drag into groups)*. The learner drags every item into a group box. In the Question section you list the **groups** and the **items**, and each item says which group it **Belongs in**.
+
+A box takes any number of items, and an item stays where it is let go. The keyboard works as for matching. Every box takes every item, so a wrong drop is allowed, and **Check answer** says how it went.
+
+- It is right when every item is in its own group. Part marks give the share in the right group, and the feedback says how many (*3 of 4 in the right group*).
+- An item can have **Feedback if put in the wrong group**, said with the result.
+- Tick **Say right or wrong as each item is dropped** and each drop answers straight away (*Eagle goes in Birds. Right.*) without using a try. The kit does this through an *Item dropped in a group* node on each box.
+- When it finishes, the items stop moving, and with **Show the right answer when finished wrong** the wrong ones are listed with their group.
+
+Categorise questions are marked in the page, not on the server, because which group an item belongs in is part of how the layers are set up.
+
+### Fill the blanks by dragging
+
+On *Fill in the blank*, set **Answer by** to *Dragging words from a word bank*. Each blank becomes a slot, and a bank of word chips appears: the first plain (not a /pattern/) accepted answer of each blank, plus any **Extra words**.
+
+Check reads the word in each slot as if it had been typed, so accepted answers, case, tolerance, part marks and retries all work as for typing. **Shuffle the word bank** deals the chips again each time it starts.
+
+This kind can still be marked on the server (see [Marking on the server](question-kit#marking-on-the-server)): only the answer words are in the page, not which blank each fits.
+
+### Matching
+
+Add question, *Matching (drag and drop)*. Each pair in the Question section is a term and what it matches: a country and its capital, a word and its meaning, a label and a place on a diagram. Add or remove a pair and the layers follow. A new pair takes the look of the others.
+
+The learner drags each term into the slot beside a definition. A slot holds one term, and dropping another on it swaps them. With the keyboard: Tab to a term, Space to pick it up, the arrow keys to choose a slot, Space to drop, Escape to put it back (see [Drag and drop](drag-and-drop)).
+
+**Check answer** is right when every term is in its own slot. With **Part marks** the score is the share of terms in the right place, and the feedback says how many (*2 of 4 matched correctly*). When the question finishes, each slot is marked ✓ Right or ✗ Wrong and, with **Show the right answer when finished wrong**, says which term belongs there. The terms stop moving.
+
+**Try again** puts the terms back. **Shuffle** deals the terms to different places each time it starts. To match labels to a diagram, move the slots over the picture and restyle the terms: they are ordinary layers.
 
 ![A matching question: four country names to drag onto their capitals, with dashed slots on the right.](help/question-matching.png)
 
-**Hotspot.** Add question, *Hotspot (click the right place)*. The sample picture is drawn with shapes so the question works straight away: put your own image in its place (delete the shapes in the **Picture** layer, add an image, or give the Picture frame an image fill). The areas sit together in one **Areas** group over the picture, and the question has one click flow for all of them (a *When clicked or hovered* on the group, *Only when a child is hit*, feeding *Choose option* the area's place with \`event.childIndex\`), so adding an area adds no flow. Each **Area** in the Question section is a name, a tick for right, and a shape (rectangle, ellipse or polygon); **Edit on canvas** selects its layer so you can move, resize or reshape it with the usual tools, and **Show all areas** selects every one, since they are invisible until a learner picks one. Tick more than one area as right and the learner has to mark all of them (the areas become checkboxes, and **Part marks** score the share). Clicking an area picks it with a ring and a tint; after the question finishes the right areas are marked and *Right answer: Roof* is written under the picture, so it is not shown by colour alone. If clicks near an area should count, **Grow areas 8 px** makes every area bigger on each side (and **Shrink** the reverse). Each area can have its own feedback, said when it is the one clicked.
+### Hotspot
+
+Add question, *Hotspot (click the right place)*. The learner clicks an area of a picture. The sample picture is drawn with shapes so the question works straight away. Put your own image in its place: delete the shapes in the **Picture** layer and add an image, or give the Picture frame an image fill.
+
+Each **Area** in the Question section has a name, a tick for right, and a shape (rectangle, ellipse or polygon). The areas are invisible until a learner picks one.
+
+- **Edit on canvas** selects the area's layer, so you can move, resize or reshape it with the usual tools.
+- **Show all areas** selects every one.
+- Tick more than one area as right and the learner has to mark all of them. The areas become checkboxes, and **Part marks** score the share.
+- If clicks near an area should count, **Grow areas 8 px** makes every area bigger on each side (**Shrink areas 8 px** does the reverse).
+- Each area can have its own feedback, said when it is the one clicked.
+
+Clicking an area picks it with a ring and a tint. After the question finishes the right areas are marked and *Right answer: Roof* is written under the picture, so it is not shown by colour alone.
+
+The areas sit together in one **Areas** group over the picture, and the question has one click flow for all of them. Adding an area adds no flow. If you want to extend it: that flow is a *When clicked or hovered* on the group, set to *Only when a child is hit*, feeding *Choose option* the area's place with \`event.childIndex\`.
 
 ![A hotspot question over a drawn house: the Roof area is selected and shown with its outline.](help/question-hotspot.png)
 
@@ -2235,7 +3015,7 @@ Choose **Paste questions from Word or Excel** in the Add question menu: see [Pas
 
 If you already have questions in Moodle, or made them with the GIFT converter from a Word document, you do not have to retype them. Open the **Add question** menu and press **Import questions from a GIFT file**, then pick the file (\`.gift\` or \`.txt\`).
 
-Each question gets an artboard of its own, named after its title if it has one and otherwise "Question 3" and so on, in rows below what is already on the canvas. An empty artboard that is open (a new project's first one) takes the first question. They are ordinary questions from then on: the **Question** section changes anything, and you restyle them like any other. The whole import is one undo. Up to 100 questions come in from one file; the report says how many were left over.
+Each question gets a page of its own, named after its title if it has one and otherwise "Question 3" and so on, in rows below what is already on the canvas. An empty page that is open (a new project's first one) takes the first question. They are ordinary questions from then on: the **Question** section changes anything, and you restyle them like any other. The whole import is one undo. Up to 100 questions come in from one file; the report says how many were left over.
 
 | In the GIFT file | Becomes |
 |---|---|
@@ -2246,7 +3026,13 @@ Each question gets an artboard of its own, named after its title if it has one a
 | \`{#3.14:0.01}\`, \`{#1..5}\` (numerical) | Fill in the blank with a margin of error |
 | \`=term -> definition\` lines | Matching (drag and drop) |
 
-The text after a \`#\` on an answer becomes that option's feedback. The text after \`####\` is added to the "Correct" message. On true or false, the two \`#\` parts are the feedback for the wrong choice and the right one. A question written as \`The capital is {=Paris ~Rome}.\` shows a gap (\`_____\`) where the answers were. Backslash escapes (\`\\~\`, \`\\=\`, \`\\#\`, \`\\{\`, \`\\}\`, \`\\:\`, \`\\n\`) work as in Moodle, comment lines starting with \`//\` are ignored, and options stay in the order of the file (turn on **Shuffle** to deal them).
+Feedback comes across like this:
+
+- The text after a \`#\` on an answer becomes that option's feedback.
+- The text after \`####\` is added to the "Correct" message.
+- On true or false, the two \`#\` parts are the feedback for the wrong choice and the right one.
+
+A question written as \`The capital is {=Paris ~Rome}.\` shows a gap (\`_____\`) where the answers were. Backslash escapes (\`\\~\`, \`\\=\`, \`\\#\`, \`\\{\`, \`\\}\`, \`\\:\`, \`\\n\`) work as in Moodle, and comment lines starting with \`//\` are ignored. Options stay in the order of the file (turn on **Shuffle** to deal them).
 
 When it finishes, a report lists everything that did not come across, or came across changed, with the line number in the file. Nothing is dropped quietly:
 
@@ -2261,16 +3047,20 @@ Moodle XML files are not read yet.
 
 ## The whole quiz
 
-Every project has a built-in \`quiz\` that adds up its questions, for a results page that needs no wiring per question:
+A project's questions can add themselves up, so a results page needs no wiring per question. Every project has a built-in \`quiz\` that does it:
 
 | Name | Holds |
 |---|---|
 | \`quiz.score\`, \`quiz.max\`, \`quiz.percent\` | points earned, the most all the questions can score, and the share (two places) |
 | \`quiz.passed\`, \`quiz.passMark\` | at or over the pass mark from [Results and progress](results) (false and empty when there is none) |
 | \`quiz.count\`, \`quiz.finished\`, \`quiz.right\`, \`quiz.done\` | how many questions, how many are finished, how many of those are right, and whether all are finished |
-| \`quiz.questions\` | one entry for each question: \`prefix\`, \`page\` (its artboard's name), \`score\`, \`points\`, \`correct\`, \`locked\` |
+| \`quiz.questions\` | one entry for each question: \`prefix\`, \`page\` (its page's name), \`score\`, \`points\`, \`correct\`, \`locked\` |
 
-Use \`quiz.questions\` as a repeater's items to show a row for each question: \`{item.page}: {item.score} of {item.points}\`. Adding a question to the quiz adds a row, and a question's own settings are all there is to wire. A bank gone through once counts as one question with the run's score and points. A variable or data source called \`quiz\` takes the name over, as for any built-in. In Results and progress, **Score from: Total of all questions** makes the project's reported score this total.
+Use \`quiz.questions\` as a [repeater's](repeaters) items to show a row for each question: \`{item.page}: {item.score} of {item.points}\`. Adding a question to the quiz adds a row, and a question's own settings are all there is to wire.
+
+A bank gone through once counts as one question, with the run's score and points. A variable or data source called \`quiz\` takes the name over, as for any built-in.
+
+In Results and progress, **Score from: Total of all questions** makes the project's reported score this total.
 
 Two settings in the Question section help a quiz of several pages: **Keep the answer when the page is revisited** (coming back to the page in the same visit finds the question as it was left, rather than set up again; a drag question puts its layers back where the last check found them) and **Hide Try again** (leaves out the button, for a test that is marked once).
 
@@ -2293,7 +3083,9 @@ By default a bank loops for ever. Set **When the rows run out** to *Finish after
 | \`q1_setDone\` | true once every question is finished |
 | \`q1_missed\` | the rows (counting from 0) that finished wrong, in this run |
 
-**Check answer** has a **set done** output that fires when the question just checked was the last of the run, and **Reset question** has one that fires when there is no next question, so a Next question button can go straight to a results page. Moving on from a question without finishing it counts it as missed. On Reset question, **Bank run** set to *Start a new run* draws a fresh run with clean totals, and *Review the missed ones* runs only the rows in \`q1_missed\` (with nothing missed it is done at once).
+**Check answer** has a **set done** output that fires when the question just checked was the last of the run. **Reset question** has one that fires when there is no next question. So a Next question button can go straight to a results page.
+
+Moving on from a question without finishing it counts it as missed. On Reset question, **Bank run** set to *Start a new run* draws a fresh run with clean totals. *Review the missed ones* runs only the rows in \`q1_missed\` (with nothing missed it is done at once).
 
 Columns a row can have:
 
@@ -2310,18 +3102,25 @@ A CSV works the same way: the header names are the columns, in any case. The que
 
 ## Results
 
-**Report result** in the Question section adds a *Report result* node after **Check answer**'s *finished* output, sending the question's score (\`q1_score\`) to the project's Results (see the Results settings for the top score, pass mark and completion). With several questions, leave it off and report once yourself, for example a *Report result* node with the score \`q1_score + q2_score\` after the last one.
+A question can send its score to the project's Results (see the Results settings for the top score, pass mark and completion). Set **Report result** in the Question section to **Score so far** or **Complete, with the score**. It adds a *Report result* node after **Check answer**'s *finished* output, sending the question's score (\`q1_score\`).
+
+With several questions, leave it on **No** and report once yourself, for example a *Report result* node with the score \`q1_score + q2_score\` after the last one. Or use **Score from: Total of all questions** (see [The whole quiz](question-kit#the-whole-quiz)).
 
 ## Marking on the server
 
-Everything above marks in the learner's browser, so the right answers are in the file the learner downloads and a score is only ever what their browser says. For marks that have to be trustworthy, tick **Mark answers on the server** in the Marking part of the Question section. Both the share link and the **Link for StudyDesk** then serve the project without its answers (press **Update to the latest version** in [Share link](export#share-link) after you change it), and the **Link for StudyDesk** is the one that can check an answer:
+Everything above marks in the learner's browser. The right answers are in the file the learner downloads, and a score is only ever what their browser says.
 
-- The page that is served has the right answers taken out: which options are right, accepted answers and their patterns and tolerances, the feedback, and the hints. The right order of an ordering question is hidden too. Anyone who looks at the page's code finds none of it.
+For marks that have to be trustworthy, tick **Mark answers on the server** in the Marking part of the Question section. Both the share link and the **Link for StudyDesk** then serve the project without its answers (press **Update to the latest version** in [Share link](export#share-link) after you change it). The **Link for StudyDesk** is the one that can check an answer.
+
+How it works:
+
+- The page that is served has the right answers taken out: which options are right, accepted answers and their patterns and tolerances, the feedback, the hints, and the right order of an ordering question. Anyone who looks at the page's code finds none of it.
 - **Check answer** sends the learner's answer to the server, which marks it with the same marking the player uses, and sends back right or wrong, the score and the feedback to show. The tries, hints and score are kept by the server, so a learner who reloads or starts again does not get a fresh set of tries.
-- The server records the result itself. The mark that counts for each question is how it finished the first time (unless the set has **Retakes**, below). **Try again** after that is practice and does not change the recorded mark. The project's score is the total of those marks out of the questions' total points, it counts as complete when every server-marked question has finished, and it passes at the pass mark set in the Results settings.
+- The server records the result itself. The mark that counts for each question is how it finished the first time (unless the set has **Retakes**, see [Tries and retakes](question-kit#tries-and-retakes)). **Try again** after that is practice and does not change the recorded mark.
+- The project's score is the total of those marks out of the questions' total points. It counts as complete when every server-marked question has finished, and it passes at the pass mark set in the Results settings.
 - A **Report result** node, or anything else the browser sends as a result, is ignored for a project with server-marked questions: the server's own record is the only one. Questions that are not set to be marked on the server still do their normal marking in the page, but they add nothing to that record.
 - Checks and hints are limited to 30 a minute for each learner, so an answer can't be found by guessing over and over. A learner who goes over is asked to wait.
-- A learner who came in from an LMS over LTI 1.3 has their score sent to the LMS gradebook by the server when the whole set is finished, and again if their kept score changes. See [Spelling tests](question-kit#spelling-tests) for how.
+- A learner who came in from an LMS over LTI 1.3 has their score sent to the LMS gradebook by the server when the whole set is finished, and again if their kept score changes. See [Grading in the LMS](question-kit#grading-in-the-lms).
 
 What it does not do:
 
@@ -2334,58 +3133,164 @@ What it does not do:
 
 ## Spelling tests
 
-A spelling test plays a word and the learner types it. Build one with one **Fill in the blank** question for each word, one to a page the way the **Spelling test** starter does, and for each:
+A spelling test plays a word and the learner types it. You build one from **Fill in the blank** questions, one for each word and one to a page, the way the **Spelling test** starter does. The word is marked on the server and exists only in the audio, so it is not in the page for anyone to read.
+
+### Setting up a word
+
+For each word:
 
 1. Tick **Mark answers on the server** and **Spelling: letters must match exactly** on its blank.
-2. List every accepted spelling, one per line (\`judgement\` and \`judgment\`). Tick **Also accept American spellings** to accept the American form of each as well: the editor shows the forms it adds, so nothing is accepted that you can't see. It knows the common differences (colour/color, organise/organize, centre/center, travelled/traveled, paediatric/pediatric and a few dozen words that just differ) and leaves a word alone when it is not sure, so add anything else as its own line.
-3. Give the word its audio (see **The spoken word** below): a **Play sound** node on a button plays it. Write nothing of the word anywhere else (not in a layer name, a label or the prompt).
+2. List every accepted spelling, one per line (\`judgement\` and \`judgment\`).
+3. Give the word its audio (see [Voice for the word](question-kit#voice-for-the-word)). A **Play sound** node on a button plays it. Write nothing of the word anywhere else (not in a layer name, a label or the prompt).
 
-**The spoken word.** With **Spelling** ticked, the question has a **Voice for the word** section. **Word audio** says where the sound comes from: **Made with a voice** or **My own audio**. With a made voice, press **Make the audio with a voice** and the server turns the first accepted spelling into speech and saves it as an ordinary sound in the project's Assets, picked in that word's **Play sound** node (a page with no Play sound node gets a **Play the word** button with one). **Make the audio for all words** does every word with the same voice and speed. The speech is made here, while you are editing, so the learner's page only ever has the sound.
+Tick **Also accept American spellings** to accept the American form of each spelling as well. The editor shows the forms it adds, so nothing is accepted that you can't see. It knows the common differences (colour/color, organise/organize, centre/center, travelled/traveled, paediatric/pediatric and a few dozen words that are spelled differently). It leaves a word alone when it is not sure, so add anything else as its own line.
 
+### What counts as right
+
+Every letter, in order. Case is ignored unless **Match case** is on, and spaces round the word are ignored. A curly apostrophe typed on a phone counts as a plain one, but a missing apostrophe or hyphen is wrong, and accents have to be there (cafe is not café). Numbers are not compared as numbers.
+
+The box has the browser's own spellcheck, autocorrect and automatic capitals switched off (**No browser help** in the input's settings), so it neither underlines nor fixes the word.
+
+### Voice for the word
+
+With **Spelling: letters must match exactly** ticked, the question has a **Voice for the word** section. **Word audio** says where the sound comes from: **Made with a voice** or **My own audio**. Switching between the two never deletes either file. Both stay in Assets, and each question remembers which one is in use.
+
+**Play** (under **Word audio**, for either kind of audio) plays the sound the word's **Play sound** node plays now, so you can check it without leaving the Inspector or opening Preview.
+
+- It reads **Stop** while it plays. It stops by itself at the end, when you move to another word or page, and when a new audio is made, chosen or recorded.
+- Only one sound plays at a time.
+- It is switched off, with the reason in its tooltip, until the word has audio.
+- It plays in the editor only. Nothing changes in the learner's page.
+
+If the page has more than one **Play sound** node, **Put the audio in** asks which one the word's button runs.
+
+#### Made with a voice
+
+Press **Make the audio with a voice**. The server turns the first accepted spelling into speech and saves it as an ordinary sound in the project's Assets, picked in that word's **Play sound** node. A page with no Play sound node gets a **Play the word** button with one. The speech is made while you are editing, so the learner's page only ever has the sound.
+
+- **Make the audio for all words** does every word with the same voice and speed. Each word keeps its own **Say it like** and **Sentence**, and words set to My own audio are skipped.
 - **Voice** and **Speed**: eight British voices (there is no Australian voice yet). A little under normal speed, the default, is clear for a spelling test.
-- **Preview** plays it without saving anything, so you can hear a word before it goes in.
-- **Say it like**: when the voice says a word wrongly, or does not know it, type the word as it sounds in ordinary English words (\`cull er\` for colour). It is only used to make the audio and is never in the page. A word the voice does not know says so and nothing is made until you give it a **Say it like**.
-- **Sentence** is said after the word, as a teacher would (\`The colour of the sky is blue.\`), and **Say the word again at the end** gives word, sentence, word. Both are only in the audio.
-- The first time anyone uses it, the server has to download the voice once (about 130 MB), and the section offers **Set up the voice**. If the server has no speech engine it says so, and you can still record the words yourself, upload the files and pick them in the **Play sound** node.
-- **My own audio** hides the voice controls and shows a sound picker: choose a sound already in Assets, **Add a new sound** (upload), or **Record it now** with your microphone. It goes in the same **Play sound** node the made voice uses, so the page's buttons and graph do not change. Switching between the two never deletes either file: the made audio and your own both stay in Assets and each question remembers which is in use. **Make the audio for all words** skips words set to My own audio. Marking on the server, and the word being kept off the learner's page, work exactly as before, because your audio is still the only place the word is. The editor warns when the audio file's name contains the word (Preview and exported files keep file names, and the share link renames them), so name it something else. Recordings are made in the browser (webm, ogg or m4a depending on the browser): use an uploaded mp3 or wav if you need a particular format.
-- Make a word again after you change it, and the new audio replaces the old. Listen to every word before you share: a voice can say an unusual word wrongly, and **Say it like** fixes that.
+- **Preview** plays the made voice without saving anything, so you can hear a word before it goes in.
+- **Say it like**: when the voice says a word wrongly, or does not know it, type the word as it sounds in ordinary English words (\`cull er\` for colour). It is only used to make the audio and is never in the page. A word the voice does not know says so, and nothing is made until you give it a **Say it like**.
+- **Sentence** is said after the word, as a teacher would (\`The colour of the sky is blue.\`). **Say the word again at the end** gives word, sentence, word. Both are only in the audio.
 
-**Practice mode.** Tick **Practice mode** and the learner's own device reads the word aloud instead (the **Play sound** node becomes a **Read aloud** node holding the word). The device voice has to be given the word, so **the word is in the page, where anyone can read it in their browser's developer tools**. Use it for practice, never a graded test. The question is then marked in the page and sends no grade, **Mark answers on the server** is turned off, and the share link does not hide the word. The voice is whatever the learner's device has, and with none for the language nothing is said. Turning it off puts the audio back but does not turn server marking back on: do that yourself.
+Make a word again after you change it (the button then reads **Make the audio again**) and the new audio replaces the old. Play every word before you share: a voice can say an unusual word wrongly, and **Say it like** fixes that.
 
-**What counts as right.** Every letter, in order. Case is ignored unless **Match case** is on, and spaces round the word are ignored. A curly apostrophe typed on a phone counts as a plain one, but a missing apostrophe or hyphen is wrong, and accents have to be there (cafe is not café). Numbers are not compared as numbers. The box has the browser's own spellcheck, autocorrect and automatic capitals switched off (**No browser help** in the input's settings), so it neither underlines nor fixes the word.
+The first time anyone uses it, the server has to download the voice once (about 130 MB), and the section offers **Set up the voice**. If the server has no speech engine it says so. You can still record the words yourself, or upload the files and pick them in the **Play sound** node.
 
-**Spell checkers and writing tools.** With **Spelling** ticked, the question also has a **Spell checkers and writing tools** section. What the page can switch off, it does: the answer box asks for no spellcheck, autocorrect, automatic capitals or autofill, carries the opt-out attributes Grammarly and LanguageTool honour (\`data-gramm\`, \`data-enable-grammarly\`, \`data-lt-active\`), and with **Block paste and drop into the box** ticked the answer has to be typed. What it can't switch off, it looks for. The page watches for what writing tools put into it (Grammarly, LanguageTool, Microsoft Editor, ProWritingAid, QuillBot and Ginger) and for an answer that changes without anyone typing. **When a writing tool is found** chooses what happens:
+#### My own audio
 
-- **Block until it is turned off** puts up a panel that says what was found and how to turn that tool off for this site. Nothing behind it can be reached. The page checks again by itself and the panel goes as soon as nothing is found; **Check again** does it on the spot. If the answer changed by itself, the learner presses a button and the answer goes back to what they typed.
+**My own audio** hides the voice controls and shows a sound picker. Choose a sound already in Assets, **+ Add a new sound…** to upload one, or **Record it now** to use your microphone. Say the word clearly and do not name the file after it. The editor warns when the file's name contains the word, because Preview and exported files keep file names (the share link renames them).
+
+To record a word:
+
+1. Press **Record it now**, say the word, then press **Stop recording**. The take is only held in the editor. It is not uploaded and it is not in the project yet.
+2. Press **Listen** to hear it.
+3. Press **Use this recording** to keep it. It is added to Assets and becomes the word's audio, as one undo step. Or press **Discard**: nothing is saved and there is nothing to undo.
+
+**Record again** throws the take away and starts over. Moving to another word or page, or switching to **Made with a voice**, discards a take you have not used (a take of a couple of seconds or more is mentioned in a message). Closing the editor with one asks first.
+
+Whatever you use goes in the same **Play sound** node the made voice uses, so the page's buttons and graph do not change. Marking on the server, and keeping the word off the learner's page, work as before, because your audio is still the only place the word is.
+
+Recordings are made in the browser (webm, ogg or m4a depending on the browser). Use an uploaded mp3 or wav if you need a particular format.
+
+### Practice mode
+
+Tick **Practice mode** and the learner's own device reads the word aloud instead. The **Play sound** node becomes a **Read aloud** node holding the word.
+
+The device voice has to be given the word, so **the word is in the page, where anyone can read it in their browser's developer tools**. Use it for practice, never a graded test. The question is then marked in the page and sends no grade, **Mark answers on the server** is turned off, and the share link does not hide the word.
+
+The voice is whatever the learner's device has, and with none for the language nothing is said. Turning practice mode off puts the audio back but does not turn server marking back on: do that yourself.
+
+### Spell checkers and writing tools
+
+With **Spelling: letters must match exactly** ticked, the question also has a **Spell checkers and writing tools** section. It keeps spell check, Grammarly and similar tools from helping with the word. It switches off what the page can, and looks for what it can't.
+
+**What the page switches off.** Ticking **Switch off browser spell check and writing helpers in the box** makes the answer box ask for no spellcheck, autocorrect, automatic capitals or autofill, and asks the writing tools that honour an opt-out (Grammarly and LanguageTool) to stay out. With **Block paste and drop into the box** ticked, the answer has to be typed.
+
+**What it looks for.** The page watches for what writing tools put into it (Grammarly, LanguageTool, Microsoft Editor, ProWritingAid, QuillBot and Ginger) and for an answer that changes without anyone typing. **When a writing tool is found** chooses what happens:
+
+- **Block until it is turned off** puts up a panel that says what was found and how to turn that tool off for this site. Nothing behind it can be reached.
 - **Warn only** shows the same panel as a notice the learner can dismiss.
 - **Off** looks for nothing (the other ticks still apply).
 
-New spelling questions start on **Block** with paste refused. Existing ones are left as they were until you change them. Whatever was found is kept with the learner's result: **Results** shows the tools found and how often the panel came up, and the results spreadsheet has a **writing tools found** column. That works on the Link for StudyDesk, where there is a learner to keep it for. The settings, the watching and the panel are part of the player, so they work the same on the share link, in the StudyDesk embed and inside an exported single file (an exported file has no learner record to keep what was found in, so there the panel is all there is). In **Preview** the panel has a **Skip (Preview only)** button so you are not locked out of your own test.
+With Block, the page checks again by itself and the panel goes as soon as nothing is found. **Check again** does it on the spot. If the answer changed by itself, the learner presses a button and the answer goes back to what they typed.
 
-**Assistive technology.** Screen readers, magnifiers, switch devices and other assistive technology put nothing in the page and are never looked for. If a tool a learner relies on does look like a writing tool, set an **Exemption code**: the learner types it in the panel and is let through for the rest of their visit, and their result says an exemption was used. The page only holds a scrambled form of the code, so give the code itself to that learner only. The panel also tells learners to ask their teacher about an exemption.
+New spelling questions start on **Block until it is turned off** with paste refused. Existing ones are left as they were until you change them.
 
-**What the guard cannot do.** Be plain with yourself about this, and with learners if you like:
+**What is kept.** Whatever was found is kept with the learner's result. **Results** shows the tools found and how often the panel came up, and the results spreadsheet has a **writing tools found** column. That works on the Link for StudyDesk, where there is a learner to keep it for.
+
+The settings, the watching and the panel are part of the player, so they work the same on the share link, in the StudyDesk embed and inside an exported single file. An exported file has no learner record to keep what was found in, so there the panel is all there is. In **Preview** the panel has a **Skip (Preview only)** button so you are not locked out of your own test.
+
+#### Exemption code for assistive technology
+
+Screen readers, magnifiers, switch devices and other assistive technology put nothing in the page and are never looked for. If a tool a learner relies on does look like a writing tool, set an **Exemption code**.
+
+1. Type a code of at least 4 characters in **Exemption code** (it shows when the setting above is Block or Warn only) and press **Set code**.
+2. Give the code to that learner only. The page holds only a scrambled form of it, and it is not shown again here.
+3. The learner types it in the panel and is let through for the rest of their visit. Their result says an exemption was used.
+
+**Remove code** takes it away. The panel also tells learners to ask their teacher about an exemption.
+
+#### What the guard cannot do
+
+Be plain with yourself about this, and with learners if you like.
 
 - The keyboard on a phone or tablet, and a computer's own autocorrect and text suggestions, are outside the page. The page can't see them or turn them off. On an iPhone or iPad the autocorrect setting is only a hint the keyboard may ignore.
 - A second device, a desktop program, or a tool that puts nothing in the page can't be seen at all.
-- The list of markers is what each tool is known (or, for Microsoft Editor, ProWritingAid, QuillBot and Ginger, generally believed) to put in a page. A tool that changes its markers slips through until the list (\`src/guard-tools.ts\` in the player) is updated, which is why the page also watches for an answer changing without typing.
+- The list of tools is what each is known (or, for Microsoft Editor, ProWritingAid, QuillBot and Ginger, generally believed) to put in a page. A tool that changes its markers slips through until the player's list is updated, which is why the page also watches for an answer changing without typing.
 - A writing helper only shows it is on in the page if it is allowed to run on this site. A learner can turn one on after the panel has gone.
 
 So treat it as a strong nudge and a record, not a lock. It works best alongside what the test already does: the word is marked on the server and only in the audio.
 
-**Keeping the word out of the page.** The page learners get has no accepted spellings in it, because the question is marked on the server. The word is in the audio, so the audio is the only place it is. In a project with spelling questions, **Update to the latest version** on the share link also renames every audio asset to a plain name (\`colour.mp3\` becomes \`audio-1.mp3\`) and cuts the title and comment tags out of mp3 and wav files. Other kinds of audio keep their tags, and the share says so: use mp3 or wav. Speech made on the learner's own device (the browser reading text aloud) is not an option for a graded test: it would need the word as text in the page, which is why **Practice mode** is only for practice. Make the words with the **Voice for the word** section, or record them and upload the files. Audio the voice makes is a plain wav with no tags.
+### Keeping the word out of the page
 
-What this does not protect against: a learner who writes down what they hear (that is the test), who runs the audio through speech recognition, or who has your project open in the editor. **Preview** and any file you export still carry the answers.
+The page learners get has no accepted spellings in it, because the question is marked on the server. The word is in the audio, so the audio is the only place it is.
 
-**Submit, Try again and Hint.** **Play the word** leads the question card's button row, in the brand's accent colour, and **Submit answer** sits at the far right, so the word's own action and the final answer are at opposite ends and never look alike. A Play the word button that the **Voice for the word** section adds to a page goes in the same place. The starter's answer button says **Submit answer**, since the word is marked once and the mark is final, and **Play the word** switches itself off (reading "Playing...") while the word is going, so a second press can't play it over the first. It switches back on when the word ends, is stopped or cannot be loaded. **Try again** and **Hint** are off to begin with, each one project variable you change once for every word: \`allowTryAgain\` (a learner who got a word wrong may clear the box and have another go, for practice, so the first mark still stands) and \`offerHint\` (a small **Hint** pill at the top right of the card, opposite the prompt, which shows the hint typed for the word in **Hints** in the Question section; the hint stays on the server with the answers, and it never holds the word). Set them in the Variables tab: the starter's initial value is what the learner opens with. A word page you copy keeps all of it.
+In a project with spelling questions, **Update to the latest version** on the share link also renames every audio asset to a plain name (\`colour.mp3\` becomes \`audio-1.mp3\`) and cuts the title and comment tags out of mp3 and wav files. Other kinds of audio keep their tags, and the share says so, so use mp3 or wav. Audio the voice makes is a plain wav with no tags.
 
-**Tries and retakes.** **Tries** is how many goes at one word (1 for a test). **Retakes** (in the Marking part, set the same on every word) lets the learner go through the whole test again: a round is every word finished once, the server keeps each round, and the score that counts is the **Best round** or the **Latest round**. Choose a set number of retakes, or unlimited. A **Reset question** node with **Retake** on (the starter's **Retake** button) starts the next round for every word at once, and only when the round is finished and a retake is left, so opening a page again never uses one up. Until the last retake the right spelling is not shown after a wrong word, so a learner can't read the answers off one round to use in the next. The question's \`round\`, \`retakesLeft\`, \`kept\` and \`keptMax\` variables say where the learner is and what is on record, for a results page to show.
+Speech made on the learner's own device (the browser reading text aloud) is not an option for a graded test. It would need the word as text in the page, which is why **Practice mode** is only for practice. Make the words with the **Voice for the word** section, or record them and upload the files.
 
-**Grading in the LMS.** Add the project to a course with the LMS's **Select content** picker (or an external tool link) and, when the LMS has a grade for that link, the server sends the score to it. It sends the kept score with the test's total points once every word is finished in a round, and again only when the kept score changes. It needs the LMS to be registered for LTI 1.3 with grade passback allowed, and the link has to be set up for grades in the course. A learner signed in another way gets everything but the grade. If the LMS refuses a score, the server tries again a moment later and with the learner's next click, and the record shows what was sent.
+This does not protect against a learner who writes down what they hear (that is the test), who runs the audio through speech recognition, or who has your project open in the editor. **Preview** and any file you export still carry the answers.
+
+### Submit, Try again and Hint
+
+On a spelling card, **Play the word** leads the button row and **Submit answer** sits at the far right (see [The button row on a question card](question-kit#the-button-row-on-a-question-card)). The starter's answer button says **Submit answer**, since the word is marked once and the mark is final. A Play the word button that the **Voice for the word** section adds to a page goes in the same place.
+
+**Play the word** switches itself off (reading "Playing...") while the word is going, so a second press can't play it over the first. It switches back on when the word ends, is stopped or cannot be loaded.
+
+**Try again** and **Hint** are off to begin with. Each is one project variable you change once for every word, in the Variables tab. The starter's initial value is what the learner opens with, and a word page you copy keeps all of it.
+
+- \`allowTryAgain\`: a learner who got a word wrong may clear the box and have another go, for practice. The first mark still stands.
+- \`offerHint\`: a small **Hint** pill at the top right of the card, opposite the prompt, shows the hint typed for the word in **Hints** in the Question section. The hint stays on the server with the answers, and it never holds the word.
+
+### Tries and retakes
+
+**Tries** is how many goes at one word (1 for a test). **Retakes**, in the Marking part and set the same on every word, lets the learner go through the whole test again. A round is every word finished once, and the server keeps each round.
+
+- **Retakes** has three choices: **Off (first go counts, then practice)**, **A set number of retakes** (with **Retakes allowed**) and **Unlimited retakes**.
+- **Score kept** says which round counts: the **Best round** or the **Latest round**.
+- A **Reset question** node with **Retake** on (the starter's **Retake** button) starts the next round for every word at once. It works only when the round is finished and a retake is left, so opening a page again never uses one up.
+- Until the last retake the right spelling is not shown after a wrong word, so a learner can't read the answers off one round to use in the next.
+
+The question's \`round\`, \`retakesLeft\`, \`kept\` and \`keptMax\` variables say where the learner is and what is on record, for a results page to show.
+
+### Grading in the LMS
+
+Add the project to a course with the LMS's **Select content** picker (or an external tool link). When the LMS has a grade for that link, the server sends the score to it. It sends the kept score with the test's total points once every word is finished in a round, and again only when the kept score changes.
+
+It needs the LMS to be registered for LTI 1.3 with grade passback allowed, and the link has to be set up for grades in the course. A learner signed in another way gets everything but the grade. If the LMS refuses a score, the server tries again a moment later and with the learner's next click, and the record shows what was sent.
 
 ## Accessible by default
 
-The prompt is a heading, the options are a radio group (or checkboxes) with their text as the name and *Right* / *Wrong* / *This was the right answer* as the description once they are marked, every part is reachable with Tab and operated with Enter and Space, and **Check answer**, **Hint** and the ordering moves announce through the live region (see [Accessibility](accessibility)): the feedback, the hint, "Evaporation, position 2 of 4". Right and wrong are shown with words (✓ Right, ✗ Wrong) as well as colour. A matching question's terms are named buttons that screen readers announce as draggable, picked up and dropped with the keyboard, and told where they landed. A hotspot's areas are focusable radio buttons (checkboxes when several are right) named after the area, so the picture can be answered without a mouse; give every area a name, and the picture an accessible description. These need the Accessibility preference on, which is the default.
+Questions work with a keyboard and a screen reader without extra setup. These need the Accessibility preference on, which is the default.
+
+- The prompt is a heading. The options are a radio group (or checkboxes) with their text as the name, and *Right*, *Wrong* or *This was the right answer* as the description once they are marked.
+- Every part is reachable with Tab and operated with Enter and Space.
+- **Check answer**, **Hint** and the ordering moves announce through the live region (see [Accessibility](accessibility)): the feedback, the hint, "Evaporation, position 2 of 4".
+- Right and wrong are shown with words (✓ Right, ✗ Wrong) as well as colour.
+- A matching question's terms are named buttons that screen readers announce as draggable. They are picked up and dropped with the keyboard, and the learner is told where they landed.
+- A hotspot's areas are focusable radio buttons (checkboxes when several are right) named after the area, so the picture can be answered without a mouse. Give every area a name, and the picture an accessible description.
 
 ## Copies, deleting and changing type
 
@@ -2395,7 +3300,7 @@ The prompt is a heading, the options are a radio group (or checkboxes) with thei
 
 ## Reference
 
-The question frame holds its settings in \`question\`, and each part layer carries a \`questionPart\` marker so the settings can find it again after it is renamed or moved. Both are in the exported file; the player uses the settings and ignores the markers. The nodes are **Check answer**, **Reset question**, **Show hint**, **Choose option** and **Move item** in the [node reference](interaction-nodes). Not yet in the kit: matching (which would use [Drag and drop](drag-and-drop)) and hotspots.
+A question keeps its settings on its frame, and each part layer is marked as part of the question, so the settings can find it again after it is renamed or moved. Both are in the exported file. The player uses the settings and ignores the markers. The nodes are **Check answer**, **Reset question**, **Show hint**, **Choose option** and **Move item** in the [node reference](interaction-nodes).
 `,
   },
   {
@@ -2406,9 +3311,9 @@ The question frame holds its settings in \`question\`, and each part layer carri
     keywords: 'command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share',
     body: `Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
 
-![The command palette searching for timeline: the Open Timeline command, then matching help pages.](help/command-palette.png)
+![The command palette searching for timeline: the New timeline and Open Timeline commands, then matching help pages.](help/command-palette.png)
 
-Each row shows its **shortcut** if it has one, or the kind of command it is. A command that cannot run just now (nothing selected, nothing to undo) is greyed and says why. A switch shows **On** or **Off**, and running it flips it. Press <kbd>F1</kbd> inside it to search the help instead. Matching help pages are listed under the commands, labelled **Help**, and <kbd>Enter</kbd> on one opens it.
+Each row shows its **shortcut** if it has one (your own keys, if you changed them), or the kind of command it is. A command that cannot run at the moment (nothing selected, nothing to undo) is greyed and says why. A switch shows **On** or **Off**, and running it flips it. Press <kbd>F1</kbd> inside it to search the help instead. Matching help pages are listed under the commands, labelled **Help**, and <kbd>Enter</kbd> on one opens it.
 
 ## What it can do
 - **Add**: a rectangle, ellipse, text, frame, button, input field, link, chart and the other layers, in the middle of the open page; **Add a page**; **Add question** (and [paste questions](paste-questions)).
@@ -2420,9 +3325,9 @@ Each row shows its **shortcut** if it has one, or the kind of command it is. A c
 - **View**: zoom, grid, rulers, notes, bones, snapping and each snap target, page arrows.
 - **Tools**: pick any tool, with its key.
 - **Panels** and **Workspaces**: open any panel (Timeline, Interactions, Accessibility, Usage...) or switch to any workspace, built in or saved.
-- **Project**: Preview, Share, invite people, share for review, save as a template, revision history, Preferences, Save now, undo and redo, and every export.
+- **Project**: Preview, Share, invite people, share for review, save as a template, revision history, Preferences, **Keyboard shortcuts**, Save now, undo and redo, and every export.
 
-It only does what the menus and buttons already do, with the same results and the same undo.
+It only does what the menus and buttons already do, with the same results and the same undo. Every command in it can be given a key of your own: see [Keyboard shortcuts](shortcuts#every-panel-tool-and-action-can-have-a-key).
 
 ## When Ctrl+K does something else
 While you are **typing in a text layer** <kbd>Ctrl</kbd>+<kbd>K</kbd> adds a link, as in any editor. On the projects page, where there is no palette, it searches the help. While Preview is open it searches the help in a new window.`,
@@ -2433,17 +3338,19 @@ While you are **typing in a text layer** <kbd>Ctrl</kbd>+<kbd>K</kbd> adds a lin
     group: 'Import and export',
     summary: 'One list of what is most likely wrong, shown when you press Share or Export, with a way to go and look at each and to fix some.',
     keywords: 'before share check publish export dead button does nothing unreachable page template sample text placeholder alt text description contrast broken link unused file size heavy checklist this is fine share anyway',
-    body: `When you press **Share → Share…**, or **Export → Single HTML file** or **Project package**, and there is something likely to be wrong, a short list opens first: **3 things to look at**. If there is nothing, you go straight through. The Share dialog also carries a line at the top saying the same (**Show me** opens the list).
+    body: `**Before you share** is a short list of what is most likely to be wrong with your project, so you can fix it before learners see it. It never stops you sharing.
+
+It opens by itself when you press **Share → Share…**, or **Export → Single HTML file** or **Project package**, and there is something to look at. The heading counts the problems, for example **3 things to look at**. If there is nothing, you go straight through. The Share dialog also carries a line at the top saying the same (**Show me** opens the list). For the Share dialog itself, see [Sharing](export#share-link).
 
 ![The Before you share list: a button that does nothing, template items still to do, sample words, a picture with no description.](help/before-you-share.png)
 
 ## What it looks for
 - **Buttons that do nothing when clicked.** A button layer with no click, press or hover on it (or on what holds it), that is not switched off. **Choose what it does** opens the [behaviour chooser](interactions#behaviours-when-this-is-clicked) on it.
-- **Pages nothing leads to.** Pages no button or link can reach from the start page, following **Go to artboard** (and Next and Previous). It stays quiet if a graph picks pages by expression, since that could lead anywhere, and pages another page draws as an [instance](instances) or as a master do not count.
+- **Pages nothing leads to.** Pages no button or link can reach from the start page, following **Go to a page** (and Next and Previous). It stays quiet if a graph picks pages by expression, since that could lead anywhere, and pages another page draws as an [instance](instances) or as a master do not count.
 - **Things from the template still to do.** The [checklist](templates#use-a-template): items not ticked, ticked but the layer is still the template's, or pointing at a layer that is gone. **Open the checklist** opens it.
 - **Sample words.** Text, button and link words that still say "Text" or "Button", "Lorem ipsum", "Your title here", "Replace this", "[Your name]", "TBC" and the like. **Go there** puts the cursor in the text.
 - **Pictures and videos with no description.** Type the description in the list and press **Add it**. See [Accessibility checker](accessibility-checker).
-- **Text that is hard to read.** The checker's colour contrast problems. **Fix them for me** applies the safe fixes in one step (undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>).
+- **Text that is hard to read.** The checker's colour contrast problems. **Fix them for me** applies the safe fixes in one step (undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>). When only some can be fixed safely it reads **Fix 2 of them for me**.
 - **Links and references that lead nowhere.** A link layer with no address, or things the [Usage](usage) panel finds pointing at something that is gone.
 - **Files that add up to a lot**, over 25 MB, with the biggest named, and **files nothing uses**. **Remove the files nothing uses…** asks first, like the Usage panel. See [Download size](download-size).
 
@@ -2452,7 +3359,9 @@ Layers that are locked (the brand's logo and footer) are left out: they are not 
 ## Going there, fixing, and "This is fine"
 Each kind of problem is one line, saying how many there are. Click it (or press <kbd>Enter</kbd> on it) to open it and see each one, why it matters and the fixes; click again to close it. When there is only one kind it starts open.
 
-**Go there** closes the list, takes you to the page, selects the layer and (for words) lets you type. Press Share again when you are ready. Each row has **This is fine** for the ones that are meant to be like that (a decorative button, a picture that is only decoration): it leaves it off the list from then on. The mark is kept in this browser for the project, like the accessibility checker's **reviewed** marks (and a picture's mark is the same one the checker uses), and **Forget what I marked as fine** at the bottom puts them all back.
+**Go there** closes the list, takes you to the page, selects the layer and (for words) lets you type. Press Share again when you are ready.
+
+Each row has **This is fine** for the ones that are meant to be like that (a decorative button, a picture that is only decoration). It leaves that one off the list from then on. The mark is kept in this browser for the project, like the accessibility checker's **reviewed** marks (a picture's mark is the same one the checker uses). **Forget what I marked as fine** at the bottom puts them all back.
 
 **Share anyway** (or **Export anyway**) carries on regardless: the list only ever advises.
 
@@ -2464,7 +3373,14 @@ The same checks are available piece by piece: the [Accessibility](accessibility-
     group: 'Interactivity',
     summary: 'Paste a list or table of questions from Word or a spreadsheet, or open a filled in template, see a preview, and add them as kit questions.',
     keywords: 'paste questions import word docx excel xlsx spreadsheet csv table template list quiz bank bulk multiple choice true false blank matching',
-    body: `If your questions are already in Word or a spreadsheet, you do not have to retype them. Open the **Add question** menu and choose **Paste questions from Word or Excel**, then paste them in (or press **Open a file** to read a filled in template). A preview shows the questions it understood and the lines it did not, and nothing is added until you press **Add**. Each question gets an artboard of its own and is an ordinary [kit question](question-kit) from then on. Press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type "paste questions" to open it from the command palette.
+    body: `If your questions are already in Word or a spreadsheet, you do not have to retype them. Paste them in, check what the editor understood, and add them as [questions](question-kit).
+
+1. Open the **Add question** menu and choose **Paste questions from Word or Excel**.
+2. Paste the questions into the box, or press **Open a file…** to read a filled in template.
+3. Check the preview. It shows the questions it understood, the lines it did not (**Not understood**) and anything it changed on the way in.
+4. Press **Add questions** (the button counts them, for example **Add 3 questions**). Nothing is added until you do.
+
+Each question gets a page of its own and is an ordinary [question](question-kit) from then on. You can also press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type "paste questions" to open it from the [command palette](command-palette).
 
 ![The Paste questions dialog: lines pasted on the left, what it understood and what it did not on the right.](help/paste-questions.png)
 
@@ -2475,7 +3391,9 @@ Each template has a worked example of every kind of question it reads: multiple 
 - [Excel template (.xlsx)](templates/question-template.xlsx): a row for each question, with a second sheet of instructions.
 - [CSV template (.csv)](templates/question-template.csv): the same rows, as a plain file for any spreadsheet.
 
-Delete the examples (or write under them), fill in your own, then copy what you wrote and paste it in, or open the saved file. Headings and grey notes in the Word file are ignored, so it does not matter if you leave the examples in. Only the first sheet of the Excel file is read.
+Delete the examples (or write under them) and fill in your own. Then copy what you wrote and paste it in, or open the saved file.
+
+Headings and grey notes in the Word file are ignored, so it does not matter if you leave the examples in. Only the first sheet of the Excel file is read.
 
 ## As lines (Word, email, a text file)
 One question in each block, with a blank line between questions. The first line is the question (a number in front of it, like \`1.\` or \`Q1:\`, is dropped) and every line after it is a choice:
@@ -2494,10 +3412,15 @@ Feedback: Mercury orbits closest.
 - **True/False**: the question, then \`Answer: True\` or \`Answer: False\`. Choices called True and False with one marked work too.
 - **Fill in the blank**: the question, then \`Answer: H2O | h2o\`, every accepted answer split by \`|\`.
 - **Matching**: a pair on each line, written \`France = Paris\` (or \`->\`), two to 8 pairs.
-- **Type** is optional: Multiple choice, Multiple answer, True/False, Fill in the blank or Matching. Without it the kind is worked out (a question with two or more right choices becomes Multiple answer). **Title** names the artboard. **Feedback** is shown once the question is finished.
+- **Type** is optional: Multiple choice, Multiple answer, True/False, Fill in the blank or Matching. Without it the kind is worked out (a question with two or more right choices becomes Multiple answer). **Title** names the page. **Feedback** is shown once the question is finished.
 
 ## As a table (Excel, Word table, CSV)
-Copy the cells (with the headings) and paste. The headings are matched by their words, in any order: **Type**, **Question**, **Option 1**, **Option 2** and so on (as many as you like), **Correct** and **Feedback**. **Correct** takes the letter or number of the right choice (\`B\` or \`2\`), several as \`A, C\`, or \`True\`/\`False\`. You can also mark the right option with a \`*\` instead. For fill in the blank the option cells are the accepted answers, and for matching each option cell is a pair, \`term = match\`. With no heading row, the first cell of a line is the question and the others are choices.
+Copy the cells (with the headings) and paste. The headings are matched by their words, in any order: **Type**, **Question**, **Option 1**, **Option 2** and so on (as many as you like), **Correct** and **Feedback**.
+
+- **Correct** takes the letter or number of the right choice (\`B\` or \`2\`), several as \`A, C\`, or \`True\`/\`False\`. You can also mark the right option with a \`*\` instead.
+- For fill in the blank the option cells are the accepted answers.
+- For matching each option cell is a pair, \`term = match\`.
+- With no heading row, the first cell of a line is the question and the others are choices.
 
 ## What it will not read
 Ordering, categorise and hotspot questions are not pasted (add them from the Add question menu), and nor are pictures, part marks or feedback on individual choices. Every line it cannot use is listed in the preview with its line (or row) number and why, so you can fix it in the box and see it change. At most 100 questions are added at once.`,
@@ -2508,7 +3431,7 @@ Ordering, categorise and hotspot questions are not pasted (add them from the Add
     group: 'Interactivity',
     summary: 'Named values (number, text, true/false, colour, choice) shared by the whole project.',
     keywords: 'variable state value number string boolean color enum choice options input',
-    body: `Variables hold the state of an interactive: a score, a name, whether a panel is open. They belong to the project, so every artboard sees the same values.
+    body: `A variable is a named value the activity remembers while it runs: a score, a name, whether a panel is open. Use variables when something on one page has to change something else, on the same page or another. They belong to the project, so every page sees the same values.
 
 Add them in the **Variables** tab. Each has a name, a type and a starting value.
 
@@ -2524,13 +3447,45 @@ Add them in the **Variables** tab. Each has a name, a type and a starting value.
 Choice variables show as a dropdown wherever you set them, so you can't type a value that isn't on the list. In expressions, \`enums.difficulty\` is the list of that choice's options, so \`enums.difficulty.indexOf(difficulty)\` is its position. A solo group's **active child** can be bound straight to a choice whose options are the children's names.
 
 ## Lists
-A list variable holds the items a [repeater](repeaters) draws: put its name in **Repeat → Items**, and \`item\`/\`index\` are the current one. The starting items are JSON text in the Variables tab. Change the list while it runs with **Change a value or counter**: *Append to list* adds an item (\`{name: "Cy"}\`), *Remove from list* takes out the item at a position (0 is the first), *Empty* clears it, and *Set to* replaces it. The other list ops are *Add to list, or take out if there* (a tick-list: adds the value, or removes it when it is already in), *Remove from list (value)* (every item equal to the value, objects compared by what they hold) and *Change one list item*: give the item's position (left empty it is \`event.index\`, the item the event came from), an optional **Field** to change only that field of an object item, and the new value, which can read \`item\` (what is there now) and \`index\` (\`item.count + 1\`). A position that is not in the list changes nothing. In scripts use \`ix.toggleItem('picked', 'b')\`, \`ix.removeValue('picked', 'b')\` and \`ix.setItem('cards', 2, 'down', 'state')\`, or assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`. Text that is not a JSON array makes an empty list.
+A list variable holds the items a [repeater](repeaters) draws. Put its name in **Repeat → Items**, and \`item\` and \`index\` are the current one. The starting items are JSON text in the Variables tab. Text that is not a JSON array makes an empty list.
+
+Change the list while it runs with **Change a value or counter**. Its **Do** box has these list choices:
+- *Add to the end of the list* adds an item (\`{name: "Cy"}\`).
+- *Remove from the list (by position)* takes out the item at a position (0 is the first).
+- *Empty (list, number or text)* clears it, and *Set to* replaces it.
+- *Add to the list, or take out if it is there* works as a tick-list: it adds the value, or removes it when it is already in.
+- *Remove from the list (by value)* takes out every item equal to the value. Objects are compared by what they hold.
+- *Change one list item* changes the item at a position you give. Left empty, the position is \`event.index\`, the item the event came from. An optional **Field** changes only that field of an object item. The new value can read \`item\` (what is there now) and \`index\`, for example \`item.count + 1\`. A position that is not in the list changes nothing.
+
+In scripts use \`ix.toggleItem('picked', 'b')\`, \`ix.removeValue('picked', 'b')\` and \`ix.setItem('cards', 2, 'down', 'state')\`, or assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`.
+
+## Easing a number to a new value
+**Change a value or counter** can make a number run up (or down) to its new value instead of jumping. Use it for a score that counts up, or a bar that fills. It has two settings when **Do** is *Set to* or *Add to it* on a number:
+
+- **Over (ms)** is how long the change takes. 0 jumps, as always. 400 runs the number to its new value in 0.4 seconds, and anything reading it moves with it: a bar, a text, a [blend](blends).
+- **Easing** is how the number speeds up and slows down on the way (see [Easing](easing)).
+
+**Continue** says whether the next node runs straight away, part-way, or once the number has arrived. A newer change to the same variable takes over from wherever it has got to, and so does any other write to it. With reduced motion it sets at once.
 
 ## Worked out from a formula
-Instead of typing a starting value, give a variable a **formula** (the line under its value in the Variables tab): an [expression](expressions) over the variables above it in the list. The player works it out each time the project starts (and after **Start over**), and the canvas preview works it out too, so what you see while editing follows the variables it depends on. The typed value is only what it falls back to if the formula fails. It is an ordinary variable once it plays, so Set variable can change it, unless you tick **Keep up to date** (see *Live variables* below): then it is read only and is worked out again whenever what it reads changes. The branded Crossword and Word search starters use this: you edit a plain list of words (and clues) and the grid is laid out from it, with \`crossword(words, 10)\` and \`wordSearch(words, 12)\` (see [Expressions](expressions)). Clear the formula to type or lay the value out yourself.
+Instead of typing a starting value, you can give a variable a **formula**: an [expression](expressions) over the variables above it in the list. Choose **Worked out** next to the type, and a box for the formula appears under the value.
+
+The player works the formula out each time the project starts (and after **Start over**). The canvas preview works it out too, so what you see while editing follows the variables it depends on. The typed value is only what it falls back to if the formula fails.
+
+Once it plays it is an ordinary variable, so **Change a value or counter** can change it. Tick **Keep up to date** (see *Live variables* below) and it is read only instead, and is worked out again whenever what it reads changes.
+
+The branded Crossword and Word search starters use this: you edit a plain list of words (and clues) and the grid is laid out from it, with \`crossword(words, 10)\` and \`wordSearch(words, 12)\`. Clear the formula to type or lay the value out yourself.
 
 ## Live variables
-Tick **Keep up to date** under a variable's formula and it becomes *live*: the formula is worked out again whenever a variable it reads changes (and, for a formula that reads layers, data or the microphone, whenever something moves), not just at the start. Use one for anything you would otherwise paste the same long expression for in several places: a word count (\`wordCount(essay)\`), whether the score passes (\`score / total >= 0.5\`), a band (\`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\`), a list filtered by another variable. Layers then just show \`{wordsLeft}\`.
+Tick **Keep up to date** under a variable's formula and it becomes *live*. The formula is worked out again whenever a variable it reads changes, not only at the start. (A formula that reads layers, data or the microphone is worked out again whenever something moves.)
+
+Use one for anything you would otherwise paste the same long expression for in several places. Layers then just show \`{wordsLeft}\`. Examples:
+- a word count: \`wordCount(essay)\`;
+- whether the score passes: \`score / total >= 0.5\`;
+- a band: \`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\`;
+- a list filtered by another variable.
+
+\`wordCount\`, \`band\`, \`clock\`, \`shuffle\`, \`randInt\`, \`includesAll\` and \`includesAny\` are formula helpers made for this: see [Expressions](expressions#helpers). To show seconds as \`1:35\`, use \`clock(seconds)\` in a formula, or the **Seconds to m:ss** [converter](bindings#converters) on a binding.
 
 - A live variable is **read only**. *Change a value or counter*, scripts, inputs and the page cannot change it (they are told so in the console), and the Usage tab lists a *Change a value or counter* or *Put values back to the start* node that names one under **Broken**. Untick it to set it by hand again.
 - Live variables can read each other, in any order in the list. If they read each other in a circle (or one reads itself) they stay at their starting value and the Variables tab and **Usage** say so.
@@ -2538,10 +3493,16 @@ Tick **Keep up to date** under a variable's formula and it becomes *live*: the f
 - The typed value is what it falls back to when the formula fails (data not loaded yet, say). The canvas preview shows live variables worked out too.
 
 ## Save as user data
-Tick **Save as user data** on a variable and the player looks after the rest. Its saved value is put back **before the project starts**, so the first thing a returning learner sees is their own work; it is saved a moment after it changes (a burst of typing is one save), and straight away when they move to another artboard or leave the page. It goes to the same place as the *Save progress* and *Load saved progress* nodes (see [Results and resume](results)), so you no longer need a *Save progress* node before every Next and Back. In expressions, \`userData.loaded\` is true once the saved values have been looked for (for a "Welcome back" panel that should not flash on a first visit) and \`userData.restored\` is how many variables came back. A live variable cannot be saved. Instances inside a page keep nothing: tick it in the main project.
+Tick **Save as user data** on a variable (under **Options**) and the player looks after the rest. Its saved value is put back **before the project starts**, so the first thing a returning learner sees is their own work.
+
+It is saved a moment after it changes (a burst of typing is one save), and straight away when the learner moves to another page or leaves. It goes to the same place as the *Save progress* and *Load saved progress* nodes (see [Results and resume](results)), so you no longer need a *Save progress* node before every Next and Back.
+
+In expressions, \`userData.loaded\` is true once the saved values have been looked for (for a "Welcome back" panel that should not flash on a first visit), and \`userData.restored\` is how many variables came back. A live variable cannot be saved. Embedded pages (instances) keep nothing: tick it in the main project.
 
 ## Putting variables back
-*Change a value or counter → Back to its starting value* puts one variable back, and the **Put values back to the start** node puts several back in one go (tick them in the node's list, or **All**). A starting value is the one for this course if there is one, else the typed value, else the formula worked out again (so a formula that shuffles gives a fresh order). Live variables are left alone. This is lighter than **Start over**, which also leaves the page. Scripts: \`ix.reset('score', 'answers')\`.
+**Change a value or counter** with **Do** set to *Back to its starting value* puts one variable back. The **Put values back to the start** node puts several back in one go (tick them in the node's list, or **All**).
+
+A starting value is the one for this course if there is one, else the typed value, else the formula worked out again (so a formula that shuffles gives a fresh order). Live variables are left alone. This is lighter than **Start over**, which also leaves the page. In scripts: \`ix.reset('score', 'answers')\`.
 
 ## Different values for different courses
 One project can start with different values in different courses (a due date, a unit name, a week count). In the **Data** tab, pick **context** and add a row under **Per-course values**: a course label such as \`MAT1000_*\`, and the variables it changes. See [Course and learner context](course-context).
@@ -2554,13 +3515,22 @@ One project can start with different values in different courses (a due date, a 
 - In scripts: \`ix.vars.score += 1\`.
 - From the host page: \`player.setVariable('score', 10)\`.
 
-Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field. Tick **Remember** to keep the value between visits (for a score, a saved choice or a name): in the learner's record when the project is played from the Link for StudyDesk, otherwise in their browser. See [Results and progress](results). Press **+ Add variable** and pick what it is for: a **Counter** (a number that goes up and down), a **Switch (on or off)**, **Text**, a **Score** (a running total, remembered between visits), a **List**, a **Choice** or a **Colour**. Each one is an ordinary variable of that type with a name you can change, so the table still shows the type and starting value. See [Tutorial 3](tutorial-state-machine) for a worked example.
+## Adding a variable
+Press **+ Add variable** and pick what it is for: a **Counter** (a number that goes up and down), a **Switch (on or off)**, **Text**, a **Score** (a running total, remembered between visits), a **List**, a **Choice** or a **Colour**. Each one is an ordinary variable of that type with a name you can change, so the table still shows the type and starting value. See [Tutorial 3](tutorial-state-machine) for a worked example.
 
-Under each name the table says **used in 3 places** (or **not used yet**). Click it to list the places (layers, expressions, interactions, scripts), and click one to go there. The bin asks first when the variable is used, naming the places, because they stop working once the name is gone; a variable nothing uses goes straight away, and the message at the bottom has an **Undo**.
+Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field.
 
 Next to the type, **Starts as a value** is the number, text or switch the project starts with. **Worked out** is for a variable that is calculated, such as a crossword grid: it shows a box for the formula (for example \`crossword(words, 10)\`), and the value stays as what it falls back to if the formula fails. **Keep up to date** (for a formula) works it out again whenever something it reads changes.
 
-**Options** (folded away until something in it is on) holds **Remember** (keep the value between visits) and **Save as user data** (keep it on the server for each person), each with a sentence saying what it does.
+## Options on a variable
+**Options** is folded away until something in it is on. It holds two switches, each with a sentence saying what it does:
+- **Remember** keeps the value between visits (for a score, a saved choice or a name). It is kept in the learner's record when the project is played from the Link for StudyDesk, otherwise in their browser. See [Results and progress](results).
+- **Save as user data** keeps it on the server for each person (see above).
+
+## Where a variable is used
+Under each name the table says **used in 3 places** (or **not used yet**). Click it to list the places (layers, expressions, interactions, scripts), and click one to go there.
+
+The bin asks first when the variable is used, naming the places, because they stop working once the name is gone. A variable nothing uses goes straight away, and the message at the bottom has an **Undo**.
 
 ![The Variables tab.](help/variables-panel.png)`,
   },
@@ -2570,7 +3540,7 @@ Next to the type, **Starts as a value** is the number, text or switch the projec
     group: 'Interactivity',
     summary: 'Short JavaScript formulas in text, bindings and node settings.',
     keywords: 'expression formula javascript template braces condition ternary math',
-    body: `An expression is a short formula that gives a value, written in a safe subset of JavaScript. Variables and data sources are in scope by name.
+    body: `An expression is a short formula that works out a value: a total, a piece of text, a yes or no. You write them in text, bindings and node settings, in a safe subset of JavaScript. Your variables and data sources are available by name.
 
 \`\`\`
 score + 1
@@ -2581,32 +3551,41 @@ products.filter(p => p.inStock).length
 \`\`\`
 
 ## Where they go
+You can write an expression in four places:
 - **Text**: anything in \`{braces}\`.
 - **Bindings**: a property's value. See [Bindings](bindings).
-- **Node settings** marked *expr*, such as Set variable's value or If's condition.
+- **Node settings** marked *expr*, such as the value of **Change a value or counter** or the condition of **Check a condition**.
 - **Repeat → Items**: the list to repeat over.
 
 In repeated copies, \`item\` and \`index\` are the current list item and its position. In interactions, \`event\` describes what fired.
 
 ## Suggestions as you type
-Every field that takes an expression suggests as you type: the Formula of a binding, a node's expression settings (If's condition, Set variable's value...), a variable's formula, Repeat's items, a joystick's X and Y, and the \`{braces}\` in a text layer's words, a button's label or a link's address (there it only suggests inside the braces).
+**Expression suggestions as you type** help you write a formula without remembering every name. They appear in every field that takes an expression: the Formula of a binding, a node's expression settings (a Check a condition node's condition, Change a value or counter's value...), a variable's formula, Repeat's items, a joystick's X and Y, and the \`{braces}\` in a text layer's words, a button's label or a link's address (there they only suggest inside the braces).
 
-Type the start of a name, or press the dot after one, and a short list appears with each choice's type and its value right now. It offers your variables, \`context\` (and its fields, such as \`context.firstName\`), your data sources, the names the player supplies (\`reducedMotion\`, \`voiceAvailable\`, \`micLevel\`, \`downloadSize\`...), the helpers below with their arguments, and what the setting itself has (\`event\` in a graph node, \`value\` in a converter, \`self\` in a binding). After a dot it lists what can follow: the fields of an object, \`self.width\`, or the methods of text and lists. Inside \`layer("\` it lists your layers' names.
+Type the start of a name, or press the dot after one, and a short list appears. Each choice shows its type and its value right now.
+
+The list offers:
+- your variables, \`context\` (and its fields, such as \`context.firstName\`) and your data sources;
+- the names the player supplies (\`reducedMotion\`, \`voiceAvailable\`, \`micLevel\`, \`downloadSize\`...);
+- the helpers below, with their arguments;
+- what the setting itself has: \`event\` in a graph node, \`value\` in a converter, \`self\` in a binding.
+
+After a dot it lists what can follow: the fields of an object, \`self.width\`, or the methods of text and lists. Inside \`layer("\` it lists your layers' names.
 
 **Up** and **Down** move through the list, **Enter** or **Tab** puts the choice in, and **Esc** closes it. With no list showing, Enter and Tab do what they always did.
 
 ## Checks as you type
-A line under every formula field says what the formula is doing, a moment after you stop typing:
-- **Green**: what it works out to right now, such as *currently true*, *currently 12* or *currently “Hello”*. A formula that depends on what has just happened (it uses \`event\`) says *depends on what happens when it runs*, and one that uses \`Math.random()\`, \`randInt\` or the date says *changes each time it runs*. It is not run to show you a value that would be different the next time.
+A line under every formula field tells you what the formula is doing, a moment after you stop typing:
+- **Green**: what it works out to right now, such as *currently true*, *currently 12* or *currently “Hello”*. A formula that depends on what has happened (it uses \`event\`) says *depends on what happens when it runs*, and one that uses \`Math.random()\`, \`randInt\` or the date says *changes each time it runs*. It is not run to show you a value that would be different the next time.
 - **Red**: what is wrong, in a sentence. *There is no value called scoer. Did you mean score?* comes with a **Use score** button that fixes every use of it in one click. A bracket or quote that is not closed, a symbol missing at the end, a single \`=\` where \`==\` was meant, and a formula that cannot be worked out with today's values are all said in words.
 
 The check uses the same scope as the suggestions, and the values are the project's starting values, as on the canvas.
 
 ## Conditions without typing
-A field that asks for a yes/no condition (see [Interactions](interactions)) offers pickers instead of a text box: **[value] [is at least] [5]**, with **+ and** and **+ or** for more rows, and **Edit as formula** for the text. The pickers write an ordinary formula, so anything you built with them can be edited by typing, and a formula they cannot show opens as text.
+You don't have to write a yes/no condition as a formula. A field that asks for one (see [Interactions](interactions)) offers pickers instead of a text box: **[value] [is at least] [5]**, with **+ and** and **+ or** for more rows, and **Edit as formula** for the text. The pickers write an ordinary formula, so anything you built with them can be edited by typing, and a formula they cannot show opens as text.
 
 ## Helpers
-These work in every expression:
+Helpers are ready-made functions for common jobs: showing a number as text, mapping one range onto another, counting words, laying out a puzzle or a diagram. These work in every expression:
 
 | Call | Gives |
 |---|---|
@@ -2633,12 +3612,12 @@ These work in every expression:
 | \`includesAll(list, items)\`, \`includesAny(list, items)\` | Whether the list (or text) has every one of the items, or at least one, ignoring capitals: \`includesAny(answer, ["cat", "kitten"])\` |
 | \`enums.name\` | The options of a choice variable |
 | \`instanceInput(layer, name)\` | The current value of a variable inside an [instance](instances) layer (by name or id) |
-| \`artboard.width\`, \`artboard.height\` | The artboard's size (and \`artboard.name\`), in the same units as a layer's X and Y, whatever size the player is shown at |
+| \`artboard.width\`, \`artboard.height\` | The page's size (and \`artboard.name\`), in the same units as a layer's X and Y, whatever size the player is shown at |
 | \`self\` | In a [binding](bindings) (and its converters): the layer it's on. \`self.width\`, \`self.opacity\`, \`self.text\`, any plain setting it has, and for a video \`self.time\`, \`self.duration\`, \`self.playing\`, \`self.ended\` and \`self.rate\` |
 | \`layer(name)\` | The same for any layer, by name or id: \`layer('Knob').width\`. X and Y are inside its parent, as in the Inspector |
 
 ## What you can write
-Expressions are read by a small interpreter, not run as JavaScript, so a project can't use them to reach the page. These work:
+This is exactly what an expression can contain. Expressions are read by a small interpreter, not run as JavaScript, so a project can't use them to reach the page. These work:
 
 - **Values**: numbers (\`12\`, \`.5\`, \`1e3\`, \`0xff\`), text in \`"…"\`, \`'…'\` or backticks with \`\${…}\` slots, \`true\`, \`false\`, \`null\`, \`undefined\`, lists \`[1, 2, ...more]\`, objects \`{a: 1, b}\`, and patterns \`/regex/flags\`.
 - **Operators**: \`+ - * / % **\`, \`== != === !==\`, \`< > <= >=\`, \`&& || ??\`, \`!\`, \`typeof\`, \`in\`, \`a ? b : c\`, bit operators, and \`,\` inside brackets.
@@ -2649,7 +3628,7 @@ Expressions are read by a small interpreter, not run as JavaScript, so a project
 These don't: assignment (\`=\`, \`++\`), statements, \`function\`, \`this\`, loops, \`window\`, \`document\`, \`fetch\`, \`eval\`, and list methods that change a list in place (\`push\`, \`splice\`; \`sort\` and \`reverse\` give a sorted copy and leave the list alone). A slot that can't be read or fails is left as written in text and gives nothing elsewhere. Very large lists or text, and expressions that run for very long, are cut off.
 
 ## Patterns (regular expressions)
-A \`/pattern/flags\` works with \`match\`, \`matchAll\`, \`search\`, \`replace\`, \`replaceAll\`, \`split\`, \`.test(text)\` and \`.exec(text)\`. Some patterns can make a browser freeze on the wrong text (a pattern like \`(a+)+$\` takes twice as long with every extra character), so patterns are checked before they run. A pattern is refused, with a message, when:
+A pattern describes text to look for, such as a postcode or a word that may be spelled two ways. A \`/pattern/flags\` works with \`match\`, \`matchAll\`, \`search\`, \`replace\`, \`replaceAll\`, \`split\`, \`.test(text)\` and \`.exec(text)\`. Some patterns can make a browser freeze on the wrong text (a pattern like \`(a+)+$\` takes twice as long with every extra character), so patterns are checked before they run. A pattern is refused, with a message, when:
 
 - it has a **backreference** (\`\\1\`, \`\\k<name>\`);
 - a **repeated group contains another repetition**: \`(a+)+\`, \`(\\w+\\s?)*\`, \`(.*x){5}\`. Write it flat instead, for example \`[a-z]+\`;
@@ -2674,7 +3653,10 @@ In a text layer, a slot whose pattern is refused (or whose text is too long for 
     group: 'Interactivity',
     summary: 'Tie a layer property to a variable: in (the variable sets it), out (it sets the variable) or both ways.',
     keywords: 'bind binding data binding property drive reactive two-way both ways out in video position playing length drag x y attribute scrub artboard size width layer',
-    body: `A binding sets a layer's property from an [expression](expressions), and keeps it up to date as variables and data change. In the **Data bindings** section of the Inspector, press **+ Add binding** (or the **+** in the section's header) and pick the property; type in the search box at the top to find it quickly (*opa* finds Opacity).
+    body: `A binding connects a layer's setting to a variable, so the layer changes by itself when the variable does: a bar that grows with the score, a name that shows in a text layer, a layer that appears at step 3. It sets the property from an [expression](expressions) and keeps it up to date as variables and data change.
+
+## Adding a binding
+In the **Data bindings** section of the Inspector, press **+ Add binding** (or the **+** in the section's header) and pick the property; type in the search box at the top to find it quickly (*opa* finds Opacity).
 
 Each binding then says where its value comes from:
 - **Variable**: pick a variable from the list (search it by name), or **+ New variable…** at the bottom of the list to make one. The property takes that variable's value as it is.
@@ -2699,13 +3681,15 @@ A bound property shows a link icon and can't be changed by hand or keyframed unt
 
 ## Which way: in, out or both
 Each binding has **← In**, **Out →** and **⇄ Both** at the top.
-- **In** (the usual): the variable or formula sets the property, as above. The formula can read the layer it's on as \`self\`: \`self.width / 2\` for a height, \`self.time / self.duration\` on a video for how far through it is. \`self\` is the layer before its own bindings apply, so a binding never reads its own result. On the editing canvas a video has no time or length yet. On a video's **Playback position** and **Playing** it seeks, plays or pauses the video whenever the formula's value changes, and leaves the video alone while it doesn't, so it still plays on by itself.
+- **In** (the usual): the variable or formula sets the property, as above. The formula can read the layer it's on as \`self\`: \`self.width / 2\` for a height, \`self.time / self.duration\` on a video for how far through it is. \`self\` is the layer before its own bindings apply, so a binding never reads its own result.
 - **Out**: the property's value is written into a variable whenever it changes, and nothing sets the property from it. Use it to *read* something: a draggable layer's **X** as it is dragged, a video's **Playback position**, a timeline-animated **Opacity**. Read-only attributes (a video's **Length**, **Ended**) can only go out.
 - **Both**: the property and the variable are kept equal. At the start the property takes the variable's value; after that, change either one and the other follows. A slider bound to the same variable as a video's **Playback position** both shows the position and scrubs the video; setting a video's **Playing** to false pauses it.
 - An **Input field**'s **Value** is the common case for Both: typing writes the variable and the variable fills the box (the **Bind to a variable…** button in the Input section adds exactly this). Out leaves the box showing its own text.
 - A **draggable** layer with its X or Y bound **In** never tells the variable it moved, so a Save user data or a remembered variable keeps the old value. Bind it **⇄ Both** to save where the learner left it; the Bindings section says so and has a button for it.
 
 Out and Both name a variable (no formula, no converters), and the grey line says what will happen in words.
+
+**Videos.** On the editing canvas a video has no time or length yet. On a video's **Playback position** and **Playing** an *In* binding seeks, plays or pauses the video whenever the formula's value changes, and leaves the video alone while it doesn't, so it still plays on by itself.
 
 The value is made to fit the property (settings that can't be animated, like a video's **Loop**, go by the type they already have): a number property takes a number (\`true\`/\`false\` become 1/0, numeric text is read) and is left as it was if the expression gives something that is not a number; a true/false property takes a boolean; text and colour properties take text.
 
@@ -2733,7 +3717,7 @@ Choices and lists work with bindings like any other value: bind a fill colour to
     group: 'Interactivity',
     summary: 'JavaScript with the ix API, run safely in a sandbox.',
     keywords: 'script javascript code ix api sandbox quickjs wasm onframe animate await',
-    body: `Scripts are JavaScript for what the nodes can't do. Add them in the **Scripts** tab. A script runs on start (tick **Run on start**) or from a **Run script** node; short code can go straight into a **Run code** node.
+    body: `Scripts are short programs, written in JavaScript, for the things the interaction nodes can't do. If you do not write code, the nodes cover most needs: see [Interactions](interactions). Add scripts in the **Scripts** tab. A script runs on start (tick **Run on start**) or from a **Run script** node; short code can go straight into a **Run code** node.
 
 \`\`\`
 const ball = ix.node('Ball');
@@ -2741,6 +3725,14 @@ ix.onFrame((dt) => ball.set('x', (ball.get('x') + dt * 0.1) % ix.artboard.width)
 ix.on('reset', () => { ix.vars.score = 0; });
 await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' });
 \`\`\`
+
+## Code colours
+
+The **Code colours** buttons above the code (**Follow**, **Light**, **Dark**) set the colours of the code box.
+- **Follow** goes light or dark with the editor's theme. It is the default.
+- **Light** is dark code on a light page, and **Dark** is light code on a dark page, whatever the editor looks like.
+
+The same buttons are above the raw text in the Data tab, and the setting reaches every code box at once. It is also in [Preferences](preferences) as **Code editor colours** (General page, Appearance). It is your own setting, not saved in the project.
 
 ## The ix API
 | Call | Does |
@@ -2770,7 +3762,11 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 To paint a layer from a script every frame (generative art, particles, charts), use a [Script layer](script-layers).
 
 ## The sandbox
-New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches the URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. It follows the project's [data rules](data-sources#what-may-be-loaded): http(s) only, no cookies to other sites, and, if you list **Allowed data hosts** in Project settings, only those hosts. A refused URL makes \`loadData\` throw, so use \`try\`/\`catch\`. Without an allowed-hosts list, only run projects whose scripts you trust. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`,
+The sandbox is a locked room for scripts, so a script can't harm the page or the learner's browser. New projects run scripts in it. It is a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped.
+
+**Run scripts in the sandbox** in Project settings turns it off, so scripts run in the page itself with full access (\`node.element\`, \`fetch\`, the DOM). Keep it on for code you do not trust, and turn it off only for code you trust that needs the page.
+
+One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches the URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. It follows the project's [data rules](data-sources#what-may-be-loaded): http(s) only, no cookies to other sites, and, if you list **Allowed data hosts** in Project settings, only those hosts. A refused URL makes \`loadData\` throw, so use \`try\`/\`catch\`. Without an allowed-hosts list, only run projects whose scripts you trust.`,
   },
   {
     id: 'script-layers',
@@ -2816,8 +3812,8 @@ ${DRAW_API.map(([sig, what]) => `| \`${sig.replace(/\|/g, '\\|')}\` | ${what.rep
 ## Settings
 
 - **FPS**: a frame rate cap. 0 draws on every frame; 30 is plenty for most charts.
-- **Pixel ratio**: canvas pixels per layer pixel. **Auto** follows the screen's density and the artboard's scale, up to 3. A fixed number is sharper but slower; very large layers are held to what the browser can allocate.
-- **Paint while editing**: draws a single still frame on the canvas, at the timeline's time (0 when no timeline is showing), so you can lay out the artboard. Turn it off for a heavy script; the layer then shows as a placeholder. **Preview** always runs it.
+- **Pixel ratio**: canvas pixels per layer pixel. **Auto** follows the screen's density and the page's scale, up to 3. A fixed number is sharper but slower; very large layers are held to what the browser can allocate.
+- **Paint while editing**: draws a single still frame on the canvas, at the timeline's time (0 when no timeline is showing), so you can lay out the page. Turn it off for a heavy script; the layer then shows as a placeholder. **Preview** always runs it.
 
 The layer is an ordinary layer otherwise: move, rotate, fade, blend, mask and animate it, and click it with a **When clicked or hovered** event. Inside the script, \`g.pointer\` gives the pointer in the layer's own pixels (\`x\`, \`y\`, \`down\`, \`inside\`), correct even if the layer is rotated or inside a group.
 
@@ -2877,7 +3873,7 @@ The **Uniforms** list gives the shader values you can change. Press **Add a unif
 ## Settings
 
 - **FPS**: a frame rate cap while it animates. 0 draws on every frame.
-- **Pixel ratio**: canvas pixels per layer pixel. **Auto** follows the screen's density and the artboard's scale, up to 2. Shaders cost time for every pixel, so a layer is held to about 4 million pixels however large it is: past that it is drawn smaller and stretched.
+- **Pixel ratio**: canvas pixels per layer pixel. **Auto** follows the screen's density and the page's scale, up to 2. Shaders cost time for every pixel, so a layer is held to about 4 million pixels however large it is: past that it is drawn smaller and stretched.
 - **Animate while editing**: runs the shader live on the editor canvas. Off (the default) paints one still frame at the timeline's time (0 when none is showing), which keeps editing smooth. **Preview** always runs it.
 
 ## Errors
@@ -2890,7 +3886,7 @@ If the shader doesn't compile, the layer shows a placeholder and the inspector l
 - A shader is **paused while it is off screen** or the browser tab is hidden. A shader that reads neither \`u_time\` nor \`u_mouse\` (it only uses its uniforms) is drawn only when something changes.
 - Without WebGL (some remote desktops and very old devices) the layer shows a placeholder and says so.
 - **Pictures** you use as image uniforms must come from your project's assets (or a site that allows it); a picture the browser won't hand to WebGL is skipped with a warning.
-- **Export**: shader layers work in the single-file export, **.ixp** packages and the embeddable player. A **PNG or SVG picture** of an artboard shows the layer's current frame (at the timeline's time, or 0), not a running animation.
+- **Export**: shader layers work in the single-file export, **.ixp** packages and the embeddable player. A **PNG or SVG picture** of a page shows the layer's current frame (at the timeline's time, or 0), not a running animation.
 
 ## Shader filter on an image
 
@@ -2927,7 +3923,7 @@ Pick the **Progress bar** tool (in the **Data** group of the tool bar, which sta
 
 ## Where it works
 
-Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard. They are **not** part of a Lottie export (the export lists them as left out).`,
+Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page. They are **not** part of a Lottie export (the export lists them as left out).`,
   },
   {
     id: 'charts',
@@ -2950,13 +3946,15 @@ Pick the **Chart** tool (in the **Data** group of the tool bar, which starts fol
 
 Anything that is not a number counts as 0. A chart draws up to 200 items.
 
+Under the expression, a **preview** shows the first few items as the chart reads them (and what is wrong when it can't), using the project's variables at their starting values and the loaded data. The chart redraws when a variable or data source it reads changes.
+
 ## Hiding a value
 
-An object item with \`hidden: true\` is a placeholder, for a guessing page where one bar is the answer: \`[{label: "Mon", value: 4}, {label: "Tue", hidden: true}, ...]\`. It is drawn as a dashed, empty mark with a **?** (even with **Value labels** off), and the hover readout, the screen reader and the table say *hidden* instead of a number. Put \`hidden\` on from a variable and the real bar can be revealed later by changing the data (\`hidden: !answered\`). **Hidden key** names another field to use instead of \`hidden\`.
+A chart can **hide a value**: one bar, point or slice shows as a guess instead of its number. Use it for a guessing page where one bar is the answer. The item is drawn as a dashed, empty mark with a **?** (even with **Value labels** off). The hover readout, the screen reader and the table say *hidden* instead of a number.
 
-A hidden item without a number of its own is left out when the axis is worked out, and shows as a slot the full length of the axis (a column or bar), a hollow point halfway up with a gap in the line (a line chart), and nothing in a pie or donut (it has no share). Give it a \`value\` as well and the dashed mark is drawn at that size and counts for the axis, which is how to show an outline of where the bar will land.
+To hide an item, give it \`hidden: true\` in the data: \`[{label: "Mon", value: 4}, {label: "Tue", hidden: true}, ...]\`. To reveal the real bar later, set \`hidden\` from a variable (\`hidden: !answered\`) and change the variable. **Hidden key** names another field to use instead of \`hidden\`.
 
- Under the expression, a **preview** shows the first few items as the chart reads them (and what is wrong when it can't), using the project's variables at their starting values and the loaded data. The chart redraws when a variable or data source it reads changes.
+A hidden item without a number of its own is left out when the axis is worked out. It shows as a slot the full length of the axis (a column or bar), a hollow point halfway up with a gap in the line (a line chart), and nothing in a pie or donut (it has no share). Give it a \`value\` as well and the dashed mark is drawn at that size and counts for the axis, which is how to show an outline of where the bar will land.
 
 ## Kinds and look
 
@@ -2970,11 +3968,11 @@ A hidden item without a number of its own is left out when the axis is worked ou
 - **Hover** a bar, slice or point to see a readout with its name and value. **Tab** moves into the chart and the **arrow keys**, **Home** and **End** move between items, with the same readout. **Enter** or **Space** clicks the item.
 - Clicks, presses and hovers on a mark run **When clicked or hovered** nodes on the chart layer with \`event.index\`: the item's place in the list, from 0 (\`event.index\` is null away from the marks). **Pointer moves over it** gives it for each item you cross; **Hover start** only for the item you first entered. Arrowing between items fires **When a layer is focused** nodes with \`event.index\` too. So \`scores[event.index].name\` is the item that was clicked.
 - A **Table for screen readers** (on by default) puts the same numbers in a table that only a screen reader finds, with a share column for pie and donut charts. Give the chart a **text alternative** in *Accessibility* that says what it shows ("Sales by month, 2026"): the [checker](accessibility-checker) asks for one. A chart marked **Decorative** is hidden from screen readers.
-- **Grow in** makes columns and bars rise, slices and points pop, and a line draw itself, the first time the chart appears. Viewers whose device asks for less motion just get the chart (the project's *reduced motion* setting turns it on for you, as it does for animations).
+- **Grow in** makes columns and bars rise, slices and points pop, and a line draw itself, the first time the chart appears. Viewers whose device asks for less motion get the chart as it is (the project's *reduced motion* setting turns it on for you, as it does for animations).
 
 ## Where it works
 
-Charts draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard (as they look when fully grown, without the readout). They are **not** part of a Lottie export. There is no 3D, stacking or mixing of kinds. For anything else, a [Script layer](script-layers) can draw whatever you like.`,
+Charts draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page (as they look when fully grown, without the readout). They are **not** part of a Lottie export. There is no 3D, stacking or mixing of kinds. For anything else, a [Script layer](script-layers) can draw whatever you like.`,
   },
   {
     id: 'connectors',
@@ -2986,7 +3984,9 @@ Charts draw in the editor, Preview, the single-file export, **.ixp** packages an
 
 ## Drawing one
 
-Pick the **Connector** tool (<kbd>K</kbd>, in the **Draw** group) and drag from one layer to another. The layer under the pointer lights up with a dot on each side: let go near a dot and the end attaches to that **side**; let go anywhere else on the layer and it is **auto**, the side that faces the other end. Let go on empty canvas and that end is a **loose point** that stays where it was dropped. Hold <kbd>Shift</kbd> to keep the tool. The new connector is selected, with a gold handle on each end: drag a handle onto another layer to re-attach it.
+Pick the **Connector** tool (<kbd>K</kbd>, in the **Draw** group) and drag from one layer to another. The layer under the pointer lights up with a dot on each side: let go near a dot and the end attaches to that **side**; let go anywhere else on the layer and it is **auto**, the side that faces the other end. Let go on empty canvas and that end is a **loose point** that stays where it was dropped. Hold <kbd>Shift</kbd> to keep the tool.
+
+The new connector is selected, with a gold handle on each end. Drag a handle onto another layer to re-attach it.
 
 You can also add one in the **Connector** section of the Inspector, which lists the layers on the artboard for each end.
 
@@ -3007,7 +4007,7 @@ A layer inside a [repeater](repeaters) has one copy per item, and a copy's numbe
 - the boxes: a group repeating \`nodes\`, with a box as its template (its first child);
 - the lines: a group repeating \`links\` (\`[{from: 0, to: 2}, ...]\`) with one connector as its template. Its **Start** is the box, **Which copy** \`item.from\`; its **End** the same box, **Which copy** \`item.to\`.
 
-Add a link to the list and a line appears; change a link and it moves. A link that names a copy that isn't there (an index past the end, or text) simply isn't drawn. When you drag the Connector tool onto a layer that is in a repeater, the end is made for you as copy 0.
+Add a link to the list and a line appears; change a link and it moves. A link that names a copy that isn't there (an index past the end, or text) isn't drawn. When you drag the Connector tool onto a layer that is in a repeater, the end is made for you as copy 0.
 
 ## Reading it
 
@@ -3015,7 +4015,7 @@ A connector is **decorative**: screen readers skip it, and so does the keyboard.
 
 ## Where it works
 
-Connectors draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard. They are left out of Lottie files (the export says so). A connector takes no clicks or hovers; put the events on the layers it joins. An artboard with connectors is redrawn whole on each edit in the editor, which is still fast at diagram sizes.
+Connectors draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page. They are left out of Lottie files (the export says so). A connector takes no clicks or hovers; put the events on the layers it joins. A page with connectors is redrawn whole on each edit in the editor, which is still fast at diagram sizes.
 
 ## Starters that use them
 
@@ -3027,20 +4027,20 @@ See also [Repeaters](repeaters), [Charts](charts) and [Accessibility](accessibil
     id: 'usage',
     title: 'Usage: what uses what',
     group: 'Reference',
-    summary: 'Find where an asset, variable, artboard, script, timeline or data source is used, and clear out what is not.',
+    summary: 'Find where an asset, variable, page, script, timeline or data source is used, and clear out what is not.',
     keywords: 'usage dependencies dependency graph unused references used by find remove cleanup orphan broken missing',
     body: `![The Usage tab: variables on the left, and what each one is used by on the right.](help/usage-tab.png)
 
 The **Usage** tab (bottom panel) answers "what is this used by?" for the whole project, and shows what nothing uses.
 
-Pick a group along the top (**Artboards**, **Assets**, **Variables**, **Data**, **Scripts**, **Timelines**, **Layers**) and an item on the left. The right side lists everything that uses it. **Click an entry to jump there**: layers are selected on the canvas, artboards and timelines are opened, and interactions open the **Interactions** tab on that node. Scripts and data sources open their tab.
+Pick a group along the top (**Artboards**, **Assets**, **Variables**, **Data**, **Scripts**, **Timelines**, **Layers**) and an item on the left. The right side lists everything that uses it. **Click an entry to jump there**: layers are selected on the canvas, pages and timelines are opened, and interactions open the **Interactions** tab on that node. Scripts and data sources open their tab.
 
-A yellow **unused** flag marks items nothing refers to, and the number on each group is how many there are. Tick **Unused only** to list just those.
+A yellow **unused** flag marks items nothing refers to, and the number on each group is how many there are. Tick **Unused only** to see only those.
 
 ## What counts as a use
 
-- **Assets**: image and video layers, image fills and strokes, cursor images, artboard backgrounds, fonts, data files and *Play sound* nodes.
-- **Artboards**: instances, *Go to a page* nodes, and being the start artboard.
+- **Assets**: image and video layers, image fills and strokes, cursor images, page backgrounds, fonts, data files and *Play sound* nodes.
+- **Artboards**: instances, *Go to a page* nodes, and being the start page.
 - **Variables**: input fields bound to them, bindings, text and link templates (\`{score}\`), repeaters, joysticks, blends, instance inputs, and interaction nodes that name them or use them in an expression.
 - **Data sources**: the same expressions, plus *Load data* and *When data has loaded* nodes, and being a font or data file.
 - **Scripts**: *Run script* nodes, or having *Run on start* ticked.
@@ -3065,22 +4065,43 @@ The **Broken** group lists references that point at something that has been dele
     keywords: 'link colours to tokens fixed plain colours switch does nothing theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast',
     body: `![The Themes tab: the starter tokens down the side with their Light, Dark and High contrast colours, and the contrast check.](help/themes-panel.png)
 
-A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. A **new project** starts with the three themes and the starter tokens already in it, the artboard on the Light background, and every layer you add follows the tokens, so it looks right in Dark and High contrast without you picking anything. Projects made before this, and imported ones, have none until you add them in the Themes tab, and behave exactly as before.
+A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark or High contrast) is a column of values for those names.
 
+A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is only a colour never changes.
 
-**The UniSQ colourways.** **+ Colourway…** in the Themes tab adds any of the branded starter packs' colourways (Gold, Purple, Blue, Green, Orange, Red) to this project as a theme: the starter tokens get its colours and its brand tokens (the gradient, deep, accent and logo colours) are added, so layers that use them follow it. A project with no themes yet can start from one. High contrast is the one every project already has.
+A **new project** starts with the three themes and the starter tokens already in it, and the page on the Light background. Every layer you add follows the tokens, so it looks right in Dark and High contrast without you picking anything.
 
-**While it loads.** When a project has to wait before its first page shows (remembered progress or saved data coming from StudyDesk, a **Before activity loads** flow, the first page's fonts), a spinner appears after a quarter of a second, in the project's own colours: the **color/primary** token (or **color/button**) for the ring and **color/background** behind it, from the theme the viewer gets. A viewer who asks for less motion sees it pulse instead of spin. A quick start never shows it.
+Projects made before this, and imported ones, have no themes until you add them in the **Themes** tab. They look exactly as they did.
+
+## Adding a UniSQ colourway
+**+ Colourway…** in the **Themes** tab adds any of the [branded starter packs](branded-starters)' colourways (Gold, Purple, Blue, Green, Orange or Red) to this project as a theme. The starter tokens get its colours, and its brand tokens (the gradient, deep, accent and logo colours) are added, so layers that use them follow it.
+
+A project with no themes yet can start from one. High contrast is the one every project already has.
+
+## The loading spinner
+When a project has to wait before its first page shows, a spinner appears after a quarter of a second. The waits are remembered progress or saved data coming from StudyDesk, a **Before activity loads** flow, and the first page's fonts. A quick start never shows it.
+
+The spinner uses the project's own colours: the **color/primary** token (or **color/button**) for the ring and **color/background** behind it, from the theme the viewer gets. A viewer who asks for less motion sees it pulse instead of spin.
+
 ## The Themes panel
-Open the **Themes** tab (bottom panel). A new project already has the starter themes. For one without (an older or imported project), **Add Light, Dark and High contrast** makes the three themes and the starter tokens, in the same look as the StudyDesk toolbox: its greys, and its gold for buttons with black, bolder text.
+Open the **Themes** tab (bottom panel). For a project without themes, **Add Light, Dark and High contrast** makes the three themes and the starter tokens. They take the look of the StudyDesk toolbox: its greys, and its gold for buttons with black, bolder text.
+
+The starter tokens are:
 - **color/background**, **color/surface** and **color/surface-muted** are the page, a card and a hover or quiet grey. **color/text** and **color/muted** are the copy on them.
 - **color/button** and **color/on-button** are the gold button and its black label. **color/primary** and **color/on-primary** are the accent for selections, which in the toolbox is the same gold. **color/link** is the toolbox's hyperlink blue, used by new Link layers.
 - **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus ring. The ring is two tones: this colour, with a thin black or white halo either side of it (whichever is further from it, worked out for you), so it stays visible on a white page, a gradient and a dark panel alike. You only choose the one colour.
 - **color/success**, **color/error** and **color/warning** each come with a **-surface** tint, for the right, wrong and missed answers.
 
-**Toolbox colours come from the shared StudyDesk palette and stay in step with it.** Light is the toolbox exactly as the toolbox draws itself: each token takes the palette colour the toolbox uses for that job (cards are the palette's grey 1, text grey 7, outlines and quiet text grey 4, buttons the primary button colours, the accent and focus ring the primary gold), read from \`/styles/palette.min.css\`. A token made this way remembers the palette colour it came from, shown by a small link mark beside its colour. Whenever the editor opens the project it refreshes those colours from the live palette, and the player does the same when the page it runs in can reach \`/styles/palette.min.css\`, so a change to the palette reaches published pieces without re-editing them. **Change a colour by hand and that colour stops following the palette.** If the palette can't be reached (an exported file, offline, another host) the last stored colour is used. Dark and High contrast are built for contrast and take their colours from the same palette where it has suitable ones; a few tints and lighter or darker shades are mixed from two palette colours.
+### Toolbox colours follow the shared palette
+Light is the toolbox exactly as the toolbox draws itself. Each token takes the colour from the shared StudyDesk palette that the toolbox uses for that job. Cards are the palette's grey 1, text grey 7, outlines and quiet text grey 4, buttons the primary button colours, and the accent and focus ring the primary gold.
 
-Dark and High contrast are the same names with values made for them. Then:
+A token made this way remembers the palette colour it came from, shown by a small link mark beside its colour. The editor refreshes those colours from the live palette whenever it opens the project. The player does the same when the page it runs in can reach the palette, so a change to the palette reaches published pieces without re-editing them.
+
+**Change a colour by hand and that colour stops following the palette.** If the palette can't be reached (an exported file, offline, another host) the last stored colour is used.
+
+Dark and High contrast are built for contrast. They take their colours from the same palette where it has suitable ones, and a few tints and lighter or darker shades are mixed from two palette colours.
+
+### Working in the panel
 - Each row is a token, each column a theme. Click a colour to change it. **Used** counts the places that follow the token.
 - **+ Theme** copies the default theme. **+ Token** adds a row. Rename either; layers keep following a renamed token.
 - A theme can answer to a **Light** or **Dark scheme**, be marked **High contrast**, and be the **Default**. These decide which theme a viewer gets (see below).
@@ -3095,9 +4116,20 @@ In any colour picker in the inspector, open the arrow beside the swatch and choo
 ## When switching the theme changes nothing
 A theme can only change a colour that follows a token. A project built with plain colours (an imported file, or one made before the themes were added) has nothing to change, so the Light, Dark and High contrast switches, on the canvas, in Preview and in the Themes tab, all look the same. When that is the case you see a line, **Nothing here follows the theme: these colours are fixed**, with a **Link colours to tokens** button.
 
-**Link colours to tokens** (also in the Themes tab, and in the right-click menu of an artboard, where it covers just the selected artboards) goes through artboard backgrounds, layer fills, strokes, text and rich text colours, button, input and link colours, shadows and gradient stops. A plain colour that is exactly the colour of a token in the default theme (same alpha, \`#fff\` and \`#ffffff\` are alike) becomes that token. Before anything changes it says what it will do, like "Link 7 colours: 3 backgrounds, 2 fills, 2 text", and lists the colours that match no token. Those stay as they are: link them by hand from the picker's Tokens tab, or add a token with that colour and run it again. Undo (Ctrl+Z) takes the whole thing back in one step.
+**Link colours to tokens** is a button on that line, in the **Themes** tab, and in the right-click menu of a page (where it covers only the selected pages). It goes through page backgrounds, layer fills, strokes, text and rich text colours, button, input and link colours, shadows and gradient stops.
 
-When two tokens have the same colour (the button and the primary, say) the layer's job decides: artboard backgrounds prefer \`color/background\` then \`color/surface\`, text prefers \`color/text\`, button fills \`color/button\`, button text \`color/on-button\`, strokes \`color/border\`. Anything else takes the first of them in the Themes tab. Layers that follow a colour style are left to the style (use **Convert colour styles to tokens**), library artboards are read-only, and the brand layers of a branded starter are skipped unless the power user override is on. Colours written inside a binding expression are not touched.
+A plain colour that is exactly the colour of a token in the default theme becomes that token. Same alpha counts, and \`#fff\` and \`#ffffff\` are alike.
+
+Before anything changes it says what it will do, like "Link 7 colours: 3 backgrounds, 2 fills, 2 text", and lists the colours that match no token. Those stay as they are. Link them by hand from the picker's **Tokens** tab, or add a token with that colour and run it again. Undo (<kbd>Ctrl</kbd>+<kbd>Z</kbd>) takes the whole thing back in one step.
+
+When two tokens have the same colour (the button and the primary, say) the layer's job decides:
+- Page backgrounds prefer \`color/background\`, then \`color/surface\`.
+- Text prefers \`color/text\`.
+- Button fills prefer \`color/button\`, and button text \`color/on-button\`.
+- Strokes prefer \`color/border\`.
+- Anything else takes the first of them in the **Themes** tab.
+
+Some things are left alone. Layers that follow a colour style stay with the style (use **Convert colour styles to tokens**). Library pages are read-only. The brand layers of a branded starter are skipped unless the power user override is on. Colours written inside a binding expression are not touched.
 
 ## New layers, questions and starters
 A new button is gold with black, bolder text, an input has a grey outline, a shape is a neutral grey, text is the toolbox black. In a project that has the starter tokens, new layers, the [question kit](question-kit) and the step bar follow those tokens instead, so a new layer looks right in Dark and High contrast without you picking anything. In a project with no tokens they get the same colours as plain ones. The built-in [starters](templates) come with the themes and use the tokens.
@@ -3106,9 +4138,25 @@ A new button is gold with black, bolder text, an input has a grey outline, a sha
 Lottie, Rive, PSD, SVG and package imports bring their colours in as plain colours. Nothing guesses which colour "is" the primary. Mixing plain and token colours in one project is normal.
 
 ## Contrast
-- The Themes panel checks the pairs that matter in every theme, by token name: **color/text** and **color/muted** on **color/background**, **color/surface** and **color/surface-muted**, **color/on-primary** on **color/primary**, **color/on-button** on **color/button**, each of **success**, **error** and **warning** on its surface, and **color/primary**, **color/border** and **color/focus** against **color/background** and **color/surface**. Dark and High contrast pass every one. **Light does not, and that is expected:** it is the shared StudyDesk palette as the toolbox uses it, and these pairs fall below WCAG AA in it: muted text on background 2.59:1, muted text on surface 2.38:1, muted text on muted surface 1.96:1, primary on background 1.75:1, link on background 3.60:1, link on surface 3.30:1, outline against background 2.59:1, outline against surface 2.38:1, focus ring on background 1.75:1, focus ring on surface 1.61:1, success on its surface 3.90:1, error on its surface 3.13:1, warning on its surface 2.67:1. The Themes panel and the [Accessibility checker](accessibility-checker) report them as they are and are not told to ignore them. Choose different colours for a piece that has to pass. A pair that is too low shows its ratio on the cell and in the list.
+- The Themes panel checks the pairs that matter in every theme, by token name. **color/text** and **color/muted** are checked on **color/background**, **color/surface** and **color/surface-muted**. **color/on-primary** is checked on **color/primary**, and **color/on-button** on **color/button**. Each of **success**, **error** and **warning** is checked on its surface. **color/primary**, **color/border** and **color/focus** are checked against **color/background** and **color/surface**. A pair that is too low shows its ratio on the cell and in the list.
+- Dark and High contrast pass every one. **Light does not, and that is expected.** It is the shared StudyDesk palette as the toolbox uses it, and some pairs fall below WCAG AA in it. The Themes panel and the [Accessibility checker](accessibility-checker) report them as they are and are not told to ignore them. Choose different colours for a piece that has to pass.
 - The [Accessibility checker](accessibility-checker) checks text contrast in every theme, not only the one shown. A finding that starts "In Dark:" is about Dark. It offers no automatic fix for text that follows a token, since a fix would write a plain colour over the token.
 - **Theme colour on a fixed colour** is a warning for text that follows a token but sits on a plain colour. The theme changes one and not the other, so white text on a plain white card goes unreadable in Dark.
+
+The Light pairs that fall short are:
+- muted text on background 2.59:1
+- muted text on surface 2.38:1
+- muted text on muted surface 1.96:1
+- primary on background 1.75:1
+- link on background 3.60:1
+- link on surface 3.30:1
+- outline against background 2.59:1
+- outline against surface 2.38:1
+- focus ring on background 1.75:1
+- focus ring on surface 1.61:1
+- success on its surface 3.90:1
+- error on its surface 3.13:1
+- warning on its surface 2.67:1
 
 ## How the finished interactive picks a theme
 In this order:
@@ -3121,7 +4169,11 @@ In this order:
 **Preview** has a theme box (a theme, or follow the viewer), a **Viewer** box to pretend dark mode or more contrast is on, and, with the page option below, a **Host** box.
 
 ## Taking colours from the page
-Tick **Map tokens from the page's CSS variables** and a token is read from a CSS variable on the page that holds the player before the theme's own value. The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` and \`color/button\` to \`--bs-primary\`, \`color/on-button\` to \`--bs-white\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other. A missing or odd variable just leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
+Tick **Map tokens from the page's CSS variables** and a token is read from a CSS variable on the page that holds the player, before the theme's own value.
+
+The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` and \`color/button\` to \`--bs-primary\`, \`color/on-button\` to \`--bs-white\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other.
+
+A missing or odd variable leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
 
 ## Branded projects
 A project made from a [branded starter pack](branded-starters) carries a theme for each UniSQ colourway (Gold, Purple, Blue, Green, Orange, Red) and High contrast. Its **Project** settings have a **Colourway** row that picks the default theme, and an option to let learners switch. Its layers can only use the project's tokens, so edit a colourway's colours here rather than typing a hex.
@@ -3133,13 +4185,13 @@ Tokens are colours only. Fonts, radii and spacing are not tokens. Colours inside
     id: 'accessibility-checker',
     title: 'Accessibility checker',
     group: 'Reference',
-    summary: 'Find contrast, keyboard, label, autoplay and flashing problems per artboard, fix the safe ones, and export a report for sign-off.',
+    summary: 'Find contrast, keyboard, label, autoplay and flashing problems per page, fix the safe ones, and export a report for sign-off.',
     keywords: 'accessibility a11y wcag contrast check checker audit screen reader keyboard aria label alt text description captions autoplay reduced motion flashing seizure target size report sign off compliance',
-    body: `![The Accessibility tab: findings listed under their artboard on the left, and on the right what was found, why it matters, what to do and a fix button.](help/accessibility-checker.png)
+    body: `![The Accessibility tab: findings listed under their page on the left, and on the right what was found, why it matters, what to do and a fix button.](help/accessibility-checker.png)
 
-The **Accessibility** tab (bottom panel) runs a set of automatic checks over the whole project and lists what it found, artboard by artboard. It is there so you find out while you are designing, not from an audit at the end.
+The **Accessibility** tab (bottom panel) runs a set of automatic checks over the whole project and lists what it found, page by page. It is there so you find out while you are designing, not from an audit at the end.
 
-**It lists checks found. It does not say the project is accessible or that it complies with WCAG.** Some problems cannot be seen by a program, and some checks cannot be sure; those come back as **to look at** and a person decides. What the checks cannot see is listed under [What it cannot see](accessibility-checker#what-it-cannot-see), and in every exported report.
+**It lists what the checks found. It does not say the project is accessible or that it complies with WCAG.** Some problems cannot be seen by a program, and some checks cannot be sure. Those come back as **to look at**, and a person decides. What the checks cannot see is listed under [What it cannot see](accessibility-checker#what-it-cannot-see), and in every exported report.
 
 ## Reading the list
 
@@ -3149,14 +4201,14 @@ Each finding has a coloured dot:
 - **Probable** (amber): probably a problem, and a person decides, for example a picture with no description (it might be decoration).
 - **To look at** (blue): the checker could not tell, for example text over a photo that is only partly dark, a video (it cannot hear captions) or embedded HTML.
 
-Click a finding to **select the layer** (and open its artboard). The right side says what was found, with the numbers, **why it matters** to the person using the page in plain words, **what to do**, and which WCAG 2.2 success criteria it speaks to. The dots at the top are filters: click one to hide that group.
+Click a finding to **select the layer** (and open its page). The right side says what was found, with the numbers, **why it matters** to the person using the page in plain words, **what to do**, and which WCAG 2.2 success criteria it speaks to. The dots at the top are filters: click one to hide that group.
 
 ## The checks
 
 | Check | Looks for |
 |---|---|
 | **Text contrast** | Text colour against what is behind it (in every [theme](themes) when the project has colour tokens): layers drawn under the text, solid fills, gradients (every stop must pass), pictures (sampled from the file) and the layer's own opacity. Normal text needs 4.5:1, large text (24 px, or 18.66 px and bold) needs 3:1. Rich text is checked run by run. |
-| **Small text** | Text under 12 px on the artboard, counting the scale of any group it is in. This is a rule of thumb, not a WCAG number. |
+| **Small text** | Text under 12 px on the page, counting the scale of any group it is in. This is a rule of thumb, not a WCAG number. |
 | **Needs a mouse or touch** | A layer that reacts to a click, hover or drag, is not a Button or link, and has no *When a key is pressed* interaction that does the same thing. |
 | **No name for assistive technology** | Clickable layers, buttons, links and fields with no text and no ARIA label. A field named only by its placeholder is a probable problem. |
 | **No description** | Pictures, videos and embedded pages with no ARIA label. Script and shader layers are listed to look at. |
@@ -3164,13 +4216,13 @@ Click a finding to **select the layer** (and open its artboard). The right side 
 | **Animation starts by itself** | Autoplay timelines when the project does not respect reduced motion. |
 | **No way to pause moving content** | An autoplaying timeline that loops or runs over 5 seconds, with no *Play or stop an animation* node set to pause, stop or toggle it. |
 | **Video starts by itself** | Autoplay video with sound or without controls. Also a timeline that plays sound on its own when the viewer buttons are hidden and nothing mutes or pauses it. |
-| **Flashing** | A timeline that makes a large layer (a tenth of the artboard or more) go bright and dark more than three times in a second. |
+| **Flashing** | A timeline that makes a large layer (a tenth of the page or more) go bright and dark more than three times in a second. |
 | **Video and narration need captions** | Narration on a timeline with no captions is an issue, and captions that cover under half of it a warning (music and effects are left alone; see [Narration, captions and transcript](captions)). A video layer with imported captions passes; one without is listed to look at, since a program cannot tell if the file has them, and it points you at [Describe what you see](describe-what-you-see) for the pictures (WCAG 1.2.5). Descriptions that run while a caption is showing, so the voice would talk over the speech, are a warning. |
 | **Page title** | The project has no title. |
 
 ### How contrast is worked out
 
-The checker does not take a screenshot. It reads the layers: the artboard background, then everything drawn before the text, in drawing order, at a grid of points over the part of the box the words fill. Where a gradient or a picture is behind the text it takes the range of colours there. If every point passes, there is no finding. If every point fails, it is a problem. If some pass and some do not, or the colour behind cannot be known (a video, a shader, a script layer, a blend mode, a freeform shape), it says **to look at** instead of guessing. Pictures are sampled from the asset file at a coarse resolution once they have loaded.
+The checker does not take a screenshot. It reads the layers: the page background, then everything drawn before the text, in drawing order, at a grid of points over the part of the box the words fill. Where a gradient or a picture is behind the text it takes the range of colours there. If every point passes, there is no finding. If every point fails, it is a problem. If some pass and some do not, or the colour behind cannot be known (a video, a shader, a script layer, a blend mode, a freeform shape), it says **to look at** instead of guessing. Pictures are sampled from the asset file at a coarse resolution once they have loaded.
 
 A binding or timeline that changes a colour while the page runs is not followed: only the starting colour is checked, and the finding says so.
 
@@ -3192,7 +4244,7 @@ For a finding you have looked at and accepted ("it is decoration", "the captions
 
 ## Exporting a report
 
-**Export report** downloads one printable HTML page: a summary per artboard, every finding with why it matters and what to do, which ones were reviewed, the checks that ran, what was not checked, and a box to sign. **CSV** downloads the findings as a spreadsheet.
+**Export report** downloads one printable HTML page: a summary per page, every finding with why it matters and what to do, which ones were reviewed, the checks that ran, what was not checked, and a box to sign. **CSV** downloads the findings as a spreadsheet.
 
 ## What it cannot see
 
@@ -3212,7 +4264,7 @@ Test with a keyboard, a screen reader and your own eyes as well.`,
     group: 'Data',
     summary: 'JSON, CSV, TSV or text from an uploaded file or a URL, used by name.',
     keywords: 'data json csv tsv text url fetch api spreadsheet refresh cors',
-    body: `Open the **Data** tab and add a source **From file** (upload) or **From URL** (fetched by the player).
+    body: `A **data source** is a file or web address of information that your project reads by name: a list of products, quiz questions, a table of results. Open the **Data** tab and add a source **From file** (upload) or **From URL** (fetched by the player).
 
 - **Format**: JSON, CSV or TSV (first row is the column names), or plain text. CSV and TSV become a list of rows, with numbers and true/false converted.
 - **URL**: fetched as soon as you press Enter or leave the field. **Reload** fetches it again.
@@ -3221,22 +4273,63 @@ Test with a keyboard, a screen reader and your own eyes as well.`,
 
 Use a source by its **name** anywhere expressions go: \`{products.length} products\`, a binding \`products[0].price\`, or **Repeat → Items** \`products\`. Scripts read \`ix.data.products\`.
 
-**Load data** reloads a source (optionally from a different URL); **When data has loaded** fires when it arrives. **+ Shared responses** adds a different kind of source, answers the people playing add, counted for the class or kept for each person: see [Shared responses](shared-responses). The host page can push data with \`player.setData('products', [...])\`.
+**Load data** reloads a source (optionally from a different URL), and **When data has loaded** fires when it arrives. The host page can push data with \`player.setData('products', [...])\`.
+
+**+ Shared responses** adds a different kind of source: answers the people playing add, counted for the class or kept for each person. See [Shared responses](shared-responses).
 
 ## Editing a data file
-A source **From: Uploaded file** can be edited right there, in two ways, and both change the same text:
+A source **From: Uploaded file** can be edited right there, in up to four views: **Form**, **Table**, **Tree** and **Raw text**. Which ones you get depends on the file. They show the same text, so a change in one shows in the others.
 
-- **Table** (CSV and TSV, and JSON that is a list of flat objects) or **Tree** (any other JSON): change a cell or a value by typing in it. Above it, buttons add, copy, delete and move rows and columns (or, in a tree, add inside or next to a row, copy, delete, move, open or close everything), and **Cell holds** (or **Holds**) changes a value between text, number, yes/no, empty, list and group, so 12 and "12" are not the same thing. In a tree, a list of flat objects opens as a table (the **Table / List** switch turns that off), so \`opening\` or \`choices\` inside a bigger file are edited like a spreadsheet.
-- **Raw text**: the file's own text, coloured for its format (JSON, and a colour for each column of a CSV or TSV). A mistake in JSON is marked on its line with the line and column and what is wrong; **Go to this spot** (the line and column link) jumps to it. **Tidy up** lays JSON out again with two-space indents.
+### Form
+**Form** is the view a JSON file opens in. It shows the file as labelled fields, for people who would rather not see braces and quotes.
 
-A change is saved a moment after you stop typing (or when you leave the box), as a new version of the file, so **Undo** and **Redo** bring the old text back, other people editing see the change, and the canvas, bindings, repeaters and Preview use it at once. JSON that doesn't parse is **not** saved: the interactive keeps using the last good version until it does. CSV and TSV never fail to parse, but a quote that never closes or a row with the wrong number of cells gets a warning.
+- Every group is a card of fields. A key name is made into plain words: \`startLabel\` and \`start_label\` both read **Start label**. Hover a label to see the real key.
+- Short text is a line. Long text (or text with line breaks) is a box that grows as you type.
+- A number is a number box. It waits until what you typed is a number, and never turns into text.
+- Yes or no is a switch.
+- An empty value shows **empty** with **Fill in**. That makes it a number or yes/no when the same field is one in the other cards, and text otherwise.
 
-Things to know:
+A list of groups, such as \`dilemmas\`, \`choices\` or \`opening\`, is a stack of cards. Each is titled from the item's title, name, label, question or id (or its first short text) with its number, like **Dilemma 1: The old assignment**.
+
+- Each card opens and closes. **Open all** and **Close all** do every card.
+- Each card has **Up**, **Down**, **Copy** and **Delete**.
+- **Add another** at the end of a list adds a card with the same fields as the ones already there, left empty and keeping their types (a number starts at 0, a yes/no at no).
+- A list of plain values is a list of fields with the same buttons.
+- A list of simple rows can be shown as **Cards** or as a **Table**. Many short rows open as a table.
+
+The **outline** at the side (above the form when the panel is narrow) lists every list and card. Pick one to jump to it, open it and move to it.
+
+The form can change what is in the file, and add, copy, move or delete items. To add a new field, rename a key or change what a field holds (text to number, say), use **Tree**. Every card and list has an **In Tree** button that opens Tree on that very spot.
+
+A file with an error in it shows the raw text until it parses again, because the form needs a file that does.
+
+### Table and Tree
+**Table** is for CSV and TSV, and for JSON that is a list of flat objects. **Tree** is for any other JSON, and is where JSON's structure changes go. Change a cell or a value by typing in it.
+
+- Buttons above add, copy, delete and move rows and columns. In a tree they add inside or next to a row, copy, delete, move, and open or close everything.
+- **Cell holds** (or **Holds**) changes a value between text, number, yes/no, empty, list and group, so 12 and "12" are not the same thing.
+- In a tree, a list of flat objects opens as a table (the **Table / List** switch turns that off). So \`opening\` or \`choices\` inside a bigger file are edited like a spreadsheet.
+
+### Raw text
+The file's own text, coloured for its format: JSON, and a colour for each column of a CSV or TSV.
+
+- A mistake in JSON is marked on its line with the line and column and what is wrong. **Go to this spot** (the line and column link) jumps to it.
+- **Tidy up** lays JSON out again with two-space indents.
+- The **Code colours** buttons beside it (**Follow**, **Light**, **Dark**) set the colours of the text box. **Follow** goes light or dark with the editor's theme. It is your own setting, not saved in the project, and it is also in [Preferences](preferences).
+
+### Saving
+A change is saved a moment after you stop typing (or when you leave the box), as a new version of the file. **Undo** and **Redo** bring the old text back, other people editing see the change, and the canvas, bindings, repeaters and Preview use it at once.
+
+JSON that doesn't parse is **not** saved. The interactive keeps using the last good version until it does. CSV and TSV never fail to parse, but a quote that never closes or a row with the wrong number of cells gets a warning.
+
+### Things to know
 - If more than one source reads the same file, a note says so before you edit: the edit changes all of them. **Give it its own copy** makes the file separate for this source.
-- A source **From: URL** can be looked at but not changed here, because the file isn't ours. **Make a copy to edit** saves what the URL gave as an uploaded file and reads that instead (**Undo** goes back to the URL).
-- Long tables show 100 rows at a time (use Next and Previous); the raw text has no limit.
-- In a table, **Tab** goes into and out of the table, the arrow keys move between cells (Left and Right at the ends of the text), **Enter** goes down, **Escape** puts the cell back. In a tree, Up and Down move, Right opens (or goes in), Left closes (or goes out), **Enter** or **F2** edits the row, **Delete** removes it, and **Alt+Up** and **Alt+Down** move it.
-- Each save leaves the earlier file on the server so Undo works; **Remove unused assets** in the Usage tab clears them.
+- A source **From: URL** can be looked at but not changed here, because the file isn't yours. **Make a copy to edit** saves what the URL gave as an uploaded file and reads that instead (**Undo** goes back to the URL).
+- Long tables show 100 rows at a time (use Next and Previous). The raw text has no limit.
+- In a table, **Tab** goes into and out of the table, the arrow keys move between cells (Left and Right at the ends of the text), **Enter** goes down, and **Escape** puts the cell back.
+- In a tree, Up and Down move, Right opens (or goes in), Left closes (or goes out), **Enter** or **F2** edits the row, **Delete** removes it, and **Alt+Up** and **Alt+Down** move it.
+- In the form, **Tab** moves through the fields and buttons in order, each card's title is a heading with a button that opens and closes it, and every field has a real label. Nothing waits to be confirmed: each change is saved a moment after you stop typing.
+- Each save leaves the earlier file on the server so Undo works. **Remove unused assets** in the Usage tab clears them.
 
 ## The built-in context
 The list always starts with **context**, a read-only source that is there without adding anything: the course and the learner (\`{context.firstName}\`, \`context.courseCode\`). Pick it to see its fields, set sample values to design with, and give different courses different starting values. See [Course and learner context](course-context).
@@ -3282,7 +4375,9 @@ Put answers in with the **Add to shared responses** node (the answer is an expre
 This is one setting on the data source, **Who sees it**. To let the same project run either way, set **Switch with** to a text variable (a choice variable named \`whoSees\` with the options *Only me* and *Everyone in this class*, say): it takes who sees from the variable's value, so one setting in the project, or a button the learner presses, flips the whole page. A variable that says Only me, alone or private keeps answers private; one that says everyone, class or shared shows them to the class. Answers kept for Only me are stored apart from the class's, so switching a project to the class later never shows anyone what they kept to themselves.
 
 ## Where it runs
-The class lives on the server, and the server only knows who someone is on the **StudyDesk learner page** (**Share**, then **Link for StudyDesk**, see [Share link](export#share-link)). There each person's answers are kept under their signed-in account and course, and what the class sees is read every few seconds while the page is open. Anywhere else (an exported file, an ordinary share link, the page open on its own) there is no class: **Only me** still works, keeping the person's own answers in their browser, and **Everyone in this class** answers \`ready: false\` so the page can quietly show their own words. **Preview** pretends: the class is your sample answers plus whatever you add in the preview.
+The class lives on the server, and the server only knows who someone is on the **StudyDesk learner page** (**Share**, then **Link for StudyDesk**, see [Share link](export#share-link)). There each person's answers are kept under their signed-in account and course, and what the class sees is read every few seconds while the page is open.
+
+Anywhere else (an exported file, an ordinary share link, the page open on its own) there is no class. **Only me** still works, keeping the person's own answers in their browser. **Everyone in this class** answers \`ready: false\`, so the page can quietly show their own words. **Preview** pretends: the class is your sample answers plus whatever you add in the preview.
 
 The rules are fixed when the project is shared. After you add or change a shared source, **Update to the latest version** in the Share dialog or the learner page will not know about it.
 
@@ -3318,9 +4413,9 @@ See the **Word cloud** starter for the class cloud wired up: the same page for O
 - Names (the collection's, and a counter's) ignore capitals and keep only letters, numbers, spaces, dashes and underscores. A person can keep up to 20 collections in a course.
 
 ## The nodes
-- **Add to course collection** puts a stamp in, or raises a counter. Type the **Collection** name, choose **A stamp** or **To a counter**, and type the **Name** as plain words (\`Gold star\`). Use a formula for a name that changes (\`"Level " + level\`) or for several stamps at once (a list of texts). It continues from **Added** when something was new and from **Nothing new** when it was already there, so you can say "you already have this one".
-- **Load course collection** fetches the collection and can fill a **list variable** with the stamps and a **number variable** with how many there are. It continues from **Loaded** when there is anything in it, and from **Empty** when there is not.
-- **Check course collection** branches on a stamp (**Has it** or **Not yet**), a counter at least a number, or both. It can write the counter's number into a variable. It uses what was fetched last and fetches the collection first if it has not been yet.
+- **Add a stamp to the course passport** (also called **Add to course collection**) puts a stamp in, or raises a counter. Type the **Collection** name, choose **A stamp** or **To a counter**, and type the **Name** as plain words (\`Gold star\`). Use a formula for a name that changes (\`"Level " + level\`) or for several stamps at once (a list of texts). It continues from **Added** when something was new and from **Nothing new** when it was already there, so you can say "you already have this one".
+- **Load the course passport** (**Load course collection**) fetches the collection and can fill a **list variable** with the stamps and a **number variable** with how many there are. It continues from **Loaded** when there is anything in it, and from **Empty** when there is not.
+- **Check the course passport** (**Check course collection**) branches on a stamp (**Has it** or **Not yet**), a counter at least a number, or both. It can write the counter's number into a variable. It uses what was fetched last, and fetches the collection first if it has not been yet.
 
 In a script: \`await ix.course.stamp('passport', 'Gold star')\` (a text or a list of texts, resolves with how many were new), \`await ix.course.count('passport', 'quizzes', 3)\` (1 when the counter went up, otherwise 0) and \`const c = await ix.course.read('passport')\`, which gives \`{stamps, counts, course}\` (or \`null\` when nothing keeps collections here). Counter names come back in lower case.
 
@@ -3376,7 +4471,7 @@ A variable or data source that you name \`context\` hides the built-in one, and 
 One project can serve several courses without being copied. In the **Data** tab, pick **context** and use **Per-course values**: add a row with a course label, then pick the variables that row changes and give each its value for that course.
 
 - The label can use \`*\` for any run of characters and \`?\` for one character, and is not case sensitive: \`MAT1000_*\` is every run of MAT1000, and \`MAT1000_26S1_ONC\` is exactly one. Commas give several: \`MAT1000_*, MAT1001_*\`.
-- Rows apply when the project starts on the Link for StudyDesk page, in order from the top. Every matching row applies, and a later row wins where two set the same variable. A course that matches no row simply gets each variable's own starting value.
+- Rows apply when the project starts on the Link for StudyDesk page, in order from the top. Every matching row applies, and a later row wins where two set the same variable. A course that matches no row gets each variable's own starting value.
 - It changes the starting value only. **Start over** goes back to it. A learner's own remembered progress (variables ticked **Remember**) still wins over it, so leave **Remember** off for a variable you set per course. A value the embedding page sets itself (an input attribute) wins too.
 - Preview uses the sample course, and each row says whether it matches, so you can try each course by changing the sample course label.
 
@@ -3393,21 +4488,32 @@ Only the course, the learner's first name and display name, and whether they are
     group: 'Data',
     summary: 'Copy a layer once per item in a list, with item and index in scope.',
     keywords: 'repeat repeater list loop for each item index grid table',
-    body: `Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the first child for each item**. Its **first child** is then copied once per item in **Items** (an expression that gives a list, like \`products\` or \`[1, 2, 3]\`).
+    body: `A **repeater** copies one layout once for each item in a list: a row for every product, a card for every question. Add an item to the list and a new copy appears.
 
-**Items** can be a [data source](data-sources) or a *List* [variable](variables): the repeater redraws when the list changes, so a *Change a value or counter* node that appends to the list adds a row.
+## Turn it on
+Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the first child for each item**. Its **first child** is then copied once per item in **Items**. Items is an expression that gives a list, like \`products\` or \`[1, 2, 3]\`.
 
-Inside the copies, \`item\` is the current item and \`index\` its position (from 0): \`{index + 1}. {item.name} - {item.price}\`.
+**Items** can be a [data source](data-sources) or a *List* [variable](variables). The repeater redraws when the list changes, so a *Change a value or counter* node that adds to the list adds a row.
 
-**Layout** places the copies: vertical, horizontal, grid (with columns), or none (when the frame uses [auto layout](auto-layout), which is usually best). A grid has a **Fill** direction: *Rows first* goes across each row and then down (1 2 3 / 4 5 6 / 7), *Columns first* goes down each column and then across (1 4 7 / 2 5 / 3 6), with **Cols** still the number of columns.
+Inside the copies, \`item\` is the current item and \`index\` is its position, counting from 0: \`{index + 1}. {item.name} - {item.price}\`.
 
-**Text in the copies sizes itself.** A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there, so a long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow. There is no need to guess a height from the number of characters. A height or width you bind on the template layer still wins. Only copies whose text changed are measured again.
+## Layout
+**Layout** places the copies: vertical, horizontal, grid (with columns), or none (when the frame uses [auto layout](auto-layout), which is usually best).
 
-**Instances in a repeater** can take their [inputs](instances) from the item: select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
+A grid has a **Fill** direction. *Rows first* goes across each row and then down (1 2 3 / 4 5 6 / 7). *Columns first* goes down each column and then across (1 4 7 / 2 5 / 3 6). **Cols** is still the number of columns.
 
+## Text in the copies sizes itself
+A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there. A long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow. You don't need to guess a height from the number of characters.
+
+A height or width you bind on the template layer still wins. Only copies whose text changed are measured again.
+
+## Instances in a repeater
+Instances in a repeater can take their [inputs](instances) from the item. Select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
+
+## Clicks and the keyboard
 Clicks on a copy fire **When clicked or hovered** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked.
 
-For lists a keyboard user moves through, tick **Keyboard navigation** under the repeater: one copy is the Tab stop and the arrow keys move between the rest (see [Accessibility](accessibility#keyboard-navigation)).`,
+For lists a keyboard user moves through, tick **Keyboard navigation** under the repeater. One copy is the Tab stop and the arrow keys move between the rest (see [Accessibility](accessibility#keyboard-navigation)).`,
   },
   {
     id: 'results',
@@ -3426,8 +4532,8 @@ Open **Results and progress** in the Project section of the Inspector (click an 
 | Score variable | The number variable that holds the score |
 | Top score | The score that counts as 100% (the default is 100). A score above it is reported as 100% |
 | Pass mark | Tick it and give a percentage to report pass or fail as well as the score |
-| Complete when | **Report result node only**, **Reaching an artboard**, **A variable turns on** (a true/false one), **Score meets the pass mark** or **A step-through artboard reaches its last step** (see [Steps](steps)). Completing reports the result once |
-| Resume on the same artboard | A returning learner opens on the artboard they left |
+| Complete when | **Report result node only**, **Reaching a page**, **A variable turns on** (a true/false one), **Score meets the pass mark** or **A step-through page reaches its last step** (see [Steps](steps)). Completing reports the result once |
+| Resume on the same page | A returning learner opens on the page they left |
 
 Then tick **Remember** on each variable that should keep its value between visits (the Variables tab).
 
@@ -3435,18 +4541,28 @@ With **Total of all questions** there is no score variable or top score: the pas
 
 ## Report result and Start over
 - **Report result** (action node) sends the result: *Complete* marks this attempt complete, *Score so far* reports the score without completing. Leave **Score** empty to use the score variable, or give an expression such as \`correct * 10\`. In scripts: \`ix.report({ completed: true, score: 7 })\`.
-- **Start over** (action node, or \`ix.startOver()\`) puts every variable back to its starting value, clears remembered progress, counts a new attempt and shows the start artboard. Nothing after it in the same flow runs. Scripts keep their own state.
+- **Start over** (action node, or \`ix.startOver()\`) puts every variable back to its starting value, clears remembered progress, counts a new attempt and shows the start page. Nothing after it in the same flow runs. Scripts keep their own state.
 - \`ix.result\` reads the result as it stands, \`{completed, score, max, percent, passed}\`. Reading it reports nothing.
 
 ## Where it goes
 The player works with no server: with nothing else around it, **Remember** keeps values in the browser and a reported result goes nowhere (the page around an iframe also receives it as a message).
 
-Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](export#share-link) rather than the share link. It also tells the project which course it is in and the learner's first name, for [Course and learner context](course-context) (never their username or email, and none of it goes into results or Insights). It plays the same project, and keeps one record per learner per course in the Toolbox's own database: completion, score, pass or fail, attempts and the remembered variables. Learners are identified by their StudyDesk session. The same link also counts what learners do for [Insights](insights). Someone opening it with no session plays as normal and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
+Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](export#share-link) rather than the share link. It plays the same project and keeps one record per learner per course in the Toolbox's own database: completion, score, pass or fail, attempts and the remembered variables. Learners are identified by their StudyDesk session.
+
+The same link tells the project which course it is in and the learner's first name, for [Course and learner context](course-context). It never passes a username or email, and none of it goes into results or Insights. It also counts what learners do, for [Insights](insights).
+
+Someone opening it with no session plays as normal, and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
 
 ## Save user data and Load user data
 **Remember** keeps a variable's value all the time, on its own. When you'd rather choose the moment, use the two action nodes instead: **Save progress** keeps the variables you tick, as they are right then (say, when the learner presses *Submit*), and **Load saved progress** puts them back on a later visit. Put the load in **Before activity loads** so the values are in place before anything shows. *Load saved progress* goes on from **Loaded** when anything came back, and from **Nothing saved** on a first visit, so you can set up a fresh start there.
 
-Most of the time you do not need the nodes: tick **Save as user data** on a variable in the [Variables](variables) tab and it is loaded before the project starts and saved as it changes. They go to the same places as remembered progress: on the **Link for StudyDesk**, one record per learner per course, kept by their StudyDesk session; with no session or in an export, in the browser. **Preview** keeps them too, for that project in this browser, so closing and reopening Preview is like a learner coming back; **Forget saved data** in Preview's bar starts you again as a new learner. Each save only changes the variables it names. User data is kept apart from remembered progress and from results, so **Clear results** and **Start over** leave it alone; it goes when the project goes for good (30 days after it's deleted, or straight away with **Delete forever**).
+Most of the time you don't need the nodes. Tick **Save as user data** on a variable in the [Variables](variables) tab and it is loaded before the project starts and saved as it changes.
+
+Both ways go to the same places as remembered progress. On the **Link for StudyDesk** it is one record per learner per course, kept by their StudyDesk session. With no session, or in an export, it is kept in the browser. Each save only changes the variables it names.
+
+**Preview** keeps saved data and remembered progress too, for that project in this browser. Closing and reopening Preview is like a learner coming back. **Forget saved data** in Preview's bar starts you again as a new learner.
+
+User data is kept apart from remembered progress and from results, so **Clear results** and **Start over** leave it alone. It goes when the project goes for good: 30 days after it's deleted, or straight away with **Delete forever**.
 
 ## See the results
 **View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. The owner and people invited to collaborate can see it. **Export CSV** downloads every learner's record as a spreadsheet: username, name, course, completed, passed, attempts, best and last score and percentage, and when they were last active (the list in the dialog shows the latest 200). **Clear results** deletes every record for the project (handy after testing); only the owner can use it (collaborators see it greyed out), since it can't be undone.
@@ -3460,16 +4576,16 @@ Most of the time you do not need the nodes: tick **Save as user data** on a vari
     id: 'insights',
     title: 'Insights: what learners did',
     group: 'Getting started',
-    summary: 'See where learners go, click and struggle: artboards reached, a click heat map, steps, answers to each question and your own records, as counts.',
+    summary: 'See where learners go, click and struggle: pages reached, a click heat map, steps, answers to each question and your own records, as counts.',
     keywords: 'insights analytics records record learners activity funnel heat map heatmap clicks steps answers questions struggle csv export privacy consent studydesk',
     body: `The **Insights** tab (bottom panel) answers "where do learners get stuck?" with counts. It shows nothing until learners have played the project from the **Link for StudyDesk** (see [Share link](export#share-link)) while signed in to StudyDesk.
 
 ## What you see
 - **Learners, visits, clicks, answers checked.** A learner is one StudyDesk user however many times they came back. A visit is one time the page was opened.
-- **Artboards reached.** A bar per artboard, in the project's order, of how many different learners saw it, and what share of the people who reached the start artboard that is. A big drop between two bars is where people left, or where nothing led them on.
-- **Steps reached** for each step-through artboard, so you can see which step people stopped at.
+- **Pages reached.** A bar per page, in the project's order, of how many different learners saw it, and what share of the people who reached the start page that is. A big drop between two bars is where people left, or where nothing led them on.
+- **Steps reached** for each step-through page, so you can see which step people stopped at.
 - **One card per question.** How many learners answered, how many checks were right, how many were right the first time, and a bar for how often each option was chosen (the right answer in green). An option nobody chose shows as zero. Typed and ordered answers are only counted as right or wrong.
-- **Where learners clicked.** The buttons, links and clickable layers learners clicked most. Tick **Click heat on the canvas** to draw every click over the artboard you are editing: blue is a few, red is many. Clicks that land on nothing show up too, which is how you find the thing people expected to be clickable.
+- **Where learners clicked.** The buttons, links and clickable layers learners clicked most. Tick **Click heat on the canvas** to draw every click over the page you are editing: blue is a few, red is many. Clicks that land on nothing show up too, which is how you find the thing people expected to be clickable.
 - **Your records**, from the *Record* node and \`ix.record\`.
 - **Courses**, when the project is used in more than one.
 
@@ -3479,7 +4595,7 @@ Choose how far back to count (7 days to all time) and press **Refresh**. **Expor
 Add a **Record** action node (Interactions tab) anywhere in a flow: give it a **Name** ("opened hint") and, if you like, a **Value** (an expression: a choice, a level, a score band). Insights counts how often each name happened, how many learners it happened to, and how often each value came up. In scripts: \`ix.record('chose route', 'B')\`. Names are cut at 60 characters and values at 120.
 
 ## What is and is not recorded
-- Automatic records: an artboard was shown, a click (where, and which button or link), a step was reached, and a question was checked (right or wrong, which options were chosen).
+- Automatic records: a page was shown, a click (where, and which button or link), a step was reached, and a question was checked (right or wrong, which options were chosen).
 - Nothing a learner types is recorded. A typed answer is only marked right or wrong.
 - Insights shows counts and numbers of different learners. It never lists a learner. With only a handful of learners a count can be one person, so wait for more before drawing conclusions.
 - The records go to the Toolbox's usual analytics as the learner's StudyDesk session (the same way every other toolbox item is counted), so the people who read those reports can see which user they came from. Tell learners what is counted, the way you would for any other usage statistics.
@@ -3489,6 +4605,8 @@ Add a **Record** action node (Interactions tab) anywhere in a flow: give it a **
 
 ## Good to know
 - Records are the learner's browser's word, so they are good for seeing patterns, not for proof.
+- Records reach the suite analytics only when learners open the project from the **Link for StudyDesk** (see [Share link](export#share-link)), signed in to StudyDesk. Use **Record** nodes for anything of your own, and keep anything personal out of their names and values.
+- A very busy project's counts cover only the most recent records. Choose a shorter period to cover all of it.
 - Only the project's owner (and power users) can open Insights.
 - **Update to the latest version** in Share link after changing record settings or adding Record nodes, so the link plays the new version.`,
   },
@@ -3519,7 +4637,13 @@ Learners who cannot, or would rather not, use a microphone or camera must be abl
 - \`micLevel\` (0 to 1, how loud) and \`micBands\` (a list of 8 numbers, 0 to 1 each, from low to high sound) while the project is listening live, and \`listening\` (true while it is). \`recording\` is true while recording, and \`micLevel\` follows a recording too.
 - \`recording\` \`recordingSeconds\`, and \`recordings.<name>.state\` (\`empty\`, \`recording\`, \`ready\`, \`playing\`), \`.seconds\` and \`.hasRecording\` for each recording, for meters, timers and buttons.
 
-The Accessibility tab has a check for this (Listen live counts as a sensor node, and its **Could not start** output as the way on): a project that uses a sensor needs a click, key or typed way to reach the same finish (Report result, Go to artboard, Steps, Check answer or the completion variable) that does not go through the sensor. The check passes when a button or typed answer finishes without it, including carrying on from a node's **Could not start** output. If there truly cannot be an equal way (an assessment of speaking, say), say why in **No equal way to finish**: learners are told, and the check becomes a note for you to review. The check finds that there is another way, not that it is a good one. The **Sign practice with self-review** starter is an example: the learner can do the whole walk, and reach the summary, without ever turning the camera on.
+The **Accessibility** tab has a check for this. A project that uses a sensor needs a click, key or typed way to reach the same finish without it. The finish can be Report result, Go to a page, Steps, Check answer or the completion variable.
+
+The check counts **Listen live** as a sensor node, and a node's **Could not start** output as a way on. It passes when a button or typed answer finishes without the sensor, including carrying on from **Could not start**.
+
+If there truly cannot be an equal way (an assessment of speaking, say), say why in **No equal way to finish**. Learners are told, and the check becomes a note for you to review. The check finds that there is another way, not that it is a good one.
+
+The **Sign practice with self-review** starter is an example: the learner can do the whole walk, and reach the summary, without ever turning the camera on.
 
 ## Listen live: the microphone as a number
 Tick **Live listening** under Microphone (and **Only ever listen, never record** if that is all the project does: the page then refuses every Start recording, and the consent screen says so). A **Listen live** node turns it on and off. While it is on the microphone drives numbers you can bind anywhere: \`micLevel\` (how loud) and \`micBands\` (8 bands, log-spaced from about 80 Hz to 8 kHz: \`micBands[0]\` is a low hum, \`micBands[7]\` the highest whistle overtones), about 25 times a second. Bar heights, circle sizes, colours and shaders can read them like any variable. For example, a bar's height binding \`200 * micBands[3]\`.
@@ -3536,9 +4660,20 @@ All are in the Interactions palette, and described there.
 - **Stop recording**, **Discard recording**, **Play recording** (sound plays through the project's own sound, so the viewer's sound button applies; video plays in the layer you choose) and **Download recording** (offers a file, after a tap: it is the only way a recording leaves memory).
 - **Camera preview** shows the camera live in a layer's place. The page draws it over the project, so the project never sees the camera's pixels.
 - **Take or choose a photo** puts a picture, scaled to at most 1600 px on the long side, into an image asset. Every image layer that uses the asset shows it. From the device's photo picker (with the front or back camera if the device offers it) or a still from the live preview. To fill a different asset for each item of a list, give **Or the asset from an expression** an asset's id or name (such as \`prompts[current].photo\`); it wins over the asset picked. Set **Do** to **Throw the photo away** to put the asset's own picture back and forget the photo.
-- **Download a file** saves text you build (a report, a CSV) after a tap. It works in any project: it needs no microphone or camera, so there is nothing to tick in Project > Microphone and camera. With the type **Web page (.html)** it can carry pictures: write \`[[image:id]]\` where one goes, with the id or name of an asset (a photo the learner took, or one of your own pictures), and the learner's page swaps it for the picture itself, so the file is one page with its images inside and works offline. Put \`html(text)\` around anything the learner typed so it cannot break the page. A web page can be up to 16 MB (other files 2 MB), and every one is saved with a rule that stops it running script or loading anything when it is opened, so it is a report and nothing more. If a picture cannot be found the mark is left empty, so give each image a good \`alt\`. The **Photo prompts notebook** starter builds its whole report this way, for upload to a Moodle assignment.
+- **Download a file** saves text you build, such as a report or a CSV, after a tap. It works in any project. See [Download a file](sensors#download-a-file) below.
 - **Offer: do not use my microphone or camera** asks the learner, in the page's own screen, whether to stop using them for good. Put it on a "Use the keyboard instead" button. Only the learner decides.
 - **When the microphone or camera is used** fires when a recording starts, a recording is ready (\`event.reason\` is \`stopped\`, \`limit\` or \`device-lost\`: the learner can press Stop on the bar too), something could not start (\`event.problem\` and \`event.message\`), the state changed, a video finished playing, a photo arrived, or live listening started or stopped.
+
+## Download a file
+**Download a file** needs no microphone or camera, so there is nothing to tick in **Microphone and camera**. The journal and workbook starters use it on a **Download as a file** button, so a learner keeps their work without an email link. A project shared before this needs **Update to the latest version**.
+
+- With the type **Web page (.html)** it can carry pictures. Write \`[[image:id]]\` where one goes, with the id or name of an asset (a photo the learner took, or one of your own pictures).
+- The learner's page swaps the mark for the picture itself, so the file is one page with its images inside and works offline. If a picture can't be found the mark is left empty, so give each image a good \`alt\`.
+- Put \`html(text)\` around anything the learner typed so it can't break the page.
+- A web page can be up to 16 MB, and other files up to 2 MB.
+- Every web page is saved with a rule that stops it running script or loading anything when it is opened, so it is a report and nothing more.
+
+The **Photo prompts notebook** starter builds its whole report this way, for upload to a Moodle assignment.
 
 ## Try it
 **Preview** has a pretend microphone and camera, because the real ones need the page the project is shared in. It makes a made-up level and short tone for a recording, a swelling level and moving bands for live listening, and a sample picture. The **Microphone and camera** menu above the preview makes it fail the ways a real one does (denied, no device, blocked by the course page, the learner chose not to use them), so you can build and check the plain version. A small "Simulated" note shows while it records. Try the real devices from the **Link for StudyDesk** on the page you will use.
@@ -3603,56 +4738,74 @@ Off by default, so embeds that already exist keep working. Turn it on and attrib
     id: 'project-settings',
     title: 'Project settings',
     group: 'Getting started',
-    summary: 'Start artboard, fit, page title, fonts, sandbox, reduced motion and Optimise output.',
-    keywords: 'settings start artboard fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider',
+    summary: 'Start page, fit, page title, fonts, sandbox, reduced motion and Optimise output.',
+    keywords: 'settings start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider',
     body: `![The Project section of the Inspector, with Allowed data hosts filled in and the library and reduced motion boxes below it.](help/project-settings.png)
 
-Click an empty part of the canvas, or an artboard's name, to see the **Project** settings in the Inspector (below the artboard's own).
+The **Project** section holds the settings for the whole project, not one page. Click an empty part of the canvas, or a page's name, and it shows in the Inspector, below the page's own settings.
 
 | Setting | Meaning |
 |---|---|
+| Colourway | Branded starters only. The colour theme the project opens in, and whether learners can switch it. See [Branded starter packs](branded-starters#switching-colourway) |
 | Name | The project's name, as on the projects page |
 | Page title | The title of the browser tab for the exported page |
 | Description | A note about the project, kept in the file |
-| Fit | How the artboard scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
-| Page background | The colour around the artboard in the exported page |
+| Fit | How the page scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
+| Page background | The colour around the page in the exported page |
 | Run scripts in the sandbox | See [Scripts](scripts) |
 | Run embedded HTML in the page | Only shown while the sandbox box above is off. Lets Embed layers with HTML reach the page, for HTML you wrote and trust. See [Web elements](web-elements) |
 | Allowed data hosts | Hosts that data may be loaded from, one per line (\`api.example.com\`, \`*.example.com\`). Empty allows any http(s) host. See [Data sources](data-sources#what-may-be-loaded) |
-| This project is a library | Shares the artboards you publish, with the project's styles and assets, as components for other projects. See [Libraries](libraries) |
+| This project is a library | Shares the pages you publish, with the project's styles and assets, as components for other projects. See [Libraries](libraries) |
 | Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
-| Optimise output | On by default. Downloads and share links carry smaller copies of big pictures; your originals stay at full size. The slider under it runs from **Smaller files** to **Better quality** (it starts at **Better quality**). **Optimise pictures now** makes the copies straight away and tells you what they save. See [Exporting](export#optimised-pictures) |
-| Results and progress | The score, pass mark and when the project counts as complete. See [Results and progress](results) |
-| Credits | Whether learners get a **Credits** button, and whether exported and shared pages carry the attributions list. The entries are in the **Attributions** tab. See [Attributions and references](attributions) |
-| Start artboard | Shown first in the player: set with **Make start page** on an artboard |
-| Fonts | The fonts the project loads. **Add a Google font…** is a search box over every Google font (type, then <kbd>Enter</kbd> or click; the chips narrow it by Sans, Serif, Display, Handwriting or Mono), or upload font files in the **Assets** panel. New projects start with Open Sans. Choosing a font for a text layer adds it here by itself. Fonts come from this server (it keeps a copy of each Google font the first time it is used), and a lesson waits a moment for its fonts before it shows, so text never appears in one font and then changes |`,
+| Depth range | How far, in pixels, a layer with a depth of 100% moves as the pointer goes from the middle of the window to its edge. It starts at 40 px. Each layer's own **Depth** is in its Inspector. See [Depth (parallax)](fill-stroke#depth-parallax) |
+| Tilt moves depth layers | Off by default. On phones and tablets, layers with a depth also follow how the device is tilted. iPhones and iPads ask the viewer for permission to use the motion sensor on their first tap, never when the page loads. If they refuse, or there is no sensor, the layers follow the pointer only |
+| Optimise output | On by default. Downloads and share links carry smaller copies of big pictures, and your originals stay at full size. The slider under it runs from **Smaller files** to **Better quality** (it starts at **Better quality**). **Optimise pictures now** makes the copies straight away and tells you what they save. See [Exporting](export#optimised-pictures) |
+| Start page | Shown first in the player. Set it with **Make start page** on a page |
+
+## More sections
+Below those settings the Inspector has sections of their own for the project, each with its own help:
+- **Captions and narration**: whether captions and descriptions start on, and whether the player shows its viewer buttons. See [Narration, captions and transcript](captions).
+- **Read aloud**: **Offer read-aloud** gives every page a **Listen** button, with a **Language** and a **Button at** corner. See [Read it to me](read-aloud).
+- **Results and progress**: the score, pass mark and when the project counts as complete. See [Results and progress](results).
+- **Learner records**: which things the player counts for [Insights](insights).
+- **Microphone and camera**: what the project may use. See [Microphone, camera and photos](sensors).
+- **Credits**: whether learners get a **Credits** button, and whether exported and shared pages carry the attributions list. The entries are in the **Attributions** tab. See [Attributions and references](attributions).
+
+## Fonts
+The **Fonts** section lists the fonts the project loads. New projects start with Open Sans.
+
+- **Add a Google font…** is a search box over every Google font. Type, then press <kbd>Enter</kbd> or click. The chips narrow it by Sans, Serif, Display, Handwriting or Mono.
+- Or upload font files in the **Assets** panel.
+- Choosing a font for a text layer adds it here by itself.
+
+Fonts come from this server, which keeps a copy of each Google font the first time it is used. A lesson waits a moment for its fonts before it shows, so text never appears in one font and then changes.`,
   },
 
   {
     id: 'download-size',
     title: 'Download size and lite versions',
     group: 'Interactivity',
-    summary: 'What each artboard asks a learner to download, how to show it to them, and how to offer a lesson as video, audio only and text only.',
+    summary: 'What each page asks a learner to download, how to show it to them, and how to offer a lesson as video, audio only and text only.',
     keywords: 'download size weight bandwidth lite low data saver metered mobile slow connection audio only text only version video size megabytes mb file size lazy loading transcript saveData lowBandwidth downloadSize fileSize',
     body: `Many learners study on mobile data or a shared connection. This page is about showing them what a lesson costs before they commit, and about offering a lighter way to take it.
 
 ## Seeing what an artboard weighs
-Select an artboard and open **Download size** in the Inspector. The heading says what this artboard needs in total. Open it to see its heaviest files, and a bar for every artboard in the project so you can compare the versions of a lesson.
+Select a page and open **Download size** in the Inspector. The heading says what this page needs in total. Open it to see its heaviest files, and a bar for every page in the project so you can compare the versions of a lesson.
 
 - Sizes are the ones the project already stores for each file. While [Optimise output](project-settings) is on and the lighter copy of a picture has been made, its size is used.
-- A file counts once however many layers use it. An artboard shown inside another as an [instance](instances) counts what that artboard needs. A file that another artboard only links to with **Go to a page** belongs to that artboard.
-- Fonts and data files load for every artboard, so they are listed apart and left out of each artboard's number.
+- A file counts once however many layers use it. A page shown inside another as an [instance](instances) counts what that page needs. A file that another page only links to with **Go to a page** belongs to that page.
+- Fonts and data files load for every page, so they are listed apart and left out of each page's number.
 
 ## What the player loads, and when
-The player draws one artboard at a time, and an artboard the learner has not opened asks for nothing: no pictures, no video, no sound. When they get to it, it loads everything it has. Every timeline's sound is fetched on arrival, started or not, so the first play does not wait.
+The player draws one page at a time, and a page the learner has not opened asks for nothing: no pictures, no video, no sound. When they get to it, it loads everything it has. Every timeline's sound is fetched on arrival, started or not, so the first play does not wait.
 
-- **Hidden layers still load.** A layer with Visible off is not drawn, but a video in it still starts loading (it may be carrying the sound for an audio version), and an instance layer still loads its artboard. To keep a version's files off the wire, put the version on its own artboard and go to it. Do not hide layers.
-- Fonts and data sources are the project's, so they load at the start whichever artboard shows.
-- **A single HTML file, a share link and the Link for StudyDesk carry every file inside the page.** All the versions arrive in the first download, so the choice saves memory and playing, not the download. Only a copy whose files are hosted separately loads just the chosen version. The lesson tells the learner which case they are in, with the \`assetsEmbedded\` name below.
+- **Hidden layers still load.** A layer with Visible off is not drawn, but a video in it still starts loading (it may be carrying the sound for an audio version), and an instance layer still loads its page. To keep a version's files off the wire, put the version on its own page and go to it. Do not hide layers.
+- Fonts and data sources are the project's, so they load at the start whichever page shows.
+- **A single HTML file, a share link and the Link for StudyDesk carry every file inside the page.** All the versions arrive in the first download, so the choice saves memory and playing, not the download. Only a copy whose files are hosted separately loads only the chosen version. The lesson tells the learner which case they are in, with the \`assetsEmbedded\` name below.
 
 ## Showing a size to learners
 These names work in any expression, text template or binding. A variable with the same name wins.
-- **downloadSize("Video lesson")**: the bytes of the files that artboard needs. Give several names to add up what a version needs (each file once). With no name it means the artboard that is showing.
+- **downloadSize("Video lesson")**: the bytes of the files that page needs. Give several names to add up what a version needs (each file once). With no name it means the page that is showing.
 - **fileSize(bytes)**: a size as people say it, such as "340 KB" or "12 MB".
 - **saveData**: true when the browser says the learner has turned on Data Saver.
 - **connectionType**: \`4g\`, \`3g\`, \`2g\` or \`slow-2g\`, or empty. Only some browsers say; Safari and Firefox say nothing.
@@ -3670,7 +4823,7 @@ What the starter cannot do for you is make the three versions. The soundtrack mu
 
 ## Good to know
 - Test the lighter versions on a throttled connection in your browser's developer tools before you tell anyone they are light.
-- If you rename a version's artboard, change its name in the size line on the Choose page.`,
+- If you rename a version's page, change its name in the size line on the Choose page.`,
   },
 
   // ---------------------------------------------------------------- import/export
@@ -3682,47 +4835,107 @@ What the starter cannot do for you is make the three versions. The soundtrack mu
     keywords: 'import powerpoint pptx slides deck presentation slide show vectorcraft drawcraft photocraft pcraft lottie dotlottie rive riv rev editor project backup svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update new version source file changes reconnect',
     body: `| File | Becomes | Update from file |
 |---|---|---|
-| Lottie (\`.json\`, \`.lottie\`) | An artboard and a timeline | No |
-| Rive (\`.riv\`) | An artboard for each Rive artboard, with timelines, state machines and bindings | No |
+| Lottie (\`.json\`, \`.lottie\`) | A page and a timeline | No |
+| Rive (\`.riv\`) | A page for each Rive artboard, with timelines, state machines and bindings | No |
 | Rive editor project (\`.rev\`) | The same, plus the layer names and the artboards a \`.riv\` export leaves out | No |
-| Photoshop (\`.psd\`) | An artboard of layers, with editable text | Yes |
-| Illustrator (\`.ai\`) and PDF | An artboard per page, as vector art | Yes |
-| AutoCAD (\`.dxf\`) | An artboard with a group per CAD layer (\`.dwg\` must be saved as DXF first) | Yes |
-| VectorCraft, PhotoCraft | Artboards of layers | Yes |
-| PowerPoint (\`.pptx\`) | An artboard per slide, with editable text, pictures and shapes | Yes |
+| Photoshop (\`.psd\`) | A page of layers, with editable text | Yes |
+| Illustrator (\`.ai\`) and PDF | A page for each artboard or PDF page, as vector art | Yes |
+| AutoCAD (\`.dxf\`) | A page with a group per CAD layer (\`.dwg\` must be saved as DXF first) | Yes |
+| VectorCraft, PhotoCraft | Pages of layers | Yes |
+| PowerPoint (\`.pptx\`) | A page for each slide, with editable text, pictures and shapes | Yes |
 | SVG | A group of editable shapes | No |
+
+**Update from file** is the last column: for those files you can bring in a newer version later without losing your edits. See [Updating a design file](import#updating-a-design-file).
 
 New to this? [Tutorial 4](tutorial-import-design) walks through an import step by step.
 
-Lottie, Rive (\`.riv\` or \`.rev\`), Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft, PhotoCraft and PowerPoint files: use **+ Import file as artboard** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
+## Ways to bring a file in
+- **+ Import file as page** at the bottom of the **Layers** panel adds pages to the open project. It takes Lottie, Rive (\`.riv\` or \`.rev\`), Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft, PhotoCraft and PowerPoint files.
+- **Import** on the projects page makes a **new project** from the file.
+- A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new pages.
+- An SVG file dropped on the canvas, pasted, or picked with the **Image** tool becomes a group of shapes (see [SVG](import#svg)).
+
+After an import, a report lists anything that couldn't be carried over exactly (see [The import report](import#the-import-report)).
 
 ## Lottie (.json, .lottie)
 Shape layers, groups, fills, strokes, gradients (with their exact start and end points, centre and radius, see [exact gradient points](fill-stroke#exact-gradient-points); they are written out the same way), transforms, trim paths and keyframes with easing become layers and a timeline. Text animators with range selectors become [text modifiers](text-modifiers). Expressions, layer masks, track mattes, layer effects, skew and time remapping are not carried over, and the import report lists what was dropped.
 
 ## Rive (.riv)
-![A Rive file after import: each Rive artboard is an artboard, with its animations as timelines and its state machine as interactions.](help/rive-import-result.png)
+![A Rive file after import: each Rive artboard is a page, with its animations as timelines and its state machine as interactions.](help/rive-import-result.png)
 
-Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Shape morphing (animated path points), holes, clipping shapes (a clip shape that follows another shape keeps following it) and the translation, rotation, scale, transform and follow path constraints (with factors, limits and local space) are carried over, and so are bones, skins (weights), image meshes, and IK and distance constraints (see [Bones and skinning](bones)); other constraints are not. A transition's blend time becomes a **Blend in** on the next state's *Play or stop an animation* or *Start a blend* (a percentage of the old animation is converted to milliseconds, disabled transitions are skipped), with its mix curve as the blend easing, the state left running on under it (or frozen, for *pause on exit*) and *early exit* as *Can be left early*; a state that is being mixed into cannot be left until the mix is done, unless that allows it (a trigger pressed meanwhile is lost, as in Rive). An exit time becomes a **Wait for time in timeline**. Transitions out of one state that carry different random weights become one **Random** node (up to six; a weight of 0 is never picked). Transitions from the Any state are not held up by a mix in progress. Layout padding, margins and gaps given as percentages stay percentages (a share of the width of the layout around them, the way Rive does it, so they follow the layout when it is resized), and absolute insets given as percentages are worked out against the layout's size (and fixed at the file's size); a layout's border widths take room inside it like padding, auto margins push a layer to the end, and a gap between wrapped lines keeps its own value. Rectangles and layouts with a different radius on each corner keep them, and dash lengths given as a share of the outline become pixels (fixed at the file's size). A fill and a stroke that Rive draws in a mixed order keep that [paint order](fill-stroke#paint-order). A text box's vertical alignment, overflow (clip, ellipsis) and no-wrap come in; paragraph spacing comes in too (as the layer's *Paragraph spacing*); shrink-to-fit does not. Rive centres a stroke on its outline, so a stroked rectangle or ellipse comes in a stroke-width bigger to keep the same outer edge. State machine layers that start an animation from any state with nothing to wait for (the looping animations of an icon) start when the artboard does. A transition that has an exit time at the end of the animation and also conditions is taken as soon as both hold, even when the conditions come true long after the animation finished (a splash that plays once and waits for a button); with no exit time and nothing to wait for it is taken the moment the state is entered. An entry transition that has conditions leaves the layer idle until they hold. Actions on a state or a transition (set a view model property when it is entered, left, started or finished) become *Change a value or counter* nodes. A layer's open-link event does not fire when the artboard starts, and one link is not opened twice within two seconds. Listeners on a nested artboard (the buttons of a layout built from several artboards) change the shared view model variables the main artboard's state machine reads. In play, an imported Rive artboard lets the pointer through every layer except the ones its listeners name (the artboard's **pointerThrough** setting in a saved project), so a hidden panel or a picture on top of a button does not stop its click, as in Rive.
+Each Rive artboard becomes a page. In this section, "artboard" means Rive's own artboard.
 
-Rive **listeners** import as events: pointer enter, exit, press, release, click, move and drag as *When clicked or hovered*, **keyboard listeners** as *When a key is pressed* (the key, its modifiers, and the down, repeat and up phases; the key codes are the ones Rive uses, so letters, digits, arrows, function and numpad keys all map), and **focus** and **blur** listeners as *When a layer is focused*, with Rive's focus actions as *Focus layer* (focus traversal actions are not imported). A keyboard listener on a layer imports with *Only while this layer has focus* set to it, so it hears the key only while that layer (or one inside it) has the focus, as in Rive; one on the artboard reacts wherever the focus is. Rive has no scroll-wheel listener, so there is nothing to import there; gamepad, text input and semantic listeners are listed in the report. **Nested artboards** keep their starting inputs, and what Rive does to their inputs comes in too: a listener action that sets a nested number or bool or fires a nested trigger becomes *Give an embedded page a value* or *Trigger something in an embedded page* (a nested bool that Rive toggles flips what it is now: the instance's input is read back with \`instanceInput()\`). Keys on a nested bool or trigger in an animation become [timeline markers](timelines) (named like *Badge: flag = true*) with a *When an animation reaches a marker* flow, and a nested number animated between keys becomes a track on the instance's input (*Input level*), so it tweens (see [instances](instances)). A **9-slice image** (an image with slice axes) imports with its insets, and tile modes become **Fill edges**; Rive scales such an image to resize it, so the box is resized here and the corners keep their size (when the scale is animated the scale is kept instead). N-sliced groups, which resize a group's shapes, import as plain groups.
+What comes across: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Shape morphing (animated path points), holes, clipping shapes (a clip shape that follows another shape keeps following it) and the translation, rotation, scale, transform and follow path constraints (with factors, limits and local space) are carried over, and so are bones, skins (weights), image meshes, and IK and distance constraints (see [Bones and skinning](bones)); other constraints are not.
 
-Rive pointer listeners are tested **by shape**, the way the Rive runtime does it: a listener's target is under the pointer where the shapes inside it cover (their fill, whatever its colour or opacity, not their stroke and not the box around them), and every target is tested on its own, so regions that overlap are all hovered. Targets entered at the same moment act from the front of the layers to the back, so the one lowest in the layers has the last word (that is what Rive answers at an overlap). Layers that are not shown (a [solo](groups-frames) that has moved on) are not in the way. A state's animation that has played out keeps its last pose while the machine stays in that state, over the layers before it, as in Rive (it matters when a later layer holds a region view that an earlier layer's hover exit would otherwise put away). Re-import a Rive file made before this to get it.
+### Transitions and blending
+A transition's blend time becomes a **Blend in** on the next state's *Play or stop an animation* or *Start a blend* (a percentage of the old animation is converted to milliseconds, disabled transitions are skipped), with its mix curve as the blend easing, the state left running on under it (or frozen, for *pause on exit*) and *early exit* as *Can be left early*; a state that is being mixed into cannot be left until the mix is done, unless that allows it (a trigger pressed meanwhile is lost, as in Rive).
 
-Rive **events** become messages: a *Send message* node with the event's name, and its custom properties as the payload (an object, e.g. \`event.payload.power\`). An event keyed on an animation becomes a [timeline marker](timelines) with a *When an animation reaches a marker* node; events fired by listeners and by states or transitions (at their start or end) become *Send message* nodes in those flows, and Rive event listeners become *When a message arrives* nodes. An **audio event** also plays its embedded sound (a *Play sound* node, with the audio stored as a project asset), and an **open URL event** also opens its link (an *Open a web address* node). Audio that is hosted on Rive's CDN instead of embedded is skipped, and the import report says so.
+An exit time becomes a **Wait for time in timeline**. Transitions out of one state that carry different random weights become one **Random** node (up to six; a weight of 0 is never picked). Transitions from the Any state are not held up by a mix in progress.
 
-Rive **gradients** keep their exact start and end points (a radial one its centre and radius), moved into the layer's box, so they land where Rive draws them and stay put when the layer is resized; keys on the points and on the stops' colours and positions become timeline tracks (see [exact gradient points](fill-stroke#exact-gradient-points)). **Text** boxes can animate their height and origin: a fixed-size text box keeps its top left where Rive keeps it while its height or origin is keyed (lines that no longer fit are clipped or cut with an ellipsis as the box shrinks, and the vertical alignment follows the box), while the height of auto-width and auto-height text is worked out from its text, as in Rive, and its keys are ignored. **Actions on states and transitions** that set a view model property (at the start or end of a state or a transition) become *Change a value or counter* nodes in the state's flow, next to the ones for Rive events.
+### Layout, strokes and text
+Layout padding, margins and gaps given as percentages stay percentages (a share of the width of the layout around them, the way Rive does it, so they follow the layout when it is resized), and absolute insets given as percentages are worked out against the layout's size (and fixed at the file's size); a layout's border widths take room inside it like padding, auto margins push a layer to the end, and a gap between wrapped lines keeps its own value.
 
-Rive **view models** become shared [variables](variables): numbers, true/false, text, colours, triggers (a count that goes up when it fires) and enums (a *Choice* with the enum's options), and a list property becomes a *List* of the first items' values. Transitions and listeners that read or write them keep working. **Data binds on layers** (a view model value driving a layer's position, rotation, scale, opacity, text, fill or stroke colour, stroke width and so on) become [bindings](bindings), with the bind's converters (to text with decimals, rounding, boolean negate, range mapper, add, subtract, multiply, divide, to number, string pad and trim, formulas that are plain arithmetic) as converters. Two-way and to-source binds are brought in one way only (value to layer), and interpolating converters apply instantly.
+Rectangles and layouts with a different radius on each corner keep them, and dash lengths given as a share of the outline become pixels (fixed at the file's size). A fill and a stroke that Rive draws in a mixed order keep that [paint order](fill-stroke#paint-order).
 
+A text box's vertical alignment, overflow (clip, ellipsis) and no-wrap come in; paragraph spacing comes in too (as the layer's *Paragraph spacing*); shrink-to-fit does not.
+
+Rive centres a stroke on its outline, so a stroked rectangle or ellipse comes in a stroke-width bigger to keep the same outer edge.
+
+### When state machine flows start
+State machine layers that start an animation from any state with nothing to wait for (the looping animations of an icon) start when the artboard does. A transition that has an exit time at the end of the animation and also conditions is taken as soon as both hold, even when the conditions come true long after the animation finished (a splash that plays once and waits for a button); with no exit time and nothing to wait for it is taken the moment the state is entered.
+
+An entry transition that has conditions leaves the layer idle until they hold.
+
+### Actions, links and pointer handling
+Actions on a state or a transition (set a view model property when it is entered, left, started or finished) become *Change a value or counter* nodes in the state's flow, next to the ones for Rive events. A layer's open-link event does not fire when the artboard starts, and one link is not opened twice within two seconds. Listeners on a nested artboard (the buttons of a layout built from several artboards) change the shared view model variables the main artboard's state machine reads.
+
+In play, an imported Rive artboard lets the pointer through every layer except the ones its listeners name, so a hidden panel or a picture on top of a button does not stop its click, as in Rive.
+
+### Listeners and keyboard
+Rive **listeners** import as events: pointer enter, exit, press, release, click, move and drag as *When clicked or hovered*, **keyboard listeners** as *When a key is pressed* (the key, its modifiers, and the down, repeat and up phases; the key codes are the ones Rive uses, so letters, digits, arrows, function and numpad keys all map), and **focus** and **blur** listeners as *When a layer is focused*, with Rive's focus actions as *Focus layer* (focus traversal actions are not imported).
+
+A keyboard listener on a layer imports with *Only while this layer has focus* set to it, so it hears the key only while that layer (or one inside it) has the focus, as in Rive; one on the artboard reacts wherever the focus is.
+
+Rive has no scroll-wheel listener, so there is nothing to import there; gamepad, text input and semantic listeners are listed in the report.
+
+### Nested artboards and 9-slice images
+**Nested artboards** keep their starting inputs, and what Rive does to their inputs comes in too: a listener action that sets a nested number or bool or fires a nested trigger becomes *Give an embedded page a value* or *Trigger something in an embedded page* (a nested bool that Rive toggles flips what it is now: the instance's input is read back with \`instanceInput()\`).
+
+Keys on a nested bool or trigger in an animation become [timeline markers](timelines) (named like *Badge: flag = true*) with a *When an animation reaches a marker* flow, and a nested number animated between keys becomes a track on the instance's input (*Input level*), so it tweens (see [instances](instances)).
+
+A **9-slice image** (an image with slice axes) imports with its insets, and tile modes become **Fill edges**; Rive scales such an image to resize it, so the box is resized here and the corners keep their size (when the scale is animated the scale is kept instead). N-sliced groups, which resize a group's shapes, import as plain groups.
+
+### How pointer listeners are tested
+Rive pointer listeners are tested **by shape**, the way the Rive runtime does it: a listener's target is under the pointer where the shapes inside it cover (their fill, whatever its colour or opacity, not their stroke and not the box around them), and every target is tested on its own, so regions that overlap are all hovered. Targets entered at the same moment act from the front of the layers to the back, so the one lowest in the layers has the last word (that is what Rive answers at an overlap).
+
+Layers that are not shown (a [solo](groups-frames) that has moved on) are not in the way. A state's animation that has played out keeps its last pose while the machine stays in that state, over the layers before it, as in Rive (it matters when a later layer holds a region view that an earlier layer's hover exit would otherwise put away). Re-import a Rive file made before this to get it.
+
+### Events
+Rive **events** become messages: a *Send message* node with the event's name, and its custom properties as the payload (an object, e.g. \`event.payload.power\`). An event keyed on an animation becomes a [timeline marker](timelines) with a *When an animation reaches a marker* node; events fired by listeners and by states or transitions (at their start or end) become *Send message* nodes in those flows, and Rive event listeners become *When a message arrives* nodes.
+
+An **audio event** also plays its embedded sound (a *Play sound* node, with the audio stored as a project asset), and an **open URL event** also opens its link (an *Open a web address* node). Audio that is hosted on Rive's CDN instead of embedded is skipped, and the import report says so.
+
+### Gradients and text boxes
+Rive **gradients** keep their exact start and end points (a radial one its centre and radius), moved into the layer's box, so they land where Rive draws them and stay put when the layer is resized; keys on the points and on the stops' colours and positions become timeline tracks (see [exact gradient points](fill-stroke#exact-gradient-points)).
+
+**Text** boxes can animate their height and origin: a fixed-size text box keeps its top left where Rive keeps it while its height or origin is keyed (lines that no longer fit are clipped or cut with an ellipsis as the box shrinks, and the vertical alignment follows the box), while the height of auto-width and auto-height text is worked out from its text, as in Rive, and its keys are ignored.
+
+### View models and data binds
+Rive **view models** become shared [variables](variables): numbers, true/false, text, colours, triggers (a count that goes up when it fires) and enums (a *Choice* with the enum's options), and a list property becomes a *List* of the first items' values. Transitions and listeners that read or write them keep working.
+
+**Data binds on layers** (a view model value driving a layer's position, rotation, scale, opacity, text, fill or stroke colour, stroke width and so on) become [bindings](bindings), with the bind's converters (to text with decimals, rounding, boolean negate, range mapper, add, subtract, multiply, divide, to number, string pad and trim, formulas that are plain arithmetic) as converters. Two-way and to-source binds are brought in one way only (value to layer), and interpolating converters apply instantly.
+
+### Joysticks
 Rive **joysticks** become [joysticks](joysticks): a joystick that has a handle layer gets that layer and its rectangle as the **Handle** and **Area**, so the timelines follow where the handle sits (inverted axes are turned round, and a joystick without a handle keeps its set position). A *listener action that aligns a layer to the pointer* (what moves a joystick handle on drag) becomes *Change a layer's setting* nodes that set the layer's x and y from the pointer. Keys that move a joystick's own x and y are not imported.
 
+### Masks, text modifiers, scrolling and lists
 Rive **layer masks** become [masks](groups-frames#masks): the masked layer goes in a group with a masking copy of the source layer (a shape, a group of shapes, an image) in front of it, and the source itself is hidden unless the mask says it keeps drawing. Inverted, luminance and inverted luminance masks keep their mode (see *Mask mode* in [Groups and frames](groups-frames#masks)); custom bounds and the mask resolution are ignored, and the report lists those.
 
 Rive **text modifiers** become [text modifiers](text-modifiers): each range of a group is one modifier, with the group's move, turn, scale and fade (the units are letters, words or lines, ranges by percent or by index, with the offset, strength and falloff) and keys on a range or group follow onto it. Falloffs import as the *Falloff* shape, which matches Rive letter for letter (it was measured against Rive's own runtime), and ranges that combine by subtracting, multiplying, min or max, ranges limited to one text run, text follow path and per-letter variable font axes are not imported; the report lists them.
 
 Rive **scroll constraints** make the layout a scrollable [frame](groups-frames) in the direction they scroll, and the browser scrolls it. Elastic bounce and momentum, snapping, endless and virtualised lists, drag speed and a starting offset are not imported, and neither are scroll bars (the browser draws its own). A scroll constraint the viewer cannot drag is skipped.
 
-Rive **artboard component lists** become a frame that repeats an [instance](instances) of the item artboard once per item of the list [variable](variables), laid out along the parent's direction with its gap. Each item shows its own values: the properties of the item's view model that the item artboard reads become that instance's inputs, bound to the matching fields of the item (*Input title* bound to \`item.title\`; nested view models as \`item.style.color\`), and those variables are one per instance rather than shared. A list that shows different artboards for different kinds of items shows the first, and a list without a list property or an item artboard is skipped.
+Rive **artboard component lists** (lists that show an artboard for each item) become a frame that repeats an [instance](instances) of the item artboard once per item of the list [variable](variables), laid out along the parent's direction with its gap. Each item shows its own values: the properties of the item's view model that the item artboard reads become that instance's inputs, bound to the matching fields of the item (*Input title* bound to \`item.title\`; nested view models as \`item.style.color\`), and those variables are one per instance rather than shared. A list that shows different artboards for different kinds of items shows the first, and a list without a list property or an item artboard is skipped.
 
 
 ## Rive editor project (.rev)
@@ -3733,10 +4946,15 @@ A \`.rev\` is the file the Rive editor itself saves (the project or a backup of 
 - Only fonts, images and sounds something uses come in; the editor also keeps the files it was given and never used.
 
 The editor's own organisation (folders, the original SVG files that were imported, the position of states in the state machine graph, built-in enum tables) is skipped. Nothing about the format is published, so the reader was written from real files: if a \`.rev\` holds something it does not understand, the report says so and carries on with the rest, and a file it cannot read at all fails with a message. Export a \`.riv\` from the Rive editor and import that if it does.
+
 ## Photoshop (.psd)
 ![A Photoshop file after import: layers, a live text layer, and hidden layers kept hidden.](help/psd-import-result.png)
 
-The document becomes an artboard of the same size. Every pixel layer becomes an image layer (stored as a PNG asset) at its position, folders become groups, and the layer name, visibility, opacity (including fill opacity) and blend modes carry over: normal, dissolve, multiply, screen, overlay, soft light, hard light, darken, lighten, color dodge, color burn, linear dodge (add), difference, exclusion, hue, saturation, color and luminosity. Modes a browser can't draw come in as the nearest one there is, and the report lists them: linear burn as multiply, darker color as darken, lighter color as lighten, vivid, linear and pin light and hard mix as hard light, and divide as color dodge. 8 and 16 bit RGB and grayscale files import as layers. Indexed colour and CMYK files (and files with no layers) import as one flattened picture, and 32 bit, bitmap, Lab, duotone and multichannel files are not supported. Layers with nothing in them are skipped without comment.
+The document becomes a page of the same size. Every pixel layer becomes an image layer (stored as a PNG asset) at its position, folders become groups, and the layer name, visibility, opacity (including fill opacity) and blend modes carry over: normal, dissolve, multiply, screen, overlay, soft light, hard light, darken, lighten, color dodge, color burn, linear dodge (add), difference, exclusion, hue, saturation, color and luminosity.
+
+Modes a browser can't draw come in as the nearest one there is, and the report lists them: linear burn as multiply, darker color as darken, lighter color as lighten, vivid, linear and pin light and hard mix as hard light, and divide as color dodge.
+
+8 and 16 bit RGB and grayscale files import as layers. Indexed colour and CMYK files (and files with no layers) import as one flattened picture, and 32 bit, bitmap, Lab, duotone and multichannel files are not supported. Layers with nothing in them are skipped without comment.
 
 **Text layers** become real, editable text layers: the text, font, size, colour, alignment, line height, letter spacing (tracking) and bold, italic, underline and strikethrough, with a style run for each stretch that differs (so a heading with one red word stays one layer). Photoshop stores a font as a PostScript name such as \`Montserrat-SemiBold\`; the importer turns it into a family and weight. Families that are Google fonts are added to the project's fonts so they load; any other font keeps its name and shows only where that font is installed, so check the font field in the inspector. Point text (a click on the canvas) becomes a box that does not wrap, paragraph text (a dragged box) keeps its width and height. Text with a layer mask stays real text, with the mask over it. Only text Photoshop warps, sets vertically or stores in a way the importer can't read stays a picture of its pixels. That layer is named after the text with **(text as picture)**, shows with the picture icon in the Layers panel (real text has the **T**), and the import report lists it by name with the reason, so you know which ones to retype.
 
@@ -3749,7 +4967,7 @@ Not carried over, and listed in the report: layer styles and effects (shadows, s
 ## Illustrator (.ai) and PDF
 Illustrator saves a PDF inside its files when **Create PDF Compatible File** is ticked in the save options (it is by default). The importer reads that PDF, so a \`.ai\` file saved without it can't be imported: you'll see "Save the file with 'Create PDF Compatible File' ticked", and re-saving from Illustrator fixes it. Ordinary \`.pdf\` files import the same way.
 
-Every page becomes an artboard of the page's size (the trim box when the file has one), laid out side by side. A file with one artboard gives an artboard named after the file; with several, each is named *file / Artboard 2* and so on.
+Every PDF page, and every Illustrator artboard, becomes a page of the same size (the trim box when the file has one), laid out side by side. A file with one gives a page named after the file. With several, each is named *file / Artboard 2* and so on.
 
 What you get is editable vector art:
 
@@ -3767,14 +4985,14 @@ Not carried over, and listed in the report: pattern fills, gradient meshes, opac
 ## AutoCAD (.dxf, and .dwg)
 ![An AutoCAD drawing after import: lines, a hatch and text as editable layers.](help/dxf-import-result.png)
 
-A **DXF** file becomes one artboard of editable vector layers, named after the file. ASCII and binary DXF both work. Only the **model space** is imported; paper space layouts (sheets) are skipped and reported. If the file has nothing in the model space, its paper space is imported instead.
+A **DXF** file becomes one page of editable vector layers, named after the file. ASCII and binary DXF both work. Only the **model space** is imported; paper space layouts (sheets) are skipped and reported. If the file has nothing in the model space, its paper space is imported instead.
 
-- **Fitting.** The drawing is scaled evenly, with the y axis flipped (CAD has y up), so its longest side is 1600 px, plus a 20 px margin. The report tells you the scale ("1 px = 5 mm") from the file's drawing units. Objects on layers that are off or frozen don't count when fitting. If a stray object far from the drawing would shrink it, the artboard shows the extents saved in the file instead and says so.
+- **Fitting.** The drawing is scaled evenly, with the y axis flipped (CAD has y up), so its longest side is 1600 px, plus a 20 px margin. The report tells you the scale ("1 px = 5 mm") from the file's drawing units. Objects on layers that are off or frozen don't count when fitting. If a stray object far from the drawing would shrink it, the page shows the extents saved in the file instead and says so.
 - **Layers.** Each DXF layer becomes a group with the layer's name, in the file's order. Layers that are off or frozen are imported hidden, so you can show them again. A layer with hundreds of plain lines has them merged into a few path layers (per colour, width and dash) to keep the project light.
 - **Shapes.** Lines, polylines (with arc segments), circles, arcs, ellipses, splines (as cubic curves), points, solids, 3D faces (outline only) and leaders become path layers. Hatches become filled paths with their holes (even-odd), and gradient hatches become a two colour gradient.
 - **Blocks.** Block inserts are expanded in place, including nested blocks, scale, rotation, mirroring and row / column arrays. Layer 0 and BYBLOCK properties follow the insert. Dimensions are drawn from the shapes AutoCAD saved with them. Attributes become text.
 - **Text.** TEXT and MTEXT become text layers with their height, rotation and alignment. Formatting codes are removed and stacked fractions become *a/b*. CAD fonts aren't in the file as real fonts, so the text uses the default font and the box is an estimate: check long labels.
-- **Colours.** AutoCAD colour numbers, BYLAYER, BYBLOCK and true colours all work. White (and AutoCAD's colour 7) is drawn **black**, because the artboard is white.
+- **Colours.** AutoCAD colour numbers, BYLAYER, BYBLOCK and true colours all work. White (and AutoCAD's colour 7) is drawn **black**, because the page is white.
 - **Line weights and linetypes.** CAD lines are thin, so lines without a weight are 1 px; a weight of 0.25 mm is 1 px, 0.5 mm is 2 px, 1 mm is 4 px (up to 14 px). Linetypes (dashed, dotted, ...) become dash patterns, scaled by the file's linetype scale.
 
 Not carried over, and listed in the report: hatch pattern lines (a pattern hatch is a light tint of its colour), images, 3D solids and surfaces, multileaders, external references, infinite lines, mesh surfaces and proxy objects.
@@ -3782,7 +5000,7 @@ Not carried over, and listed in the report: hatch pattern lines (a pattern hatch
 **DWG files** (the AutoCAD drawing format itself) can't be read directly: you'll see "DWG version AC1032 (AutoCAD 2018 and later): save it as DXF from your CAD program". In AutoCAD, BricsCAD, DraftSight, LibreCAD and similar, use **File > Save As > DXF** (any version; R2000 or later keeps the most) and import that file. Like Photoshop and Illustrator files, a DXF can be updated later with **Update from file…**.
 
 ## VectorCraft (.vectorcraft)
-A VectorCraft file (and the older \`.drawcraft\` name) is read as editable vector art. Each artboard in the file becomes an artboard (one artboard is named after the file, several are named *file - Artboard name*), holding the artwork that touches it.
+A VectorCraft file (and the older \`.drawcraft\` name) is read as editable vector art. Each artboard in the file becomes a page (one is named after the file, several are named *file - Artboard name*), holding the artwork that touches it.
 
 - **Layers and groups** become groups with the same name; hidden stays hidden, and opacity and these blend modes are kept: multiply, screen, overlay, soft light, hard light, darken, lighten, color dodge, color burn, linear dodge, difference, exclusion, hue, saturation, color and luminosity. A clip group or clipped layer becomes a [mask](groups-frames#masks) in front of what it clips.
 - **Paths and compound paths** become path layers. Solid, linear and radial gradient fills and strokes (width, caps, joins, dashes) are kept, and an object with several fills or strokes becomes a group with one path layer for each. CMYK, gray and Lab colours are converted to RGB with a simple formula, so print colours can look a little different.
@@ -3794,7 +5012,7 @@ A VectorCraft file (and the older \`.drawcraft\` name) is read as editable vecto
 Not carried over, and listed in the report: opacity masks, pattern fills, brushes and variable-width strokes, arrowheads, inside and outside stroke alignment, type on a path, other live effects, placed documents, and blend modes outside the list.
 
 ## PhotoCraft (.pcraft)
-A PhotoCraft file is read like a Photoshop file: pixel layers become image layers (PNG assets), folders become groups, and an artboard folder becomes an artboard.
+A PhotoCraft file is read like a Photoshop file: pixel layers become image layers (PNG assets), folders become groups, and an artboard folder becomes a page.
 
 - Opacity (times fill opacity), blend modes, visibility, **clipping layers** (as in Photoshop: a group with a copy of the base used as a mask), layer masks (baked into the pixels, or a mask picture for text, shapes and folders) and vector masks (a path used as a mask).
 - **Text** becomes text layers: font, size, colour, tracking, leading, alignment and style runs. Warped, vertical and on-a-path text keeps its rendered pixels.
@@ -3804,7 +5022,7 @@ A PhotoCraft file is read like a Photoshop file: pixel layers become image layer
 Not carried over, and listed in the report: adjustment layers, other layer styles, pattern fills, blend modes outside the list, and mask feather. A file that is a folder rather than a ZIP archive has to be zipped first. If nothing can be rebuilt, the flattened picture saved in the file is imported instead.
 
 ## PowerPoint (.pptx)
-Each slide becomes an artboard, the size of the slide, named after the file and the slide number. Older \`.ppt\` files have to be saved as \`.pptx\` in PowerPoint first.
+Each slide becomes a page, the size of the slide, named after the file and the slide number. Older \`.ppt\` files have to be saved as \`.pptx\` in PowerPoint first.
 
 - **Text** becomes text layers: font, size, bold, italic, underline, strike, capitals, colour, letter spacing, alignment, line and paragraph spacing, vertical anchor and the box's padding. Placeholders (titles, body text) take their position and look from the slide's layout and master when the slide doesn't set them. Bullets and numbers are typed in as characters, and a layer has one alignment, so a text box with mixed alignment takes the first paragraph's.
 - **Pictures** become image layers (assets of the project), with any crop kept as a clipped frame and the alt text as the layer's label. Pictures that are only linked, or saved as EMF, WMF or TIFF, are skipped.
@@ -3817,23 +5035,24 @@ Not carried over, and listed in the report with the slides they were on: charts,
 Drop an SVG file on the canvas, paste it, or pick it with the **Image** tool. It becomes a group of editable vector layers: shapes and paths (with their transforms applied), groups, solid and gradient fills, strokes and dashes, and simple text. Masks, filters, patterns and embedded images are listed as not carried over.
 
 ## Updating a design file
-A Photoshop, Illustrator, PDF, AutoCAD (DXF), VectorCraft, PhotoCraft or PowerPoint file is copied into the project when you import it, and its artboards remember which file they came from. When the designer saves a new version, bring it in with **Update from file…**:
-- Select one of its artboards: the inspector's **Source file** section says **From Poster.psd (Photoshop, updated 2 h ago)** and has **Update from file…**.
+A Photoshop, Illustrator, PDF, AutoCAD (DXF), VectorCraft, PhotoCraft or PowerPoint file is copied into the project when you import it, and its pages remember which file they came from. When the designer saves a new version, bring it in with **Update from file…**:
+- Select one of its pages: the Properties panel's **Source file** section says **From Poster.psd (Photoshop, updated 2 h ago)** and has **Update from file…**.
 - Or open the **Assets** panel: **Design files** at the top lists each file with **Update…**.
 
-Pick the new version (it can have a new name; the artboards then say they came from that one). The editor can't notice a file changing on your computer by itself, since it runs in a web page, so updating is always this one step.
+Pick the new version (it can have a new name; the pages then say they came from that one). The editor can't notice a file changing on your computer by itself, since it runs in a web page, so updating is always this one step.
 
 How a re-import merges (your edits are kept):
 - Layers are matched by name (in the same folder, the nth layer of a repeated name), and a layer renamed in the file is recognised by its picture or text and position.
 - A property (position, size, opacity, visibility, text, style, ...) the file changed is updated **unless you changed it too**: what you edited stays. Pictures that changed in the file are replaced; one you swapped for another picture stays.
 - New layers in the file appear in their place in the layer order. Layers you added yourself, and all timelines, interactions and bindings, are left alone.
 - A layer the file no longer has is removed. If you gave it keys, interactions or bindings it stays instead, hidden, and is renamed "(removed from file)", so nothing you built is lost. A layer you deleted here stays deleted.
-- One undo step undoes a whole re-import. Pictures the file no longer uses are kept in the project (so undo can bring them back); they show as unused in the Usage tab, and **Remove unused assets** deletes them. A toast says what happened ("Poster.psd updated: 3 layers changed, 1 added").
+- One undo step undoes a whole re-import. Pictures the file no longer uses are kept in the project (so undo can bring them back); they show as unused in the Usage tab, and **Remove unused assets** deletes them. A message says what happened ("Poster.psd updated: 3 layers changed, 1 added").
 
 **Forget source file**, under the button, drops the connection: the layers stay as they are and **Update from file** goes away.
 
-Artboards that were *linked* to a file on disk before (an older way of doing this, in Chrome and Edge only) keep **Re-import now** and **Watch for changes** beside **Update from file…** in the browser that linked them.
+Pages that were *linked* to a file on disk before (an older way of doing this, in Chrome and Edge only) keep **Re-import now** and **Watch for changes** beside **Update from file…** in the browser that linked them.
 
+## The import report
 After an import, a report lists anything that couldn't be carried over exactly. It is the whole list: nothing is skipped without a note. Press the **×** to close it.
 
 ![An import report for a DXF file.](help/import-report-dxf.png)`,
@@ -3848,27 +5067,32 @@ After an import, a report lists anything that couldn't be carried over exactly. 
 
 | Export | Gives you |
 |---|---|
-| Single HTML file | One file with the player, the project and every asset (big pictures as their [optimised copies](export#optimised-pictures)). Every file is inside it, so a lesson offered in lighter versions still sends all of them in the first download: see [Download size](download-size#what-the-player-loads-and-when). Upload or embed it anywhere. Google fonts are copied into the file, so opening it never calls Google (if a font can't be fetched when you export, a message says so and that font loads from Google instead). |
+| Single HTML file | One file with the player, the project and every asset. Upload or embed it anywhere. See [About the single HTML file](export#about-the-single-html-file) |
 | Project package (${PACKAGE_EXTENSION}) | The whole project with assets at full size, to re-import or play with the player library |
 | Project JSON | The document only, without asset files |
 | Public interface reference…, TypeScript definitions (.d.ts) | What a page that embeds the project can set, read and hear, as a reference page and typed names. See [Public interface](public-interface). These three exports ask first when the list no longer matches the project |
-| Lottie JSON (this artboard), dotLottie (this artboard) | The open artboard's shapes and timeline, for Lottie players (no interactivity). A report lists what couldn't be written |
-| PNG image (this artboard), PNG image, 1× | The open artboard as a picture, at 2× or at actual size, at the timeline's playhead |
-| SVG image (this artboard) | The open artboard as an SVG file that scales cleanly. It uses HTML inside the SVG for text and web elements, so it opens in browsers but not in every drawing program |
-| Video, GIF or frames… | One timeline of the open artboard as an MP4 or WebM video, an animated GIF, or a ZIP of PNG pictures, one per frame (below) |
+| Lottie JSON (this artboard), dotLottie (this artboard) | The open page's shapes and timeline, for Lottie players (no interactivity). A report lists what couldn't be written |
+| PNG image (this artboard), PNG image, 1× | The open page as a picture, at 2× or at actual size, at the timeline's playhead |
+| SVG image (this artboard) | The open page as an SVG file that scales cleanly. It uses HTML inside the SVG for text and web elements, so it opens in browsers but not in every drawing program |
+| Video, GIF or frames… | One timeline of the open page as an MP4 or WebM video, an animated GIF, or a ZIP of PNG pictures, one per frame (below) |
 
 Sharing is on its own button, **Share**, next to Export (below).
 
-The files are named after the project (and the artboard, for pictures, Lottie and video).
+The files are named after the project (and the page, for pictures, Lottie and video).
+
+## About the single HTML file
+- Big pictures go in as their [optimised copies](export#optimised-pictures).
+- Every file is inside it, so a lesson offered in lighter versions still sends all of them in the first download. See [Download size](download-size#what-the-player-loads-and-when).
+- Google fonts are copied into the file, so opening it never calls Google. If a font can't be fetched when you export, a message says so and that font loads from Google instead.
 
 ## Video, GIF and frames
-**Export → Video, GIF or frames…** turns one timeline of the open artboard into moving pictures you can put in a slide deck, an email or a lecture recording. It plays the timeline once through, from the start, and draws every frame at its exact time: the result is smooth however slow or busy your computer is, and it is the same drawing as **PNG image**, so a frame looks just like the canvas with the playhead there.
+**Export → Video, GIF or frames…** turns one timeline of the open page into moving pictures you can put in a slide deck, an email or a lecture recording. It plays the timeline once through, from the start, and draws every frame at its exact time: the result is smooth however slow or busy your computer is, and it is the same drawing as **PNG image**, so a frame looks like the canvas with the playhead there.
 
 | Setting | What it does |
 |---|---|
-| Timeline | Which timeline of the open artboard to draw. It starts on the one you have open |
+| Timeline | Which timeline of the open page to draw. It starts on the one you have open |
 | Format | **MP4 video (H.264)** and **WebM video (VP9)** play almost everywhere and are small. **Animated GIF** plays anywhere, including in email, but is larger and limited to 256 colours a frame. **PNG frames (ZIP)** is one picture per frame (frame-0001.png and so on) for a video editor |
-| Width | How wide the picture is in pixels; the height follows the artboard's shape. Videos always have even sides, so the width can come out a pixel smaller |
+| Width | How wide the picture is in pixels; the height follows the page's shape. Videos always have even sides, so the width can come out a pixel smaller |
 | Frames per second | Starts at the timeline's own rate (30 if it has none). GIF goes up to 50, the rest up to 60 |
 | Repeat for ever | GIF only. Off, the GIF plays once and stops |
 
@@ -3895,7 +5119,7 @@ A phone photo can be 5 MB or more, and an export or share link carries every pic
 - Turn the box off to put every picture in at full size again.
 
 ## Sharing
-**Share** in the top bar (next to Export) has three ways to share a project:
+**Share** in the top bar (next to Export) has four ways to share a project:
 
 | Share | Gives you |
 |---|---|
@@ -3924,15 +5148,26 @@ Until the link exists the dialog offers **Create the link**, and once it does, *
 At the top of the dialog a line says whether there is anything to look at first: see [Before you share](before-you-share).
 
 ## Share link
-**Share → Share…**, under **More ways to share**, publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google (a message tells you if a font couldn't be fetched, and that font loads from Google instead). It is a snapshot: press **Update to the latest version** to publish later changes (the page it replaces is kept: if the update was a mistake, **Revert to previous version** puts it back for everyone at once, and pressing it again switches back), or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). The **Link for StudyDesk** is the same link, so it stops too: if learners have results or progress in the project, the confirm lists how many in each course and when each was last active, so you can tell a link a course is using this term from an old one. **Copy** copies the link and **Open** opens it in a new tab.
+**Share → Share…**, under **More ways to share**, publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it). Links are long and random so they can't be guessed. **Copy** copies the link and **Open** opens it in a new tab.
+
+The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google. A message tells you if a font couldn't be fetched, and that font loads from Google instead.
+
+### Updating, reverting and turning off
+The link is a snapshot of the project when you published it.
+
+- Press **Update to the latest version** to publish later changes.
+- The page it replaces is kept. If the update was a mistake, **Revert to previous version** puts it back for everyone at once, and pressing it again switches back.
+- **Turn off link** stops it working. After you confirm, the link shows a "turned off" page.
+- The **Link for StudyDesk** is the same link, so it stops too. If learners have results or progress in the project, the confirmation lists how many in each course and when each was last active, so you can tell a link a course is using this term from an old one.
 
 ![The Share dialog: Where will people use it? with the embed code to copy, and More ways to share folded underneath.](help/share-where.png)
 
 A share link carries big pictures as their [optimised copies](export#optimised-pictures) while **Optimise output** is on in the Project settings.
 
-**Link for StudyDesk** plays the same project but keeps each signed-in learner's score, completion and progress. Use it in StudyDesk when you set a score or tick **Remember** on variables, and see [Results and progress](results). **Results…** shows how learners did.
+### The Link for StudyDesk
+The **Link for StudyDesk** plays the same project but keeps each signed-in learner's score, completion and progress. Use it in StudyDesk when you set a score or tick **Remember** on variables, and see [Results and progress](results). **Results…** shows how learners did.
 
-That link opens the **learner page**: a small page around your project that knows who the learner is from their StudyDesk session. It gives the project the learner's saved progress, keeps their results, and, when **Learner records** is on, passes on the activity that [Insights](insights) counts. Put this link in your StudyDesk page, not the plain one. A learner who isn't signed in just plays it, and their progress stays in their own browser. **Allow remix**, under the link, adds a **Remix this** button for signed-in staff who open it, which copies the project into their own projects: see [Templates, examples and remix](templates#allow-remix-on-a-share-link).
+That link opens the **learner page**: a small page around your project that knows who the learner is from their StudyDesk session. It gives the project the learner's saved progress, keeps their results, and, when **Learner records** is on, passes on the activity that [Insights](insights) counts. Put this link in your StudyDesk page, not the plain one. A learner who isn't signed in plays it as normal, and their progress stays in their own browser. **Allow remix**, under the link, adds a **Remix this** button for signed-in staff who open it, which copies the project into their own projects: see [Templates, examples and remix](templates#allow-remix-on-a-share-link).
 
 A project that uses a microphone, camera or photos (see [Microphone, camera and photos](sensors)) only works through the **Link for StudyDesk**, and the iframe that holds that link on the StudyDesk page needs \`allow="microphone; camera"\`. The **Embed code** below writes that for you. Update the link after changing what the project declares.
 
@@ -3943,7 +5178,7 @@ It is one code for all three sites. Each of them has the same Toolbox script and
 
 What the code carries:
 - **A title** made from the project name (for example \`Interactive: Fractions lab\`), which is what a screen reader calls the frame.
-- **The shape of the project**: the start artboard's width and height as an aspect ratio, so the frame is the right height before anything loads. The page then asks StudyDesk to set the real height, and keeps asking as the project resizes, the same way the Toolbox's own items do. A project with [responsive artboards](responsive) changes shape with its width, and the frame follows.
+- **The shape of the project**: the start page's width and height as an aspect ratio, so the frame is the right height before anything loads. The page then asks StudyDesk to set the real height, and keeps asking as the project resizes, the same way the Toolbox's own items do. A project with [responsive pages](responsive) changes shape with its width, and the frame follows.
 - **\`allow="autoplay; fullscreen"\`**, so video, sound and the fullscreen button work. When the project declares the microphone or camera, \`microphone\` and \`camera\` are added; photos are a file picker and need nothing. The list follows what the project declared when the link was last updated, so press **Update to the latest version** first if you have just changed it, then copy the code again.
 - **An id** (\`data-cdt-id\`) that StudyDesk uses to tell this item from the others on the page.
 
@@ -3957,10 +5192,14 @@ For a walk-through, see [Tutorial 5](tutorial-publish).`,
     group: 'Import and export',
     summary: 'Put an interactive on a page, size it, and talk to it from JavaScript.',
     keywords: 'embed iframe player api web component script host postmessage height resize toolbox',
-    body: `## The simplest way
+    body: `This page is for anyone who puts a project on a page. The first section is for everyone. The rest is for developers.
+
+## The simplest way
 For StudyDesk, StaffDesk and the open site, use the **Embed code** in [Share link](export#embed-code): one iframe to paste into the page's Source code view, sized and labelled like any other Toolbox item.
 
-Anywhere else, upload the **Single HTML file** and show it in an iframe. Inside the StudyDesk Toolbox the player reports its height to the page so the iframe fits (the suite's \`setILARSize\` or a \`{width: null, height, cacheID}\` message).
+Anywhere else, upload the **Single HTML file** and show it in an iframe.
+
+Inside StudyDesk the project tells the page its height, so the iframe fits. (For developers: it uses the suite's \`setILARSize\`, or a \`{width: null, height, cacheID}\` message.)
 
 ## The web component
 \`\`\`
@@ -3990,27 +5229,27 @@ player.setData('products', [...]);
     group: 'Working together',
     summary: 'Publish components, colours, text styles and assets from one project and use them, with updates, in others.',
     keywords: 'library component share publish update detach style swatch version design system',
-    body: `A **library** is an ordinary project that publishes some of its artboards as **components**, along with its named colour and text styles and the assets they use. Other projects add the library, drag its components onto the canvas, and are told when a newer version is published. It is how you keep one button, header or colour palette in step across many projects. Everything lives in the **Libraries** tab of the left panel.
+    body: `A **library** is an ordinary project that publishes some of its pages as **components**, along with its named colour and text styles and the assets they use. Other projects add the library, drag its components onto the canvas, and are told when a newer version is published. It is how you keep one button, header or colour palette in step across many projects. Everything lives in the **Libraries** tab of the left panel.
 
 ## Making a library
 1. Turn on **This project is a library** (Inspector, **Project** section, or **Make this project a library** in the Libraries tab). The projects page marks it with a **Library** badge.
-2. Select an artboard and tick **Publish to library**. Do this for each artboard you want to offer. An artboard that a published one uses as an [instance](instances) comes along automatically.
+2. Select a page and tick **Publish to library**. Do this for each page you want to offer. A page that a published one uses as an [instance](instances) comes along automatically.
 3. In the Libraries tab press **Publish**, with an optional note. Each publish with something new in it makes the next **version** (v1, v2 ...). Publishing with nothing changed does not.
 4. **Share**: tick **Everyone can use it**, or type usernames, then **Save sharing**. Only you see the library until you do. **Stop publishing** withdraws it; projects that already use it keep their copies.
 
 ## Using a library
 - Under **Available libraries** press **Add**. Its components and colours appear under **Libraries in this project**.
-- **Drag a component onto the canvas**, or press **Place** to put it in the open artboard. The first time, the component's artboard is copied into your project as a **library artboard** (badged *library* in the layers list) and an [instance](instances) of it is placed. That copy is only there for the instance to use, so it is kept **off the canvas**: you see one thing placed, not two. The eye on its row in Layers shows it on the canvas (and hides it again), and picking the row shows it too. Placing it again reuses the same copy. **Add artboard** copies it onto the canvas as an artboard of its own, without placing anything.
-- A library artboard is **read-only**: its layers, timelines and interactions come from the library. You can move it and rename it. Variables, fonts, data sources and assets it needs are added to your project (a variable or data source you already have with the same name is left alone).
-- Libraries are copied, not linked live: the artboards, assets and styles are in your project, so [exports](export) and the player are self-contained.
+- **Drag a component onto the canvas**, or press **Place** to put it in the open page. The first time, the component's page is copied into your project as a **library page** (badged *library* in the layers list) and an [instance](instances) of it is placed. That copy is only there for the instance to use, so it is kept **off the canvas**: you see one thing placed, not two. The eye on its row in Layers shows it on the canvas (and hides it again), and picking the row shows it too. Placing it again reuses the same copy. **Add page** copies it onto the canvas as a page of its own, without placing anything.
+- A library page is **read-only**: its layers, timelines and interactions come from the library. You can move it and rename it. Variables, fonts, data sources and assets it needs are added to your project (a variable or data source you already have with the same name is left alone).
+- Libraries are copied, not linked live: the pages, assets and styles are in your project, so [exports](export) and the player are self-contained.
 
 ## Updates
 When the library publishes a new version, its entry shows **Updates available**. Press it to **review**: each changed component lists what changed (layers added, removed or changed, size, timelines, interactions), and styles are listed too. Then **Update all**, or **Update this one** per component.
 
-What is kept when you update: the instances you placed in your own artboards, their **Inputs**, their position and size, your variables (and their values), your own artboards and your own styles. A component the library has removed stays in your project as it is until you detach or delete it.
+What is kept when you update: the instances you placed in your own pages, their **Inputs**, their position and size, your variables (and their values), your own pages and your own styles. A component the library has removed stays in your project as it is until you detach or delete it.
 
 ## Detach
-**Detach to edit** (Inspector, or in the library's list) turns a library artboard into a normal artboard you can edit. It stops getting updates. **Stop using this library** detaches everything from it and makes its styles your own.
+**Detach to edit** (Inspector, or in the library's list) turns a library page into a normal page you can edit. It stops getting updates. **Stop using this library** detaches everything from it and makes its styles your own.
 
 ## Styles
 **Styles** holds named colours and text styles.
@@ -4022,7 +5261,7 @@ What is kept when you update: the instances you placed in your own artboards, th
 A library can be published as a **brand kit**: the same thing, but what a project takes from it is locked so it stays on brand. See [Brand kits](brand-kits).
 
 ## Limits
-- Components carry artboards (with their timelines and interaction graphs), variables, fonts, data sources and assets. Project **scripts** are not carried; instances do not run scripts of their own anyway.
+- Components carry pages (with their timelines and interaction graphs), variables, fonts, data sources and assets. Project **scripts** are not carried; instances do not run scripts of their own anyway.
 - An update replaces a copy's content by layer id. Inputs that name a variable the library renamed or removed are left as they were.
 - Only the latest version is kept on the server, so you cannot go back to an older one (undo works right after an update, and the [revision history](live-editing#revision-history) goes further back).`,
   },
@@ -4043,9 +5282,10 @@ A library can be published as a **brand kit**: the same thing, but what a projec
 - **Pictures, videos and sounds** are picked from the project's files, or **+ Add a new picture…** uploads one. A grey placeholder becomes your picture, and its "Replace with your picture" words go away.
 - **Switches and numbers** such as the pass mark, how many tries, how long a right answer stays on screen.
 - The small arrow beside a field takes the editor to the layer it is about.
+- Some starters have a setting of their own, such as **Keep the learner's map for next time** on the **Mind map**. See [Starter settings](branded-starters#starter-settings).
 
 ## How it relates to the checklist
-Most checklist items now point at a field: press **Fill in** beside the item to open the form at the right place. Items about looks and layout (move a spot onto its part of the diagram, restyle a card, set up the sound) stay on the checklist and are done on the page.
+Most checklist items now point at a field: press **Fill in** beside the item to open the form at the right place. Items about looks and layout (move a spot onto its part of the diagram, restyle a card, set up the sound) stay on the checklist and are done on the page. The command palette can open **Fill in** too.
 
 ## It is the same data
 Every field edits ordinary parts of the project, so **Undo** and **Redo** work, other people editing live see it, and nothing is hidden: the **Variables** tab shows the list you typed, **Layers** the text, the **Question** section the answers. Use whichever is easier. The form only knows where things are, so if you delete a layer or a variable a field was about, the field says so and the rest of the form carries on.
@@ -4062,7 +5302,7 @@ Every field edits ordinary parts of the project, so **Undo** and **Redo** work, 
     group: 'Working together',
     summary: 'Start a project from a template with a checklist of what to change, save your own, play and copy the examples, allow remix on a share link, and pull template updates in.',
     keywords: 'template starter checklist example remix copy duplicate update version save share quiz flip cards sorting branching story timeline intro review',
-    body: `A **template** is a whole project saved so other people (or you) can start new projects from it. Nobody has to begin from a blank artboard, and a **checklist** walks whoever uses it through replacing the sample content, so a template's wording does not end up in front of learners. Everything is on the **Templates** tab of the projects page (next to **Projects**).
+    body: `A **template** is a whole project saved so other people (or you) can start new projects from it. Nobody has to begin from a blank page, and a **checklist** walks whoever uses it through replacing the sample content, so a template's wording does not end up in front of learners. Everything is on the **Templates** tab of the projects page (next to **Projects**).
 
 ![The Templates tab on the projects page: Mine, Shared, Built-in and Examples, with a card for each built-in starter.](help/templates-tab.png)
 
@@ -4099,7 +5339,7 @@ Open a project and choose **Share > Save as template**.
 - **Title** and **Description** are what the card shows. Say what the template is for.
 - **Everyone can use this template** (off: only you see it). People who use it get their own copy; yours is never changed.
 - **Checklist**: one line for each thing to change ("Replace the question text"). Select a layer first and press **Link** on an item to point it at that layer, or **Add for the selected layers** for one item per layer. Clicking an item later selects the layer. Reword the items for the person who will use it, not for you.
-- The picture on the card is the project's own thumbnail, and the whole project (artboards, pictures, fonts, variables, interactions and [notes](notes), which are the right place to explain each part) goes with it. Review comments and results do not.
+- The picture on the card is the project's own thumbnail, and the whole project (pages, pictures, fonts, variables, interactions and [notes](notes), which are the right place to explain each part) goes with it. Review comments and results do not.
 - Saving again from the same project, choosing **The next version of ...**, makes **version 2**, **3** and so on. Saving with nothing changed only updates the title, description, checklist and visibility.
 
 ![The Save as template window: title, description, who can use it, and a checklist whose first item points at the selected layer.](help/templates-save.png)
@@ -4107,7 +5347,7 @@ Open a project and choose **Share > Save as template**.
 Do not leave real names, private pictures or course content in a template that is shared with everyone: anyone can use it, and the pictures go with it.
 
 ## Update from template
-Projects made from a saved template remember which version they came from, and what every artboard, layer, timeline, interaction node and variable was when they were copied. When the author saves a newer version, the Checklist tab shows **Update available**. Press it to see:
+Projects made from a saved template remember which version they came from, and what every page, layer, timeline, interaction node and variable was when they were copied. When the author saves a newer version, the Checklist tab shows **Update available**. Press it to see:
 - parts the template changed that **you have not touched**: they are updated, in place, with your own layers inside them left alone;
 - parts the template **added**: they are added where they sit in the template;
 - parts you changed: **kept as they are**, listed so you know the template changed them too;
@@ -4120,16 +5360,16 @@ Untick anything you do not want, then **Update**. It is one undo step (Ctrl+Z). 
 A template made from a project that already has a [brand kit](brand-kits) added, with some of its items placed, is a **pre-branded template**. Its card says **Brand kit**, and projects made from it start with the kit's logos and headers in place and locked, so they stay on brand. Everything else in the project is the author's to change.
 
 ## Examples
-**Examples** are finished projects that ship with Interactives: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
+**Examples** are finished projects that ship with Interactives: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. Every example's pages and graphs are laid out neatly and carry a [note](notes#notes-in-starters-and-examples) or two saying what to look at. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
 
 ## Allow remix on a share link
-In **Share > Share link**, tick **Allow remix**. People who open the **Link for StudyDesk** while signed in to the editor get a **Remix this** button; pressing it copies the project into their own projects and opens it. The copy is theirs: it does not change your project, and it is not tied to it. A remix copies the project **as it is now** (not the version last published to the link), with every artboard, layer and picture, including parts the page does not show, so only allow it for projects you are happy to give away. Turn it off at any time; copies already made stay.
+In **Share > Share link**, tick **Allow remix**. People who open the **Link for StudyDesk** while signed in to the editor get a **Remix this** button; pressing it copies the project into their own projects and opens it. The copy is theirs: it does not change your project, and it is not tied to it. A remix copies the project **as it is now** (not the version last published to the link), with every page, layer and picture, including parts the page does not show, so only allow it for projects you are happy to give away. Turn it off at any time; copies already made stay.
 
 ## Good to know
 - Layer ids stay the same in a copy, so a checklist and updates can find things. Duplicating or pasting layers inside the copy makes new ids as usual.
 - The server keeps a template as a snapshot with its own copy of the files, so deleting or editing the project it came from does not change it.
 - Templates are one level: a copy of a template does not become a template of its own until you save it as one.
-- The **Built-in** tab also has the UniSQ [branded starter packs](branded-starters): ready-made activities in a choice of colourways, with the brand locked. Every built-in starter opens with its artboards laid out in order in a tidy grid (and you can do the same to any project with **Tidy up pages**, see [Artboards](artboards)).`,
+- The **Built-in** tab also has the UniSQ [branded starter packs](branded-starters): ready-made activities in a choice of colourways, with the brand locked. Every built-in starter opens with its pages laid out in order in a tidy grid (and you can do the same to any project with **Tidy up pages**, see [Pages](artboards)).`,
   },
   {
     id: 'branded-starters',
@@ -4143,10 +5383,80 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
       const list = src?.sets.length
         ? src.sets.map((set) => `### ${set.name}\n\n${set.starters.map((s) => `- **${s.name}**: ${s.description}`).join('\n')}`).join('\n\n')
         : 'The list of starters is in the editor (Templates, Built-in).';
-      return `A **branded starter pack** is a ready-made activity in the UniSQ look: a gradient title page with the logo, white content pages with a footer line, and sections on deep purple. You write the content; the look is already done, and it stays done.
+      return `A **branded starter pack** is a ready-made activity in the UniSQ look: a gradient title page with the logo, white content pages with a footer line, and sections on deep purple. You write the content. The look is already done, and it stays done.
 
 ## Using one
-Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top. Pick a **colourway** (the swatches; your choice is remembered in this browser), find the starter in its set, and press **Use template**. The pictures show the first page in the colourway you chose. You get a checklist of everything to change, like any other [template](templates#use-a-template): the pictures are grey placeholders, and the sample text is yours to replace. A starter with sound (the **Listening lab**) comes with short placeholder tones in the project's **Assets**, named "(replace)": use the arrow beside each one to swap in your own clip, and the **Play sound** nodes follow it. **Keep the beat** has no metronome timer to drift: one steady 16 ms clock (held back by its **Only while** until a drill is running) reads \`Date.now()\` against the start time, so every beat is exactly where it should be, and each tap is scored the moment it arrives. Its drills, tempos and how close a tap has to be are the **presets** variable (Variables tab). **Sign practice with self-review** keeps the model clip on one page, **Model clips** (one Video layer whose asset follows the sign in view: each sign in the **signs** variable names its clip, a placeholder tone in **Assets** to swap for the signer's video), and every other page shows it. Its Watch and choose half needs no camera, and its camera half records a short video take that stays on the learner's device. Each page has a phone version that stacks the model above the camera (see [Responsive artboards](responsive)), with the same layer names, so a change to wording or layout on one is made on the other too. It says plainly that it supports practice and is not feedback from a Deaf teacher, so keep that in; you also need the signer's consent and the rights to each clip. The **Live sound lab** uses the microphone as a number and records nothing: a loudness meter with a target band (steady volume, or a noise check worded as a rough guide) and eight frequency bars. Its project is set to listen only, the learner is asked once and sees a Listening bar with Stop, and a slider on each scene makes the same numbers when there is no microphone (see [Microphone, camera and photos](sensors)). Try the real microphone from the Link for StudyDesk, not Preview. Its target band, noise line and band names are variables. The **Photo prompts notebook** has a privacy pledge, about six prompts (each a photo slot, caption, tag and "why this one" box, with retake, delete and skip with a reason), a list or bingo board view (the **bingo** variable) and a hand-in page that downloads one web page with the photos inside it. Photos are only held in the page, so it tells learners to download before leaving. The **prompts** variable holds the prompts; each has a photo and example field naming two image assets, and the example is the way through for a learner with no camera. **Shadow the model** (Speaking and practice) is a few phrase cards: each plays a model clip (with a **Slow** switch that keeps the pitch), the learner records themselves, plays their take or the model then their take back to back, ticks your self-check and rates themselves. It declares the microphone, so open **Project > Microphone and camera** to see the purpose and the 30 second cap, and untick Microphone for a listen-and-repeat version. A learner who says no, has no microphone or chooses "Do not use my microphone or camera" gets the plain version (listen, say it aloud, self-check), so nobody is shut out. The recording stays in their browser, is dropped when they go to the next card and is gone on a reload, and the page says so. Each card is a row of the **cards** variable (phrase, note, sound, checks); the sound is the clip's asset, so replacing a placeholder with the arrow in **Assets** keeps the card pointing at it, and for a new row you type the clip's name in **sound**. The **Difficult conversation** and **Timed talk** rehearsals ship with an optional recording step that is switched off: tick Microphone in the same place and *Record my reply* or *Record this talk* and the play-back buttons appear, only for learners whose microphone works. The **Word cloud** (Explore and reveal) makes a cloud from a list of words and weights, \`ourWords\` (a text, a weight, and a detail and link for the dialog a word opens), with the **cloud** formula helper: sizes follow weights, nothing overlaps, and the same words always give the same picture. Words are buttons in one Tab stop with the arrow keys moving through them biggest first, and **View as list** is the text alternative with the counts. Its second page lets one learner type words and watch their own cloud grow (kept as user data, with a **blocked** list and a **minCount**). One author setting, **whoSees**, will choose Only me or Everyone in this class: Only me works now, and the class option arrives with shared responses (until then it keeps showing the learner's own words). The **Dated timeline** (Explore and reveal) is a timeline on a real scale: **events** and **eras** are lists with dates, and the **timelineLayout** helper places them for the years in view, lays the labels out in lanes so they never collide and picks the scale (decades, years, then months) as you zoom. Earlier, Later, Zoom and Fit all move the view, Next event and Previous event walk the events and the view follows, a click or Enter opens an event in a dialog, and **View as list** is the text alternative. Its page is the base of a responsive set with a portrait variant under 560 px wide (same layer names, so a change to wording or layout is made on both), and an ordering activity follows it. The simpler **Interactive timeline** is still in Drag, sort and timelines.
+Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top.
+
+1. Pick a **colourway** (the swatches). Your choice is remembered in this browser, and the pictures show the first page in it.
+2. Find the starter in its set. Press **Play** on its card to try it first: it runs the way a share link would, and nothing is saved.
+3. Press **Use template**.
+
+You get a checklist of everything to change, like any other [template](templates#use-a-template), and a **Fill in** tab beside it: a plain form for the words, questions and pictures ([Fill in this starter](fill-in-starter)). The pictures are grey placeholders, and the sample text is yours to replace.
+
+## On every starter page
+- Back and Next sit in a bar along the bottom of every page: Back on the left, Next on the right.
+- The first page has a small **Credits** button in a corner (bottom right, level with the footer line, unless something of the starter's is in the way). It opens the project's list of credits, which you fill in under [Attributions](attributions); delete the button if you have nothing to credit. Each page of a phone version has its own.
+- Checklist items are short, one job each, with **Why and how** folded underneath.
+- Every starter's graphs and pages carry [notes](notes#notes-in-starters-and-examples) that say what each part does, why it is built that way and what to change.
+- Every page is checked in every colourway, so a button never lands on text and nothing crowds the logo.
+
+## Starter settings
+These are in the **Fill in** tab, on the starter they belong to.
+- **Keep the learner's map for next time** (**Mind map**, its **Build your own** page): on, the learner's map is saved for them as they build, on the StudyDesk learner page, and they get **Save**, **Start a new map** and **Open a saved map**. Off, the map lasts only until they leave. Either way they can download it as a text outline, as a picture, or as a copy to open later.
+- **A soft chip behind each word** (the pills) and **Word colour** (**Plain** or **Colourway**) in the **Word cloud**.
+- **Who sees the learners' cloud**, **Words not allowed** and **Show a word once it has been said** in the **Word cloud**. See below.
+- **Offer a Hint** and **Offer Try again** in the question starters. See [The starters](branded-starters#the-starters).
+
+## Notes on some starters
+### Listening lab
+It comes with short placeholder tones in the project's **Assets**, named "(replace)". Use the arrow beside each one to swap in your own clip, and the **Play sound** nodes follow it.
+
+### Keep the beat
+There is no metronome timer to drift. One steady 16 ms clock, held back until a drill is running, reads the real time against the start time, so every beat is exactly where it should be, and each tap is scored the moment it arrives. The drills, tempos and how close a tap has to be are in the **presets** variable (Variables tab).
+
+### Sign practice with self-review
+- The model clip is one Video layer on one page, **Model clips**, and every other page shows it. Its asset follows the sign in view: each sign in the **signs** variable names its clip, a placeholder tone in **Assets** to swap for the signer's video.
+- The Watch and choose half needs no camera. The camera half records a short video take that stays on the learner's device.
+- Each page has a phone version that stacks the model above the camera (see [Responsive pages](responsive)), with the same layer names, so a change to wording or layout on one is made on the other too.
+- It says plainly that it supports practice and is not feedback from a Deaf teacher, so keep that in. You also need the signer's consent and the rights to each clip.
+
+### Live sound lab
+It uses the microphone as a number and records nothing: a loudness meter with a target band (steady volume, or a noise check worded as a rough guide) and eight frequency bars. The project is set to listen only. The learner is asked once and sees a Listening bar with Stop.
+
+A slider on each scene makes the same numbers when there is no microphone (see [Microphone, camera and photos](sensors)). Try the real microphone from the Link for StudyDesk, not Preview. The target band, noise line and band names are variables.
+
+### Photo prompts notebook
+- A privacy pledge, then about six prompts. Each has a photo slot, a caption, a tag and a "why this one" box, with retake, delete and skip with a reason.
+- A list or bingo board view (the **bingo** variable).
+- A hand-in page that downloads one web page with the photos inside it. Photos are only held in the page, so it tells learners to download before leaving.
+- The **prompts** variable holds the prompts. Each has a photo and an example field naming two image assets, and the example is the way through for a learner with no camera.
+
+### Shadow the model (Speaking and practice)
+A few phrase cards. Each plays a model clip (with a **Slow** switch that keeps the pitch), the learner records themselves, plays their take or the model then their take back to back, ticks your self-check and rates themselves.
+
+- It declares the microphone, so open **Project > Microphone and camera** to see the purpose and the 30 second cap. Untick Microphone for a listen-and-repeat version.
+- A learner who says no, has no microphone or chooses "Do not use my microphone or camera" gets the plain version (listen, say it aloud, self-check), so nobody is shut out.
+- The recording stays in their browser, is dropped when they go to the next card and is gone on a reload, and the page says so.
+- Each card is a row of the **cards** variable (phrase, note, sound, checks). The sound is the clip's asset, so replacing a placeholder with the arrow in **Assets** keeps the card pointing at it. For a new row, type the clip's name in **sound**.
+
+### Difficult conversation and Timed talk
+Both rehearsals ship with an optional recording step that is switched off. Tick Microphone in **Project > Microphone and camera**, then *Record my reply* or *Record this talk*, and the play-back buttons appear, only for learners whose microphone works.
+
+### Word cloud (Explore and reveal)
+A cloud from a list of words and weights, \`ourWords\` (a text, a weight, and a detail and link for the dialog a word opens), with the **cloud** formula helper. Sizes follow weights, nothing overlaps, and the same words always give the same picture.
+
+- Words are buttons in one Tab stop, with the arrow keys moving through them biggest first. **View as list** is the text alternative, with the counts.
+- Its second page lets a learner type words and watch a cloud grow, kept as user data, with a **blocked** list and a **minCount**.
+- **Who sees the learners' cloud** chooses **Only me** or **Everyone in this class**. The class option uses a [Shared responses](shared-responses) source, so it only works from the StudyDesk learner page. Anywhere else the page shows the learner's own words.
+
+### Dated timeline (Explore and reveal)
+A timeline on a real scale. **events** and **eras** are lists with dates, and the **timelineLayout** helper places them for the years in view, lays the labels out in lanes so they never collide and picks the scale (decades, years, then months) as you zoom.
+
+- Earlier, Later, Zoom and Fit all move the view. Next event and Previous event walk the events and the view follows.
+- A click or Enter opens an event in a dialog. **View as list** is the text alternative.
+- The page is the base of a responsive set with a portrait variant under 560 px wide (same layer names, so a change to wording or layout is made on both), and an ordering activity follows it.
+- The simpler **Interactive timeline** is still in Drag, sort and timelines.
 
 ## Colourways
 Every branded project carries all of these as [themes](themes), plus **High contrast**, which a viewer who asks for more contrast gets automatically. Every colour in the project is a theme colour, so switching colourway re-colours the whole thing at once.
@@ -4154,12 +5464,19 @@ Every branded project carries all of these as [themes](themes), plus **High cont
 ${ways}
 
 ### Switching colourway
-Select nothing (or an artboard) and open **Project** in the inspector. The **Colourway** swatches change the theme the project opens in. It is one undo step, and the canvas and Preview show it straight away.
+Select nothing (or a page) and open **Project** in the Inspector. The **Colourway** swatches change the theme the project opens in. It is one undo step, and the canvas and Preview show it straight away.
 
 Tick **Let learners switch colourway** to add a small row of swatches to the top right of the start page. Each one is a button that runs the interaction graph's **Switch the colour theme** action, so learners can pick the colour they find easiest to read. The swatches are brand layers: they stay where they are, and unticking the box removes them.
 
 ### Contrast
-Every starter, in every colourway and High contrast, meets WCAG 2.2 AA: 4.5:1 for text (3:1 for large text), and 3:1 for the edge of a button, the focus ring, a progress bar against its track and chart marks. A test holds every page of every starter to it, in the states that show feedback and open dialogs too, so a colourway change can't slip under it. Things you may notice: the Orange and Red colourways carry a soft dark scrim over the gradient on the first and last pages (white words reach only 3.6:1 on the bare gradient); a button's edge is an outline in its label colour (gold buttons in Purple have a dark one); and selected outlines, bars and chart marks use the **primary** colour (purple in Purple), keeping the button colour for fills with a label on them. The keyboard focus ring is two tones, so it holds 3:1 everywhere, with nothing to choose: the **color/focus** colour (3 px) with a 2 px halo of black or white either side of it, whichever is further from that colour (white round Purple's and Blue's dark ring, black round a gold one). Whatever is behind a control, one of the two tones stands clear of it: the colour itself on the white pages, the halo on the dark ends of the Blue, Green and Purple gradients and on deep panels. The contrast test checks that on every page, first and last pages and deep panels included, and lists nothing.
+Every starter, in every colourway and High contrast, meets WCAG 2.2 AA: 4.5:1 for text (3:1 for large text), and 3:1 for the edge of a button, the focus ring, a progress bar against its track and chart marks. A test holds every page of every starter to it, including the states that show feedback and open dialogs, so a colourway change can't slip under it.
+
+What you may notice:
+- The Orange and Red colourways carry a soft dark scrim over the gradient on the first and last pages, because white words reach only 3.6:1 on the bare gradient.
+- A button's edge is an outline in its label colour (gold buttons in Purple have a dark one).
+- Selected outlines, bars and chart marks use the **primary** colour (purple in Purple). The button colour is kept for fills with a label on them.
+
+The keyboard focus ring is two tones, so it holds 3:1 everywhere, and there is nothing to choose. It is the **color/focus** colour (3 px) with a 2 px halo of black or white either side of it, whichever is further from that colour (white round Purple's and Blue's dark ring, black round a gold one). Whatever is behind a control, one of the two tones stands clear of it: the colour itself on the white pages, the halo on the dark ends of the Blue, Green and Purple gradients and on deep panels.
 
 ## What is locked, and why
 Branded projects are held to the brand so every activity looks like it came from the same place, whoever writes it.
@@ -4168,10 +5485,16 @@ Branded projects are held to the brand so every activity looks like it came from
 - **Colours** have to be theme colours. The colour picker offers the project's **Tokens**; typing a hex colour or picking one from elsewhere is refused with a note that this is a branded project. A new layer you draw or paste gets the nearest theme colour instead of its plain one.
 - **Fonts** are Open Sans.
 
-The accessibility checks, the [themes](themes) panel and everything else work as they do in any project. A power user can turn the lock off for a session with F9 (the brand kit override), which also lifts the brand kit lock, to fix something in the pack itself. With it on, brand layers show in the Layers panel like any layer: select one there, and press its padlock to unlock it for clicking on the canvas. Nothing is saved with it.
+The accessibility checks, the [themes](themes) panel and everything else work as they do in any project. Projects made before the lock existed are locked when they open.
+
+A power user can turn the lock off for a session with F9 (the brand kit override), which also lifts the brand kit lock, to fix something in the pack itself. With it on, brand layers show in the Layers panel like any layer. Select one there, and press its padlock to unlock it for clicking on the canvas. Nothing is saved with it.
 
 ## The starters
-Question starters share two switches and a look. **Hint** is a small pill at the top right of the question card, so the one full size button is the one that answers. The two optional extras are one project variable each, changed once in the **Variables** tab for every question: \`offerHint\` shows or hides the Hint pill, and \`allowTryAgain\` shows or hides Try again after a wrong answer (the practice starters open with both on, the Spelling test and the multi-page quiz with Try again off). A button says what happens to the answer: **Submit answer** where it is final, **Check answer** where there are tries. A button that starts a sound is disabled and reads "Playing..." until the sound ends, so it can't be pressed over itself.
+Question starters share two switches and a look. **Hint** is a small pill at the top right of the question card, so the one full size button is the one that answers.
+
+The two optional extras are one switch each, for every question. **Offer a Hint** shows or hides the Hint pill, and **Offer Try again** shows or hides Try again after a wrong answer. Change them once in the **Fill in** tab (they are the project variables \`offerHint\` and \`allowTryAgain\` if you prefer the **Variables** tab). The practice starters open with both on. The Spelling test and the multi-page quiz open with Try again off.
+
+A button says what happens to the answer: **Submit answer** where it is final, **Check answer** where there are tries. A button that starts a sound is disabled and reads "Playing..." until the sound ends, so it can't be pressed over itself.
 
 ${list}
 `;
@@ -4186,26 +5509,26 @@ ${list}
     body: `A **brand kit** is a [library](libraries) that the people who look after your brand have published and marked as one. It carries the brand's colours, text styles, fonts and components (logos, headers, footers). A project can use it like any library, with one difference: **what comes from the kit is locked**. The rest of the project is yours.
 
 ## Using a brand kit
-1. In the **Libraries** tab, a kit is badged **Brand kit** under **Available libraries**. Press **Add with starter items** to add it and have its header, footer and logo placed in the artboard you have open (whatever the kit marks for new projects). **Add** adds the kit without placing anything; then drag its components onto the canvas or press **Place**, as with any library.
+1. In the **Libraries** tab, a kit is badged **Brand kit** under **Available libraries**. Press **Add with starter items** to add it and have its header, footer and logo placed in the page you have open (whatever the kit marks for new projects). **Add** adds the kit without placing anything; then drag its components onto the canvas or press **Place**, as with any library.
 2. Colours and text styles from the kit show in **Styles** with the kit's name. Use **Fill**, **Stroke**, **Text** and **Apply** as usual.
 3. When the kit publishes a new version, **Updates available** appears and you review it as for any library.
 
 ## What is locked
-Only the items that come from the kit. Your own artboards, layers, colours and fonts are never locked.
-- **Its artboards** (the copies in your project, badged *library* and kept off the canvas) can't be edited, **detached**, deleted or copied, and **Stop using this library** is switched off. You can move and rename the artboard.
+Only the items that come from the kit. Your own pages, layers, colours and fonts are never locked.
+- **Its pages** (the copies in your project, badged *library* and kept off the canvas) can't be edited, **detached**, deleted or copied, and **Stop using this library** is switched off. You can move and rename the page.
 - **Text the kit marks as editable** can be changed. Double-click it, or edit it in the Inspector, and the words are yours; its font, size, colour and position stay the kit's. Your words are kept when the kit updates.
-- **Instances** of a kit item in your own artboards are yours to move, rotate and fade. Their size keeps the item's **proportions**, and can go from half to double its own size; a resize outside that snaps back. Their **Inputs** are yours too.
+- **Instances** of a kit item in your own pages are yours to move, rotate and fade. Their size keeps the item's **proportions**, and can go from half to double its own size; a resize outside that snaps back. Their **Inputs** are yours too.
 - Colours and text styles from the kit can't be edited or deleted, as with any library. A layer of your own that follows one still stops following it if you change that property.
 
-If something is refused, a message on screen says so. A brand kit is a guard rail, not a vault: it stops the easy ways of ending up off brand, and it can't stop you copying a layer's look by eye.
+If something is refused, a message on screen says so. A brand kit is a guard rail, not a vault: it stops the obvious ways of ending up off brand, and it can't stop you copying a layer's look by eye.
 
 ## Off-brand check
-A project that uses a kit has a **Brand check** section in the Libraries tab. **Check against the brand kit** lists the colours and fonts used in your own artboards that the kit doesn't have, how many times, and on which artboards. It is only a list: nothing is blocked or changed, and a colour that is a theme token counts as the colour it holds in the default theme. The kit's colours are its colour styles and the colours of its text styles; its fonts are its text styles' fonts and the fonts it lists.
+A project that uses a kit has a **Brand check** section in the Libraries tab. **Check against the brand kit** lists the colours and fonts used in your own pages that the kit doesn't have, how many times, and on which pages. It is only a list: nothing is blocked or changed, and a colour that is a theme token counts as the colour it holds in the default theme. The kit's colours are its colour styles and the colours of its text styles; its fonts are its text styles' fonts and the fonts it lists.
 
 ## Making a brand kit
-1. Make the library as usual: a project with **This project is a library** on, and the logo, header and footer artboards marked **Publish to library**. Add the brand's **colour styles** and **text styles** in the Libraries tab (**Styles**), and the fonts they use to the project.
+1. Make the library as usual: a project with **This project is a library** on, and the logo, header and footer pages marked **Publish to library**. Add the brand's **colour styles** and **text styles** in the Libraries tab (**Styles**), and the fonts they use to the project.
 2. For text people should be able to change (a course title in a header), select the text layer and tick **Editable in brand kit projects**.
-3. For items a new project should start with, select the artboard and set **Brand kit start** (top, bottom, a corner, or centre). **Add with starter items** places those.
+3. For items a new project should start with, select the page and set **Brand kit start** (top, bottom, a corner, or centre). **Add with starter items** places those.
 4. **Publish**, share it (**Everyone can use it**), then tick **This is a brand kit**. The projects that already use the library pick up the lock the next time they open the Libraries tab.
 
 **Who can do this:** only the people who look after brand kits can mark one, and publish a new version of or withdraw one that is marked. The server decides, as it does for the power-user view on the [projects page](projects#who-sees-what): power users, plus anyone in the group the administrators name for brand kits. Anyone else who owns the library project can still edit it, and sees that it is a brand kit, but can't turn that on or off, and the server refuses a new version from them.
@@ -4227,7 +5550,7 @@ Power users (and the brand group) can switch the lock off while they work, with 
     group: 'Working together',
     summary: 'Several people in one project, autosave, revisions and conflicts.',
     keywords: 'multiplayer collaborate live share presence cursor save autosave conflict undo revision history version restore save failed too big retry offline',
-    body: `Everything saves as you work. A project can be opened by its owner, by people the owner has invited to collaborate (below), and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). When more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
+    body: `Everything saves as you work, and <kbd>Ctrl</kbd>+<kbd>S</kbd> saves at once from anywhere in the editor. A project can be opened by its owner, by people the owner has invited to collaborate (below), and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). When more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
 
 - **Undo** only undoes your own changes.
 - If two people change the same setting at the same moment, the later change wins.
@@ -4244,7 +5567,7 @@ The label next to the project name says **Save failed**; hover it for the reason
 Very big projects are fine: the server splits anything too big for one database record into parts and puts them back together when the project opens.
 
 ## Revision history
-The server keeps saved revisions of the project: a snapshot every few minutes while it changes (the newest 100 are kept), and one before every restore. Click the **Revision history** button (the clock) in the top bar. The list on the left shows each version with its date and how long ago it was; click one to see a picture of it and a count of its artboards and variables. **Restore this version** asks **Restore version** in a dialog first. What is there now is saved in the history before the restore, so you can come back to it, and the page reloads with the restored project.
+The server keeps saved revisions of the project: a snapshot every few minutes while it changes (the newest 100 are kept), and one before every restore. Click the **Revision history** button (the clock) in the top bar. The list on the left shows each version with its date and how long ago it was; click one to see a picture of it and a count of its pages and variables. **Restore this version** asks **Restore version** in a dialog first. What is there now is saved in the history before the restore, so you can come back to it, and the page reloads with the restored project.
 
 **Named versions.** **Save a named version…** keeps the project as it is right now under a name you choose ("Sent to the coordinator", "Before the redesign"), and pins it. **Name it** (or **Rename**) names any version in the list, and **Pin** keeps one. Pinned versions show a pin and their name in the list, and are never cleared out of the history however old they get; a project keeps up to 20. **Unpin** lets one be cleared like the others, once 100 newer ones have built up.
 
@@ -4281,20 +5604,20 @@ The interaction graph has notes too: see **Notes on the graph** in [Interactions
 Notes are not comments. [Review comments](comments) are threaded conversations with reviewers, kept on the server beside the project. A note is part of the project document, so it comes along when the project is copied, saved as a template or remixed, and everyone editing at the same moment sees it appear. It is **never** a layer: it is not in the Layers list, the interactions graph, auto layout or bindings.
 
 ## Players never see notes
-A note is never drawn when the project is played, in **Preview**, in the **Single HTML file**, a **share link**, a **Link for StudyDesk**, an embed, the review page, or a **PNG**, **SVG**, **Lottie** or **GIF** picture of an artboard. The text is also taken out of the project data those pages carry, and the server takes it out again when a page is shared, so it is not in anything that plays. The **project package (.ixp)** and the **project JSON** are for editing, so they keep notes.
+A note is never drawn when the project is played, in **Preview**, in the **Single HTML file**, a **share link**, a **Link for StudyDesk**, an embed, the review page, or a **PNG**, **SVG**, **Lottie** or **GIF** picture of a page. The text is also taken out of the project data those pages carry, and the server takes it out again when a page is shared, so it is not in anything that plays. The **project package (.ixp)** and the **project JSON** are for editing, so they keep notes.
 
 ## Add a note
-Pick the **Note** tool (<kbd>S</kbd>, in the tools bar next to **Comment**) and click, or drag out the size you want. A note drawn on an artboard belongs to that artboard and moves with it (it can hang outside the artboard's edge). A note drawn on empty canvas belongs to the canvas itself. Type straight away; <kbd>Esc</kbd> or a click elsewhere finishes, and a note left empty goes away.
+Pick the **Note** tool (<kbd>S</kbd>, in the tools bar next to **Comment**) and click, or drag out the size you want. A note drawn on a page belongs to that page and moves with it (it can hang outside the page's edge). A note drawn on empty canvas belongs to the canvas itself. Type straight away; <kbd>Esc</kbd> or a click elsewhere finishes, and a note left empty goes away.
 
 - **Move** it by dragging it, **resize** it from its bottom right corner.
 - **Double-click** it, or press <kbd>Enter</kbd> with it focused, to change the text.
-- With a note picked, a small bar above it sets the **colour** (yellow, orange, green, blue, purple or pink), **attaches** it to the layer you have selected on the same artboard, and **deletes** it. <kbd>Delete</kbd> removes a picked note too.
+- With a note picked, a small bar above it sets the **colour** (yellow, orange, green, blue, purple or pink), **attaches** it to the layer you have selected on the same page, and **deletes** it. <kbd>Delete</kbd> removes a picked note too.
 - Notes are small on purpose. They grow with the zoom but never get tiny or huge, and a picked note has a gold outline.
 
 Keyboard: <kbd>Tab</kbd> reaches every note on the canvas. With one focused, the arrow keys move it (<kbd>Shift</kbd> for 10), <kbd>Alt</kbd>+arrows resize it, <kbd>Enter</kbd> edits it, <kbd>Delete</kbd> removes it and <kbd>Esc</kbd> lets go. Every button on the bar has a label for a screen reader.
 
 ## Attach a note to a layer
-Select a layer, pick a note on the same artboard and press **Attach to the selected layer**. The note now follows that layer when it moves, scales or rotates, and its header says which layer it is on. Dragging the note changes how far it sits from the layer. Delete the layer and the note stays where it was (its outline turns dashed). **Detach** lets go. Canvas notes cannot be attached.
+Select a layer, pick a note on the same page and press **Attach to the selected layer**. The note now follows that layer when it moves, scales or rotates, and its header says which layer it is on. Dragging the note changes how far it sits from the layer. Delete the layer and the note stays where it was (its outline turns dashed). **Detach** lets go. Canvas notes cannot be attached.
 
 ## What a note can say
 Plain text with a little markdown:
@@ -4303,12 +5626,15 @@ Plain text with a little markdown:
 |---|---|
 | \`**bold**\`, \`*italic*\`, \`code\` | **bold**, *italic*, \`code\` |
 | \`- an item\` | a bullet |
-| \`[ ] a task\` and \`[x] a done task\` | a tick box you can click on the canvas, which rewrites the text |
+| \`[ ] a task\` and \`[x] a done task\` | a tick box you can click on the canvas, which rewrites the text. A \`[ ]\` partway through a line shows as a box too |
 
-Nothing in a note is ever treated as markup.
+Code can sit inside **bold** too. Nothing in a note is ever treated as markup.
 
 ## Show and hide notes
 The eye button beside the **Note** tool shows or hides every note on your canvas, and its badge counts them. It is your own preference (also under **Preferences > Show notes on the canvas**), so putting a template's explanations away changes nothing for anyone else. Notes are never drawn while you Preview.
+
+## Notes in starters and examples
+Every starter's pages and interaction graphs carry short notes. They say what each chain of nodes does, why it is built that way and what to change. The examples' bigger graphs and pages carry a note or two saying what to look at. Hide them with the eye button once you have read them. They come with your copy of the project like any other note.
 
 ## Notes and templates
 A project made from a template starts with the template's notes, so the explanations arrive on the canvas next to the parts they are about. **Save as template** keeps your notes. **Update from template** leaves your notes alone. Hide them with the eye button once you have read them, or delete them.
@@ -4330,7 +5656,7 @@ Comments are kept on the server apart from the project. They are never part of t
 ![The Comments tab with two open conversations, and the first one open on the canvas: its pin follows the Bulb layer, with Resolve, Assigned to and a reply box.](help/comments-panel.png)
 
 ## Leaving a comment
-Pick the **Comment** tool (<kbd>C</kbd>) and click where you want to say something. If there is a layer under the click, the note is pinned to that layer at that spot, so the pin **follows the layer** when it moves, scales or rotates. If the layer is deleted the pin stays where it was, drawn with a dashed edge, and the **Comments** panel says the layer is gone. A click on empty artboard pins the note to that point of the artboard.
+Pick the **Comment** tool (<kbd>C</kbd>) and click where you want to say something. If there is a layer under the click, the note is pinned to that layer at that spot, so the pin **follows the layer** when it moves, scales or rotates. If the layer is deleted the pin stays where it was, drawn with a dashed edge, and the **Comments** panel says the layer is gone. A click on empty page pins the note to that point of the page.
 
 Type the note and press **Comment** (<kbd>Ctrl</kbd>+<kbd>Enter</kbd> sends too). Type **@** to mention someone from the list of people in the project. As the owner you can pick an **Assign to** person as you send it.
 
@@ -4340,15 +5666,16 @@ Click a pin to open its conversation next to it. Reply in the box under it; edit
 Pins are numbered. A resolved pin turns grey with a tick, a pin handed to you has an amber ring, and the one that is open has a halo. **Escape** puts a conversation away.
 
 ## The Comments panel
-The **Comments** tab beside Layers lists every conversation with its first words, where it is, who wrote it and how many replies it has. Click one to go to it: the artboard, the layer, the pin in the middle of the canvas and its conversation open.
+The **Comments** tab beside Layers lists every conversation with its first words, where it is, who wrote it and how many replies it has. Click one to go to it: the page, the layer, the pin in the middle of the canvas and its conversation open.
 
-Filter by **Open**, **Resolved** or **All**, by **Everyone**, **Mine** (conversations you took part in) or **Assigned to me**, and by **artboard**. The eye button hides the pins on the canvas (your choice is remembered in this browser); the panel still lists them. The number on the tab is how many are open. The projects page shows the same number on each project's card, ringed in amber when some are for you.
+Filter by **Open**, **Resolved** or **All**, by **Everyone**, **Mine** (conversations you took part in) or **Assigned to me**, and by **page**. The eye button hides the pins on the canvas (your choice is remembered in this browser); the panel still lists them. The number on the tab is how many are open. The projects page shows the same number on each project's card, ringed in amber when some are for you.
 
 ## The review link
-In **Share**, **Can comment: review link** makes a second link, apart from the share link. Send it to reviewers. They see the project as it is now, one artboard at a time as a still with the pins on it, can open any artboard from the top, **Play** the real thing, and leave, reply to and resolve comments. They cannot change the project. Because the page always reads the project as it is, there is nothing to update when you change it.
+In **Share**, **Can comment: review link** makes a second link, apart from the share link. Send it to reviewers. They see the project as it is now, one page at a time as a still with the pins on it, can open any page from the top, **Play** the real thing, and leave, reply to and resolve comments. They cannot change the project. Because the page always reads the project as it is, there is nothing to update when you change it.
 
-- **Signed in to StudyDesk** (open the link from StudyDesk): comments carry the reviewer's own name. They can resolve, and edit or delete their own.
-- **Let people comment without signing in**: anyone with the link can comment after giving a **display name**. Guests are marked *(guest)*, cannot resolve, assign or mention, and are limited to a few comments every few minutes per address and per link. Leave this off when the project is not meant for people outside StudyDesk. Without it, the link asks for a signed in StudyDesk user.
+- **Reviewers sign in.** Opening the link takes a StudyDesk sign in, and every comment carries the reviewer's own name. Inside StudyDesk they are signed in already. Opened in a tab of its own (from an email, say), the page shows **Sign in with StudyDesk**: that opens StaffDesk in a new tab, and once they are signed in there the tab closes and they are back on the review page, which then opens. A sign in lasts a week in that browser. Staff can sign in this way; someone who cannot (a student, say) can still review from inside StudyDesk. The Toolbox help has the same steps under *Sign in to an app opened outside StudyDesk*.
+- Reviewers can resolve, reply to and mention people, and edit or delete their own comments. They are limited to a generous number of comments every few minutes, per person.
+- **There is no guest option.** Review links used to be able to let anyone comment after typing a **display name**. That is gone: a link that had it switched on now asks for a sign in like any other, and the comments guests left earlier are kept and marked *(guest)*.
 - **Turn off review link** ends the link at once, including for anyone who has it open. The comments are kept.
 
 Anyone who has the review link can read the whole project, as with a share link. The link is long and random so it cannot be guessed; do not post it anywhere public.
@@ -4441,8 +5768,8 @@ ${
 | join_session | Joins a project's live session; reports who is there and what they have selected |
 | leave_session | Leaves the session |
 | get_selection | The layers each person has selected, in full |
-| get_overview, get_layers, get_interactions | Read artboards, layer trees, timelines, variables, interactions |
-| edit | Add, change, move and delete layers; add artboards, variables, timelines, interactions and scripts, in one batch |
+| get_overview, get_layers, get_interactions | Read pages, layer trees, timelines, variables, interactions |
+| edit | Add, change, move and delete layers; add pages, variables, timelines, interactions and scripts, in one batch |
 | validate | Find broken references, unconnected events and expressions that don't parse |
 | read_reference | These help pages, plus generated references for layer fields, interaction nodes and animatable properties |
 
@@ -4463,7 +5790,7 @@ ${
     summary: 'Every property timelines, bindings and the property nodes can change.',
     keywords: 'property properties animatable list prop path',
     body: () =>
-      `These properties can be keyframed, bound to an expression, and changed with **Change a layer's setting** and **Animate a layer's setting**. The path (left) is what scripts use: \`ix.node('Box').set('fill.color', '#f00')\`.\n\n| Path | Property | Kind |\n|---|---|---|\n` +
+      `A property is something about a layer that you can change over time or with a rule: where it is, how big, how see-through, its colour. Any property below can get keyframes on a timeline (see [Timelines and keyframes](timelines)), be bound to an expression (see [Bindings](bindings)), and be changed with **Change a layer's setting** and **Animate a layer's setting**.\n\nThe first column is the technical name of the property. Scripts use it: \`ix.node('Box').set('fill.color', '#f00')\`.\n\n| Path | Property | Kind |\n|---|---|---|\n` +
       ANIMATABLE_PROPS.map((p) => `| \`${p.prop}\` | ${p.label} | ${p.kind} |`).join('\n'),
   },
   {
@@ -4476,7 +5803,7 @@ ${
 
 ## Animation
 **My layer doesn't move when the timeline plays.**
-A track needs **two or more** keyframes. With one key it just holds that value. Add a second at another time. See [Tutorial 1](tutorial-first-animation).
+A track needs **two or more** keyframes. With one key it holds that value. Add a second at another time. See [Tutorial 1](tutorial-first-animation).
 
 **I'm in Record mode but nothing is keyed.**
 - The **Timeline** tab must be open, with a timeline chosen. In **Design view (no timeline)** changes are ordinary edits.
@@ -4494,7 +5821,7 @@ Record is still on. Press the red dot to switch it off.
 It is probably **locked**, or **hidden** (shown as a faint ghost). Hover it for the badge that unlocks or shows it, or use the eye and padlock in the Layers panel. See [Layers, hidden and locked layers](layers-panel).
 
 **A layer is in the editor but not in Preview.**
-Check that it is **Visible**; that it isn't hidden by a **Solo** group's active child; that it sits inside the artboard (**Clip content to artboard** hides what is outside in Preview and in exports; on the canvas the part outside shows faintly); and that no mask above it is clipping it. See [Groups and frames](groups-frames).
+Check that it is **Visible**; that it isn't hidden by a **Solo** group's active child; that it sits inside the page (**Clip content to page** hides what is outside in Preview and in exports; on the canvas the part outside shows faintly); and that no mask above it is clipping it. See [Groups and frames](groups-frames).
 
 **A field is greyed out and has a link icon.**
 It is bound to an expression. Remove the binding in **Data bindings** to edit it by hand. See [Bindings](bindings).
@@ -4509,12 +5836,19 @@ Variable and data source names are used inside expressions, so they can't contai
 **A script does nothing.**
 Open **Preview** and look at the **Events** list for an error message. Scripts in the sandbox can only use \`ix\`, timers and \`console\`. See [Scripts](scripts).
 
+## Colours and themes
+**I switch between Light, Dark and High contrast and nothing changes.**
+Only a colour that follows a token changes with the theme. Press **Link colours to tokens** in the Themes tab to link the plain colours that match a token. See [When switching the theme changes nothing](themes#when-switching-the-theme-changes-nothing).
+
+**A colour won't let me type a hex in a branded starter.**
+Branded projects only take theme colours. Pick one from the **Tokens** tab of the colour picker. See [Branded starter packs](branded-starters#what-is-locked-and-why).
+
 ## Importing and updating design files
 **The designer saved a new version of the Photoshop (or Illustrator, ...) file.**
-Select one of its artboards and press **Update from file…** in the inspector, or **Update…** beside it under **Design files** in the Assets panel, then pick the new file. Your own edits are kept. See [Updating a design file](import#updating-a-design-file).
+Select one of its pages and press **Update from file…** in the inspector, or **Update…** beside it under **Design files** in the Assets panel, then pick the new file. Your own edits are kept. See [Updating a design file](import#updating-a-design-file).
 
 **A bar asks me to Reconnect.**
-That's an artboard linked to a file on disk the older way. Press **Reconnect** to let the browser read it again, or just use **Update from file…**.
+That's a page linked to a file on disk the older way. Press **Reconnect** to let the browser read it again, or use **Update from file…**.
 
 **"The linked file was moved, renamed or deleted."**
 Use **Update from file…** and pick it where it is now.
@@ -4576,17 +5910,47 @@ Check the projects page for an active folder, tag or search (the **Clear filters
     group: 'Reference',
     summary: 'Search, tooltips and help links.',
     keywords: 'help docs search tooltip question',
-    body: `- **Search**: press <kbd>F1</kbd> anywhere for quick search (or <kbd>Ctrl</kbd>+<kbd>K</kbd>, the [command palette](command-palette), which lists help pages under its commands), or type in the drawer's **Search help** box. Type a few words and press <kbd>Enter</kbd> to open the best match.
-- **The Help button** (top bar, or <kbd>?</kbd>) opens the page for whatever is highlighted, in this order: the **field** you last clicked in Properties (its section's page, or its own when it has one); the **node** selected in Interactions or the **keyframe** selected in the Timeline, while that is the panel you are working in; the **tool** you picked on the tool bar (not Select or Hand); the **layer type** you selected (Chart, Text, Button, Rectangle...); a selected **artboard** or **page master**; the **panel** you last worked in; then the general help. Its tooltip names what it will open, and the drawer says "Help for Chart layer" at the top with a **Back to general help** link. Only selection and focus count, not what the pointer is over. The tool bar has no Help button of its own: right-click it for **Help for the tools**. <kbd>Ctrl</kbd>+<kbd>K</kbd> is the quick search.
-- **Home, Back and Forward**: the three buttons at the left of the drawer's top. **Home** is the welcome page. **Back** and **Forward** walk through the pages and sections you have visited (links, search results and the Help button all count), and each page comes back scrolled to where you left it. <kbd>Alt</kbd>+<kbd>Left</kbd> and <kbd>Alt</kbd>+<kbd>Right</kbd> do the same while the drawer has the focus, and so do the mouse's back and forward buttons over it. The history is kept when you close the drawer, so Back from a new Help button press returns to what you were reading. The full help page (the **new tab** button) uses the browser's own Back and Forward, since each page has its own address.
-- **While Preview is open**: Preview sits above the help drawer so it never covers its controls. Asking for help then (the Help button, <kbd>F1</kbd>, <kbd>?</kbd>, a **?** link) opens the help in a new window instead. <kbd>Esc</kbd> closes Preview, not a drawer behind it, and Tab stays inside Preview until you close it.
-- **The Help link** is also on the projects page.
-- **Getting started**: the five tutorials start at [Tutorial 1](tutorial-first-animation). Stuck? [Troubleshooting and common questions](troubleshooting).
+    body: `## Searching
+- Press <kbd>F1</kbd> anywhere for quick search. Type a few words and press <kbd>Enter</kbd> to open the best match, or use <kbd>↑</kbd> <kbd>↓</kbd> to choose.
+- <kbd>Ctrl</kbd>+<kbd>K</kbd> opens the [command palette](command-palette), which lists matching help pages under its commands.
+- The drawer has its own **Search help** box.
+
+## The Help button
+The **Help** button in the top bar (or <kbd>Shift</kbd>+<kbd>F1</kbd>) opens the page for whatever is highlighted. It looks in this order:
+
+1. The **field** you last clicked in the Properties panel (its section's page, or its own when it has one).
+2. The **node** selected in Interactions, or the **key** selected in the Timeline, while that is the panel you are working in.
+3. The **tool** you picked on the tool bar (not Select or Hand).
+4. The **layer type** you selected (Chart, Text, Button, Rectangle...).
+5. A selected **page** or **page master**.
+6. The **panel** you last worked in.
+7. The general help.
+
+The button's tooltip names what it will open, and the drawer says "Help for Chart layer" at the top, with a **Back to general help** link. Only selection and focus count, not what the pointer is over. The tool bar has no Help button of its own: right-click it for **Help for the tools**. The **Help** link is also on the projects page.
+
+## Home, Back and Forward
+The three buttons at the left of the drawer's top.
+
+- **Home** is the welcome page.
+- **Back** and **Forward** walk through the pages and sections you have visited. Links, search results and the Help button all count, and each page comes back scrolled to where you left it.
+- <kbd>Alt</kbd>+<kbd>Left</kbd> and <kbd>Alt</kbd>+<kbd>Right</kbd> do the same while the drawer has the focus, and so do the mouse's back and forward buttons over it.
+- The history is kept when you close the drawer, so Back from a new Help button press returns to what you were reading.
+- The full help page (the **new tab** button) uses the browser's own Back and Forward, since each page has its own address.
+
+## More about … links and ? links
+Many sections in the Properties panel, and in the other side panels, have a short line saying what the section is for. At the end of it is a **More about …** link. It opens the help at the right place, where the longer detail is.
+
+A **?** beside a section's title opens the same page. The panels' tabs don't have a **?**: use the **Help** button, or right-click the tab and choose **Help for this panel**.
+
+## While Preview is open
+Preview sits above the help drawer so it never covers its controls. Asking for help then (the Help button, <kbd>F1</kbd>, <kbd>Shift</kbd>+<kbd>F1</kbd>, a **?** link) opens the help in a new window instead. <kbd>Esc</kbd> closes Preview, not a drawer behind it, and <kbd>Tab</kbd> stays inside Preview until you close it.
+
+## Finding your way around
+- **Getting started**: the five tutorials start at [Tutorial 1](tutorial-first-animation). Stuck? See [Troubleshooting and common questions](troubleshooting).
 - **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.
 - **Pictures and clips**: click a picture to open it full size. Clips play on a loop without sound, and have controls if you want to pause.
 - **Tooltips**: hover a button or a field's name for a short explanation. Turn them off in [Preferences](preferences).
-- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
-- **? links**: inspector sections have a **?** that opens their page here. The panels' tabs don't have one: use the top bar's, or right-click the tab.`,
+- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).`,
   },
 ];
 

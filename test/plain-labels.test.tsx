@@ -52,7 +52,7 @@ describe('inspector fields in author words and units', () => {
     const x = scene();
     render();
     expect(field('opacity').value).toBe('35');
-    expect(host.querySelector('[data-prop="opacity"] .field-suffix')!.textContent).toBe('%');
+    expect(host.querySelector('[data-prop="opacity"] .field-trail')!.textContent).toBe('%');
     typeInto(field('opacity'), '50');
     expect(node(x).opacity).toBe(0.5);
     typeInto(field('opacity'), '100');
@@ -88,7 +88,7 @@ describe('inspector fields in author words and units', () => {
     const x = scene();
     render();
     expect(host.querySelector('[data-prop="rotation"] .field-label')!.textContent).toBe('Rotation');
-    expect(host.querySelector('[data-prop="rotation"] .field-suffix')!.textContent).toBe('°');
+    expect(host.querySelector('[data-prop="rotation"] .field-trail')!.textContent).toBe('°');
     typeInto(field('rotation'), '45');
     expect(node(x).rotation).toBe(45);
   });

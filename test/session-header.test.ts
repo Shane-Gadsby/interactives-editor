@@ -63,3 +63,57 @@ describe('installSessionHeader', () => {
     expect(seen[0].headers.get('X-Session-ID')).toBeNull();
   });
 });
+
+describe('the direct sign in a review link asks for', () => {
+  let asked: { tool: string; options: Record<string, unknown> }[];
+  const answers: Record<string, unknown> = {};
+
+  beforeEach(() => {
+    vi.resetModules();
+    asked = [];
+    sessionStorage.clear();
+    for (const k of Object.keys(answers)) delete answers[k];
+    (window as unknown as { directSignIn: unknown }).directSignIn = async (tool: string, options: Record<string, unknown> = {}) => {
+      asked.push({ tool, options });
+      return answers[tool] ?? null;
+    };
+  });
+
+  afterEach(() => {
+    delete (window as unknown as { directSignIn?: unknown }).directSignIn;
+    location.hash = '';
+    sessionStorage.clear();
+  });
+
+  it('is the editor sign in on any other page', async () => {
+    location.hash = '#/';
+    const { sessionUser } = await import('../src/lib/session');
+    await sessionUser();
+    expect(asked.map((a) => a.tool)).toEqual(['interactives']);
+  });
+
+  it('uses an editor sign in the browser already holds, without a box', async () => {
+    location.hash = '#/review/abcdefghijklmnop';
+    answers.interactives = { sessionID: 'dt_have' };
+    const { sessionUser } = await import('../src/lib/session');
+    await sessionUser();
+    expect(asked).toEqual([{ tool: 'interactives', options: { title: 'Interactives', prompt: false } }]);
+  });
+
+  it('otherwise asks to sign in as a reviewer, which any staff member can', async () => {
+    location.hash = '#/review/abcdefghijklmnop';
+    const { sessionUser } = await import('../src/lib/session');
+    await sessionUser();
+    expect(asked.map((a) => a.tool)).toEqual(['interactives', 'interactives-review']);
+    expect(asked[1].options.prompt).toBeUndefined();
+  });
+
+  it('asks for nothing inside StudyDesk, where the url or the tab already carries a session', async () => {
+    location.hash = '#/review/abcdefghijklmnop';
+    sessionStorage.setItem('sessionID', 'abc123');
+    const { sessionUser } = await import('../src/lib/session');
+    await sessionUser();
+    expect(asked).toEqual([]);
+  });
+});
+

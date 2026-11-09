@@ -35,6 +35,7 @@ import { syncPractice } from '../lib/voice';
 import { VoiceSection } from './VoiceSection';
 import { GuardSection } from './GuardSection';
 import { growAreas, makeIndependent, partOf, partsOf, setAreaShape, setQuestionSettings, shapeOfArea, sharedPrefix, type AreaShape } from '../lib/question-kit';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const PART_LABELS: [string, string][] = [
   ['prompt', 'Prompt'],
@@ -335,13 +336,13 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
             + Add pair
           </button>
           <ExtrasList label="Extra terms" noun="term" extras={extras} setExtra={setExtra} apply={apply} />
-          <div className="muted small">Terms, definitions and slots are ordinary layers: restyle them, or move the slots onto a diagram to match labels to places.</div>
+          <SectionBlurb text="Terms, definitions and slots are ordinary layers: restyle them, or move the slots onto a diagram." name="matching" help={['question-kit', 'what-gets-built']} />
         </div>
       )}
 
       {q.kind === 'categorise' && (
         <div className="q-list" role="group" aria-label="Groups and items">
-          <div className="muted small">Each group is a box the learner drags items into. A group takes any number of items. Pick the group each item belongs in.</div>
+          <SectionBlurb text="Each group is a box the learner drags items into. Pick the group each item belongs in." name="sorting" help={['question-kit', 'what-gets-built']} />
           {groups.map((g, i) => (
             <Row key={g.id}>
               <span className="muted small q-num">{i + 1}.</span>
@@ -387,15 +388,17 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
             value={!!q.dropFeedback}
             onChange={(v) => apply({ dropFeedback: v || undefined })}
           />
-          <div className="muted small">Group boxes and items are ordinary layers: restyle them, enlarge a box or move it onto a picture.</div>
+          <SectionBlurb text="Group boxes and items are ordinary layers: restyle them, or move a box onto a picture." name="sorting" help={['question-kit', 'what-gets-built']} />
         </div>
       )}
 
       {q.kind === 'hotspot' && (
         <div className="q-list" role="group" aria-label="Areas">
-          <div className="muted small">
-            Put your picture in the Picture layer, then place each area over it (the layers named Area). {isMultiple(q) ? 'Tick every right area; the learner marks all of them.' : 'Mark the one right area.'}
-          </div>
+          <SectionBlurb
+            text={`Put your picture in the Picture layer, then place each Area over it. ${isMultiple(q) ? 'Tick every right area.' : 'Mark the one right area.'}`}
+            name="picture questions"
+            help={['question-kit', 'what-gets-built']}
+          />
           {q.options.map((o, i) => {
             const area = (parts.spot ?? []).find((n) => n.questionPart === `spot:${o.id}`);
             return (
@@ -455,7 +458,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       )}
 
       <div className="q-sub">Marking</div>
-      <div className="labels-54">
+      <div>
         <Row>
           <NumberField label="Points" title="Points a right answer is worth" value={q.points} min={0} step={0.5} onChange={(v) => apply({ points: v }, 'points')} />
           <NumberField label="Tries" title="How many times the answer can be checked before it locks. 0 is no limit" value={q.attempts} min={0} step={1} onChange={(v) => apply({ attempts: Math.round(v) }, 'attempts')} />
@@ -490,9 +493,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         onChange={(v) => apply({ serverMarked: v || undefined })}
       />
       {q.serverMarked && !serverProblem && (
-        <div className="muted small">
-          Learners get this question without its right answers, patterns, hints or feedback, and the server marks it. Only the share link and the Link for StudyDesk do this (the answers go out when you update the link). Preview and exported files still carry the answers.
-        </div>
+        <SectionBlurb text="Learners get this question without its right answers, and the server marks it (share link and StudyDesk link only)." name="marking on the server" help={['question-kit', 'marking-on-the-server']} />
       )}
       {q.serverMarked && !serverProblem && <Retakes q={q} apply={apply} />}
       {serverProblem && <div className={q.serverMarked ? 'q-problem' : 'muted small'}>{q.serverMarked ? 'Marked in the page for now. ' : ''}{serverProblem}</div>}
@@ -507,7 +508,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         placeholder="Optional"
         onChange={(v) => apply({ hints: v.split('\n').slice(0, MAX_HINTS) }, 'hints')}
       />
-      <div className="labels-66">
+      <div>
         <TextField label="Right" title="Said when the answer is right" value={q.feedbackCorrect} onChange={(v) => apply({ feedbackCorrect: v }, 'fb-ok')} />
         <TextField label="Wrong" title="Said when the answer is wrong" value={q.feedbackIncorrect} onChange={(v) => apply({ feedbackIncorrect: v }, 'fb-no')} />
         <TextField label="Partly right" title="Said instead of Wrong when part marks are on and some of it is right" value={q.feedbackPartial} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackPartial: v }, 'fb-part')} />
@@ -611,7 +612,7 @@ function ExtrasList({ label, noun, extras, setExtra, apply }: { label: string; n
   return (
     <div className="q-list" role="group" aria-label={label}>
       <div className="q-sub">{label}</div>
-      <div className="muted small">Dragged like the others, but they belong nowhere: left in the pile is right, and one dropped in a {noun === 'term' ? 'slot' : 'blank'} is wrong.</div>
+      <SectionBlurb text={`Dragged like the others, but they belong nowhere: left in the pile is right, and one dropped in a ${noun === 'term' ? 'slot' : 'blank'} is wrong.`} name="extra terms" help={['question-kit', 'what-gets-built']} />
       {extras.map((x, i) => (
         <Row key={x.id}>
           <TextField value={x.text} placeholder={`Extra ${noun} ${i + 1}`} onChange={(v) => setExtra(i, { text: v }, `extra-text-${i}`)} />
@@ -661,7 +662,7 @@ function Retakes({ q, apply }: { q: Question; apply: (patch: Partial<Question>, 
             ]}
             onChange={(v) => apply({ retake: { ...q.retake!, keep: v } })}
           />
-          <div className="muted small">Set this the same on every question of the test. A round is every one of them finished once. Add a Reset question node with Retake on (for example on a Retake button) to start the next round; Try again on a single question is hidden.</div>
+          <SectionBlurb text="Set this the same on every question of the test. A Reset question node with Retake on starts the next round." name="retakes" help={['question-kit', 'spelling-tests']} />
         </>
       )}
     </>
@@ -737,12 +738,10 @@ function QuestionBank({ q, project, apply }: { q: Question; project: Project; ap
                 step={1}
                 onChange={(v) => apply({ bank: { ...q.bank!, count: v >= 1 ? Math.floor(v) : undefined } }, 'bank-count')}
               />
-              <div className="muted small">
-                The run keeps {q.prefix}_setScore, {q.prefix}_setMax, {q.prefix}_setPos, {q.prefix}_setLeft, {q.prefix}_setCount, {q.prefix}_setDone and {q.prefix}_missed (the rows got wrong). Wire a Reset question node with Bank run set to Review the missed ones to practise those, or Start a new run to draw again.
-              </div>
+              <SectionBlurb text={`The run keeps its score, position and missed rows in ${q.prefix}_set… variables. Reset question can review the missed ones.`} name="question banks" help={['question-kit', 'question-banks-from-data']} />
             </>
           )}
-          <div className="muted small">Columns: prompt, options and correct (or answer, items), hint, feedback, points. The Try again button becomes Next question.</div>
+          <SectionBlurb text="Columns: prompt, options and correct (or answer, items), hint, feedback, points." name="question banks" help={['question-kit', 'question-banks-from-data']} />
         </>
       )}
     </>

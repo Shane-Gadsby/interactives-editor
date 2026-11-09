@@ -1,7 +1,9 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { matches } from '../lib/keymap';
 import { closePalette, registerPaletteHost, usePaletteOpen } from '../lib/command-palette';
 import { buildCommands, noteCommandUsed, searchCommands, suggestedCommands, type Command } from '../lib/commands';
-import { searchHelp, type HelpHit } from '../help/search';
+import type { HelpHit } from '../help/search';
+import { helpSearch } from '../help/lazy';
 import { openHelp, openHelpSearch } from '../help/Help';
 import { track } from '../lib/analytics';
 
@@ -20,11 +22,13 @@ function Palette({ onClose }: { onClose: () => void }) {
   //Built once per opening: it reads the project and the selection as they are now
   const all = useMemo(() => buildCommands(), []);
   const list = useRef<HTMLUListElement>(null);
+  //help results come once the search's chunk is in (a moment after the palette opens, the first time)
+  const helpSearcher = helpSearch.use();
   const rows = useMemo<Row[]>(() => {
     const cmds = q.trim() ? searchCommands(all, q, 24) : suggestedCommands(all);
-    const help = q.trim() ? searchHelp(q, 4) : [];
+    const help = q.trim() && helpSearcher ? helpSearcher.searchHelp(q, 4) : [];
     return [...cmds.map((c): Row => ({ kind: 'command', c })), ...help.map((h): Row => ({ kind: 'help', h }))];
-  }, [all, q]);
+  }, [all, q, helpSearcher]);
   useEffect(() => setSel(0), [q]);
   useEffect(() => {
     list.current?.querySelector('li.active')?.scrollIntoView?.({ block: 'nearest' });
@@ -65,7 +69,7 @@ function Palette({ onClose }: { onClose: () => void }) {
             else if (e.key === 'Enter') (e.preventDefault(), pick(rows[sel]));
             else if (e.key === 'Escape') onClose();
             else if (e.key === 'F1') (e.preventDefault(), onClose(), openHelpSearch());
-            else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') (e.preventDefault(), onClose());
+            else if (matches(e, 'palette')) (e.preventDefault(), onClose());
           }}
         />
         <ul id="palette-list" role="listbox" aria-label="Commands" ref={list}>

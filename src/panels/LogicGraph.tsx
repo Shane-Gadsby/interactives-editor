@@ -68,13 +68,17 @@ import { artboardChoices } from '../lib/variants-edit';
 import { nodeMenuItems } from '../lib/node-menu';
 import { GraphPalette } from './GraphPalette';
 import { FlowSentences } from './FlowSentences';
-import { stepArtboard, stepKey } from './ArtboardPicker';
+import { stepArtboard } from './ArtboardPicker';
+import { CONTEXT_ORDER, commandFor, keyHints, matches, withKey } from '../lib/keymap';
 import { GraphNoteForm, GraphNoteNode, resizing as noteResizing, type GraphNoteData } from './GraphNoteNode';
 import { flashOf, useFlowVersion, wireClass } from '../lib/run-flow';
 import { labelOfKind, nodeAka, nodeHeading, nodeLabel, nodeTip, plainParam, pw, optionLabel, useTechnicalWording } from '../lib/plain-words';
+import { finishReveal, frameRects, onReveal, pendingReveal, reducedMotion, type RevealRequest } from '../lib/graph-reveal';
+import { setLastKeyArea } from '../lib/key-area';
 import { addGraphNote, anchorOrigin, graphNotePlace, patchGraphNote, removeGraphNotes, attachGraphNote } from '../lib/graph-notes';
+import { SectionBlurb } from '../components/SectionBlurb';
 
-type IxNodeData = { logic: LogicNode; summary: string };
+type IxNodeData = { logic: LogicNode; summary: string; revealed?: boolean };
 
 const CAT_COLOR: Record<string, string> = { event: 'var(--event)', action: 'var(--action)', logic: 'var(--logic)' };
 
@@ -87,7 +91,7 @@ function IxNode({ data, selected }: NodeProps<Node<IxNodeData>>) {
   if (!def) return <div className="ix-graph-node unknown">Unknown node {data.logic.kind}</div>;
   const flash = lit && lit.kind !== 'wire' ? lit : null;
   return (
-    <div className={`ix-graph-node${selected ? ' selected' : ''}${flash ? ` flash-${flash.kind} flash-${flash.n % 2}` : ''}`} style={{ ['--cat' as string]: CAT_COLOR[def.category] }}>
+    <div className={`ix-graph-node${selected ? ' selected' : ''}${data.revealed ? ' revealed' : ''}${flash ? ` flash-${flash.kind} flash-${flash.n % 2}` : ''}`} style={{ ['--cat' as string]: CAT_COLOR[def.category] }}>
       {def.hasInput && <Handle type="target" position={Position.Left} id="in" />}
       <div className="gn-head">
         <span className="gn-cat">{def.category}</span>
@@ -183,12 +187,19 @@ function GroupNode({ data, selected }: NodeProps<Node<GroupData>>) {
 
 const nodeTypes = { ix: IxNode, ixgroup: GroupNode, ixnote: GraphNoteNode };
 
+//Layer names of an artboard, kept for as long as its layers are the same objects (every node on the graph reads them)
+const layerNames = new WeakMap<object, Map<string, string>>();
+
 export function summarize(n: LogicNode, ab: Artboard, project: Project): string {
   const def = CATALOG_BY_KIND[n.kind];
   if (!def) return '';
   const parts: string[] = [];
-  const names = new Map<string, string>();
-  walk(ab.children, (x) => names.set(x.id, x.name));
+  let names = layerNames.get(ab.children);
+  if (!names) {
+    names = new Map<string, string>();
+    walk(ab.children, (x) => names!.set(x.id, x.name));
+    layerNames.set(ab.children, names);
+  }
   for (const p of def.params) {
     if (p.showIf && !p.showIf.values.includes(n.params[p.showIf.key] ?? defaultParams(n.kind)[p.showIf.key])) continue;
     const v = n.params[p.key];
@@ -255,6 +266,14 @@ export function LogicGraph() {
   /** What a menu on `id` acts on: the whole selection when `id` is part of it, otherwise just `id`. */
   const targetIds = (id: string) => (chosenNow().includes(id) ? chosenNow() : [id]);
 
+  //The nodes just added glow for a moment (not at all with reduced motion)
+  const [glow, setGlow] = useState<string[]>([]);
+  //A node the flow didn't change keeps its object, so React Flow leaves it alone (a click on one node in a big graph redrew every node)
+  const kept = useRef(new Map<string, { logic: LogicNode; summary: string; selected: boolean; revealed: boolean; node: Node<IxNodeData> }>());
+  useEffect(() => {
+    const here = new Set((ab?.logic.nodes ?? []).map((n) => n.id));
+    for (const id of kept.current.keys()) if (!here.has(id)) kept.current.delete(id);
+  }, [ab?.logic.nodes]);
   const nodes: Node<IxNodeData>[] = useMemo(
     () =>
       [
@@ -273,13 +292,16 @@ export function LogicGraph() {
               selected: chosen.includes(g.id),
             }) as unknown as Node<IxNodeData>,
         ),
-        ...(ab?.logic.nodes ?? []).map((n) => ({
-          id: n.id,
-          type: 'ix',
-          position: { x: n.x, y: n.y },
-          data: { logic: n, summary: ab ? summarize(n, ab, s.project) : '' },
-          selected: chosen.includes(n.id),
-        })),
+        ...(ab?.logic.nodes ?? []).map((n) => {
+          const summary = ab ? summarize(n, ab, s.project) : '';
+          const selected = chosen.includes(n.id);
+          const revealed = glow.includes(n.id);
+          const had = kept.current.get(n.id);
+          if (had && had.logic === n && had.summary === summary && had.selected === selected && had.revealed === revealed) return had.node;
+          const node: Node<IxNodeData> = { id: n.id, type: 'ix', position: { x: n.x, y: n.y }, data: { logic: n, summary, ...(revealed ? { revealed: true } : {}) }, selected };
+          kept.current.set(n.id, { logic: n, summary, selected, revealed, node });
+          return node;
+        }),
         // Sticky notes for the people editing the graph (hidden with the canvas notes, and never in the player)
         ...(showNotes && ab
           ? (ab.logic.notes ?? []).map((note) => {
@@ -299,7 +321,7 @@ export function LogicGraph() {
             })
           : []),
       ],
-    [ab, s.project, chosen, showNotes],
+    [ab, s.project, chosen, showNotes, glow],
   );
   // Selected connections live here (the document only stores the graph), so Delete can remove them
   const [selEdges, setSelEdges] = useState<string[]>([]);
@@ -348,6 +370,9 @@ export function LogicGraph() {
   const press = useRef<{ id: string; x: number; y: number; was: boolean; mod: boolean } | null>(null);
   const pointerDown = (e: React.PointerEvent) => {
     press.current = null;
+    //React Flow swallows the mousedown, so nothing takes focus on its own: without this Delete lands on whatever had it before (the canvas)
+    const el = e.target as HTMLElement;
+    if (!el.closest('input, textarea, select, button, [contenteditable], .cm-editor') && !canvasRef.current?.contains(document.activeElement)) canvasRef.current?.focus({ preventScroll: true });
     const id = e.button === 0 ? (e.target as HTMLElement).closest<HTMLElement>('.react-flow__node')?.dataset.id : undefined;
     if (!id) return;
     const mod = e.ctrlKey || e.metaKey;
@@ -721,8 +746,8 @@ export function LogicGraph() {
         { label: 'Add note to this group', title: 'A sticky note that moves with this group. Players never see it', onClick: () => void addNoteAt({ x: g.x, y: g.y - 130 }, id) },
         { label: 'Colour', items: GROUP_COLORS.map((c) => ({ label: c.label, color: c.value || 'var(--muted)', onClick: () => updateGroup(g.id, (x) => (c.value ? (x.color = c.value) : delete x.color)) })) },
         { separator: true },
-        { label: 'Copy group and its nodes', hint: 'Ctrl+C', onClick: () => copySelection([id]) },
-        { label: 'Duplicate group and its nodes', hint: 'Ctrl+D', onClick: () => duplicate([id]) },
+        { label: 'Copy group and its nodes', hint: keyHints('graph-copy'), onClick: () => copySelection([id]) },
+        { label: 'Duplicate group and its nodes', hint: keyHints('graph-duplicate'), onClick: () => duplicate([id]) },
         { separator: true },
         { label: 'Ungroup (keep the nodes)', onClick: () => ungroup(id) },
         {
@@ -761,7 +786,7 @@ export function LogicGraph() {
         { label: 'New group here', onClick: () => addGroup({ x: at?.x ?? 0, y: at?.y ?? 0, width: 360, height: 220 }) },
         { label: 'Add note here', title: 'A sticky note for the people editing this graph. Players never see it', onClick: () => void addNoteAt(at) },
         { label: 'Tidy up', title: 'Lay the graph out in columns from its events, with as few crossing connections as possible, and fit groups to their nodes', onClick: tidy },
-        { label: 'Paste', hint: 'Ctrl+V', onClick: () => pasteFromClipboard(at) },
+        { label: 'Paste', hint: keyHints('paste'), onClick: () => pasteFromClipboard(at) },
       ],
       search: 'Find a node…',
     });
@@ -813,14 +838,14 @@ export function LogicGraph() {
       });
     items.push(
       { separator: true },
-      { label: 'Cut', hint: 'Ctrl+X', onClick: () => copySelection([id], true) },
-      { label: 'Copy', hint: 'Ctrl+C', onClick: () => copySelection([id]) },
-      { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate([id]) },
-      { label: 'Put in a new group', hint: 'Ctrl+G', title: 'Draw a labelled frame around this node; drag other nodes into it', onClick: () => groupAround([id]) },
+      { label: 'Cut', hint: keyHints('graph-cut'), onClick: () => copySelection([id], true) },
+      { label: 'Copy', hint: keyHints('graph-copy'), onClick: () => copySelection([id]) },
+      { label: 'Duplicate', hint: keyHints('graph-duplicate'), onClick: () => duplicate([id]) },
+      { label: 'Put in a new group', hint: keyHints('graph-group'), title: 'Draw a labelled frame around this node; drag other nodes into it', onClick: () => groupAround([id]) },
       { label: 'Add note to this node', title: 'A sticky note that moves with this node. Players never see it', onClick: () => void addNoteAt({ x: n.x, y: n.y - 130 }, id) },
       { label: 'Help for this node', onClick: () => openHelp('interaction-nodes', slug(nodeHeading(def))) },
       { separator: true },
-      { label: 'Delete', hint: 'Del', danger: true, onClick: () => removeNodes([id]) },
+      { label: 'Delete', hint: keyHints('graph-delete'), danger: true, onClick: () => removeNodes([id]) },
     );
     setMenu({ x: e.clientX, y: e.clientY, items });
   };
@@ -837,11 +862,11 @@ export function LogicGraph() {
     const what = [nodeIds.length && `${nodeIds.length} node${nodeIds.length === 1 ? '' : 's'}`, groupCount && `${groupCount} group${groupCount === 1 ? '' : 's'}`, noteCount && `${noteCount} note${noteCount === 1 ? '' : 's'}`].filter(Boolean).join(' and ');
     const items: MenuItem[] = [
       { heading: `${what} selected` },
-      { label: 'Cut', hint: 'Ctrl+X', onClick: () => copySelection(ids, true) },
-      { label: 'Copy', hint: 'Ctrl+C', title: 'Copies them with the connections between them; pasted copies are wired to each other the same way', onClick: () => copySelection(ids) },
-      { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate(ids) },
+      { label: 'Cut', hint: keyHints('graph-cut'), onClick: () => copySelection(ids, true) },
+      { label: 'Copy', hint: keyHints('graph-copy'), title: 'Copies them with the connections between them; pasted copies are wired to each other the same way', onClick: () => copySelection(ids) },
+      { label: 'Duplicate', hint: keyHints('graph-duplicate'), onClick: () => duplicate(ids) },
     ];
-    if (nodeIds.length) items.push({ label: 'Put in a new group', hint: 'Ctrl+G', title: 'Draw a labelled frame around the selected nodes', onClick: () => groupAround(nodeIds) });
+    if (nodeIds.length) items.push({ label: 'Put in a new group', hint: keyHints('graph-group'), title: 'Draw a labelled frame around the selected nodes', onClick: () => groupAround(nodeIds) });
     if (touching.length)
       items.push({
         label: 'Disconnect',
@@ -851,7 +876,7 @@ export function LogicGraph() {
           { label: `All (${touching.length})`, onClick: () => removeEdges(touching.map((x) => x.id)) },
         ],
       });
-    items.push({ label: 'Tidy up the graph', onClick: tidy }, { separator: true }, { label: 'Delete', hint: 'Del', danger: true, onClick: () => void deleteSelected() });
+    items.push({ label: 'Tidy up the graph', onClick: tidy }, { separator: true }, { label: 'Delete', hint: keyHints('graph-delete'), danger: true, onClick: () => void deleteSelected() });
     setMenu({ x: e.clientX, y: e.clientY, items });
   };
 
@@ -865,11 +890,11 @@ export function LogicGraph() {
       y: e.clientY,
       items: [
         { heading: 'Note' },
-        { label: 'Edit text', hint: 'Enter', onClick: () => store().set({ editingNote: id }) },
+        { label: 'Edit text', hint: keyHints('graph-edit-note'), onClick: () => store().set({ editingNote: id }) },
         { label: 'Colour', items: NOTE_COLOURS.map((c) => ({ label: { gold: 'Yellow', orange: 'Orange', green: 'Green', sky: 'Blue', purple: 'Purple', rose: 'Pink' }[c], onClick: () => patchGraphNote(id, { colour: c }) })) },
         ...(note.anchor ? [{ label: 'Stop following', onClick: () => void attachGraphNote(id, null) } as MenuItem] : []),
         { separator: true },
-        { label: 'Delete note', hint: 'Del', danger: true, onClick: () => removeGraphNotes([id]) },
+        { label: 'Delete note', hint: keyHints('graph-delete'), danger: true, onClick: () => removeGraphNotes([id]) },
       ],
     });
   };
@@ -878,16 +903,98 @@ export function LogicGraph() {
     e.preventDefault();
     setSelEdges([edgeId]);
     select([], null);
-    setMenu({ x: e.clientX, y: e.clientY, items: [{ label: 'Delete connection', hint: 'Del', danger: true, onClick: () => removeEdges([edgeId]) }] });
+    setMenu({ x: e.clientX, y: e.clientY, items: [{ label: 'Delete connection', hint: keyHints('graph-delete'), danger: true, onClick: () => removeEdges([edgeId]) }] });
   };
 
   // Frame the graph when switching artboards, or when nodes appear in a graph that was empty.
   const count = ab?.logic.nodes.length ?? 0;
   const lastCount = useRef(count);
   useEffect(() => {
-    if (count && (lastCount.current === 0 || count - lastCount.current > 1)) requestAnimationFrame(() => rf.current?.fitView({ maxZoom: 1, padding: 0.2 }));
+    //(not when something was just added and is being framed on its own: lib/graph-reveal.ts)
+    if (count && (lastCount.current === 0 || count - lastCount.current > 1) && !pendingReveal()) requestAnimationFrame(() => rf.current?.fitView({ maxZoom: 1, padding: 0.2 }));
     lastCount.current = count;
   }, [count, s.abId]);
+
+  //Something was added from outside the graph (+ When clicked…, an empty event): wait for the nodes to be drawn and measured,
+  //take focus to the new event, frame everything that was added, and glow it. Anyone dragging or zooming in the meantime keeps their view
+  const reveal = useCallback((req: RevealRequest) => {
+    let tries = 0;
+    let stop = false;
+    let cleanup: (() => void) | null = null;
+    const frame = (instant: boolean) => {
+      const inst = rf.current;
+      const pane = canvasRef.current;
+      if (!inst || !pane) return;
+      const rects = req.ids.flatMap((id) => {
+        const n = inst.getInternalNode(id);
+        return n ? [{ x: n.internals.positionAbsolute.x, y: n.internals.positionAbsolute.y, width: n.measured?.width ?? 180, height: n.measured?.height ?? 70 }] : [];
+      });
+      const box = pane.getBoundingClientRect();
+      const vp = frameRects(rects, { width: box.width, height: box.height }, { maxZoom: 1, minZoom: 0.2 });
+      if (vp) void inst.setViewport(vp, { duration: instant || reducedMotion() ? 0 : 300 });
+    };
+    const attempt = () => {
+      if (stop) return;
+      const inst = rf.current;
+      const pane = canvasRef.current;
+      const drawn = !!inst && !!pane && req.ids.every((id) => !!inst.getInternalNode(id)?.measured?.width);
+      //(a graph that never measures its nodes, a test's, is framed on typical sizes after a while)
+      if (!drawn && !(tries > 40 && inst && pane && req.ids.every((id) => !!inst.getInternalNode(id)))) {
+        if (++tries < 90) requestAnimationFrame(attempt);
+        else finishReveal(req);
+        return;
+      }
+      //Focus first: React Flow pans to a node that takes focus, and the framing below then wins
+      setLastKeyArea('graph');
+      const el = Array.from(pane!.querySelectorAll<HTMLElement>('.react-flow__node')).find((n) => n.getAttribute('data-id') === req.focusId);
+      (el ?? pane!).focus({ preventScroll: true });
+      frame(false);
+      if (!reducedMotion()) {
+        setGlow(req.ids);
+        setTimeout(() => setGlow((g) => (g === req.ids ? [] : g)), 1800);
+      }
+      //The dock may still be growing to give the graph room (lib/interactions-room.ts), so frame again if the panel changes size
+      //in the next moment, unless the person has already taken the view into their own hands
+      let ro: ResizeObserver | null = null;
+      const touched = () => cleanup?.();
+      if (typeof ResizeObserver !== 'undefined') {
+        ro = new ResizeObserver(() => frame(true));
+        ro.observe(pane!);
+      }
+      pane!.addEventListener('pointerdown', touched, true);
+      pane!.addEventListener('wheel', touched, true);
+      const timer = setTimeout(() => cleanup?.(), 900);
+      cleanup = () => {
+        ro?.disconnect();
+        pane!.removeEventListener('pointerdown', touched, true);
+        pane!.removeEventListener('wheel', touched, true);
+        clearTimeout(timer);
+        cleanup = null;
+      };
+      finishReveal(req);
+    };
+    requestAnimationFrame(attempt);
+    return () => {
+      stop = true;
+      cleanup?.();
+    };
+  }, []);
+  useEffect(() => {
+    let undo: (() => void) | undefined;
+    const run = (r: RevealRequest) => {
+      if (r.abId !== store().get().activeArtboardId) return;
+      undo?.();
+      undo = reveal(r);
+    };
+    //(asked for before this mounted: the tab was on something else)
+    const waiting = pendingReveal();
+    if (waiting) run(waiting);
+    const off = onReveal(run);
+    return () => {
+      off();
+      undo?.();
+    };
+  }, [reveal]);
 
   if (!ab) return null;
   const selected = ab.logic.nodes.find((n) => n.id === s.sel);
@@ -897,20 +1004,34 @@ export function LogicGraph() {
   const panelKeys = (e: React.KeyboardEvent) => {
     const t = e.target as HTMLElement;
     const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || t.isContentEditable || !!t.closest('.cm-editor');
-    if ((e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) || ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f')) {
+    //(the keys are the keymap's, so they follow what the person set)
+    if (matches(e, 'graph-search') && (!typing || e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       e.stopPropagation();
       searchRef.current?.focus();
       searchRef.current?.select();
       return;
     }
-    const dir = stepKey(e);
+    if (!typing && (matches(e, 'graph-tidy') || matches(e, 'graph-add-note'))) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (matches(e, 'graph-tidy')) tidy();
+      else void addNoteAt();
+      return;
+    }
+    const dir = matches(e, 'graph-next-page') ? 1 : matches(e, 'graph-prev-page') ? -1 : null;
     if (dir && !t.closest('.cm-editor') && !t.closest('.search-pop')) {
       e.preventDefault();
       e.stopPropagation();
       stepArtboard(dir);
     }
   };
+
+  //React Flow hands these to every node it draws, so a new function on each render would draw every node again
+  const onNodeContextMenu = (e: React.MouseEvent, node: Node) => (isNote(node.id) ? noteMenu(e, node.id) : isGroup(node.id) ? groupMenu(e, node.id) : nodeMenu(e, node.id));
+  const nodeHandlers = useRef({ onNodeClick, onNodeContextMenu });
+  nodeHandlers.current = { onNodeClick, onNodeContextMenu };
+  const stableNodeHandlers = useMemo(() => ({ onNodeClick: (e: React.MouseEvent, node: Node) => nodeHandlers.current.onNodeClick(e, node), onNodeContextMenu: (e: React.MouseEvent, node: Node) => nodeHandlers.current.onNodeContextMenu(e, node) }), []);
 
   return (
     <div className="logic-root" onKeyDownCapture={panelKeys}>
@@ -934,34 +1055,33 @@ export function LogicGraph() {
           e.stopPropagation();
           const t = e.target as HTMLElement;
           if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.closest('.cm-editor')) return;
-          const mod = e.ctrlKey || e.metaKey;
-          const k = e.key.toLowerCase();
-          if (e.key === 'Delete' || e.key === 'Backspace') {
+          const cmd = commandFor(e, CONTEXT_ORDER.graph)?.id;
+          if (cmd === 'graph-delete') {
             e.preventDefault();
             void deleteSelected();
-          } else if ((e.key === 'Enter' || e.key === 'F2') && chosenNow().length === 1 && isNote(chosenNow()[0])) {
+          } else if (cmd === 'graph-edit-note' && chosenNow().length === 1 && isNote(chosenNow()[0])) {
             //Enter on a picked note opens it for typing, like a note on the canvas
             e.preventDefault();
             store().set({ editingNote: chosenNow()[0] });
-          } else if (mod && k === 'a') {
+          } else if (cmd === 'graph-select-all') {
             e.preventDefault();
             select([...(ab.logic.groups ?? []).map((g) => g.id), ...ab.logic.nodes.map((n) => n.id), ...(showNotes ? (ab.logic.notes ?? []).map((n) => n.id) : [])]);
-          } else if (mod && k === 'g' && chosenNow().some((id) => !isGroup(id) && !isNote(id))) {
+          } else if (cmd === 'graph-group' && chosenNow().some((id) => !isGroup(id) && !isNote(id))) {
             e.preventDefault();
             groupAround(chosenNow());
-          } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+          } else if (cmd === 'undo' || cmd === 'redo') {
             // The graph keeps the key to itself (stopPropagation above), so undo and redo have to be handled here
             e.preventDefault();
-            if (e.key.toLowerCase() === 'y' || e.shiftKey) store().redo();
+            if (cmd === 'redo') store().redo();
             else store().undo();
-          } else if (mod && k === 'd' && chosenNow().length) {
+          } else if (cmd === 'graph-duplicate' && chosenNow().length) {
             e.preventDefault();
             duplicate(chosenNow());
-          } else if (mod && (k === 'c' || k === 'x') && chosenNow().length) {
+          } else if ((cmd === 'graph-copy' || cmd === 'graph-cut') && chosenNow().length) {
             //Leave it alone when there's text selected in a node, so copying that still works
             if (window.getSelection()?.toString()) return;
             e.preventDefault();
-            copySelection(chosenNow(), k === 'x');
+            copySelection(chosenNow(), cmd === 'graph-cut');
           }
         }}
         onPaste={(e) => {
@@ -989,7 +1109,7 @@ export function LogicGraph() {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
-          onNodeClick={onNodeClick}
+          onNodeClick={stableNodeHandlers.onNodeClick}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onConnectEnd={onConnectEnd}
@@ -999,7 +1119,7 @@ export function LogicGraph() {
             setSelEdges([]);
           }}
           onPaneContextMenu={paneMenu}
-          onNodeContextMenu={(e, node) => (isNote(node.id) ? noteMenu(e, node.id) : isGroup(node.id) ? groupMenu(e, node.id) : nodeMenu(e, node.id))}
+          onNodeContextMenu={stableNodeHandlers.onNodeContextMenu}
           onEdgeContextMenu={(e, edge) => edgeMenu(e, edge.id)}
           fitView={ab.logic.nodes.length > 0}
           fitViewOptions={{ maxZoom: 1 }}
@@ -1020,10 +1140,10 @@ export function LogicGraph() {
         >
           <Background gap={16} />
           <Controls showInteractive={false}>
-            <ControlButton onClick={() => void addNoteAt()} title="Add a note: a sticky note for the people editing this graph (players never see it)" aria-label="Add a note to the graph">
+            <ControlButton onClick={() => void addNoteAt()} title={withKey('Add a note: a sticky note for the people editing this graph (players never see it)', 'graph-add-note')} aria-label="Add a note to the graph">
               <Icons.note width={14} />
             </ControlButton>
-            <ControlButton onClick={tidy} title="Tidy up: lay the graph out in columns from its events, with as few crossing connections as possible (one undo)" aria-label="Tidy up the graph">
+            <ControlButton onClick={tidy} title={withKey('Tidy up: lay the graph out in columns from its events, with as few crossing connections as possible (one undo)', 'graph-tidy')} aria-label="Tidy up the graph">
               <Icons.distH width={14} />
             </ControlButton>
           </Controls>
@@ -1040,9 +1160,7 @@ export function LogicGraph() {
       </div>
       <div className="logic-settings">
         {chosen.length > 1 ? (
-          <p className="hint">
-            {chosen.length} selected. Drag any of them to move them all. <b>Ctrl+C</b> copies them with the connections between them (pasted copies are wired to each other the same way), <b>Ctrl+D</b> duplicates, <b>Ctrl+G</b> puts them in a new group and <b>Del</b> deletes them. Ctrl+click adds or removes one.
-          </p>
+          <SectionBlurb text={`${chosen.length} selected. Drag any of them to move them all. Right-click for more.`} name="selecting nodes" help={['interactions', 'selecting-moving-around-and-copying']} />
         ) : s.sel && ab.logic.notes?.some((n) => n.id === s.sel) ? (
           <GraphNoteForm note={ab.logic.notes!.find((n) => n.id === s.sel)!} logic={ab.logic} />
         ) : selected ? <ParamForm node={selected} ab={ab} project={s.project} onChange={(params) => updateLogic((a) => {
@@ -1052,7 +1170,7 @@ export function LogicGraph() {
           const n = a.logic.nodes.find((x) => x.id === selected.id);
           if (n) n.note = note || undefined;
         }, `logic-note-${selected.id}`)} /> : s.sel && ab.logic.groups?.some((g) => g.id === s.sel) ? (
-          <p className="hint">A group. Drag it (its title or the empty space inside) to move it with the nodes in it, drag its edges to resize it, double-click the title to rename it, and right-click it to add a node inside or change its colour. Delete asks whether to keep the nodes inside or delete them too.</p>
+          <SectionBlurb text="A group. Drag it to move it with its nodes, or its edges to resize it. Double-click the title to rename it." name="groups" help={['interactions', 'groups']} />
         ) : (
           <p className="hint">Select a node to edit its settings.</p>
         )}

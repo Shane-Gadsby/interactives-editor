@@ -1,6 +1,8 @@
 import { extOf, track as usage } from '../lib/analytics';
 import { useEffect, useRef, useState } from 'react';
 import { clockLabel, cuesToSrt, cuesToVtt, localVoices, parseCaptions, trackSpan, uid, type AudioRole, type AudioTrack, type CaptionCue, type CaptionTrack, type Project, type Timeline as TL } from 'interactives-player';
+import { Icons } from '../components/icons';
+import { mediaBrief, mediaMarks, mediaSummary, type LaneShow } from '../lib/timeline-view';
 import { store } from '../store/store';
 import { assetKind, assetUrls } from '../lib/assets';
 import { pickFiles } from '../lib/insert';
@@ -10,6 +12,7 @@ import { audioDuration, barsFor, loadWaveform, type Waveform } from '../lib/wave
 import { alertDialog, confirmDialog } from '../components/dialogs';
 import { CheckField, NumberField, SelectField, TextField } from '../components/ui';
 import { Modal } from '../components/ProjectModals';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /**
  * The sound and caption rows of the timeline panel: a lane per sound with its waveform, volume keys and trim handles, and a
@@ -41,6 +44,14 @@ export interface MediaCtx {
 }
 
 const X = (pxPerMs: number, t: number) => 12 + t * pxPerMs;
+
+/** The Sound and captions group: which lanes show (the View menu), and whether the group is open or folded to one row. */
+export interface MediaGroupView {
+  show: LaneShow;
+  open: boolean;
+  onToggle: () => void;
+}
+const GROUP_ID = 'media-group-rows';
 
 // ---------------------------------------------------------------------------
 // Waveforms
@@ -84,143 +95,168 @@ function WaveCanvas({ w, from, to, width, height }: { w: Waveform; from: number;
 // ---------------------------------------------------------------------------
 // Labels (the left column)
 
-export function MediaLabels({ ctx, assetsFor, onAddSound, onCaptionAction, onDescriptionAction }: { ctx: MediaCtx; assetsFor: { id: string; name: string }[]; onAddSound: (assetId: string) => void; onCaptionAction: (a: string) => void; onDescriptionAction: (a: string) => void }) {
+export function MediaLabels({ ctx, view, assetsFor, onAddSound, onCaptionAction, onDescriptionAction }: { ctx: MediaCtx; view: MediaGroupView; assetsFor: { id: string; name: string }[]; onAddSound: (assetId: string) => void; onCaptionAction: (a: string) => void; onDescriptionAction: (a: string) => void }) {
   const { tl, sel, setSel, setTl } = ctx;
   const audio = tl.audio ?? [];
   const caps = tl.captions ?? [];
   const descs = tl.descriptions ?? [];
+  const anyShown = view.show.audio || view.show.captions || view.show.descriptions;
+  if (!anyShown) return null;
   return (
     <div className="media-labels">
-      <div className="track-node media-head">
-        <span>Sound</span>
-        <select
-          className="media-add"
-          value=""
-          title="Put a sound on this timeline. It plays while the timeline plays and follows seeks, pauses and speed"
-          aria-label="Add a sound to the timeline"
-          onChange={(e) => {
-            if (e.target.value) onAddSound(e.target.value);
-            e.target.value = '';
-          }}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          <option value="">+ Add sound…</option>
-          {assetsFor.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-          <option value="__upload">Upload audio…</option>
-        </select>
+      <div className="track-node media-head media-group-head">
+        <button type="button" className="media-fold" aria-expanded={view.open} aria-controls={GROUP_ID} title={`${view.open ? 'Fold the sound and caption rows into one row' : 'Show the sound and caption rows'} (${mediaSummary(tl, view.show)})`} onClick={view.onToggle} onKeyDown={(e) => e.stopPropagation()}>
+          {view.open ? <Icons.chevronDown /> : <Icons.chevronRight />}
+          <span>Sound and captions</span>
+        </button>
+        <small className="media-summary">{mediaBrief(tl, view.show)}</small>
       </div>
-      {audio.map((a) => (
-        <div key={a.id} className={`track-label media-label audio-label${sel?.kind === 'audio' && sel.track === a.id ? ' selected' : ''}`} style={{ height: AUDIO_ROW }} onClick={() => setSel({ kind: 'audio', track: a.id })}>
-          <span className="media-name" title={`${a.name} (${a.role ?? 'narration'})`}>
-            {a.name}
-            <small>{a.role ?? 'narration'}</small>
-          </span>
-          <span className="media-btns">
-            <button
-              className={`mini${a.muted ? ' on' : ''}`}
-              style={{ visibility: 'visible' }}
-              title={a.muted ? 'Silent in the player (still in step). Click to unmute' : 'Mute this sound in the player'}
-              aria-pressed={!!a.muted}
-              aria-label={`Mute ${a.name}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setTl((d) => {
-                  const t = d.audio?.find((x) => x.id === a.id);
-                  if (t) t.muted = t.muted ? undefined : true;
-                });
-              }}
-            >
-              M
-            </button>
-            <button
-              className="mini"
-              title="Remove this sound from the timeline"
-              aria-label={`Remove ${a.name}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setTl((d) => {
-                  d.audio = d.audio?.filter((x) => x.id !== a.id);
-                  if (!d.audio?.length) delete d.audio;
-                });
-                if (sel && 'track' in sel && sel.track === a.id) setSel(null);
-              }}
-            >
-              ×
-            </button>
-          </span>
+      {view.open && (
+        <div id={GROUP_ID} className="media-group-rows">
+        {view.show.audio && (
+          <>
+            <div className="track-node media-head">
+              <span>Sound</span>
+              <select
+                className="media-add"
+                value=""
+                title="Put a sound on this timeline. It plays while the timeline plays and follows seeks, pauses and speed"
+                aria-label="Add a sound to the timeline"
+                onChange={(e) => {
+                  if (e.target.value) onAddSound(e.target.value);
+                  e.target.value = '';
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <option value="">+ Add sound…</option>
+                {assetsFor.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+                <option value="__upload">Upload audio…</option>
+              </select>
+            </div>
+            {audio.map((a) => (
+              <div key={a.id} className={`track-label media-label audio-label${sel?.kind === 'audio' && sel.track === a.id ? ' selected' : ''}`} style={{ height: AUDIO_ROW }} onClick={() => setSel({ kind: 'audio', track: a.id })}>
+                <span className="media-name" title={`${a.name} (${a.role ?? 'narration'})`}>
+                  {a.name}
+                  <small>{a.role ?? 'narration'}</small>
+                </span>
+                <span className="media-btns">
+                  <button
+                    className={`mini${a.muted ? ' on' : ''}`}
+                    style={{ visibility: 'visible' }}
+                    title={a.muted ? 'Silent in the player (still in step). Click to unmute' : 'Mute this sound in the player'}
+                    aria-pressed={!!a.muted}
+                    aria-label={`Mute ${a.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTl((d) => {
+                        const t = d.audio?.find((x) => x.id === a.id);
+                        if (t) t.muted = t.muted ? undefined : true;
+                      });
+                    }}
+                  >
+                    M
+                  </button>
+                  <button
+                    className="mini"
+                    title="Remove this sound from the timeline"
+                    aria-label={`Remove ${a.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTl((d) => {
+                        d.audio = d.audio?.filter((x) => x.id !== a.id);
+                        if (!d.audio?.length) delete d.audio;
+                      });
+                      if (sel && 'track' in sel && sel.track === a.id) setSel(null);
+                    }}
+                  >
+                    ×
+                  </button>
+                </span>
+              </div>
+            ))}
+          </>
+        )}
+        {view.show.captions && (
+          <>
+            <div className="track-node media-head">
+              <span>Captions</span>
+              <select
+                className="media-add"
+                value=""
+                title="Add captions: type them in, paste a transcript, import or export a WebVTT or SRT file"
+                aria-label="Captions actions"
+                onChange={(e) => {
+                  if (e.target.value) onCaptionAction(e.target.value);
+                  e.target.value = '';
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <option value="">Captions…</option>
+                <option value="cue">New caption at the playhead</option>
+                <option value="paste">Paste a transcript…</option>
+                <option value="import">Import WebVTT or SRT…</option>
+                <option value="vtt" disabled={!caps.some((c) => c.cues.length)}>
+                  Export WebVTT
+                </option>
+                <option value="srt" disabled={!caps.some((c) => c.cues.length)}>
+                  Export SRT
+                </option>
+                <option value="track">Add a language…</option>
+              </select>
+            </div>
+            {caps.map((c) => (
+              <div key={c.id} className={`track-label media-label caption-label${sel && 'track' in sel && sel.track === c.id && sel.kind !== 'audio' && sel.kind !== 'vkey' ? ' selected' : ''}`} style={{ height: CAPTION_ROW }} onClick={() => setSel({ kind: 'captions', track: c.id })}>
+                <span className="media-name" title={`${c.name}${c.lang ? ` (${c.lang})` : ''}: ${c.cues.length} caption${c.cues.length === 1 ? '' : 's'}`}>
+                  {c.name}
+                  <small>{c.lang || 'no language'}</small>
+                </span>
+              </div>
+            ))}
+          </>
+        )}
+        {view.show.descriptions && (
+          <>
+            <div className="track-node media-head">
+              <span>Descriptions</span>
+              <select
+                className="media-add"
+                value=""
+                title="Say what is on screen for people who cannot see it: short sentences in the gaps, read by the viewer's own voice. Not a recorded described version"
+                aria-label="Descriptions actions"
+                onChange={(e) => {
+                  if (e.target.value) onDescriptionAction(e.target.value);
+                  e.target.value = '';
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <option value="">Descriptions…</option>
+                <option value="cue">New description at the playhead</option>
+                <option value="import">Import WebVTT or SRT…</option>
+                <option value="vtt" disabled={!descs.some((c) => c.cues.length)}>
+                  Export WebVTT
+                </option>
+                <option value="srt" disabled={!descs.some((c) => c.cues.length)}>
+                  Export SRT
+                </option>
+                <option value="track">Add a language…</option>
+              </select>
+            </div>
+            {descs.map((c) => (
+              <div key={c.id} className={`track-label media-label caption-label description-label${sel && 'track' in sel && sel.track === c.id && sel.kind !== 'audio' && sel.kind !== 'vkey' ? ' selected' : ''}`} style={{ height: CAPTION_ROW }} onClick={() => setSel({ kind: 'captions', track: c.id })}>
+                <span className="media-name" title={`${c.name}${c.lang ? ` (${c.lang})` : ''}: ${c.cues.length} description${c.cues.length === 1 ? '' : 's'}`}>
+                  {c.name}
+                  <small>{c.lang || 'no language'}</small>
+                </span>
+              </div>
+            ))}
+          </>
+        )}
         </div>
-      ))}
-      <div className="track-node media-head">
-        <span>Captions</span>
-        <select
-          className="media-add"
-          value=""
-          title="Add captions: type them in, paste a transcript, import or export a WebVTT or SRT file"
-          aria-label="Captions actions"
-          onChange={(e) => {
-            if (e.target.value) onCaptionAction(e.target.value);
-            e.target.value = '';
-          }}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          <option value="">Captions…</option>
-          <option value="cue">New caption at the playhead</option>
-          <option value="paste">Paste a transcript…</option>
-          <option value="import">Import WebVTT or SRT…</option>
-          <option value="vtt" disabled={!caps.some((c) => c.cues.length)}>
-            Export WebVTT
-          </option>
-          <option value="srt" disabled={!caps.some((c) => c.cues.length)}>
-            Export SRT
-          </option>
-          <option value="track">Add a language…</option>
-        </select>
-      </div>
-      {caps.map((c) => (
-        <div key={c.id} className={`track-label media-label caption-label${sel && 'track' in sel && sel.track === c.id && sel.kind !== 'audio' && sel.kind !== 'vkey' ? ' selected' : ''}`} style={{ height: CAPTION_ROW }} onClick={() => setSel({ kind: 'captions', track: c.id })}>
-          <span className="media-name" title={`${c.name}${c.lang ? ` (${c.lang})` : ''}: ${c.cues.length} caption${c.cues.length === 1 ? '' : 's'}`}>
-            {c.name}
-            <small>{c.lang || 'no language'}</small>
-          </span>
-        </div>
-      ))}
-      <div className="track-node media-head">
-        <span>Descriptions</span>
-        <select
-          className="media-add"
-          value=""
-          title="Say what is on screen for people who cannot see it: short sentences in the gaps, read by the viewer's own voice. Not a recorded described version"
-          aria-label="Descriptions actions"
-          onChange={(e) => {
-            if (e.target.value) onDescriptionAction(e.target.value);
-            e.target.value = '';
-          }}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          <option value="">Descriptions…</option>
-          <option value="cue">New description at the playhead</option>
-          <option value="import">Import WebVTT or SRT…</option>
-          <option value="vtt" disabled={!descs.some((c) => c.cues.length)}>
-            Export WebVTT
-          </option>
-          <option value="srt" disabled={!descs.some((c) => c.cues.length)}>
-            Export SRT
-          </option>
-          <option value="track">Add a language…</option>
-        </select>
-      </div>
-      {descs.map((c) => (
-        <div key={c.id} className={`track-label media-label caption-label description-label${sel && 'track' in sel && sel.track === c.id && sel.kind !== 'audio' && sel.kind !== 'vkey' ? ' selected' : ''}`} style={{ height: CAPTION_ROW }} onClick={() => setSel({ kind: 'captions', track: c.id })}>
-          <span className="media-name" title={`${c.name}${c.lang ? ` (${c.lang})` : ''}: ${c.cues.length} description${c.cues.length === 1 ? '' : 's'}`}>
-            {c.name}
-            <small>{c.lang || 'no language'}</small>
-          </span>
-        </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -228,22 +264,45 @@ export function MediaLabels({ ctx, assetsFor, onAddSound, onCaptionAction, onDes
 // ---------------------------------------------------------------------------
 // Lanes (the right column)
 
-export function MediaLanes({ ctx }: { ctx: MediaCtx }) {
-  const { tl } = ctx;
+export function MediaLanes({ ctx, view }: { ctx: MediaCtx; view: MediaGroupView }) {
+  const { tl, pxPerMs } = ctx;
+  if (!view.show.audio && !view.show.captions && !view.show.descriptions) return null;
   return (
     <div className="media-lanes">
-      <div className="lane node-lane media-head" onPointerDown={ctx.scrub} />
-      {(tl.audio ?? []).map((a) => (
-        <AudioLane key={a.id} ctx={ctx} track={a} />
-      ))}
-      <div className="lane node-lane media-head" onPointerDown={ctx.scrub} />
-      {(tl.captions ?? []).map((c) => (
-        <CaptionLane key={c.id} ctx={ctx} track={c} />
-      ))}
-      <div className="lane node-lane media-head" onPointerDown={ctx.scrub} />
-      {(tl.descriptions ?? []).map((c) => (
-        <CaptionLane key={c.id} ctx={ctx} track={c} kind="descriptions" />
-      ))}
+      <div className="lane node-lane media-head media-group-head" onPointerDown={ctx.scrub}>
+        {!view.open &&
+          mediaMarks(tl, view.show).map((m, i) => (
+            <span key={i} className={`media-mark ${m.kind}`} aria-hidden="true" style={{ left: X(pxPerMs, m.from), width: Math.max(2, (Math.min(m.to, tl.duration) - m.from) * pxPerMs) }} />
+          ))}
+      </div>
+      {view.open && (
+        <div className="media-group-rows">
+          {view.show.audio && (
+            <>
+              <div className="lane node-lane media-head" onPointerDown={ctx.scrub} />
+              {(tl.audio ?? []).map((a) => (
+                <AudioLane key={a.id} ctx={ctx} track={a} />
+              ))}
+            </>
+          )}
+          {view.show.captions && (
+            <>
+              <div className="lane node-lane media-head" onPointerDown={ctx.scrub} />
+              {(tl.captions ?? []).map((c) => (
+                <CaptionLane key={c.id} ctx={ctx} track={c} />
+              ))}
+            </>
+          )}
+          {view.show.descriptions && (
+            <>
+              <div className="lane node-lane media-head" onPointerDown={ctx.scrub} />
+              {(tl.descriptions ?? []).map((c) => (
+                <CaptionLane key={c.id} ctx={ctx} track={c} kind="descriptions" />
+              ))}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -506,7 +565,7 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
           onChange={(v) => set((t) => void (t.keepPitch = v ? undefined : false))}
         />
         <div className="field-label block">Volume keys</div>
-        <p className="hint">Double-click the clip to add one; drag it up and down for the level, sideways for the time. They multiply the volume above, so a fade is two keys.</p>
+        <SectionBlurb text="Double-click the clip to add one; drag it up and down for the level, sideways for the time." name="volume keys" help={['captions', 'sound']} />
         <div className="row">
           <button
             className="btn small-btn"
@@ -656,9 +715,7 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
         {track.cues.length === 1 ? '' : 's'}.
       </p>
       {described && (
-        <p className="hint">
-          When the viewer has descriptions on, a voice on their device reads each one as the timeline reaches it and the sound is turned down while it speaks. Keep them in gaps between speech, one clear sentence each. They are also listed in the transcript, which works with no voice. This is a cheaper aid, not a recorded described version.
-        </p>
+        <SectionBlurb text="A voice on the viewer's device reads each one in the gaps. A cheaper aid, not a recorded described version." name="descriptions" help={['describe-what-you-see', 'how-it-works-for-the-viewer']} />
       )}
       <div className="row wrap">
         {!described && (
@@ -684,9 +741,11 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
         onChange={(v) => setTrack((t) => void (t.speak = v ? true : undefined))}
       />}
       {(track.speak || described) && (
-        <p className="hint">
-          {voices.length ? `${voices.length} voice${voices.length === 1 ? '' : 's'} on this device can read ${described ? 'them' : 'it'} (none of them send anything anywhere).` : `No voice that runs on this device was found, so nothing will be read. Viewers with one will hear ${described ? 'them' : 'it'}. Voices that need the internet are never used.`}
-        </p>
+        <SectionBlurb
+          text={voices.length ? `${voices.length} voice${voices.length === 1 ? '' : 's'} on this device can read ${described ? 'them' : 'it'}.` : `No voice that runs on this device was found, so nothing will be read here. Viewers with one will hear ${described ? 'them' : 'it'}.`}
+          name="the draft voice"
+          help={['captions', 'draft-voice']}
+        />
       )}
       <div className="row wrap">
         <button
@@ -739,7 +798,7 @@ export function TranscriptDialog({ tl, track, onClose, onDone }: { tl: TL; track
   return (
     <Modal title="Paste a transcript" help="captions" onClose={onClose}>
       <div className="share-body transcript-dialog">
-        <p className="hint">Paste the words that are spoken. They are cut into captions (a sentence each, long ones split at a comma) and timed for you; then drag the edges to fine-tune. A transcript with times at the start of its lines ("0:12 Welcome") keeps them.</p>
+        <SectionBlurb text="Paste the words that are spoken. They are cut into captions and timed for you; then drag the edges to fine-tune." name="pasting a transcript" help={['captions']} />
         <textarea className="transcript-text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste or type the transcript here" aria-label="Transcript" rows={9} autoFocus />
         <div className="row wrap">
           <SelectField<PasteTiming>

@@ -1,11 +1,13 @@
 // The artboard commands the canvas, the Layers panel and the keyboard share: each asks what it needs to (a name, a yes), then
 // does one store operation. The store methods themselves never ask anything, so they stay easy to test.
+import { keyHints } from './keymap';
 import { store } from '../store/store';
 import { confirmDialog, promptDialog } from '../components/dialogs';
 import type { MenuItem } from '../components/ContextMenu';
 import { freshGroupName, groupOf, pickedArtboardIds } from './artboard-groups';
 import { tidyArtboardsCommand } from './tidy-command';
 import { linkColoursCommand } from './link-colours-action';
+import { placeInMenu } from './components';
 
 /** Delete artboards. Several at once is asked about first (one undo brings them back); one is deleted straight away as it always was. */
 export async function deleteArtboardsCommand(ids: string[]): Promise<void> {
@@ -16,12 +18,27 @@ export async function deleteArtboardsCommand(ids: string[]): Promise<void> {
   s.deleteArtboards(list);
 }
 
-/** The Delete key: the selected layers, or the selected artboards (asking first when there are several). */
-export function deleteSelectionCommand(): void {
+/**
+ * The Delete key: the selected layers (with an Undo message saying what went), or the selected artboards. From the keyboard a
+ * page or component is always asked about first, since it takes everything on it along and a stray key is easy.
+ */
+export async function deleteSelectionCommand(opts: { keyboard?: boolean } = {}): Promise<void> {
   const s = store();
   const st = s.get();
-  if (st.artboardSelected) void deleteArtboardsCommand(pickedArtboardIds(st));
-  else s.deleteSelection();
+  if (st.artboardSelected) {
+    const ids = pickedArtboardIds(st);
+    if (opts.keyboard && ids.length === 1) {
+      const ab = st.project.artboards.find((a) => a.id === ids[0]);
+      if (ab && !(await confirmDialog({ title: `Delete the page "${ab.name}"?`, message: 'It and everything on it go. Undo (Ctrl+Z) brings it back.', confirmLabel: 'Delete', danger: true }))) return;
+    }
+    await deleteArtboardsCommand(ids);
+    return;
+  }
+  const names = s.selectedNodes().map((n) => n.name);
+  if (!names.length) return;
+  const mark = s.historyMark();
+  s.deleteSelection();
+  s.toastUndo(names.length === 1 ? `Deleted ${names[0]}.` : `Deleted ${names.length} layers.`, mark);
 }
 
 /** Group the artboards, asking for a name first. */
@@ -91,8 +108,10 @@ export function artboardMenuItems(ids: string[], gid?: string): MenuItem[] {
     }
   }
   items.push({ label: 'Link colours to tokens…', title: 'Turn the plain colours on these pages that are the same as a token\'s colour into that token, so they change with the theme', onClick: () => void linkColoursCommand(target) });
+  const place = !gid && boards.length === 1 ? placeInMenu(boards[0].id) : null;
+  if (place) items.push(place);
   items.push({ label: 'Duplicate', onClick: () => s.duplicateArtboards(target) });
-  items.push({ label: gid ? 'Delete pages in group' : boards.length > 1 ? 'Delete pages' : 'Delete page', hint: gid ? undefined : 'Del', danger: true, onClick: () => void deleteArtboardsCommand(target) });
+  items.push({ label: gid ? 'Delete pages in group' : boards.length > 1 ? 'Delete pages' : 'Delete page', hint: gid ? undefined : keyHints('delete'), danger: true, onClick: () => void deleteArtboardsCommand(target) });
   return items;
 }
 
@@ -103,4 +122,46 @@ export function tidyTheseCommand(ids: string[]): void {
   const moved = s.tidyArtboards(ids);
   if (moved) s.toastUndo(`Tidied ${moved} ${moved === 1 ? 'page' : 'pages'} into a grid.`, mark);
   else s.toast('Those pages are already tidy.', 'info');
+}
+
+let lastFitPadding = 0;
+
+/** The two Fit page to selection items for a layer's right-click menu (the canvas and the Layers list share them). */
+export function fitPageSelectionItems(): MenuItem[] {
+  //Selections are on one artboard; with several artboards picked it isn't offered
+  if (pickedArtboardIds(store().get()).length > 1) return [];
+  return [
+    { label: 'Fit page to selection', hint: keyHints('fit-page-selection'), title: 'Resize the page to just these layers, keeping them where they are', onClick: () => void fitPageCommand() },
+    { label: 'Fit page to selection with space around…', title: 'The same, leaving room around the layers (you choose how much)', onClick: () => void fitPageCommand({ ask: true }) },
+  ];
+}
+
+/**
+ * Fit page to selection (the open page shrinks or grows to the picked layers, which stay where they were on the canvas), or to
+ * every layer on it when `layers` is set. `ask` first asks how much space to leave around them. One undo step, with the message.
+ */
+export async function fitPageCommand(opts: { layers?: boolean; ask?: boolean } = {}): Promise<boolean> {
+  const s = store();
+  const st = s.get();
+  const say = (m: string) => (s.toast(m, 'info'), false);
+  if (!s.artboard()) return say('Open a page first.');
+  if (!opts.layers && !st.selection.length) return say('Pick some layers first, and the page will shrink to fit them.');
+  if (!opts.layers && pickedArtboardIds(st).length > 1) return say('Pick the layers on one page first.');
+  let padding = 0;
+  if (opts.ask) {
+    const v = await promptDialog({
+      title: 'Fit the page with space around',
+      label: 'Space around the layers, in pixels',
+      initial: String(lastFitPadding),
+      confirmLabel: 'Fit page',
+      validate: (t) => (Number.isFinite(Number(t)) && Number(t) >= 0 && Number(t) <= 2000 ? null : 'A number from 0 to 2000'),
+    });
+    if (v === null) return false;
+    padding = lastFitPadding = Math.round(Number(v));
+  }
+  const mark = s.historyMark();
+  const did = opts.layers ? s.fitArtboardToLayers({ padding }) : s.fitArtboardToSelection({ padding });
+  if (did) s.toastUndo(opts.layers ? 'The page now fits its layers.' : 'The page now fits the picked layers.', mark);
+  else say(opts.layers && !s.artboard()?.children.length ? 'There is nothing on this page to fit to.' : 'The page already fits.');
+  return did;
 }

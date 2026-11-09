@@ -55,6 +55,8 @@ const sessionHeader = (u: User | null | undefined) => (u ? JSON.stringify({ user
 export async function startServer(): Promise<Harness> {
   const storage = fs.mkdtempSync(path.join(os.tmpdir(), 'ix-storage-'));
   process.env.INTERACTIVES_STORAGE = storage;
+  // The background compressing of dist would burn seconds of cpu in every test file that starts a server
+  process.env.INTERACTIVES_PRECOMPRESS ??= '0';
   const db = new FakeDb();
   const realExpress = req('express');
   let captured: any = null;
@@ -77,9 +79,11 @@ export async function startServer(): Promise<Harness> {
     '../suite-libs/crash-guard': {},
     '../suite-libs/mongo-connect': () => ({ connect: async () => {}, db: () => ({ collection: (n: string) => (db as any)[n] }) }),
     '../suite-libs/version-reporting': () => {},
-    '../suite-libs/session-check': () => (rq: any, _rs: any, next: () => void) => {
+    //x-test-tool stands in for a direct sign in token, which only answers for the tool it was issued for
+    '../suite-libs/session-check': (options: { tool?: string } = {}) => (rq: any, _rs: any, next: () => void) => {
       const h = rq.get('x-test-session');
-      rq.sessionData = h ? JSON.parse(h) : null;
+      const only = rq.get('x-test-tool');
+      rq.sessionData = h && !(only && options.tool && options.tool !== only) ? JSON.parse(h) : null;
       next();
     },
     '../suite-libs/cache-headers': {

@@ -71,6 +71,13 @@ describe('candidates per target', () => {
     expect(t.rects).toEqual([]);
   });
 
+  it('Guides: given the lines that cross the page (from any page), those are the targets instead of its own', () => {
+    const { ab } = board();
+    const t = buildTargets(ab, only('guides'), new Set(), null, { x: [100, 250], y: [300] });
+    expect(t.xs).toEqual([{ at: 100, kind: 'guides' }, { at: 250, kind: 'guides' }]);
+    expect(t.ys).toEqual([{ at: 300, kind: 'guides' }]);
+  });
+
   it('Guides: the ruler guides', () => {
     const { ab } = board();
     const t = buildTargets(ab, only('guides'), new Set());

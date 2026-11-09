@@ -9,6 +9,7 @@ import { ConditionField } from '../src/components/ConditionField';
 import { ExprField } from '../src/components/ExprField';
 import { BehaviourHost, closeBehaviours, openBehaviours } from '../src/components/BehaviourDialog';
 import { Inspector } from '../src/panels/Inspector';
+import { setPrefs } from '../src/lib/prefs';
 import { FlowSentences } from '../src/panels/FlowSentences';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -220,7 +221,7 @@ describe('BehaviourDialog', () => {
     expect(sc.s.get().project.artboards[0].logic.nodes.find((n) => n.kind === 'action.artboard')?.params).toMatchObject({ to: 'next', transition: 'iris' });
   });
 
-  it('Add writes the nodes as one undo step, and leaves them picked, without leaving the panel', () => {
+  it('Add writes the nodes as one undo step, opens the graph on them and picks them', () => {
     const sc = open();
     choose('Show a layer');
     set(q('.behaviour-dialog select') as HTMLSelectElement, sc.hint.id);
@@ -230,12 +231,31 @@ describe('BehaviourDialog', () => {
     const ab = st.project.artboards[0];
     expect(ab.logic.nodes.map((n) => n.kind)).toEqual(['event.pointer', 'action.visibility']);
     expect(ab.children.find((n) => n.id === sc.hint.id)!.visible).toBe(false);
-    expect(st.logicSelection).toBe(ab.logic.nodes[1].id);
-    expect(st.toast?.text).toBe('Added: When clicked: show Hint text.');
+    expect(st.logicSelection).toBe(ab.logic.nodes[0].id);
+    expect(st.logicPicked).toEqual(ab.logic.nodes.map((n) => n.id));
+    expect(st.bottomTab).toBe('logic');
+    expect(st.toast?.text).toBe('Added When clicked: show Hint text');
     expect(q('.behaviour-dialog')).toBeNull();
     sc.s.undo();
     expect(sc.s.get().project.artboards[0].logic.nodes).toHaveLength(0);
     expect(sc.s.get().project.artboards[0].children.find((n) => n.id === sc.hint.id)!.visible).not.toBe(false);
+  });
+
+  it('with "Show new interactions in the graph" off, Add only picks the nodes and the person stays where they are', () => {
+    setPrefs({ showNewInteractions: false });
+    try {
+      const sc = open();
+      sc.s.set({ bottomTab: 'timeline' });
+      click(byText('Add'));
+      const st = sc.s.get();
+      const ab = st.project.artboards[0];
+      expect(st.bottomTab).toBe('timeline');
+      expect(st.logicSelection).toBe(ab.logic.nodes[1].id);
+      expect(st.logicPicked).toEqual(ab.logic.nodes.map((n) => n.id));
+      expect(st.toast?.text).toMatch(/^Added When clicked: /);
+    } finally {
+      setPrefs({ showNewInteractions: true });
+    }
   });
 
   it('a counter can be a new one named in plain words', () => {

@@ -1,7 +1,8 @@
 /**
  * The review page (#/review/<token>): the project as still artboards with the comment pins on them, a Comments panel,
- * and Play for the real thing. Open to anyone with the link; a link that allows guests asks them for a display name, one
- * that doesn't wants a signed in StudyDesk user. The pins are an overlay on this page, never part of the project.
+ * and Play for the real thing. The link takes a signed in StudyDesk user: inside StudyDesk they are already, and in a tab of
+ * its own the page signs them in through StaffDesk first (session.ts). The pins are an overlay on this page, never part
+ * of the project.
  */
 import { useNoProgressHost } from './lib/preview-learner';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -12,7 +13,7 @@ import { anchorAt, pinPlace, placeLabel } from './lib/comment-anchor';
 import { assetUrls } from './lib/assets';
 import { previewScope } from './lib/data';
 import { ensureFonts } from './lib/fonts';
-import { sessionUser } from './lib/session';
+import { isDirectLoad, sessionId, sessionUser } from './lib/session';
 import { standaloneHtml } from './lib/export';
 import { CommentsPanel } from './panels/CommentsPanel';
 import { DraftCard, Pin, ThreadCard } from './components/CommentUI';
@@ -22,7 +23,6 @@ interface Loaded {
   id: string;
   name: string;
   project: Project;
-  guests: boolean;
   me: (CommentUser & { manager?: boolean }) | null;
   threads: Thread[];
   people: Person[];
@@ -34,7 +34,13 @@ export function Review({ token }: { token: string }) {
   const [state, setState] = useState<{ kind: 'loading' } | { kind: 'error'; message: string; signin: boolean } | { kind: 'ok'; data: Loaded }>({ kind: 'loading' });
   useEffect(() => {
     let off = false;
-    assetUrls.external = (id) => new URL(`review/${encodeURIComponent(token)}/assets/${encodeURIComponent(id)}`, document.baseURI).href;
+    // Pictures and fonts load as plain urls, which carry no header, so the session goes on the url (the live stream does the same)
+    assetUrls.external = (id) => {
+      const url = new URL(`review/${encodeURIComponent(token)}/assets/${encodeURIComponent(id)}`, document.baseURI);
+      const sid = sessionId();
+      if (sid) url.searchParams.set('sessionID', sid);
+      return url.href;
+    };
     (async () => {
       // The session id is stored by the time this answers, and then goes on this request
       await sessionUser();
@@ -46,7 +52,7 @@ export function Review({ token }: { token: string }) {
         const project = normalizeProject(body.project);
         ensureFonts(project);
         comments.startReview(token, { threads: body.threads, people: body.people, me: body.me });
-        setState({ kind: 'ok', data: { id: body.id, name: body.name, project, guests: !!body.guests, me: body.me, threads: body.threads, people: body.people } });
+        setState({ kind: 'ok', data: { id: body.id, name: body.name, project, me: body.me, threads: body.threads, people: body.people } });
       } catch {
         if (!off) setState({ kind: 'error', message: 'Could not reach the Interactives server', signin: false });
       }
@@ -58,13 +64,21 @@ export function Review({ token }: { token: string }) {
     };
   }, [token]);
 
-  if (state.kind === 'loading') return <div className="center-msg muted">Opening the review…</div>;
+  if (state.kind === 'loading') return <div className="center-msg muted">{isDirectLoad() ? 'Sign in with StudyDesk to open this review…' : 'Opening the review…'}</div>;
   if (state.kind === 'error')
     return (
       <div className="review-note">
         <h2>{state.signin ? 'Sign in to review' : 'This review link does not work'}</h2>
         <p>{state.message}.</p>
-        {state.signin && <p className="muted small">Open the link from StudyDesk, where you are already signed in, or ask the project's owner for a link that lets people comment without signing in.</p>}
+        {state.signin && (
+          <p className="muted small">
+            Open the link from StudyDesk, where you are already signed in, or{' '}
+            <button type="button" className="link-btn" onClick={() => location.reload()}>
+              reload this page
+            </button>{' '}
+            to sign in with StudyDesk.
+          </p>
+        )}
       </div>
     );
   return <ReviewPage token={token} data={state.data} />;
@@ -143,8 +157,8 @@ function ReviewPage({ token, data }: { token: string; data: Loaded }) {
           </button>
         </div>
         <span className="spacer" />
-        <span className="muted small" title={me?.username ? 'Your comments carry your StudyDesk name' : 'You will be asked for a name when you comment'}>
-          {me?.username ? `Commenting as ${me.name}` : 'Commenting as a guest'}
+        <span className="muted small" title="Your comments carry your StudyDesk name">
+          {me?.username ? `Commenting as ${me.name}` : 'Not signed in'}
         </span>
         <button type="button" className="btn" onClick={() => setPlaying(true)} title="Play the project the way a learner would (comments are not shown while it plays)">
           <Icons.play width={13} /> Play

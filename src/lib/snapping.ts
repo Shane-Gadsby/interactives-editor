@@ -24,7 +24,7 @@ export const SNAP_ITEMS: { kind: SnapKind; label: string; pref: keyof Prefs; tip
   { kind: 'grid', label: 'Grid', pref: 'snapGrid', tip: 'Land on the grid lines (Ctrl+\'). Show grid draws them' },
   { kind: 'artboard', label: 'Artboard', pref: 'snapArtboard', tip: "The artboard's edges and centre. Artboards snap to other artboards' edges" },
   { kind: 'layers', label: 'Layers', pref: 'snapLayers', tip: "Edges and centres of other layers (the ones beside it, or all of them: see Layers: all, not just siblings)" },
-  { kind: 'guides', label: 'Guides', pref: 'snapGuides', tip: 'Ruler guides (drag out of a ruler to make one)' },
+  { kind: 'guides', label: 'Guides', pref: 'snapGuides', tip: 'Ruler guides (drag out of a ruler to make one). A guide is one line across the canvas, so it snaps layers on every page it crosses, whether it is universal or attached to a page' },
   { kind: 'spacing', label: 'Spacing', pref: 'snapSpacing', tip: 'Equal gaps between neighbouring layers, with the distance shown' },
   { kind: 'pixels', label: 'Pixels', pref: 'snapPixels', tip: 'Whole-pixel positions and sizes. Off lets a layer sit between pixels' },
   { kind: 'points', label: 'Points', pref: 'snapPoints', tip: 'Path anchor points and bone joints, for the pen and when editing path points' },
@@ -118,10 +118,10 @@ const edges = (r: Rect, kind: SnapKind, xs: Target[], ys: Target[]) => {
 };
 
 /**
- * The candidate lines for a drag on an artboard: the artboard, ruler guides, other layers (the siblings of `parentId`, or
+ * The candidate lines for a drag on an artboard: the artboard, ruler guides (`guides`: every line that crosses this page, in its pixels, see `guidesAcross`; the page's own when not given), other layers (the siblings of `parentId`, or
  * all of them) and their gaps, and path points. `exclude` is what is being dragged (and what it holds).
  */
-export function buildTargets(ab: Artboard, s: SnapSettings, exclude: Set<string>, parentId: string | null = null): SnapSet {
+export function buildTargets(ab: Artboard, s: SnapSettings, exclude: Set<string>, parentId: string | null = null, guides?: { x: number[]; y: number[] }): SnapSet {
   const xs: Target[] = [];
   const ys: Target[] = [];
   const rects: Rect[] = [];
@@ -132,8 +132,8 @@ export function buildTargets(ab: Artboard, s: SnapSettings, exclude: Set<string>
     ys.push({ at: 0, kind: 'artboard' }, { at: ab.height / 2, kind: 'artboard' }, { at: ab.height, kind: 'artboard' });
   }
   if (s.guides) {
-    for (const x of ab.guides?.x ?? []) xs.push({ at: x, kind: 'guides' });
-    for (const y of ab.guides?.y ?? []) ys.push({ at: y, kind: 'guides' });
+    for (const x of (guides ?? ab.guides)?.x ?? []) xs.push({ at: x, kind: 'guides' });
+    for (const y of (guides ?? ab.guides)?.y ?? []) ys.push({ at: y, kind: 'guides' });
   }
   if (s.layers || s.spacing) {
     const visit = (list: SceneNode[], deep: boolean) => {

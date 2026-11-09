@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react';
+import { keyHint, holdActive, type Held } from '../lib/keymap';
 import type { Artboard } from 'interactives-player';
-import { store } from '../store/store';
+import { store, useEditor } from '../store/store';
+import { ContextMenu, type MenuItem } from '../components/ContextMenu';
+import { usePrefs } from '../lib/prefs';
+import { GUIDE_REACH, addGuide, addUniversalGuide, attachToPage, guideStep, guidesMenuItems, setGuideDragging, guidesOf, makeUniversal, moveGuide, moveUniversalGuide, pageForUniversal, removeGuide, roundTo, removeUniversalGuide, universalGuidesOf, type Axis, type GuideKind, type GuideRef } from '../lib/guides';
 
 const SIZE = 20;
 
@@ -10,119 +14,275 @@ function stepFor(zoom: number): number {
   return steps.find((s) => s * zoom >= 60) ?? 10000;
 }
 
-function setGuides(abId: string, fn: (g: { x: number[]; y: number[] }) => void, coalesce?: string) {
-  store().update(
-    (d) => {
-      const a = d.artboards.find((x) => x.id === abId);
-      if (!a) return;
-      a.guides ??= { x: [], y: [] };
-      fn(a.guides);
-    },
-    { coalesce },
-  );
-}
+type Drag = { axis: Axis; kind: GuideKind; index: number | null; at: number; out: boolean; cx: number; cy: number; abId: string; step: number };
 
 /**
  * Rulers along the top and left of the canvas, measured from the active artboard's top-left.
- * Drag out of a ruler to make a guide; drag a guide to move it, or back onto the ruler to remove it.
+ * Drag out of a ruler to make a guide. A new guide is universal (fixed on the canvas, canvas coordinates) unless the "attach new
+ * guides" preference is on, and the "other kind" hold (Alt) while dragging gives the other kind. A universal guide is one endless
+ * dashed line across the canvas; an attached guide belongs to the page it is dropped on, moves with it, and is only drawn across
+ * that page and a little past it. Drag a guide to move it; let go onto the ruler to remove either kind, an attached one also off its
+ * page, a universal one also off the edge of the canvas. Holding the round-to-5 (Ctrl) or round-to-10 (Ctrl+Shift) modifiers
+ * puts the dragged guide on a multiple of that, measured on the page the ruler measures from (the open page for a universal guide,
+ * its own page for an attached one). Both holds and the other-kind one are in the keymap (Guides), so they can be rebound.
+ * Every universal guide is drawn (and grabbable along its whole length) here; the open page's attached guides too, but the other
+ * pages' are drawn by the canvas, dimmer, and can't be grabbed until that page is open.
  */
 export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard | undefined; zoom: number; panX: number; panY: number; width: number; height: number }) {
-  const [drag, setDrag] = useState<{ axis: 'x' | 'y'; index: number | null; at: number } | null>(null);
+  const [drag, setDrag] = useState<Drag | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const project = useEditor((st) => st.project);
+  const attachNew = usePrefs().attachGuides;
   const root = useRef<HTMLDivElement>(null);
   if (!ab) return null;
+  const locked = !!project.guidesLocked;
   const ox = panX + ab.canvasX * zoom;
   const oy = panY + ab.canvasY * zoom;
-  const toLocal = (axis: 'x' | 'y', clientX: number, clientY: number) => {
+  const toLocal = (axis: Axis, clientX: number, clientY: number, on: Artboard = ab) => {
     const r = root.current!.getBoundingClientRect();
-    return axis === 'x' ? Math.round((clientX - r.left - ox) / zoom) : Math.round((clientY - r.top - oy) / zoom);
+    return axis === 'x' ? Math.round((clientX - r.left - panX - on.canvasX * zoom) / zoom) : Math.round((clientY - r.top - panY - on.canvasY * zoom) / zoom);
   };
-  const overRuler = (axis: 'x' | 'y', clientX: number, clientY: number) => {
+  //the same in canvas pixels, for a universal guide
+  const toCanvas = (axis: Axis, clientX: number, clientY: number) => {
+    const r = root.current!.getBoundingClientRect();
+    return axis === 'x' ? Math.round((clientX - r.left - panX) / zoom) : Math.round((clientY - r.top - panY) / zoom);
+  };
+  //a universal guide's number is where it is on the open page, so the rulers and the guides read the same
+  const onOpenPage = (axis: Axis, canvasAt: number) => canvasAt - (axis === 'x' ? ab.canvasX : ab.canvasY);
+  //The page under the pointer, so a new guide goes on whichever page it is dragged over, not only the open one
+  const pageAt = (clientX: number, clientY: number): Artboard | undefined => {
+    const r = root.current!.getBoundingClientRect();
+    const x = (clientX - r.left - panX) / zoom;
+    const y = (clientY - r.top - panY) / zoom;
+    return project.artboards.find((a) => !a.canvasHidden && x >= a.canvasX && x <= a.canvasX + a.width && y >= a.canvasY && y <= a.canvasY + a.height);
+  };
+  const overRuler = (axis: Axis, clientX: number, clientY: number) => {
     const r = root.current!.getBoundingClientRect();
     return axis === 'x' ? clientX - r.left < SIZE : clientY - r.top < SIZE;
   };
+  //past the edge of the canvas itself
+  const offCanvas = (clientX: number, clientY: number) => {
+    const r = root.current!.getBoundingClientRect();
+    return clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom;
+  };
 
-  const start = (e: React.PointerEvent, axis: 'x' | 'y', index: number | null) => {
+  //Past the page (or over the ruler) is where letting go removes an attached guide, or drops a new one. It is only decided on
+  //release: while the pointer is out there the guide stays where it last was on the page, so nothing goes mid-drag.
+  //A universal guide has no page to be off: its edge is the ruler or the edge of the canvas
+  const outside = (axis: Axis, clientX: number, clientY: number, at: number, on: Artboard = ab) => overRuler(axis, clientX, clientY) || at < 0 || at > (axis === 'x' ? on.width : on.height);
+  const outsideCanvas = (axis: Axis, clientX: number, clientY: number) => overRuler(axis, clientX, clientY) || offCanvas(clientX, clientY);
+
+  const start = (e: React.PointerEvent, axis: Axis, ref: GuideRef | null) => {
     e.stopPropagation();
     e.preventDefault();
-    const el = e.currentTarget as HTMLElement;
-    try {
-      el.setPointerCapture(e.pointerId);
-    } catch {
-      /* synthetic */
+    if (e.button === 2) return;
+    if (locked) {
+      store().toast('The guides are locked. Unlock them from the button in the corner of the rulers.', 'info');
+      return;
     }
     const key = `guide-${ab.id}-${Date.now()}`;
-    let idx = index;
+    //The "other kind" hold (Alt) while dragging a new guide gives the other kind from the preference, for that one guide. What is
+    //held is read off the latest pointer or key event, and the keymap says which modifiers those are
+    let held: Held = e;
+    const kindNow = (): GuideKind => (ref ? ref.kind : attachNew !== holdActive(held, 'guide-other-kind') ? 'page' : 'universal');
+    //on the window, not the guide's own element: a guide can stop being drawn while it is dragged, and the drag must not
+    //go with it
+    //A new attached guide follows the page under the pointer (and stays with the last one while it is between pages);
+    //a guide that already exists stays on its own page
+    let on: Artboard = ab;
+    let last = { x: e.clientX, y: e.clientY };
+    const where = (x: number, y: number) => {
+      const kind = kindNow();
+      //a new guide follows the page under the pointer either way: it is the page an attached one lands on, and the one the hint names
+      if (!ref) on = pageAt(x, y) ?? on;
+      //rounded where the ruler measures: the open page for a universal guide, the guide's own page for an attached one
+      const step = guideStep(held);
+      if (kind === 'universal') {
+        const origin = axis === 'x' ? ab.canvasX : ab.canvasY;
+        const at = roundTo(toCanvas(axis, x, y) - origin, step) + origin;
+        return { kind, at, step, out: outsideCanvas(axis, x, y) };
+      }
+      const at = roundTo(toLocal(axis, x, y, on), step);
+      return { kind, at, step, out: outside(axis, x, y, at, on) };
+    };
     const move = (ev: PointerEvent) => {
-      const at = toLocal(axis, ev.clientX, ev.clientY);
-      setDrag({ axis, index: idx, at });
-      if (idx !== null && !overRuler(axis, ev.clientX, ev.clientY)) setGuides(ab.id, (g) => void (g[axis][idx!] = at), key);
+      held = ev;
+      last = { x: ev.clientX, y: ev.clientY };
+      show();
+    };
+    const show = () => {
+      const w = where(last.x, last.y);
+      setDrag({ axis, kind: w.kind, index: ref ? ref.index : null, at: w.at, out: w.out, cx: last.x, cy: last.y, abId: on.id, step: w.step });
+      if (ref && !w.out) store().update((d) => (ref.kind === 'universal' ? moveUniversalGuide(d, ref, w.at) : moveGuide(d, ab.id, ref, w.at)), { coalesce: key });
+    };
+    //pressing or letting go of a modifier without moving still changes what the guide will be (its kind, where it rounds to)
+    const keys = (ev: KeyboardEvent) => {
+      if (!['Alt', 'Control', 'Meta', 'Shift'].includes(ev.key)) return;
+      held = ev;
+      show();
     };
     const up = (ev: PointerEvent) => {
-      el.removeEventListener('pointermove', move);
-      el.removeEventListener('pointerup', up);
-      setDrag(null);
-      const at = toLocal(axis, ev.clientX, ev.clientY);
-      if (overRuler(axis, ev.clientX, ev.clientY)) {
-        if (idx !== null) setGuides(ab.id, (g) => void g[axis].splice(idx!, 1));
-      } else if (idx === null) {
-        setGuides(ab.id, (g) => void g[axis].push(at));
+      end();
+      held = ev;
+      const w = where(ev.clientX, ev.clientY);
+      if (ref && w.out) store().update((d) => (ref.kind === 'universal' ? removeUniversalGuide(d, ref) : removeGuide(d, ab.id, ref)));
+      else if (!ref && !w.out) {
+        if (w.kind === 'universal') store().update((d) => addUniversalGuide(d, axis, w.at));
+        else {
+          store().update((d) => addGuide(d, on.id, axis, w.at));
+          //the rulers measure from the page the guide went on
+          if (on.id !== ab.id) store().set({ activeArtboardId: on.id });
+        }
       }
       store().commit();
     };
-    el.addEventListener('pointermove', move);
-    el.addEventListener('pointerup', up);
+    const cancel = () => {
+      end();
+      store().commit();
+    };
+    const end = () => {
+      setGuideDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
+      window.removeEventListener('keydown', keys);
+      window.removeEventListener('keyup', keys);
+      setDrag(null);
+    };
+    setGuideDragging(true);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', cancel);
+    window.addEventListener('keydown', keys);
+    window.addEventListener('keyup', keys);
+  };
+
+  const guideMenu = (e: React.MouseEvent, g: GuideRef) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const dir = g.axis === 'x' ? 'Vertical' : 'Horizontal';
+    const items: MenuItem[] = [];
+    if (g.kind === 'page') {
+      items.push(
+        { heading: `${dir} guide at ${g.at} px, attached to ${ab.name}` },
+        { label: 'Remove guide', danger: true, disabled: locked, onClick: () => store().update((d) => removeGuide(d, ab.id, g)) },
+        { label: 'Make it universal', title: 'Fix it on the canvas where it is now, so it stays put when this page is moved', disabled: locked, onClick: () => store().update((d) => makeUniversal(d, ab.id, g)) },
+      );
+    } else {
+      const page = pageForUniversal(project, g, ab.id);
+      items.push(
+        { heading: `${dir} guide at ${onOpenPage(g.axis, g.at)} px on ${ab.name}, universal` },
+        { label: 'Remove guide', danger: true, disabled: locked, onClick: () => store().update((d) => removeUniversalGuide(d, g)) },
+        {
+          label: page ? `Attach to ${page.name}` : 'Attach to a page',
+          title: page ? 'Tie it to this page, so it moves with it' : 'This guide does not cross any page, so there is nothing to attach it to',
+          disabled: locked || !page,
+          onClick: () => page && store().update((d) => attachToPage(d, page.id, g)),
+        },
+      );
+    }
+    items.push({ separator: true }, ...guidesMenuItems(ab.id));
+    setMenu({ x: e.clientX, y: e.clientY, items });
+  };
+  const cornerMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setMenu({ x: e.clientX || r.right, y: e.clientY || r.bottom, items: guidesMenuItems(ab.id) });
   };
 
   const step = stepFor(zoom);
+  const otherKey = keyHint('guide-other-kind');
+  const roundKeys = [keyHint('guide-round-5') && `${keyHint('guide-round-5')}: nearest 5`, keyHint('guide-round-10') && `${keyHint('guide-round-10')}: nearest 10`].filter(Boolean).join(', ');
+  const newTip = `${attachNew ? 'Attached to the page' : 'Universal'}${otherKey ? ` (${otherKey}: ${attachNew ? 'universal' : 'attached to the page'})` : ''}${roundKeys ? `. Hold ${roundKeys} while dragging` : ''}`;
   const ticks = (len: number, origin: number) => {
     const out: number[] = [];
     const first = Math.floor(-origin / zoom / step) * step;
     for (let v = first; (v - first) * zoom < len + step * zoom; v += step) out.push(v);
     return out;
   };
-  const guides = ab.guides ?? { x: [], y: [] };
-  // Guides drawn as long thin lines (vertical for x, horizontal for y) with a wider grab zone
-  const lines = (['x', 'y'] as const).flatMap((axis) =>
-    guides[axis].map((v, i) => {
-      const pos = axis === 'x' ? ox + v * zoom : oy + v * zoom;
-      return (
-        <div
-          key={`${axis}${i}`}
-          className={`guide-line ${axis}`}
-          style={axis === 'x' ? { left: pos - 3 } : { top: pos - 3 }}
-          title={`Guide at ${v}px: drag to move, drag onto the ruler to remove`}
-          onPointerDown={(e) => start(e, axis, i)}
-        />
-      );
-    }),
-  );
-  const preview = drag && drag.index === null && (
-    <div className={`guide-line ${drag.axis} preview`} style={drag.axis === 'x' ? { left: ox + drag.at * zoom - 3 } : { top: oy + drag.at * zoom - 3 }} />
-  );
+  // A universal guide is an endless thin line across the whole canvas, an attached one runs the length of its page and a little past it, each with a wider grab zone
+  const same = (g: GuideRef) => !!drag && drag.index === g.index && drag.axis === g.axis && drag.kind === g.kind;
+  //where an attached guide is drawn along its length: its page, and the reach past each end
+  const pageSpan = (axis: Axis, on: Artboard): React.CSSProperties => {
+    const px = panX + on.canvasX * zoom;
+    const py = panY + on.canvasY * zoom;
+    return axis === 'x' ? { top: py - GUIDE_REACH, height: on.height * zoom + GUIDE_REACH * 2, bottom: 'auto' } : { left: px - GUIDE_REACH, width: on.width * zoom + GUIDE_REACH * 2, right: 'auto' };
+  };
+  //the open page's attached guides: grabbable over that page (and a little past it), so they never get in the way of clicking
+  //layers on the pages they cross
+  const lines = guidesOf(ab).map((g) => {
+    const pos = (g.axis === 'x' ? ox : oy) + g.at * zoom;
+    return (
+      <div
+        key={`${g.axis}${g.index}`}
+        className={`guide-line attached ${g.axis}${locked ? ' locked' : ''}${drag?.out && same(g) ? ' removing' : ''}`}
+        style={{ ...(g.axis === 'x' ? { left: pos - 3 } : { top: pos - 3 }), ...pageSpan(g.axis, ab) }}
+        title={`${g.at} px · ${ab.name} guide${locked ? ' (locked)' : ''}`}
+        onPointerDown={(e) => start(e, g.axis, g)}
+        onContextMenu={(e) => guideMenu(e, g)}
+      >
+        <span className="guide-grab" />
+      </div>
+    );
+  });
+  //universal guides: fixed on the canvas, so they are drawn whichever page is open, and grabbed anywhere along their length
+  const loose = universalGuidesOf(project).map((g) => {
+    const pos = (g.axis === 'x' ? panX : panY) + g.at * zoom;
+    const rel = onOpenPage(g.axis, g.at);
+    return (
+      <div
+        key={`u${g.axis}${g.index}`}
+        className={`guide-line universal ${g.axis}${locked ? ' locked' : ''}${drag?.out && same(g) ? ' removing' : ''}`}
+        style={g.axis === 'x' ? { left: pos - 3 } : { top: pos - 3 }}
+        title={`${rel} px · Universal guide${locked ? ' (locked)' : ''}`}
+        onPointerDown={(e) => start(e, g.axis, g)}
+        onContextMenu={(e) => guideMenu(e, g)}
+      >
+        <span className="guide-grab" />
+      </div>
+    );
+  });
+  //the new guide is drawn where it is dragged: on the page it is over (attached), or at the canvas position (universal)
+  const pv = drag ? project.artboards.find((a) => a.id === drag.abId) ?? ab : ab;
+  const pox = panX + pv.canvasX * zoom;
+  const poy = panY + pv.canvasY * zoom;
+  const dragAt = drag ? (drag.kind === 'universal' ? (drag.axis === 'x' ? panX : panY) + drag.at * zoom : (drag.axis === 'x' ? pox : poy) + drag.at * zoom) : 0;
+  //the number shown is measured on the open page for a universal guide, like the rulers
+  const dragNumber = drag ? (drag.kind === 'universal' ? onOpenPage(drag.axis, drag.at) : drag.at) : 0;
+  const preview = drag && drag.index === null && !drag.out && <div className={`guide-line ${drag.axis} preview${drag.kind === 'universal' ? ' universal' : ' attached'}`} style={{ ...(drag.axis === 'x' ? { left: dragAt - 3 } : { top: dragAt - 3 }), ...(drag.kind === 'universal' ? {} : pageSpan(drag.axis, pv)) }} />;
+  const box = root.current?.getBoundingClientRect();
   return (
     <div ref={root} className="rulers">
+      {loose}
       {lines}
       {preview}
-      {drag && (
-        <div className="guide-pos" style={drag.axis === 'x' ? { left: ox + drag.at * zoom + 6, top: SIZE + 4 } : { top: oy + drag.at * zoom + 6, left: SIZE + 4 }}>
-          {drag.at}
+      {drag?.out && box && (
+        <div className="guide-remove-hint" role="status" style={{ left: drag.cx - box.left + 14, top: drag.cy - box.top + 14 }}>
+          {drag.index === null ? 'Let go here and no guide is made' : 'Let go to remove this guide'}
         </div>
       )}
-      <div className="canvas-ruler top" title="Drag down to make a horizontal guide (Shift+R hides rulers)" onPointerDown={(e) => start(e, 'y', null)}>
+      {drag && !drag.out && (
+        <div className="guide-pos" style={drag.axis === 'x' ? { left: dragAt + 6, top: SIZE + 4 } : { top: dragAt + 6, left: SIZE + 4 }}>
+          {dragNumber} px · {drag.kind === 'universal' ? 'Universal' : pv.name}
+          {drag.step ? ` · nearest ${drag.step}` : ''}
+        </div>
+      )}
+      <div className="canvas-ruler top" title={`Drag down for a horizontal guide. ${newTip}${keyHint('toggle-rulers') ? ` (${keyHint('toggle-rulers')} hides rulers)` : ''}`} onPointerDown={(e) => start(e, 'y', null)}>
         {ticks(width, ox).map((v) => (
           <span key={v} style={{ left: ox + v * zoom }}>
             {v}
           </span>
         ))}
       </div>
-      <div className="canvas-ruler left" title="Drag right to make a vertical guide" onPointerDown={(e) => start(e, 'x', null)}>
+      <div className="canvas-ruler left" title={`Drag right for a vertical guide. ${newTip}`} onPointerDown={(e) => start(e, 'x', null)}>
         {ticks(height, oy).map((v) => (
           <span key={v} style={{ top: oy + v * zoom }}>
             {v}
           </span>
         ))}
       </div>
-      <div className="ruler-corner" />
+      <button className="ruler-corner" aria-label="Guides menu" aria-haspopup="menu" title="Guides: lock them, or clear this page's, the universal ones or all of them" onPointerDown={(e) => e.stopPropagation()} onClick={cornerMenu} />
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
     </div>
   );
 }

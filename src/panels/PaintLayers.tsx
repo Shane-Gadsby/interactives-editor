@@ -7,6 +7,7 @@ import { assetUrls } from '../lib/assets';
 import { IconButton, Row, Section, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { KeyRow, Num, PaintField, useSetter, useShown } from './Inspector';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /**
  * The Fill and Stroke sections. A shape has a list of fills and a list of strokes (`fill` + `fills`, `stroke` +
@@ -93,8 +94,10 @@ function FxFields({ n, ids, prefix, set }: { n: Painted; ids: string[]; prefix: 
       </Row>
       <Row>
         <Num node={n} ids={ids} prop={`${prefix}.feather`} label="Feather" title="Soft blur of this paint alone, in pixels. With an offset and a dark, see-through colour it makes a drop shadow" min={0} />
-        <Num node={n} ids={ids} prop={`${prefix}.offsetX`} label="X" title="Shift this paint sideways, in pixels" />
-        <Num node={n} ids={ids} prop={`${prefix}.offsetY`} label="Y" title="Shift this paint down, in pixels" />
+      </Row>
+      <Row>
+        <Num node={n} ids={ids} prop={`${prefix}.offsetX`} label={'Offset\u00a0X'} title="Shift this paint sideways, in pixels" />
+        <Num node={n} ids={ids} prop={`${prefix}.offsetY`} label={'Offset\u00a0Y'} title="Shift this paint down, in pixels" />
       </Row>
     </>
   );
@@ -223,6 +226,7 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
                 onChange={(p) => (p?.type === 'solid' && s.paint.type === 'solid' ? set({ [`${prefix}.paint.color`]: p.color }, `stroke-paint-${i}`) : set({ [`${prefix}.paint`]: p! }, `stroke-paint-${i}`))}
               />
             </PropRow>
+            {s.paint.type === 'solid' && <KeyRow node={n} ids={ids} prop={`${prefix}.paint.color`} />}
             <Row>
               <Num node={n} ids={ids} prop={`${prefix}.width`} label="W" min={0} />
               <TextField
@@ -263,7 +267,7 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
         );
       })}
       {!list.length && <p className="hint">No stroke. Use + to add one.</p>}
-      {list.length > 0 && (n.type === 'path' || n.type === 'polygon' || n.type === 'star') && <p className="hint">Vector strokes are centred on the path unless you pick Inside or Outside; box strokes sit inside the edge.</p>}
+      {list.length > 0 && (n.type === 'path' || n.type === 'polygon' || n.type === 'star') && <SectionBlurb text="Paths are stroked on the line unless you pick Inside or Outside; boxes stroke inside the edge." name="Stroke" help={['fill-stroke', 'stroke']} />}
     </Section>
   );
 }

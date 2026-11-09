@@ -99,6 +99,11 @@ describe('preferences', () => {
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { snapDistance: 25, snapOn: 'yes', snapPoints: 1 } } })).json.prefs).toEqual({});
   });
 
+  it('keeps the code editor colours choice (follow, light or dark) and drops anything else', async () => {
+    for (const codeTheme of ['follow', 'light', 'dark']) expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { codeTheme } } })).json.prefs).toEqual({ codeTheme });
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { codeTheme: 'purple' } } })).json.prefs).toEqual({});
+  });
+
   it('keeps inspector folds as short keys to booleans, at most 300, and drops anything else', async () => {
     const folds = { Accessibility: false, count: true, ['x'.repeat(60)]: true };
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { sectionFolds: folds } } })).json.prefs).toEqual({ sectionFolds: folds });
@@ -112,6 +117,51 @@ describe('preferences', () => {
     expect(kept.s0).toBe(true);
     expect(kept.s1).toBe(false);
     expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs.sectionFolds).toEqual(kept);
+  });
+
+  it('keeps the section and tool order as short keys to short lists of different short keys, and drops anything else', async () => {
+    const order = { sectionOrder: { 'layer:rect': ['Fill', 'Stroke', 'layer-selection'], page: ['Steps'] }, toolOrder: { groups: ['draw', 'shapes'], media: ['text', 'image'] } };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: order } })).json.prefs).toEqual(order);
+    expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs).toEqual(order);
+    const mixed = { sectionOrder: { ok: ['a', 'a', 'b', 3, null, '', 'z'.repeat(81)], notAList: 'x', empty: [], '': ['a'], ['k'.repeat(61)]: ['a'] }, toolOrder: [['a']] };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: mixed } })).json.prefs).toEqual({ sectionOrder: { ok: ['a', 'b'] } });
+    const many = { sectionOrder: Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`p${i}`, Array.from({ length: 120 }, (_, j) => `s${j}`)])) };
+    const kept = (await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: many } })).json.prefs.sectionOrder;
+    expect(Object.keys(kept)).toHaveLength(60);
+    expect(kept.p0).toHaveLength(80);
+  });
+
+  it('keeps saved keyboard sets (an id, a name, a base and keys), at most 16 and 10 KB each, and the one in use, and drops anything else', async () => {
+    const sets = { keymapSets: [{ id: 'ks-abc', name: 'Mine', base: 'illustration', keys: { 'tool.pen': ['Q'], undo: ['Mod+Z', 'Mod+U'] } }, { id: 'ks-two', name: 'Two', base: 'default', keys: {} }], keymapActive: 'ks-abc', keymap: { 'tool.pen': ['Q'] }, keymapPreset: 'illustration' };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: sets } })).json.prefs).toEqual(sets);
+    expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs).toEqual(sets);
+    const mixed = [
+      { id: 'a b', name: 'space in id', base: 'default', keys: {} },
+      { id: 'ok-1', name: '  Trimmed  ', base: 'default', keys: { 'bad id!': ['A'], five: ['A', 'B', 'C', 'D', 'E'], junk: ['<script>', 7] } },
+      { id: 'ok-1', name: 'same id twice', base: 'default', keys: {} },
+      { id: 'nobase', name: 'x', base: 'other', keys: {} },
+      { id: 'noname', name: '   ', base: 'default', keys: {} },
+      { id: 'longname', name: 'n'.repeat(61), base: 'default', keys: {} },
+      { id: 'array', name: 'keys as array', base: 'default', keys: ['A'] },
+      { id: 'big', name: 'Too big', base: 'default', keys: Object.fromEntries(Array.from({ length: 300 }, (_, i) => [`command.number-${i}`, ['Mod+Shift+Alt+K', 'Mod+Shift+Alt+L', 'Mod+Shift+Alt+M', 'Mod+Shift+Alt+N']])) },
+      'text',
+      null,
+    ];
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymapSets: mixed, keymapActive: 'not an id!' } } })).json.prefs).toEqual({ keymapSets: [{ id: 'ok-1', name: 'Trimmed', base: 'default', keys: { five: ['A', 'B', 'C', 'D'], junk: [] } }] });
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymapSets: 'x', keymapActive: 7 } } })).json.prefs).toEqual({});
+    const many = Array.from({ length: 30 }, (_, i) => ({ id: `s${i}`, name: `Set ${i}`, base: 'default', keys: {} }));
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymapSets: many } } })).json.prefs.keymapSets).toHaveLength(16);
+  });
+
+  it('keeps each person\'s keyboard shortcuts as command ids to a few short key combos, and the one-key switch and preset', async () => {
+    const keys = { keymap: { 'tool.pen': ['Shift+P'], undo: ['Mod+Z', 'Mod+U'], 'zoom-fit': ['Mod+0'] }, keymapPreset: 'illustration', singleKeys: false };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: keys } })).json.prefs).toEqual(keys);
+    expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs).toEqual(keys);
+    const mixed = { ok: ['A', 'Mod+Shift+,', 'Mod+\\'], 'bad id!': ['A'], '__proto__': ['A'], text: 'A', five: ['A', 'B', 'C', 'D', 'E'], junk: ['<script>', 'x'.repeat(30), 7, 'A b'] };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymap: mixed, keymapPreset: 'other', singleKeys: 'no' } } })).json.prefs).toEqual({ keymap: { ok: ['A', 'Mod+Shift+,', 'Mod+\\'], five: ['A', 'B', 'C', 'D'], junk: [] } });
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymap: ['A'] } } })).json.prefs).toEqual({});
+    const many = Object.fromEntries(Array.from({ length: 700 }, (_, i) => [`cmd.${i}`, ['A']]));
+    expect(Object.keys((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymap: many } } })).json.prefs.keymap)).toHaveLength(600);
   });
 
   it('keeps what first-run remembers as short keys to booleans, at most 40, and the strip switch', async () => {
@@ -144,8 +194,8 @@ describe('preferences', () => {
     expect(guest).toEqual({ user: 'guest', prefs: { theme: 'auto' } });
   });
 
-  it('refuses a body over 128kb (room for saved workspaces) with the too-big message', async () => {
-    const r = await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { defaultFont: 'x'.repeat(140000) } } });
+  it('refuses a body over 512kb (room for saved workspaces and keyboard sets) with the too-big message', async () => {
+    const r = await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { defaultFont: 'x'.repeat(540000) } } });
     expect(r.status).toBe(413);
     expect(r.json.error).toBe('That is too big to save');
   });

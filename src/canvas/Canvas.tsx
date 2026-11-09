@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { keyHints, runCommand } from '../lib/keymap';
+import { windowCommand } from '../lib/key-area';
 import {
   LIGHT_LOOK,
   apply,
@@ -19,8 +21,6 @@ import {
   starPoints,
   subPathsToD,
   sampleArtboard,
-  uid,
-  defaultParams,
   applyConstraints,
   nodeRuns,
   rotationFor,
@@ -53,10 +53,13 @@ import { drawnBox, drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorne
 import { isBrandHeld } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
 import { groupFrame, groupMembers, pickedArtboardIds } from '../lib/artboard-groups';
-import { artboardMenuItems } from '../lib/artboard-commands';
+import { artboardMenuItems, fitPageCommand, fitPageSelectionItems } from '../lib/artboard-commands';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
+import { GUIDE_REACH, guideDragging, guidesAcross, guidesOf } from '../lib/guides';
+import { PAGE_DRAG, componentChoices, wouldLoop, getDraggedPage, insertComponent, openInsertComponentPicker } from '../lib/components';
+import { ALT_DRAG_HINT, ALT_DRAG_TIP, altHintDue, useAltHeld } from '../lib/alt-drag';
 import { artboardGridMenu, gridMenu } from '../components/grid-menu';
 import { gridFor, gridLabel, gridLook } from '../lib/grid';
 import { SNAP_LABEL, buildTargets, pixelRound, snapAny, snapArtboardBox, snapFor, snapMoveBox, snapPointer, type Gap, type SnapSet, type SnapSettings, type Target } from '../lib/snapping';
@@ -84,6 +87,7 @@ import { liveSession } from '../lib/live';
 import { bendPaths, hasShapeKeys, nearestSegment, shapeToPaths, type SegmentHit } from '../lib/path-edit';
 import { confirmDialog } from '../components/dialogs';
 import { openBehaviours } from '../components/BehaviourDialog';
+import { addInteraction } from '../lib/interaction-add';
 import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
 import { rangeLabel } from '../lib/variants-edit';
 import { ANIM_PRESETS, animOptions } from '../lib/animate-presets';
@@ -102,7 +106,7 @@ type Drag =
   | { kind: 'gradPt'; id: string; prefix: string; part: 'from' | 'to' | 'center' | 'radius'; node0: SceneNode; parentM: Matrix }
   | { kind: 'resizeMulti'; handle: Handle; bounds0: Rect; items: { id: string; node0: SceneNode; off: Pt }[] }
   | { kind: 'rotate'; center: Pt; angle0: number; items: { id: string; r0: number }[] }
-  | { kind: 'moveAb'; start: Pt; items: { id: string; x0: number; y0: number }[]; moved: boolean; collapse?: string }
+  | { kind: 'moveAb'; start: Pt; items: { id: string; x0: number; y0: number }[]; moved: boolean; collapse?: string; alt: boolean; duplicated: boolean }
   | { kind: 'resizeAb'; handle: Handle; id: string; ab0: Artboard }
   | { kind: 'create'; tool: Tool; abId: string | null; start: Pt; parentId: string | null }
   | { kind: 'marquee'; abId: string | null; start: Pt; additive: string[] }
@@ -183,6 +187,7 @@ export function Canvas() {
   const vp = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
   const spaceDown = useRef(false);
+  const holdCode = useRef('');
   // What the pointer would do here (set while it moves with no drag going), and what the drag going now is doing
   const [hoverCursor, setHoverCursor] = useState<string | null>(null);
   // A note beside the pointer when pressing here will ask something first (the Bend tool converting a shape to a path,
@@ -193,6 +198,15 @@ export function Canvas() {
     setToolHint((cur) => (!text || !r ? (cur ? null : cur) : cur?.text === text && Math.abs(cur.x - (cx - r.left)) < 2 && Math.abs(cur.y - (cy - r.top)) < 2 ? cur : { text, x: cx - r.left, y: cy - r.top }));
   };
   const [dragCursorNow, setDragCursorNow] = useState<string | null>(null);
+  // Alt held: what can be dragged shows a copy cursor. A note about it comes up on the first few plain drags
+  const altHeld = useAltHeld();
+  // The page a page dragged from the Layers list would be placed in
+  const [dropHost, setDropHost] = useState<string | null>(null);
+  const [altHint, setAltHint] = useState<{ x: number; y: number } | null>(null);
+  const showAltHint = (e: { clientX: number; clientY: number }) => {
+    const r = vp.current?.getBoundingClientRect();
+    if (r && altHintDue()) setAltHint({ x: e.clientX - r.left, y: e.clientY - r.top });
+  };
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
   const [pencil, setPencil] = useState<Pt[] | null>(null);
@@ -231,7 +245,7 @@ export function Canvas() {
     const proj = store().get().project;
     const c = snapCache.current;
     if (c && c.key === key && (drag.current || c.proj === proj)) return c.set;
-    const set = buildTargets(ab, sn, new Set(exclude), parent?.() ?? null);
+    const set = buildTargets(ab, sn, new Set(exclude), parent?.() ?? null, guidesAcross(proj, ab));
     snapCache.current = { key, proj, set };
     return set;
   };
@@ -361,7 +375,9 @@ export function Canvas() {
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !isTyping(e)) {
+      //Hold to pan: the key is the keymap's (Space unless the person moved it), and in the Timeline the same key plays instead
+      if (!isTyping(e) && windowCommand(e)?.id === 'hand-hold') {
+        holdCode.current = e.code;
         spaceDown.current = true;
         setSpaceHeld(true);
       }
@@ -383,7 +399,8 @@ export function Canvas() {
       }
     };
     const up = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
+      if (holdCode.current && e.code === holdCode.current) {
+        holdCode.current = '';
         spaceDown.current = false;
         setSpaceHeld(false);
       }
@@ -526,7 +543,7 @@ export function Canvas() {
         // taken out of the selection with Ctrl+click: nothing to drag
         if (kind === 'ab' && !now.includes(a)) return;
         const items = now.map((id) => getArtboard(s2.get().project, id)).filter(Boolean).map((x) => ({ id: x!.id, x0: x!.canvasX, y0: x!.canvasY }));
-        drag.current = { kind: 'moveAb', start: w, items, moved: false, collapse };
+        drag.current = { kind: 'moveAb', start: w, items, moved: false, collapse, alt: e.altKey && !adds, duplicated: false };
         return;
       }
       if (kind === 'abresize' && ab) {
@@ -741,6 +758,15 @@ export function Canvas() {
         if (sel.includes(hit.id)) startMove(hitAb, p, e.altKey);
         return;
       }
+      // Alt on an empty part of an artboard drags a copy of the artboard (a plain press there is the marquee, and a click with Alt still is)
+      if (e.altKey && !adds(e) && !e.shiftKey && !hitAb.library?.brand) {
+        const picked = pickedArtboardIds(st);
+        const ids = st.artboardSelected && picked.includes(hitAb.id) ? picked : [hitAb.id];
+        store().set({ selection: [], artboardSelected: false, focusId: null });
+        const items = ids.map((id) => getArtboard(store().get().project, id)).filter(Boolean).map((x) => ({ id: x!.id, x0: x!.canvasX, y0: x!.canvasY }));
+        drag.current = { kind: 'moveAb', start: w, items, moved: false, alt: true, duplicated: false };
+        return;
+      }
       // Empty part of an artboard: marquee.
       store().set({ selection: adds(e) ? st.selection : [], artboardSelected: false, focusId: adds(e) ? st.focusId : null });
       drag.current = { kind: 'marquee', abId: hitAb.id, start: p, additive: adds(e) ? st.selection : [] };
@@ -807,7 +833,7 @@ export function Canvas() {
     if (!d) {
       // Hover feedback. Hit-testing every layer is the costly part and pointers report far more often than the screen
       // draws, so it runs once per frame, for the latest position
-      if ((st.tool === 'select' || st.tool === 'bend') && !spaceDown.current) {
+      if ((st.tool === 'select' || st.tool === 'bend') && !spaceDown.current && !guideDragging()) {
         hoverAt.current = { x: e.clientX, y: e.clientY, deep: e.ctrlKey || e.metaKey };
         if (!hoverFrame.current) {
           hoverFrame.current = requestAnimationFrame(() => {
@@ -844,6 +870,7 @@ export function Canvas() {
           (drag.current as typeof d).moved = true;
           return;
         }
+        if (!d.moved && !d.alt) showAltHint(e);
         d.moved = true;
         if (e.shiftKey) {
           if (Math.abs(dx) > Math.abs(dy)) dy = 0;
@@ -943,6 +970,20 @@ export function Canvas() {
       case 'moveAb': {
         let dx = w.x - d.start.x;
         let dy = w.y - d.start.y;
+        if (d.alt && !d.duplicated && Math.hypot(dx, dy) * zoom < 3) break;
+        // Alt (Option on a Mac) was down when the press started: the pages under the pointer stay and a copy goes along
+        if (d.alt && !d.duplicated) {
+          const made = store().duplicateArtboards(d.items.map((it) => it.id), { inPlace: true });
+          if (!made.size) {
+            // nothing could be copied (a brand kit page): leave the originals where they are
+            d.alt = false;
+            drag.current = null;
+            setDragCursorNow(null);
+            break;
+          }
+          d.items = d.items.map((it) => ({ ...it, id: made.get(it.id) ?? it.id }));
+          d.duplicated = true;
+        }
         const sn = snapFor(e);
         if (sn.on && (sn.grid || sn.artboard)) {
           //the moved artboards go as one box against the ones that stay
@@ -959,6 +1000,7 @@ export function Canvas() {
         const px = pixelRound(sn);
         dx = px(dx);
         dy = px(dy);
+        if ((dx || dy) && !d.moved && !d.alt) showAltHint(e);
         if (dx || dy) d.moved = true;
         const at = new Map(d.items.map((it) => [it.id, it]));
         store().update(
@@ -1134,6 +1176,7 @@ export function Canvas() {
     const d = drag.current;
     drag.current = null;
     setDragCursorNow(null);
+    setAltHint(null);
     // a click (not a drag) on one of several selected artboards' names picks just that one
     if (d?.kind === 'moveAb' && !d.moved && d.collapse) store().pickArtboards([d.collapse]);
     if (d?.kind === 'bend' && !store().get().recording) {
@@ -1492,6 +1535,15 @@ export function Canvas() {
 
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault();
+    // A page dragged out of the Layers list: placed in the page it is dropped on, as a component
+    setDropHost(null);
+    const page = e.dataTransfer.getData(PAGE_DRAG);
+    if (page) {
+      const w = toWorld(e.clientX, e.clientY);
+      const ab = abAt(w);
+      if (ab) insertComponent(page, ab.id, local(ab, w));
+      return;
+    }
     // A component dragged from the Libraries panel
     const comp = e.dataTransfer.getData(COMPONENT_DRAG);
     if (comp) {
@@ -1596,7 +1648,7 @@ export function Canvas() {
       <g key={`abg-${g.id}`} className={`ab-group${all ? ' picked' : ''}`}>
         <rect className="ab-group-frame" x={x} y={y} width={fr.width * zoom} height={fr.height * zoom} rx={10} />
         <rect data-handle={`abgroup:${g.id}`} className="ab-group-chip" x={x} y={y - 28} width={tw} height={24} rx={6}>
-          <title>{`${g.name}: a group of ${members.length} artboards. Click to select them all, drag to move them together, right-click for more`}</title>
+          <title>{`${g.name}: a group of ${members.length} artboards. Click to select them all, drag to move them together, ${ALT_DRAG_TIP.replace('to drag a copy', 'to drag a copy of the group')}, right-click for more`}</title>
         </rect>
         <text className="ab-group-title" x={x + 10} y={y - 11.5} pointerEvents="none">
           {title}
@@ -1616,16 +1668,34 @@ export function Canvas() {
         <rect key={`labelbg-${ab.id}`} data-handle={`ab:${ab.id}`} className="ab-label-chip" x={tl.x - 4} y={tl.y - 24} width={Math.round(labelText.length * 6.3 + 10)} height={19} rx={5} />,
       );
     overlay.push(
-      <text
-        key={`label-${ab.id}`}
-        data-handle={`ab:${ab.id}`}
-        className={`ab-label${isActive ? ' active' : ''}${isPicked ? ' picked' : ''}`}
-        x={tl.x}
-        y={tl.y - 8}
-      >
-        {labelText}
-      </text>,
+      <g key={`label-${ab.id}`}>
+        <title>{`Click to select the page. Drag to move it. ${ALT_DRAG_TIP}`}</title>
+        <text data-handle={`ab:${ab.id}`} className={`ab-label${isActive ? ' active' : ''}${isPicked ? ' picked' : ''}`} x={tl.x} y={tl.y - 8}>
+          {labelText}
+        </text>
+      </g>,
     );
+    // The attached guides of a page that is not the open one: the open page's are the Rulers' (they can be grabbed), these only show, so
+    // a guide doesn't vanish when another page takes the focus. An attached guide is only drawn across its own page and a little past
+    // it (GUIDE_REACH), the same as the Rulers draw the open page's. (Universal guides are all the Rulers'.)
+    if (userPrefs.rulers && !s.previewPlaying && ab.id !== s.activeArtboardId) {
+      for (const g of guidesOf(ab)) {
+        const at = (g.axis === 'x' ? tl.x : tl.y) + g.at * zoom;
+        const [a1, a2] = g.axis === 'x' ? [tl.y, tl.y + ab.height * zoom] : [tl.x, tl.x + ab.width * zoom];
+        overlay.push(
+          <line
+            key={`gmark-${ab.id}-${g.axis}${g.index}`}
+            className="guide-mark"
+            x1={g.axis === 'x' ? at : a1 - GUIDE_REACH}
+            x2={g.axis === 'x' ? at : a2 + GUIDE_REACH}
+            y1={g.axis === 'x' ? a1 - GUIDE_REACH : at}
+            y2={g.axis === 'x' ? a2 + GUIDE_REACH : at}
+          />,
+        );
+      }
+    }
+    // a page being dragged in from the Layers list: this one is where it would be placed
+    if (ab.id === dropHost) overlay.push(<rect key={`drop-host-${ab.id}`} className="drop-host" x={tl.x} y={tl.y} width={ab.width * zoom} height={ab.height * zoom} />);
     // Artboards of a responsive set: one pill per member on the label line, to jump between them
     const members = setMembers(project.artboards, ab);
     const pillText = (m: Artboard) => `${m.name} ${rangeLabel(project.artboards, m)}`;
@@ -1669,6 +1739,7 @@ export function Canvas() {
       const a = toS(active, { x: 0, y: 0 });
       const bw = active.width * zoom;
       const bh = active.height * zoom;
+      overlay.push(<rect key="ab-sel-edge" className="sel-outline-edge" x={a.x} y={a.y} width={bw} height={bh} />);
       overlay.push(<rect key="ab-sel" className="sel-outline" x={a.x} y={a.y} width={bw} height={bh} />);
       // the other selected artboards get the same outline (and no handles: they are moved, grouped and tidied together)
       for (const id of pickedNow) {
@@ -1741,6 +1812,8 @@ export function Canvas() {
           overlay.push(<polygon key={`m-${id}`} className="hover-outline" points={pts.map((p) => `${p.x},${p.y}`).join(' ')} />);
         }
       }
+      //the dark line under the gold one, so the outline still shows on a gold or white layer
+      overlay.push(<polygon key="sel-edge" className="sel-outline-edge" points={quad.map((p) => `${p.x},${p.y}`).join(' ')} />);
       overlay.push(<polygon key="sel" className="sel-outline" points={quad.map((p) => `${p.x},${p.y}`).join(' ')} />);
       const at = (fx: number, fy: number): Pt => {
         const top = { x: quad[0].x + (quad[1].x - quad[0].x) * fx, y: quad[0].y + (quad[1].y - quad[0].y) * fx };
@@ -2070,9 +2143,16 @@ export function Canvas() {
         },
       })),
     });
+    //Right-click inside a page: put another page here as a component (a library copy is read-only, so not there)
+    const insertHere = (ab: Artboard): MenuItem => ({
+      label: 'Insert component here…',
+      title: 'Place another page inside this one, here, as a component',
+      disabled: !!ab.library || componentChoices(st.project, ab.id).length === 0,
+      onClick: () => void openInsertComponentPicker({ hostId: ab.id, at: local(ab, w) }),
+    });
     const paste: MenuItem = {
       label: 'Paste',
-      hint: 'Ctrl+V',
+      hint: keyHints('paste'),
       onClick: () => {
         void (navigator.clipboard?.readText?.() ?? Promise.resolve('')).then((t) => pasteNodes(t), () => pasteNodes());
       },
@@ -2099,25 +2179,24 @@ export function Canvas() {
       const one = sel.length === 1 ? sel[0] : null;
       items = [
         { heading: one ? one.name : `${sel.length} layers` },
-        { label: 'Cut', hint: 'Ctrl+X', onClick: () => copySelection(true) },
-        { label: 'Copy', hint: 'Ctrl+C', onClick: () => copySelection() },
+        { label: 'Cut', hint: keyHints('cut'), onClick: () => copySelection(true) },
+        { label: 'Copy', hint: keyHints('copy'), onClick: () => copySelection() },
         paste,
-        { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => s2.duplicateSelection() },
-        { label: 'Delete', hint: 'Del', danger: true, onClick: () => s2.deleteSelection() },
+        { label: 'Duplicate', hint: keyHints('duplicate'), onClick: () => s2.duplicateSelection() },
+        { label: 'Delete', hint: keyHints('delete'), danger: true, onClick: () => s2.deleteSelection() },
         { separator: true },
         {
           label: 'Order',
           items: [
-            { label: 'Bring to front', hint: 'Ctrl+]', onClick: () => s2.reorder(Infinity) },
-            { label: 'Bring forward', hint: ']', onClick: () => s2.reorder(1) },
-            { label: 'Send backward', hint: '[', onClick: () => s2.reorder(-1) },
-            { label: 'Send to back', hint: 'Ctrl+[', onClick: () => s2.reorder(-Infinity) },
+            { label: 'Bring to front', hint: keyHints('front'), onClick: () => s2.reorder(Infinity) },
+            { label: 'Bring forward', hint: keyHints('forward'), onClick: () => s2.reorder(1) },
+            { label: 'Send backward', hint: keyHints('backward'), onClick: () => s2.reorder(-1) },
+            { label: 'Send to back', hint: keyHints('back'), onClick: () => s2.reorder(-Infinity) },
           ],
         },
-        { label: 'Group', hint: 'Ctrl+G', onClick: () => s2.groupSelection() },
-        //Selections are on one artboard; with several artboards picked it isn't offered
-        ...(pickedArtboardIds(s2.get()).length > 1 ? [] : [{ label: 'Fit page to selection', title: 'Resize the page to just these layers, keeping them where they are', onClick: () => s2.fitArtboardToSelection() } as MenuItem]),
-        ...(one && (one.type === 'group' || one.type === 'frame') ? [{ label: 'Ungroup', hint: 'Ctrl+Shift+G', onClick: () => s2.ungroupSelection() } as MenuItem] : []),
+        { label: 'Group', hint: keyHints('group'), onClick: () => s2.groupSelection() },
+        ...fitPageSelectionItems(),
+        ...(one && (one.type === 'group' || one.type === 'frame') ? [{ label: 'Ungroup', hint: keyHints('ungroup'), onClick: () => s2.ungroupSelection() } as MenuItem] : []),
         ...(sel.length > 1
           ? [
               {
@@ -2127,8 +2206,8 @@ export function Canvas() {
             ]
           : []),
         { separator: true },
-        { label: one?.visible === false ? 'Show' : 'Hide', onClick: () => s2.setProps(sel.map((n) => n.id), { visible: one?.visible === false }) },
-        { label: 'Lock', onClick: () => s2.setProps(sel.map((n) => n.id), { locked: true }) },
+        { label: one?.visible === false ? 'Show' : 'Hide', hint: keyHints('hide-layers'), onClick: () => s2.setProps(sel.map((n) => n.id), { visible: one?.visible === false }) },
+        { label: 'Lock', hint: keyHints('lock-layers'), onClick: () => s2.setProps(sel.map((n) => n.id), { locked: true }) },
         ...(sel.every((n) => n.type !== 'bone')
           ? [
               {
@@ -2154,12 +2233,13 @@ export function Canvas() {
                   { label: 'Empty On hover event', title: 'Just the On pointer event, with nothing joined to it', onClick: () => addInteraction(hab, one.id, 'pointerenter') },
                 ],
               } as MenuItem,
-              ...(one.type === 'text' || one.type === 'button' || one.type === 'link' ? [{ label: 'Edit text', hint: 'Enter', onClick: () => s2.set({ editingTextId: one.id }) } as MenuItem] : []),
-              ...(one.type === 'image' && canCrop(one) ? [{ label: 'Crop picture', hint: 'Enter', onClick: () => s2.set({ croppingId: one.id }) } as MenuItem] : []),
+              ...(one.type === 'text' || one.type === 'button' || one.type === 'link' ? [{ label: 'Edit text', hint: keyHints('enter'), onClick: () => s2.set({ editingTextId: one.id }) } as MenuItem] : []),
+              ...(one.type === 'image' && canCrop(one) ? [{ label: 'Crop picture', hint: keyHints('enter'), onClick: () => s2.set({ croppingId: one.id }) } as MenuItem] : []),
             ]
           : []),
         { separator: true },
         newHere(hab),
+        insertHere(hab),
       ];
     } else if (hab) {
       // An artboard's empty area: the artboard (or the artboards, when this one is among several selected)
@@ -2168,12 +2248,14 @@ export function Canvas() {
       items = [
         { heading: ids.length > 1 ? `${ids.length} pages` : hab.name },
         newHere(hab),
+        insertHere(hab),
         paste,
         { separator: true },
         ...(ids.length === 1
           ? [
               { label: 'Make start page', disabled: st.project.settings.startArtboardId === hab.id, onClick: () => s2.update((d) => void (d.settings.startArtboardId = hab.id)) } as MenuItem,
-              { label: 'Zoom to page', onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) } as MenuItem,
+              { label: 'Zoom to page', hint: keyHints('zoom-page'), onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) } as MenuItem,
+              { label: 'Fit page to its layers', hint: keyHints('fit-page-layers'), title: 'Resize the page to just the layers on it, keeping them where they are', disabled: !hab.children.length, onClick: () => (s2.set({ activeArtboardId: hab.id }), void fitPageCommand({ layers: true })) } as MenuItem,
               artboardGridMenu(hab),
               { separator: true } as MenuItem,
             ]
@@ -2187,23 +2269,13 @@ export function Canvas() {
         { separator: true },
         { label: showRoutes() ? 'Hide page arrows' : 'Show page arrows', title: 'The faint arrows between pages that show where Go to page, Next and Previous lead (editor only)', onClick: () => setShowRoutes(!showRoutes()) },
         { label: 'Tidy up pages', disabled: st.project.artboards.filter((a) => !a.canvasHidden).length < 2, onClick: tidyArtboardsCommand },
-        { label: 'Zoom to fit everything', hint: 'Shift+1', onClick: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '!', code: 'Digit1', shiftKey: true })) },
-        { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: 'Shift+R', onClick: () => setPrefs({ rulers: !prefs().rulers }) },
+        { label: 'Zoom to fit everything', hint: keyHints('zoom-fit'), onClick: () => void runCommand('zoom-fit') },
+        { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: keyHints('toggle-rulers'), onClick: () => setPrefs({ rulers: !prefs().rulers }) },
         ...gridMenu(),
-        { label: 'Help', hint: '?', onClick: openContextHelp },
+        { label: 'Help', hint: keyHints('help-context'), onClick: openContextHelp },
       ];
     }
     setMenu({ x: e.clientX, y: e.clientY, items });
-  }
-
-  /** Add just an "On pointer" event for a layer, with nothing joined to it (the recipes in the behaviour dialog add the action too), and open the Interactions tab on it. */
-  function addInteraction(ab: Artboard, nodeId: string, type: 'click' | 'pointerenter') {
-    const ev = { id: uid('lg'), kind: 'event.pointer', x: 40, y: 40 + ab.logic.nodes.length * 30, params: { ...defaultParams('event.pointer'), target: nodeId, type } };
-    store().update((d) => {
-      const a = d.artboards.find((x) => x.id === ab.id);
-      a?.logic.nodes.push(ev);
-    });
-    store().set({ bottomTab: 'logic', logicSelection: ev.id });
   }
 
   function zoomToBox(b: Rect) {
@@ -2264,12 +2336,16 @@ export function Canvas() {
 
   const showRulers = userPrefs.rulers;
   // Space pans, a drag shows what it is doing, then what a press under the pointer would do, then the tool's own
-  const cursor = dragCursorNow ?? (spaceHeld ? 'grab' : s.tool === 'select' || s.tool === 'bend' ? hoverCursor ?? toolCursor(s.tool) : toolCursor(s.tool));
+  const dragging = drag.current;
+  const copying = !!dragging && (dragging.kind === 'move' ? dragging.duplicated : dragging.kind === 'moveAb' ? dragging.duplicated : false);
+  const baseCursor = dragCursorNow ?? (spaceHeld ? 'grab' : s.tool === 'select' || s.tool === 'bend' ? hoverCursor ?? toolCursor(s.tool) : toolCursor(s.tool));
+  // the move cursor turns into the copy one while Alt is down (over something a drag would move), and for the whole of a copy drag
+  const cursor = copying || (altHeld && baseCursor === 'move') ? 'copy' : baseCursor;
 
   return (
     <div
       ref={vp}
-      className="canvas"
+      className={`canvas${altHeld && s.tool === 'select' ? ' alt-held' : ''}`}
       style={{ cursor }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -2282,6 +2358,17 @@ export function Canvas() {
         e.preventDefault();
         // Files and library components are copied in, not moved
         e.dataTransfer.dropEffect = 'copy';
+        // A page from the Layers list: outline the page it would land in
+        if (e.dataTransfer.types.includes(PAGE_DRAG)) {
+          const over = abAt(toWorld(e.clientX, e.clientY));
+          const from = getDraggedPage();
+          const ok = !!over && !over.library && !(from && wouldLoop(store().get().project, over.id, from));
+          e.dataTransfer.dropEffect = ok ? 'copy' : 'none';
+          setDropHost((cur) => (ok ? (cur === over!.id ? cur : over!.id) : cur ? null : cur));
+        }
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropHost(null);
       }}
       onDrop={onDrop}
       onContextMenu={openMenu}
@@ -2369,7 +2456,7 @@ export function Canvas() {
         <button
           type="button"
           className="canvas-status"
-          title="Snap to grid is on. Click for the snapping choices and the grid size (Ctrl while dragging skips snapping, Ctrl+' turns the grid off)"
+          title={`Snap to grid is on. Click for the snapping choices and the grid size (Ctrl while dragging skips snapping${keyHints('snap-grid') ? `, ${keyHints('snap-grid')} turns the grid off` : ''})`}
           onClick={(e) => {
             const r = e.currentTarget.getBoundingClientRect();
             setMenu({ x: r.left, y: r.top - 8, items: gridMenu() });
@@ -2391,6 +2478,12 @@ export function Canvas() {
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
       {s.croppingId && active && <CropOverlay ab={active} id={s.croppingId} zoom={zoom} panX={panX} panY={panY} />}
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} bounds={{ width: vp.current?.clientWidth ?? 2000, height: vp.current?.clientHeight ?? 1200 }} />}
+      {altHint && (
+        <div className="tool-hint" role="status" style={{ left: altHint.x + 18, top: altHint.y + 20 }}>
+          <Icons.info className="tool-hint-icon" />
+          <span>{ALT_DRAG_HINT}</span>
+        </div>
+      )}
       {toolHint && (
         <div className="tool-hint" role="status" style={{ left: toolHint.x + 18, top: toolHint.y + 20 }}>
           <Icons.info className="tool-hint-icon" />

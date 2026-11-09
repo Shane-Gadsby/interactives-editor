@@ -1,14 +1,13 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { VersionInfo } from '../components/VersionInfo';
-import { Markdown } from './markdown';
-import { searchHelp, type HelpHit } from './search';
-import { noteHelpSearch, track } from '../lib/analytics';
-import { GROUPS, TOPICS, getTopic, topicBody } from './topics';
-import './branded-help';
-import { Icons } from '../components/icons';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { track } from '../lib/analytics';
 import { HelpHistory, type HelpEntry } from './history';
 import { isPreviewOpen } from '../lib/overlays';
 import { closePalette, openPalette, paletteIsOpen } from '../lib/command-palette';
+import { matches } from '../lib/keymap';
+import { openShortcuts } from '../lib/shortcuts-sheet';
+import { VersionInfo } from '../components/VersionInfo';
+import { helpTopics, helpViews, useTopic } from './lazy';
+
 
 // ---------------------------------------------------------------- opening help from anywhere
 
@@ -28,6 +27,10 @@ const emit = (next: Partial<HelpState>) => {
 // (the Help button on a layer, say) can still go Back to what was being read
 const hist = new HelpHistory();
 let scrollSource: (() => number) | null = null;
+/** The open article says how far down it is, so Back can return to the same spot (set and cleared by the help's own screens). */
+export function setHelpScrollSource(fn: (() => number) | null): void {
+  scrollSource = fn;
+}
 const leave = () => hist.saveScroll(scrollSource?.() ?? hist.current?.scroll ?? 0);
 const nextNav = () => (state.drawer?.nav ?? 0) + 1;
 
@@ -133,15 +136,18 @@ export function HelpHost() {
       //F1 is the help quick search. Ctrl/Cmd+K is the command palette (which lists help results too), except while editing text
       //where it's the link shortcut; where there is no palette (the home page) it falls back to the help search.
       //The Help button and ? open the page for what is highlighted
-      if (e.key === 'F1') {
+      if (matches(e, 'help-search')) {
         e.preventDefault();
         if (paletteIsOpen()) closePalette();
         openHelpSearch();
-      } else if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k' && !(e.target instanceof HTMLElement && e.target.closest('.text-editor, .text-toolbar'))) {
+      } else if (matches(e, 'palette') && !(e.target instanceof HTMLElement && e.target.closest('.text-editor, .text-toolbar'))) {
         e.preventDefault();
         if (isPreviewOpen()) openHelpSearch();
         else if (!openPalette()) openHelpSearch();
-      } else if (e.key === '?' && !isTyping(e) && !e.ctrlKey && !e.metaKey) {
+      } else if (matches(e, 'shortcuts') && !isTyping(e)) {
+        e.preventDefault();
+        openShortcuts();
+      } else if (matches(e, 'help-context') && !isTyping(e)) {
         e.preventDefault();
         if (state.drawer) closeHelp();
         else openContext();
@@ -157,263 +163,32 @@ export function HelpHost() {
     <>
       {s.drawer && (
         <aside className="help-drawer" aria-label="Help" ref={drawerRef}>
-          <HelpView id={s.drawer.id} anchor={s.drawer.anchor} onNavigate={showTopic} focusKey={s.opened} compact onClose={closeHelp} nav={{ home: helpHome, back: helpBack, forward: helpForward, canBack: hist.canBack, canForward: hist.canForward }} navKey={s.drawer.nav} restore={s.drawer.restore} context={s.drawer.context} />
+          <DrawerBody s={s as HelpState & { drawer: Drawer }} />
         </aside>
       )}
-      {s.search && <QuickSearch onPick={(h) => (track('help', 'search-pick', { thing: h.topic.id, detail: { in: 'quick' } }), openHelp(h.topic.id, h.anchor))} onClose={() => emit({ search: false })} />}
+      {s.search && <QuickSearchHost />}
     </>
   );
 }
 
-// ---------------------------------------------------------------- the help itself
-
-export interface HelpNav {
-  home: () => void;
-  back: () => void;
-  forward: () => void;
-  canBack: boolean;
-  canForward: boolean;
+//The drawer's article and the quick search are in the help's own chunk (HelpViews): a quiet line shows while it comes in
+function DrawerBody({ s }: { s: HelpState & { drawer: Drawer } }) {
+  const v = helpViews.use();
+  if (!v) return <p className="muted help-loading" role="status">Loading help…</p>;
+  return <v.HelpView id={s.drawer.id} anchor={s.drawer.anchor} onNavigate={showTopic} focusKey={s.opened} compact onClose={closeHelp} nav={{ home: helpHome, back: helpBack, forward: helpForward, canBack: hist.canBack, canForward: hist.canForward }} navKey={s.drawer.nav} restore={s.drawer.restore} context={s.drawer.context} />;
+}
+function QuickSearchHost() {
+  const v = helpViews.use();
+  if (!v) return null;
+  return <v.QuickSearch onPick={(h) => (track('help', 'search-pick', { thing: h.topic.id, detail: { in: 'quick' } }), openHelp(h.topic.id, h.anchor))} onClose={() => emit({ search: false })} />;
 }
 
-export function HelpView({ id, anchor, onNavigate, compact, onClose, focusKey, nav, navKey, restore, context }: { id: string; anchor?: string; onNavigate: (id: string, anchor?: string) => void; compact?: boolean; onClose?: () => void; focusKey?: number; nav?: HelpNav; navKey?: number; restore?: number; context?: string }) {
-  const topic = getTopic(id) ?? TOPICS[0];
-  const [query, setQuery] = useState('');
-  const [navOpen, setNavOpen] = useState(!compact);
-  const hits = useMemo(() => searchHelp(query, 30), [query]);
-  const body = useRef<HTMLDivElement>(null);
-  const search = useRef<HTMLInputElement>(null);
-  // Showing the help (on mount, and again each time it's asked for) puts the caret in the search box, so people can type
-  // straight away. preventScroll keeps the article where an anchor scrolled it.
-  useEffect(() => {
-    search.current?.focus({ preventScroll: true });
-  }, [focusKey]);
-  const go = (href: string) => {
-    const [tid, a] = href.split('#');
-    if (query.trim()) track('help', 'search-pick', { thing: tid || topic.id });
-    onNavigate(tid || topic.id, a);
-    setQuery('');
-  };
-  useEffect(() => {
-    track('help', 'topic', { thing: topic.id, detail: { in: compact ? 'drawer' : 'page' } });
-  }, [topic.id, compact]);
-  useEffect(() => noteHelpSearch(query, hits.length), [query, hits.length]);
-  //the drawer asks where the article is scrolled when it leaves it
-  useEffect(() => {
-    if (!compact) return;
-    scrollSource = () => body.current?.scrollTop ?? 0;
-    return () => {
-      scrollSource = null;
-    };
-  }, [compact]);
-  useLayoutEffect(() => {
-    const el = body.current;
-    if (!el) return;
-    //Back and Forward put the article where it was, ahead of its anchor
-    if (restore !== undefined) {
-      el.scrollTop = restore;
-      return;
-    }
-    const target = anchor ? el.querySelector(`#${CSS.escape(anchor)}`) : null;
-    if (target) {
-      target.scrollIntoView({ block: 'start' });
-      target.classList.add('help-flash');
-      setTimeout(() => target.classList.remove('help-flash'), 1200);
-    } else el.scrollTop = 0;
-  }, [topic.id, anchor, navKey]);
-  const idx = TOPICS.indexOf(topic);
-  const prev = TOPICS[idx - 1];
-  const next = TOPICS[idx + 1];
 
-  return (
-    <div className={`help-view${compact ? ' compact' : ''}${navOpen ? ' nav-open' : ''}`}>
-      <header className="help-head">
-        {nav && (
-          <div className="help-nav-btns" role="group" aria-label="Help history">
-            <button className="icon-btn" title="Back (Alt+Left)" aria-label="Back" disabled={!nav.canBack} onClick={nav.back}>
-              <Icons.arrowLeft />
-            </button>
-            <button className="icon-btn" title="Forward (Alt+Right)" aria-label="Forward" disabled={!nav.canForward} onClick={nav.forward}>
-              <Icons.arrowRight />
-            </button>
-            <button className="icon-btn" title="Help home: the welcome page" aria-label="Help home" onClick={nav.home}>
-              <Icons.home />
-            </button>
-          </div>
-        )}
-        {compact && (
-          <button className="icon-btn" title={navOpen ? 'Hide contents' : 'Show contents'} onClick={() => setNavOpen(!navOpen)}>
-            <Icons.more />
-          </button>
-        )}
-        <input ref={search} className="help-search" type="search" placeholder="Search help…" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => {
-          e.stopPropagation();
-          if (e.key === 'Enter' && hits[0]) go(`${hits[0].topic.id}${hits[0].anchor ? `#${hits[0].anchor}` : ''}`);
-          if (e.key === 'Escape') setQuery('');
-        }} />
-        {compact && (
-          <a className="icon-btn" title="Open the help in a new tab" href={`#/help/${topic.id}`} target="_blank" rel="noreferrer">
-            <Icons.external />
-          </a>
-        )}
-        {compact && <VersionInfo />}
-        {onClose && (
-          <button className="icon-btn" title="Close help (Esc)" onClick={onClose}>
-            <Icons.close />
-          </button>
-        )}
-      </header>
-      <div className="help-main">
-        {navOpen && !query && (
-          <nav className="help-nav">
-            {GROUPS.map((g) => (
-              <div key={g} className="help-group">
-                <div className="help-group-title">{g}</div>
-                {TOPICS.filter((t) => t.group === g).map((t) => (
-                  <a
-                    key={t.id}
-                    href={`#/help/${t.id}`}
-                    className={t.id === topic.id ? 'active' : ''}
-                    title={t.summary}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      go(t.id);
-                      if (compact) setNavOpen(false);
-                    }}
-                  >
-                    {t.title}
-                  </a>
-                ))}
-              </div>
-            ))}
-          </nav>
-        )}
-        <div className="help-body" ref={body}>
-          {query ? (
-            <SearchResults hits={hits} query={query} onPick={(h) => go(`${h.topic.id}${h.anchor ? `#${h.anchor}` : ''}`)} />
-          ) : (
-            <article className="help-article">
-              {context && topic.id !== 'welcome' && (
-                <div className="help-context" role="note">
-                  <span>
-                    Help for <strong>{context}</strong>
-                  </span>
-                  <button type="button" className="link-btn" onClick={() => go('welcome')}>
-                    Back to general help
-                  </button>
-                </div>
-              )}
-              <div className="help-crumb">{topic.group}</div>
-              <h1>
-                {topic.icon && topic.icon in Icons && <span className="help-topic-icon">{(Icons[topic.icon as keyof typeof Icons] as () => JSX.Element)()}</span>}
-                {topic.title}
-              </h1>
-              <p className="help-summary">{topic.summary}</p>
-              <Markdown text={topicBody(topic)} onLink={go} />
-              <footer className="help-pager">
-                {prev ? (
-                  <a href={`#/help/${prev.id}`} onClick={(e) => (e.preventDefault(), go(prev.id))}>
-                    ← {prev.title}
-                  </a>
-                ) : (
-                  <span />
-                )}
-                {next && (
-                  <a href={`#/help/${next.id}`} onClick={(e) => (e.preventDefault(), go(next.id))}>
-                    {next.title} →
-                  </a>
-                )}
-              </footer>
-            </article>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SearchResults({ hits, query, onPick }: { hits: HelpHit[]; query: string; onPick: (h: HelpHit) => void }) {
-  if (!hits.length) return <p className="muted help-none">Nothing matches “{query}”. Try fewer or different words.</p>;
-  return (
-    <ul className="help-results">
-      {hits.map((h, i) => (
-        <li key={i}>
-          <button onClick={() => onPick(h)}>
-            <strong>
-              {h.topic.title}
-              {h.heading ? ` › ${h.heading}` : ''}
-            </strong>
-            <span className="muted small">{h.snippet}</span>
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** F1 (and Ctrl/Cmd+K where there is no command palette): type, arrow to a result, Enter to open it. */
-function QuickSearch({ onPick, onClose }: { onPick: (h: HelpHit) => void; onClose: () => void }) {
-  const [q, setQ] = useState('');
-  const [sel, setSel] = useState(0);
-  const hits = useMemo(() => (q ? searchHelp(q, 10) : TOPICS.slice(0, 8).map((t) => ({ topic: t, snippet: t.summary, score: 0 }) as HelpHit)), [q]);
-  useEffect(() => setSel(0), [q]);
-  useEffect(() => noteHelpSearch(q, q ? hits.length : -1), [q, hits.length]);
-  return (
-    <div className="modal-backdrop quick-help-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="quick-help" role="dialog" aria-label="Search help">
-        <input
-          autoFocus
-          placeholder="Search help (e.g. “zoom”, “repeat list”, “trim path”)"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            e.stopPropagation();
-            if (e.key === 'ArrowDown') (e.preventDefault(), setSel((s) => Math.min(hits.length - 1, s + 1)));
-            if (e.key === 'ArrowUp') (e.preventDefault(), setSel((s) => Math.max(0, s - 1)));
-            if (e.key === 'Enter' && hits[sel]) onPick(hits[sel]);
-            if (e.key === 'Escape') onClose();
-          }}
-        />
-        <ul>
-          {hits.map((h, i) => (
-            <li key={i} className={i === sel ? 'active' : ''} onPointerEnter={() => setSel(i)} onClick={() => onPick(h)}>
-              <strong>
-                {h.topic.title}
-                {h.heading ? ` › ${h.heading}` : ''}
-              </strong>
-              <span className="muted small">{h.snippet}</span>
-            </li>
-          ))}
-          {!hits.length && <li className="muted">Nothing matches. Try other words.</li>}
-        </ul>
-        <div className="quick-help-foot muted small">
-          <span>
-            <kbd>↑</kbd> <kbd>↓</kbd> to choose · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close
-          </span>
-          <VersionInfo />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** The full help page at #/help/<topic>. */
-//The full page routes per topic (#/help/<topic>), so the browser's own history is its history: Back and Forward use it
-const pageNav: HelpNav = {
-  home: () => (location.hash = '#/help/welcome'),
-  back: () => history.back(),
-  forward: () => history.forward(),
-  get canBack() {
-    return (window as unknown as { navigation?: { canGoBack: boolean } }).navigation?.canGoBack ?? true;
-  },
-  get canForward() {
-    return (window as unknown as { navigation?: { canGoForward: boolean } }).navigation?.canGoForward ?? true;
-  },
-};
-
+//The full page routes per topic (#/help/<topic>), so the browser's own history is its history: Back and Forward use it (HelpViews' page nav)
+/** The full help page at #/help/<topic>: its frame is here at once, the article comes with the help's chunk. */
 export function HelpPage({ id, anchor }: { id: string; anchor?: string }) {
-  useEffect(() => {
-    document.title = `${getTopic(id)?.title ?? 'Help'} · Interactives help`;
-  }, [id]);
+  const v = helpViews.use();
+  if (v) return <v.HelpPage id={id} anchor={anchor} />;
   return (
     <div className="help-page">
       <header className="home-head">
@@ -424,20 +199,22 @@ export function HelpPage({ id, anchor }: { id: string; anchor?: string }) {
           Help <VersionInfo />
         </span>
       </header>
-      <HelpView id={id} anchor={anchor} onNavigate={(t, a) => (location.hash = `#/help/${t}${a ? `/${a}` : ''}`)} nav={pageNav} />
+      <p className="muted help-loading" role="status">Loading help…</p>
     </div>
   );
 }
 
-/** A small "?" that opens a help page; its tooltip is the page's summary. */
+/** A small "?" that opens a help page; its tooltip is the page's summary (the topics come in once the editor warms them up, or on hover). */
 export function HelpLink({ topic, anchor }: { topic: string; anchor?: string }) {
-  const t = getTopic(topic);
+  const t = useTopic(topic);
   return (
     <button
       type="button"
       className="help-link"
       title={t ? `${t.title}: ${t.summary}` : 'Help'}
-      aria-label={`Help: ${t?.title ?? topic}`}
+      aria-label={t ? `Help: ${t.title}` : 'Help'}
+      onPointerEnter={() => void helpTopics.ensure()}
+      onFocus={() => void helpTopics.ensure()}
       onClick={(e) => {
         e.stopPropagation();
         openHelp(topic, anchor);

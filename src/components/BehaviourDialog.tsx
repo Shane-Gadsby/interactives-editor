@@ -6,6 +6,7 @@ import { pickNewAsset } from '../lib/quick-add';
 import { RECIPES, RECIPE_BY_ID, NEW_PREFIX, THIS_LAYER, TRIGGER_WORDS, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, incomplete, layerChoices, otherPages, switchChoices, unavailable, type Answers, type Need, type Recipe, type RecipeCtx, type Trigger } from '../lib/recipes';
 import { TextField } from './ui';
 import { track } from '../lib/analytics';
+import { revealAdded, revealedWithin } from '../lib/graph-reveal';
 
 /**
  * "When this is clicked...": a short list of what should happen, then the one or two choices it needs, then Add. What it writes is
@@ -81,12 +82,20 @@ function BehaviourDialog({ req }: { req: BehaviourRequest }) {
   const add = () => {
     if (!ctx || blocked || gap) return;
     const b = buildBehaviour(ctx, recipeId, req.trigger, answers);
-    applyBehaviour((r) => store().update(r), req.abId, b);
-    // picked in the graph, not opened: the person stays where they are, and can open the graph from the row
-    store().set({ logicSelection: b.actionId, logicPicked: [b.eventId, b.actionId] });
-    store().toast(`Added: ${b.sentence}.`);
+    const made = applyBehaviour((r) => store().update(r), req.abId, b);
     track('feature', `behaviour-${recipeId}`);
     closeBehaviours();
+    //The graph opens on what was made and frames it (lib/graph-reveal.ts). With that preference off the nodes are only picked
+    //in the graph, and the person stays where they are, and can open the graph from the row
+    const said = `Added ${b.sentence}`;
+    const shown = revealAdded({
+      abId: req.abId,
+      ids: made.nodeIds,
+      focusId: made.eventId,
+      say: said,
+      quiet: () => store().set({ logicSelection: made.actionId, logicPicked: made.nodeIds }),
+    });
+    if (!shown) store().toast(said);
   };
   // arrows move through the list as they would through radio buttons
   const step = (d: number) => {
@@ -136,7 +145,8 @@ function BehaviourDialog({ req }: { req: BehaviourRequest }) {
     window.addEventListener('keydown', onKey, true);
     return () => {
       window.removeEventListener('keydown', onKey, true);
-      if (before && document.contains(before)) before.focus();
+      //(unless the graph has just been brought up: focus is on its new nodes, not back where the dialog came from)
+      if (before && document.contains(before) && !revealedWithin(1500)) before.focus();
     };
   }, []);
 

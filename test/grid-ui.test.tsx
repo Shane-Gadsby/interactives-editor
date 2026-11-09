@@ -29,10 +29,10 @@ const find = (items: MenuItem[], re: RegExp) => items.find((i) => re.test(labelO
 const sub = (m: MenuItem) => ('items' in m ? m.items : []);
 const click = (m: MenuItem) => ('onClick' in m ? m.onClick() : undefined);
 
-describe('Preferences, Canvas block', () => {
+describe('Preferences, Canvas page', () => {
   it('has Show grid and Snap to grid switches and the size presets, which change the preferences', () => {
-    act(() => root.render(<PrefsModal onClose={() => undefined} />));
-    const block = host.querySelector('[aria-label="Canvas"]')!;
+    act(() => root.render(<PrefsModal page="canvas" onClose={() => undefined} />));
+    const block = host.querySelector('[role="tabpanel"]')!;
     expect(block).toBeTruthy();
     const checks = [...block.querySelectorAll('label')].map((l) => l.textContent);
     expect(checks.join('|')).toMatch(/Show rulers.*Show grid.*Snap to grid/);
@@ -76,11 +76,11 @@ describe('the grid menus', () => {
     setCurrentStore(store);
     const ab = () => store.get().project.artboards[0];
     const menu = artboardGridMenu(ab());
-    expect(labelOf(menu)).toBe('Grid for this artboard');
+    expect(labelOf(menu)).toBe('Grid for this page');
     click(sub(menu).find((i) => labelOf(i).includes('12 px'))!);
     expect(ab().grid).toEqual({ size: 12, subdivisions: 4 });
     const again = artboardGridMenu(ab());
-    expect(labelOf(again)).toBe('Grid for this artboard (12 px (every 4))');
+    expect(labelOf(again)).toBe('Grid for this page (12 px (every 4))');
     click(sub(again).find((i) => labelOf(i).startsWith('✓') || labelOf(i).includes('12 px'))!);
     click(sub(again).find((i) => labelOf(i).includes('Every 8 cells'))!);
     expect(ab().grid).toEqual({ size: 12, subdivisions: 8 });

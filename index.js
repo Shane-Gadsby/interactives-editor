@@ -9,6 +9,7 @@ let port = Number(process.env.PORT) || 3048,
 	mongoConnect = require('../suite-libs/mongo-connect'),
 	client = mongoConnect(),
 	cacheHeaders = require('../suite-libs/cache-headers'),
+	precompressed = require('./precompressed'),
 	sessionCheck = require('../suite-libs/session-check'),
 	path = require('path'),
 	crypto = require('crypto'),
@@ -477,7 +478,13 @@ fontsProxy.prewarm()
 
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
-const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean', technicalWording: 'boolean', gettingStarted: 'boolean'},
+const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], codeTheme: ['follow', 'light', 'dark'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', attachGuides: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean', technicalWording: 'boolean', showNewInteractions: 'boolean', altDragHintAlways: 'boolean', gettingStarted: 'boolean', timelineList: 'boolean', timelineFoldEmpty: 'boolean', timelineHideSound: 'boolean', timelineHideCaptions: 'boolean', timelineHideDescriptions: 'boolean', singleKeys: 'boolean', keymapPreset: ['default', 'illustration']},
+	cleanKeymap = (m) => Object.fromEntries(
+		Object.entries(m)
+			.filter(([k, v]) => /^[a-z][a-z0-9.-]{0,59}$/i.test(k) && Array.isArray(v))
+			.map(([k, v]) => [k, v.filter((c) => typeof c === 'string' && c.length > 0 && c.length <= 24 && /^[A-Za-z0-9+,./\\[\]';=`-]+$/.test(c)).slice(0, 4)])
+			.slice(0, 600)
+	),
 	cleanPrefs = (p) => {
 		let out = {}
 		for (let [k, rule] of Object.entries(PREF_KEYS)) {
@@ -497,6 +504,35 @@ const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], to
 					.slice(0, 300)
 			)
 		}
+		//The order the person put inspector sections (by panel kind) and tool rail groups and tools in. Short keys to short
+		//lists of short, different keys: at most 60 places, 80 keys in each, and anything else is dropped
+		for (let name of ['sectionOrder', 'toolOrder']) {
+			if (p?.[name] && typeof p[name] === 'object' && !Array.isArray(p[name])) {
+				out[name] = Object.fromEntries(
+					Object.entries(p[name])
+						.filter(([k, v]) => k.length > 0 && k.length <= 60 && k !== '__proto__' && Array.isArray(v))
+						.map(([k, v]) => [k, [...new Set(v.filter((x) => typeof x === 'string' && x.length > 0 && x.length <= 80))].slice(0, 80)])
+						.filter(([, v]) => v.length)
+						.slice(0, 60)
+				)
+			}
+		}
+		//The person's own keyboard shortcuts: command id to a short list of key combos (lib/keymap.ts). Ids and combos are
+		//plain short strings, at most 600 commands with 4 combos each (the registry has about 250: every panel, tool and action can take a key), and anything else is dropped
+		if (p?.keymap && typeof p.keymap === 'object' && !Array.isArray(p.keymap)) out.keymap = cleanKeymap(p.keymap)
+		//Keyboard shortcut sets saved under a name (lib/keymap-sets.ts): an id, a name, which built-in set they start from and
+		//the keys changed on top (same rule as keymap). At most 16, none bigger than 10 KB, ids all different. keymapActive is
+		//the id of the one the keys in use belong to
+		if (Array.isArray(p?.keymapSets)) {
+			let seen = new Set()
+			out.keymapSets = p.keymapSets
+				.filter((s) => s && typeof s === 'object' && !Array.isArray(s) && typeof s.id === 'string' && /^[\w-]{1,40}$/.test(s.id) && typeof s.name === 'string' && s.name.trim().length > 0 && s.name.length <= 60 && ['default', 'illustration'].includes(s.base) && s.keys && typeof s.keys === 'object' && !Array.isArray(s.keys))
+				.filter((s) => !seen.has(s.id) && seen.add(s.id))
+				.map((s) => ({id: s.id, name: s.name.trim(), base: s.base, keys: cleanKeymap(s.keys)}))
+				.filter((s) => JSON.stringify(s).length <= 10000)
+				.slice(0, 16)
+		}
+		if (typeof p?.keymapActive === 'string' && /^[\w-]{1,40}$/.test(p.keymapActive)) out.keymapActive = p.keymapActive
 		//What the first-run screen and the Getting started strip remember (which jobs are ticked, whether it was put away).
 		//Short keys to booleans, at most 40, same rule as the folds
 		if (p?.onboarding && typeof p.onboarding === 'object' && !Array.isArray(p.onboarding)) {
@@ -523,7 +559,7 @@ router.get('/api/prefs', async (req, res) => {
 	res.json({user, prefs: doc?.prefs || {}})
 })
 
-router.put('/api/prefs', express.json({limit: '128kb'}), async (req, res) => {
+router.put('/api/prefs', express.json({limit: '512kb'}), async (req, res) => {
 	let user = whoIs(req)?.username || 'guest',
 		clean = cleanPrefs(req.body.prefs)
 	await prefs.updateOne({_id: user}, {$set: {prefs: clean, updated: new Date()}}, {upsert: true})
@@ -2817,9 +2853,9 @@ router.post('/api/examples/:key/use', express.json({limit: '4kb'}), async (req, 
 //part of the project document, so exports, share links and the op log never see them.
 //
 //Two doors in. The editor (/api/projects/:id/comments..., the owner and power users, like every project route) and
-//the review page (/review/:token/..., anyone with the review link). A review link can allow guests: they give a
-//display name, can pin and reply, and are rate limited per address and per link. Signed in reviewers comment under
-//their own name and can resolve. Assigning and mentioning are for the people who can open the project.
+//the review page (/review/:token/..., anyone signed in who has the review link). Reviewers comment under their own
+//name and can resolve, and are rate limited per person. Assigning is for the people who can open the project.
+//Review links used to allow guests with a typed name, that option is gone and their old comments just keep the label
 //Live updates go out over a small SSE hub per project (not the editing room: reviewers aren't in it)
 const commentHubs = new Map(),
 	commentLimits = {},
@@ -2875,31 +2911,28 @@ const commentHubs = new Map(),
 
 	threadsFor = async (projectID) => commentLib.threadsOf(await commentRows.find({project: projectID}).sort({created: 1}).toArray()),
 
-	//Who is writing. Signed in is the session's word. A review guest is a name they typed, so it is only ever a label
+	//Who is writing. Signed in is the session's word
 	commentActor = (req, doc, via, body) => {
 		let me = whoIs(req),
 			manager = via === 'editor' || (!!me?.username && (me.username === doc.owner?.username || isPower(req)))
 
 		if (me?.username) {
-			return {by: {username: me.username, userID: me.userID, name: me.name || me.username}, signed: true, guest: false, manager}
+			return {by: {username: me.username, userID: me.userID, name: me.name || me.username}, signed: true, manager}
 		}
 
+		//The review page never gets here without a session (reviewProject asks first)
 		if (via === 'review') {
-			let name = commentLib.cleanName(body?.guestName)
-
-			return name ? {by: {name, guest: true}, signed: false, guest: true, manager: false} : null
+			return null
 		}
 
 		//The editor with no session at all (dev without si-manager): a label, same as the editing stream's
-		return {by: {username: null, name: commentLib.cleanName(body?.name) || 'Guest'}, signed: false, guest: false, manager: true}
+		return {by: {username: null, name: commentLib.cleanName(body?.name) || 'Guest'}, signed: false, manager: true}
 	},
 
-	sameAuthor = (row, actor) => !!actor.by.username && !actor.guest && row.by?.username === actor.by.username,
+	sameAuthor = (row, actor) => !!actor.by.username && row.by?.username === actor.by.username,
 
-	//Counts one write against the limits. Guests: their address and the link. Everyone: a generous per person ceiling
-	commentAllowed = (c) => c.actor.guest
-		? commentLimits.guestIP.hit(c.ip) && commentLimits.guestToken.hit(c.token || c.doc._id)
-		: commentLimits.person.hit(c.actor.by.username || c.ip),
+	//Counts one write against the limit, a generous per person ceiling (the address stands in for the editor with no session)
+	commentAllowed = (c) => commentLimits.person.hit(c.actor.by.username || c.ip),
 
 	//In-app notices for the people a write is about, unless they switched them off in their preferences
 	notify = async (c, thread, kind, text, mentions, assignee) => {
@@ -2955,7 +2988,7 @@ const commentHubs = new Map(),
 
 			let id = commentID(),
 				now = new Date(),
-				mentions = c.actor.guest ? [] : commentLib.cleanMentions(body.mentions),
+				mentions = commentLib.cleanMentions(body.mentions),
 				assignee = null
 
 			if (c.actor.manager && body.assignee) {
@@ -3012,7 +3045,7 @@ const commentHubs = new Map(),
 			}
 
 			let now = new Date(),
-				mentions = c.actor.guest ? [] : commentLib.cleanMentions(body.mentions)
+				mentions = commentLib.cleanMentions(body.mentions)
 
 			await commentRows.insertOne({_id: commentID(), project: c.doc._id, thread: threadID, root: false, by: c.actor.by, text, mentions, created: now})
 			await commentRows.updateOne({_id: threadID}, {$set: {updated: now}})
@@ -3042,10 +3075,6 @@ const commentHubs = new Map(),
 
 				if (!status) {
 					return {status: 400, body: {error: 'Status is open or resolved'}}
-				}
-
-				if (c.actor.guest) {
-					return {status: 403, body: {error: 'Sign in to resolve comments'}}
 				}
 
 				set.status = status
@@ -3156,7 +3185,7 @@ router.get('/api/projects/:id/comments', async (req, res) => {
 
 	let threads = await threadsFor(doc._id)
 
-	res.json({threads, people: commentLib.peopleOf(threads, doc.owner), me: commentActor(req, doc, 'editor').by, review: doc.review ? {token: doc.review.token, guests: !!doc.review.guests} : null})
+	res.json({threads, people: commentLib.peopleOf(threads, doc.owner), me: commentActor(req, doc, 'editor').by, review: doc.review ? {token: doc.review.token} : null})
 })
 
 router.get('/api/projects/:id/comments/live', async (req, res) => {
@@ -3190,7 +3219,8 @@ router.get('/api/projects/:id/review', async (req, res) => {
 	let doc = await projectFor(req, res)
 
 	if (doc) {
-		res.json({review: doc.review || null})
+		//The guests flag an old link might still carry isn't passed on, it does nothing now
+		res.json({review: doc.review ? {...doc.review, guests: undefined} : null})
 	}
 })
 
@@ -3201,10 +3231,10 @@ router.put('/api/projects/:id/review', express.json({limit: '1kb'}), async (req,
 		return
 	}
 
-	let review = {token: doc.review?.token || crypto.randomBytes(18).toString('base64url'), guests: !!req.body.guests, created: doc.review?.created || new Date(), updated: new Date(), by: whoIs(req)}
+	let review = {token: doc.review?.token || crypto.randomBytes(18).toString('base64url'), created: doc.review?.created || new Date(), updated: new Date(), by: whoIs(req)}
 
 	await projects.updateOne({_id: doc._id}, {$set: {review}})
-	audit(req, doc.review?.token ? 'review-updated' : 'review-on', doc, {guests: review.guests})
+	audit(req, doc.review?.token ? 'review-updated' : 'review-on', doc)
 	res.json({review})
 })
 
@@ -3260,11 +3290,30 @@ router.post('/api/notices/read', express.json({limit: '4kb'}), async (req, res) 
 	res.json({ok: true})
 })
 
-//The review page's side. Open to anyone with the link: a session is read if there is one (optional), and a link that
-//allows no guests wants one
-const REVIEW_TOKEN = /^[\w-]{16,64}$/
+//The review page's side. The link alone gets nobody in, it takes a signed in session as well: a StudyDesk one inside
+//StudyDesk, or the direct sign in token when the link was opened in its own tab. That one is its own tool in si-manager's
+//registry ('interactives-review', any staff member) so a reviewer doesn't need to be an Interactives beta tester, but
+//someone who already holds the editor's 'interactives' token gets in on that too. A token only resolves for the tool it
+//was issued for, so the lookups are tried in turn. The session is read here and refused in reviewProject, with a reply the
+//page knows how to read. That refusal doesn't wait for SUITE_SESSION_ENFORCE, the link on its own never opens anything
+const REVIEW_TOKEN = /^[\w-]{16,64}$/,
+	reviewTools = ['interactives-review', 'interactives'],
 
-router.use('/review', cacheHeaders.api, sessionCheck({optional: true, tool: 'interactives'}), (req, res, next) => {
+	reviewChecks = reviewTools.map((tool) => sessionCheck({optional: true, tool})),
+
+	reviewSession = async (req, res, next) => {
+		for (let check of reviewChecks) {
+			await new Promise((resolve) => check(req, res, resolve))
+
+			if (req.sessionData?.user) {
+				break
+			}
+		}
+
+		next()
+	}
+
+router.use('/review', cacheHeaders.api, reviewSession, (req, res, next) => {
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('X-Robots-Tag', 'noindex')
 	next()
@@ -3279,7 +3328,7 @@ const reviewProject = async (req, res, full) => {
 		return null
 	}
 
-	if (!doc.review.guests && !whoIs(req)?.username) {
+	if (!whoIs(req)?.username) {
 		res.status(401).json({error: 'Sign in to StudyDesk to review this project', signin: true})
 		return null
 	}
@@ -3303,7 +3352,6 @@ router.get('/review/:token', async (req, res) => {
 		name: doc.name,
 		//Reviewers are not editors: sticky notes stay with the people making the project
 		project: notesLib.stripNotes(room ? room.doc : await store.parse(doc)),
-		guests: !!doc.review.guests,
 		me: actor ? {...actor.by, manager: actor.manager} : null,
 		owner: doc.owner ? {username: doc.owner.username, name: doc.owner.name} : null,
 		threads,
@@ -3360,7 +3408,7 @@ const reviewComment = (handler) => async (req, res) => {
 	let actor = commentActor(req, doc, 'review', req.body)
 
 	if (!actor) {
-		return res.status(400).json({error: 'Tell us your name first (2 to 40 letters)'})
+		return res.status(401).json({error: 'Sign in to StudyDesk to review this project', signin: true})
 	}
 
 	reply(res, await handler({doc, actor, ip: clientIP(req), token: req.params.token}, req))
@@ -4715,8 +4763,13 @@ router.get(['/', '/index.html'], cacheHeaders.document, (req, res) => {
 })
 
 //Vite's output is content hashed, so those files can be cached hard. Everything else goes through the suite's rules
-router.use('/assets', express.static(`${__dirname}/dist/assets`, {immutable: true, maxAge: '1y'}))
-router.use(express.static(`${__dirname}/dist`, cacheHeaders.staticOptions))
+//Compressed copies of the text files (brotli, gzip) are made in the background after boot, into storage/_compressed
+//(outside git), and handed out ahead of express.static to browsers that accept them. Until a file's copy exists, or when
+//one can't be used (a Range request, an out of date copy), the plain file goes out as before
+let assetOptions = {immutable: true, maxAge: '1y'},
+	compressed = precompressed(`${__dirname}/dist`, `${storageDir}/_compressed`)
+router.use('/assets', compressed.serve(`${__dirname}/dist/assets`, assetOptions), express.static(`${__dirname}/dist/assets`, assetOptions))
+router.use(compressed.serve(`${__dirname}/dist`, cacheHeaders.staticOptions), express.static(`${__dirname}/dist`, cacheHeaders.staticOptions))
 
 //The editor routes in the browser (#/project/<id>), so anything else really is a 404
 app.use(`/${appName}`, router)
@@ -4776,9 +4829,7 @@ client.connect()
 		media = mediaMod
 		commentLib = commentsMod
 
-		//Sliding windows for review comments: a guest's address, a guest through one link, and anyone signed in
-		commentLimits.guestIP = new commentsMod.Limiter(10, 10 * 60 * 1000)
-		commentLimits.guestToken = new commentsMod.Limiter(60, 60 * 60 * 1000)
+		//Sliding window for comments, per person
 		commentLimits.person = new commentsMod.Limiter(60, 10 * 60 * 1000)
 
 		//Shared responses: how often one person may add or take back (per project), and how often they may read
@@ -4803,6 +4854,14 @@ client.connect()
 			}
 
 			console.log(`${appName} started on port: ${port} - Date: ${new Date()}`)
+
+			//Not before we are answering, and not at all with INTERACTIVES_PRECOMPRESS=0. A restart finds the copies it
+			//made last time and only does the files that changed
+			if (process.env.INTERACTIVES_PRECOMPRESS !== '0') {
+				compressed.build()
+					.then((r) => console.log(`${appName}: compressed copies ready, ${r.made} made, ${r.reused} reused, ${r.removed} cleared, ${(r.br / 1024).toFixed(0)} KB brotli in ${(r.ms / 1000).toFixed(1)} s`))
+					.catch((err) => console.warn(`${appName}: making compressed copies failed (plain files are served)`, err.message))
+			}
 		})
 	})
 	.catch((err) => {

@@ -138,14 +138,15 @@ describe('the timeline panel', () => {
     expect(text).toContain('Caption');
   });
 
-  it('"+ When the playhead reaches this…" adds the nodes and opens Interactions on the action', () => {
+  it('"+ When the playhead reaches this…" adds the nodes and opens Interactions on them', () => {
     mount();
     down(markers()[1]);
     act(() => button('+ When the playhead reaches this…')!.click());
     expect(ab().logic.nodes.map((n) => n.kind)).toEqual(['event.timelineMarker', 'action.setVariable']);
     expect(ab().logic.nodes[0].params.marker).toBe('Middle');
     expect(s.get().bottomTab).toBe('logic');
-    expect(s.get().logicSelection).toBe(ab().logic.nodes[1].id);
+    expect(s.get().logicSelection).toBe(ab().logic.nodes[0].id);
+    expect(s.get().logicPicked).toEqual(ab().logic.nodes.map((n) => n.id));
   });
 
   it('Delete removes the focused marker, arrow keys nudge it, Shift is bigger', () => {

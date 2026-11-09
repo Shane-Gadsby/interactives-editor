@@ -1,5 +1,5 @@
 //The comment pieces on screen: the panel and its filters, a conversation (resolve, assign, reply, @ mentions), the
-//new comment box, a guest being asked for a name, and the pin on the canvas not being in the preview.
+//new comment box, a reviewer on the review page, and the pin on the canvas not being in the preview.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -214,31 +214,26 @@ describe('a conversation', () => {
   });
 });
 
-describe('a guest on the review page', () => {
-  it('is asked for a name, which stays in its box while typed, and cannot send without one', async () => {
-    await start(null, [t('cm1', 1)], 'review');
+describe('a reviewer on the review page', () => {
+  it('has no name box, is named by the session, and can mention people and reply', async () => {
+    await start({ username: 'cat', name: 'Cat' }, [t('cm1', 1)], 'review');
     await render(<ThreadCard thread={comments.get().threads[0]} where="Main" />);
-    expect(host.querySelector('button[aria-label="Delete"]')).toBeNull();
-    expect(buttons('Resolve')).toHaveLength(0);
-    const name = host.querySelector('.cm-name input') as HTMLInputElement;
+    expect(host.querySelector('.cm-name')).toBeNull();
+    expect(host.querySelector('.cm-composer input[type="text"]')).toBeNull();
     const box = host.querySelector('.cm-composer textarea') as HTMLTextAreaElement;
+    expect(box.placeholder).toMatch(/mention/);
+    await type(box, 'Hi @bo');
+    expect(host.querySelector('.cm-people')).not.toBeNull();
     await type(box, 'A note');
-    expect((buttons('Reply')[0] as HTMLButtonElement).disabled).toBe(true);
-    await type(name, 'D');
-    await type(name, 'Dr Nair');
-    expect(host.querySelector('.cm-name input')).toBe(name);
-    expect(comments.get().guestName).toBe('Dr Nair');
     expect((buttons('Reply')[0] as HTMLButtonElement).disabled).toBe(false);
-    localStorage.removeItem('ix-review-name');
+    expect(buttons('Resolve').length).toBeGreaterThan(0);
   });
 
-  it('cannot mention anybody', async () => {
-    await start(null, [t('cm1', 1)], 'review');
+  it('still sees a guest comment from before, labelled as one', async () => {
+    const old = t('cm1', 1, { comments: [{ id: 'cm1', by: { name: 'Zed', guest: true }, text: 'From before', mentions: [], created: new Date().toISOString(), edited: null }] });
+    await start({ username: 'cat', name: 'Cat' }, [old], 'review');
     await render(<ThreadCard thread={comments.get().threads[0]} where="Main" />);
-    const box = host.querySelector('.cm-composer textarea') as HTMLTextAreaElement;
-    await type(box, 'Hi @bo');
-    expect(host.querySelector('.cm-people')).toBeNull();
-    expect(box.placeholder).not.toMatch(/mention/);
+    expect(host.textContent).toContain('Zed (guest)');
   });
 });
 

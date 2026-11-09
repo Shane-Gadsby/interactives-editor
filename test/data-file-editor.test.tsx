@@ -1,5 +1,5 @@
 //The Data tab's file editor: raw text, table and tree, saving as a new version of the uploaded file, undo, shared files and URL sources.
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, beforeAll } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { EditorView } from 'codemirror';
@@ -44,6 +44,10 @@ vi.mock('../src/lib/db', async (orig) => ({
 import { DataPanel } from '../src/panels/DataPanel';
 import { dataCache } from '../src/lib/data';
 import { assetUrls } from '../src/lib/assets';
+import { warmCode } from './lazy-chunks';
+
+//the editor loads these in chunks of their own; the test starts with them in
+beforeAll(() => warmCode());
 
 //CodeMirror measures text with ranges, which jsdom doesn't lay out
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -107,7 +111,8 @@ function project(files: { name: string; mime: string; text: string; kind: 'json'
   });
   return p;
 }
-async function mount(p: Project) {
+//JSON opens as a form; the tests of the tree and table go to them first, and the form's own tests ask for it
+async function mount(p: Project, view: 'gui' | 'form' = 'gui') {
   s = new EditorStore(p);
   setCurrentStore(s);
   host = document.createElement('div');
@@ -115,6 +120,11 @@ async function mount(p: Project) {
   root = createRoot(host);
   await act(async () => root.render(<DataPanel />));
   await settle();
+  if (view === 'gui') {
+    const go = button('Tree') ?? button('Table');
+    if (go && go.getAttribute('aria-pressed') === 'false') await click(go);
+    await settle();
+  }
 }
 
 beforeEach(() => {

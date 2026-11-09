@@ -312,11 +312,23 @@ export function buildBehaviour(ctx: RecipeCtx, recipeId: string, trigger: Trigge
   return { nodes: [event, action], edges, variables, patches, eventId: event.id, actionId: action.id, sentence: flowSentence(buildFlow(event, { ab: shown, project, self: ctx.layerId })) };
 }
 
-/** Write a behaviour into the artboard: its nodes, edges, variables and layer settings, all in the one `update` (one undo step). */
-export function applyBehaviour(update: (recipe: (d: Project) => void) => void, abId: string, b: Behaviour): void {
+/** What `applyBehaviour` made, so the graph knows what to frame. */
+export interface BehaviourWritten {
+  /** Every node written, event first. Empty when the page was gone. */
+  nodeIds: string[];
+  eventId: string;
+  actionId: string;
+  /** Variables created for it (a new counter or switch). */
+  variableIds: string[];
+}
+
+/** Write a behaviour into the artboard: its nodes, edges, variables and layer settings, all in the one `update` (one undo step). Says what it wrote. */
+export function applyBehaviour(update: (recipe: (d: Project) => void) => void, abId: string, b: Behaviour): BehaviourWritten {
+  let wrote = false;
   update((d) => {
     const ab = d.artboards.find((x) => x.id === abId);
     if (!ab) return;
+    wrote = true;
     for (const v of b.variables) d.variables.push(v);
     ab.logic.nodes.push(...b.nodes);
     ab.logic.edges.push(...b.edges);
@@ -326,4 +338,5 @@ export function applyBehaviour(update: (recipe: (d: Project) => void) => void, a
       });
     }
   });
+  return { nodeIds: wrote ? b.nodes.map((n) => n.id) : [], eventId: b.eventId, actionId: b.actionId, variableIds: wrote ? b.variables.map((v) => v.id) : [] };
 }

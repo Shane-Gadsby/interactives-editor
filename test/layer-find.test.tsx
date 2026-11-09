@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { createNode, createProject, type Artboard, type SceneNode } from 'interactives-player';
+import { createArtboard, createNode, createProject, type Artboard, type SceneNode } from 'interactives-player';
 import { EditorStore, setCurrentStore } from '../src/store/store';
 import { LeftPanel } from '../src/panels/LeftPanel';
+import { fitPageSelectionItems } from '../src/lib/artboard-commands';
 import { filterLayers, referenceFill, referenceFont, sameFill, sameFont, selectSameItems } from '../src/lib/layer-find';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -150,5 +151,30 @@ describe('Layers panel filter', () => {
     const font = [...document.querySelectorAll('.ctx-menu button')].find((b) => b.textContent?.includes('Select same font')) as HTMLElement;
     act(() => void font.click());
     expect(s.get().selection.length).toBe(3);
+  });
+
+  it('right-click on a row offers Fit page to selection and acts on the picked layers', () => {
+    const hero = [...host.querySelectorAll('.layer-row')].find((r) => r.textContent?.includes('Hero')) as HTMLElement;
+    act(() => void hero.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 })));
+    const items = () => [...document.querySelectorAll('.ctx-menu button')] as HTMLElement[];
+    const labels = items().map((b) => b.textContent);
+    expect(labels.some((l) => l?.includes('Fit page to selection'))).toBe(true);
+    expect(labels.some((l) => l?.includes('Fit page to selection with space around'))).toBe(true);
+    //Fit sits above the Select same items
+    expect(labels.findIndex((l) => l?.includes('Fit page to selection'))).toBeLessThan(labels.findIndex((l) => l?.includes('Select same fill')));
+    const before = { w: s.get().project.artboards[0].width, h: s.get().project.artboards[0].height };
+    const fit = items().find((b) => b.textContent?.trim().startsWith('Fit page to selection') && !b.textContent?.includes('space around'))!;
+    act(() => void fit.click());
+    expect(s.get().selection).toEqual([ids.hero]);
+    const ab = s.get().project.artboards[0];
+    expect(ab.width !== before.w || ab.height !== before.h).toBe(true);
+  });
+
+  it('the shared Fit items are left out when layers are picked on several pages', () => {
+    expect(fitPageSelectionItems().length).toBe(2);
+    const two = createArtboard({ name: 'Two', width: 400, height: 300, canvasX: 1000, canvasY: 0 });
+    act(() => s.update((d) => void d.artboards.push(two)));
+    act(() => s.pickArtboards([s.get().project.artboards[0].id, two.id]));
+    expect(fitPageSelectionItems()).toEqual([]);
   });
 });

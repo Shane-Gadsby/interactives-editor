@@ -2,6 +2,7 @@ import { pairingReport, setMembers, type Artboard, type Project } from 'interact
 import { store } from '../store/store';
 import { NumberField, Row, Section, SelectField } from '../components/ui';
 import { rangeLabel } from '../lib/variants-edit';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /**
  * The artboard's Responsive settings: the set it is in (one artboard per width range), the width each is shown from, adding a
@@ -18,7 +19,7 @@ export function VariantsSection({ ab, project }: { ab: Artboard; project: Projec
   if (!inSet) {
     return (
       <Section help="responsive" title="Responsive" defaultOpen={false}>
-        <p className="hint">Show a different arrangement of this artboard when the page is narrower or wider. Each variant is a whole artboard of its own; the player picks the one that fits and keeps the viewer&rsquo;s variables, timelines and changes when it switches.</p>
+        <SectionBlurb text="Show a different arrangement of this artboard when the page is narrower or wider." name="Responsive" help={['responsive', 'how-a-set-works']} />
         <Row k="Add variants" words={['responsive', 'narrow variant', 'wide variant', 'phone', 'mobile', 'breakpoint']}>
           <button className="btn" title="Copy this artboard as a phone-sized variant (360 px). It is shown when the page is narrower than this artboard's breakpoint" onClick={() => store().addVariant(ab.id, 'narrower')}>
             Add narrow variant
@@ -43,9 +44,7 @@ export function VariantsSection({ ab, project }: { ab: Artboard; project: Projec
   const others = members.filter((m) => m !== ab);
   return (
     <Section help="responsive" title="Responsive">
-      <p className="hint">
-        {base.name} and its variants. The page shows the one whose width range fits the box it is in, and switches as the box is resized.
-      </p>
+      <SectionBlurb text={`${base.name} and its variants. The page shows the one whose width range fits the box it is in.`} name="Responsive" help={['responsive', 'what-carries-when-it-switches']} />
       <ul className="variant-list" aria-label="Artboards in this set">
         {members.map((m) => (
           <li key={m.id} className={m === ab ? 'current' : undefined}>

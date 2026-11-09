@@ -8,6 +8,7 @@ import {
   createArtboard,
   frameTime,
   sampleKeys,
+  holdsText,
   cloneWithNewIds,
   remapConnectorIds,
   getPath,
@@ -21,6 +22,7 @@ import {
   nodeRuns,
   retextRuns,
   sanitizeLayerInPlace,
+  migrateProjectGuides,
   setBase,
   setMembers,
   masterOf,
@@ -66,6 +68,8 @@ function hasAutoLayout(list: SceneNode[]): boolean {
 // Per artboard object (immer shares the ones a change didn't touch, so this is only worked out again for what changed)
 const layoutFlag = new WeakMap<object, boolean>();
 const fitChecked = new WeakSet<object>();
+// Artboards already laid out (a second layout changes nothing, so the same object never needs another one)
+const layoutSettled = new WeakSet<object>();
 
 /** Groups that size to their contents (fit-groups.ts), before auto layout so frames lay out the groups' real sizes. */
 function settleGroups(project: Project): Project {
@@ -90,14 +94,17 @@ function settleLayout(project: Project, fitGroups = false): Project {
   if (fitGroups) project = settleGroups(project);
   const withLayout = new Set<string>();
   for (const ab of project.artboards) {
+    if (layoutSettled.has(ab)) continue;
     let has = layoutFlag.get(ab);
     if (has === undefined) layoutFlag.set(ab, (has = hasAutoLayout(ab.children)));
     if (has) withLayout.add(ab.id);
   }
   if (!withLayout.size) return project;
-  return produce(project, (d) => {
+  const next = produce(project, (d) => {
     for (const ab of d.artboards) if (withLayout.has(ab.id)) relayoutTree(ab.children as SceneNode[]);
   });
+  for (const ab of next.artboards) layoutSettled.add(ab);
+  return next;
 }
 
 /**
@@ -258,12 +265,16 @@ export interface ToastAction {
   stale?: boolean;
 }
 export interface Toast {
+  /** Which message this is, so its timer still clears it after the Undo button goes stale (a new object). */
+  id?: number;
   text: string;
   kind: 'info' | 'error';
   action?: ToastAction;
 }
 
 type Listener = () => void;
+
+let toastSeq = 0;
 
 const HISTORY_LIMIT = 200;
 /** Remote batches kept for undo steps that have not caught up with them yet; past this they are all caught up at once. */
@@ -295,7 +306,7 @@ export class EditorStore {
   constructor(project: Project) {
     // Lay out auto-layout frames once on open, so the first edit (and its undo) starts from settled positions.
     // (an unchanged produce still freezes the document, so a stray in-place edit throws instead of corrupting history)
-    this.state = EditorStore.initial(settleLayout(lockBrandChrome(produce(project, () => undefined))));
+    this.state = EditorStore.initial(settleLayout(lockBrandChrome(produce(project, (d) => void migrateProjectGuides(d)))));
   }
 
   static initial(project: Project): EditorState {
@@ -496,7 +507,7 @@ export class EditorStore {
     this.remoteLog = [];
     this.remoteBase = this.remoteTotal;
     this.lastCoalesce = null;
-    this.state = { ...this.state, project: p, saveState: 'saved' };
+    this.state = { ...this.state, project: 'guides' in p ? produce(p, (d) => void migrateProjectGuides(d)) : p, saveState: 'saved' };
     this.sanitize();
     this.emit();
   }
@@ -601,10 +612,10 @@ export class EditorStore {
   }
 
   toast(text: string, kind: 'info' | 'error' = 'info', action?: ToastAction): void {
-    this.set({ toast: { text, kind, action } });
-    const current = this.state.toast;
+    const id = ++toastSeq;
+    this.set({ toast: { id, text, kind, action } });
     setTimeout(() => {
-      if (this.state.toast === current) this.set({ toast: null });
+      if (this.state.toast?.id === id) this.set({ toast: null });
     }, kind === 'error' ? 6000 : action ? 9000 : 2500);
   }
 
@@ -828,17 +839,30 @@ export class EditorStore {
   /**
    * Resize the artboard to the bounds of the selected layers, keeping everything where it is on the canvas: the artboard moves
    * to the selection's corner, its top-level layers (and their x/y keyframes) shift by the same amount the other way. Only for
-   * a selection on one artboard (a layer selection always is; with several artboards picked it does nothing).
+   * a selection on one artboard (a layer selection always is; with several artboards picked it does nothing). `padding` leaves
+   * that many pixels of space around the layers.
    */
-  fitArtboardToSelection(): boolean {
+  fitArtboardToSelection(opts: { padding?: number } = {}): boolean {
     const ab = this.artboard();
     if (!ab || !this.state.selection.length || pickedArtboardIds(this.state).length > 1) return false;
-    const b = selectionBounds(ab, topmost(ab, this.state.selection));
+    return this.fitArtboardTo(ab, topmost(ab, this.state.selection), opts.padding ?? 0);
+  }
+
+  /** The same, to every layer on the open page (shrink-wrap the page), for when nothing is selected. */
+  fitArtboardToLayers(opts: { padding?: number } = {}): boolean {
+    const ab = this.artboard();
+    if (!ab || !ab.children.length) return false;
+    return this.fitArtboardTo(ab, ab.children.map((n) => n.id), opts.padding ?? 0);
+  }
+
+  private fitArtboardTo(ab: Artboard, ids: string[], padding: number): boolean {
+    const b = selectionBounds(ab, ids);
     if (!b || b.width < 1 || b.height < 1) return false;
-    const x0 = Math.floor(b.x);
-    const y0 = Math.floor(b.y);
-    const w = Math.ceil(b.x + b.width) - x0;
-    const h = Math.ceil(b.y + b.height) - y0;
+    const pad = Math.max(0, Math.round(padding) || 0);
+    const x0 = Math.floor(b.x) - pad;
+    const y0 = Math.floor(b.y) - pad;
+    const w = Math.ceil(b.x + b.width) - x0 + pad;
+    const h = Math.ceil(b.y + b.height) - y0 + pad;
     if (!x0 && !y0 && w === ab.width && h === ab.height) return false;
     track('doc', 'fit-artboard');
     this.update((d) => {
@@ -1050,6 +1074,33 @@ export class EditorStore {
       if (loc.siblings === list && loc.index < index) at--;
       list.splice(Math.max(0, Math.min(list.length, at)), 0, n);
     });
+  }
+
+  /** Alt-drag in the Layers list: a copy of the layer lands in the drop spot (the same arguments as `moveNode`) and the original stays. */
+  copyNodeTo(id: string, parentId: string | null, index: number): string | null {
+    const ab = this.artboard();
+    if (!ab) return null;
+    track('doc', 'duplicate', { thing: 'layers-drag' });
+    let made: string | null = null;
+    this.update((d) => {
+      const dab = getArtboard(d as Project, ab.id)!;
+      const loc = locate(dab, id);
+      if (!loc) return;
+      if (parentId && (parentId === id || locate(dab, parentId)?.ancestors.some((a) => a.id === id))) return; // a group can't be copied into itself
+      const oldOffset = loc.ancestors.reduce((o, a) => ({ x: o.x + a.x, y: o.y + a.y }), { x: 0, y: 0 });
+      const target = parentId ? locate(dab, parentId) : null;
+      const list = target && isContainer(target.node) ? target.node.children : dab.children;
+      const newOffset = target ? [...target.ancestors, target.node].reduce((o, a) => ({ x: o.x + a.x, y: o.y + a.y }), { x: 0, y: 0 }) : { x: 0, y: 0 };
+      const copy = cloneWithNewIds(JSON.parse(JSON.stringify(loc.node)) as SceneNode);
+      copy.x += oldOffset.x - newOffset.x;
+      copy.y += oldOffset.y - newOffset.y;
+      copy.name = uniqueName(nodeNames(dab), loc.node.name);
+      list.splice(Math.max(0, Math.min(list.length, index)), 0, copy);
+      made = copy.id;
+      adoptQuestions(d as Project, ab.id, [copy.id]);
+    });
+    if (made) this.select([made]);
+    return made;
   }
 
   /**
@@ -1468,12 +1519,13 @@ export class EditorStore {
   /**
    * Duplicate several artboards in one undo step. The copies keep their layout among themselves and sit to the right of the
    * originals; they are selected afterwards. A copy joins the group of its original, except when a whole group is duplicated:
-   * then the copies are a new group of their own ("Quiz copy").
+   * then the copies are a new group of their own ("Quiz copy"). Answers with each original's id and its copy's, `inPlace`
+   * leaves the copies on top of the originals (Alt-drag then carries them away).
    */
-  duplicateArtboards(ids: string[]): void {
+  duplicateArtboards(ids: string[], opts: { inPlace?: boolean } = {}): Map<string, string> {
     const p = this.state.project;
     const srcs = p.artboards.filter((a) => ids.includes(a.id));
-    if (!srcs.length || srcs.some((a) => this.brandCopyRefused(a))) return;
+    if (!srcs.length || srcs.some((a) => this.brandCopyRefused(a))) return new Map();
     track('doc', 'artboard-duplicate', { sum: { artboards: srcs.length } });
     const copies = srcs.map((a) => ({ src: a, copy: this.copyArtboard(a) }));
     if (srcs.length > 1) {
@@ -1491,6 +1543,13 @@ export class EditorStore {
         taken.add(c.copy.name);
       }
     }
+    //an Alt-drag copy starts under the original and the drag carries it away
+    if (opts.inPlace) {
+      for (const c of copies) {
+        c.copy.canvasX = c.src.canvasX;
+        c.copy.canvasY = c.src.canvasY;
+      }
+    }
     //a group copied whole becomes a group of copies
     const wholeGroups = (p.artboardGroups ?? []).filter((g) => p.artboards.filter((a) => a.group === g.id).every((a) => ids.includes(a.id)) && srcs.some((a) => a.group === g.id));
     const fresh = new Map(wholeGroups.map((g) => [g.id, { id: uid('abg'), name: freshGroupName(p, `${g.name} copy`) }]));
@@ -1505,6 +1564,7 @@ export class EditorStore {
       }
     });
     this.pickArtboards(copies.map((c) => c.copy.id));
+    return new Map(copies.map((c) => [c.src.id, c.copy.id]));
   }
 
   /** A copy of an artboard with new ids all through (layers, timelines, joysticks, blends and the interactions that point at them), next to it on the canvas. Not added to the project. */
@@ -1621,7 +1681,7 @@ export class EditorStore {
 
   // ---------------------------------------------------------------- timelines
 
-  addTimeline(): string {
+  addTimeline(name = 'Timeline'): string {
     track('feature', 'timeline-add');
     const ab = this.artboard();
     if (!ab) return '';
@@ -1629,7 +1689,7 @@ export class EditorStore {
       id: uid('tl'),
       name: uniqueName(
         ab.timelines.map((t) => t.name),
-        'Timeline',
+        name,
       ),
       duration: 1000,
       loop: 'once',
@@ -1642,6 +1702,72 @@ export class EditorStore {
     });
     this.set({ activeTimelineId: tl.id, playhead: 0, bottomTab: 'timeline' });
     return tl.id;
+  }
+
+  /** Rename a timeline of the open artboard. Empty names and names another timeline has are refused (returns false). */
+  renameTimeline(id: string, name: string): boolean {
+    const ab = this.artboard();
+    const clean = name.trim();
+    if (!ab || !clean) return false;
+    if (ab.timelines.some((t) => t.id !== id && t.name === clean)) return false;
+    const tl = ab.timelines.find((t) => t.id === id);
+    if (!tl) return false;
+    if (tl.name === clean) return true;
+    track('feature', 'timeline-rename');
+    this.update((d) => {
+      const t = getArtboard(d as Project, ab.id)?.timelines.find((x) => x.id === id);
+      if (t) t.name = clean;
+    });
+    return true;
+  }
+
+  /** Move a timeline to a place in the open artboard's list (the order is what "after the timelines that play before it" means for held poses). */
+  moveTimeline(id: string, to: number): void {
+    const ab = this.artboard();
+    const from = ab?.timelines.findIndex((t) => t.id === id) ?? -1;
+    if (!ab || from < 0) return;
+    const at = Math.max(0, Math.min(ab.timelines.length - 1, to));
+    if (at === from) return;
+    track('feature', 'timeline-reorder');
+    this.update((d) => {
+      const list = getArtboard(d as Project, ab.id)!.timelines;
+      const [t] = list.splice(from, 1);
+      list.splice(at, 0, t);
+    });
+  }
+
+  /** A copy of a timeline right after it, with new ids, named "<name> copy", not set to autoplay (so the two don't both start). Returns the copy's id. */
+  duplicateTimeline(id: string): string {
+    const ab = this.artboard();
+    const src = ab?.timelines.find((t) => t.id === id);
+    if (!ab || !src) return '';
+    track('feature', 'timeline-duplicate');
+    const copy = JSON.parse(JSON.stringify(src)) as Timeline;
+    copy.id = uid('tl');
+    copy.name = uniqueName(
+      ab.timelines.map((t) => t.name),
+      `${src.name} copy`,
+    );
+    copy.autoplay = false;
+    for (const tr of copy.tracks) tr.id = uid('tr');
+    for (const m of copy.markers ?? []) m.id = uid('mk');
+    this.update((d) => {
+      const list = getArtboard(d as Project, ab.id)!.timelines;
+      list.splice(list.findIndex((t) => t.id === id) + 1, 0, copy);
+    });
+    this.set({ activeTimelineId: copy.id, playhead: 0, selectedKeys: [] });
+    return copy.id;
+  }
+
+  /** Delete a timeline of the open artboard. Things that played it by name or id are left to the Usage tab to flag. */
+  deleteTimeline(id: string): void {
+    const ab = this.artboard();
+    if (!ab?.timelines.some((t) => t.id === id)) return;
+    track('feature', 'timeline-delete');
+    this.update((d) => {
+      const a = getArtboard(d as Project, ab.id);
+      if (a) a.timelines = a.timelines.filter((t) => t.id !== id);
+    });
   }
 
   updateTimeline(fn: (tl: Draft<Timeline>) => void, coalesce?: string): void {
@@ -1908,7 +2034,7 @@ export function keyTime(tl: Pick<Timeline, 'duration' | 'fps' | 'snap'>, t: numb
 /** A layer property's value at time t of a timeline: its track's value there when the timeline animates it, otherwise the layer's own. */
 export function valueAt(tl: Timeline | undefined, node: SceneNode, prop: string, t: number): unknown {
   const track = tl?.tracks.find((x) => x.nodeId === node.id && x.prop === prop);
-  return track?.keys.length ? sampleKeys(track.keys, frameTime(tl!, t)) : getPath(node, prop);
+  return track?.keys.length ? sampleKeys(track.keys, frameTime(tl!, t), holdsText(prop, node)) : getPath(node, prop);
 }
 
 /** Set a keyframe value at time t (within 1ms an existing key is replaced). Keys made at the playhead pass keyTime(tl, playhead). */

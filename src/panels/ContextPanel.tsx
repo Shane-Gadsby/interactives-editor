@@ -2,6 +2,7 @@ import { CONTEXT_FIELDS, courseMatches, sampleContextFor, uid, type ContextValue
 import { store, useEditor } from '../store/store';
 import { Icons } from '../components/icons';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /** The built-in data source's entry in the Data panel's list. */
 export const CONTEXT_ID = '__context';
@@ -36,10 +37,7 @@ export function ContextPanel() {
         <h3>
           <code>context</code> <span className="badge">built in, read only</span>
         </h3>
-        <p className="hint">
-          The course and the person playing, ready to use by name in bindings, text slots (<code>{'{context.firstName}'}</code>), the interaction graph and scripts (<code>ix.context</code>). On the Link for StudyDesk page it is
-          filled in from the signed in session. Anywhere else, such as a plain export or a share link outside StudyDesk, the text is empty and the flags are false.
-        </p>
+        <SectionBlurb text="The course and the person playing, to use by name in text, bindings and scripts. Only filled in on the StudyDesk link." name="context" help={['course-context', 'where-the-values-come-from']} />
         {clash && <p className="error small">A variable named context hides this one in expressions.</p>}
         <table className="var-table context-table">
           <thead>
@@ -69,18 +67,12 @@ export function ContextPanel() {
             ))}
           </tbody>
         </table>
-        <p className="hint">
-          Sample values are for designing. The canvas and Preview use them, so you can see a greeting or a due date as a learner in that course would. Nothing about a learner goes into results or analytics.
-        </p>
+        <SectionBlurb text="Sample values are for designing: the canvas and Preview use them. Learners never see them." name="sample values" help={['course-context', 'where-the-values-come-from']} />
       </div>
 
       <div className="context-block">
         <h3>Per-course values</h3>
-        <p className="hint">
-          One project for several courses. When the course label matches a row, its variables start with the values given here instead of their own initial ones. Use <code>*</code> for any run of characters and{' '}
-          <code>?</code> for one, and commas to give several: <code>MAT1000_*</code> or <code>MAT1000_26S1_ONC, MAT1001_26S1_ONC</code>. Every matching row applies, top to bottom, and a later row wins where two set the same variable.
-          Remembered progress comes after these, so a learner's own saved value still wins. The sample course above decides which rows show as matching here and in Preview.
-        </p>
+        <SectionBlurb text="One project for several courses: a row whose course label matches sets its variables' starting values." name="per-course values" help={['course-context', 'per-course-values']} />
         {(s.rows ?? []).map((r) => (
           <CourseRow key={r.id} row={r} variables={s.variables} matches={courseMatches(r.match, shown.courseLabel)} setRows={setRows} />
         ))}

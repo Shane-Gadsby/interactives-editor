@@ -95,7 +95,7 @@ export function CommentsPanel({ project, onJump, hint }: { project: Project | nu
             : c.threads.length
               ? 'No comments match these filters.'
               : hint
-                ? 'No comments yet. Press C, then click anywhere on the canvas to leave one. Share the review link from Share to collect comments from other people.'
+                ? 'No comments yet. Press C, then click the canvas to leave one. Share the review link to hear from others.'
                 : 'No comments yet. Click Comment, then click on the project where you want to say something.'}
         </p>
       )}

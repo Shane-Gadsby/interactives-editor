@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PrefsHost } from './components/PrefsModal';
 import { Home } from './Home';
 import { UsagePage } from './UsagePage';
 import { AdminPage } from './AdminPage';
@@ -12,6 +13,8 @@ import { sessionUser } from './lib/session';
 import { installStaleBuildNotice } from './lib/stale-build';
 import { installAnalytics, track } from './lib/analytics';
 import { rememberLeft } from './lib/home-return';
+import { KEYS_ROUTE } from './lib/keymap-sets';
+import { offerImport } from './lib/prefs-window';
 import { loadUserPrefs } from './lib/prefs'; // importing applies the cached theme before the first paint
 
 type Route = { page: 'home' } | { page: 'usage' } | { page: 'admin' } | { page: 'review'; token: string } | { page: 'editor'; id: string } | { page: 'help'; id: string; anchor?: string };
@@ -44,13 +47,26 @@ export function App() {
     else if (route.page === 'help') track('help', 'page', { thing: /^[\w-]{1,40}$/.test(route.id) ? route.id : 'other' });
   }, [route.page, route.page === 'help' ? route.id : '']);
   useEffect(() => {
-    const on = () =>
+    //A share link for a set of keys (#/keys/<code>) is not a page: it is offered in Preferences and the address goes back to where the person was
+    let lastHash = KEYS_ROUTE.test(location.hash) ? '#/' : location.hash;
+    const keys = () => {
+      const m = KEYS_ROUTE.exec(location.hash);
+      if (!m) return false;
+      offerImport(m[1]);
+      history.replaceState(null, '', lastHash || '#/');
+      return true;
+    };
+    keys();
+    const on = () => {
+      if (keys()) return;
+      lastHash = location.hash;
       setRoute((was) => {
         const next = parse();
         //leaving a project for the list by any road (Home button, browser Back) remembers which one
         if (was.page === 'editor' && next.page === 'home') rememberLeft(was.id);
         return next;
       });
+    };
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
@@ -70,6 +86,7 @@ export function App() {
         <Home open={(id) => (location.hash = `#/p/${id}`)} />
       )}
       <HelpHost />
+      <PrefsHost />
       <DialogHost />
       <BehaviourHost />
     </>

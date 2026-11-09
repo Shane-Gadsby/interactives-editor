@@ -213,7 +213,8 @@ describe('games, story and writing after the sweep', () => {
       const p = build('writing/questionnaire');
       expect((layer(p, 'Survey', 'Rating scale') as unknown as { keyNav: { mode: string } }).keyNav.mode).toBe('radio');
       expect((layer(p, 'Survey', 'Place choices') as unknown as { keyNav: { mode: string } }).keyNav.mode).toBe('radio');
-      expect(kinds(p, 'event.pointer').filter((n) => n.params.type === 'click')).toHaveLength(6);
+      //(the survey's own, and the Credits button every starter has)
+      expect(kinds(p, 'event.pointer').filter((n) => n.params.type === 'click')).toHaveLength(7);
       expect(p.variables.find((v) => v.name === 'ready')).toMatchObject({ live: true });
       expect(kinds(p, 'action.artboard').filter((n) => n.params.to === 'expression')).toHaveLength(1);
       expect(byName(board(p, 'Survey'), 'Save for later button')).toBeUndefined();

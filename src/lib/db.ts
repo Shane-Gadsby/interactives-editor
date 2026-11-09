@@ -9,6 +9,7 @@
 import type { LibraryContent, LibraryInfo } from './libraries';
 import type { TemplateInfo } from './templates';
 import { reportError, routePattern, track } from './analytics';
+import { fetchOrEarly } from './early-fetch';
 import { normalizeProject, readPackage, uid, writePackage, type Asset, type Project } from 'interactives-player';
 
 export interface ProjectMeta {
@@ -82,7 +83,8 @@ async function call<T>(path: string, init: RequestInit = {}, as?: 'blob'): Promi
   const method = (init.method ?? 'GET').toUpperCase();
   const route = routePattern(path).slice(0, 46);
   try {
-    res = await fetch(API + path, { credentials: 'same-origin', ...init });
+    //the first read of the open project was started by index.html before the bundle arrived (lib/early-fetch.ts)
+    res = await (method === 'GET' && !init.body ? fetchOrEarly(API + path, { credentials: 'same-origin', ...init }) : fetch(API + path, { credentials: 'same-origin', ...init }));
   } catch (err) {
     reportError({ kind: 'api', error: err, where: route, detail: { method, status: 0 } });
     throw new ApiError('Could not reach the Interactives server', 0);
@@ -140,8 +142,35 @@ export async function loadProjectRecord(id: string): Promise<Project | null> {
   }
 }
 
+/** Under this the gzip header and the extra step cost about what they save. */
+const GZIP_FROM = 4096;
+/** Cleared for the session when the browser has no CompressionStream or the server (or a proxy on the way) says 415. */
+let gzipSaves = typeof CompressionStream !== 'undefined';
+
+/** A whole project is mostly repeated key names, so it shrinks to a tenth or less. Null when it can't be done here. */
+async function gzipText(text: string): Promise<Blob | null> {
+  if (!gzipSaves) return null;
+  try {
+    return await new Response(new Response(text).body!.pipeThrough(new CompressionStream('gzip'))).blob();
+  } catch {
+    gzipSaves = false;
+    return null;
+  }
+}
+
 export async function saveProject(p: Project, opts: { force?: boolean } = {}): Promise<void> {
-  const r = await call<{ rev: number }>(`projects/${encodeURIComponent(p.id)}`, json({ project: p, rev: revs.get(p.id) ?? 0, force: opts.force }));
+  const path = `projects/${encodeURIComponent(p.id)}`;
+  const text = JSON.stringify({ project: p, rev: revs.get(p.id) ?? 0, force: opts.force });
+  const packed = text.length >= GZIP_FROM ? await gzipText(text) : null;
+  let r: { rev: number };
+  try {
+    r = await call<{ rev: number }>(path, packed ? { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' }, body: packed } : { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: text });
+  } catch (err) {
+    // A server or proxy that won't take an encoded body: say it once, then send plain from here on
+    if (!(packed && err instanceof ApiError && err.status === 415)) throw err;
+    gzipSaves = false;
+    r = await call<{ rev: number }>(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: text });
+  }
   revs.set(p.id, r.rev);
 }
 

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, beforeAll } from 'vitest';
 import { nodeHeading, nodeLabel } from '../src/lib/plain-words';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -8,6 +8,10 @@ import { EditorStore, setCurrentStore } from '../src/store/store';
 import { DockZone, currentHelpTarget, openHeaderHelp, trackPanelFocus, useDockSync, useHeaderHelpTitle } from '../src/components/Dock';
 import { closeHelp, helpHistory, HelpHost } from '../src/help/Help';
 import { DialogHost } from '../src/components/dialogs';
+import { warmHelp } from './lazy-chunks';
+
+//the editor loads these in chunks of their own; the test starts with them in
+beforeAll(() => warmHelp());
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class {

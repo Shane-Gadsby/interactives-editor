@@ -1,8 +1,10 @@
 /* The editor's own colours, from the shared StudyDesk palette (/styles/palette.min.css, loaded in index.html) so it
-   looks like the rest of the toolbox: its greys, its blue for focus and selection, and its gold kept for a few touches
-   (primary buttons, the open tab, the line under the top bar). Each falls back to the same colour written out, for a
+   looks like the rest of the toolbox: its greys and its gold, which is also every focus ring, chosen state and selection
+   (the old blue is gone: --accent and --accent-2 no longer exist, test/no-old-blue.test.ts keeps them that way). Each falls back to the same colour written out, for a
    server without the palette. Dark mixes the palette's darkest greys, since it has no dark panel colours of its own */
 :root {
+  /* ruler guides: one colour, dashed */
+  --guide: #ff4fa3;
   --u-gold: var(--ilar-swatch-yellow, #ffb448);
   --u-gold-dark: var(--ilar-swatch-yellow-dark, #fb9400);
   --u-gold-darker: var(--ilar-swatch-yellow-darker, #b36b03);
@@ -31,15 +33,28 @@
   --line-2: color-mix(in srgb, var(--u-g6) 80%, var(--u-g7));
   --text: var(--u-g1);
   --muted: var(--u-g4);
-  /* The palette blue in both themes: it sits under white text in menus, chips and toggles all over */
-  --accent: var(--u-blue);
-  --accent-2: var(--u-blue);
+  /* Keyboard focus: the palette gold, with a thin dark edge either side of it so the ring keeps 3:1 on white panels, gold
+     rows and dark panels alike (the way the player draws its own). --focus-halo only suits the 1px offset, so a rule that
+     moves the ring in or out sets its own. --focus-inset is the same ring for the ones drawn inside a row */
+  --focus-ring: var(--u-gold);
+  --focus-edge: var(--u-g7);
+  --focus-outline: 2px solid var(--focus-ring);
+  --focus-halo: 0 0 0 1px var(--focus-edge), 0 0 0 4px var(--focus-edge);
+  --focus-inset: inset 0 0 0 3px var(--focus-edge);
+  /* A chosen thing that has no fill of its own (a key, a node, a clip): a gold ring with a dark line inside it */
+  --sel-ring: 0 0 0 1px var(--focus-edge), 0 0 0 3px var(--primary-bg);
+  --sel-ring-thin: 0 0 0 1px var(--focus-edge), 0 0 0 2px var(--primary-bg);
+  --sel-ring-inset: inset 0 0 0 1px var(--focus-edge), inset 0 0 0 2px var(--primary-bg);
+  /* Text links: gold on the dark panels (9:1), the palette's dark text with an underline on the light ones, since gold text on white fails */
+  --link: var(--u-gold);
+  /* Information colour, not accent: what an "action" node, a review dot or a receive tag is, and nothing that is chosen or focused */
+  --info: var(--u-sky);
   --danger: color-mix(in srgb, var(--u-red) 85%, #fff);
   --ok: color-mix(in srgb, var(--u-green) 70%, #fff);
   --warn: var(--u-gold);
   --canvas: color-mix(in srgb, var(--u-g7) 70%, #000);
   --event: var(--u-gold-dark);
-  --action: var(--u-sky);
+  --action: var(--info);
   --logic: color-mix(in srgb, var(--u-purple) 70%, #fff);
   --brand: var(--u-gold);
   --primary-bg: var(--u-gold);
@@ -96,6 +111,7 @@
   --z-popover-raised: 1300;
   --z-menu: 2000;
   --z-toast: 3000;
+  --z-toast-under-modal: 95;
   --z-dialog: 5000;
   --z-tooltip: 10000;
 }
@@ -109,14 +125,14 @@
   --line-2: var(--u-g3);
   --text: var(--u-gt);
   --muted: var(--u-g5);
-  --accent: var(--u-blue);
-  --accent-2: var(--u-blue);
+  --link: var(--u-gt);
+  --info: var(--u-blue);
   --danger: var(--u-red);
   --ok: var(--u-green);
   --warn: var(--u-gold-darker);
   --canvas: var(--u-g2);
   --event: var(--u-gold-darker);
-  --action: var(--u-blue);
+  --action: var(--info);
   --logic: var(--u-purple);
   --brand: var(--u-gold);
   --primary-bg: var(--u-gold);
@@ -148,14 +164,14 @@
   --line-2: var(--u-g3);
   --text: var(--u-gt);
   --muted: var(--u-g5);
-  --accent: var(--u-blue);
-  --accent-2: var(--u-blue);
+  --link: var(--u-gt);
+  --info: var(--u-blue);
   --danger: var(--u-red);
   --ok: var(--u-green);
   --warn: var(--u-gold-darker);
   --canvas: var(--u-g2);
   --event: var(--u-gold-darker);
-  --action: var(--u-blue);
+  --action: var(--info);
   --logic: var(--u-purple);
   --brand: var(--u-gold);
   --primary-bg: var(--u-gold);
@@ -219,8 +235,10 @@ input[type='range'] {
   padding: 2px 6px;
 }
 :where(select:not([multiple]):not([size]):focus, input:focus, textarea:focus) {
-  border-color: var(--accent);
-  outline: none;
+  border-color: var(--focus-ring);
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 code,
 .mono {
@@ -314,12 +332,14 @@ code,
 .link-btn {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
   padding: 4px 0;
 }
 .link-btn:hover:not(:disabled) {
-  text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 .icon-btn {
   display: inline-flex;
@@ -353,8 +373,29 @@ code,
   color: #fff;
 }
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
+}
+/* A bare link (Home's, the admin pages') would be the browser's blue, visited purple. :where() keeps it at zero specificity so every class that styles its own link still wins */
+:where(a) {
+  color: var(--link);
+  text-underline-offset: 2px;
+}
+/* A code editor's focus is one ring round the whole box (CodeMirror draws its own thin dotted one, and the contenteditable inside would add a second) */
+div.cm-editor.cm-focused {
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+  box-shadow: var(--focus-halo);
+}
+.cm-editor .cm-content:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+/* The browser's own text selection is blue; here it is the gold, dark text on it, like every other chosen thing */
+::selection {
+  background: color-mix(in srgb, var(--u-gold) 70%, transparent);
+  color: var(--u-g7);
 }
 
 /* ---------------------------------------------------------------- fields */
@@ -372,24 +413,9 @@ code,
   white-space: nowrap;
   flex: none;
 }
-/* The one-letter labels (X, Y, W, Sx, Ox, a) share a width, so a column of them lines up */
-.inspector .number-field > .field-label {
-  width: 18px;
-}
-/* A run of rows whose labels differ in length: give them one width so the boxes line up (labels-54, labels-66) */
-.inspector .labels-54 .field-label {
-  flex: none;
-  width: 54px;
-  white-space: nowrap;
-}
-.inspector .labels-66 .field-label {
-  flex: none;
-  width: 66px;
-  white-space: nowrap;
-}
 .field-label.block {
   display: block;
-  margin: 8px 0 4px;
+  margin: 6px 0 3px;
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -419,17 +445,14 @@ code,
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: var(--accent);
-  outline: none;
+  border-color: var(--focus-ring);
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .text-field.multiline {
   align-items: flex-start;
   flex-direction: column;
-}
-.field-suffix {
-  color: var(--muted);
-  font-size: 11px;
-  margin-left: -2px;
 }
 /* Native sliders, ticks and radios take the palette gold, like every other chosen state */
 input[type='range'],
@@ -526,8 +549,9 @@ progress {
 }
 .palette-swatch:hover,
 .palette-swatch:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .palette-swatch.on {
   box-shadow: 0 0 0 2px var(--panel-2), 0 0 0 4px var(--text);
@@ -561,6 +585,13 @@ progress {
   flex: 1;
   min-width: 0;
 }
+/* a tall field (the text box): the key sits at its top, beside the first line */
+.keyed.top {
+  align-items: flex-start;
+}
+.keyed.top > .key-btn {
+  margin-top: 4px;
+}
 .key-btn {
   flex: none;
   border: none;
@@ -585,56 +616,475 @@ progress {
   justify-content: space-between;
 }
 
-/* ---------------------------------------------------------------- inspector fit
-   Nothing in the inspector clips its value. A field has a smallest size it is still readable at (a three digit number,
-   a short dropdown word, a hex colour), rows wrap onto a second line when their fields would shrink below that, and
-   labels of more than one word wrap inside their own box instead of pushing the field out of the panel. */
-.inspector .row {
-  flex-wrap: wrap;
-  gap: 4px 8px;
+/* ---------------------------------------------------------------- field rows
+   One grid for every field in the Properties panel and the graph's node settings (.inspector, .param-form).
+   The panel is nine tracks wide: label | control | unit | key | chain | label | control | unit | key. A pair row uses all
+   of it (label and control twice, the unit and key tracks riding along with the control before them), and every line is
+   snapped to the same tracks, so nothing wanders:
+   - a single field spans all of it: its label in track one (--label-w) and its control running to the right edge of the
+     second control. The unit (x, %, ms) has a slot after the control (--field-trail), and a key diamond a slot after that
+     (--field-key), both kept whether or not they are showing, so every box in the panel ends in the same place;
+   - a pair (X and Y, W and H) puts its second label in track six (--label-w-2) in every row, and the chain between them in five;
+   - a checkbox starts under the controls (track two), and two of them under the first and the second control;
+   - a row of buttons is equal cells from the left edge.
+   Below the container width in the query at the end, a pair is one field per line (the panel is too narrow to halve), and so
+   it is for any field that wants more than half a row (a dropdown, a text box, a px/percent box). Lines are --row-gap
+   apart, a sub-heading starts a group --group-gap above, and every control is --field-h high. A longer label wraps inside its column.
+   Only a text area (and code, lists and tables, with .field-label.block) puts its label above, in the same small label.
+   Components say which kind of field they are with fieldClass() in components/ui.tsx, and
+   test/field-layout.test.tsx holds this contract. */
+:root {
+  --label-w: 72px;
+  --label-w-2: 46px;
+  --field-trail: 10px;
+  --field-key: 14px;
+  --field-chain: 12px;
+  --field-gap: 4px;
+  --field-h: 26px;
+  --row-gap: 8px;
+  --group-gap: 16px;
 }
-.inspector .row > .field:not(.check-field),
-.inspector .row > .keyed {
-  min-width: min-content;
+:is(.param-form, .key-editor) {
+  --field-key: 0px;
 }
-.inspector .field-label {
-  flex: 0 1 auto;
-  min-width: min-content;
+:is(.inspector, .param-form, .key-editor) {
+  --cols-8: var(--label-w) minmax(0, 1fr) var(--field-trail) var(--field-key) var(--field-chain) var(--label-w-2) minmax(0, 1fr) var(--field-trail);
+  --cols: var(--cols-8) var(--field-key);
+  container: panel / inline-size;
+}
+/* what sits in a section is one row-gap apart (the wrapper of a search match has no box, its contents are the items) */
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: var(--row-gap);
+  align-content: start;
+  justify-items: stretch;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > :is(.btn, .link-btn, .icon-btn, .remove-btn) {
+  justify-self: start;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > * {
+  margin-block: 0;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > :is(.field-label.block, .q-sub):not(:first-child) {
+  margin-top: calc(var(--group-gap) - var(--row-gap));
+}
+/* a bare wrapper div (a few panels group fields in one) has no box, its lines belong to the section */
+.inspector .section-body > div:not([class]) {
+  display: contents;
+}
+/* every section has the same padding: 12px at the sides and under its last line, and the first line is one row-gap under the title */
+.inspector .section {
+  padding: 4px 12px 12px;
+}
+.inspector .section.closed {
+  padding-bottom: 4px;
+}
+.inspector .section-body {
+  padding-top: 2px;
+}
+
+/* a field: label, control, unit slot. Its own three tracks where no row hands it nine (in a flex line, say) */
+:is(.inspector, .param-form, .key-editor) .field:not(.check-field) {
+  display: grid;
+  grid-template-columns: var(--label-w) minmax(0, 1fr) var(--field-trail);
+  align-items: center;
+  column-gap: var(--field-gap);
+  margin: 0 calc(var(--field-key) + var(--field-gap)) 0 0;
+  min-width: 0;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .field:not(.check-field) {
+  grid-template-columns: var(--cols-8);
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .field:not(.check-field),
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed > .field:not(.check-field),
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .keyed > .field:not(.check-field) {
+  grid-template-columns: subgrid;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .keyed > .field:not(.check-field) {
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .field > .field-label {
+  grid-column: 1;
+}
+:is(.inspector, .param-form, .key-editor) .field > :not(.field-label, .field-trail, .unit-toggle) {
+  grid-column: 2 / -2;
+}
+:is(.inspector, .param-form, .key-editor) .field > .field-trail {
+  grid-column: -2 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .field.unlabelled:not(.check-field) > :not(.field-trail, .unit-toggle) {
+  grid-column: 1 / -2;
+}
+:is(.inspector, .param-form, .key-editor) .field.stacked:not(.check-field) {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  row-gap: 3px;
+}
+:is(.inspector, .param-form, .key-editor) .field.stacked > * {
+  grid-column: 1;
+}
+:is(.inspector, .param-form, .key-editor) .field-label {
+  min-width: 0;
   white-space: normal;
   overflow-wrap: normal;
   line-height: 1.2;
 }
-.inspector .field:not(.text-field.multiline) input:not([type='checkbox']):not([type='color']):not(.alpha),
-.inspector .field select {
+.field-trail {
+  min-width: 0;
+  margin-left: -2px;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1;
+  white-space: nowrap;
+}
+/* outside the property panels an empty slot takes no room (only there is it a grid track) */
+.field-trail:empty {
+  display: none;
+}
+:is(.inspector, .param-form, .key-editor) .field-trail:empty {
+  display: block;
+}
+/* what a text box with a rule (the grid's columns and rows) did not understand, quietly under it, starting under the box */
+.inspector .field-problem {
+  color: var(--warn-text);
+  font-size: 11px;
+  line-height: 1.3;
+  padding-left: calc(var(--label-w) + var(--field-gap));
+}
+/* the controls share a height, border and padding wherever they are */
+:is(.inspector, .param-form, .key-editor) .field:not(.check-field) :is(input:not([type='checkbox'], [type='color'], .alpha), select) {
+  height: var(--field-h);
+  min-width: 0;
+}
+:is(.inspector, .param-form, .key-editor) .field.stacked textarea {
+  min-height: calc(var(--field-h) * 2);
+}
+:is(.inspector, .param-form, .key-editor) .field.li-picker-field {
+  align-items: start;
+}
+:is(.inspector, .param-form, .key-editor) .li-picker {
+  justify-self: start;
+}
+
+/* a key diamond sits in the slot after the field it belongs to (and so does the one under a field, KeyRow) */
+:is(.inspector, .param-form, .key-editor) .keyed {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  padding-right: calc(var(--field-key) + var(--field-gap));
+}
+:is(.inspector, .param-form, .key-editor) .keyed > .field {
   flex: 1 1 0;
 }
-.inspector .number-field input:not([type='checkbox']):not([type='color']) {
-  min-width: 32px;
-  padding: 0 4px;
+:is(.inspector, .param-form, .key-editor) .keyed > .key-btn {
+  flex: none;
+  width: var(--field-key);
+  margin-right: calc(-1 * (var(--field-key) + var(--field-gap)));
+  padding: 0;
+  text-align: center;
 }
-.inspector .text-field:not(.multiline) input {
-  min-width: 56px;
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .keyed,
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--field-gap);
+  align-items: center;
+  padding-right: 0;
 }
-.inspector .select-field select {
-  min-width: 84px;
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed {
+  grid-template-columns: subgrid;
 }
-/* Dropdowns need more room than numbers: a row of a dropdown and a number gives the dropdown the larger share */
-.inspector .row > .select-field {
-  flex-grow: 2;
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .keyed > .field:not(.check-field),
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed > .field:not(.check-field) {
+  grid-column: 1 / -2;
 }
-.inspector .color-field {
-  gap: 4px;
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .keyed > .check-field {
+  grid-column: 2 / -2;
 }
-.inspector .color-field input.color-text:not([type='color']) {
-  min-width: 68px;
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed > .check-field {
+  grid-column: 1 / -2;
 }
-.inspector .check-field {
-  flex: 0 1 auto;
-  gap: 4px;
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .keyed > .key-btn,
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed > .key-btn {
+  grid-column: -2 / -1;
+  margin: 0;
 }
-.inspector .check-field input {
+:is(.inspector, .param-form, .key-editor) .keyed.top {
+  align-items: start;
+}
+/* the property search hides a field and leaves its diamond wrapper (the grid rules above would show it again) */
+:is(.inspector, .param-form, .key-editor) .keyed:has(> .ps-hide) {
+  display: none !important;
+}
+:is(.inspector, .param-form, .key-editor) .key-row {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--field-gap);
+  align-items: center;
+}
+:is(.inspector, .param-form, .key-editor) .key-row > :not(.key-btn) {
+  grid-column: 1 / -2;
+}
+:is(.inspector, .param-form, .key-editor) .key-row > .key-btn {
+  grid-column: -2 / -1;
+  padding: 0;
+}
+
+/* checkboxes: the box then its words */
+:is(.inspector, .param-form, .key-editor) .check-field.field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--field-h);
+  min-width: 0;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .check-field input {
   flex: none;
   margin: 0;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .check-field {
+  padding-left: calc(var(--label-w) + var(--field-gap));
+}
+
+/* ---- a row of fields is the same nine tracks */
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--field-gap);
+  row-gap: var(--row-gap);
+  align-items: center;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed {
+  grid-column: 1 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .field:not(.check-field) {
+  display: grid;
+  grid-column: 1 / -2;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .check-field {
+  grid-column: 2 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed:has(> .check-field) {
+  grid-column: 2 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > :is(.link-toggle, .link-gap) {
+  display: none;
+}
+/* four unlabelled boxes (padding, margin) go two by two, whatever the width */
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))):has(> .field.unlabelled ~ .field.unlabelled ~ .field.unlabelled) > .field:nth-child(odd) {
+  grid-column: 1 / 5;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))):has(> .field.unlabelled ~ .field.unlabelled ~ .field.unlabelled) > .field:nth-child(even) {
+  grid-column: 5 / 9;
+}
+
+/* ---- a field with one small button after it (remove, duplicate): the button takes the unit and key slots */
+:is(.inspector, .param-form, .key-editor) .row:has(> .field:not(.check-field):first-child + .icon-btn:last-child):not(:has(> :nth-child(3))) {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--field-gap);
+  align-items: center;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .field:not(.check-field):first-child + .icon-btn:last-child):not(:has(> :nth-child(3))) > .field {
+  grid-column: 1 / 8;
+  grid-template-columns: subgrid;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .field:not(.check-field):first-child + .icon-btn:last-child):not(:has(> :nth-child(3))) > .field > :not(.field-label, .field-trail, .unit-toggle) {
+  grid-column: 2 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .field:not(.check-field):first-child + .icon-btn:last-child):not(:has(> :nth-child(3))) > .field > .field-trail {
+  display: none;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .field:not(.check-field):first-child + .icon-btn:last-child):not(:has(> :nth-child(3))) > .icon-btn {
+  grid-column: 8 / -1;
+  justify-self: end;
+}
+
+/* ---- a blend's timeline line: its own four tracks (name | timeline | value or weight | remove), so the dropdown gets all that
+   is left rather than the share of a pair. A weight-per-timeline blend (.direct) has its weight, a dropdown and a box, on a
+   second line under the timeline, since three boxes would not fit across */
+:is(.inspector, .param-form, .key-editor) .row.blend-entry {
+  display: grid;
+  grid-template-columns: var(--label-w) minmax(0, 1fr) 56px var(--field-h);
+  column-gap: var(--field-gap);
+  row-gap: var(--field-gap);
+  align-items: center;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 3;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field:first-child {
+  grid-column: 1 / 3;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field.unlabelled:first-child {
+  grid-column: 2;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field > :not(.field-label, .field-trail) {
+  grid-column: 2 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field.unlabelled > :not(.field-trail) {
+  grid-column: 1 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field > .field-trail {
+  display: none;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .icon-btn {
+  grid-column: 4;
+  grid-row: 1;
+  justify-self: end;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry.direct > .field:first-child {
+  grid-column: 1 / 4;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry.direct > .field.unlabelled:first-child {
+  grid-column: 2 / 4;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry.direct > .field:nth-child(2) {
+  grid-column: 2;
+  grid-row: 2;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry.direct > .field:nth-child(2):nth-last-child(2) {
+  grid-column: 2 / 4;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry.direct > .field:nth-child(3) {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+/* two tick boxes on a line sit side by side from the box edge, each as wide as its words, and the second drops to its own line
+   if the two do not fit (a second box in half a row wrapped "Hug height" onto two lines). A keyed one (a diamond after it) keeps the grid */
+:is(.inspector, .param-form, .key-editor) .row:has(> .check-field:first-child):has(> .check-field:nth-child(2)):not(:has(> :nth-child(3))) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--group-gap);
+  padding-left: calc(var(--label-w) + var(--field-gap));
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .check-field:first-child):has(> .check-field:nth-child(2)):not(:has(> :nth-child(3))) > .check-field {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding-left: 0;
+}
+
+/* ---- a row of buttons: equal cells from the left edge, wrapping to the next line when they would be squeezed */
+:is(.inspector, .param-form, .key-editor) .row:not(:has(> :not(.btn, .link-btn))):has(> :is(.btn, .link-btn)) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: var(--row-gap);
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row:not(:has(> :not(.btn, .link-btn))) > .btn {
+  justify-content: center;
+  min-height: var(--field-h);
+}
+
+/* a label with a group of buttons beside it (animation presets): the buttons start in the control column and wrap there */
+:is(.inspector, .param-form, .key-editor) .row:has(> .field-label):has(> .anim-presets) {
+  display: grid;
+  grid-template-columns: var(--label-w) minmax(0, 1fr);
+  column-gap: var(--field-gap);
+  align-items: start;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row > .field-label {
+  padding-top: 5px;
+}
+:is(.inspector, .param-form, .key-editor) .row > .anim-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+/* any other line (a field with a remove button, a swatch row) stays a flex line */
+:is(.inspector, .param-form, .key-editor) .row {
+  flex-wrap: wrap;
+  gap: var(--row-gap) var(--field-gap);
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row > :is(.field, .keyed) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* ---- two to a line: only where the panel is wide enough to halve (the container query), and only for fields that fit half a row */
+@container panel (min-width: 316px) {
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed):not(:is(.field, .keyed) ~ *):is(.field:not(.check-field)) {
+    grid-column: 1 / 4;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed):not(:is(.field, .keyed) ~ *):is(.keyed:not(:has(> .check-field))) {
+    grid-column: 1 / 5;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed) ~ :is(.field, .keyed):is(.field:not(.check-field)) {
+    grid-column: 6 / 9;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed) ~ :is(.field, .keyed):is(.keyed:not(:has(> .check-field))) {
+    grid-column: 6 / 10;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed):not(:is(.field, .keyed) ~ *):is(.check-field) {
+    grid-column: 2 / 7;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed):not(:is(.field, .keyed) ~ *):is(.keyed:has(> .check-field)) {
+    grid-column: 2 / 5;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed) ~ :is(.field, .keyed):is(.check-field, .keyed:has(> .check-field)) {
+    grid-column: 7 / -1;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)):has(> .ps-hide, > .keyed > .ps-hide) > .field:not(.check-field, .ps-hide) {
+    grid-column: 1 / -2;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)):has(> .ps-hide, > .keyed > .ps-hide) > .keyed:not(:has(> .check-field)):not(.ps-hide) {
+    grid-column: 1 / -1;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)):has(> .ps-hide, > .keyed > .ps-hide) > :is(.check-field, .keyed:has(> .check-field)):not(.ps-hide) {
+    grid-column: 2 / -1;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> .link-toggle, > .link-gap):has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.link-toggle, .link-gap) {
+    display: inline-flex;
+    grid-column: 5;
+    grid-row: 1;
+    justify-self: center;
+    width: var(--field-chain);
+  }
+}
+
+/* the shader uniforms: name and type have no label showing, so their boxes take the label column too */
+.inspector .uniform-item > .row > .field > :not(.field-trail) {
+  grid-column: 1 / -2;
+}
+
+/* the colour field: swatch, palette, hex and opacity are one control */
+.color-field > .field-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+:is(.inspector, .param-form, .key-editor) .color-field > .field-control input.color-text:not([type='color']) {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+:is(.inspector, .param-form, .key-editor) .color-field .swatch {
+  width: var(--field-h);
+  height: var(--field-h);
+}
+:is(.inspector, .param-form, .key-editor) .color-field .palette-btn {
+  height: var(--field-h);
+}
+/* the px or percent button sits inside the box, at its right end */
+.unit-field > .unit-toggle {
+  right: calc(var(--field-trail) + var(--field-gap) + 2px);
 }
 
 /* ---------------------------------------------------------------- sections */
@@ -671,7 +1121,7 @@ progress {
   text-transform: none;
 }
 .section-title:hover {
-  color: var(--accent);
+  color: var(--text);
 }
 .section-title {
   display: inline-flex;
@@ -715,7 +1165,7 @@ progress {
 }
 .search-picker:hover,
 .search-picker.open {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .search-picker-value {
   flex: 1;
@@ -815,7 +1265,9 @@ progress {
 .search-pop-list li.action {
   border-top: 1px solid var(--line);
   margin-top: 4px;
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .search-pop-list li.action.on {
   color: var(--primary-fg);
@@ -1024,7 +1476,7 @@ hr.item-sep {
   cursor: pointer;
 }
 .tag-chip:hover {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .tag-chip.active {
   background: var(--primary-bg);
@@ -1504,16 +1956,16 @@ hr.item-sep {
   opacity: 0.4;
 }
 .dock-tabs.drop-over {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 10%, transparent);
 }
 .dock-tabs button.drop-before {
-  box-shadow: inset 3px 0 0 var(--accent);
+  box-shadow: inset 3px 0 0 var(--primary-bg);
 }
 .dock-tabs .drop-end {
   flex: none;
   width: 3px;
   align-self: stretch;
-  background: var(--accent);
+  background: var(--primary-bg);
 }
 body.dock-dragging,
 body.dock-dragging * {
@@ -1526,9 +1978,9 @@ body.dock-dragging * {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--primary-bg) 60%, transparent);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 8%, transparent);
   color: var(--text);
   font-size: 11px;
   font-weight: 600;
@@ -1540,7 +1992,7 @@ body.dock-dragging * {
   writing-mode: vertical-rl;
 }
 .dock-edge.over {
-  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 28%, transparent);
   border-style: solid;
 }
 .dock-float-ghost {
@@ -1548,9 +2000,9 @@ body.dock-dragging * {
   z-index: var(--z-dock-ghost);
   width: 380px;
   height: 320px;
-  border: 2px dashed var(--accent);
+  border: 2px dashed var(--primary-bg);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 6%, transparent);
   pointer-events: none;
 }
 .dock-drag-tab {
@@ -1911,6 +2363,9 @@ body.col-resizing * {
 }
 .overlay {
   position: absolute;
+  /* above the guide lines (z-index 1 in the rulers layer): the overlay lets the pointer through except on its handles, so a guide
+     lying along a layer's edge never hides that layer's resize handles, and is grabbed everywhere else */
+  z-index: 2;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -1946,6 +2401,27 @@ body.col-resizing * {
   stroke-dasharray: 7 5;
   pointer-events: none;
 }
+/* the attached guides of a page that is not the open one (Canvas): the length of their page and a little past it, dimmer, and they can't be grabbed until that page is open */
+.guide-mark {
+  stroke: var(--guide);
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+  opacity: 0.55;
+  pointer-events: none;
+}
+/* the page a page dragged from the Layers list would be placed in (Canvas dropHost) */
+.drop-host {
+  fill: color-mix(in srgb, var(--primary-bg) 14%, transparent);
+  stroke: var(--primary-bg);
+  stroke-width: 3;
+  pointer-events: none;
+}
+/* Alt down: what Alt-drag copies shows the copy cursor (Canvas altHeld) */
+.canvas.alt-held .ab-label,
+.canvas.alt-held .ab-label-chip,
+.canvas.alt-held .ab-group-chip {
+  cursor: copy;
+}
 .ab-group-chip {
   fill: var(--panel-2);
   stroke: var(--line-2);
@@ -1963,16 +2439,24 @@ body.col-resizing * {
 .ab-group.picked .ab-group-title {
   fill: var(--primary-fg);
 }
+.sel-outline-edge {
+  fill: none;
+  stroke: var(--focus-edge);
+  stroke-width: 3.5;
+  pointer-events: none;
+}
 .sel-outline {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--primary-bg);
   stroke-width: 1.5;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 .hover-outline {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--primary-bg);
   stroke-width: 1;
-  opacity: 0.7;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 .focus-outline {
   fill: none;
@@ -1980,8 +2464,8 @@ body.col-resizing * {
   stroke-dasharray: 4 3;
 }
 .handle {
-  fill: #fff;
-  stroke: var(--accent);
+  fill: var(--primary-bg);
+  stroke: var(--focus-edge);
   stroke-width: 1.2;
 }
 .h-nw,
@@ -2006,24 +2490,26 @@ body.col-resizing * {
   cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cg%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%2012a7%207%200%200%201%2012-4.9M19%2012a7%207%200%200%201-12%204.9%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224%22/%3E%3Cpath%20d%3D%22M17.5%203.5v4h-4M6.5%2020.5v-4h4%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224%22/%3E%3Cpath%20d%3D%22M5%2012a7%207%200%200%201%2012-4.9M19%2012a7%207%200%200%201-12%204.9%22%20stroke%3D%22%23111%22%20stroke-width%3D%221.8%22/%3E%3Cpath%20d%3D%22M17.5%203.5v4h-4M6.5%2020.5v-4h4%22%20stroke%3D%22%23111%22%20stroke-width%3D%221.8%22/%3E%3C/g%3E%3C/svg%3E") 12 12, alias;
 }
 .size-label {
-  fill: #fff;
+  fill: var(--primary-fg);
   font-size: 10.5px;
   text-anchor: middle;
   paint-order: stroke;
-  stroke: var(--accent-2);
+  stroke: var(--primary-bg);
   stroke-width: 6px;
   stroke-linejoin: round;
 }
 .marquee {
-  fill: color-mix(in srgb, var(--accent) 8%, transparent);
-  stroke: var(--accent);
+  fill: color-mix(in srgb, var(--primary-bg) 12%, transparent);
+  stroke: var(--primary-bg);
   stroke-dasharray: 3 2;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 .create-box,
 .create-line {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--primary-bg);
   stroke-width: 1;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 /* Connector tool: the layer an end would land on, its sides (the chosen one is gold), the end handles of the selected connector, and the line so far */
 .conn-target {
@@ -2116,17 +2602,20 @@ body.col-resizing * {
   pointer-events: none;
 }
 .path-point {
-  fill: #fff;
-  stroke: var(--accent);
+  fill: var(--primary-bg);
+  stroke: var(--focus-edge);
   stroke-width: 1.2;
   cursor: move;
 }
 .path-point.selected,
 .path-point.first {
-  fill: var(--accent);
+  fill: var(--focus-edge);
+  stroke: var(--primary-bg);
 }
 .path-handle {
-  fill: var(--accent);
+  fill: var(--primary-bg);
+  stroke: var(--focus-edge);
+  stroke-width: 0.8;
   cursor: move;
 }
 .grad-handle {
@@ -2136,7 +2625,7 @@ body.col-resizing * {
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
 }
 .grad-handle:hover {
-  stroke: var(--accent, #0080a8);
+  stroke: var(--primary-bg);
 }
 .grad-line {
   stroke: #fff;
@@ -2146,19 +2635,22 @@ body.col-resizing * {
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
 }
 .path-handle-line {
-  stroke: var(--accent);
+  stroke: var(--primary-bg);
   stroke-width: 1;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 .pen-preview {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--primary-bg);
   stroke-width: 1.5;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 .text-editor {
   position: absolute;
   z-index: 5;
   background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--primary-bg);
+  box-shadow: 0 0 0 1px var(--focus-edge);
   resize: none;
   padding: 0;
   margin: 0;
@@ -2229,8 +2721,8 @@ div.text-editor {
 }
 /* some of the selection has it: a dashed ring instead of the solid fill */
 .tt-btn.mixed {
-  box-shadow: inset 0 0 0 1.5px var(--accent);
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--primary-bg);
+  background: color-mix(in srgb, var(--primary-bg) 22%, transparent);
 }
 .tt-btn:disabled,
 .tt-color:has(input:disabled) {
@@ -2259,8 +2751,9 @@ div.text-editor {
   background: var(--btn-hover-bg);
 }
 .tt-swatch:focus-within {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .tt-a {
   font-weight: 700;
@@ -2359,9 +2852,9 @@ div.text-editor {
   white-space: nowrap;
 }
 .assets.dropping {
-  outline: 2px dashed var(--accent-2);
+  outline: 2px dashed var(--primary-bg);
   outline-offset: -4px;
-  background: color-mix(in srgb, var(--accent-2) 8%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 8%, transparent);
 }
 .layer-row,
 .artboard-row {
@@ -2388,7 +2881,7 @@ div.text-editor {
 }
 /* A chosen layer, artboard or group row: the palette's gold with its dark text, like the other chosen states. Hover on a
    plain row is the panel grey, hover on a chosen one the darker gold, a multi-selection carries a dark bar down its left
-   edge (a lone selection has none), and keyboard focus is an inset ring (blue on a plain row, dark on gold) */
+   edge (a lone selection has none), and keyboard focus is an inset ring (gold with a dark line inside on a plain row, dark on gold) */
 .layer-row.selected,
 .artboard-row.selected {
   background: var(--primary-bg);
@@ -2403,12 +2896,17 @@ div.text-editor {
 }
 .layer-row:focus-visible,
 .artboard-row:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: -2px;
+  box-shadow: var(--focus-inset);
 }
 .layer-row.selected:focus-visible,
 .artboard-row.selected:focus-visible {
   outline-color: var(--primary-fg);
+  box-shadow: none;
+}
+.layer-row.selected.multi:focus-visible {
+  box-shadow: inset 3px 0 0 var(--primary-fg);
 }
 .artboard-row.selected .badge {
   color: var(--pill-fg);
@@ -2456,8 +2954,8 @@ div.text-editor {
   opacity: 0.4;
 }
 .layer-row.drop-inside {
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
-  outline: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--primary-bg) 22%, transparent);
+  outline: 2px solid var(--primary-bg);
   outline-offset: -2px;
   border-radius: 3px;
 }
@@ -2465,7 +2963,7 @@ div.text-editor {
   position: absolute;
   right: 6px;
   height: 2px;
-  background: var(--accent);
+  background: var(--primary-bg);
   border-radius: 1px;
   pointer-events: none;
   z-index: 2;
@@ -2478,7 +2976,7 @@ div.text-editor {
   width: 8px;
   height: 8px;
   box-sizing: border-box;
-  border: 2px solid var(--accent);
+  border: 2px solid var(--primary-bg);
   border-radius: 50%;
   background: var(--panel, var(--bg));
 }
@@ -2526,7 +3024,7 @@ button.twisty:hover {
   flex: 1;
   height: 20px;
   background: var(--bg);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--primary-bg);
   border-radius: 3px;
 }
 .badge {
@@ -2742,11 +3240,37 @@ button.twisty:hover {
 .code-field {
   margin: 4px 0;
 }
+/* Code editor colours (Follow / Light / Dark) in the headers of the code boxes */
+.code-theme-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+.code-theme-label {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.code-theme-switch .seg-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+}
 .code-editor {
   border: 1px solid var(--line);
   border-radius: 4px;
   overflow: hidden;
   height: 100%;
+}
+/* what stands in for a code box for the moment CodeMirror's chunk comes in */
+.code-editor-loading pre {
+  margin: 0;
+  padding: 4px 8px;
+  height: 100%;
+  overflow: auto;
+  font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+  background: var(--panel);
 }
 
 /* ---------------------------------------------------------------- timeline */
@@ -2877,7 +3401,7 @@ button.twisty:hover {
   width: 14px;
   height: 18px;
   margin-left: -7px;
-  background: var(--accent, #4f9dff);
+  background: var(--u-gold-darker);
   clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
   cursor: ew-resize;
   opacity: 0.8;
@@ -2963,8 +3487,8 @@ button.twisty:hover {
   width: 18px;
   height: 18px;
   border-radius: 9px;
-  background: var(--accent, #4f9dff);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   font-size: 10.5px;
   font-weight: 700;
   line-height: 18px;
@@ -2998,8 +3522,8 @@ button.twisty:hover {
   background: rgba(231, 177, 76, 0.12);
 }
 .segment.selected {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--primary-bg) 30%, transparent);
+  box-shadow: var(--sel-ring-inset);
 }
 .ease-curve {
   position: absolute;
@@ -3020,7 +3544,7 @@ button.twisty:hover {
   background: var(--bg);
 }
 .ease-curve.big polyline {
-  stroke: var(--accent);
+  stroke: var(--key-on);
   stroke-width: 2;
 }
 .key {
@@ -3040,7 +3564,40 @@ button.twisty:hover {
 }
 .key.selected {
   background: #fff;
-  box-shadow: 0 0 0 2px var(--accent);
+  box-shadow: var(--sel-ring);
+}
+.key:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+/* A hold key (text, labels): a square, not a diamond, with a flat bar to the next key because nothing eases between them */
+.key.hold {
+  transform: none;
+  border-radius: 2px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  top: 7px;
+}
+/* A key of a text dip that stays with its text key: a hollow diamond, solid again once it has been edited by hand */
+.key.tied:not(.selected) {
+  background: transparent;
+  border: 2px solid var(--warn);
+}
+.segment.hold {
+  cursor: default;
+  pointer-events: none;
+}
+.segment.hold::before {
+  top: 6px;
+  height: 4px;
+  border-radius: 1px;
+  background: rgba(231, 177, 76, 0.55);
+}
+.swap-text {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
 }
 .key.summary {
   width: 8px;
@@ -3077,6 +3634,9 @@ button.twisty:hover {
   flex: none;
   border-left: 1px solid var(--line);
   padding: 4px 10px;
+  /* the column scrolls by itself when its settings are taller than the panel, the lanes stay put */
+  min-height: 0;
+  overflow-y: auto;
 }
 .key-editor .field {
   margin: 4px 0;
@@ -3319,7 +3879,7 @@ button.twisty:hover {
   position: relative;
 }
 .ix-graph-node.selected {
-  box-shadow: 0 0 0 2px var(--accent);
+  box-shadow: var(--sel-ring);
 }
 /* Preview running: a node that ran lights green, an event whose "Only if" said no goes grey, the wire it followed pulses. The two
    animation names alternate (flash-0, flash-1) so the same node firing again starts the flash over. The word in the head says it too. */
@@ -3378,6 +3938,23 @@ button.twisty:hover {
     stroke-dashoffset: -10;
   }
 }
+/* Just added from the Inspector or the canvas menu: a gold ring that fades, so the eye finds the new nodes after the graph frames them */
+.ix-graph-node.revealed {
+  animation: ix-revealed 1.8s ease-out;
+}
+@keyframes ix-revealed {
+  from {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary-bg) 80%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ix-graph-node.revealed {
+    animation: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .ix-graph-node.flash-ran,
   .ix-graph-node.flash-blocked,
@@ -3396,7 +3973,8 @@ button.twisty:hover {
   background: color-mix(in srgb, var(--group) 8%, transparent);
 }
 .ix-group.selected {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
+  box-shadow: 0 0 0 1px var(--focus-edge);
 }
 .ix-group {
   cursor: grab;
@@ -3974,8 +4552,8 @@ button.twisty:hover {
   opacity: 1;
   padding: 2px 8px;
   border-radius: 4px;
-  background: var(--accent, #1a73e8);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .preview-said span.muted {
   opacity: 0.7;
@@ -4001,14 +4579,25 @@ button.twisty:hover {
   z-index: var(--z-toast);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
+/* while a dialog (Preferences, Share...) is open an ordinary message sits under it instead of over its fields;
+   errors (Not saved...) and the reload notice still show on top */
+body:has(.modal-backdrop) .toast:not(.error):not(.stale-toast) {
+  z-index: var(--z-toast-under-modal);
+}
 .toast.error {
   border-color: var(--danger);
   color: var(--danger-text);
 }
 
-/* React Flow, dark */
+/* React Flow, dark. Its own defaults for a drag-box and the resize handles are a blue, so both are the gold here */
 .react-flow {
   --xy-background-color: var(--canvas);
+  --xy-selection-background-color: color-mix(in srgb, var(--primary-bg) 14%, transparent);
+  --xy-selection-border: 1px dashed var(--key-on);
+  --xy-resize-background-color: var(--primary-bg);
+}
+.react-flow__resize-control.handle {
+  border-color: var(--focus-edge);
 }
 
 /* ---------------------------------------------------------------- data */
@@ -4248,8 +4837,9 @@ textarea.data-cell {
   font-variant-numeric: tabular-nums;
 }
 .data-cell:focus-visible {
-  outline: 2px solid var(--primary-bg);
+  outline: var(--focus-outline);
   outline-offset: -2px;
+  box-shadow: var(--focus-inset);
   background: var(--panel-2);
 }
 .data-cell::placeholder {
@@ -4272,8 +4862,9 @@ textarea.data-cell {
   outline: none;
 }
 .tree-item:focus-visible > .tree-line {
-  outline: 2px solid var(--primary-bg);
+  outline: var(--focus-outline);
   outline-offset: -2px;
+  box-shadow: var(--focus-inset);
 }
 .tree-item.on > .tree-line {
   background: var(--panel-2);
@@ -4337,6 +4928,298 @@ textarea.data-cell {
   margin: 2px 0 6px;
   padding-left: 4px;
   border-left: 2px solid var(--line);
+}
+/* The Form view of a JSON data file: cards of labelled fields, with an outline at the side */
+.data-file-body.form {
+  min-height: 260px;
+}
+.data-formview {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.data-formview-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.data-formview-note > span:first-child {
+  flex: 1 1 240px;
+}
+.data-formview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+.data-formview-layout.has-outline {
+  grid-template-columns: minmax(150px, 210px) minmax(0, 1fr);
+}
+.data-formview-outline {
+  position: sticky;
+  top: 0;
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 4px 6px 6px 0;
+  border-right: 1px solid var(--line);
+  font-size: 11.5px;
+}
+.data-formview-outline ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.data-formview-outline .link-btn {
+  display: block;
+  width: 100%;
+  padding: 2px 4px;
+  border-radius: 3px;
+  text-align: left;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.data-formview-outline .link-btn.list {
+  font-weight: 600;
+  margin-top: 4px;
+}
+.data-formview-outline .link-btn:hover {
+  background: var(--panel-2);
+}
+.data-formview-outline .link-btn:focus-visible,
+.form-card-toggle:focus-visible,
+.form-switch:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+  box-shadow: var(--focus-halo);
+}
+@container (max-width: 520px) {
+  .data-formview-layout.has-outline {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .data-formview-outline {
+    position: static;
+    max-height: 96px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 0 0 6px;
+  }
+}
+.data-formview-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.form-root,
+.form-card-body,
+.form-list,
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.form-root-title,
+.form-list-title,
+.form-card-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.form-list-title:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+  box-shadow: var(--focus-halo);
+}
+.form-count {
+  font-weight: 400;
+}
+.form-list-head,
+.form-card-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.form-list-head .seg-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+.form-card {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  min-width: 0;
+}
+.form-card-head {
+  padding: 4px 6px;
+  background: var(--panel-2);
+  border-radius: 5px 5px 0 0;
+}
+.form-card:not(.open) .form-card-head {
+  border-radius: 5px;
+}
+.form-card-title {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.form-card-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.form-twist {
+  flex: none;
+  width: 12px;
+  color: var(--muted);
+}
+.form-card-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.data-formview .btn.small {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.form-card-body {
+  padding: 8px 10px 10px;
+}
+.form-card-body[hidden] {
+  display: none;
+}
+.form-card .form-card,
+.form-card .form-list {
+  margin-top: 2px;
+}
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.form-field {
+  display: grid;
+  grid-template-columns: minmax(80px, 150px) minmax(0, 1fr);
+  align-items: start;
+  gap: 2px 10px;
+}
+.form-field.has-actions {
+  grid-template-columns: minmax(80px, 150px) minmax(0, 1fr) auto;
+}
+.form-label {
+  padding-top: 4px;
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.form-control {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.form-text:focus {
+  border-color: var(--focus-ring);
+  outline: var(--focus-outline);
+  outline-offset: -2px;
+  box-shadow: var(--focus-inset);
+}
+.form-text {
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+}
+textarea.form-text {
+  resize: vertical;
+  overflow: hidden;
+  min-height: 3.4em;
+}
+.form-text.number {
+  max-width: 140px;
+}
+.form-bad {
+  font-size: 11px;
+  color: var(--danger);
+}
+.form-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+  font-size: 11.5px;
+}
+.form-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 2px 8px 2px 2px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.form-switch-knob {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.12s;
+}
+.form-switch.on {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.form-switch.on .form-switch-knob {
+  background: var(--primary-fg);
+  transform: translateX(0);
+}
+.form-switch[disabled] {
+  cursor: default;
+  opacity: 0.7;
+}
+.form-list-add,
+.form-more {
+  align-self: flex-start;
+}
+@container (max-width: 420px) {
+  .form-field,
+  .form-field.has-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .form-label {
+    padding-top: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .form-switch-knob {
+    transition: none;
+  }
 }
 .dot {
   width: 7px;
@@ -4494,7 +5377,7 @@ textarea.data-cell {
 }
 .field-label[data-tip],
 .field[data-tip] > .field-label,
-.field[data-tip] > span:not(.swatch) {
+.field[data-tip] > span:not(.swatch, .field-trail, .field-control) {
   text-decoration: underline dotted var(--line-2);
   text-underline-offset: 3px;
 }
@@ -4517,7 +5400,7 @@ textarea.data-cell {
 }
 .help-link:hover {
   color: var(--text);
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .section-head .help-link {
   margin-right: auto;
@@ -4640,7 +5523,9 @@ textarea.data-cell {
   color: var(--muted);
 }
 .help-article a {
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .help-article code,
 .help-results code {
@@ -4718,7 +5603,7 @@ kbd {
 .help-note {
   margin: 12px 0;
   padding: 8px 12px;
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--primary-bg);
   background: var(--panel-2);
   border-radius: 0 var(--radius) var(--radius) 0;
 }
@@ -4727,7 +5612,7 @@ kbd {
 }
 @keyframes help-flash {
   from {
-    background: color-mix(in srgb, var(--accent) 35%, transparent);
+    background: color-mix(in srgb, var(--primary-bg) 35%, transparent);
   }
 }
 .help-pager {
@@ -4824,16 +5709,237 @@ kbd {
   padding: 6px 12px;
   border-top: 1px solid var(--line);
 }
-.prefs-modal {
-  width: min(420px, calc(100vw - 32px));
+/* Preferences window (components/PrefsModal.tsx): pages down the left, one page of settings at a time */
+.prefs-window {
+  position: relative;
+  width: min(980px, calc(100vw - 32px));
+  height: min(680px, calc(100vh - 48px));
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  min-height: 0;
+  overflow: hidden;
+}
+.prefs-window > header {
+  flex: none;
+}
+.prefs-search {
+  flex: 1;
+  min-width: 0;
+  max-width: 360px;
+  margin-left: 12px;
+}
+.prefs-window > header .spacer {
+  flex: 1;
+}
+.prefs-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.prefs-nav {
+  flex: none;
+  width: 210px;
+  padding: 10px 8px;
+  border-right: 1px solid var(--line);
+  background: var(--panel-2);
+  overflow-y: auto;
+}
+.prefs-nav [role='tablist'] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.prefs-tab {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.prefs-tab:hover {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+.prefs-tab.on {
+  background: var(--primary-bg);
+  color: var(--primary-fg, #1e1e1e);
+  font-weight: 600;
+}
+.prefs-tab:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+  box-shadow: var(--focus-halo);
+}
+.prefs-panel {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 14px 20px 20px;
+  outline: none;
+}
+.prefs-page-head h2,
+.prefs-results h2 {
+  margin: 0 0 2px;
+  font-size: 17px;
+}
+.prefs-page-head p {
+  margin: 0 0 6px;
+}
+.prefs-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 0 14px;
+  border-top: 1px solid var(--line);
+}
+.prefs-page-head + .prefs-section {
+  margin-top: 8px;
+}
+.prefs-section > h3 {
+  margin: 0;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.prefs-section .pref {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  max-width: 640px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  border-radius: 6px;
+}
+.prefs-section .pref.wide,
+.prefs-section .pref:has(.keys-list),
+.prefs-section .pref:has(.keys-sets),
+.prefs-section .pref:has(.prefs-workspaces) {
+  max-width: none;
+}
+.prefs-section .select-field {
+  width: 100%;
+}
+.pref.pref-flash {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: 2px;
+  animation: pref-flash 1.6s ease-out 1;
+}
+@keyframes pref-flash {
+  from { background: color-mix(in srgb, var(--primary-bg) 40%, transparent); }
+  to { background: transparent; }
+}
+.prefs-results ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.prefs-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.prefs-result:hover,
+.prefs-result:focus-visible {
+  border-color: var(--primary-bg);
+}
+.prefs-result-name {
+  font-weight: 600;
+}
+.prefs-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--line);
+}
+.prefs-foot-note {
+  flex: 1;
+}
+.prefs-grip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 0 50%, var(--muted) 50% 56%, transparent 56% 70%, var(--muted) 70% 76%, transparent 76%);
+  opacity: 0.6;
+}
+@media (max-width: 720px) {
+  .modal-backdrop:has(> .prefs-window) {
+    align-items: stretch;
+    justify-content: stretch;
+  }
+  .prefs-window {
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+  }
+  .prefs-window > header {
+    flex-wrap: wrap;
+  }
+  .prefs-search {
+    order: 5;
+    flex-basis: 100%;
+    max-width: none;
+    margin-left: 0;
+  }
+  .prefs-main {
+    flex-direction: column;
+  }
+  .prefs-nav {
+    width: auto;
+    padding: 6px 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .prefs-nav [role='tablist'] {
+    flex-direction: row;
+    gap: 4px;
+  }
+  .prefs-tab {
+    width: auto;
+    white-space: nowrap;
+  }
+  .prefs-foot {
+    flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pref.pref-flash {
+    animation: none;
+  }
 }
 .prefs-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px 16px 16px;
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
 }
 .prefs-workspaces {
   display: flex;
@@ -4904,6 +6010,8 @@ kbd {
 .ctx-menu {
   position: fixed;
   z-index: var(--z-menu);
+  /* a menu opened from inside a layer that lets the pointer through (the rulers and guides) must still take clicks */
+  pointer-events: auto;
   min-width: 190px;
   max-height: calc(100vh - 8px);
   overflow-y: auto;
@@ -4930,8 +6038,9 @@ kbd {
 }
 .ctx-item:hover:not(:disabled),
 .ctx-item.open {
-  background: var(--accent-2);
-  color: #fff;
+  /* menus highlight in the brand gold like every other chosen state, not the old blue */
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .ctx-item:disabled {
   color: var(--muted);
@@ -4939,6 +6048,7 @@ kbd {
 }
 .ctx-item.danger:hover {
   background: var(--danger);
+  color: #fff;
 }
 .ctx-label {
   flex: 1;
@@ -4977,8 +6087,9 @@ kbd {
   font: inherit;
 }
 .ctx-search:focus {
-  outline: 2px solid var(--accent-2);
-  outline-offset: -1px;
+  outline: var(--focus-outline);
+  outline-offset: -2px;
+  box-shadow: var(--focus-inset);
 }
 .ctx-empty {
   padding: 5px 8px;
@@ -5071,20 +6182,48 @@ kbd {
   top: 0;
   width: 20px;
   height: 20px;
+  padding: 0;
   background: var(--panel);
+  border: 0;
   border-right: 1px solid var(--line-2);
   border-bottom: 1px solid var(--line-2);
   z-index: 3;
+  pointer-events: auto;
+  cursor: pointer;
+}
+/* a small guide mark in the corner: the way in to the guides menu */
+.ruler-corner::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-left: 1px dashed var(--guide);
+  border-top: 1px dashed var(--guide);
+}
+.ruler-corner:hover,
+.ruler-corner:focus-visible {
+  background: var(--primary-bg);
 }
 .guide-line {
   position: absolute;
-  pointer-events: auto;
+  /* drawn across the whole canvas, but only its .guide-grab strip (over its own page) takes the pointer */
+  pointer-events: none;
   z-index: 1;
+}
+.guide-grab {
+  position: absolute;
+  pointer-events: auto;
+}
+.guide-line.x .guide-grab {
+  left: 0;
+  width: 100%;
+}
+.guide-line.y .guide-grab {
+  top: 0;
+  height: 100%;
 }
 .guide-line::after {
   content: '';
   position: absolute;
-  background: #ff4fa3;
 }
 .guide-line.x {
   top: 0;
@@ -5092,11 +6231,21 @@ kbd {
   width: 7px;
   cursor: col-resize;
 }
+/* every guide is dashed, in the one colour (--guide, above) */
 .guide-line.x::after {
   left: 3px;
   top: 0;
   bottom: 0;
   width: 1px;
+  background: repeating-linear-gradient(to bottom, var(--guide) 0 6px, transparent 6px 10px);
+}
+.guide-line.x .guide-grab {
+  top: 0;
+  height: 100%;
+}
+.guide-line.y .guide-grab {
+  left: 0;
+  width: 100%;
 }
 .guide-line.y {
   left: 0;
@@ -5109,6 +6258,11 @@ kbd {
   left: 0;
   right: 0;
   height: 1px;
+  background: repeating-linear-gradient(to right, var(--guide) 0 6px, transparent 6px 10px);
+}
+/* locked guides can't be grabbed */
+.guide-line.locked {
+  cursor: not-allowed;
 }
 .guide-line.preview {
   pointer-events: none;
@@ -5118,10 +6272,25 @@ kbd {
   position: absolute;
   padding: 1px 4px;
   border-radius: 3px;
-  background: #ff4fa3;
+  background: var(--guide);
   color: #fff;
   font: 10px ui-monospace, monospace;
   z-index: 4;
+}
+/* a guide dragged off its page, that letting go will remove: faded, with a note by the pointer saying so */
+.guide-line.removing {
+  opacity: 0.35;
+}
+.guide-remove-hint {
+  position: absolute;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
 }
 
 /* ---------------------------------------------------------------- history and share */
@@ -5353,7 +6522,7 @@ kbd {
   cursor: pointer;
 }
 .new-thumb:hover {
-  color: var(--accent);
+  color: var(--text);
 }
 .link-btn.inline {
   display: inline;
@@ -5381,8 +6550,8 @@ kbd {
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
 }
 .quick-unlock:hover {
-  background: var(--accent-2);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 a.btn {
   text-decoration: none;
@@ -5415,7 +6584,7 @@ a.btn {
 .debug-bar > span {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--key-on);
 }
 .debug-filter {
   padding: 3px 6px;
@@ -5591,8 +6760,8 @@ code {
   cursor: pointer;
 }
 .add-menu-list button:hover {
-  background: var(--accent-2);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .curve-editor {
   display: block;
@@ -5611,7 +6780,7 @@ code {
 }
 .ce-curve {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--key-on);
   stroke-width: 2;
 }
 .ce-arm {
@@ -5620,12 +6789,12 @@ code {
 }
 .ce-handle {
   fill: var(--panel);
-  stroke: var(--accent);
+  stroke: var(--key-on);
   stroke-width: 2;
   cursor: grab;
 }
 .ce-handle:hover {
-  fill: var(--accent);
+  fill: var(--key-on);
 }
 
 /* ---------------------------------------------------------------- draw order list */
@@ -5729,8 +6898,10 @@ code {
   font: inherit;
 }
 .dialog-field input:focus {
-  outline: none;
-  border-color: var(--accent);
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+  box-shadow: var(--focus-halo);
+  border-color: var(--focus-ring);
 }
 .dialog-field input[aria-invalid='true'] {
   border-color: var(--danger);
@@ -5757,8 +6928,9 @@ code {
   filter: brightness(1.1);
 }
 .dialog .btn:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 
 /* ---------------------------------------------------------------- linked files: chooser, banner, inspector */
@@ -5868,8 +7040,9 @@ code {
   cursor: not-allowed;
 }
 .seg-btn:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: -2px;
+  box-shadow: var(--focus-inset);
 }
 .link-info {
   display: flex;
@@ -6031,8 +7204,8 @@ code {
   padding-bottom: 6px;
 }
 .badge.lib-updates {
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   border: 0;
   cursor: pointer;
 }
@@ -6120,7 +7293,9 @@ code {
 .link-btn {
   background: none;
   border: 0;
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
   padding: 0;
   text-align: left;
@@ -6182,8 +7357,8 @@ code {
 
 /* Bones: glyphs on the canvas (never drawn in the player) */
 .bone-body {
-  fill: color-mix(in srgb, var(--accent) 28%, transparent);
-  stroke: var(--accent);
+  fill: color-mix(in srgb, var(--primary-bg) 28%, transparent);
+  stroke: var(--primary-bg);
   stroke-width: 1.2;
   stroke-linejoin: round;
   cursor: grab;
@@ -6199,7 +7374,7 @@ code {
 .bone-joint,
 .bone-tip {
   fill: #fff;
-  stroke: var(--accent);
+  stroke: var(--focus-edge);
   stroke-width: 1.2;
 }
 .bone-joint {
@@ -6240,7 +7415,7 @@ code {
   cursor: grab;
 }
 .paint-head.drop {
-  outline: 1px dashed var(--accent);
+  outline: 1px dashed var(--primary-bg);
 }
 .paint-head .mini {
   border: none;
@@ -6291,7 +7466,7 @@ code {
 }
 @keyframes paint-moved {
   from {
-    background: color-mix(in srgb, var(--accent) 35%, transparent);
+    background: color-mix(in srgb, var(--primary-bg) 35%, transparent);
   }
   to {
     background: transparent;
@@ -6300,7 +7475,7 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .paint-order-row.moved {
     animation: none;
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    background: color-mix(in srgb, var(--primary-bg) 18%, transparent);
   }
 }
 .sr-only {
@@ -6501,6 +7676,18 @@ code {
   text-transform: uppercase;
   color: var(--muted);
 }
+/* A recording waiting to be kept or thrown away */
+.voice-take {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.voice-take .row {
+  flex-wrap: wrap;
+}
 .q-vars summary {
   cursor: pointer;
   font-size: 12px;
@@ -6531,7 +7718,7 @@ code {
 }
 .chip:hover,
 .chip:focus-visible {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .q-part-note {
   display: flex;
@@ -6622,7 +7809,7 @@ code {
   display: block;
   height: 100%;
   border-radius: 3px;
-  background: var(--accent);
+  background: var(--key-on);
 }
 .ins-bar-fill.ok {
   background: var(--ok);
@@ -6671,7 +7858,7 @@ code {
   flex: none;
   width: 15px;
   height: 15px;
-  color: var(--accent);
+  color: var(--key-on);
 }
 
 /* The "new version, reload" notice after a deploy (lib/stale-build.ts) */
@@ -6683,7 +7870,7 @@ code {
   align-items: center;
   gap: 10px;
   max-width: min(640px, calc(100vw - 32px));
-  border-color: var(--accent, var(--line-2));
+  border-color: var(--primary-bg);
   z-index: var(--z-toast);
 }
 /* ---------------------------------------------------------------- narration and captions on the timeline */
@@ -6721,7 +7908,7 @@ code {
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 .media-label.selected {
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 25%, transparent);
   color: var(--text, inherit);
 }
 .media-name {
@@ -6763,7 +7950,7 @@ code {
 }
 .audio-clip.selected {
   border-color: #fff;
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: var(--sel-ring-thin);
 }
 .audio-clip.muted {
   opacity: 0.5;
@@ -6811,7 +7998,7 @@ code {
 }
 .vkey.selected {
   background: #fff;
-  box-shadow: 0 0 0 2px var(--accent);
+  box-shadow: var(--sel-ring);
 }
 .trim-handle {
   position: absolute;
@@ -6877,7 +8064,7 @@ code {
 }
 .cue.selected {
   border-color: #fff;
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: var(--sel-ring-thin);
 }
 .cue-text {
   display: block;
@@ -6955,11 +8142,11 @@ code {
   cursor: pointer;
 }
 .var-pill.on rect {
-  fill: var(--accent);
-  stroke: var(--accent);
+  fill: var(--primary-bg);
+  stroke: var(--primary-bg);
 }
 .var-pill.on text {
-  fill: #fff;
+  fill: var(--primary-fg);
 }
 .variant-list {
   list-style: none;
@@ -7066,7 +8253,7 @@ code {
   height: 22px;
   width: 0;
   border: 0;
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--primary-bg);
   background: none;
   padding: 0;
   cursor: pointer;
@@ -7079,7 +8266,7 @@ code {
   left: 0;
   transform: translateX(-50%);
   font: 10px ui-monospace, monospace;
-  color: var(--accent);
+  color: var(--text);
   pointer-events: auto;
 }
 .pw-zone {
@@ -7354,8 +8541,8 @@ code {
   border-radius: 50% 50% 50% 3px;
   transform: translate(0, -100%);
   border: 2px solid #fff;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   font: 600 11px/1 system-ui, sans-serif;
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
@@ -7379,7 +8566,7 @@ code {
   box-shadow: 0 0 0 2px var(--warn), 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 .cm-pin.selected {
-  box-shadow: 0 0 0 3px var(--accent-2), 0 0 0 5px rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 3px var(--focus-edge), 0 0 0 5px var(--primary-bg);
   z-index: 2;
 }
 .cm-pin.detached {
@@ -7387,13 +8574,14 @@ code {
 }
 .cm-pin.draft {
   background: var(--panel);
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--text);
+  border-color: var(--primary-bg);
   cursor: default;
 }
 .cm-pin:focus-visible {
-  outline: 2px solid var(--accent-2);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .cm-card {
   position: absolute;
@@ -7454,8 +8642,8 @@ code {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--accent-2);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7485,7 +8673,8 @@ code {
   line-height: 1.4;
 }
 .cm-mention {
-  color: var(--accent);
+  color: var(--link);
+  font-weight: 600;
 }
 .cm-composer {
   position: relative;
@@ -7506,20 +8695,9 @@ code {
   padding: 6px 8px;
 }
 .cm-composer textarea:focus {
-  outline: 2px solid var(--accent-2);
-  outline-offset: -1px;
-}
-.cm-name {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.cm-name input {
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--line-2);
-  border-radius: 6px;
-  padding: 5px 8px;
+  outline: var(--focus-outline);
+  outline-offset: -2px;
+  box-shadow: var(--focus-inset);
 }
 .cm-actions {
   display: flex;
@@ -7640,8 +8818,8 @@ code {
 }
 .cm-tab-badge {
   margin-left: 5px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .project-card .cm-count {
   display: inline-flex;
@@ -7650,8 +8828,8 @@ code {
   margin-left: 6px;
   padding: 1px 6px;
   border-radius: 9px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   font-size: 10.5px;
   font-weight: 600;
   vertical-align: middle;
@@ -7817,7 +8995,9 @@ code {
   opacity: 0.6;
 }
 .notice-list .notice-all {
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .review-hint {
   position: absolute;
@@ -7912,6 +9092,222 @@ code {
   border: 1px solid var(--line-2);
   border-radius: 8px;
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.4);
+}
+
+/* Timeline: the side list of the artboard's timelines (TimelineList) and the folding Sound and captions group */
+.timeline-shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+.timeline-shell > .timeline,
+.timeline-shell > .panel-empty {
+  flex: 1;
+  min-width: 0;
+}
+.tl-list {
+  flex: none;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+}
+.tl-list-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.tl-list-head-btns {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+.tl-list-scroll {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.tl-list-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tl-row-sub {
+  opacity: 0.75;
+}
+.tl-row {
+  position: relative;
+  padding: 4px 8px 5px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.tl-row:hover {
+  background: var(--panel-2);
+}
+.tl-row.active {
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.tl-row.active:hover {
+  background: var(--primary-bg-hover);
+}
+.tl-row.animates {
+  box-shadow: inset 3px 0 0 var(--primary-bg);
+}
+.tl-row.animates.active {
+  box-shadow: inset 3px 0 0 var(--primary-fg);
+}
+.tl-row.dragging {
+  opacity: 0.5;
+}
+.tl-row.over {
+  box-shadow: inset 0 2px 0 var(--primary-bg);
+}
+.tl-row-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tl-row-pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tl-row-pick:focus-visible,
+.tl-row-edit:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+  box-shadow: var(--focus-halo);
+}
+.tl-row.active .tl-row-pick:focus-visible {
+  outline-color: var(--primary-fg);
+}
+.tl-row-name {
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tl-row-edit {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 1px 4px;
+}
+.tl-row-btns {
+  display: none;
+  gap: 0;
+  margin: 1px 0 2px -4px;
+}
+.tl-row.active .tl-row-btns,
+.tl-row:focus-within .tl-row-btns {
+  display: flex;
+}
+.tl-row-btns .icon-btn {
+  width: 22px;
+  height: 22px;
+}
+.tl-row.active .icon-btn {
+  color: var(--primary-fg);
+}
+.tl-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  opacity: 0.85;
+}
+.tl-row-meta span + span::before {
+  content: '·';
+  margin-right: 8px;
+}
+.tl-row-use.idle {
+  font-style: italic;
+}
+.tl-row-hit {
+  font-weight: 600;
+}
+.tl-row-problem {
+  color: var(--danger-text);
+}
+.tl-row.active .tl-row-problem {
+  color: var(--primary-fg);
+}
+.tl-states {
+  border-top: 1px solid var(--line);
+  padding: 6px 8px 8px;
+}
+.tl-states p {
+  margin: 0 0 6px;
+}
+.tl-states-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.media-fold {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 0;
+}
+.media-fold:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+  box-shadow: var(--focus-halo);
+}
+.media-summary {
+  color: var(--muted);
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-group-head {
+  border-top: 1px solid var(--line);
+}
+.media-mark {
+  position: absolute;
+  height: 5px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+.media-mark.audio {
+  top: 3px;
+  background: rgba(80, 180, 160, 0.9);
+}
+.media-mark.captions {
+  top: 9px;
+  background: var(--muted);
+}
+.media-mark.descriptions {
+  top: 15px;
+  background: var(--primary-bg);
+}
+@media (max-width: 900px) {
+  .tl-list {
+    width: 170px;
+  }
 }
 
 /* usage and errors (power users) */
@@ -8258,7 +9654,9 @@ code {
   padding: 2px 4px 2px 8px;
   border: 1px solid var(--line-2);
   border-radius: 999px;
-  color: var(--accent);
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -8356,7 +9754,7 @@ code {
   cursor: default;
 }
 .checklist-text:not(:disabled) {
-  color: var(--accent);
+  color: var(--link);
 }
 .update-group {
   margin: 6px 0;
@@ -8525,7 +9923,7 @@ code {
 }
 .color-field .swatch.linked {
   border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--accent);
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--primary-bg);
   overflow: visible;
 }
 .color-field .swatch.linked svg {
@@ -8535,8 +9933,8 @@ code {
   padding: 2px;
   box-sizing: content-box;
   border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .token-chip {
   display: flex;
@@ -8736,7 +10134,7 @@ code {
   text-overflow: ellipsis;
 }
 .font-picker.open .font-input {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .font-pop {
   position: fixed;
@@ -8871,8 +10269,9 @@ code {
 }
 .np-tab:focus-visible,
 .np-opt:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .np-tab-label {
   font-weight: 600;
@@ -9164,7 +10563,7 @@ code {
 .motion-progress .bar span {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--key-on);
 }
 
 /* Attributions and references */
@@ -9334,8 +10733,9 @@ code {
   border-color: var(--text);
 }
 .colourway-swatch:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .colourway-swatch.on {
   box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--text);
@@ -9437,7 +10837,7 @@ code {
 .weight-bar span {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--key-on);
 }
 .weight-size {
   flex: 0 0 auto;
@@ -9509,7 +10909,7 @@ code {
 
 /* The selection of the text being edited, drawn while the focus is in the toolbar (the browser stops drawing it then) */
 ::highlight(tt-sel) {
-  background-color: rgba(60, 130, 246, 0.35);
+  background-color: rgba(255, 180, 72, 0.5);
 }
 .themes-way-pick {
   max-width: 100%;
@@ -9720,8 +11120,9 @@ code {
 .note-box:focus-visible,
 .note-act:focus-visible,
 .note-swatch:focus-visible {
-  outline: 2px solid var(--u-g7);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 /* A turned-up corner, which is also where the note is resized from */
 .note-fold {
@@ -10027,7 +11428,8 @@ code {
 .preview-modal:focus {
   outline: none;
 }
-/* Node summary in the Interactions settings column, with the link on to the reference */
+/* Node summary in the Interactions settings column, and the explainer line under an Inspector section, with the link on to the help */
+.section-blurb .link-btn,
 .node-summary .link-btn {
   white-space: normal;
   text-align: left;
@@ -10170,8 +11572,9 @@ code {
   color: var(--primary-fg);
 }
 .page-link-handle:focus-visible {
-  outline: 2px solid var(--focus, var(--primary-bg));
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .page-link-stem {
   position: absolute;
@@ -10236,8 +11639,9 @@ body.page-link-dragging * {
   color: var(--primary-fg);
 }
 .nav-style:focus-visible {
-  outline: 2px solid var(--focus, var(--primary-bg));
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .row-actions {
   display: flex;
@@ -10503,8 +11907,9 @@ button.flow-text:hover {
   text-decoration: underline;
 }
 button.flow-text:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 
 /* the behaviour chooser */
@@ -10557,8 +11962,9 @@ button.flow-text:focus-visible {
   cursor: not-allowed;
 }
 .recipe-opt:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .recipe-name {
   font-weight: 600;
@@ -10693,8 +12099,9 @@ button.flow-text:focus-visible {
   border-color: var(--primary-bg);
 }
 .fr-goal:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .fr-goal span {
   color: var(--muted);
@@ -10753,21 +12160,18 @@ button.flow-text:focus-visible {
   padding: 0;
   list-style: none;
 }
-/* ---------------------------------------------------------------- pivot (a 3x3 picker and two percents) */
+/* ---------------------------------------------------------------- pivot (a 3x3 picker, then X and Y as a pair row) */
 .prop-row.pivot-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  display: block;
+  /* the dots and the X and Y pair get room round them, they were crowding the next row */
+  margin: var(--group-gap) 0;
 }
 .pivot-row .li-picker-field {
   flex: none;
 }
-.pivot-nums {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
+.prop-row.pivot-row .row.pivot-nums {
+  /* clear space between the dots and the Pivot X and Y boxes */
+  margin-top: var(--group-gap);
 }
 
 /* ---------------------------------------------------------------- a message with an Undo or Redo button */
@@ -11011,11 +12415,12 @@ button.flow-text:focus-visible {
   cursor: pointer;
 }
 .gs-job:hover {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .gs-job:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .gs-tick {
   display: inline-grid;
@@ -11278,8 +12683,9 @@ button.flow-text:focus-visible {
   color: var(--primary-fg);
 }
 .share-choice:focus-within {
-  outline: 2px solid var(--text);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .share-thing {
   display: flex;
@@ -11574,4 +12980,351 @@ button.flow-text:focus-visible {
 .data-grid tbody th {
   position: static;
   background: transparent;
+}
+
+/* A property key (P, S, R, T, A) just took you here: the field and its Timeline track are marked for a moment */
+.prop-jumped {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: 1px;
+  border-radius: 4px;
+  animation: prop-jumped 1.4s ease-out 1;
+}
+@keyframes prop-jumped {
+  from { background: color-mix(in srgb, var(--primary-bg) 45%, transparent); }
+  to { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prop-jumped { animation: none; }
+}
+
+/* Keyboard shortcuts page (components/KeymapPrefs.tsx and KeymapSets.tsx): the keys, what they do, and where each person changes them */
+.keys-controls {
+  position: sticky;
+  top: -14px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 8px 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.keys-list {
+  width: 100%;
+}
+.keys-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 260px;
+}
+.keys-search input {
+  flex: 1;
+  min-width: 0;
+}
+.keys-list .btn.on,
+.keys-sets .btn.on {
+  background: var(--primary-bg);
+  color: var(--primary-fg, #1e1e1e);
+  border-color: var(--primary-bg);
+}
+.keys-clash,
+.keys-pending {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+}
+.keys-clash ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+.keys-pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.keys-pending > span {
+  flex: 1 1 280px;
+}
+.keys-body {
+  display: block;
+}
+.keys-group h4 {
+  margin: 14px 0 4px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.keys-group table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.keys-group td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.keys-group tr.recording td {
+  background: color-mix(in srgb, var(--primary-bg) 18%, transparent);
+}
+.keys-name {
+  width: 36%;
+}
+.keys-where {
+  width: 19%;
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.keys-keys {
+  width: 28%;
+}
+.keys-act {
+  text-align: right;
+  white-space: nowrap;
+}
+.keys-act .btn + .btn {
+  margin-left: 4px;
+}
+.keys-chip {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 6px 2px 0;
+}
+.keys-x {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 3px;
+  font-size: 14px;
+  line-height: 1;
+}
+.keys-x:hover,
+.keys-x:focus-visible {
+  color: var(--text);
+}
+.keys-listen {
+  font-size: 11.5px;
+  color: var(--text);
+}
+.keys-foot {
+  margin: 12px 0 0;
+}
+/* keyboard sets: the picker, its menu, and the share and import boxes */
+.keys-sets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.keys-setrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.keys-setpick {
+  flex: 1 1 240px;
+  max-width: 360px;
+  width: auto !important;
+}
+.keys-setnote {
+  margin: 0;
+}
+.keys-menu {
+  position: relative;
+}
+.keys-menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 5;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.keys-menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.keys-menu-item:hover:not(:disabled),
+.keys-menu-item:focus-visible {
+  background: var(--primary-bg);
+  color: var(--primary-fg, #1e1e1e);
+  outline: none;
+}
+.keys-menu-item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.keys-menu-sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--line);
+}
+.keys-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+.keys-panel h4 {
+  margin: 0;
+  font-size: 13px;
+}
+.keys-panel p {
+  margin: 0;
+}
+.keys-panel textarea {
+  width: 100%;
+  font: 12px/1.4 var(--mono, monospace);
+  resize: vertical;
+}
+.keys-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.keys-review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.keys-review p {
+  margin: 0;
+}
+.keys-note {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.keys-review-list {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.keys-review-list td {
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.keys-review-list kbd {
+  margin-right: 4px;
+}
+.keys-review-name {
+  max-width: 320px;
+}
+.prefs-keys {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+@media (max-width: 640px) {
+  .keys-where {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- moving sections and tools (lib/reorder-drag.ts, lib/section-order.ts) */
+/* a panel whose sections have been moved: its children take the order set on them (lib/section-order.ts) */
+.reordered {
+  display: flex;
+  flex-direction: column;
+}
+.reordered > * {
+  flex: none;
+}
+/* a small grip in the left margin of a section's header, so it reads as something to pick up */
+.section-head {
+  position: relative;
+}
+.section-grip {
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 6px;
+  height: 12px;
+  margin-top: -6px;
+  opacity: 0;
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1.5px);
+  background-size: 3px 4px;
+  background-repeat: repeat;
+  color: var(--muted);
+  pointer-events: none;
+}
+.section-head:hover .section-grip,
+.section-head:focus-within .section-grip {
+  opacity: 0.8;
+}
+body.reorder-active,
+body.reorder-active * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+.reorder-lifted {
+  opacity: 0.45;
+}
+body.reorder-active .ix-tooltip {
+  display: none !important;
+}
+/* where the dropped thing will land: gold, with a dark and a light edge so it shows in both themes */
+.reorder-line {
+  position: fixed;
+  z-index: var(--z-dock-drag, 71);
+  pointer-events: none;
+  border-radius: 2px;
+  background: var(--primary-bg);
+  box-shadow:
+    0 0 0 1px var(--primary-fg),
+    0 0 0 2px color-mix(in srgb, var(--panel) 80%, transparent);
+}
+.reorder-line.noop {
+  opacity: 0.4;
+}
+.reorder-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: var(--z-dock-drag, 71);
+  pointer-events: none;
+  max-width: 220px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--primary-bg);
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+/* the thing that was just moved says so for a moment (a static outline, so reduced motion needs nothing) */
+.reorder-landed {
+  box-shadow: inset 3px 0 0 var(--primary-bg);
 }

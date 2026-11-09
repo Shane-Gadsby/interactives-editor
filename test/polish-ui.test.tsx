@@ -21,11 +21,12 @@ afterEach(() => {
 });
 
 describe('inspector polish', () => {
-  it('puts a long single-line label above its box, and keeps a short one beside it', () => {
-    act(() => root.render(<><TextField label="Text alternative" value="" onChange={() => undefined} /><TextField label="Name" value="" onChange={() => undefined} /></>));
-    const [long, short] = [...host.querySelectorAll('.text-field')];
-    expect(long.classList.contains('multiline')).toBe(true);
-    expect(short.classList.contains('multiline')).toBe(false);
+  it('keeps a long single-line label beside its box (it wraps in the label column), and puts only a text area label above', () => {
+    act(() => root.render(<><TextField label="Text alternative" value="" onChange={() => undefined} /><TextField label="Name" value="" onChange={() => undefined} /><TextField label="Text" value="" multiline onChange={() => undefined} /></>));
+    const [long, short, area] = [...host.querySelectorAll('.text-field')];
+    expect(long.classList.contains('stacked')).toBe(false);
+    expect(short.classList.contains('stacked')).toBe(false);
+    expect(area.classList.contains('stacked')).toBe(true);
   });
 
   it('sums a token up as one line of text, a value for each theme', () => {

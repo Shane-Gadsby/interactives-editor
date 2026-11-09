@@ -204,9 +204,12 @@ const TIMELINE_OP: Record<string, (t: string, p: P) => string> = {
 
 function setVariable(p: P, c: Names): string {
   const v = c.variable(p.variable);
-  switch (String(p.op ?? 'set')) {
+  const op = String(p.op ?? 'set');
+  //an easing time on a number: only worded when it is not 0
+  const over = (op === 'set' || op === 'add') && String(p.over ?? '').trim() && String(p.over).trim() !== '0' ? ` over ${secs(p.over)}` : '';
+  switch (op) {
     case 'add':
-      return `add ${val(p.value)} to ${v}`;
+      return `add ${val(p.value)} to ${v}${over}`;
     case 'toggle':
       return `switch ${v} on or off`;
     case 'push':
@@ -224,7 +227,7 @@ function setVariable(p: P, c: Names): string {
     case 'setItem':
       return `change an item of the list ${v}`;
     default:
-      return `set ${v} to ${val(p.value)}`;
+      return `set ${v} to ${val(p.value)}${over}`;
   }
 }
 
@@ -265,6 +268,7 @@ const ACTION: Record<string, (p: P, c: Names) => string> = {
   },
   'action.moveView': (p, c) => (p.to === 'page' ? 'show the whole page again' : `move the view to ${c.layer(p.target)}`),
   'action.url': (p) => `open the link ${val(p.url)}`,
+  'action.credits': () => 'open the credits',
   'action.startOver': () => 'start over',
   'action.reportResult': (p) => (p.completed === 'progress' ? `report the score so far${p.score ? ` (${val(p.score)})` : ''}` : `report the result${p.score ? ` (score ${val(p.score)})` : ''}`),
   'action.record': (p) => `record ${quoted(String(p.name ?? 'milestone'))}`,

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { matches } from '../lib/keymap';
 import { PropRow, PropSearchProvider, PropSearchStore } from '../lib/prop-search';
 import { PropSearchBox } from './PropSearchBox';
+import { SectionOrderScope } from '../lib/section-order';
 import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
 import {
   LIGHT_LOOK,
@@ -26,7 +28,6 @@ import {
   type ProgressNode,
   type ChartNode,
   type ConnectorNode,
-  DRAW_API,
   DRAW_TEMPLATES,
   type DrawTemplate,
   defaultAutoLayout,
@@ -61,9 +62,10 @@ import {
 import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { getArtboard, isIdentifier, locate } from '../store/doc';
 import { ColourwayRow } from './ColourwayRow';
-import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, UnitField } from '../components/ui';
+import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, TrackField, UnitField } from '../components/ui';
 import { ExprField } from '../components/ExprField';
 import { openBehaviours } from '../components/BehaviourDialog';
+import { revealAdded } from '../lib/graph-reveal';
 import { flowSentence, flowsForLayer } from '../lib/flow-describe';
 import { removeFlow, setFlowOff, showInGraph } from '../lib/flow-actions';
 
@@ -75,7 +77,6 @@ import { assetKind } from '../lib/assets';
 import { acceptFor, pickFiles, replaceAssetFile } from '../lib/insert';
 import { updateFromFile } from '../lib/importers';
 import { pointTracks } from '../lib/path-edit';
-import { formatTracks, parseTracks } from '../lib/grid-tracks';
 import { addAssetOption, createVariable, withQuickAdd } from '../lib/quick-add';
 import { SearchPicker, type PickerOption } from '../components/SearchPicker';
 import { CodeEditor } from '../components/CodeEditor';
@@ -127,6 +128,7 @@ import { CornerRadii } from './CornerRadii';
 import { hasCornerRadii } from '../lib/corner-radii';
 import { pickedArtboardIds } from '../lib/artboard-groups';
 import { ArtboardsSelection } from './ArtboardsSelection';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 
 export function Inspector() {
@@ -153,11 +155,13 @@ export function Inspector() {
   if (!ab) return <aside className="inspector" />;
   const nodes = s.selection.map((id) => locate(ab, id)?.node).filter(Boolean) as SceneNode[];
   const pickedAbs = pickedArtboardIds(s);
+  // each kind of panel keeps its own section order: a layer's by its type (a rectangle, some text, ...), the page's, several pages'
+  const orderScope = nodes.length ? (nodes.every((x) => x.type === nodes[0].type) ? `layer:${nodes[0].type}` : 'layers') : pickedAbs.length > 1 ? 'pages' : 'page';
   // "/" or Ctrl+F anywhere in the panel (outside a field you're typing in) goes to the search; Esc clears it
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     const t = e.target as HTMLElement;
     const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || t.isContentEditable;
-    if ((e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) || ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f')) {
+    if (matches(e, 'inspector-search') && (!typing || e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       e.stopPropagation();
       box.current?.focus();
@@ -172,10 +176,12 @@ export function Inspector() {
       <PropSearchProvider value={store}>
         <PropSearchBox store={store} query={query} setQuery={setQuery} inputRef={box} />
         {s.recording && s.timelineShown && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
-        {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : (
-          // several artboards selected: what applies to all of them, instead of the active one's own settings
-          pickedAbs.length > 1 ? <ArtboardsSelection ids={pickedAbs} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />
-        )}
+        <SectionOrderScope.Provider value={orderScope}>
+          {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : (
+            // several artboards selected: what applies to all of them, instead of the active one's own settings
+            pickedAbs.length > 1 ? <ArtboardsSelection ids={pickedAbs} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />
+          )}
+        </SectionOrderScope.Provider>
       </PropSearchProvider>
     </aside>
   );
@@ -537,10 +543,15 @@ function LibraryArtboardSection({ ab, project }: { ab: Artboard; project: Projec
   const locked = !!link.brand && !override;
   return (
     <Section id="library-link" help={link.brand ? 'brand-kits' : 'libraries'} title={link.brand ? 'Brand kit' : 'Library'}>
-      <p className="hint">
-        {link.internal ? 'Used inside a library component. ' : ''}From <strong>{name}</strong>, version {link.version}. It is read-only here: its layers, timelines and interactions come from the library and are replaced when you update it. Instances of it in your own artboards, their inputs and your variables are yours.
-        {link.brand && ' It is part of a brand kit, so it stays linked and locked. You can move it, and change the text the kit marks as editable. Instances of it keep its proportions and can be scaled between half and double its size.'}
-      </p>
+      <SectionBlurb
+        text={
+          <>
+            {link.internal ? 'Used inside a library component. ' : ''}From <strong>{name}</strong>, version {link.version}. {link.brand ? 'Part of a brand kit, so it stays linked and locked.' : 'Read-only here: update the library to change it.'}
+          </>
+        }
+        name={link.brand ? 'brand kits' : 'libraries'}
+        help={link.brand ? ['brand-kits', 'what-is-locked'] : ['libraries', 'using-a-library']}
+      />
       <Row>
         <button
           className="btn"
@@ -668,9 +679,9 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <Row>
           <SelectField
             label="Use in"
-            title="Place this page as an instance inside another page"
+            title="Place this page inside another page, as a component. You can also right-click it and choose Place in…, or drag its row from the Layers list onto the other page"
             value=""
-            options={[{ value: '', label: 'Instance in…' }, ...project.artboards.filter((a) => a.id !== ab.id).map((a) => ({ value: a.id, label: a.name }))]}
+            options={[{ value: '', label: 'Component in…' }, ...project.artboards.filter((a) => a.id !== ab.id).map((a) => ({ value: a.id, label: a.name }))]}
             onChange={(target) => {
               if (!target) return;
               const host = project.artboards.find((a) => a.id === target)!;
@@ -686,16 +697,14 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <MasterSection ab={ab} project={project} />
       <TabOrderSection ab={ab} />
       <StepsSection ab={ab} project={project} />
-      <JoysticksSection ab={ab} />
       <BlendsSection ab={ab} project={project} />
+      <JoysticksSection ab={ab} />
       <BonesArtboardSection ab={ab} />
       <WeightSection ab={ab} project={project} />
       <Section help="project-settings" title="Project">
         <ColourwayRow project={project} />
-        <div className="labels-66">
-          <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
-          <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
-        </div>
+        <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
+        <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
         <TextField label="Description" value={project.settings.description} multiline onChange={(v) => setProject((p) => (p.settings.description = v), 'project-desc')} />
         <SelectField<FitMode>
           label="Fit"
@@ -768,7 +777,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <SensorsSection project={project} />
       <Section help="attributions" title="Credits" defaultOpen={false}>
         <CreditsSettingsFields />
-        <p className="hint">The entries themselves are in the Attributions tab. They are your own record unless you turn the button on.</p>
+        <SectionBlurb text="The entries are in the Attributions tab. Learners only see them if you turn the button on." name="Credits" help={['attributions', 'showing-it-to-learners']} />
         <Row k="Open Attributions" words={['credits', 'references', 'sources']}>
           <button className="btn" onClick={() => store().set({ bottomTab: 'credits', previewPlaying: false })} title="Open the Attributions tab">
             Open Attributions
@@ -788,7 +797,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <PropRow k="Add a font" words={['google fonts', 'typeface', 'upload font', 'font family']}>
         <FontPicker
           ariaLabel="Add a font"
-          title="Search every Google font and add it to this project (the player loads it). Fonts you upload in Assets show here too"
+          title="Search every Google font and add it to this project"
           placeholder="Add a Google font…"
           clearOnPick
           system={false}
@@ -799,7 +808,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           }}
         />
         </PropRow>
-        <p className="hint">Upload .woff2/.ttf files in Assets to use your own fonts.</p>
+        <SectionBlurb text="Upload .woff2 or .ttf files in Assets to use your own fonts." name="Fonts" help={['project-settings']} />
       </Section>
     </>
   );
@@ -807,10 +816,11 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
 
 // ---------------------------------------------------------------- nodes
 
-function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboard; project: Project }) {
+export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboard; project: Project }) {
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
   const set = useSetter(ids);
+  const shown = useShown(n);
   const single = nodes.length === 1;
   const sameType = nodes.every((x) => x.type === n.type);
   //A connector's box is the route between the two layers it joins, so there is nothing to place, size, turn or lay out
@@ -866,7 +876,10 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
         )}
         {!(sameType && (n.type === 'bone' || n.type === 'connector')) && <PivotFields originX={n.originX} originY={n.originY} onChange={(p) => set(p)} onCommit={() => store().commit()} />}
         <Row>
-          <CheckField label="Visible" value={n.visible} onChange={(v) => set({ visible: v })} />
+          <div className="keyed">
+            <CheckField label="Visible" value={Boolean(shown('visible') ?? n.visible)} onChange={(v) => set({ visible: v })} />
+            <KeyButton node={n} ids={ids} prop="visible" />
+          </div>
           <CheckField label="Locked" value={!!n.locked} onChange={(v) => set({ locked: v })} />
         </Row>
         {!isConn && <CheckField label="Use as mask" value={!!n.mask} onChange={(v) => set({ mask: v ? true : undefined })} />}
@@ -923,7 +936,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
           <TextField label="CSS class" value={n.className ?? ''} onChange={(v) => set({ className: v || undefined })} />
           {n.type === 'text' && (
             <>
-              <p className="hint">The toolbar that floats over the text while you edit it (double-click the text) is the normal way to style parts of it. This list is for fixing the runs by hand.</p>
+              <SectionBlurb text="Style parts of the text with the toolbar that floats over the text while you edit. This list is for fixing runs by hand." name="Text runs" help={['text', 'several-styles-in-one-text-layer']} />
               <RunsEditor node={n} />
             </>
           )}
@@ -1171,6 +1184,7 @@ function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[];
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
   const set = useSetter(ids);
+  const shown = useShown(n);
   const mixedFont = nodes.some((x) => x.fontFamily !== n.fontFamily);
   //Picking a Google font the project doesn't list yet adds it (with the weights these layers use), in the same undo step
   const pickFont = (o: FontPick) => {
@@ -1196,15 +1210,18 @@ function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[];
         ) : (
           <Num node={n} ids={ids} prop="fontSize" label="Size" min={1} />
         )}
-        <SelectField
-          label="Weight"
-          value={String(n.fontWeight)}
-          options={['100', '200', '300', '400', '500', '600', '700', '800', '900']}
-          onChange={(v) => setWeight(Number(v))}
-        />
+        <div className="keyed">
+          <SelectField
+            label="Weight"
+            value={String(shown('fontWeight') ?? n.fontWeight)}
+            options={['100', '200', '300', '400', '500', '600', '700', '800', '900']}
+            onChange={(v) => setWeight(Number(v))}
+          />
+          <KeyButton node={n} ids={ids} prop="fontWeight" />
+        </div>
       </Row>
       <Row>
-        <NumberField label="Line" value={n.lineHeight} step={0.05} min={0.5} onChange={(v) => set({ lineHeight: v })} />
+        <Num node={n} ids={ids} prop="lineHeight" label="Line" step={0.05} min={0.5} fallback={n.lineHeight} />
         <Num node={n} ids={ids} prop="letterSpacing" label="Letter" step={0.1} />
       </Row>
       <Color node={n} ids={ids} prop="color" label="Colour" />
@@ -1317,6 +1334,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
   const set = useSetter(ids);
+  const shown = useShown(n);
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
   const videos = project.assets.filter((a) => assetKind(a.mime, a.name) === 'video');
   const sounds = project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio');
@@ -1386,7 +1404,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
               </button>
             </Row>
           )}
-          <p className="hint">Double-click a path to edit its points; double-click its outline to add one. Alt-click a point toggles curve/corner; Delete removes it. The Bend tool (W) drags an edge into a curve.</p>
+          <SectionBlurb text="Double-click a path to edit its points, or its outline to add one." name="editing points" help={['shapes', 'editing-points']} />
           {nodes.length === 1 && <ShapeKeys node={n} />}
         </Section>
       );
@@ -1399,7 +1417,12 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'text':
       return (
         <Section help="text" title="Text">
-          {nodes.length === 1 && <ExprField label="Text" template mono={false} value={n.text} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
+          {nodes.length === 1 && (
+            <div className="keyed top">
+              <ExprField label="Text" template mono={false} value={String(shown('text') ?? n.text)} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />
+              <KeyButton node={n} ids={ids} prop="text" />
+            </div>
+          )}
           <SelectField
             label="Sizing"
             title={textFitOf(n) ? 'Fixed while Fit text to box is on: the text is sized to the box, not the box to the text' : undefined}
@@ -1441,9 +1464,15 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           />
           <TextSelectionHint id={n.id} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
-          <p className="hint">
-            Insert variables with <code>{'{name}'}</code>, or any expression like <code>{'{score * 10}'}</code>.
-          </p>
+          <SectionBlurb
+            text={
+              <>
+                Insert variables with <code>{'{name}'}</code>, or any expression like <code>{'{score * 10}'}</code>.
+              </>
+            }
+            name="live values in text"
+            help={['text', 'live-values-in-text']}
+          />
         </Section>
       );
     case 'image':
@@ -1496,10 +1525,21 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'button':
       return (
         <Section help="web-elements" title="Button">
-          {nodes.length === 1 && <ExprField label="Label" template mono={false} value={n.label} onChange={(v) => set({ label: v }, `label-${n.id}`)} />}
+          {nodes.length === 1 && (
+            <div className="keyed top">
+              <ExprField label="Label" template mono={false} value={String(shown('label') ?? n.label)} onChange={(v) => set({ label: v }, `label-${n.id}`)} />
+              <KeyButton node={n} ids={ids} prop="label" />
+            </div>
+          )}
           {radius}
-          <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />
-          <NumberField label="Disabled look" title="How opaque the button looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={n.disabledOpacity ?? 0.5} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
+          <div className="keyed">
+            <CheckField label="Disabled" value={!!shown('disabled')} onChange={(v) => set({ disabled: v })} />
+            <KeyButton node={n} ids={ids} prop="disabled" />
+          </div>
+          <div className="keyed">
+            <NumberField label="Disabled look" title="How opaque the button looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={Number(shown('disabledOpacity') ?? n.disabledOpacity ?? 0.5)} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
+            <KeyButton node={n} ids={ids} prop="disabledOpacity" />
+          </div>
           <FitTextFields nodes={nodes as (SceneNode & { fitText?: TextFit | null })[]} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           <p className="hint">Add a click interaction to make it do something.</p>
@@ -1531,8 +1571,14 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             </>
           )}
           {radius}
-          <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />
-          <NumberField label="Disabled look" title="How opaque the input looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={n.disabledOpacity ?? 0.5} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
+          <div className="keyed">
+            <CheckField label="Disabled" value={!!shown('disabled')} onChange={(v) => set({ disabled: v })} />
+            <KeyButton node={n} ids={ids} prop="disabled" />
+          </div>
+          <div className="keyed">
+            <NumberField label="Disabled look" title="How opaque the input looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={Number(shown('disabledOpacity') ?? n.disabledOpacity ?? 0.5)} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
+            <KeyButton node={n} ids={ids} prop="disabledOpacity" />
+          </div>
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           {!project.variables.length && <p className="hint">Create a variable in the Variables tab to bind this input to.</p>}
         </Section>
@@ -1540,7 +1586,12 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'link':
       return (
         <Section help="links-cursors" title="Link">
-          {nodes.length === 1 && <TextField label="Text" value={n.text} onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
+          {nodes.length === 1 && (
+            <div className="keyed">
+              <TextField label="Text" value={String(shown('text') ?? n.text)} onChange={(v) => set({ text: v }, `text-${n.id}`)} />
+              <KeyButton node={n} ids={ids} prop="text" />
+            </div>
+          )}
           <TextField label="URL" value={n.href} onChange={(v) => set({ href: v })} />
           <CheckField label="Open in new tab" value={n.newTab} onChange={(v) => set({ newTab: v })} />
           <FitTextFields nodes={nodes as (SceneNode & { fitText?: TextFit | null })[]} />
@@ -1560,7 +1611,10 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onChange={(v) => set({ mode: v })}
           />
           {n.mode === 'iframe' ? (
-            <TextField label="URL" value={n.src} commitOnBlur onChange={(v) => set({ src: v })} />
+            <div className="keyed">
+              <TextField label="URL" value={String(shown('src') ?? n.src)} commitOnBlur onChange={(v) => set({ src: v })} />
+              <KeyButton node={n} ids={ids} prop="src" />
+            </div>
           ) : (
             nodes.length === 1 && (
               <PropRow k="HTML" words={['embed code', 'iframe', 'markup', 'source', 'code']}>
@@ -1584,7 +1638,12 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             options={[{ value: '', label: 'Use a URL' }, ...videos.map((a) => ({ value: a.id, label: a.name })), ...sounds.map((a) => ({ value: a.id, label: `${a.name} (sound only: shows the poster)` })), addAssetOption('video')]}
           />
           {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
-          {!n.assetId && <TextField label="URL" value={n.src} commitOnBlur onChange={(v) => set({ src: v })} />}
+          {!n.assetId && (
+            <div className="keyed">
+              <TextField label="URL" value={String(shown('src') ?? n.src)} commitOnBlur onChange={(v) => set({ src: v })} />
+              <KeyButton node={n} ids={ids} prop="src" />
+            </div>
+          )}
           <Row>
             <CheckField label="Autoplay" value={n.autoplay} onChange={(v) => set({ autoplay: v })} />
             <CheckField label="Loop" value={n.loop} onChange={(v) => set({ loop: v })} />
@@ -1609,7 +1668,15 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             options={[{ value: '', label: 'None' }, ...images.map((a) => ({ value: a.id, label: a.name })), addAssetOption('image')]}
           />
           <TextField label="Text when empty" title="What a video with no source says while playing. Empty draws a plain grey box. The editor always shows Choose a video" value={n.emptyText ?? ''} commitOnBlur onChange={(v) => set({ emptyText: v.trim() ? v : undefined })} />
-          <p className="hint">To use where the video is, whether it's playing, how long it is or which chapter it is in, add a <strong>Data binding</strong> below (Playback position, Playing, Playback speed, Length, Chapter showing, Hold paused) and pick which way it goes.</p>
+          <SectionBlurb
+            text={
+              <>
+                To use where the video is, or whether it is playing, add a <strong>Data binding</strong> below.
+              </>
+            }
+            name="video playback in variables"
+            help={['images-media', 'video-playback-in-variables']}
+          />
           <VideoCues node={n} set={(patch) => set(patch)} />
           <VideoCaptions node={n} set={(patch) => set(patch)} />
           <VideoDescriptions node={n} set={(patch) => set(patch)} />
@@ -1691,16 +1758,7 @@ function DrawSection({ nodes }: { nodes: DrawNode[] }) {
         value={n.runInEditor !== false}
         onChange={(v) => set({ runInEditor: v })}
       />
-      <details className="draw-api">
-        <summary>What can the script use?</summary>
-        <ul className="hint">
-          {DRAW_API.map(([sig, what]) => (
-            <li key={sig}>
-              <code>{sig}</code>: {what}
-            </li>
-          ))}
-        </ul>
-      </details>
+      <SectionBlurb text="The script draws with g, once a frame. The help lists everything it can use." name="the drawing API" help={['script-layers', 'the-drawing-api']} />
     </Section>
   );
 }
@@ -1716,7 +1774,7 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
       const a = d.artboards.find((x) => x.id === ab.id);
       a?.logic.nodes.push({ id, kind: 'event.pointer', x: 40, y: maxY + 140, params: { target: node.id, type } });
     });
-    store().set({ bottomTab: 'logic', logicSelection: id });
+    revealAdded({ abId: ab.id, ids: [id], focusId: id, say: `Added an empty ${type === 'click' ? 'When clicked' : 'When hovered'} event`, quiet: () => store().set({ bottomTab: 'logic', logicSelection: id }) });
   };
   return (
     <Section help="interactions" title="Interactions" defaultOpen>
@@ -1765,12 +1823,12 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
       </Row>
       <CheckField
         label="Clickable while see-through"
-        title="When playing, a layer that is partly see-through (layer opacity, or a fill and stroke opacity, under 100%) normally lets the pointer through to what's underneath: no link, no hand cursor, no clicks or hovers, for it and everything inside it. Tick this to keep it clickable anyway. Hidden layers are never clickable."
+        title="Keep a partly see-through layer (opacity under 100%) clickable. Normally the pointer goes through it to what is underneath. Hidden layers are never clickable."
         value={!!node.interactiveWhenFaded}
         onChange={(v) => store().setProps([node.id], { interactiveWhenFaded: v || undefined })}
       />
       {shownAmount(node) < 1 && !node.interactiveWhenFaded && (flows.length > 0 || !!node.link?.url) ? <p className="hint">This layer is see-through ({Math.round(shownAmount(node) * 100)}%), so it can't be clicked while playing until it's fully showing.</p> : null}
-      {node.interactiveWhenFaded ? <p className="hint">Ticked: this layer stays clickable (hand cursor, clicks, hovers) even while faded out.</p> : null}
+      {node.interactiveWhenFaded ? <p className="hint">It stays clickable (hand cursor, clicks, hovers) even while faded out.</p> : null}
     </Section>
   );
 }
@@ -1825,12 +1883,13 @@ export function DepthSection({ nodes, project }: { nodes: SceneNode[]; project: 
         onChange={(v) => set({ depth: v ? v : undefined }, 'depth')}
       />
       {n.depth ? (
-        <p className="hint">
-          Moves up to {Math.round((Math.abs(depth) / 100) * (project.settings.parallax?.range ?? 40))} px{depth < 0 ? ', with the pointer' : ', against the pointer'}. Everything inside the layer goes with it.
-          {dragged ? ' A layer people can drag holds still.' : ''} Nothing moves for viewers who ask for less motion.
-        </p>
+        <SectionBlurb
+          text={`Moves up to ${Math.round((Math.abs(depth) / 100) * (project.settings.parallax?.range ?? 40))} px${depth < 0 ? ', with the pointer' : ', against the pointer'}.${dragged ? ' A layer people can drag holds still.' : ''}`}
+          name="Depth"
+          help={['fill-stroke', 'depth-parallax']}
+        />
       ) : (
-        <p className="hint">Give a background a small depth and the foreground a large one. Set the range, and whether phones tilt, in Project settings.</p>
+        <SectionBlurb text="Give a background a small depth and the foreground a large one." name="Depth" help={['fill-stroke', 'depth-parallax']} />
       )}
     </Section>
   );
@@ -1838,33 +1897,41 @@ export function DepthSection({ nodes, project }: { nodes: SceneNode[]; project: 
 
 function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
   const n = nodes[0];
-  const set = useSetter(nodes.map((x) => x.id));
+  const ids = nodes.map((x) => x.id);
+  const set = useSetter(ids);
+  const shown = useShown(n);
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
   const link = n.link;
   return (
     <>
     <Section help="links-cursors#link" title="Link" defaultOpen={!!link}>
-      <ExprField
-        label="Link"
-        template
-        mono={false}
-        value={link?.url ?? ''}
-        placeholder="https://… (makes the whole layer a link)"
-        commitOnBlur
-        onChange={(url) => set({ link: url.trim() ? { url: url.trim(), target: link?.target ?? '_blank' } : null })}
-      />
+      <div className="keyed">
+        <ExprField
+          label="Link"
+          template
+          mono={false}
+          value={String(shown('link.url') ?? link?.url ?? '')}
+          placeholder="https://… (makes the whole layer a link)"
+          commitOnBlur
+          onChange={(url) => set({ link: url.trim() ? { url: url.trim(), target: link?.target ?? '_blank' } : null })}
+        />
+        {link && <KeyButton node={n} ids={ids} prop="link.url" />}
+      </div>
       {link && (
         <SelectField<LinkTarget> label="Open in" value={link.target} options={LINK_TARGETS as { value: LinkTarget; label: string }[]} onChange={(t) => set({ link: { ...link, target: t } })} />
       )}
     </Section>
     <Section help="links-cursors#cursor" title="Cursor on hover" defaultOpen={!!(n.cursor || n.cursorImage)}>
-      <SelectField
-        label="Cursor"
-        title="The mouse cursor shown while the pointer is over this layer (and its children), like CSS :hover { cursor }. Automatic shows a pointer if the layer is a link or clickable"
-        value={n.cursor ?? ''}
-        options={[{ value: '', label: 'Automatic' }, ...CURSORS.map((c) => ({ value: c, label: CURSOR_LABELS[c] ?? c }))]}
-        onChange={(v) => set({ cursor: v || undefined })}
-      />
+      <div className="keyed">
+        <SelectField
+          label="Cursor"
+          title="The mouse cursor shown while the pointer is over this layer (and its children), like CSS :hover { cursor }. Automatic shows a pointer if the layer is a link or clickable"
+          value={String(shown('cursor') ?? n.cursor ?? '')}
+          options={[{ value: '', label: 'Automatic' }, ...CURSORS.map((c) => ({ value: c, label: CURSOR_LABELS[c] ?? c }))]}
+          onChange={(v) => set({ cursor: v || undefined })}
+        />
+        <KeyButton node={n} ids={ids} prop="cursor" />
+      </div>
       <SelectField
         label="Image"
         value={n.cursorImage ?? ''}
@@ -1877,9 +1944,7 @@ function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Pr
           <NumberField label="Hot y" value={n.cursorHotspot?.y ?? 0} min={0} onChange={(y) => set({ cursorHotspot: { x: n.cursorHotspot?.x ?? 0, y } })} />
         </Row>
       )}
-      <p className="hint">
-        Shown on hover in Preview and the exported player. Automatic gives a pointer to links and to layers with a click, press or release interaction. Interactions (Set cursor) and scripts (<code>ix.setCursor</code>, <code>node.set('cursor', …)</code>) can change it while running. Images over 32×32 px may be ignored by browsers.
-      </p>
+      <SectionBlurb text="The mouse pointer shown over this layer in Preview and the exported player." name="Cursor on hover" help={['links-cursors', 'cursor']} />
     </Section>
     </>
   );
@@ -1977,10 +2042,15 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
               />
             </Row>
           )}
-          <p className="hint">
-            Inside the copies, text slots and bindings can use <code>item</code> and <code>index</code>, e.g. <code>{'{item.name}'}</code>. Clicks on a copy put its position in <code>event.index</code>.
-            {lists.length ? ` Data: ${lists.join(', ')}.` : ' Add a data source in the Data tab, or use any array expression.'}
-          </p>
+          <SectionBlurb
+            text={
+              <>
+                Inside the copies, use <code>item</code> and <code>index</code>, e.g. <code>{'{item.name}'}</code>. {lists.length ? `Lists: ${lists.join(', ')}.` : 'Items can be a data source or any list.'}
+              </>
+            }
+            name="Repeat (list)"
+            help={['repeaters']}
+          />
           {!node.children.length && <p className="error small">Put a layer inside this {node.type} to use as the template.</p>}
         </>
       )}
@@ -2059,8 +2129,8 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
             <GridAlignFields grid={L.grid} onChange={(grid) => update({ grid })} />
           ) : L.grid ? (
             <>
-              <TextField label="Columns" title="Sizes of the columns: px, %, fr (a share of what is left) or auto. Like 100px 25% 1fr auto" value={formatTracks(L.grid.columns)} onChange={(v) => update({ grid: { ...L.grid!, columns: parseTracks(v) } })} />
-              <TextField label="Rows" title="Sizes of the rows, written the same way. Rows past the ones listed are auto" value={formatTracks(L.grid.rows)} onChange={(v) => update({ grid: { ...L.grid!, rows: parseTracks(v) } })} />
+              <TrackField label="Columns" title="Sizes of the columns: px, %, fr (a share of what is left) or auto. Like 100px 25% 1fr auto" tracks={L.grid.columns} onChange={(columns) => update({ grid: { ...L.grid!, columns } })} />
+              <TrackField label="Rows" title="Sizes of the rows, written the same way. Rows past the ones listed are auto" tracks={L.grid.rows} onChange={(rows) => update({ grid: { ...L.grid!, rows } })} />
               <Row>
                 {gapField('Column gap')}
                 {lineGapField('Row gap')}
@@ -2127,7 +2197,7 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
               Remove auto layout
             </button>
           </Row>
-          <p className="hint">Children are placed in layer order (reorder them in Layers). Hidden layers take no space, also at runtime.</p>
+          <SectionBlurb text="Children sit in layer order, and hidden layers take no space." name="Auto layout" help={['auto-layout']} />
         </>
       )}
     </Section>
@@ -2140,7 +2210,7 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
   const target = project.artboards.find((a) => a.id === node.artboardId);
   const [inputs, setInputs] = useState(JSON.stringify(node.inputs ?? {}, null, 0));
   return (
-    <Section help="instances" title="Instance">
+    <Section help="instances" id="Instance" title="Component">
       <SelectField
         label="Artboard"
         value={node.artboardId}
@@ -2184,7 +2254,7 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
           }
         }}
       />
-      <p className="hint">An instance runs its artboard on its own in the player: its timelines, interactions and variables. Inputs set its variables' starting values by name.</p>
+      <SectionBlurb text="An instance runs its artboard on its own. Inputs set its variables' starting values by name." name="Component" help={['instances']} />
     </Section>
   );
 }
@@ -2241,7 +2311,7 @@ function TextModifiersSection({ node }: { node: Extract<SceneNode, { type: 'text
           </button>
         ))}
       </Row>
-      {!list.length && <p className="hint">Animate letters, words or lines one after another. Try a preset, or add a modifier and key its offset.</p>}
+      {!list.length && <SectionBlurb text="Animate letters, words or lines one after another. Try a preset." name="Text modifiers" help={['text-modifiers']} />}
       {list.map((raw, i) => {
         const m = { ...defaultModifier(), ...raw };
         const P = (k: string) => `modifiers.${i}.${k}`;
@@ -2373,7 +2443,7 @@ function ConstraintsSection({ node }: { node: SceneNode }) {
       defaultOpen={list.length > 0}
       actions={<IconButton icon={<Icons.plus />} title="Add a constraint" onClick={() => add('followPath')} />}
     >
-      {!list.length && <p className="hint">Tie this layer to another: follow a path, or copy its position, rotation or scale.</p>}
+      {!list.length && <SectionBlurb text="Tie this layer to another: follow a path, or copy its position, rotation or scale." name="Constraints" help={['constraints']} />}
       {list.map((c, i) => (
         <div key={c.id} className="constraint">
           <Row>
@@ -2462,7 +2532,7 @@ function JoysticksSection({ ab }: { ab: Artboard }) {
         />
       }
     >
-      {!list.length && <p className="hint">Set timeline positions from numbers instead of time: dials, gauges, eyes that follow the pointer.</p>}
+      {!list.length && <SectionBlurb text="Set timeline positions from numbers instead of time: dials, gauges, eyes that follow the pointer." name="Joysticks" help={['joysticks']} />}
       {list.map((j, i) => (
         <div key={j.id} className="constraint">
           <Row>
@@ -2532,7 +2602,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
         />
       }
     >
-      {!list.length && <p className="hint">Mix several timelines by a number: blend idle, walk and run by speed, or layer a lean on top of a loop. Start one with a Play blend node.</p>}
+      {!list.length && <SectionBlurb text="Mix several timelines by a number, like idle, walk and run by speed." name="Blends" help={['blends']} />}
       {!list.length && (
         <PropRow k="Build a blend example" words={['example', 'demo', 'pose', 'blend']}>
         <button
@@ -2577,8 +2647,25 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
             {oneD && <SelectField label="Input" title="The number variable that picks the position" value={b.variable ?? ''} options={vars(numberVars.length ? 'Choose variable…' : 'No number variables yet')} onChange={(v) => update((bs) => void (bs[i].variable = v || null))} />}
             {!oneD && <NumberField label="Full weight at" title="The variable value that means full weight: 1 for 0 to 1, 100 for percentages" value={b.range ?? 1} min={0.0001} onChange={(v) => update((bs) => void (bs[i].range = v), `blend-range-${b.id}`)} />}
             <CheckField label="Start with the artboard" value={!!b.autoplay} onChange={(v) => update((bs) => void (bs[i].autoplay = v || undefined))} />
+            <NumberField
+              label="Transition (ms)"
+              title="When the number (or a weight) jumps, ease the mix over this long instead of snapping, e.g. 250. The variable itself is not changed. 0 follows it at once"
+              value={b.transition ?? 0}
+              min={0}
+              step={50}
+              onChange={(v) => update((bs) => void (bs[i].transition = v > 0 ? v : undefined), `blend-trans-${b.id}`)}
+            />
+            {(b.transition ?? 0) > 0 && (
+              <SelectField<string>
+                label="Transition easing"
+                title="How the mix eases during the transition. Linear sweeps evenly"
+                value={typeof b.transitionEase === 'string' ? b.transitionEase : 'linear'}
+                options={EASING_NAMES.map((e) => ({ value: e, label: e }))}
+                onChange={(v) => update((bs) => void (bs[i].transitionEase = v === 'linear' ? undefined : (v as Easing)))}
+              />
+            )}
             {b.entries.map((e, k) => (
-              <Row key={k}>
+              <Row key={k} className={oneD ? 'blend-entry' : 'blend-entry direct'}>
                 <SelectField label={k === 0 ? 'Timelines' : undefined} value={e.timeline ?? ''} options={tls} onChange={(v) => update((bs) => void (bs[i].entries[k].timeline = v || null))} />
                 {oneD ? (
                   <NumberField title="Where this timeline sits along the input" value={e.value ?? k} step={0.1} onChange={(v) => update((bs) => void (bs[i].entries[k].value = v), `blend-val-${b.id}-${k}`)} />

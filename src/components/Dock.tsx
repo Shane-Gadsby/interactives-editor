@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
 import { onPanelRequest, store, useEditor, type BottomTab } from '../store/store';
-import { dockFloat, FOLDED_HEIGHT, showAll, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, TOP_HEIGHT, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
+import { BOTTOM_DEFAULT, bottomHeightFor, dockFloat, FOLDED_HEIGHT, showAll, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, TOP_HEIGHT, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
 import { Icons, type IconName } from './icons';
 import { openHelp, setContextHelp } from '../help/Help';
-import { getTopic } from '../help/topics';
+import { helpTopics } from '../help/lazy';
 import { ContextMenu, type MenuItem } from './ContextMenu';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Layers, Assets } from '../panels/LeftPanel';
@@ -12,7 +11,7 @@ import { LibrariesPanel } from '../panels/LibrariesPanel';
 import { CommentsPanel } from '../panels/CommentsPanel';
 import { Inspector } from '../panels/Inspector';
 import { TimelinePanel } from '../panels/Timeline';
-import { LogicGraph } from '../panels/LogicGraph';
+import { lazyModule } from '../lib/lazy-module';
 import { ScriptsPanel, VariablesPanel } from '../panels/ScriptsVariables';
 import { DataPanel } from '../panels/DataPanel';
 import { UsagePanel } from '../panels/UsagePanel';
@@ -53,6 +52,13 @@ function CommentsBody() {
   return <CommentsPanel project={project} onJump={jumpToThread} hint />;
 }
 
+//The interaction graph (React Flow and the node forms, a big chunk) comes in when its tab is first shown
+export const logicGraph = lazyModule(() => import('../panels/LogicGraph'));
+function LogicGraphPanel() {
+  const m = logicGraph.use();
+  return m ? <m.LogicGraph /> : <p className="panel-empty muted" role="status">Loading the interaction graph…</p>;
+}
+
 const PANELS: Record<PanelId, PanelDef> = {
   layers: { label: 'Layers', help: 'layers-panel', tip: 'The pages and the layers on them', body: () => <Layers /> },
   assets: { label: 'Assets', help: 'assets', tip: 'Every file in the project: pictures, video, sound, fonts, data and design files', body: () => <Assets /> },
@@ -61,7 +67,7 @@ const PANELS: Record<PanelId, PanelDef> = {
   comments: { label: 'Comments', help: 'comments', tip: 'Review comments: notes pinned on the canvas by you and by reviewers, with replies, resolve and assignees', body: () => <CommentsBody /> },
   inspector: { label: 'Properties', help: 'properties-panel', tip: 'The settings of the selected layers, or of the page and project', body: () => <Inspector /> },
   timeline: { label: 'Timeline', icon: 'timeline', help: 'timelines', tip: 'Animate properties with keyframes', tool: true, body: () => <TimelinePanel /> },
-  logic: { label: 'Interactions', icon: 'logic', help: 'interactions', tip: 'Events, actions and logic as a node graph', tool: true, body: () => <LogicGraph /> },
+  logic: { label: 'Interactions', icon: 'logic', help: 'interactions', tip: 'Events, actions and logic as a node graph', tool: true, body: () => <LogicGraphPanel /> },
   scripts: { label: 'Scripts', icon: 'code', help: 'scripts', tip: 'JavaScript with the ix API', tool: true, body: () => <ScriptsPanel /> },
   variables: { label: 'Variables', icon: 'variable', help: 'variables', tip: 'Named values shared by the whole project', tool: true, body: () => <VariablesPanel /> },
   data: { label: 'Data', icon: 'table', help: 'data-sources', tip: 'JSON, CSV, TSV or text from files or URLs', tool: true, body: () => <DataPanel /> },
@@ -352,7 +358,9 @@ export function openPanelHelp(p: PanelId): void {
   openHelp(topic, anchor);
 }
 const panelHelpTip = (p: PanelId) => {
-  const t = getTopic(PANELS[p].help.split('#')[0]);
+  //the topics are in a chunk of their own: a menu opened before they've come in gets the plain line (and starts them)
+  void helpTopics.ensure().catch(() => undefined);
+  const t = helpTopics.get()?.getTopic(PANELS[p].help.split('#')[0]);
   return t ? `${t.title}: ${t.summary}` : 'Open the help for this panel';
 };
 
@@ -562,12 +570,26 @@ function MorePanels() {
         More panels
       </button>
       {/* out in the body: inside the tab strip its buttons would take the tabs' look */}
-      {at && createPortal(<ContextMenu x={at.x} y={at.y} items={items} onClose={() => setAt(null)} />, document.body)}
+      {at && <ContextMenu x={at.x} y={at.y} items={items} onClose={() => setAt(null)} />}
     </>
   );
 }
 
 // ---------------------------------------------------------------- docked areas
+
+//260 stored means "never set" (it follows the window), so a height somebody drags to must not land on exactly that
+const nudgeOffDefault = (v: number): number => (Math.round(v) === BOTTOM_DEFAULT ? BOTTOM_DEFAULT + 1 : v);
+
+/** The window's height, so what is sized from it follows a resize. */
+function useWindowHeight(): number {
+  return useSyncExternalStore(
+    (cb) => {
+      window.addEventListener('resize', cb);
+      return () => window.removeEventListener('resize', cb);
+    },
+    () => window.innerHeight,
+  );
+}
 
 /** One of the docked areas around the canvas. Renders nothing when every panel has left it (its grid track is 0). */
 export function DockZone({ zone }: { zone: Zone }) {
@@ -575,13 +597,14 @@ export function DockZone({ zone }: { zone: Zone }) {
   const ok = useAvailable();
   const g = l.zones[zone];
   const { tabs, active } = visible(g, ok);
-  const h = useEditor((st) => st.bottomHeight);
+  const winH = useWindowHeight();
+  const h = bottomHeightFor(useEditor((st) => st.bottomHeight), winH);
   if (!tabs.length) return null;
   const folded = (zone === 'bottom' && l.bottomFolded) || (zone === 'top' && l.topFolded);
   const top = zone === 'top';
   const size = top ? l.topHeight : h;
   const [min, max] = top ? [TOP_HEIGHT.min, Math.min(TOP_HEIGHT.max, window.innerHeight - 200)] : [140, window.innerHeight - 200];
-  const setSize = (v: number) => (top ? setDock((d) => ({ ...d, topHeight: Math.round(Math.max(min, Math.min(max, v))) })) : store().set({ bottomHeight: Math.max(min, Math.min(max, v)) }));
+  const setSize = (v: number) => (top ? setDock((d) => ({ ...d, topHeight: Math.round(Math.max(min, Math.min(max, v))) })) : store().set({ bottomHeight: nudgeOffDefault(Math.max(min, Math.min(max, v))) }));
   const startResize = (e: React.PointerEvent) => {
     const y0 = e.clientY;
     const el = e.currentTarget as HTMLElement;
@@ -609,7 +632,7 @@ export function DockZone({ zone }: { zone: Zone }) {
       tabIndex={0}
       title={`Drag to resize the ${name} panels (double-click to reset)`}
       onPointerDown={startResize}
-      onDoubleClick={() => setSize(top ? TOP_HEIGHT.def : 260)}
+      onDoubleClick={() => (top ? setSize(TOP_HEIGHT.def) : store().set({ bottomHeight: BOTTOM_DEFAULT }))}
       onKeyDown={(e) => {
         const step = e.shiftKey ? 40 : 10;
         //up makes the bottom area taller and the top one shorter
@@ -651,7 +674,8 @@ export function DockZone({ zone }: { zone: Zone }) {
 export function useZoneSizes(widths: { left: number; right: number }): { left: number; right: number; bottom: number; top: number; tools: ToolsPlace } {
   const l = useDock();
   const ok = useAvailable();
-  const h = useEditor((st) => st.bottomHeight);
+  const winH = useWindowHeight();
+  const h = bottomHeightFor(useEditor((st) => st.bottomHeight), winH);
   const has = (z: Zone) => l.zones[z].tabs.some(ok);
   return {
     left: has('left') ? widths.left : 0,
@@ -796,7 +820,7 @@ export function ToolsHead() {
 }
 
 /** The tool rail's right-click menu: which side it sits on, along the bottom, or floating. */
-export function toolsMenu(): MenuItem[] {
+export function toolsMenu(order: MenuItem[] = []): MenuItem[] {
   const place = getDock().tools.place;
   const to = (p: ToolsPlace) => () => setDock((l) => placeTools(l, p, p === 'float' ? { x: 90, y: 110 } : undefined));
   return [
@@ -807,6 +831,8 @@ export function toolsMenu(): MenuItem[] {
     { label: 'Dock at the top', disabled: place === 'top', onClick: to('top') },
     { label: 'Floating', disabled: place === 'float', onClick: to('float') },
     { separator: true },
+    ...order,
+    ...(order.length ? [{ separator: true as const }] : []),
     { label: 'Help for the tools', title: 'The tool bar and what each tool does', onClick: () => openHelp('interface', 'tool-bar-left-edge-unless-you-move-it') },
     { label: 'Reset panel layout', onClick: () => (resetDock(), store().set({ bottomTab: 'timeline' })) },
   ];

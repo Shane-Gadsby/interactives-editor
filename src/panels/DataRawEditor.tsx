@@ -3,7 +3,7 @@ import { EditorView, basicSetup } from 'codemirror';
 import { EditorState } from '@codemirror/state';
 import { json } from '@codemirror/lang-json';
 import { lintGutter, setDiagnostics, type Diagnostic } from '@codemirror/lint';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { useCodeThemeExtension } from '../lib/code-theme';
 import type { DataKind } from 'interactives-player';
 import { csvLanguage, tsvLanguage } from '../lib/csv-lang';
 import type { Problem } from '../lib/data-edit';
@@ -19,6 +19,7 @@ export function DataRawEditor({ value, kind, readOnly, problems, onChange, jump,
   const view = useRef<EditorView | null>(null);
   const changeRef = useRef(onChange);
   changeRef.current = onChange;
+  const colours = useCodeThemeExtension(view);
 
   useEffect(() => {
     const v = new EditorView({
@@ -28,7 +29,7 @@ export function DataRawEditor({ value, kind, readOnly, problems, onChange, jump,
         extensions: [
           basicSetup,
           kind === 'json' ? json() : kind === 'csv' ? csvLanguage : kind === 'tsv' ? tsvLanguage : [],
-          oneDark,
+          colours(),
           lintGutter(),
           EditorState.readOnly.of(!!readOnly),
           EditorView.editable.of(!readOnly),

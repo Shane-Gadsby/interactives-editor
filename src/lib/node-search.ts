@@ -43,6 +43,7 @@ export const NODE_SYNONYMS: Record<string, string[]> = {
   'action.url': ['link', 'website', 'open', 'browser', 'navigate', 'external'],
   'action.reportResult': ['score', 'grade', 'lms', 'complete', 'pass', 'fail', 'moodle', 'scorm', 'xapi'],
   'action.record': ['analytics', 'track', 'insights', 'log event', 'count'],
+  'action.credits': ['credits', 'attribution', 'references', 'sources', 'licence', 'acknowledgements', 'citations'],
   'action.startOver': ['restart', 'reset', 'retry', 'again', 'new attempt'],
   'action.cursor': ['mouse', 'pointer', 'hand', 'cursor'],
   'action.saveUserData': ['save', 'remember', 'persist', 'store', 'progress'],

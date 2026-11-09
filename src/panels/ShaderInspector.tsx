@@ -20,6 +20,7 @@ import { assetKind } from '../lib/assets';
 import { useShaderProblem } from '../lib/shader-edit';
 import { addUniform, applyShaderPreset, removeUniform, retypeUniform, type ShaderPrefix } from '../lib/shader-uniform-edit';
 import { Color, KeyButton, Num } from './Inspector';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const PIXEL_RATIOS = ['auto', '1', '2', '3'] as const;
 // Plain words in the picker; the stored type stays the GLSL one
@@ -116,30 +117,7 @@ function ShaderFields({ node, target, prefix, project, onPatch }: { node: SceneN
         value={!!target.animateInEditor}
         onChange={(v) => onPatch({ animateInEditor: v })}
       />
-      <details className="draw-api">
-        <summary>What can the shader use?</summary>
-        <ul className="hint">
-          <li>
-            <code>u_time</code>: seconds since the layer started (frozen for viewers who prefer reduced motion)
-          </li>
-          <li>
-            <code>u_resolution</code> (vec2): the canvas size in pixels; <code>fragCoord</code> is in the same pixels, origin bottom-left
-          </li>
-          <li>
-            <code>u_mouse</code> (vec3): pointer over the layer, x and y from 0 to 1 with y up, z is 1 while the button is down
-          </li>
-          <li>
-            <code>u_frame</code>: frames drawn so far; <code>v_uv</code> (vec2): 0 to 1 across the layer, y up
-          </li>
-          <li>Your uniforms are declared for you: use their names in the code. An image uniform also gives <code>name_size</code> (vec2, pixels).</li>
-          {isFilter && (
-            <li>
-              <code>u_image</code> (sampler2D) and <code>u_image_size</code>: this layer&rsquo;s own picture, laid out as the layer shows it
-            </li>
-          )}
-          <li>Return straight (not premultiplied) alpha. <code>texture2D</code> and <code>texture</code> both work.</li>
-        </ul>
-      </details>
+      <SectionBlurb text="The code gets u_time, u_resolution, u_mouse and your uniforms by name." name="built-in values" help={['shader-layers', 'built-in-values']} />
     </>
   );
 }
@@ -151,7 +129,7 @@ function UniformList({ node, uniforms, prefix, project, onPatch }: { node: Scene
   return (
     <div className="uniform-list">
       <div className="field-label block">Uniforms (animate with ◆, bind in Data bindings)</div>
-      {uniforms.length === 0 && <p className="hint">No uniforms. Add one to give the shader a value to animate or bind to a variable.</p>}
+      {uniforms.length === 0 && <p className="hint">No uniforms yet. Add one to animate or bind a value.</p>}
       {uniforms.map((u, i) => {
         const others = uniforms.filter((_, j) => j !== i).map((x) => x.name);
         // `<image>_size` is declared too

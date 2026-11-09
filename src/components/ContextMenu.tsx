@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { rankEntries } from '../lib/prop-search';
 
 export type MenuItem =
@@ -38,7 +39,10 @@ export function ContextMenu({ x, y, items, onClose, search }: { x: number; y: nu
       window.removeEventListener('blur', onClose);
     };
   }, [onClose]);
-  return search ? <SearchMenu x={x} y={y} items={items} onClose={onClose} placeholder={search} /> : <MenuList x={x} y={y} items={items} onClose={onClose} />;
+  // Drawn on the page itself, never inside whatever opened it: a menu opened from a strip that scrolls sideways (the dock
+  // tabs) or a layer that lets the pointer through (the rulers) was clipped or couldn't be clicked
+  const menu = search ? <SearchMenu x={x} y={y} items={items} onClose={onClose} placeholder={search} /> : <MenuList x={x} y={y} items={items} onClose={onClose} />;
+  return createPortal(menu, document.body);
 }
 
 function SearchMenu({ x, y, items, onClose, placeholder }: { x: number; y: number; items: MenuItem[]; onClose: () => void; placeholder: string }) {

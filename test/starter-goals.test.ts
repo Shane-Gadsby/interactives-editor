@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeAll } from 'vitest';
 import { BRANDED_STARTERS } from '../src/lib/branded';
 import { STARTERS } from '../src/lib/template-starters';
 import { FIRST_RUN, GOALS, GOAL_KEYS, goalsOf, plainTags, starterMatches } from '../src/lib/starter-goals';
 import { pickForKey, starterPlayHtml, starterProject } from '../src/lib/starter-pick';
+import { warmStarters } from './lazy-chunks';
+
+//the editor loads these in chunks of their own; the test starts with them in
+beforeAll(() => warmStarters());
 
 const all = [...STARTERS, ...BRANDED_STARTERS];
 

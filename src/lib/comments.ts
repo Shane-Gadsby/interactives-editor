@@ -31,11 +31,8 @@ export interface CommentsState {
   draft: Draft | null;
   showPins: boolean;
   live: 'off' | 'live' | 'reconnecting';
-  /** A guest's display name for the review page, kept in this browser. */
-  guestName: string;
 }
 
-const NAME_KEY = 'ix-review-name';
 const PINS_KEY = 'ix-comment-pins';
 
 const keep = (k: string): string => {
@@ -66,7 +63,6 @@ const initial = (): CommentsState => ({
   draft: null,
   showPins: keep(PINS_KEY) !== 'off',
   live: 'off',
-  guestName: keep(NAME_KEY),
 });
 
 type Listener = () => void;
@@ -251,11 +247,6 @@ export class CommentsClient {
     this.set({ showPins: on });
   }
 
-  setGuestName(name: string): void {
-    remember(NAME_KEY, name);
-    this.set({ guestName: name });
-  }
-
   /** The thread number as the panel and pins show it. */
   thread(id: string | null): Thread | undefined {
     return id ? this.state.threads.find((t) => t.id === id) : undefined;
@@ -263,27 +254,22 @@ export class CommentsClient {
 
   // ---- writes. Each answer is the whole thread, applied at once; the stream's copy of it arrives too and changes nothing
 
-  private who(): { guestName?: string } {
-    const { me, guestName, mode } = this.state;
-    return mode?.kind === 'review' && !me?.username ? { guestName } : {};
-  }
-
   async create(text: string, o: { mentions?: string[]; assignee?: Person | null } = {}): Promise<Thread> {
     const d = this.state.draft;
     if (!d) throw new Error('Place a pin first');
-    const r = await this.call<{ thread: Thread }>(this.base(), 'POST', { anchor: d.anchor, context: d.context, text, mentions: o.mentions, assignee: o.assignee ?? undefined, ...this.who() });
+    const r = await this.call<{ thread: Thread }>(this.base(), 'POST', { anchor: d.anchor, context: d.context, text, mentions: o.mentions, assignee: o.assignee ?? undefined });
     this.apply(r.thread);
     this.set({ draft: null, openId: r.thread.id });
     return r.thread;
   }
 
   async reply(threadId: string, text: string, mentions: string[] = []): Promise<void> {
-    const r = await this.call<{ thread: Thread }>(`${this.base()}/${threadId}/replies`, 'POST', { text, mentions, ...this.who() });
+    const r = await this.call<{ thread: Thread }>(`${this.base()}/${threadId}/replies`, 'POST', { text, mentions });
     this.apply(r.thread);
   }
 
   async setStatus(threadId: string, status: 'open' | 'resolved'): Promise<void> {
-    const r = await this.call<{ thread: Thread }>(`${this.base()}/${threadId}`, 'PATCH', { status, ...this.who() });
+    const r = await this.call<{ thread: Thread }>(`${this.base()}/${threadId}`, 'PATCH', { status });
     this.apply(r.thread);
   }
 
@@ -316,7 +302,6 @@ export function useComments(): CommentsState {
 
 export interface ReviewLink {
   token: string;
-  guests: boolean;
   created: string;
   updated: string;
 }
@@ -338,8 +323,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const getReview = (projectId: string) => api<{ review: ReviewLink | null }>(`projects/${encodeURIComponent(projectId)}/review`).then((r) => r.review);
-export const putReview = (projectId: string, guests: boolean) =>
-  api<{ review: ReviewLink }>(`projects/${encodeURIComponent(projectId)}/review`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guests }) }).then((r) => r.review);
+export const putReview = (projectId: string) => api<{ review: ReviewLink }>(`projects/${encodeURIComponent(projectId)}/review`, { method: 'PUT' }).then((r) => r.review);
 export const stopReview = (projectId: string) => api<{ ok: boolean }>(`projects/${encodeURIComponent(projectId)}/review`, { method: 'DELETE' });
 /** The page's own address minus its query and hash: the editor's url can carry the owner's ?sessionID=, which must never end up in a link to hand out. */
 export const reviewUrl = (token: string) => `${new URL('./', document.baseURI).href}#/review/${token}`;
@@ -360,7 +344,7 @@ export interface Notice {
 export const getNotices = () => api<{ unread: number; items: Notice[] }>('notices');
 export const readNotices = (o: { project?: string; thread?: string } = {}) => api<{ ok: boolean }>('notices/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(o) });
 
-/** Open the "Share for review" dialog of the open editor (the review link: create, copy, allow guests, turn off). Any menu or button can call it. */
+/** Open the "Share for review" dialog of the open editor (the review link: create, copy, turn off). Any menu or button can call it. */
 export const SHARE_FOR_REVIEW_EVENT = 'ix-share-for-review';
 export function openShareForReview(): void {
   window.dispatchEvent(new CustomEvent(SHARE_FOR_REVIEW_EVENT));

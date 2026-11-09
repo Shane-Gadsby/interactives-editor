@@ -94,7 +94,8 @@ function unkeyed(): string[] {
   for (const body of host.querySelectorAll('.section-body')) {
     for (const el of body.children) {
       if (el.hasAttribute('data-prop') || el.querySelector('[data-prop]')) continue;
-      // a hint, a heading or a note has nothing to edit, so nothing to find
+      // a hint (with or without its More about link), a heading or a note has nothing to edit, so nothing to find
+      if (el.matches('.section-blurb')) continue;
       if (!el.matches('button, input, select, textarea, a, .code-field') && !el.querySelector('button, input, select, textarea, a, .code-editor')) continue;
       out.push(`${body.previousElementSibling?.textContent?.trim() ?? '?'}: ${el.outerHTML.slice(0, 140)}`);
     }

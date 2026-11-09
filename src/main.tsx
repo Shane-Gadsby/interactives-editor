@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import './styles.css';
+import './shell.css';
 import { startPalette } from './lib/palette-look';
 import { installSessionHeader } from './lib/session';
 

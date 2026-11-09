@@ -49,6 +49,23 @@ describe('the accessibility panel', () => {
     expect(host.querySelector('.a11y-chip.issue .a11y-count')?.textContent).toBe('1');
   });
 
+  it('says "1 problem" for one and "problems" for none or several', () => {
+    const chip = () => host.querySelector('.a11y-chip.issue')?.textContent?.trim();
+    expect(chip()).toBe('1 problem');
+    //fix it: none is plural
+    act(() => rows().find((r) => r.textContent?.includes('Low text contrast'))!.click());
+    act(() => btn('Change the text colour')!.click());
+    expect(chip()).toBe('0 problems');
+    //two at once
+    act(() => {
+      s.update((d) => {
+        d.artboards[0].children.push(createNode('text', { name: 'Faint 1', x: 20, y: 300, width: 300, height: 24, text: 'Pale', color: '#bbbbbb' }), createNode('text', { name: 'Faint 2', x: 20, y: 340, width: 300, height: 24, text: 'Pale', color: '#bbbbbb' }));
+      });
+    });
+    expect(chip()).toMatch(/^\d+ problems$/);
+    expect(chip()).not.toBe('1 problems');
+  });
+
   it('selects the layer when a finding is clicked, and shows why it matters', () => {
     const row = rows().find((r) => r.textContent?.includes('Low text contrast'))!;
     act(() => row.click());
