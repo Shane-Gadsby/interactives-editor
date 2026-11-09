@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Swap text stays with its text key**: the fade or blur that Swap text adds now moves when you move or retime the text key, and goes when you delete it. Tied keys are hollow diamonds; editing one by hand lets just that key go. Untick **Keep the dip with this text key** in the Keyframe panel for plain keys instead.
 - **Fixed: messages with an Undo button stayed on screen**: a message such as "Placed the component … in …" never went away once anything else changed, and sat over open dialogs. It now goes after nine seconds whatever happens, and while a dialog such as Preferences is open it sits underneath it (errors such as "Not saved" still show on top).
 - **Always show the Alt-drag hint**: a new Preference shows "Alt: drag a copy" on every drag instead of only the first three.
 - **See what you just added**: adding "When clicked" or "When hovered" (or an empty event, or "When the playhead reaches this…" from a marker) now opens the Interactions graph on what you just made: the graph zooms to the new nodes, they are picked and glow briefly, keyboard focus goes to the new event so Delete and the arrows act on the graph, and a screen reader is told what was added. Nothing moves for undo, redo, someone else's live edit or an agent. Untick "Show new interactions in the graph" in Preferences to keep your view where it is.
