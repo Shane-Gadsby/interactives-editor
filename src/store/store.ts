@@ -259,12 +259,16 @@ export interface ToastAction {
   stale?: boolean;
 }
 export interface Toast {
+  /** Which message this is, so its timer still clears it after the Undo button goes stale (a new object). */
+  id?: number;
   text: string;
   kind: 'info' | 'error';
   action?: ToastAction;
 }
 
 type Listener = () => void;
+
+let toastSeq = 0;
 
 const HISTORY_LIMIT = 200;
 /** Remote batches kept for undo steps that have not caught up with them yet; past this they are all caught up at once. */
@@ -602,10 +606,10 @@ export class EditorStore {
   }
 
   toast(text: string, kind: 'info' | 'error' = 'info', action?: ToastAction): void {
-    this.set({ toast: { text, kind, action } });
-    const current = this.state.toast;
+    const id = ++toastSeq;
+    this.set({ toast: { id, text, kind, action } });
     setTimeout(() => {
-      if (this.state.toast === current) this.set({ toast: null });
+      if (this.state.toast?.id === id) this.set({ toast: null });
     }, kind === 'error' ? 6000 : action ? 9000 : 2500);
   }
 

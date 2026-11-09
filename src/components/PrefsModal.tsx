@@ -137,6 +137,12 @@ export function PrefsModal({ onClose, workspace = false }: { onClose: () => void
             onChange={(v) => setPrefs({ showNewInteractions: v })}
           />
           <CheckField
+            label="Always show the Alt-drag hint"
+            title="Dragging a layer, a page or a row in Layers says that holding Alt (Option on a Mac) drags a copy. It shows for your first three drags; tick this to see it on every drag"
+            value={p.altDragHintAlways}
+            onChange={(v) => setPrefs({ altDragHintAlways: v })}
+          />
+          <CheckField
             label="Ask what a picture shows"
             title="When you add a picture or video, a small box on its settings asks what it shows, so it gets a text alternative for screen readers. You can skip it or mark the picture decorative, and it never stops you carrying on. Switch it off if you add a lot of pictures at once"
             value={p.askPictureDescription}

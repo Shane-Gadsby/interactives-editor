@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { prefs } from './prefs';
 
 /**
  * Alt-drag (Option on a Mac) drags a copy of a layer, group or page instead of moving it. Nothing on screen says so, so
@@ -23,6 +24,8 @@ const read = (): number => {
 
 /** Whether a drag that has just started without Alt should say what Alt does (counts the showing). */
 export function altHintDue(): boolean {
+  //Preferences > Always show the Alt-drag hint: every plain drag says it, and the count is left alone
+  if (prefs().altDragHintAlways) return true;
   const n = read();
   if (n >= ALT_HINT_TIMES) return false;
   try {

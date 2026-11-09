@@ -2,6 +2,8 @@
 
 ## Unreleased: Symposium 3
 
+- **Fixed: messages with an Undo button stayed on screen**: a message such as "Placed the component … in …" never went away once anything else changed, and sat over open dialogs. It now goes after nine seconds whatever happens, and while a dialog such as Preferences is open it sits underneath it (errors such as "Not saved" still show on top).
+- **Always show the Alt-drag hint**: a new Preference shows "Alt: drag a copy" on every drag instead of only the first three.
 - **See what you just added**: adding "When clicked" or "When hovered" (or an empty event, or "When the playhead reaches this…" from a marker) now opens the Interactions graph on what you just made: the graph zooms to the new nodes, they are picked and glow briefly, keyboard focus goes to the new event so Delete and the arrows act on the graph, and a screen reader is told what was added. Nothing moves for undo, redo, someone else's live edit or an agent. Untick "Show new interactions in the graph" in Preferences to keep your view where it is.
 - **Keyboard shortcuts you can change**: press **?** (or Ctrl+/) for the sheet of every shortcut, search them or press a key to find what it does, and give any command your own keys (saved with you, not in the project). Tooltips, menus and the command palette show your own keys. One-key shortcuts (V, H, P…) can be switched off for speech input users. **I** opens Insert component, and **Shift+L** shows or hides the list of timelines.
 - **Timeline keys**: Space or K plays, J or Home goes to the start, comma and full stop step a frame, Shift+comma and Shift+full stop jump between keys. P, S, R, T and A in the Timeline take you to the selected layer's Position, Scale, Rotation, Opacity and Anchor point.

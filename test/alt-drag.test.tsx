@@ -6,6 +6,7 @@ import { EditorStore, setCurrentStore } from '../src/store/store';
 import { Canvas } from '../src/canvas/Canvas';
 import { LeftPanel } from '../src/panels/LeftPanel';
 import { altHintDue, ALT_HINT_TIMES } from '../src/lib/alt-drag';
+import { setPrefs } from '../src/lib/prefs';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class {
@@ -156,6 +157,15 @@ describe('the first plain drags mention Alt', () => {
   it('only a few times', () => {
     const seen = Array.from({ length: ALT_HINT_TIMES + 2 }, () => altHintDue());
     expect(seen).toEqual([true, true, true, false, false]);
+  });
+
+  it('every time with Always show the Alt-drag hint ticked', () => {
+    setPrefs({ altDragHintAlways: true });
+    try {
+      expect(Array.from({ length: ALT_HINT_TIMES + 3 }, () => altHintDue()).every(Boolean)).toBe(true);
+    } finally {
+      setPrefs({ altDragHintAlways: false });
+    }
   });
 
   it('a page-name drag shows the note and takes it away on release', () => {

@@ -96,6 +96,7 @@
   --z-popover-raised: 1300;
   --z-menu: 2000;
   --z-toast: 3000;
+  --z-toast-under-modal: 95;
   --z-dialog: 5000;
   --z-tooltip: 10000;
 }
@@ -4091,6 +4092,11 @@ button.twisty:hover {
   border-radius: 8px;
   z-index: var(--z-toast);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+/* while a dialog (Preferences, Share...) is open an ordinary message sits under it instead of over its fields;
+   errors (Not saved...) and the reload notice still show on top */
+body:has(.modal-backdrop) .toast:not(.error):not(.stale-toast) {
+  z-index: var(--z-toast-under-modal);
 }
 .toast.error {
   border-color: var(--danger);
