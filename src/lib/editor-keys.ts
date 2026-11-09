@@ -13,6 +13,7 @@ import { prefs, setPrefs } from './prefs';
 import { COMMANDS, runnerOf, setRunner } from './keymap';
 import { routeToGraph, windowCommand } from './key-area';
 import { canCrop } from './crop';
+import { openInsertComponentPicker } from './components';
 
 type Run = (e?: KeyboardEvent) => boolean | void;
 const stop = (e?: KeyboardEvent) => e?.preventDefault();
@@ -117,6 +118,10 @@ export function installEditorKeys(zoomTo: (mode: 'fit' | '100' | 'selection') =>
   set('backward', (e) => (stop(e), store().reorder(-1)));
   set('front', (e) => (stop(e), store().reorder(Infinity)));
   set('back', (e) => (stop(e), store().reorder(-Infinity)));
+  set('insert-component', (e) => {
+    if (!openInsertComponentPicker()) return false;
+    stop(e);
+  });
   set('rename', (e) => {
     const st = store().get();
     if (st.selection.length !== 1) return false;
@@ -135,5 +140,7 @@ export function handleEditorKey(e: KeyboardEvent): void {
   if (!cmd) return;
   //Enter and Space on a button, link or menu item press it; they are not shortcuts there
   if ((e.key === 'Enter' || e.key === ' ') && t?.closest('button, a[href], summary, [role="button"], [role="menuitem"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"]')) return;
+  //A panel that already used an arrow key (the Layers list moving or extending the pick) keeps it
+  if (e.defaultPrevented && cmd.id.startsWith('nudge-')) return;
   runnerOf(cmd.id)?.(e);
 }

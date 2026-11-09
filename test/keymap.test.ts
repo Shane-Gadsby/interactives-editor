@@ -124,6 +124,8 @@ describe('the default keymap', () => {
     expect(bindingsOf('key-prev')).toEqual(['Shift+,']);
     expect(bindingsOf('shortcuts')).toContain('Shift+/');
     expect(bindingsOf('rename')).toEqual(['F2']);
+    expect(bindingsOf('insert-component')).toEqual(['I']);
+    expect(bindingsOf('timeline-list')).toEqual(['Shift+L']);
     expect(bindingsOf('nudge-left-10')).toEqual(['Shift+ArrowLeft']);
   });
 });

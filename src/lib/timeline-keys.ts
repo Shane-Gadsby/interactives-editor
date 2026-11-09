@@ -4,6 +4,7 @@
 import { store } from '../store/store';
 import { activeTimeline } from './key-edit';
 import { setRunner } from './keymap';
+import { toggleTimelineList } from '../panels/TimelineList';
 import { jumpToProperty, type JumpProp } from './prop-jump';
 
 const FALLBACK_FPS = 30;
@@ -72,6 +73,7 @@ export function installTimelineKeys(): void {
       if (to === null) store().toast(dir > 0 ? 'No more keys after this' : 'No more keys before this');
       else setHead(to);
     });
+  setRunner('timeline-list', (e) => (stop(e), toggleTimelineList()));
   const jumps: [string, JumpProp][] = [
     ['prop-position', 'position'],
     ['prop-scale', 'scale'],

@@ -19,10 +19,13 @@ const WHERE: Record<Context, string> = {
 
 //What the mouse does with a key held (these are gestures, so they are listed but not rebindable)
 const MOUSE: [string, string][] = [
-  ['Alt + drag', 'Drag a copy of the layers you are moving'],
-  ['Shift + click', 'Add a layer to the ones you have picked'],
-  ['Ctrl + click', 'Pick the layer inside a group, or add to the pick in the Layers list and the graph'],
-  ['Space + drag', 'Pan the canvas (or the Hand tool)'],
+  ['Alt + drag', 'Drag a copy: layers on the canvas, pages, page groups, and rows in the Layers list'],
+  ['Shift + click', 'In the Layers list, pick everything from the last one you clicked to this one; on the canvas, add to the pick'],
+  ['Shift + \u2191 / \u2193', 'In the Layers list, extend the pick one layer at a time'],
+  ['Ctrl + click', 'Pick the layer inside a group, or add one layer to (or take one off) the pick in the Layers list and the graph'],
+  ['Alt + drag a guide out', 'Make the other kind of guide for that one (every page, or this page only)'],
+  ['Menu key or Shift + F10', 'Open the right-click menu of a key in the Timeline (a text key has Swap text)'],
+  ['Space + drag', 'Pan the canvas (or use the Hand tool)'],
   ['Alt + click a section', 'Open only that section of the Properties panel'],
   ['Shift while dragging a number', 'Change it ten times faster (Alt: ten times slower)'],
   ['Ctrl while dragging', 'Turn snapping off for that drag'],
@@ -212,14 +215,14 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
             );
           })}
           {!byCombo && !needle && (
-            <section className="keys-group" aria-label="Mouse">
-              <h3>With the mouse</h3>
+            <section className="keys-group" aria-label="Mouse gestures">
+              <h3>Mouse gestures</h3>
               <table>
                 <tbody>
                   {MOUSE.map(([k, what]) => (
                     <tr key={k}>
                       <td className="keys-name">{what}</td>
-                      <td className="keys-where">Mouse</td>
+                      <td className="keys-where">Gesture</td>
                       <td className="keys-keys">
                         <kbd>{k}</kbd>
                       </td>

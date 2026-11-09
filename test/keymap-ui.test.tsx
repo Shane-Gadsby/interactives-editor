@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createNode, createProject } from 'interactives-player';
 import { EditorStore, setCurrentStore } from '../src/store/store';
-import { setPrefs } from '../src/lib/prefs';
+import { prefs as prefsNow, setPrefs } from '../src/lib/prefs';
 import { bindingsOf, forceMac, keysSuspended } from '../src/lib/keymap';
 import { setLastKeyArea } from '../src/lib/key-area';
 import { handleEditorKey, installEditorKeys } from '../src/lib/editor-keys';
@@ -95,6 +95,29 @@ describe('the Timeline\'s keys', () => {
     expect(s.get().previewPlaying).toBe(false);
     key({ key: '.' }, 'Period');
     expect(s.get().playhead).toBe(0);
+  });
+});
+
+describe('keys for the merged features', () => {
+  it('I opens the Insert component picker, and Shift+L shows or hides the timeline list in the Timeline', async () => {
+    const s = new EditorStore(createProject('T'));
+    setCurrentStore(s);
+    installEditorKeys(() => undefined);
+    installTimelineKeys();
+    setLastKeyArea('canvas');
+    const comps = await import('../src/lib/components');
+    comps.closeInsertComponentPicker();
+    key({ key: 'i' }, 'KeyI');
+    expect(comps.insertPickerIsOpen()).toBe(true);
+    comps.closeInsertComponentPicker();
+    const before = prefsNow().timelineList;
+    setLastKeyArea('canvas');
+    key({ key: 'L', shiftKey: true }, 'KeyL');
+    expect(prefsNow().timelineList).toBe(before);
+    setLastKeyArea('timeline');
+    key({ key: 'L', shiftKey: true }, 'KeyL');
+    expect(prefsNow().timelineList).toBe(!before);
+    setPrefs({ timelineList: before });
   });
 });
 

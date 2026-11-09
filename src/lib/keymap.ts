@@ -77,6 +77,7 @@ export const COMMANDS: CommandDef[] = [
   C('paste', 'Paste', 'Edit', 'canvas', ['Mod+V'], { fixed: true }),
   C('enter', 'Edit the selected layer', 'Edit', 'canvas', ['Enter'], { edits: true, words: 'open group text points crop' }),
   C('escape', 'Let go (deselect, finish, back to Select)', 'Edit', 'canvas', ['Escape'], { fixed: true }),
+  C('insert-component', 'Insert a component here\u2026', 'Edit', 'canvas', ['I'], { edits: true, words: 'instance page embed place put' }),
   C('rename', 'Rename the selected layer', 'Edit', 'canvas', ['F2']),
   C('undo', 'Undo', 'Edit', 'everywhere', ['Mod+Z']),
   C('redo', 'Redo', 'Edit', 'everywhere', ['Mod+Shift+Z', 'Mod+Y']),
@@ -107,6 +108,7 @@ export const COMMANDS: CommandDef[] = [
   C('timeline-end', 'Go to the end', 'Timeline', 'timeline', ['End']),
   C('frame-back', 'Step back a frame', 'Timeline', 'timeline', [','], { words: 'nudge playhead' }),
   C('frame-forward', 'Step forward a frame', 'Timeline', 'timeline', ['.'], { words: 'nudge playhead' }),
+  C('timeline-list', 'Show or hide the list of timelines', 'Timeline', 'timeline', ['Shift+L'], { words: 'states side panel' }),
   C('key-prev', 'Jump to the previous key', 'Timeline', 'timeline', ['Shift+,'], { words: 'keyframe' }),
   C('key-next', 'Jump to the next key', 'Timeline', 'timeline', ['Shift+.'], { words: 'keyframe' }),
 

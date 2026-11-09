@@ -469,6 +469,7 @@ The same letter can mean different things in different places: a key looks first
 | <kbd>]</kbd> / <kbd>[</kbd> | Bring forward / send backward (<kbd>Ctrl</kbd> for front / back) |
 | <kbd>Enter</kbd> | Go into a group or frame, edit a path's points, or edit text |
 | <kbd>Escape</kbd> | Stop editing, go up a level, clear the selection, then back to Select |
+| <kbd>I</kbd> | **Insert a component here…**: pick a page (a component) to place on the open page |
 | <kbd>F2</kbd> | Rename the selected layer in the Layers list |
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> | Save now |
 
@@ -495,6 +496,7 @@ These work after you click in the Timeline.
 | <kbd>L</kbd> | Play |
 | <kbd>J</kbd> or <kbd>Home</kbd> / <kbd>End</kbd> | Go to the start / the end |
 | <kbd>,</kbd> / <kbd>.</kbd> | Step back / forward one frame (on the timeline's frame rate, 30 per second if it has none) |
+| <kbd>Shift</kbd>+<kbd>L</kbd> | Show or hide the list of this page's timelines beside the Timeline |
 | <kbd>Shift</kbd>+<kbd>,</kbd> / <kbd>Shift</kbd>+<kbd>.</kbd> | Jump to the previous / next key of the selected layers (of every layer when none is selected) |
 | <kbd>P</kbd> / <kbd>S</kbd> / <kbd>R</kbd> / <kbd>T</kbd> / <kbd>A</kbd> | Go to the selected layer's **P**osition, **S**cale, **R**otation, opacity (**T**ransparency) or **A**nchor point: the Properties panel opens that field and focuses it, and the Timeline track for it, if the layer has one, is marked |
 
@@ -539,6 +541,10 @@ Double-click a text layer to edit it. Select some of the text, then:
 ## Mouse
 | Do this | To |
 |---|---|
+| <kbd>Alt</kbd> + drag a layer, a page, a page group or a row in the Layers list | Drag a copy (the sheet of keyboard shortcuts lists these gestures too) |
+| <kbd>Shift</kbd> + click in the Layers list | Pick everything from the last layer you clicked to this one; <kbd>Shift</kbd>+<kbd>Up</kbd> / <kbd>Down</kbd> extend the pick a row at a time |
+| <kbd>Alt</kbd> while dragging a guide out of a ruler | Make the other kind of guide (every page, or this page only) |
+| Menu key or <kbd>Shift</kbd>+<kbd>F10</kbd> on a key in the Timeline | Open its right-click menu (a text key has **Swap text**) |
 | Hold <kbd>Alt</kbd> while drawing or resizing | Work from the centre |
 | Hold <kbd>Ctrl</kbd> while dragging | Move, resize or draw without snapping to anything (grid, artboard, layers, guides, spacing, points) |
 | Click the Snap button on the tool bar | Open the snapping menu: the switch and a tick for each target |
