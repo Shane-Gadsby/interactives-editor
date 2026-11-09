@@ -12530,15 +12530,16 @@ button.flow-text:focus-visible {
   background: color-mix(in srgb, var(--primary-bg) 18%, transparent);
 }
 .keys-name {
-  width: 38%;
+  width: 36%;
 }
 .keys-where {
-  width: 15%;
+  width: 19%;
   color: var(--muted);
   font-size: 11.5px;
+  white-space: nowrap;
 }
 .keys-keys {
-  width: 30%;
+  width: 28%;
 }
 .keys-act {
   text-align: right;
