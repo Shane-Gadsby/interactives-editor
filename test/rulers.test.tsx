@@ -88,7 +88,7 @@ describe('a guide is one endless line', () => {
     expect(guides()).toEqual({ x: [], y: [] });
     expect(project().canvasGuides).toEqual({ x: [300], y: [] });
     expect(project().guides).toBeUndefined();
-    expect(host.querySelector('.canvas-ruler.top')!.getAttribute('title')).toMatch(/attaches to the page/);
+    expect(host.querySelector('.canvas-ruler.top')!.getAttribute('title')).toMatch(/Attached to the page \(Alt: universal\)/);
     expect(host.querySelector('.canvas-ruler.top')!.getAttribute('title')).toMatch(/Alt/);
   });
 
@@ -253,14 +253,14 @@ describe('universal guides (the default)', () => {
     expect(s.get().activeArtboardId).not.toBe('ab2');
   });
 
-  it('Alt while dragging gives an attached guide on the page under the pointer, and the hint says which it is', () => {
+  it('Alt while dragging gives an attached guide on the page under the pointer, and the label says which it is', () => {
     const top = host.querySelector('.canvas-ruler.top')!;
     const x = project().artboards[1].canvasX + 50;
     mouse(top, 'pointerdown', x, 5);
     mouse(win, 'pointermove', x, 140);
-    expect(host.querySelector('.guide-kind-hint')?.textContent).toMatch(/^Universal guide.*Hold Alt to attach it to Second/);
+    expect(host.querySelector('.guide-pos')?.textContent).toMatch(/ px · Universal$/);
     act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Alt', altKey: true })));
-    expect(host.querySelector('.guide-kind-hint')?.textContent).toMatch(/^Attached to Second.*Hold Alt for a universal guide/);
+    expect(host.querySelector('.guide-pos')?.textContent).toMatch(/^140 px · Second$/);
     act(() => void window.dispatchEvent(new MouseEvent('pointerup', { clientX: x, clientY: 140, altKey: true })));
     expect(project().artboards[1].guides?.y).toEqual([140]);
     expect(project().canvasGuides).toBeUndefined();
@@ -268,8 +268,8 @@ describe('universal guides (the default)', () => {
   });
 
   it('the rulers say what a new guide is', () => {
-    expect(host.querySelector('.canvas-ruler.top')!.getAttribute('title')).toMatch(/universal, fixed on the canvas/);
-    expect(host.querySelector('.canvas-ruler.left')!.getAttribute('title')).toMatch(/Alt to attach it/);
+    expect(host.querySelector('.canvas-ruler.top')!.getAttribute('title')).toMatch(/Universal \(Alt: attached to the page\)/);
+    expect(host.querySelector('.canvas-ruler.left')!.getAttribute('title')).toMatch(/Alt: attached to the page/);
   });
 
   it('is drawn the whole way, grabbable along all of it, whichever page is open, and labelled on the open page', () => {
@@ -280,7 +280,7 @@ describe('universal guides (the default)', () => {
     expect(lines).toHaveLength(2);
     for (const l of lines) expect((l.querySelector('.guide-grab') as HTMLElement).getAttribute('style')).toBeNull();
     //second page starts at 900: the vertical line at canvas 1000 is 100 into it
-    expect(host.querySelector('.guide-line.universal.x')!.getAttribute('title')).toMatch(/at 100px on Second/);
+    expect(host.querySelector('.guide-line.universal.x')!.getAttribute('title')).toBe('100 px · Universal guide');
   });
 
   it('can be moved, and removed by letting go on the ruler or off the edge of the canvas', () => {

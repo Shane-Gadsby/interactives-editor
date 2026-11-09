@@ -6246,18 +6246,6 @@ kbd {
 .guide-line.removing {
   opacity: 0.35;
 }
-.guide-kind-hint {
-  position: absolute;
-  padding: 3px 8px;
-  border-radius: 4px;
-  background: var(--panel);
-  color: var(--text);
-  border: 1px solid var(--line-2);
-  font-size: 11px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 5;
-}
 .guide-remove-hint {
   position: absolute;
   padding: 3px 8px;

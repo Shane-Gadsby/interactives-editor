@@ -184,7 +184,7 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
   };
 
   const step = stepFor(zoom);
-  const newTip = attachNew ? 'It attaches to the page it is dropped on and moves with it (hold Alt for a universal guide, fixed on the canvas)' : 'It is universal, fixed on the canvas, and stays put when pages move (hold Alt to attach it to the page it is dropped on)';
+  const newTip = attachNew ? 'Attached to the page (Alt: universal)' : 'Universal (Alt: attached to the page)';
   const ticks = (len: number, origin: number) => {
     const out: number[] = [];
     const first = Math.floor(-origin / zoom / step) * step;
@@ -202,7 +202,7 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
         key={`${g.axis}${g.index}`}
         className={`guide-line ${g.axis}${locked ? ' locked' : ''}${drag?.out && same(g) ? ' removing' : ''}`}
         style={g.axis === 'x' ? { left: pos - 3 } : { top: pos - 3 }}
-        title={`Guide at ${g.at}px, attached to ${ab.name} (it moves with the page), a line across the whole canvas: ${locked ? 'locked. Right-click for the guides menu' : 'drag to move, drag off this page (or onto the ruler) and let go to remove, right-click for more'}`}
+        title={`${g.at} px · ${ab.name} guide${locked ? ' (locked)' : ''}`}
         onPointerDown={(e) => start(e, g.axis, g)}
         onContextMenu={(e) => guideMenu(e, g)}
       >
@@ -219,7 +219,7 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
         key={`u${g.axis}${g.index}`}
         className={`guide-line universal ${g.axis}${locked ? ' locked' : ''}${drag?.out && same(g) ? ' removing' : ''}`}
         style={g.axis === 'x' ? { left: pos - 3 } : { top: pos - 3 }}
-        title={`Universal guide at ${rel}px on ${ab.name}, fixed on the canvas (it stays put when pages move): ${locked ? 'locked. Right-click for the guides menu' : 'drag to move, drag onto the ruler or off the canvas and let go to remove, right-click for more'}`}
+        title={`${rel} px · Universal guide${locked ? ' (locked)' : ''}`}
         onPointerDown={(e) => start(e, g.axis, g)}
         onContextMenu={(e) => guideMenu(e, g)}
       >
@@ -248,22 +248,17 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
       )}
       {drag && !drag.out && (
         <div className="guide-pos" style={drag.axis === 'x' ? { left: dragAt + 6, top: SIZE + 4 } : { top: dragAt + 6, left: SIZE + 4 }}>
-          {dragNumber}
+          {dragNumber} px · {drag.kind === 'universal' ? 'Universal' : pv.name}
         </div>
       )}
-      {drag && !drag.out && drag.index === null && box && (
-        <div className="guide-kind-hint" role="status" style={{ left: drag.cx - box.left + 14, top: drag.cy - box.top + 14 }}>
-          {drag.kind === 'universal' ? `Universal guide, fixed on the canvas. Hold Alt to attach it to ${pv.name}` : `Attached to ${pv.name}, moves with it. Hold Alt for a universal guide`}
-        </div>
-      )}
-      <div className="canvas-ruler top" title={`Drag down to make a horizontal guide, a line across the whole canvas. ${newTip}${keyHint('toggle-rulers') ? ` (${keyHint('toggle-rulers')} hides rulers)` : ''}`} onPointerDown={(e) => start(e, 'y', null)}>
+      <div className="canvas-ruler top" title={`Drag down for a horizontal guide. ${newTip}${keyHint('toggle-rulers') ? ` (${keyHint('toggle-rulers')} hides rulers)` : ''}`} onPointerDown={(e) => start(e, 'y', null)}>
         {ticks(width, ox).map((v) => (
           <span key={v} style={{ left: ox + v * zoom }}>
             {v}
           </span>
         ))}
       </div>
-      <div className="canvas-ruler left" title={`Drag right to make a vertical guide, a line across the whole canvas. ${newTip}`} onPointerDown={(e) => start(e, 'x', null)}>
+      <div className="canvas-ruler left" title={`Drag right for a vertical guide. ${newTip}`} onPointerDown={(e) => start(e, 'x', null)}>
         {ticks(height, oy).map((v) => (
           <span key={v} style={{ top: oy + v * zoom }}>
             {v}
