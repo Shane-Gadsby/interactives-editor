@@ -1425,7 +1425,7 @@ Photos in the catalogue have their own terms of use. Check them before you publi
 ![The Responsive section, with a base artboard and its narrow variant.](help/responsive-section.png)
 
 ## How a set works
-- Each member has a **from** width in the Responsive section. The player shows the member with the largest *from* that the box reaches, and the narrowest member when the box is narrower than all of them. *Narrow 0–599 px* and *Wide 600+ px* is the usual pair.
+- Each member has a **from** width in the Responsive section. The player shows the member with the largest *from* that the box reaches, and the narrowest member when the box is narrower than all of them. *Narrow 0 to 599 px* and *Wide 600+ px* is the usual pair.
 - In the **Layers** panel the variants sit under their base, each with the range it is shown at. On the canvas every member of a set has a pill for each of the others above it: click one to go and edit it.
 - **Add narrower** and **Add wider** put a new member below the narrowest or above the widest. Change a breakpoint at any time. **Make standalone** takes an artboard out of the set; **Make a variant of…** puts a loose artboard into one. Deleting the base promotes its narrowest variant.
 - Everything else treats the set as one artboard. **Go to a page**, the start artboard, the completion artboard, remembered progress and learner results all name the base, and the player shows whichever member fits. They are listed once in the pickers, as *Name (responsive)*.
@@ -1546,7 +1546,7 @@ Components can also be shared between projects: see [Libraries](libraries). To r
 
 | Constraint | What it does |
 |---|---|
-| Follow path | Places the layer along a path. **Distance** (0–100%) is how far along; animate it to move along the path. **Orient** turns the layer to face along the path. |
+| Follow path | Places the layer along a path. **Distance** (0 to 100%) is how far along; animate it to move along the path. **Orient** turns the layer to face along the path. |
 | Copy position | Takes another layer's position (plus an offset). Untick **Copy x** or **Copy y** to take only one axis. |
 | Copy rotation | Takes another layer's rotation. |
 | Copy scale | Takes another layer's scale (untick **Copy x** or **Copy y** for one axis). |
@@ -1554,7 +1554,7 @@ Components can also be shared between projects: see [Libraries](libraries). To r
 
 The three copy constraints share some options. **Read** chooses *World values* (where the other layer ends up on the artboard) or *Local values* (its own position, rotation or scale inside its parent). **Factor** multiplies what is copied (0.5 follows half as far, -1 mirrors it). **Add to own** adds the copied value to the layer's own instead of replacing it (for scale it multiplies). **Limit** keeps the result within a range: *Min* and *Max* for x or rotation or horizontal scale, and *Min y* and *Max y* for the vertical ones.
 
-Every constraint has a **Strength** (0–100%) that mixes between the layer's own value and the constrained one, and it can be animated. Constraints are applied in the player and on the canvas.`,
+Every constraint has a **Strength** (0 to 100%) that mixes between the layer's own value and the constrained one, and it can be animated. Constraints are applied in the player and on the canvas.`,
   },
 
   {
