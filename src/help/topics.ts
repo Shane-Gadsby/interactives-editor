@@ -3850,20 +3850,20 @@ See also [Repeaters](repeaters), [Charts](charts) and [Accessibility](accessibil
     id: 'usage',
     title: 'Usage: what uses what',
     group: 'Reference',
-    summary: 'Find where an asset, variable, artboard, script, timeline or data source is used, and clear out what is not.',
+    summary: 'Find where an asset, variable, page, script, timeline or data source is used, and clear out what is not.',
     keywords: 'usage dependencies dependency graph unused references used by find remove cleanup orphan broken missing',
     body: `![The Usage tab: variables on the left, and what each one is used by on the right.](help/usage-tab.png)
 
 The **Usage** tab (bottom panel) answers "what is this used by?" for the whole project, and shows what nothing uses.
 
-Pick a group along the top (**Artboards**, **Assets**, **Variables**, **Data**, **Scripts**, **Timelines**, **Layers**) and an item on the left. The right side lists everything that uses it. **Click an entry to jump there**: layers are selected on the canvas, artboards and timelines are opened, and interactions open the **Interactions** tab on that node. Scripts and data sources open their tab.
+Pick a group along the top (**Artboards**, **Assets**, **Variables**, **Data**, **Scripts**, **Timelines**, **Layers**) and an item on the left. The right side lists everything that uses it. **Click an entry to jump there**: layers are selected on the canvas, pages and timelines are opened, and interactions open the **Interactions** tab on that node. Scripts and data sources open their tab.
 
-A yellow **unused** flag marks items nothing refers to, and the number on each group is how many there are. Tick **Unused only** to list just those.
+A yellow **unused** flag marks items nothing refers to, and the number on each group is how many there are. Tick **Unused only** to see only those.
 
 ## What counts as a use
 
-- **Assets**: image and video layers, image fills and strokes, cursor images, artboard backgrounds, fonts, data files and *Play sound* nodes.
-- **Artboards**: instances, *Go to a page* nodes, and being the start artboard.
+- **Assets**: image and video layers, image fills and strokes, cursor images, page backgrounds, fonts, data files and *Play sound* nodes.
+- **Artboards**: instances, *Go to a page* nodes, and being the start page.
 - **Variables**: input fields bound to them, bindings, text and link templates (\`{score}\`), repeaters, joysticks, blends, instance inputs, and interaction nodes that name them or use them in an expression.
 - **Data sources**: the same expressions, plus *Load data* and *When data has loaded* nodes, and being a font or data file.
 - **Scripts**: *Run script* nodes, or having *Run on start* ticked.
@@ -3888,22 +3888,43 @@ The **Broken** group lists references that point at something that has been dele
     keywords: 'link colours to tokens fixed plain colours switch does nothing theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast',
     body: `![The Themes tab: the starter tokens down the side with their Light, Dark and High contrast colours, and the contrast check.](help/themes-panel.png)
 
-A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. A **new project** starts with the three themes and the starter tokens already in it, the artboard on the Light background, and every layer you add follows the tokens, so it looks right in Dark and High contrast without you picking anything. Projects made before this, and imported ones, have none until you add them in the Themes tab, and behave exactly as before.
+A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark or High contrast) is a column of values for those names.
 
+A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is only a colour never changes.
 
-**The UniSQ colourways.** **+ Colourway…** in the Themes tab adds any of the branded starter packs' colourways (Gold, Purple, Blue, Green, Orange, Red) to this project as a theme: the starter tokens get its colours and its brand tokens (the gradient, deep, accent and logo colours) are added, so layers that use them follow it. A project with no themes yet can start from one. High contrast is the one every project already has.
+A **new project** starts with the three themes and the starter tokens already in it, and the page on the Light background. Every layer you add follows the tokens, so it looks right in Dark and High contrast without you picking anything.
 
-**While it loads.** When a project has to wait before its first page shows (remembered progress or saved data coming from StudyDesk, a **Before activity loads** flow, the first page's fonts), a spinner appears after a quarter of a second, in the project's own colours: the **color/primary** token (or **color/button**) for the ring and **color/background** behind it, from the theme the viewer gets. A viewer who asks for less motion sees it pulse instead of spin. A quick start never shows it.
+Projects made before this, and imported ones, have no themes until you add them in the **Themes** tab. They look exactly as they did.
+
+## Adding a UniSQ colourway
+**+ Colourway…** in the **Themes** tab adds any of the [branded starter packs](branded-starters)' colourways (Gold, Purple, Blue, Green, Orange or Red) to this project as a theme. The starter tokens get its colours, and its brand tokens (the gradient, deep, accent and logo colours) are added, so layers that use them follow it.
+
+A project with no themes yet can start from one. High contrast is the one every project already has.
+
+## The loading spinner
+When a project has to wait before its first page shows, a spinner appears after a quarter of a second. The waits are remembered progress or saved data coming from StudyDesk, a **Before activity loads** flow, and the first page's fonts. A quick start never shows it.
+
+The spinner uses the project's own colours: the **color/primary** token (or **color/button**) for the ring and **color/background** behind it, from the theme the viewer gets. A viewer who asks for less motion sees it pulse instead of spin.
+
 ## The Themes panel
-Open the **Themes** tab (bottom panel). A new project already has the starter themes. For one without (an older or imported project), **Add Light, Dark and High contrast** makes the three themes and the starter tokens, in the same look as the StudyDesk toolbox: its greys, and its gold for buttons with black, bolder text.
+Open the **Themes** tab (bottom panel). For a project without themes, **Add Light, Dark and High contrast** makes the three themes and the starter tokens. They take the look of the StudyDesk toolbox: its greys, and its gold for buttons with black, bolder text.
+
+The starter tokens are:
 - **color/background**, **color/surface** and **color/surface-muted** are the page, a card and a hover or quiet grey. **color/text** and **color/muted** are the copy on them.
 - **color/button** and **color/on-button** are the gold button and its black label. **color/primary** and **color/on-primary** are the accent for selections, which in the toolbox is the same gold. **color/link** is the toolbox's hyperlink blue, used by new Link layers.
 - **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus ring. The ring is two tones: this colour, with a thin black or white halo either side of it (whichever is further from it, worked out for you), so it stays visible on a white page, a gradient and a dark panel alike. You only choose the one colour.
 - **color/success**, **color/error** and **color/warning** each come with a **-surface** tint, for the right, wrong and missed answers.
 
-**Toolbox colours come from the shared StudyDesk palette and stay in step with it.** Light is the toolbox exactly as the toolbox draws itself: each token takes the palette colour the toolbox uses for that job (cards are the palette's grey 1, text grey 7, outlines and quiet text grey 4, buttons the primary button colours, the accent and focus ring the primary gold), read from \`/styles/palette.min.css\`. A token made this way remembers the palette colour it came from, shown by a small link mark beside its colour. Whenever the editor opens the project it refreshes those colours from the live palette, and the player does the same when the page it runs in can reach \`/styles/palette.min.css\`, so a change to the palette reaches published pieces without re-editing them. **Change a colour by hand and that colour stops following the palette.** If the palette can't be reached (an exported file, offline, another host) the last stored colour is used. Dark and High contrast are built for contrast and take their colours from the same palette where it has suitable ones; a few tints and lighter or darker shades are mixed from two palette colours.
+### Toolbox colours follow the shared palette
+Light is the toolbox exactly as the toolbox draws itself. Each token takes the colour from the shared StudyDesk palette that the toolbox uses for that job, read from \`/styles/palette.min.css\`. Cards are the palette's grey 1, text grey 7, outlines and quiet text grey 4, buttons the primary button colours, and the accent and focus ring the primary gold.
 
-Dark and High contrast are the same names with values made for them. Then:
+A token made this way remembers the palette colour it came from, shown by a small link mark beside its colour. The editor refreshes those colours from the live palette whenever it opens the project. The player does the same when the page it runs in can reach the palette, so a change to the palette reaches published pieces without re-editing them.
+
+**Change a colour by hand and that colour stops following the palette.** If the palette can't be reached (an exported file, offline, another host) the last stored colour is used.
+
+Dark and High contrast are built for contrast. They take their colours from the same palette where it has suitable ones, and a few tints and lighter or darker shades are mixed from two palette colours.
+
+### Working in the panel
 - Each row is a token, each column a theme. Click a colour to change it. **Used** counts the places that follow the token.
 - **+ Theme** copies the default theme. **+ Token** adds a row. Rename either; layers keep following a renamed token.
 - A theme can answer to a **Light** or **Dark scheme**, be marked **High contrast**, and be the **Default**. These decide which theme a viewer gets (see below).
@@ -3918,9 +3939,20 @@ In any colour picker in the inspector, open the arrow beside the swatch and choo
 ## When switching the theme changes nothing
 A theme can only change a colour that follows a token. A project built with plain colours (an imported file, or one made before the themes were added) has nothing to change, so the Light, Dark and High contrast switches, on the canvas, in Preview and in the Themes tab, all look the same. When that is the case you see a line, **Nothing here follows the theme: these colours are fixed**, with a **Link colours to tokens** button.
 
-**Link colours to tokens** (also in the Themes tab, and in the right-click menu of an artboard, where it covers just the selected artboards) goes through artboard backgrounds, layer fills, strokes, text and rich text colours, button, input and link colours, shadows and gradient stops. A plain colour that is exactly the colour of a token in the default theme (same alpha, \`#fff\` and \`#ffffff\` are alike) becomes that token. Before anything changes it says what it will do, like "Link 7 colours: 3 backgrounds, 2 fills, 2 text", and lists the colours that match no token. Those stay as they are: link them by hand from the picker's Tokens tab, or add a token with that colour and run it again. Undo (Ctrl+Z) takes the whole thing back in one step.
+**Link colours to tokens** is a button on that line, in the **Themes** tab, and in the right-click menu of a page (where it covers only the selected pages). It goes through page backgrounds, layer fills, strokes, text and rich text colours, button, input and link colours, shadows and gradient stops.
 
-When two tokens have the same colour (the button and the primary, say) the layer's job decides: artboard backgrounds prefer \`color/background\` then \`color/surface\`, text prefers \`color/text\`, button fills \`color/button\`, button text \`color/on-button\`, strokes \`color/border\`. Anything else takes the first of them in the Themes tab. Layers that follow a colour style are left to the style (use **Convert colour styles to tokens**), library artboards are read-only, and the brand layers of a branded starter are skipped unless the power user override is on. Colours written inside a binding expression are not touched.
+A plain colour that is exactly the colour of a token in the default theme becomes that token. Same alpha counts, and \`#fff\` and \`#ffffff\` are alike.
+
+Before anything changes it says what it will do, like "Link 7 colours: 3 backgrounds, 2 fills, 2 text", and lists the colours that match no token. Those stay as they are. Link them by hand from the picker's **Tokens** tab, or add a token with that colour and run it again. Undo (<kbd>Ctrl</kbd>+<kbd>Z</kbd>) takes the whole thing back in one step.
+
+When two tokens have the same colour (the button and the primary, say) the layer's job decides:
+- Page backgrounds prefer \`color/background\`, then \`color/surface\`.
+- Text prefers \`color/text\`.
+- Button fills prefer \`color/button\`, and button text \`color/on-button\`.
+- Strokes prefer \`color/border\`.
+- Anything else takes the first of them in the **Themes** tab.
+
+Some things are left alone. Layers that follow a colour style stay with the style (use **Convert colour styles to tokens**). Library pages are read-only. The brand layers of a branded starter are skipped unless the power user override is on. Colours written inside a binding expression are not touched.
 
 ## New layers, questions and starters
 A new button is gold with black, bolder text, an input has a grey outline, a shape is a neutral grey, text is the toolbox black. In a project that has the starter tokens, new layers, the [question kit](question-kit) and the step bar follow those tokens instead, so a new layer looks right in Dark and High contrast without you picking anything. In a project with no tokens they get the same colours as plain ones. The built-in [starters](templates) come with the themes and use the tokens.
@@ -3929,9 +3961,25 @@ A new button is gold with black, bolder text, an input has a grey outline, a sha
 Lottie, Rive, PSD, SVG and package imports bring their colours in as plain colours. Nothing guesses which colour "is" the primary. Mixing plain and token colours in one project is normal.
 
 ## Contrast
-- The Themes panel checks the pairs that matter in every theme, by token name: **color/text** and **color/muted** on **color/background**, **color/surface** and **color/surface-muted**, **color/on-primary** on **color/primary**, **color/on-button** on **color/button**, each of **success**, **error** and **warning** on its surface, and **color/primary**, **color/border** and **color/focus** against **color/background** and **color/surface**. Dark and High contrast pass every one. **Light does not, and that is expected:** it is the shared StudyDesk palette as the toolbox uses it, and these pairs fall below WCAG AA in it: muted text on background 2.59:1, muted text on surface 2.38:1, muted text on muted surface 1.96:1, primary on background 1.75:1, link on background 3.60:1, link on surface 3.30:1, outline against background 2.59:1, outline against surface 2.38:1, focus ring on background 1.75:1, focus ring on surface 1.61:1, success on its surface 3.90:1, error on its surface 3.13:1, warning on its surface 2.67:1. The Themes panel and the [Accessibility checker](accessibility-checker) report them as they are and are not told to ignore them. Choose different colours for a piece that has to pass. A pair that is too low shows its ratio on the cell and in the list.
+- The Themes panel checks the pairs that matter in every theme, by token name. **color/text** and **color/muted** are checked on **color/background**, **color/surface** and **color/surface-muted**. **color/on-primary** is checked on **color/primary**, and **color/on-button** on **color/button**. Each of **success**, **error** and **warning** is checked on its surface. **color/primary**, **color/border** and **color/focus** are checked against **color/background** and **color/surface**. A pair that is too low shows its ratio on the cell and in the list.
+- Dark and High contrast pass every one. **Light does not, and that is expected.** It is the shared StudyDesk palette as the toolbox uses it, and some pairs fall below WCAG AA in it. The Themes panel and the [Accessibility checker](accessibility-checker) report them as they are and are not told to ignore them. Choose different colours for a piece that has to pass.
 - The [Accessibility checker](accessibility-checker) checks text contrast in every theme, not only the one shown. A finding that starts "In Dark:" is about Dark. It offers no automatic fix for text that follows a token, since a fix would write a plain colour over the token.
 - **Theme colour on a fixed colour** is a warning for text that follows a token but sits on a plain colour. The theme changes one and not the other, so white text on a plain white card goes unreadable in Dark.
+
+The Light pairs that fall short are:
+- muted text on background 2.59:1
+- muted text on surface 2.38:1
+- muted text on muted surface 1.96:1
+- primary on background 1.75:1
+- link on background 3.60:1
+- link on surface 3.30:1
+- outline against background 2.59:1
+- outline against surface 2.38:1
+- focus ring on background 1.75:1
+- focus ring on surface 1.61:1
+- success on its surface 3.90:1
+- error on its surface 3.13:1
+- warning on its surface 2.67:1
 
 ## How the finished interactive picks a theme
 In this order:
@@ -3944,7 +3992,11 @@ In this order:
 **Preview** has a theme box (a theme, or follow the viewer), a **Viewer** box to pretend dark mode or more contrast is on, and, with the page option below, a **Host** box.
 
 ## Taking colours from the page
-Tick **Map tokens from the page's CSS variables** and a token is read from a CSS variable on the page that holds the player before the theme's own value. The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` and \`color/button\` to \`--bs-primary\`, \`color/on-button\` to \`--bs-white\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other. A missing or odd variable just leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
+Tick **Map tokens from the page's CSS variables** and a token is read from a CSS variable on the page that holds the player, before the theme's own value.
+
+The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` and \`color/button\` to \`--bs-primary\`, \`color/on-button\` to \`--bs-white\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other.
+
+A missing or odd variable leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
 
 ## Branded projects
 A project made from a [branded starter pack](branded-starters) carries a theme for each UniSQ colourway (Gold, Purple, Blue, Green, Orange, Red) and High contrast. Its **Project** settings have a **Colourway** row that picks the default theme, and an option to let learners switch. Its layers can only use the project's tokens, so edit a colourway's colours here rather than typing a hex.
@@ -3956,13 +4008,13 @@ Tokens are colours only. Fonts, radii and spacing are not tokens. Colours inside
     id: 'accessibility-checker',
     title: 'Accessibility checker',
     group: 'Reference',
-    summary: 'Find contrast, keyboard, label, autoplay and flashing problems per artboard, fix the safe ones, and export a report for sign-off.',
+    summary: 'Find contrast, keyboard, label, autoplay and flashing problems per page, fix the safe ones, and export a report for sign-off.',
     keywords: 'accessibility a11y wcag contrast check checker audit screen reader keyboard aria label alt text description captions autoplay reduced motion flashing seizure target size report sign off compliance',
-    body: `![The Accessibility tab: findings listed under their artboard on the left, and on the right what was found, why it matters, what to do and a fix button.](help/accessibility-checker.png)
+    body: `![The Accessibility tab: findings listed under their page on the left, and on the right what was found, why it matters, what to do and a fix button.](help/accessibility-checker.png)
 
-The **Accessibility** tab (bottom panel) runs a set of automatic checks over the whole project and lists what it found, artboard by artboard. It is there so you find out while you are designing, not from an audit at the end.
+The **Accessibility** tab (bottom panel) runs a set of automatic checks over the whole project and lists what it found, page by page. It is there so you find out while you are designing, not from an audit at the end.
 
-**It lists checks found. It does not say the project is accessible or that it complies with WCAG.** Some problems cannot be seen by a program, and some checks cannot be sure; those come back as **to look at** and a person decides. What the checks cannot see is listed under [What it cannot see](accessibility-checker#what-it-cannot-see), and in every exported report.
+**It lists what the checks found. It does not say the project is accessible or that it complies with WCAG.** Some problems cannot be seen by a program, and some checks cannot be sure. Those come back as **to look at**, and a person decides. What the checks cannot see is listed under [What it cannot see](accessibility-checker#what-it-cannot-see), and in every exported report.
 
 ## Reading the list
 
@@ -3972,14 +4024,14 @@ Each finding has a coloured dot:
 - **Probable** (amber): probably a problem, and a person decides, for example a picture with no description (it might be decoration).
 - **To look at** (blue): the checker could not tell, for example text over a photo that is only partly dark, a video (it cannot hear captions) or embedded HTML.
 
-Click a finding to **select the layer** (and open its artboard). The right side says what was found, with the numbers, **why it matters** to the person using the page in plain words, **what to do**, and which WCAG 2.2 success criteria it speaks to. The dots at the top are filters: click one to hide that group.
+Click a finding to **select the layer** (and open its page). The right side says what was found, with the numbers, **why it matters** to the person using the page in plain words, **what to do**, and which WCAG 2.2 success criteria it speaks to. The dots at the top are filters: click one to hide that group.
 
 ## The checks
 
 | Check | Looks for |
 |---|---|
 | **Text contrast** | Text colour against what is behind it (in every [theme](themes) when the project has colour tokens): layers drawn under the text, solid fills, gradients (every stop must pass), pictures (sampled from the file) and the layer's own opacity. Normal text needs 4.5:1, large text (24 px, or 18.66 px and bold) needs 3:1. Rich text is checked run by run. |
-| **Small text** | Text under 12 px on the artboard, counting the scale of any group it is in. This is a rule of thumb, not a WCAG number. |
+| **Small text** | Text under 12 px on the page, counting the scale of any group it is in. This is a rule of thumb, not a WCAG number. |
 | **Needs a mouse or touch** | A layer that reacts to a click, hover or drag, is not a Button or link, and has no *When a key is pressed* interaction that does the same thing. |
 | **No name for assistive technology** | Clickable layers, buttons, links and fields with no text and no ARIA label. A field named only by its placeholder is a probable problem. |
 | **No description** | Pictures, videos and embedded pages with no ARIA label. Script and shader layers are listed to look at. |
@@ -3987,13 +4039,13 @@ Click a finding to **select the layer** (and open its artboard). The right side 
 | **Animation starts by itself** | Autoplay timelines when the project does not respect reduced motion. |
 | **No way to pause moving content** | An autoplaying timeline that loops or runs over 5 seconds, with no *Play or stop an animation* node set to pause, stop or toggle it. |
 | **Video starts by itself** | Autoplay video with sound or without controls. Also a timeline that plays sound on its own when the viewer buttons are hidden and nothing mutes or pauses it. |
-| **Flashing** | A timeline that makes a large layer (a tenth of the artboard or more) go bright and dark more than three times in a second. |
+| **Flashing** | A timeline that makes a large layer (a tenth of the page or more) go bright and dark more than three times in a second. |
 | **Video and narration need captions** | Narration on a timeline with no captions is an issue, and captions that cover under half of it a warning (music and effects are left alone; see [Narration, captions and transcript](captions)). A video layer with imported captions passes; one without is listed to look at, since a program cannot tell if the file has them, and it points you at [Describe what you see](describe-what-you-see) for the pictures (WCAG 1.2.5). Descriptions that run while a caption is showing, so the voice would talk over the speech, are a warning. |
 | **Page title** | The project has no title. |
 
 ### How contrast is worked out
 
-The checker does not take a screenshot. It reads the layers: the artboard background, then everything drawn before the text, in drawing order, at a grid of points over the part of the box the words fill. Where a gradient or a picture is behind the text it takes the range of colours there. If every point passes, there is no finding. If every point fails, it is a problem. If some pass and some do not, or the colour behind cannot be known (a video, a shader, a script layer, a blend mode, a freeform shape), it says **to look at** instead of guessing. Pictures are sampled from the asset file at a coarse resolution once they have loaded.
+The checker does not take a screenshot. It reads the layers: the page background, then everything drawn before the text, in drawing order, at a grid of points over the part of the box the words fill. Where a gradient or a picture is behind the text it takes the range of colours there. If every point passes, there is no finding. If every point fails, it is a problem. If some pass and some do not, or the colour behind cannot be known (a video, a shader, a script layer, a blend mode, a freeform shape), it says **to look at** instead of guessing. Pictures are sampled from the asset file at a coarse resolution once they have loaded.
 
 A binding or timeline that changes a colour while the page runs is not followed: only the starting colour is checked, and the finding says so.
 
@@ -4015,7 +4067,7 @@ For a finding you have looked at and accepted ("it is decoration", "the captions
 
 ## Exporting a report
 
-**Export report** downloads one printable HTML page: a summary per artboard, every finding with why it matters and what to do, which ones were reviewed, the checks that ran, what was not checked, and a box to sign. **CSV** downloads the findings as a spreadsheet.
+**Export report** downloads one printable HTML page: a summary per page, every finding with why it matters and what to do, which ones were reviewed, the checks that ran, what was not checked, and a box to sign. **CSV** downloads the findings as a spreadsheet.
 
 ## What it cannot see
 
@@ -4035,7 +4087,7 @@ Test with a keyboard, a screen reader and your own eyes as well.`,
     group: 'Data',
     summary: 'JSON, CSV, TSV or text from an uploaded file or a URL, used by name.',
     keywords: 'data json csv tsv text url fetch api spreadsheet refresh cors',
-    body: `Open the **Data** tab and add a source **From file** (upload) or **From URL** (fetched by the player).
+    body: `A **data source** is a file or web address of information that your project reads by name: a list of products, quiz questions, a table of results. Open the **Data** tab and add a source **From file** (upload) or **From URL** (fetched by the player).
 
 - **Format**: JSON, CSV or TSV (first row is the column names), or plain text. CSV and TSV become a list of rows, with numbers and true/false converted.
 - **URL**: fetched as soon as you press Enter or leave the field. **Reload** fetches it again.
@@ -4044,24 +4096,63 @@ Test with a keyboard, a screen reader and your own eyes as well.`,
 
 Use a source by its **name** anywhere expressions go: \`{products.length} products\`, a binding \`products[0].price\`, or **Repeat → Items** \`products\`. Scripts read \`ix.data.products\`.
 
-**Load data** reloads a source (optionally from a different URL); **When data has loaded** fires when it arrives. **+ Shared responses** adds a different kind of source, answers the people playing add, counted for the class or kept for each person: see [Shared responses](shared-responses). The host page can push data with \`player.setData('products', [...])\`.
+**Load data** reloads a source (optionally from a different URL), and **When data has loaded** fires when it arrives. The host page can push data with \`player.setData('products', [...])\`.
+
+**+ Shared responses** adds a different kind of source: answers the people playing add, counted for the class or kept for each person. See [Shared responses](shared-responses).
 
 ## Editing a data file
-A source **From: Uploaded file** can be edited right there, in up to four ways, and all of them change the same text:
+A source **From: Uploaded file** can be edited right there, in up to four views: **Form**, **Table**, **Tree** and **Raw text**. Which ones you get depends on the file. They show the same text, so a change in one shows in the others.
 
-- **Form** (JSON; the one a JSON file opens in): the file as labelled fields, for people who would rather not see braces and quotes. Every group is a card of fields, with its key name made into plain words (\`startLabel\` and \`start_label\` both read **Start label**; hover a label to see the real key). Short text is a line, long text (or text with line breaks) a box that grows as you type, a number is a number box (it waits until what you typed is a number, and never turns into text), yes/no is a switch, and an empty value shows **empty** with **Fill in** (as a number or yes/no when the same field is one in the other cards, else as text). A list of groups, such as \`dilemmas\`, \`choices\` or \`opening\`, is a stack of cards titled from the item's title, name, label, question or id (or its first short text) with its number, like **Dilemma 1: The old assignment**. Each card opens and closes (**Open all** and **Close all** do every card), and has **Up**, **Down**, **Copy** and **Delete**. **Add another** at the end of a list adds a new card with the same fields as the ones already there, left empty and keeping their types (a number starts at 0, a yes/no at no). A list of plain values is a list of fields with the same buttons. A list of simple rows can be shown as **Cards** or as a **Table** (many short rows open as a table). The **outline** at the side (above the form when the panel is narrow) lists every list and card; pick one to jump to it, open it and move to it. The form can change what is in the file, and add, copy, move or delete items; to add a new field, rename a key or change what a field holds (text to number, say) use **Tree**: every card and list has an **In Tree** button that opens Tree on that very spot. A file with an error in it shows the raw text until it parses again, because the form needs a file that does.
-- **Table** (CSV and TSV, and JSON that is a list of flat objects) or **Tree** (any other JSON; it is also where JSON's structure changes go): change a cell or a value by typing in it. Above it, buttons add, copy, delete and move rows and columns (or, in a tree, add inside or next to a row, copy, delete, move, open or close everything), and **Cell holds** (or **Holds**) changes a value between text, number, yes/no, empty, list and group, so 12 and "12" are not the same thing. In a tree, a list of flat objects opens as a table (the **Table / List** switch turns that off), so \`opening\` or \`choices\` inside a bigger file are edited like a spreadsheet.
-- **Raw text**: the file's own text, coloured for its format (JSON, and a colour for each column of a CSV or TSV). A mistake in JSON is marked on its line with the line and column and what is wrong; **Go to this spot** (the line and column link) jumps to it. **Tidy up** lays JSON out again with two-space indents. The **Code colours** buttons beside it (**Follow**, **Light**, **Dark**) set the colours of the text box: **Follow** goes light or dark with the editor's theme. See [Preferences](preferences).
+### Form
+**Form** is the view a JSON file opens in. It shows the file as labelled fields, for people who would rather not see braces and quotes.
 
-A change is saved a moment after you stop typing (or when you leave the box), as a new version of the file, so **Undo** and **Redo** bring the old text back, other people editing see the change, and the canvas, bindings, repeaters and Preview use it at once. JSON that doesn't parse is **not** saved: the interactive keeps using the last good version until it does. CSV and TSV never fail to parse, but a quote that never closes or a row with the wrong number of cells gets a warning.
+- Every group is a card of fields. A key name is made into plain words: \`startLabel\` and \`start_label\` both read **Start label**. Hover a label to see the real key.
+- Short text is a line. Long text (or text with line breaks) is a box that grows as you type.
+- A number is a number box. It waits until what you typed is a number, and never turns into text.
+- Yes or no is a switch.
+- An empty value shows **empty** with **Fill in**. That makes it a number or yes/no when the same field is one in the other cards, and text otherwise.
 
-Things to know:
+A list of groups, such as \`dilemmas\`, \`choices\` or \`opening\`, is a stack of cards. Each is titled from the item's title, name, label, question or id (or its first short text) with its number, like **Dilemma 1: The old assignment**.
+
+- Each card opens and closes. **Open all** and **Close all** do every card.
+- Each card has **Up**, **Down**, **Copy** and **Delete**.
+- **Add another** at the end of a list adds a card with the same fields as the ones already there, left empty and keeping their types (a number starts at 0, a yes/no at no).
+- A list of plain values is a list of fields with the same buttons.
+- A list of simple rows can be shown as **Cards** or as a **Table**. Many short rows open as a table.
+
+The **outline** at the side (above the form when the panel is narrow) lists every list and card. Pick one to jump to it, open it and move to it.
+
+The form can change what is in the file, and add, copy, move or delete items. To add a new field, rename a key or change what a field holds (text to number, say), use **Tree**. Every card and list has an **In Tree** button that opens Tree on that very spot.
+
+A file with an error in it shows the raw text until it parses again, because the form needs a file that does.
+
+### Table and Tree
+**Table** is for CSV and TSV, and for JSON that is a list of flat objects. **Tree** is for any other JSON, and is where JSON's structure changes go. Change a cell or a value by typing in it.
+
+- Buttons above add, copy, delete and move rows and columns. In a tree they add inside or next to a row, copy, delete, move, and open or close everything.
+- **Cell holds** (or **Holds**) changes a value between text, number, yes/no, empty, list and group, so 12 and "12" are not the same thing.
+- In a tree, a list of flat objects opens as a table (the **Table / List** switch turns that off). So \`opening\` or \`choices\` inside a bigger file are edited like a spreadsheet.
+
+### Raw text
+The file's own text, coloured for its format: JSON, and a colour for each column of a CSV or TSV.
+
+- A mistake in JSON is marked on its line with the line and column and what is wrong. **Go to this spot** (the line and column link) jumps to it.
+- **Tidy up** lays JSON out again with two-space indents.
+- The **Code colours** buttons beside it (**Follow**, **Light**, **Dark**) set the colours of the text box. **Follow** goes light or dark with the editor's theme. It is your own setting, not saved in the project, and it is also in [Preferences](preferences).
+
+### Saving
+A change is saved a moment after you stop typing (or when you leave the box), as a new version of the file. **Undo** and **Redo** bring the old text back, other people editing see the change, and the canvas, bindings, repeaters and Preview use it at once.
+
+JSON that doesn't parse is **not** saved. The interactive keeps using the last good version until it does. CSV and TSV never fail to parse, but a quote that never closes or a row with the wrong number of cells gets a warning.
+
+### Things to know
 - If more than one source reads the same file, a note says so before you edit: the edit changes all of them. **Give it its own copy** makes the file separate for this source.
-- A source **From: URL** can be looked at but not changed here, because the file isn't ours. **Make a copy to edit** saves what the URL gave as an uploaded file and reads that instead (**Undo** goes back to the URL).
-- Long tables show 100 rows at a time (use Next and Previous); the raw text has no limit.
-- In a table, **Tab** goes into and out of the table, the arrow keys move between cells (Left and Right at the ends of the text), **Enter** goes down, **Escape** puts the cell back. In a tree, Up and Down move, Right opens (or goes in), Left closes (or goes out), **Enter** or **F2** edits the row, **Delete** removes it, and **Alt+Up** and **Alt+Down** move it.
+- A source **From: URL** can be looked at but not changed here, because the file isn't yours. **Make a copy to edit** saves what the URL gave as an uploaded file and reads that instead (**Undo** goes back to the URL).
+- Long tables show 100 rows at a time (use Next and Previous). The raw text has no limit.
+- In a table, **Tab** goes into and out of the table, the arrow keys move between cells (Left and Right at the ends of the text), **Enter** goes down, and **Escape** puts the cell back.
+- In a tree, Up and Down move, Right opens (or goes in), Left closes (or goes out), **Enter** or **F2** edits the row, **Delete** removes it, and **Alt+Up** and **Alt+Down** move it.
 - In the form, **Tab** moves through the fields and buttons in order, each card's title is a heading with a button that opens and closes it, and every field has a real label. Nothing waits to be confirmed: each change is saved a moment after you stop typing.
-- Each save leaves the earlier file on the server so Undo works; **Remove unused assets** in the Usage tab clears them.
+- Each save leaves the earlier file on the server so Undo works. **Remove unused assets** in the Usage tab clears them.
 
 ## The built-in context
 The list always starts with **context**, a read-only source that is there without adding anything: the course and the learner (\`{context.firstName}\`, \`context.courseCode\`). Pick it to see its fields, set sample values to design with, and give different courses different starting values. See [Course and learner context](course-context).
@@ -4107,7 +4198,9 @@ Put answers in with the **Add to shared responses** node (the answer is an expre
 This is one setting on the data source, **Who sees it**. To let the same project run either way, set **Switch with** to a text variable (a choice variable named \`whoSees\` with the options *Only me* and *Everyone in this class*, say): it takes who sees from the variable's value, so one setting in the project, or a button the learner presses, flips the whole page. A variable that says Only me, alone or private keeps answers private; one that says everyone, class or shared shows them to the class. Answers kept for Only me are stored apart from the class's, so switching a project to the class later never shows anyone what they kept to themselves.
 
 ## Where it runs
-The class lives on the server, and the server only knows who someone is on the **StudyDesk learner page** (**Share**, then **Link for StudyDesk**, see [Share link](export#share-link)). There each person's answers are kept under their signed-in account and course, and what the class sees is read every few seconds while the page is open. Anywhere else (an exported file, an ordinary share link, the page open on its own) there is no class: **Only me** still works, keeping the person's own answers in their browser, and **Everyone in this class** answers \`ready: false\` so the page can quietly show their own words. **Preview** pretends: the class is your sample answers plus whatever you add in the preview.
+The class lives on the server, and the server only knows who someone is on the **StudyDesk learner page** (**Share**, then **Link for StudyDesk**, see [Share link](export#share-link)). There each person's answers are kept under their signed-in account and course, and what the class sees is read every few seconds while the page is open.
+
+Anywhere else (an exported file, an ordinary share link, the page open on its own) there is no class. **Only me** still works, keeping the person's own answers in their browser. **Everyone in this class** answers \`ready: false\`, so the page can quietly show their own words. **Preview** pretends: the class is your sample answers plus whatever you add in the preview.
 
 The rules are fixed when the project is shared. After you add or change a shared source, **Update to the latest version** in the Share dialog or the learner page will not know about it.
 
@@ -4143,9 +4236,9 @@ See the **Word cloud** starter for the class cloud wired up: the same page for O
 - Names (the collection's, and a counter's) ignore capitals and keep only letters, numbers, spaces, dashes and underscores. A person can keep up to 20 collections in a course.
 
 ## The nodes
-- **Add to course collection** puts a stamp in, or raises a counter. Type the **Collection** name, choose **A stamp** or **To a counter**, and type the **Name** as plain words (\`Gold star\`). Use a formula for a name that changes (\`"Level " + level\`) or for several stamps at once (a list of texts). It continues from **Added** when something was new and from **Nothing new** when it was already there, so you can say "you already have this one".
-- **Load course collection** fetches the collection and can fill a **list variable** with the stamps and a **number variable** with how many there are. It continues from **Loaded** when there is anything in it, and from **Empty** when there is not.
-- **Check course collection** branches on a stamp (**Has it** or **Not yet**), a counter at least a number, or both. It can write the counter's number into a variable. It uses what was fetched last and fetches the collection first if it has not been yet.
+- **Add a stamp to the course passport** (also called **Add to course collection**) puts a stamp in, or raises a counter. Type the **Collection** name, choose **A stamp** or **To a counter**, and type the **Name** as plain words (\`Gold star\`). Use a formula for a name that changes (\`"Level " + level\`) or for several stamps at once (a list of texts). It continues from **Added** when something was new and from **Nothing new** when it was already there, so you can say "you already have this one".
+- **Load the course passport** (**Load course collection**) fetches the collection and can fill a **list variable** with the stamps and a **number variable** with how many there are. It continues from **Loaded** when there is anything in it, and from **Empty** when there is not.
+- **Check the course passport** (**Check course collection**) branches on a stamp (**Has it** or **Not yet**), a counter at least a number, or both. It can write the counter's number into a variable. It uses what was fetched last, and fetches the collection first if it has not been yet.
 
 In a script: \`await ix.course.stamp('passport', 'Gold star')\` (a text or a list of texts, resolves with how many were new), \`await ix.course.count('passport', 'quizzes', 3)\` (1 when the counter went up, otherwise 0) and \`const c = await ix.course.read('passport')\`, which gives \`{stamps, counts, course}\` (or \`null\` when nothing keeps collections here). Counter names come back in lower case.
 
@@ -4201,7 +4294,7 @@ A variable or data source that you name \`context\` hides the built-in one, and 
 One project can serve several courses without being copied. In the **Data** tab, pick **context** and use **Per-course values**: add a row with a course label, then pick the variables that row changes and give each its value for that course.
 
 - The label can use \`*\` for any run of characters and \`?\` for one character, and is not case sensitive: \`MAT1000_*\` is every run of MAT1000, and \`MAT1000_26S1_ONC\` is exactly one. Commas give several: \`MAT1000_*, MAT1001_*\`.
-- Rows apply when the project starts on the Link for StudyDesk page, in order from the top. Every matching row applies, and a later row wins where two set the same variable. A course that matches no row simply gets each variable's own starting value.
+- Rows apply when the project starts on the Link for StudyDesk page, in order from the top. Every matching row applies, and a later row wins where two set the same variable. A course that matches no row gets each variable's own starting value.
 - It changes the starting value only. **Start over** goes back to it. A learner's own remembered progress (variables ticked **Remember**) still wins over it, so leave **Remember** off for a variable you set per course. A value the embedding page sets itself (an input attribute) wins too.
 - Preview uses the sample course, and each row says whether it matches, so you can try each course by changing the sample course label.
 
@@ -4218,21 +4311,32 @@ Only the course, the learner's first name and display name, and whether they are
     group: 'Data',
     summary: 'Copy a layer once per item in a list, with item and index in scope.',
     keywords: 'repeat repeater list loop for each item index grid table',
-    body: `Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the first child for each item**. Its **first child** is then copied once per item in **Items** (an expression that gives a list, like \`products\` or \`[1, 2, 3]\`).
+    body: `A **repeater** copies one layout once for each item in a list: a row for every product, a card for every question. Add an item to the list and a new copy appears.
 
-**Items** can be a [data source](data-sources) or a *List* [variable](variables): the repeater redraws when the list changes, so a *Change a value or counter* node that appends to the list adds a row.
+## Turn it on
+Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the first child for each item**. Its **first child** is then copied once per item in **Items**. Items is an expression that gives a list, like \`products\` or \`[1, 2, 3]\`.
 
-Inside the copies, \`item\` is the current item and \`index\` its position (from 0): \`{index + 1}. {item.name} - {item.price}\`.
+**Items** can be a [data source](data-sources) or a *List* [variable](variables). The repeater redraws when the list changes, so a *Change a value or counter* node that adds to the list adds a row.
 
-**Layout** places the copies: vertical, horizontal, grid (with columns), or none (when the frame uses [auto layout](auto-layout), which is usually best). A grid has a **Fill** direction: *Rows first* goes across each row and then down (1 2 3 / 4 5 6 / 7), *Columns first* goes down each column and then across (1 4 7 / 2 5 / 3 6), with **Cols** still the number of columns.
+Inside the copies, \`item\` is the current item and \`index\` is its position, counting from 0: \`{index + 1}. {item.name} - {item.price}\`.
 
-**Text in the copies sizes itself.** A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there, so a long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow. There is no need to guess a height from the number of characters. A height or width you bind on the template layer still wins. Only copies whose text changed are measured again.
+## Layout
+**Layout** places the copies: vertical, horizontal, grid (with columns), or none (when the frame uses [auto layout](auto-layout), which is usually best).
 
-**Instances in a repeater** can take their [inputs](instances) from the item: select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
+A grid has a **Fill** direction. *Rows first* goes across each row and then down (1 2 3 / 4 5 6 / 7). *Columns first* goes down each column and then across (1 4 7 / 2 5 / 3 6). **Cols** is still the number of columns.
 
+## Text in the copies sizes itself
+A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there. A long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow. You don't need to guess a height from the number of characters.
+
+A height or width you bind on the template layer still wins. Only copies whose text changed are measured again.
+
+## Instances in a repeater
+Instances in a repeater can take their [inputs](instances) from the item. Select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
+
+## Clicks and the keyboard
 Clicks on a copy fire **When clicked or hovered** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked.
 
-For lists a keyboard user moves through, tick **Keyboard navigation** under the repeater: one copy is the Tab stop and the arrow keys move between the rest (see [Accessibility](accessibility#keyboard-navigation)).`,
+For lists a keyboard user moves through, tick **Keyboard navigation** under the repeater. One copy is the Tab stop and the arrow keys move between the rest (see [Accessibility](accessibility#keyboard-navigation)).`,
   },
   {
     id: 'results',
@@ -4251,8 +4355,8 @@ Open **Results and progress** in the Project section of the Inspector (click an 
 | Score variable | The number variable that holds the score |
 | Top score | The score that counts as 100% (the default is 100). A score above it is reported as 100% |
 | Pass mark | Tick it and give a percentage to report pass or fail as well as the score |
-| Complete when | **Report result node only**, **Reaching an artboard**, **A variable turns on** (a true/false one), **Score meets the pass mark** or **A step-through artboard reaches its last step** (see [Steps](steps)). Completing reports the result once |
-| Resume on the same artboard | A returning learner opens on the artboard they left |
+| Complete when | **Report result node only**, **Reaching a page**, **A variable turns on** (a true/false one), **Score meets the pass mark** or **A step-through page reaches its last step** (see [Steps](steps)). Completing reports the result once |
+| Resume on the same page | A returning learner opens on the page they left |
 
 Then tick **Remember** on each variable that should keep its value between visits (the Variables tab).
 
@@ -4260,18 +4364,28 @@ With **Total of all questions** there is no score variable or top score: the pas
 
 ## Report result and Start over
 - **Report result** (action node) sends the result: *Complete* marks this attempt complete, *Score so far* reports the score without completing. Leave **Score** empty to use the score variable, or give an expression such as \`correct * 10\`. In scripts: \`ix.report({ completed: true, score: 7 })\`.
-- **Start over** (action node, or \`ix.startOver()\`) puts every variable back to its starting value, clears remembered progress, counts a new attempt and shows the start artboard. Nothing after it in the same flow runs. Scripts keep their own state.
+- **Start over** (action node, or \`ix.startOver()\`) puts every variable back to its starting value, clears remembered progress, counts a new attempt and shows the start page. Nothing after it in the same flow runs. Scripts keep their own state.
 - \`ix.result\` reads the result as it stands, \`{completed, score, max, percent, passed}\`. Reading it reports nothing.
 
 ## Where it goes
 The player works with no server: with nothing else around it, **Remember** keeps values in the browser and a reported result goes nowhere (the page around an iframe also receives it as a message).
 
-Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](export#share-link) rather than the share link. It also tells the project which course it is in and the learner's first name, for [Course and learner context](course-context) (never their username or email, and none of it goes into results or Insights). It plays the same project, and keeps one record per learner per course in the Toolbox's own database: completion, score, pass or fail, attempts and the remembered variables. Learners are identified by their StudyDesk session. The same link also counts what learners do for [Insights](insights). Someone opening it with no session plays as normal and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
+Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](export#share-link) rather than the share link. It plays the same project and keeps one record per learner per course in the Toolbox's own database: completion, score, pass or fail, attempts and the remembered variables. Learners are identified by their StudyDesk session.
+
+The same link tells the project which course it is in and the learner's first name, for [Course and learner context](course-context). It never passes a username or email, and none of it goes into results or Insights. It also counts what learners do, for [Insights](insights).
+
+Someone opening it with no session plays as normal, and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
 
 ## Save user data and Load user data
 **Remember** keeps a variable's value all the time, on its own. When you'd rather choose the moment, use the two action nodes instead: **Save progress** keeps the variables you tick, as they are right then (say, when the learner presses *Submit*), and **Load saved progress** puts them back on a later visit. Put the load in **Before activity loads** so the values are in place before anything shows. *Load saved progress* goes on from **Loaded** when anything came back, and from **Nothing saved** on a first visit, so you can set up a fresh start there.
 
-Most of the time you do not need the nodes: tick **Save as user data** on a variable in the [Variables](variables) tab and it is loaded before the project starts and saved as it changes. They go to the same places as remembered progress: on the **Link for StudyDesk**, one record per learner per course, kept by their StudyDesk session; with no session or in an export, in the browser. **Preview** keeps them too, for that project in this browser, so closing and reopening Preview is like a learner coming back; **Forget saved data** in Preview's bar starts you again as a new learner. Each save only changes the variables it names. User data is kept apart from remembered progress and from results, so **Clear results** and **Start over** leave it alone; it goes when the project goes for good (30 days after it's deleted, or straight away with **Delete forever**).
+Most of the time you don't need the nodes. Tick **Save as user data** on a variable in the [Variables](variables) tab and it is loaded before the project starts and saved as it changes.
+
+Both ways go to the same places as remembered progress. On the **Link for StudyDesk** it is one record per learner per course, kept by their StudyDesk session. With no session, or in an export, it is kept in the browser. Each save only changes the variables it names.
+
+**Preview** keeps saved data and remembered progress too, for that project in this browser. Closing and reopening Preview is like a learner coming back. **Forget saved data** in Preview's bar starts you again as a new learner.
+
+User data is kept apart from remembered progress and from results, so **Clear results** and **Start over** leave it alone. It goes when the project goes for good: 30 days after it's deleted, or straight away with **Delete forever**.
 
 ## See the results
 **View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. The owner and people invited to collaborate can see it. **Export CSV** downloads every learner's record as a spreadsheet: username, name, course, completed, passed, attempts, best and last score and percentage, and when they were last active (the list in the dialog shows the latest 200). **Clear results** deletes every record for the project (handy after testing); only the owner can use it (collaborators see it greyed out), since it can't be undone.
@@ -4285,16 +4399,16 @@ Most of the time you do not need the nodes: tick **Save as user data** on a vari
     id: 'insights',
     title: 'Insights: what learners did',
     group: 'Getting started',
-    summary: 'See where learners go, click and struggle: artboards reached, a click heat map, steps, answers to each question and your own records, as counts.',
+    summary: 'See where learners go, click and struggle: pages reached, a click heat map, steps, answers to each question and your own records, as counts.',
     keywords: 'insights analytics records record learners activity funnel heat map heatmap clicks steps answers questions struggle csv export privacy consent studydesk',
     body: `The **Insights** tab (bottom panel) answers "where do learners get stuck?" with counts. It shows nothing until learners have played the project from the **Link for StudyDesk** (see [Share link](export#share-link)) while signed in to StudyDesk.
 
 ## What you see
 - **Learners, visits, clicks, answers checked.** A learner is one StudyDesk user however many times they came back. A visit is one time the page was opened.
-- **Artboards reached.** A bar per artboard, in the project's order, of how many different learners saw it, and what share of the people who reached the start artboard that is. A big drop between two bars is where people left, or where nothing led them on.
-- **Steps reached** for each step-through artboard, so you can see which step people stopped at.
+- **Pages reached.** A bar per page, in the project's order, of how many different learners saw it, and what share of the people who reached the start page that is. A big drop between two bars is where people left, or where nothing led them on.
+- **Steps reached** for each step-through page, so you can see which step people stopped at.
 - **One card per question.** How many learners answered, how many checks were right, how many were right the first time, and a bar for how often each option was chosen (the right answer in green). An option nobody chose shows as zero. Typed and ordered answers are only counted as right or wrong.
-- **Where learners clicked.** The buttons, links and clickable layers learners clicked most. Tick **Click heat on the canvas** to draw every click over the artboard you are editing: blue is a few, red is many. Clicks that land on nothing show up too, which is how you find the thing people expected to be clickable.
+- **Where learners clicked.** The buttons, links and clickable layers learners clicked most. Tick **Click heat on the canvas** to draw every click over the page you are editing: blue is a few, red is many. Clicks that land on nothing show up too, which is how you find the thing people expected to be clickable.
 - **Your records**, from the *Record* node and \`ix.record\`.
 - **Courses**, when the project is used in more than one.
 
@@ -4304,7 +4418,7 @@ Choose how far back to count (7 days to all time) and press **Refresh**. **Expor
 Add a **Record** action node (Interactions tab) anywhere in a flow: give it a **Name** ("opened hint") and, if you like, a **Value** (an expression: a choice, a level, a score band). Insights counts how often each name happened, how many learners it happened to, and how often each value came up. In scripts: \`ix.record('chose route', 'B')\`. Names are cut at 60 characters and values at 120.
 
 ## What is and is not recorded
-- Automatic records: an artboard was shown, a click (where, and which button or link), a step was reached, and a question was checked (right or wrong, which options were chosen).
+- Automatic records: a page was shown, a click (where, and which button or link), a step was reached, and a question was checked (right or wrong, which options were chosen).
 - Nothing a learner types is recorded. A typed answer is only marked right or wrong.
 - Insights shows counts and numbers of different learners. It never lists a learner. With only a handful of learners a count can be one person, so wait for more before drawing conclusions.
 - The records go to the Toolbox's usual analytics as the learner's StudyDesk session (the same way every other toolbox item is counted), so the people who read those reports can see which user they came from. Tell learners what is counted, the way you would for any other usage statistics.
@@ -4346,7 +4460,13 @@ Learners who cannot, or would rather not, use a microphone or camera must be abl
 - \`micLevel\` (0 to 1, how loud) and \`micBands\` (a list of 8 numbers, 0 to 1 each, from low to high sound) while the project is listening live, and \`listening\` (true while it is). \`recording\` is true while recording, and \`micLevel\` follows a recording too.
 - \`recording\` \`recordingSeconds\`, and \`recordings.<name>.state\` (\`empty\`, \`recording\`, \`ready\`, \`playing\`), \`.seconds\` and \`.hasRecording\` for each recording, for meters, timers and buttons.
 
-The Accessibility tab has a check for this (Listen live counts as a sensor node, and its **Could not start** output as the way on): a project that uses a sensor needs a click, key or typed way to reach the same finish (Report result, Go to artboard, Steps, Check answer or the completion variable) that does not go through the sensor. The check passes when a button or typed answer finishes without it, including carrying on from a node's **Could not start** output. If there truly cannot be an equal way (an assessment of speaking, say), say why in **No equal way to finish**: learners are told, and the check becomes a note for you to review. The check finds that there is another way, not that it is a good one. The **Sign practice with self-review** starter is an example: the learner can do the whole walk, and reach the summary, without ever turning the camera on.
+The **Accessibility** tab has a check for this. A project that uses a sensor needs a click, key or typed way to reach the same finish without it. The finish can be Report result, Go to a page, Steps, Check answer or the completion variable.
+
+The check counts **Listen live** as a sensor node, and a node's **Could not start** output as a way on. It passes when a button or typed answer finishes without the sensor, including carrying on from **Could not start**.
+
+If there truly cannot be an equal way (an assessment of speaking, say), say why in **No equal way to finish**. Learners are told, and the check becomes a note for you to review. The check finds that there is another way, not that it is a good one.
+
+The **Sign practice with self-review** starter is an example: the learner can do the whole walk, and reach the summary, without ever turning the camera on.
 
 ## Listen live: the microphone as a number
 Tick **Live listening** under Microphone (and **Only ever listen, never record** if that is all the project does: the page then refuses every Start recording, and the consent screen says so). A **Listen live** node turns it on and off. While it is on the microphone drives numbers you can bind anywhere: \`micLevel\` (how loud) and \`micBands\` (8 bands, log-spaced from about 80 Hz to 8 kHz: \`micBands[0]\` is a low hum, \`micBands[7]\` the highest whistle overtones), about 25 times a second. Bar heights, circle sizes, colours and shaders can read them like any variable. For example, a bar's height binding \`200 * micBands[3]\`.
@@ -4363,9 +4483,20 @@ All are in the Interactions palette, and described there.
 - **Stop recording**, **Discard recording**, **Play recording** (sound plays through the project's own sound, so the viewer's sound button applies; video plays in the layer you choose) and **Download recording** (offers a file, after a tap: it is the only way a recording leaves memory).
 - **Camera preview** shows the camera live in a layer's place. The page draws it over the project, so the project never sees the camera's pixels.
 - **Take or choose a photo** puts a picture, scaled to at most 1600 px on the long side, into an image asset. Every image layer that uses the asset shows it. From the device's photo picker (with the front or back camera if the device offers it) or a still from the live preview. To fill a different asset for each item of a list, give **Or the asset from an expression** an asset's id or name (such as \`prompts[current].photo\`); it wins over the asset picked. Set **Do** to **Throw the photo away** to put the asset's own picture back and forget the photo.
-- **Download a file** saves text you build (a report, a CSV) after a tap. It works in any project: it needs no microphone or camera, so there is nothing to tick in Project > Microphone and camera. With the type **Web page (.html)** it can carry pictures: write \`[[image:id]]\` where one goes, with the id or name of an asset (a photo the learner took, or one of your own pictures), and the learner's page swaps it for the picture itself, so the file is one page with its images inside and works offline. Put \`html(text)\` around anything the learner typed so it cannot break the page. A web page can be up to 16 MB (other files 2 MB), and every one is saved with a rule that stops it running script or loading anything when it is opened, so it is a report and nothing more. If a picture cannot be found the mark is left empty, so give each image a good \`alt\`. The **Photo prompts notebook** starter builds its whole report this way, for upload to a Moodle assignment.
+- **Download a file** saves text you build, such as a report or a CSV, after a tap. It works in any project. See [Download a file](sensors#download-a-file) below.
 - **Offer: do not use my microphone or camera** asks the learner, in the page's own screen, whether to stop using them for good. Put it on a "Use the keyboard instead" button. Only the learner decides.
 - **When the microphone or camera is used** fires when a recording starts, a recording is ready (\`event.reason\` is \`stopped\`, \`limit\` or \`device-lost\`: the learner can press Stop on the bar too), something could not start (\`event.problem\` and \`event.message\`), the state changed, a video finished playing, a photo arrived, or live listening started or stopped.
+
+## Download a file
+**Download a file** needs no microphone or camera, so there is nothing to tick in **Microphone and camera**. The journal and workbook starters use it on a **Download as a file** button, so a learner keeps their work without an email link. A project shared before this needs **Update to the latest version**.
+
+- With the type **Web page (.html)** it can carry pictures. Write \`[[image:id]]\` where one goes, with the id or name of an asset (a photo the learner took, or one of your own pictures).
+- The learner's page swaps the mark for the picture itself, so the file is one page with its images inside and works offline. If a picture can't be found the mark is left empty, so give each image a good \`alt\`.
+- Put \`html(text)\` around anything the learner typed so it can't break the page.
+- A web page can be up to 16 MB, and other files up to 2 MB.
+- Every web page is saved with a rule that stops it running script or loading anything when it is opened, so it is a report and nothing more.
+
+The **Photo prompts notebook** starter builds its whole report this way, for upload to a Moodle assignment.
 
 ## Try it
 **Preview** has a pretend microphone and camera, because the real ones need the page the project is shared in. It makes a made-up level and short tone for a recording, a swelling level and moving bands for live listening, and a sample picture. The **Microphone and camera** menu above the preview makes it fail the ways a real one does (denied, no device, blocked by the course page, the learner chose not to use them), so you can build and check the plain version. A small "Simulated" note shows while it records. Try the real devices from the **Link for StudyDesk** on the page you will use.
@@ -4430,56 +4561,74 @@ Off by default, so embeds that already exist keep working. Turn it on and attrib
     id: 'project-settings',
     title: 'Project settings',
     group: 'Getting started',
-    summary: 'Start artboard, fit, page title, fonts, sandbox, reduced motion and Optimise output.',
-    keywords: 'settings start artboard fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider',
+    summary: 'Start page, fit, page title, fonts, sandbox, reduced motion and Optimise output.',
+    keywords: 'settings start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider',
     body: `![The Project section of the Inspector, with Allowed data hosts filled in and the library and reduced motion boxes below it.](help/project-settings.png)
 
-Click an empty part of the canvas, or an artboard's name, to see the **Project** settings in the Inspector (below the artboard's own).
+The **Project** section holds the settings for the whole project, not one page. Click an empty part of the canvas, or a page's name, and it shows in the Inspector, below the page's own settings.
 
 | Setting | Meaning |
 |---|---|
+| Colourway | Branded starters only. The colour theme the project opens in, and whether learners can switch it. See [Branded starter packs](branded-starters#switching-colourway) |
 | Name | The project's name, as on the projects page |
 | Page title | The title of the browser tab for the exported page |
 | Description | A note about the project, kept in the file |
-| Fit | How the artboard scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
-| Page background | The colour around the artboard in the exported page |
+| Fit | How the page scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
+| Page background | The colour around the page in the exported page |
 | Run scripts in the sandbox | See [Scripts](scripts) |
 | Run embedded HTML in the page | Only shown while the sandbox box above is off. Lets Embed layers with HTML reach the page, for HTML you wrote and trust. See [Web elements](web-elements) |
 | Allowed data hosts | Hosts that data may be loaded from, one per line (\`api.example.com\`, \`*.example.com\`). Empty allows any http(s) host. See [Data sources](data-sources#what-may-be-loaded) |
-| This project is a library | Shares the artboards you publish, with the project's styles and assets, as components for other projects. See [Libraries](libraries) |
+| This project is a library | Shares the pages you publish, with the project's styles and assets, as components for other projects. See [Libraries](libraries) |
 | Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
-| Optimise output | On by default. Downloads and share links carry smaller copies of big pictures; your originals stay at full size. The slider under it runs from **Smaller files** to **Better quality** (it starts at **Better quality**). **Optimise pictures now** makes the copies straight away and tells you what they save. See [Exporting](export#optimised-pictures) |
-| Results and progress | The score, pass mark and when the project counts as complete. See [Results and progress](results) |
-| Credits | Whether learners get a **Credits** button, and whether exported and shared pages carry the attributions list. The entries are in the **Attributions** tab. See [Attributions and references](attributions) |
-| Start artboard | Shown first in the player: set with **Make start page** on an artboard |
-| Fonts | The fonts the project loads. **Add a Google font…** is a search box over every Google font (type, then <kbd>Enter</kbd> or click; the chips narrow it by Sans, Serif, Display, Handwriting or Mono), or upload font files in the **Assets** panel. New projects start with Open Sans. Choosing a font for a text layer adds it here by itself. Fonts come from this server (it keeps a copy of each Google font the first time it is used), and a lesson waits a moment for its fonts before it shows, so text never appears in one font and then changes |`,
+| Depth range | How far, in pixels, a layer with a depth of 100% moves as the pointer goes from the middle of the window to its edge. It starts at 40 px. Each layer's own **Depth** is in its Inspector. See [Depth (parallax)](fill-stroke#depth-parallax) |
+| Tilt moves depth layers | Off by default. On phones and tablets, layers with a depth also follow how the device is tilted. iPhones and iPads ask the viewer for permission to use the motion sensor on their first tap, never when the page loads. If they refuse, or there is no sensor, the layers follow the pointer only |
+| Optimise output | On by default. Downloads and share links carry smaller copies of big pictures, and your originals stay at full size. The slider under it runs from **Smaller files** to **Better quality** (it starts at **Better quality**). **Optimise pictures now** makes the copies straight away and tells you what they save. See [Exporting](export#optimised-pictures) |
+| Start page | Shown first in the player. Set it with **Make start page** on a page |
+
+## More sections
+Below those settings the Inspector has sections of their own for the project, each with its own help:
+- **Captions and narration**: whether captions and descriptions start on, and whether the player shows its viewer buttons. See [Narration, captions and transcript](captions).
+- **Read aloud**: **Offer read-aloud** gives every page a **Listen** button, with a **Language** and a **Button at** corner. See [Read it to me](read-aloud).
+- **Results and progress**: the score, pass mark and when the project counts as complete. See [Results and progress](results).
+- **Learner records**: which things the player counts for [Insights](insights).
+- **Microphone and camera**: what the project may use. See [Microphone, camera and photos](sensors).
+- **Credits**: whether learners get a **Credits** button, and whether exported and shared pages carry the attributions list. The entries are in the **Attributions** tab. See [Attributions and references](attributions).
+
+## Fonts
+The **Fonts** section lists the fonts the project loads. New projects start with Open Sans.
+
+- **Add a Google font…** is a search box over every Google font. Type, then press <kbd>Enter</kbd> or click. The chips narrow it by Sans, Serif, Display, Handwriting or Mono.
+- Or upload font files in the **Assets** panel.
+- Choosing a font for a text layer adds it here by itself.
+
+Fonts come from this server, which keeps a copy of each Google font the first time it is used. A lesson waits a moment for its fonts before it shows, so text never appears in one font and then changes.`,
   },
 
   {
     id: 'download-size',
     title: 'Download size and lite versions',
     group: 'Interactivity',
-    summary: 'What each artboard asks a learner to download, how to show it to them, and how to offer a lesson as video, audio only and text only.',
+    summary: 'What each page asks a learner to download, how to show it to them, and how to offer a lesson as video, audio only and text only.',
     keywords: 'download size weight bandwidth lite low data saver metered mobile slow connection audio only text only version video size megabytes mb file size lazy loading transcript saveData lowBandwidth downloadSize fileSize',
     body: `Many learners study on mobile data or a shared connection. This page is about showing them what a lesson costs before they commit, and about offering a lighter way to take it.
 
 ## Seeing what an artboard weighs
-Select an artboard and open **Download size** in the Inspector. The heading says what this artboard needs in total. Open it to see its heaviest files, and a bar for every artboard in the project so you can compare the versions of a lesson.
+Select a page and open **Download size** in the Inspector. The heading says what this page needs in total. Open it to see its heaviest files, and a bar for every page in the project so you can compare the versions of a lesson.
 
 - Sizes are the ones the project already stores for each file. While [Optimise output](project-settings) is on and the lighter copy of a picture has been made, its size is used.
-- A file counts once however many layers use it. An artboard shown inside another as an [instance](instances) counts what that artboard needs. A file that another artboard only links to with **Go to a page** belongs to that artboard.
-- Fonts and data files load for every artboard, so they are listed apart and left out of each artboard's number.
+- A file counts once however many layers use it. A page shown inside another as an [instance](instances) counts what that page needs. A file that another page only links to with **Go to a page** belongs to that page.
+- Fonts and data files load for every page, so they are listed apart and left out of each page's number.
 
 ## What the player loads, and when
-The player draws one artboard at a time, and an artboard the learner has not opened asks for nothing: no pictures, no video, no sound. When they get to it, it loads everything it has. Every timeline's sound is fetched on arrival, started or not, so the first play does not wait.
+The player draws one page at a time, and a page the learner has not opened asks for nothing: no pictures, no video, no sound. When they get to it, it loads everything it has. Every timeline's sound is fetched on arrival, started or not, so the first play does not wait.
 
-- **Hidden layers still load.** A layer with Visible off is not drawn, but a video in it still starts loading (it may be carrying the sound for an audio version), and an instance layer still loads its artboard. To keep a version's files off the wire, put the version on its own artboard and go to it. Do not hide layers.
-- Fonts and data sources are the project's, so they load at the start whichever artboard shows.
-- **A single HTML file, a share link and the Link for StudyDesk carry every file inside the page.** All the versions arrive in the first download, so the choice saves memory and playing, not the download. Only a copy whose files are hosted separately loads just the chosen version. The lesson tells the learner which case they are in, with the \`assetsEmbedded\` name below.
+- **Hidden layers still load.** A layer with Visible off is not drawn, but a video in it still starts loading (it may be carrying the sound for an audio version), and an instance layer still loads its page. To keep a version's files off the wire, put the version on its own page and go to it. Do not hide layers.
+- Fonts and data sources are the project's, so they load at the start whichever page shows.
+- **A single HTML file, a share link and the Link for StudyDesk carry every file inside the page.** All the versions arrive in the first download, so the choice saves memory and playing, not the download. Only a copy whose files are hosted separately loads only the chosen version. The lesson tells the learner which case they are in, with the \`assetsEmbedded\` name below.
 
 ## Showing a size to learners
 These names work in any expression, text template or binding. A variable with the same name wins.
-- **downloadSize("Video lesson")**: the bytes of the files that artboard needs. Give several names to add up what a version needs (each file once). With no name it means the artboard that is showing.
+- **downloadSize("Video lesson")**: the bytes of the files that page needs. Give several names to add up what a version needs (each file once). With no name it means the page that is showing.
 - **fileSize(bytes)**: a size as people say it, such as "340 KB" or "12 MB".
 - **saveData**: true when the browser says the learner has turned on Data Saver.
 - **connectionType**: \`4g\`, \`3g\`, \`2g\` or \`slow-2g\`, or empty. Only some browsers say; Safari and Firefox say nothing.
@@ -4497,7 +4646,7 @@ What the starter cannot do for you is make the three versions. The soundtrack mu
 
 ## Good to know
 - Test the lighter versions on a throttled connection in your browser's developer tools before you tell anyone they are light.
-- If you rename a version's artboard, change its name in the size line on the Choose page.`,
+- If you rename a version's page, change its name in the size line on the Choose page.`,
   },
 
   // ---------------------------------------------------------------- import/export
@@ -4817,27 +4966,27 @@ player.setData('products', [...]);
     group: 'Working together',
     summary: 'Publish components, colours, text styles and assets from one project and use them, with updates, in others.',
     keywords: 'library component share publish update detach style swatch version design system',
-    body: `A **library** is an ordinary project that publishes some of its artboards as **components**, along with its named colour and text styles and the assets they use. Other projects add the library, drag its components onto the canvas, and are told when a newer version is published. It is how you keep one button, header or colour palette in step across many projects. Everything lives in the **Libraries** tab of the left panel.
+    body: `A **library** is an ordinary project that publishes some of its pages as **components**, along with its named colour and text styles and the assets they use. Other projects add the library, drag its components onto the canvas, and are told when a newer version is published. It is how you keep one button, header or colour palette in step across many projects. Everything lives in the **Libraries** tab of the left panel.
 
 ## Making a library
 1. Turn on **This project is a library** (Inspector, **Project** section, or **Make this project a library** in the Libraries tab). The projects page marks it with a **Library** badge.
-2. Select an artboard and tick **Publish to library**. Do this for each artboard you want to offer. An artboard that a published one uses as an [instance](instances) comes along automatically.
+2. Select a page and tick **Publish to library**. Do this for each page you want to offer. A page that a published one uses as an [instance](instances) comes along automatically.
 3. In the Libraries tab press **Publish**, with an optional note. Each publish with something new in it makes the next **version** (v1, v2 ...). Publishing with nothing changed does not.
 4. **Share**: tick **Everyone can use it**, or type usernames, then **Save sharing**. Only you see the library until you do. **Stop publishing** withdraws it; projects that already use it keep their copies.
 
 ## Using a library
 - Under **Available libraries** press **Add**. Its components and colours appear under **Libraries in this project**.
-- **Drag a component onto the canvas**, or press **Place** to put it in the open artboard. The first time, the component's artboard is copied into your project as a **library artboard** (badged *library* in the layers list) and an [instance](instances) of it is placed. That copy is only there for the instance to use, so it is kept **off the canvas**: you see one thing placed, not two. The eye on its row in Layers shows it on the canvas (and hides it again), and picking the row shows it too. Placing it again reuses the same copy. **Add artboard** copies it onto the canvas as an artboard of its own, without placing anything.
-- A library artboard is **read-only**: its layers, timelines and interactions come from the library. You can move it and rename it. Variables, fonts, data sources and assets it needs are added to your project (a variable or data source you already have with the same name is left alone).
-- Libraries are copied, not linked live: the artboards, assets and styles are in your project, so [exports](export) and the player are self-contained.
+- **Drag a component onto the canvas**, or press **Place** to put it in the open page. The first time, the component's page is copied into your project as a **library page** (badged *library* in the layers list) and an [instance](instances) of it is placed. That copy is only there for the instance to use, so it is kept **off the canvas**: you see one thing placed, not two. The eye on its row in Layers shows it on the canvas (and hides it again), and picking the row shows it too. Placing it again reuses the same copy. **Add page** copies it onto the canvas as a page of its own, without placing anything.
+- A library page is **read-only**: its layers, timelines and interactions come from the library. You can move it and rename it. Variables, fonts, data sources and assets it needs are added to your project (a variable or data source you already have with the same name is left alone).
+- Libraries are copied, not linked live: the pages, assets and styles are in your project, so [exports](export) and the player are self-contained.
 
 ## Updates
 When the library publishes a new version, its entry shows **Updates available**. Press it to **review**: each changed component lists what changed (layers added, removed or changed, size, timelines, interactions), and styles are listed too. Then **Update all**, or **Update this one** per component.
 
-What is kept when you update: the instances you placed in your own artboards, their **Inputs**, their position and size, your variables (and their values), your own artboards and your own styles. A component the library has removed stays in your project as it is until you detach or delete it.
+What is kept when you update: the instances you placed in your own pages, their **Inputs**, their position and size, your variables (and their values), your own pages and your own styles. A component the library has removed stays in your project as it is until you detach or delete it.
 
 ## Detach
-**Detach to edit** (Inspector, or in the library's list) turns a library artboard into a normal artboard you can edit. It stops getting updates. **Stop using this library** detaches everything from it and makes its styles your own.
+**Detach to edit** (Inspector, or in the library's list) turns a library page into a normal page you can edit. It stops getting updates. **Stop using this library** detaches everything from it and makes its styles your own.
 
 ## Styles
 **Styles** holds named colours and text styles.
@@ -4849,7 +4998,7 @@ What is kept when you update: the instances you placed in your own artboards, th
 A library can be published as a **brand kit**: the same thing, but what a project takes from it is locked so it stays on brand. See [Brand kits](brand-kits).
 
 ## Limits
-- Components carry artboards (with their timelines and interaction graphs), variables, fonts, data sources and assets. Project **scripts** are not carried; instances do not run scripts of their own anyway.
+- Components carry pages (with their timelines and interaction graphs), variables, fonts, data sources and assets. Project **scripts** are not carried; instances do not run scripts of their own anyway.
 - An update replaces a copy's content by layer id. Inputs that name a variable the library renamed or removed are left as they were.
 - Only the latest version is kept on the server, so you cannot go back to an older one (undo works right after an update, and the [revision history](live-editing#revision-history) goes further back).`,
   },
@@ -4870,9 +5019,10 @@ A library can be published as a **brand kit**: the same thing, but what a projec
 - **Pictures, videos and sounds** are picked from the project's files, or **+ Add a new picture…** uploads one. A grey placeholder becomes your picture, and its "Replace with your picture" words go away.
 - **Switches and numbers** such as the pass mark, how many tries, how long a right answer stays on screen.
 - The small arrow beside a field takes the editor to the layer it is about.
+- Some starters have a setting of their own, such as **Keep the learner's map for next time** on the **Mind map**. See [Starter settings](branded-starters#starter-settings).
 
 ## How it relates to the checklist
-Most checklist items now point at a field: press **Fill in** beside the item to open the form at the right place. Items about looks and layout (move a spot onto its part of the diagram, restyle a card, set up the sound) stay on the checklist and are done on the page.
+Most checklist items now point at a field: press **Fill in** beside the item to open the form at the right place. Items about looks and layout (move a spot onto its part of the diagram, restyle a card, set up the sound) stay on the checklist and are done on the page. The command palette can open **Fill in** too.
 
 ## It is the same data
 Every field edits ordinary parts of the project, so **Undo** and **Redo** work, other people editing live see it, and nothing is hidden: the **Variables** tab shows the list you typed, **Layers** the text, the **Question** section the answers. Use whichever is easier. The form only knows where things are, so if you delete a layer or a variable a field was about, the field says so and the rest of the form carries on.
@@ -4889,7 +5039,7 @@ Every field edits ordinary parts of the project, so **Undo** and **Redo** work, 
     group: 'Working together',
     summary: 'Start a project from a template with a checklist of what to change, save your own, play and copy the examples, allow remix on a share link, and pull template updates in.',
     keywords: 'template starter checklist example remix copy duplicate update version save share quiz flip cards sorting branching story timeline intro review',
-    body: `A **template** is a whole project saved so other people (or you) can start new projects from it. Nobody has to begin from a blank artboard, and a **checklist** walks whoever uses it through replacing the sample content, so a template's wording does not end up in front of learners. Everything is on the **Templates** tab of the projects page (next to **Projects**).
+    body: `A **template** is a whole project saved so other people (or you) can start new projects from it. Nobody has to begin from a blank page, and a **checklist** walks whoever uses it through replacing the sample content, so a template's wording does not end up in front of learners. Everything is on the **Templates** tab of the projects page (next to **Projects**).
 
 ![The Templates tab on the projects page: Mine, Shared, Built-in and Examples, with a card for each built-in starter.](help/templates-tab.png)
 
@@ -4926,7 +5076,7 @@ Open a project and choose **Share > Save as template**.
 - **Title** and **Description** are what the card shows. Say what the template is for.
 - **Everyone can use this template** (off: only you see it). People who use it get their own copy; yours is never changed.
 - **Checklist**: one line for each thing to change ("Replace the question text"). Select a layer first and press **Link** on an item to point it at that layer, or **Add for the selected layers** for one item per layer. Clicking an item later selects the layer. Reword the items for the person who will use it, not for you.
-- The picture on the card is the project's own thumbnail, and the whole project (artboards, pictures, fonts, variables, interactions and [notes](notes), which are the right place to explain each part) goes with it. Review comments and results do not.
+- The picture on the card is the project's own thumbnail, and the whole project (pages, pictures, fonts, variables, interactions and [notes](notes), which are the right place to explain each part) goes with it. Review comments and results do not.
 - Saving again from the same project, choosing **The next version of ...**, makes **version 2**, **3** and so on. Saving with nothing changed only updates the title, description, checklist and visibility.
 
 ![The Save as template window: title, description, who can use it, and a checklist whose first item points at the selected layer.](help/templates-save.png)
@@ -4934,7 +5084,7 @@ Open a project and choose **Share > Save as template**.
 Do not leave real names, private pictures or course content in a template that is shared with everyone: anyone can use it, and the pictures go with it.
 
 ## Update from template
-Projects made from a saved template remember which version they came from, and what every artboard, layer, timeline, interaction node and variable was when they were copied. When the author saves a newer version, the Checklist tab shows **Update available**. Press it to see:
+Projects made from a saved template remember which version they came from, and what every page, layer, timeline, interaction node and variable was when they were copied. When the author saves a newer version, the Checklist tab shows **Update available**. Press it to see:
 - parts the template changed that **you have not touched**: they are updated, in place, with your own layers inside them left alone;
 - parts the template **added**: they are added where they sit in the template;
 - parts you changed: **kept as they are**, listed so you know the template changed them too;
@@ -4947,16 +5097,16 @@ Untick anything you do not want, then **Update**. It is one undo step (Ctrl+Z). 
 A template made from a project that already has a [brand kit](brand-kits) added, with some of its items placed, is a **pre-branded template**. Its card says **Brand kit**, and projects made from it start with the kit's logos and headers in place and locked, so they stay on brand. Everything else in the project is the author's to change.
 
 ## Examples
-**Examples** are finished projects that ship with Interactives: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
+**Examples** are finished projects that ship with Interactives: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. Every example's pages and graphs are laid out neatly and carry a [note](notes#notes-in-starters-and-examples) or two saying what to look at. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
 
 ## Allow remix on a share link
-In **Share > Share link**, tick **Allow remix**. People who open the **Link for StudyDesk** while signed in to the editor get a **Remix this** button; pressing it copies the project into their own projects and opens it. The copy is theirs: it does not change your project, and it is not tied to it. A remix copies the project **as it is now** (not the version last published to the link), with every artboard, layer and picture, including parts the page does not show, so only allow it for projects you are happy to give away. Turn it off at any time; copies already made stay.
+In **Share > Share link**, tick **Allow remix**. People who open the **Link for StudyDesk** while signed in to the editor get a **Remix this** button; pressing it copies the project into their own projects and opens it. The copy is theirs: it does not change your project, and it is not tied to it. A remix copies the project **as it is now** (not the version last published to the link), with every page, layer and picture, including parts the page does not show, so only allow it for projects you are happy to give away. Turn it off at any time; copies already made stay.
 
 ## Good to know
 - Layer ids stay the same in a copy, so a checklist and updates can find things. Duplicating or pasting layers inside the copy makes new ids as usual.
 - The server keeps a template as a snapshot with its own copy of the files, so deleting or editing the project it came from does not change it.
 - Templates are one level: a copy of a template does not become a template of its own until you save it as one.
-- The **Built-in** tab also has the UniSQ [branded starter packs](branded-starters): ready-made activities in a choice of colourways, with the brand locked. Every built-in starter opens with its artboards laid out in order in a tidy grid (and you can do the same to any project with **Tidy up pages**, see [Artboards](artboards)).`,
+- The **Built-in** tab also has the UniSQ [branded starter packs](branded-starters): ready-made activities in a choice of colourways, with the brand locked. Every built-in starter opens with its pages laid out in order in a tidy grid (and you can do the same to any project with **Tidy up pages**, see [Pages](artboards)).`,
   },
   {
     id: 'branded-starters',
@@ -4970,10 +5120,79 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
       const list = src?.sets.length
         ? src.sets.map((set) => `### ${set.name}\n\n${set.starters.map((s) => `- **${s.name}**: ${s.description}`).join('\n')}`).join('\n\n')
         : 'The list of starters is in the editor (Templates, Built-in).';
-      return `A **branded starter pack** is a ready-made activity in the UniSQ look: a gradient title page with the logo, white content pages with a footer line, and sections on deep purple. You write the content; the look is already done, and it stays done.
+      return `A **branded starter pack** is a ready-made activity in the UniSQ look: a gradient title page with the logo, white content pages with a footer line, and sections on deep purple. You write the content. The look is already done, and it stays done.
 
 ## Using one
-Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top. Pick a **colourway** (the swatches; your choice is remembered in this browser), find the starter in its set, and press **Use template**. The pictures show the first page in the colourway you chose. You get a checklist of everything to change, like any other [template](templates#use-a-template): the pictures are grey placeholders, and the sample text is yours to replace. A starter with sound (the **Listening lab**) comes with short placeholder tones in the project's **Assets**, named "(replace)": use the arrow beside each one to swap in your own clip, and the **Play sound** nodes follow it. **Keep the beat** has no metronome timer to drift: one steady 16 ms clock (held back by its **Only while** until a drill is running) reads \`Date.now()\` against the start time, so every beat is exactly where it should be, and each tap is scored the moment it arrives. Its drills, tempos and how close a tap has to be are the **presets** variable (Variables tab). **Sign practice with self-review** keeps the model clip on one page, **Model clips** (one Video layer whose asset follows the sign in view: each sign in the **signs** variable names its clip, a placeholder tone in **Assets** to swap for the signer's video), and every other page shows it. Its Watch and choose half needs no camera, and its camera half records a short video take that stays on the learner's device. Each page has a phone version that stacks the model above the camera (see [Responsive artboards](responsive)), with the same layer names, so a change to wording or layout on one is made on the other too. It says plainly that it supports practice and is not feedback from a Deaf teacher, so keep that in; you also need the signer's consent and the rights to each clip. The **Live sound lab** uses the microphone as a number and records nothing: a loudness meter with a target band (steady volume, or a noise check worded as a rough guide) and eight frequency bars. Its project is set to listen only, the learner is asked once and sees a Listening bar with Stop, and a slider on each scene makes the same numbers when there is no microphone (see [Microphone, camera and photos](sensors)). Try the real microphone from the Link for StudyDesk, not Preview. Its target band, noise line and band names are variables. The **Photo prompts notebook** has a privacy pledge, about six prompts (each a photo slot, caption, tag and "why this one" box, with retake, delete and skip with a reason), a list or bingo board view (the **bingo** variable) and a hand-in page that downloads one web page with the photos inside it. Photos are only held in the page, so it tells learners to download before leaving. The **prompts** variable holds the prompts; each has a photo and example field naming two image assets, and the example is the way through for a learner with no camera. **Shadow the model** (Speaking and practice) is a few phrase cards: each plays a model clip (with a **Slow** switch that keeps the pitch), the learner records themselves, plays their take or the model then their take back to back, ticks your self-check and rates themselves. It declares the microphone, so open **Project > Microphone and camera** to see the purpose and the 30 second cap, and untick Microphone for a listen-and-repeat version. A learner who says no, has no microphone or chooses "Do not use my microphone or camera" gets the plain version (listen, say it aloud, self-check), so nobody is shut out. The recording stays in their browser, is dropped when they go to the next card and is gone on a reload, and the page says so. Each card is a row of the **cards** variable (phrase, note, sound, checks); the sound is the clip's asset, so replacing a placeholder with the arrow in **Assets** keeps the card pointing at it, and for a new row you type the clip's name in **sound**. The **Difficult conversation** and **Timed talk** rehearsals ship with an optional recording step that is switched off: tick Microphone in the same place and *Record my reply* or *Record this talk* and the play-back buttons appear, only for learners whose microphone works. The **Word cloud** (Explore and reveal) makes a cloud from a list of words and weights, \`ourWords\` (a text, a weight, and a detail and link for the dialog a word opens), with the **cloud** formula helper: sizes follow weights, nothing overlaps, and the same words always give the same picture. Words are buttons in one Tab stop with the arrow keys moving through them biggest first, and **View as list** is the text alternative with the counts. Its second page lets one learner type words and watch their own cloud grow (kept as user data, with a **blocked** list and a **minCount**). One author setting, **whoSees**, will choose Only me or Everyone in this class: Only me works now, and the class option arrives with shared responses (until then it keeps showing the learner's own words). The **Dated timeline** (Explore and reveal) is a timeline on a real scale: **events** and **eras** are lists with dates, and the **timelineLayout** helper places them for the years in view, lays the labels out in lanes so they never collide and picks the scale (decades, years, then months) as you zoom. Earlier, Later, Zoom and Fit all move the view, Next event and Previous event walk the events and the view follows, a click or Enter opens an event in a dialog, and **View as list** is the text alternative. Its page is the base of a responsive set with a portrait variant under 560 px wide (same layer names, so a change to wording or layout is made on both), and an ordering activity follows it. The simpler **Interactive timeline** is still in Drag, sort and timelines.
+Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top.
+
+1. Pick a **colourway** (the swatches). Your choice is remembered in this browser, and the pictures show the first page in it.
+2. Find the starter in its set. Press **Play** on its card to try it first: it runs the way a share link would, and nothing is saved.
+3. Press **Use template**.
+
+You get a checklist of everything to change, like any other [template](templates#use-a-template), and a **Fill in** tab beside it: a plain form for the words, questions and pictures ([Fill in this starter](fill-in-starter)). The pictures are grey placeholders, and the sample text is yours to replace.
+
+## On every starter page
+- Back and Next sit in a bar along the bottom of every page: Back on the left, Next on the right.
+- Checklist items are short, one job each, with **Why and how** folded underneath.
+- Every starter's graphs and pages carry [notes](notes#notes-in-starters-and-examples) that say what each part does, why it is built that way and what to change.
+- Every page is checked in every colourway, so a button never lands on text and nothing crowds the logo.
+
+## Starter settings
+These are in the **Fill in** tab, on the starter they belong to.
+- **Keep the learner's map for next time** (**Mind map**, its **Build your own** page): on, the learner's map is saved for them as they build, on the StudyDesk learner page, and they get **Save**, **Start a new map** and **Open a saved map**. Off, the map lasts only until they leave. Either way they can download it as a text outline, as a picture, or as a copy to open later.
+- **A soft chip behind each word** (the pills) and **Word colour** (**Plain** or **Colourway**) in the **Word cloud**.
+- **Who sees the learners' cloud**, **Words not allowed** and **Show a word once it has been said** in the **Word cloud**. See below.
+- **Offer a Hint** and **Offer Try again** in the question starters. See [The starters](branded-starters#the-starters).
+
+## Notes on some starters
+### Listening lab
+It comes with short placeholder tones in the project's **Assets**, named "(replace)". Use the arrow beside each one to swap in your own clip, and the **Play sound** nodes follow it.
+
+### Keep the beat
+There is no metronome timer to drift. One steady 16 ms clock, held back until a drill is running, reads the real time against the start time, so every beat is exactly where it should be, and each tap is scored the moment it arrives. The drills, tempos and how close a tap has to be are in the **presets** variable (Variables tab).
+
+### Sign practice with self-review
+- The model clip is one Video layer on one page, **Model clips**, and every other page shows it. Its asset follows the sign in view: each sign in the **signs** variable names its clip, a placeholder tone in **Assets** to swap for the signer's video.
+- The Watch and choose half needs no camera. The camera half records a short video take that stays on the learner's device.
+- Each page has a phone version that stacks the model above the camera (see [Responsive pages](responsive)), with the same layer names, so a change to wording or layout on one is made on the other too.
+- It says plainly that it supports practice and is not feedback from a Deaf teacher, so keep that in. You also need the signer's consent and the rights to each clip.
+
+### Live sound lab
+It uses the microphone as a number and records nothing: a loudness meter with a target band (steady volume, or a noise check worded as a rough guide) and eight frequency bars. The project is set to listen only. The learner is asked once and sees a Listening bar with Stop.
+
+A slider on each scene makes the same numbers when there is no microphone (see [Microphone, camera and photos](sensors)). Try the real microphone from the Link for StudyDesk, not Preview. The target band, noise line and band names are variables.
+
+### Photo prompts notebook
+- A privacy pledge, then about six prompts. Each has a photo slot, a caption, a tag and a "why this one" box, with retake, delete and skip with a reason.
+- A list or bingo board view (the **bingo** variable).
+- A hand-in page that downloads one web page with the photos inside it. Photos are only held in the page, so it tells learners to download before leaving.
+- The **prompts** variable holds the prompts. Each has a photo and an example field naming two image assets, and the example is the way through for a learner with no camera.
+
+### Shadow the model (Speaking and practice)
+A few phrase cards. Each plays a model clip (with a **Slow** switch that keeps the pitch), the learner records themselves, plays their take or the model then their take back to back, ticks your self-check and rates themselves.
+
+- It declares the microphone, so open **Project > Microphone and camera** to see the purpose and the 30 second cap. Untick Microphone for a listen-and-repeat version.
+- A learner who says no, has no microphone or chooses "Do not use my microphone or camera" gets the plain version (listen, say it aloud, self-check), so nobody is shut out.
+- The recording stays in their browser, is dropped when they go to the next card and is gone on a reload, and the page says so.
+- Each card is a row of the **cards** variable (phrase, note, sound, checks). The sound is the clip's asset, so replacing a placeholder with the arrow in **Assets** keeps the card pointing at it. For a new row, type the clip's name in **sound**.
+
+### Difficult conversation and Timed talk
+Both rehearsals ship with an optional recording step that is switched off. Tick Microphone in **Project > Microphone and camera**, then *Record my reply* or *Record this talk*, and the play-back buttons appear, only for learners whose microphone works.
+
+### Word cloud (Explore and reveal)
+A cloud from a list of words and weights, \`ourWords\` (a text, a weight, and a detail and link for the dialog a word opens), with the **cloud** formula helper. Sizes follow weights, nothing overlaps, and the same words always give the same picture.
+
+- Words are buttons in one Tab stop, with the arrow keys moving through them biggest first. **View as list** is the text alternative, with the counts.
+- Its second page lets a learner type words and watch a cloud grow, kept as user data, with a **blocked** list and a **minCount**.
+- **Who sees the learners' cloud** chooses **Only me** or **Everyone in this class**. The class option uses a [Shared responses](shared-responses) source, so it only works from the StudyDesk learner page. Anywhere else the page shows the learner's own words.
+
+### Dated timeline (Explore and reveal)
+A timeline on a real scale. **events** and **eras** are lists with dates, and the **timelineLayout** helper places them for the years in view, lays the labels out in lanes so they never collide and picks the scale (decades, years, then months) as you zoom.
+
+- Earlier, Later, Zoom and Fit all move the view. Next event and Previous event walk the events and the view follows.
+- A click or Enter opens an event in a dialog. **View as list** is the text alternative.
+- The page is the base of a responsive set with a portrait variant under 560 px wide (same layer names, so a change to wording or layout is made on both), and an ordering activity follows it.
+- The simpler **Interactive timeline** is still in Drag, sort and timelines.
 
 ## Colourways
 Every branded project carries all of these as [themes](themes), plus **High contrast**, which a viewer who asks for more contrast gets automatically. Every colour in the project is a theme colour, so switching colourway re-colours the whole thing at once.
@@ -4981,12 +5200,19 @@ Every branded project carries all of these as [themes](themes), plus **High cont
 ${ways}
 
 ### Switching colourway
-Select nothing (or an artboard) and open **Project** in the inspector. The **Colourway** swatches change the theme the project opens in. It is one undo step, and the canvas and Preview show it straight away.
+Select nothing (or a page) and open **Project** in the Inspector. The **Colourway** swatches change the theme the project opens in. It is one undo step, and the canvas and Preview show it straight away.
 
 Tick **Let learners switch colourway** to add a small row of swatches to the top right of the start page. Each one is a button that runs the interaction graph's **Switch the colour theme** action, so learners can pick the colour they find easiest to read. The swatches are brand layers: they stay where they are, and unticking the box removes them.
 
 ### Contrast
-Every starter, in every colourway and High contrast, meets WCAG 2.2 AA: 4.5:1 for text (3:1 for large text), and 3:1 for the edge of a button, the focus ring, a progress bar against its track and chart marks. A test holds every page of every starter to it, in the states that show feedback and open dialogs too, so a colourway change can't slip under it. Things you may notice: the Orange and Red colourways carry a soft dark scrim over the gradient on the first and last pages (white words reach only 3.6:1 on the bare gradient); a button's edge is an outline in its label colour (gold buttons in Purple have a dark one); and selected outlines, bars and chart marks use the **primary** colour (purple in Purple), keeping the button colour for fills with a label on them. The keyboard focus ring is two tones, so it holds 3:1 everywhere, with nothing to choose: the **color/focus** colour (3 px) with a 2 px halo of black or white either side of it, whichever is further from that colour (white round Purple's and Blue's dark ring, black round a gold one). Whatever is behind a control, one of the two tones stands clear of it: the colour itself on the white pages, the halo on the dark ends of the Blue, Green and Purple gradients and on deep panels. The contrast test checks that on every page, first and last pages and deep panels included, and lists nothing.
+Every starter, in every colourway and High contrast, meets WCAG 2.2 AA: 4.5:1 for text (3:1 for large text), and 3:1 for the edge of a button, the focus ring, a progress bar against its track and chart marks. A test holds every page of every starter to it, including the states that show feedback and open dialogs, so a colourway change can't slip under it.
+
+What you may notice:
+- The Orange and Red colourways carry a soft dark scrim over the gradient on the first and last pages, because white words reach only 3.6:1 on the bare gradient.
+- A button's edge is an outline in its label colour (gold buttons in Purple have a dark one).
+- Selected outlines, bars and chart marks use the **primary** colour (purple in Purple). The button colour is kept for fills with a label on them.
+
+The keyboard focus ring is two tones, so it holds 3:1 everywhere, and there is nothing to choose. It is the **color/focus** colour (3 px) with a 2 px halo of black or white either side of it, whichever is further from that colour (white round Purple's and Blue's dark ring, black round a gold one). Whatever is behind a control, one of the two tones stands clear of it: the colour itself on the white pages, the halo on the dark ends of the Blue, Green and Purple gradients and on deep panels.
 
 ## What is locked, and why
 Branded projects are held to the brand so every activity looks like it came from the same place, whoever writes it.
@@ -4995,10 +5221,16 @@ Branded projects are held to the brand so every activity looks like it came from
 - **Colours** have to be theme colours. The colour picker offers the project's **Tokens**; typing a hex colour or picking one from elsewhere is refused with a note that this is a branded project. A new layer you draw or paste gets the nearest theme colour instead of its plain one.
 - **Fonts** are Open Sans.
 
-The accessibility checks, the [themes](themes) panel and everything else work as they do in any project. A power user can turn the lock off for a session with F9 (the brand kit override), which also lifts the brand kit lock, to fix something in the pack itself. With it on, brand layers show in the Layers panel like any layer: select one there, and press its padlock to unlock it for clicking on the canvas. Nothing is saved with it.
+The accessibility checks, the [themes](themes) panel and everything else work as they do in any project. Projects made before the lock existed are locked when they open.
+
+A power user can turn the lock off for a session with F9 (the brand kit override), which also lifts the brand kit lock, to fix something in the pack itself. With it on, brand layers show in the Layers panel like any layer. Select one there, and press its padlock to unlock it for clicking on the canvas. Nothing is saved with it.
 
 ## The starters
-Question starters share two switches and a look. **Hint** is a small pill at the top right of the question card, so the one full size button is the one that answers. The two optional extras are one project variable each, changed once in the **Variables** tab for every question: \`offerHint\` shows or hides the Hint pill, and \`allowTryAgain\` shows or hides Try again after a wrong answer (the practice starters open with both on, the Spelling test and the multi-page quiz with Try again off). A button says what happens to the answer: **Submit answer** where it is final, **Check answer** where there are tries. A button that starts a sound is disabled and reads "Playing..." until the sound ends, so it can't be pressed over itself.
+Question starters share two switches and a look. **Hint** is a small pill at the top right of the question card, so the one full size button is the one that answers.
+
+The two optional extras are one switch each, for every question. **Offer a Hint** shows or hides the Hint pill, and **Offer Try again** shows or hides Try again after a wrong answer. Change them once in the **Fill in** tab (they are the project variables \`offerHint\` and \`allowTryAgain\` if you prefer the **Variables** tab). The practice starters open with both on. The Spelling test and the multi-page quiz open with Try again off.
+
+A button says what happens to the answer: **Submit answer** where it is final, **Check answer** where there are tries. A button that starts a sound is disabled and reads "Playing..." until the sound ends, so it can't be pressed over itself.
 
 ${list}
 `;
@@ -5013,26 +5245,26 @@ ${list}
     body: `A **brand kit** is a [library](libraries) that the people who look after your brand have published and marked as one. It carries the brand's colours, text styles, fonts and components (logos, headers, footers). A project can use it like any library, with one difference: **what comes from the kit is locked**. The rest of the project is yours.
 
 ## Using a brand kit
-1. In the **Libraries** tab, a kit is badged **Brand kit** under **Available libraries**. Press **Add with starter items** to add it and have its header, footer and logo placed in the artboard you have open (whatever the kit marks for new projects). **Add** adds the kit without placing anything; then drag its components onto the canvas or press **Place**, as with any library.
+1. In the **Libraries** tab, a kit is badged **Brand kit** under **Available libraries**. Press **Add with starter items** to add it and have its header, footer and logo placed in the page you have open (whatever the kit marks for new projects). **Add** adds the kit without placing anything; then drag its components onto the canvas or press **Place**, as with any library.
 2. Colours and text styles from the kit show in **Styles** with the kit's name. Use **Fill**, **Stroke**, **Text** and **Apply** as usual.
 3. When the kit publishes a new version, **Updates available** appears and you review it as for any library.
 
 ## What is locked
-Only the items that come from the kit. Your own artboards, layers, colours and fonts are never locked.
-- **Its artboards** (the copies in your project, badged *library* and kept off the canvas) can't be edited, **detached**, deleted or copied, and **Stop using this library** is switched off. You can move and rename the artboard.
+Only the items that come from the kit. Your own pages, layers, colours and fonts are never locked.
+- **Its pages** (the copies in your project, badged *library* and kept off the canvas) can't be edited, **detached**, deleted or copied, and **Stop using this library** is switched off. You can move and rename the page.
 - **Text the kit marks as editable** can be changed. Double-click it, or edit it in the Inspector, and the words are yours; its font, size, colour and position stay the kit's. Your words are kept when the kit updates.
-- **Instances** of a kit item in your own artboards are yours to move, rotate and fade. Their size keeps the item's **proportions**, and can go from half to double its own size; a resize outside that snaps back. Their **Inputs** are yours too.
+- **Instances** of a kit item in your own pages are yours to move, rotate and fade. Their size keeps the item's **proportions**, and can go from half to double its own size; a resize outside that snaps back. Their **Inputs** are yours too.
 - Colours and text styles from the kit can't be edited or deleted, as with any library. A layer of your own that follows one still stops following it if you change that property.
 
-If something is refused, a message on screen says so. A brand kit is a guard rail, not a vault: it stops the easy ways of ending up off brand, and it can't stop you copying a layer's look by eye.
+If something is refused, a message on screen says so. A brand kit is a guard rail, not a vault: it stops the obvious ways of ending up off brand, and it can't stop you copying a layer's look by eye.
 
 ## Off-brand check
-A project that uses a kit has a **Brand check** section in the Libraries tab. **Check against the brand kit** lists the colours and fonts used in your own artboards that the kit doesn't have, how many times, and on which artboards. It is only a list: nothing is blocked or changed, and a colour that is a theme token counts as the colour it holds in the default theme. The kit's colours are its colour styles and the colours of its text styles; its fonts are its text styles' fonts and the fonts it lists.
+A project that uses a kit has a **Brand check** section in the Libraries tab. **Check against the brand kit** lists the colours and fonts used in your own pages that the kit doesn't have, how many times, and on which pages. It is only a list: nothing is blocked or changed, and a colour that is a theme token counts as the colour it holds in the default theme. The kit's colours are its colour styles and the colours of its text styles; its fonts are its text styles' fonts and the fonts it lists.
 
 ## Making a brand kit
-1. Make the library as usual: a project with **This project is a library** on, and the logo, header and footer artboards marked **Publish to library**. Add the brand's **colour styles** and **text styles** in the Libraries tab (**Styles**), and the fonts they use to the project.
+1. Make the library as usual: a project with **This project is a library** on, and the logo, header and footer pages marked **Publish to library**. Add the brand's **colour styles** and **text styles** in the Libraries tab (**Styles**), and the fonts they use to the project.
 2. For text people should be able to change (a course title in a header), select the text layer and tick **Editable in brand kit projects**.
-3. For items a new project should start with, select the artboard and set **Brand kit start** (top, bottom, a corner, or centre). **Add with starter items** places those.
+3. For items a new project should start with, select the page and set **Brand kit start** (top, bottom, a corner, or centre). **Add with starter items** places those.
 4. **Publish**, share it (**Everyone can use it**), then tick **This is a brand kit**. The projects that already use the library pick up the lock the next time they open the Libraries tab.
 
 **Who can do this:** only the people who look after brand kits can mark one, and publish a new version of or withdraw one that is marked. The server decides, as it does for the power-user view on the [projects page](projects#who-sees-what): power users, plus anyone in the group the administrators name for brand kits. Anyone else who owns the library project can still edit it, and sees that it is a brand kit, but can't turn that on or off, and the server refuses a new version from them.
@@ -5054,7 +5286,7 @@ Power users (and the brand group) can switch the lock off while they work, with 
     group: 'Working together',
     summary: 'Several people in one project, autosave, revisions and conflicts.',
     keywords: 'multiplayer collaborate live share presence cursor save autosave conflict undo revision history version restore save failed too big retry offline',
-    body: `Everything saves as you work. A project can be opened by its owner, by people the owner has invited to collaborate (below), and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). When more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
+    body: `Everything saves as you work, and <kbd>Ctrl</kbd>+<kbd>S</kbd> saves at once from anywhere in the editor. A project can be opened by its owner, by people the owner has invited to collaborate (below), and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). When more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
 
 - **Undo** only undoes your own changes.
 - If two people change the same setting at the same moment, the later change wins.
@@ -5071,7 +5303,7 @@ The label next to the project name says **Save failed**; hover it for the reason
 Very big projects are fine: the server splits anything too big for one database record into parts and puts them back together when the project opens.
 
 ## Revision history
-The server keeps saved revisions of the project: a snapshot every few minutes while it changes (the newest 100 are kept), and one before every restore. Click the **Revision history** button (the clock) in the top bar. The list on the left shows each version with its date and how long ago it was; click one to see a picture of it and a count of its artboards and variables. **Restore this version** asks **Restore version** in a dialog first. What is there now is saved in the history before the restore, so you can come back to it, and the page reloads with the restored project.
+The server keeps saved revisions of the project: a snapshot every few minutes while it changes (the newest 100 are kept), and one before every restore. Click the **Revision history** button (the clock) in the top bar. The list on the left shows each version with its date and how long ago it was; click one to see a picture of it and a count of its pages and variables. **Restore this version** asks **Restore version** in a dialog first. What is there now is saved in the history before the restore, so you can come back to it, and the page reloads with the restored project.
 
 **Named versions.** **Save a named version…** keeps the project as it is right now under a name you choose ("Sent to the coordinator", "Before the redesign"), and pins it. **Name it** (or **Rename**) names any version in the list, and **Pin** keeps one. Pinned versions show a pin and their name in the list, and are never cleared out of the history however old they get; a project keeps up to 20. **Unpin** lets one be cleared like the others, once 100 newer ones have built up.
 
@@ -5108,20 +5340,20 @@ The interaction graph has notes too: see **Notes on the graph** in [Interactions
 Notes are not comments. [Review comments](comments) are threaded conversations with reviewers, kept on the server beside the project. A note is part of the project document, so it comes along when the project is copied, saved as a template or remixed, and everyone editing at the same moment sees it appear. It is **never** a layer: it is not in the Layers list, the interactions graph, auto layout or bindings.
 
 ## Players never see notes
-A note is never drawn when the project is played, in **Preview**, in the **Single HTML file**, a **share link**, a **Link for StudyDesk**, an embed, the review page, or a **PNG**, **SVG**, **Lottie** or **GIF** picture of an artboard. The text is also taken out of the project data those pages carry, and the server takes it out again when a page is shared, so it is not in anything that plays. The **project package (.ixp)** and the **project JSON** are for editing, so they keep notes.
+A note is never drawn when the project is played, in **Preview**, in the **Single HTML file**, a **share link**, a **Link for StudyDesk**, an embed, the review page, or a **PNG**, **SVG**, **Lottie** or **GIF** picture of a page. The text is also taken out of the project data those pages carry, and the server takes it out again when a page is shared, so it is not in anything that plays. The **project package (.ixp)** and the **project JSON** are for editing, so they keep notes.
 
 ## Add a note
-Pick the **Note** tool (<kbd>S</kbd>, in the tools bar next to **Comment**) and click, or drag out the size you want. A note drawn on an artboard belongs to that artboard and moves with it (it can hang outside the artboard's edge). A note drawn on empty canvas belongs to the canvas itself. Type straight away; <kbd>Esc</kbd> or a click elsewhere finishes, and a note left empty goes away.
+Pick the **Note** tool (<kbd>S</kbd>, in the tools bar next to **Comment**) and click, or drag out the size you want. A note drawn on a page belongs to that page and moves with it (it can hang outside the page's edge). A note drawn on empty canvas belongs to the canvas itself. Type straight away; <kbd>Esc</kbd> or a click elsewhere finishes, and a note left empty goes away.
 
 - **Move** it by dragging it, **resize** it from its bottom right corner.
 - **Double-click** it, or press <kbd>Enter</kbd> with it focused, to change the text.
-- With a note picked, a small bar above it sets the **colour** (yellow, orange, green, blue, purple or pink), **attaches** it to the layer you have selected on the same artboard, and **deletes** it. <kbd>Delete</kbd> removes a picked note too.
+- With a note picked, a small bar above it sets the **colour** (yellow, orange, green, blue, purple or pink), **attaches** it to the layer you have selected on the same page, and **deletes** it. <kbd>Delete</kbd> removes a picked note too.
 - Notes are small on purpose. They grow with the zoom but never get tiny or huge, and a picked note has a gold outline.
 
 Keyboard: <kbd>Tab</kbd> reaches every note on the canvas. With one focused, the arrow keys move it (<kbd>Shift</kbd> for 10), <kbd>Alt</kbd>+arrows resize it, <kbd>Enter</kbd> edits it, <kbd>Delete</kbd> removes it and <kbd>Esc</kbd> lets go. Every button on the bar has a label for a screen reader.
 
 ## Attach a note to a layer
-Select a layer, pick a note on the same artboard and press **Attach to the selected layer**. The note now follows that layer when it moves, scales or rotates, and its header says which layer it is on. Dragging the note changes how far it sits from the layer. Delete the layer and the note stays where it was (its outline turns dashed). **Detach** lets go. Canvas notes cannot be attached.
+Select a layer, pick a note on the same page and press **Attach to the selected layer**. The note now follows that layer when it moves, scales or rotates, and its header says which layer it is on. Dragging the note changes how far it sits from the layer. Delete the layer and the note stays where it was (its outline turns dashed). **Detach** lets go. Canvas notes cannot be attached.
 
 ## What a note can say
 Plain text with a little markdown:
@@ -5130,12 +5362,15 @@ Plain text with a little markdown:
 |---|---|
 | \`**bold**\`, \`*italic*\`, \`code\` | **bold**, *italic*, \`code\` |
 | \`- an item\` | a bullet |
-| \`[ ] a task\` and \`[x] a done task\` | a tick box you can click on the canvas, which rewrites the text |
+| \`[ ] a task\` and \`[x] a done task\` | a tick box you can click on the canvas, which rewrites the text. A \`[ ]\` partway through a line shows as a box too |
 
-Nothing in a note is ever treated as markup.
+Code can sit inside **bold** too. Nothing in a note is ever treated as markup.
 
 ## Show and hide notes
 The eye button beside the **Note** tool shows or hides every note on your canvas, and its badge counts them. It is your own preference (also under **Preferences > Show notes on the canvas**), so putting a template's explanations away changes nothing for anyone else. Notes are never drawn while you Preview.
+
+## Notes in starters and examples
+Every starter's pages and interaction graphs carry short notes. They say what each chain of nodes does, why it is built that way and what to change. The examples' bigger graphs and pages carry a note or two saying what to look at. Hide them with the eye button once you have read them. They come with your copy of the project like any other note.
 
 ## Notes and templates
 A project made from a template starts with the template's notes, so the explanations arrive on the canvas next to the parts they are about. **Save as template** keeps your notes. **Update from template** leaves your notes alone. Hide them with the eye button once you have read them, or delete them.
@@ -5157,7 +5392,7 @@ Comments are kept on the server apart from the project. They are never part of t
 ![The Comments tab with two open conversations, and the first one open on the canvas: its pin follows the Bulb layer, with Resolve, Assigned to and a reply box.](help/comments-panel.png)
 
 ## Leaving a comment
-Pick the **Comment** tool (<kbd>C</kbd>) and click where you want to say something. If there is a layer under the click, the note is pinned to that layer at that spot, so the pin **follows the layer** when it moves, scales or rotates. If the layer is deleted the pin stays where it was, drawn with a dashed edge, and the **Comments** panel says the layer is gone. A click on empty artboard pins the note to that point of the artboard.
+Pick the **Comment** tool (<kbd>C</kbd>) and click where you want to say something. If there is a layer under the click, the note is pinned to that layer at that spot, so the pin **follows the layer** when it moves, scales or rotates. If the layer is deleted the pin stays where it was, drawn with a dashed edge, and the **Comments** panel says the layer is gone. A click on empty page pins the note to that point of the page.
 
 Type the note and press **Comment** (<kbd>Ctrl</kbd>+<kbd>Enter</kbd> sends too). Type **@** to mention someone from the list of people in the project. As the owner you can pick an **Assign to** person as you send it.
 
@@ -5167,12 +5402,12 @@ Click a pin to open its conversation next to it. Reply in the box under it; edit
 Pins are numbered. A resolved pin turns grey with a tick, a pin handed to you has an amber ring, and the one that is open has a halo. **Escape** puts a conversation away.
 
 ## The Comments panel
-The **Comments** tab beside Layers lists every conversation with its first words, where it is, who wrote it and how many replies it has. Click one to go to it: the artboard, the layer, the pin in the middle of the canvas and its conversation open.
+The **Comments** tab beside Layers lists every conversation with its first words, where it is, who wrote it and how many replies it has. Click one to go to it: the page, the layer, the pin in the middle of the canvas and its conversation open.
 
-Filter by **Open**, **Resolved** or **All**, by **Everyone**, **Mine** (conversations you took part in) or **Assigned to me**, and by **artboard**. The eye button hides the pins on the canvas (your choice is remembered in this browser); the panel still lists them. The number on the tab is how many are open. The projects page shows the same number on each project's card, ringed in amber when some are for you.
+Filter by **Open**, **Resolved** or **All**, by **Everyone**, **Mine** (conversations you took part in) or **Assigned to me**, and by **page**. The eye button hides the pins on the canvas (your choice is remembered in this browser); the panel still lists them. The number on the tab is how many are open. The projects page shows the same number on each project's card, ringed in amber when some are for you.
 
 ## The review link
-In **Share**, **Can comment: review link** makes a second link, apart from the share link. Send it to reviewers. They see the project as it is now, one artboard at a time as a still with the pins on it, can open any artboard from the top, **Play** the real thing, and leave, reply to and resolve comments. They cannot change the project. Because the page always reads the project as it is, there is nothing to update when you change it.
+In **Share**, **Can comment: review link** makes a second link, apart from the share link. Send it to reviewers. They see the project as it is now, one page at a time as a still with the pins on it, can open any page from the top, **Play** the real thing, and leave, reply to and resolve comments. They cannot change the project. Because the page always reads the project as it is, there is nothing to update when you change it.
 
 - **Signed in to StudyDesk** (open the link from StudyDesk): comments carry the reviewer's own name. They can resolve, and edit or delete their own.
 - **Let people comment without signing in**: anyone with the link can comment after giving a **display name**. Guests are marked *(guest)*, cannot resolve, assign or mention, and are limited to a few comments every few minutes per address and per link. Leave this off when the project is not meant for people outside StudyDesk. Without it, the link asks for a signed in StudyDesk user.
@@ -5268,8 +5503,8 @@ ${
 | join_session | Joins a project's live session; reports who is there and what they have selected |
 | leave_session | Leaves the session |
 | get_selection | The layers each person has selected, in full |
-| get_overview, get_layers, get_interactions | Read artboards, layer trees, timelines, variables, interactions |
-| edit | Add, change, move and delete layers; add artboards, variables, timelines, interactions and scripts, in one batch |
+| get_overview, get_layers, get_interactions | Read pages, layer trees, timelines, variables, interactions |
+| edit | Add, change, move and delete layers; add pages, variables, timelines, interactions and scripts, in one batch |
 | validate | Find broken references, unconnected events and expressions that don't parse |
 | read_reference | These help pages, plus generated references for layer fields, interaction nodes and animatable properties |
 
@@ -5290,7 +5525,7 @@ ${
     summary: 'Every property timelines, bindings and the property nodes can change.',
     keywords: 'property properties animatable list prop path',
     body: () =>
-      `These properties can be keyframed, bound to an expression, and changed with **Change a layer's setting** and **Animate a layer's setting**. The path (left) is what scripts use: \`ix.node('Box').set('fill.color', '#f00')\`.\n\n| Path | Property | Kind |\n|---|---|---|\n` +
+      `A property is something about a layer that you can change over time or with a rule: where it is, how big, how see-through, its colour. Any property below can get keyframes on a timeline (see [Timelines and keyframes](timelines)), be bound to an expression (see [Bindings](bindings)), and be changed with **Change a layer's setting** and **Animate a layer's setting**.\n\nThe first column is the technical name of the property. Scripts use it: \`ix.node('Box').set('fill.color', '#f00')\`.\n\n| Path | Property | Kind |\n|---|---|---|\n` +
       ANIMATABLE_PROPS.map((p) => `| \`${p.prop}\` | ${p.label} | ${p.kind} |`).join('\n'),
   },
   {
@@ -5303,7 +5538,7 @@ ${
 
 ## Animation
 **My layer doesn't move when the timeline plays.**
-A track needs **two or more** keyframes. With one key it just holds that value. Add a second at another time. See [Tutorial 1](tutorial-first-animation).
+A track needs **two or more** keyframes. With one key it holds that value. Add a second at another time. See [Tutorial 1](tutorial-first-animation).
 
 **I'm in Record mode but nothing is keyed.**
 - The **Timeline** tab must be open, with a timeline chosen. In **Design view (no timeline)** changes are ordinary edits.
@@ -5321,7 +5556,7 @@ Record is still on. Press the red dot to switch it off.
 It is probably **locked**, or **hidden** (shown as a faint ghost). Hover it for the badge that unlocks or shows it, or use the eye and padlock in the Layers panel. See [Layers, hidden and locked layers](layers-panel).
 
 **A layer is in the editor but not in Preview.**
-Check that it is **Visible**; that it isn't hidden by a **Solo** group's active child; that it sits inside the artboard (**Clip content to artboard** hides what is outside in Preview and in exports; on the canvas the part outside shows faintly); and that no mask above it is clipping it. See [Groups and frames](groups-frames).
+Check that it is **Visible**; that it isn't hidden by a **Solo** group's active child; that it sits inside the page (**Clip content to page** hides what is outside in Preview and in exports; on the canvas the part outside shows faintly); and that no mask above it is clipping it. See [Groups and frames](groups-frames).
 
 **A field is greyed out and has a link icon.**
 It is bound to an expression. Remove the binding in **Data bindings** to edit it by hand. See [Bindings](bindings).
@@ -5336,12 +5571,19 @@ Variable and data source names are used inside expressions, so they can't contai
 **A script does nothing.**
 Open **Preview** and look at the **Events** list for an error message. Scripts in the sandbox can only use \`ix\`, timers and \`console\`. See [Scripts](scripts).
 
+## Colours and themes
+**I switch between Light, Dark and High contrast and nothing changes.**
+Only a colour that follows a token changes with the theme. Press **Link colours to tokens** in the Themes tab to link the plain colours that match a token. See [When switching the theme changes nothing](themes#when-switching-the-theme-changes-nothing).
+
+**A colour won't let me type a hex in a branded starter.**
+Branded projects only take theme colours. Pick one from the **Tokens** tab of the colour picker. See [Branded starter packs](branded-starters#what-is-locked-and-why).
+
 ## Importing and updating design files
 **The designer saved a new version of the Photoshop (or Illustrator, ...) file.**
-Select one of its artboards and press **Update from file…** in the inspector, or **Update…** beside it under **Design files** in the Assets panel, then pick the new file. Your own edits are kept. See [Updating a design file](import#updating-a-design-file).
+Select one of its pages and press **Update from file…** in the inspector, or **Update…** beside it under **Design files** in the Assets panel, then pick the new file. Your own edits are kept. See [Updating a design file](import#updating-a-design-file).
 
 **A bar asks me to Reconnect.**
-That's an artboard linked to a file on disk the older way. Press **Reconnect** to let the browser read it again, or just use **Update from file…**.
+That's a page linked to a file on disk the older way. Press **Reconnect** to let the browser read it again, or use **Update from file…**.
 
 **"The linked file was moved, renamed or deleted."**
 Use **Update from file…** and pick it where it is now.
