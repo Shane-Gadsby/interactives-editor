@@ -615,53 +615,113 @@ progress {
 }
 
 /* ---------------------------------------------------------------- field rows
-   One layout for every field in the Properties panel and the graph's node settings (.inspector, .param-form).
-   A field is a grid of three columns: the label (one width, --label-w, and a longer label wraps to a second line inside
-   it instead of widening it), the control (inputs, dropdowns and colour boxes all start at the same x and run to the same
-   right edge) and a small trailing slot for a unit (x, %, ms). A key diamond has a slot of its own just outside the field
-   (--field-key) that is kept whether or not the diamond is showing, so a row with an extra and a row without end in the
-   same place. A row with two or more fields (X and Y) uses the narrower label columns, so they fit side by side.
+   One grid for every field in the Properties panel and the graph's node settings (.inspector, .param-form).
+   The panel is nine tracks wide: label | control | unit | key | chain | label | control | unit | key. A pair row uses all
+   of it (label and control twice, the unit and key tracks riding along with the control before them), and every line is
+   snapped to the same tracks, so nothing wanders:
+   - a single field spans all of it: its label in track one (--label-w) and its control running to the right edge of the
+     second control. The unit (x, %, ms) has a slot after the control (--field-trail), and a key diamond a slot after that
+     (--field-key), both kept whether or not they are showing, so every box in the panel ends in the same place;
+   - a pair (X and Y, W and H) puts its second label in track six (--label-w-2) in every row, and the chain between them in five;
+   - a checkbox starts under the controls (track two), and two of them under the first and the second control;
+   - a row of buttons is equal cells from the left edge.
+   Below the container width in the query at the end, a pair is one field per line (the panel is too narrow to halve), and so
+   it is for any field that wants more than half a row (a dropdown, a text box, a px/percent box). Lines are --row-gap
+   apart, a sub-heading starts a group --group-gap above, and every control is --field-h high. A longer label wraps inside its column.
    Only a text area (and code, lists and tables, with .field-label.block) puts its label above, in the same small label.
-   Checkboxes sit on the left edge, two to a line in equal halves. Components say which kind of field they are with
-   fieldClass() in components/ui.tsx, and test/field-layout.test.tsx holds this contract. */
+   Components say which kind of field they are with fieldClass() in components/ui.tsx, and
+   test/field-layout.test.tsx holds this contract. */
 :root {
-  --label-w: 76px;
-  --label-w-sm: 48px;
-  --label-w-xs: 16px;
-  --field-trail-wide: 16px;
-  --field-trail-tight: 10px;
-  --field-trail: var(--field-trail-wide);
+  --label-w: 72px;
+  --label-w-2: 46px;
+  --field-trail: 10px;
   --field-key: 14px;
-  --field-gap: 6px;
+  --field-chain: 12px;
+  --field-gap: 4px;
   --field-h: 26px;
-  /* the gap between the two halves of a pair row, which is also where a link button sits */
-  --pair-channel: 22px;
-  --link-w: 14px;
+  --row-gap: 8px;
+  --group-gap: 16px;
 }
 :is(.param-form, .key-editor) {
   --field-key: 0px;
 }
-:is(.inspector, .param-form, .key-editor) .row {
-  flex-wrap: wrap;
-  gap: 4px var(--field-gap);
+:is(.inspector, .param-form, .key-editor) {
+  --cols-8: var(--label-w) minmax(0, 1fr) var(--field-trail) var(--field-key) var(--field-chain) var(--label-w-2) minmax(0, 1fr) var(--field-trail);
+  --cols: var(--cols-8) var(--field-key);
+  container: panel / inline-size;
 }
+/* what sits in a section is one row-gap apart (the wrapper of a search match has no box, its contents are the items) */
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: var(--row-gap);
+  align-content: start;
+  justify-items: stretch;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > :is(.btn, .link-btn, .icon-btn, .remove-btn) {
+  justify-self: start;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > * {
+  margin-block: 0;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > :is(.field-label.block, .q-sub):not(:first-child) {
+  margin-top: calc(var(--group-gap) - var(--row-gap));
+}
+/* a bare wrapper div (a few panels group fields in one) has no box, its lines belong to the section */
+.inspector .section-body > div:not([class]) {
+  display: contents;
+}
+/* every section has the same padding: 12px at the sides and under its last line, and the first line is one row-gap under the title */
+.inspector .section {
+  padding: 4px 12px 12px;
+}
+.inspector .section.closed {
+  padding-bottom: 4px;
+}
+.inspector .section-body {
+  padding-top: 2px;
+}
+
+/* a field: label, control, unit slot. Its own three tracks where no row hands it nine (in a flex line, say) */
 :is(.inspector, .param-form, .key-editor) .field:not(.check-field) {
   display: grid;
-  grid-template-columns: var(--fl, var(--label-w)) minmax(var(--ctl-min, 44px), 1fr) var(--field-trail);
+  grid-template-columns: var(--label-w) minmax(0, 1fr) var(--field-trail);
   align-items: center;
   column-gap: var(--field-gap);
-  margin-right: var(--field-key);
+  margin: 0 calc(var(--field-key) + var(--field-gap)) 0 0;
+  min-width: 0;
 }
-:is(.inspector, .param-form, .key-editor) .keyed > .field {
-  margin-right: 0;
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .field:not(.check-field) {
+  grid-template-columns: var(--cols-8);
 }
-:is(.inspector, .param-form, .key-editor) .field.unlabelled:not(.check-field) {
-  grid-template-columns: minmax(var(--ctl-min, 44px), 1fr) var(--field-trail);
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .field:not(.check-field),
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed > .field:not(.check-field),
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .keyed > .field:not(.check-field) {
+  grid-template-columns: subgrid;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .keyed > .field:not(.check-field) {
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .field > .field-label {
+  grid-column: 1;
+}
+:is(.inspector, .param-form, .key-editor) .field > :not(.field-label, .field-trail, .unit-toggle) {
+  grid-column: 2 / -2;
+}
+:is(.inspector, .param-form, .key-editor) .field > .field-trail {
+  grid-column: -2 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .field.unlabelled:not(.check-field) > :not(.field-trail, .unit-toggle) {
+  grid-column: 1 / -2;
 }
 :is(.inspector, .param-form, .key-editor) .field.stacked:not(.check-field) {
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
   row-gap: 3px;
+}
+:is(.inspector, .param-form, .key-editor) .field.stacked > * {
+  grid-column: 1;
 }
 :is(.inspector, .param-form, .key-editor) .field-label {
   min-width: 0;
@@ -677,7 +737,7 @@ progress {
   line-height: 1;
   white-space: nowrap;
 }
-/* outside the property panels an empty slot takes no room (only there is it a grid column) */
+/* outside the property panels an empty slot takes no room (only there is it a grid track) */
 .field-trail:empty {
   display: none;
 }
@@ -689,83 +749,8 @@ progress {
   height: var(--field-h);
   min-width: 0;
 }
-:is(.inspector, .param-form, .key-editor) .number-field {
-  --ctl-min: 36px;
-}
-:is(.inspector, .param-form, .key-editor) .select-field {
-  --ctl-min: 64px;
-}
-:is(.inspector, .param-form, .key-editor) .color-field {
-  --ctl-min: 130px;
-}
 :is(.inspector, .param-form, .key-editor) .field.stacked textarea {
   min-height: calc(var(--field-h) * 2);
-}
-/* one slot per field: a row with two or more of them splits evenly and never wraps */
-:is(.inspector, .param-form, .key-editor) .row > :is(.field, .keyed) {
-  flex: 1 1 0;
-  min-width: min-content;
-}
-:is(.inspector, .param-form, .key-editor) .row:has(> :where(.field, .keyed) ~ :where(.field, .keyed)) {
-  --fl: var(--label-w-sm);
-  --field-trail: var(--field-trail-tight);
-}
-:is(.inspector, .param-form, .key-editor) .row:has(> :where(.field, .keyed) ~ :where(.field, .keyed)) > :is(.field, .keyed) {
-  flex: 1 1 0;
-}
-/* a dropdown, a text box or a px/percent box needs more than half a row, so it never shares a line with another field: each is a single row again, in the one label column */
-:is(.inspector, .param-form, .key-editor) .row:has(> :where(.select-field, .text-field, .unit-field, .keyed:has(> :is(.select-field, .text-field, .unit-field))) ~ :where(.field, .keyed), > :where(.field, .keyed) ~ :where(.select-field, .text-field, .unit-field, .keyed:has(> :is(.select-field, .text-field, .unit-field)))) {
-  --fl: var(--label-w);
-  --field-trail: var(--field-trail-wide);
-  flex-wrap: wrap;
-}
-:is(.inspector, .param-form, .key-editor) .row:has(> :where(.select-field, .text-field, .unit-field, .keyed:has(> :is(.select-field, .text-field, .unit-field))) ~ :where(.field, .keyed), > :where(.field, .keyed) ~ :where(.select-field, .text-field, .unit-field, .keyed:has(> :is(.select-field, .text-field, .unit-field)))) > :is(.field, .keyed) {
-  flex: 1 1 100%;
-}
-/* four unlabelled boxes (padding, margin) go two by two */
-:is(.inspector, .param-form, .key-editor) .row:has(> .field.unlabelled ~ .field.unlabelled ~ .field.unlabelled) {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: var(--pair-channel);
-}
-:is(.inspector, .param-form, .key-editor) .row:has(> :where(.field, .keyed) ~ :where(.field, .keyed)) .field.lbl-xs {
-  --fl: var(--label-w-xs);
-}
-:is(.inspector, .param-form, .key-editor) .keyed {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding-right: var(--field-key);
-}
-:is(.inspector, .param-form, .key-editor) .keyed > .key-btn {
-  flex: none;
-  width: var(--field-key);
-  margin-right: calc(-1 * var(--field-key));
-  padding: 0;
-  text-align: center;
-}
-/* checkboxes: the box then its words, on the left edge */
-:is(.inspector, .param-form, .key-editor) .check-field {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 1 auto;
-}
-:is(.inspector, .param-form, .key-editor) .check-field input {
-  flex: none;
-  margin: 0;
-}
-:is(.inspector, .param-form, .key-editor) .row:has(> :where(.field, .keyed) ~ :where(.field, .keyed)) > .check-field {
-  flex: 1 1 0;
-}
-:is(.inspector, .param-form, .key-editor) .row:has(> :where(.field, .keyed) ~ :where(.field, .keyed)):not(:has(> :where(.field, .keyed) ~ :where(.field, .keyed) ~ :where(.field, .keyed))) {
-  column-gap: var(--pair-channel);
-}
-:is(.inspector, .param-form, .key-editor) .row:has(> .link-toggle, > .link-gap) {
-  column-gap: calc((var(--pair-channel) - var(--link-w)) / 2);
-}
-:is(.inspector, .param-form, .key-editor) .row > :is(.link-toggle, .link-gap) {
-  width: var(--link-w);
 }
 :is(.inspector, .param-form, .key-editor) .field.li-picker-field {
   align-items: start;
@@ -773,21 +758,267 @@ progress {
 :is(.inspector, .param-form, .key-editor) .li-picker {
   justify-self: start;
 }
-/* a label with a group of buttons beside it (animation presets): the buttons start in the control column and wrap there */
-:is(.inspector, .param-form, .key-editor) .row > .field-label {
-  flex: 0 0 var(--label-w);
-  padding-top: 5px;
+
+/* a key diamond sits in the slot after the field it belongs to (and so does the one under a field, KeyRow) */
+:is(.inspector, .param-form, .key-editor) .keyed {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  padding-right: calc(var(--field-key) + var(--field-gap));
 }
-:is(.inspector, .param-form, .key-editor) .row:has(> .field-label) {
-  align-items: flex-start;
+:is(.inspector, .param-form, .key-editor) .keyed > .field {
+  flex: 1 1 0;
+}
+:is(.inspector, .param-form, .key-editor) .keyed > .key-btn {
+  flex: none;
+  width: var(--field-key);
+  margin-right: calc(-1 * (var(--field-key) + var(--field-gap)));
+  padding: 0;
+  text-align: center;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .keyed,
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--field-gap);
+  align-items: center;
+  padding-right: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed {
+  grid-template-columns: subgrid;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .keyed > .field:not(.check-field),
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed > .field:not(.check-field) {
+  grid-column: 1 / -2;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .keyed > .check-field {
+  grid-column: 2 / -2;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed > .check-field {
+  grid-column: 1 / -2;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .keyed > .key-btn,
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed > .key-btn {
+  grid-column: -2 / -1;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .keyed.top {
+  align-items: start;
+}
+/* the property search hides a field and leaves its diamond wrapper (the grid rules above would show it again) */
+:is(.inspector, .param-form, .key-editor) .keyed:has(> .ps-hide) {
+  display: none !important;
+}
+:is(.inspector, .param-form, .key-editor) .key-row {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--field-gap);
+  align-items: center;
+}
+:is(.inspector, .param-form, .key-editor) .key-row > :not(.key-btn) {
+  grid-column: 1 / -2;
+}
+:is(.inspector, .param-form, .key-editor) .key-row > .key-btn {
+  grid-column: -2 / -1;
+  padding: 0;
+}
+
+/* checkboxes: the box then its words */
+:is(.inspector, .param-form, .key-editor) .check-field.field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--field-h);
+  min-width: 0;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .check-field input {
+  flex: none;
+  margin: 0;
+}
+:is(.inspector .section-body, .param-form, .key-editor, .inspector .effect-item, .inspector .constraint, .inspector .paint-field, .inspector .uniform-item, .inspector .corner-radii) > .check-field {
+  padding-left: calc(var(--label-w) + var(--field-gap));
+}
+
+/* ---- a row of fields is the same nine tracks */
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--field-gap);
+  row-gap: var(--row-gap);
+  align-items: center;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed {
+  grid-column: 1 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .field:not(.check-field) {
+  display: grid;
+  grid-column: 1 / -2;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .check-field {
+  grid-column: 2 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > .keyed:has(> .check-field) {
+  grid-column: 2 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))) > :is(.link-toggle, .link-gap) {
+  display: none;
+}
+/* four unlabelled boxes (padding, margin) go two by two, whatever the width */
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))):has(> .field.unlabelled ~ .field.unlabelled ~ .field.unlabelled) > .field:nth-child(odd) {
+  grid-column: 1 / 5;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed)):not(:has(> :not(.field, .keyed, .link-toggle, .link-gap))):has(> .field.unlabelled ~ .field.unlabelled ~ .field.unlabelled) > .field:nth-child(even) {
+  grid-column: 5 / 9;
+}
+
+/* ---- a field with one small button after it (remove, duplicate): the button takes the unit and key slots */
+:is(.inspector, .param-form, .key-editor) .row:has(> .field:not(.check-field):first-child + .icon-btn:last-child):not(:has(> :nth-child(3))) {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--field-gap);
+  align-items: center;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .field:not(.check-field):first-child + .icon-btn:last-child):not(:has(> :nth-child(3))) > .field {
+  grid-column: 1 / 8;
+  grid-template-columns: subgrid;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .field:not(.check-field):first-child + .icon-btn:last-child):not(:has(> :nth-child(3))) > .field > :not(.field-label, .field-trail, .unit-toggle) {
+  grid-column: 2 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .field:not(.check-field):first-child + .icon-btn:last-child):not(:has(> :nth-child(3))) > .field > .field-trail {
+  display: none;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .field:not(.check-field):first-child + .icon-btn:last-child):not(:has(> :nth-child(3))) > .icon-btn {
+  grid-column: 8 / -1;
+  justify-self: end;
+}
+
+/* ---- a blend's timeline line: its timeline in the first controls, its value or weight in the second, the remove button at the end */
+:is(.inspector, .param-form, .key-editor) .row.blend-entry {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--field-gap);
+  align-items: center;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 6 / 8;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field:first-child {
+  grid-column: 1 / 6;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field.unlabelled:first-child {
+  grid-column: 2 / 6;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field > :not(.field-label, .field-trail) {
+  grid-column: 2 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field.unlabelled > :not(.field-trail) {
+  grid-column: 1 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .field > .field-trail {
+  display: none;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry > .icon-btn {
+  grid-column: 8 / -1;
+  grid-row: 1;
+  justify-self: end;
+}
+
+/* ---- a row of buttons: equal cells from the left edge, wrapping to the next line when they would be squeezed */
+:is(.inspector, .param-form, .key-editor) .row:not(:has(> :not(.btn, .link-btn))):has(> :is(.btn, .link-btn)) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: var(--row-gap);
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row:not(:has(> :not(.btn, .link-btn))) > .btn {
+  justify-content: center;
+  min-height: var(--field-h);
+}
+
+/* a label with a group of buttons beside it (animation presets): the buttons start in the control column and wrap there */
+:is(.inspector, .param-form, .key-editor) .row:has(> .field-label):has(> .anim-presets) {
+  display: grid;
+  grid-template-columns: var(--label-w) minmax(0, 1fr);
+  column-gap: var(--field-gap);
+  align-items: start;
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row > .field-label {
+  padding-top: 5px;
 }
 :is(.inspector, .param-form, .key-editor) .row > .anim-presets {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  min-width: 0;
+}
+/* any other line (a field with a remove button, a swatch row) stays a flex line */
+:is(.inspector, .param-form, .key-editor) .row {
+  flex-wrap: wrap;
+  gap: var(--row-gap) var(--field-gap);
+  margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row > :is(.field, .keyed) {
   flex: 1 1 0;
   min-width: 0;
 }
+
+/* ---- two to a line: only where the panel is wide enough to halve (the container query), and only for fields that fit half a row */
+@container panel (min-width: 316px) {
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed):not(:is(.field, .keyed) ~ *):is(.field:not(.check-field)) {
+    grid-column: 1 / 4;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed):not(:is(.field, .keyed) ~ *):is(.keyed:not(:has(> .check-field))) {
+    grid-column: 1 / 5;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed) ~ :is(.field, .keyed):is(.field:not(.check-field)) {
+    grid-column: 6 / 9;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed) ~ :is(.field, .keyed):is(.keyed:not(:has(> .check-field))) {
+    grid-column: 6 / 10;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed):not(:is(.field, .keyed) ~ *):is(.check-field) {
+    grid-column: 2 / 7;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed):not(:is(.field, .keyed) ~ *):is(.keyed:has(> .check-field)) {
+    grid-column: 2 / 5;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.field, .keyed) ~ :is(.field, .keyed):is(.check-field, .keyed:has(> .check-field)) {
+    grid-column: 7 / -1;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)):has(> .ps-hide, > .keyed > .ps-hide) > .field:not(.check-field, .ps-hide) {
+    grid-column: 1 / -2;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)):has(> .ps-hide, > .keyed > .ps-hide) > .keyed:not(:has(> .check-field)):not(.ps-hide) {
+    grid-column: 1 / -1;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)):has(> .ps-hide, > .keyed > .ps-hide) > :is(.check-field, .keyed:has(> .check-field)):not(.ps-hide) {
+    grid-column: 2 / -1;
+  }
+  :is(.inspector, .param-form, .key-editor) .row:has(> .link-toggle, > .link-gap):has(> :is(.field, .keyed) ~ :is(.field, .keyed)):not(:has(> :is(.field, .keyed) ~ :is(.field, .keyed) ~ :is(.field, .keyed))):not(:has(.select-field, .text-field, .unit-field, .color-field)) > :is(.link-toggle, .link-gap) {
+    display: inline-flex;
+    grid-column: 5;
+    grid-row: 1;
+    justify-self: center;
+    width: var(--field-chain);
+  }
+}
+
+/* the shader uniforms: name and type have no label showing, so their boxes take the label column too */
+.inspector .uniform-item > .row > .field > :not(.field-trail) {
+  grid-column: 1 / -2;
+}
+
 /* the colour field: swatch, palette, hex and opacity are one control */
 .color-field > .field-control {
   display: flex;

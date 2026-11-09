@@ -22,12 +22,11 @@ export function tipFor(label: ReactNode, title?: string): string | undefined {
 export const unbroken = (label: ReactNode): ReactNode => (typeof label === 'string' ? label.replace(/\b(\w{1,2})-/g, '$1\u2011') : label);
 
 /**
- * The classes every field carries, so one stylesheet block lays them all out (label column, control, trailing slot).
- * `unlabelled` has no label column; `lbl-xs` is a one or two letter label (X, Y, Sx) that gets a narrow column when two fields share a row.
+ * The classes every field carries, so one stylesheet block lays them all out on the panel's grid (label column, control, trailing slot).
+ * `unlabelled` has no label column, so its control starts at the left edge.
  */
 export function fieldClass(kind: string, label: ReactNode, hide = false, extra = ''): string {
-  const short = typeof label === 'string' && label.replace(/[\s\u00a0]/g, '').length <= 2;
-  return `field ${kind}${extra ? ' ' + extra : ''}${label === undefined ? ' unlabelled' : short ? ' lbl-xs' : ''}${hide ? ' ps-hide' : ''}`;
+  return `field ${kind}${extra ? ' ' + extra : ''}${label === undefined ? ' unlabelled' : ''}${hide ? ' ps-hide' : ''}`;
 }
 
 /** The fixed slot at the end of a field: a unit or suffix goes in it, and it is there (empty) when there is none, so the boxes in a column end together */

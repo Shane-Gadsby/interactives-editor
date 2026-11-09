@@ -32,7 +32,7 @@ export function OptimiseOutputFields({ project }: { project: Project }) {
       {on && (
         <>
           <PropRow k="Optimise quality" words={['smaller files', 'better quality', 'picture size', 'compression']}>
-            <div className="field optimise-slider">
+            <div className="optimise-slider">
               <div className="optimise-ends">
                 <span>Smaller files</span>
                 <span>Better quality</span>
