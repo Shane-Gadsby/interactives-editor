@@ -4,6 +4,7 @@ import type { BrandedStarter, StarterSet } from './kit';
 import { COLOURWAYS, type Colourway } from './looks';
 import { applyTidy } from '../artboard-tidy';
 import { finishGraphs } from './graph-kit';
+import { addCreditsButton } from '../starter-credits';
 import { settleLayout } from './layout-check';
 import { finishControls } from './finish';
 import { resolveForm } from './form-kit';
@@ -20,6 +21,9 @@ export function projectFromBrandedStarter(s: BrandedStarter, colourway: Colourwa
   //graphs laid out the way the Interactions tab's Tidy up does it, whatever order the starter built them in
   //an input's old Variable setting becomes a two-way binding now, not on the next load
   migrateInputVariables(project);
+  //the small Credits button on the first page (before the graph tidy, so its two nodes are laid out with the rest)
+  const credits = addCreditsButton(project);
+  if (credits) checklist.push(credits as TemplateChecklistItem);
   finishGraphs(project);
   //the same edges and gradient-page buttons on every starter
   finishControls(project);

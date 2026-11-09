@@ -808,6 +808,17 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.credits",
+    label: "Open credits",
+    category: "action",
+    summary: "Opens the list of credits and references, as the Credits button does.",
+    details: "Put it on a small button or link of your own and the automatic Credits button is left off that page. The list is the one in Project > Credits; with nothing in it the learner sees that no credits have been added yet. Focus goes into the list, and back to your button when it closes.",
+    group: "Navigation",
+    outputs: OUT,
+    hasInput: true,
+    params: []
+  },
+  {
     kind: "action.startOver",
     label: "Start over",
     category: "action",
@@ -9811,6 +9822,7 @@ const PLAIN_NODE = {
   "action.artboard": "Go to a page",
   "action.moveView": "Move the view to a layer",
   "action.url": "Open a web address",
+  "action.credits": "Show the credits",
   "action.cursor": "Change the mouse pointer",
   "action.saveUserData": "Save progress",
   "action.loadUserData": "Load saved progress",
@@ -10425,7 +10437,7 @@ From left to right:
 
 - **All projects** (the house): back to your [projects page](projects), with the project you left highlighted for a moment.
 - The **project name**. Click to rename.
-- The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason). A save that failed because of the network or the server tries again by itself, and says **Saved again** when it gets there.
+- The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason). A save that failed because of the network or the server tries again by itself, and says **Saved again** when it gets there. A big project is sent squeezed (compressed), so saving it takes far less of a slow upload, and there is nothing to switch on.
 - **Live**: the project's live connection, **Live**, **Reconnecting** or **Deleted**. When other people are in the project too, their initials show beside it. See [Live editing and saving](live-editing).
 - **Revision history** (the clock): earlier saved versions of the project.
 - **Undo** and **Redo**.
@@ -11090,7 +11102,7 @@ Clicking selects the layer afterwards, ready to edit.
 ## Moving layers to another artboard
 Select layers and drag them on the canvas. If you let go over a **different artboard**, a dialog asks **Move to artboard**: *Move “Card” to the artboard “Menu”?* Press **Move** to do it or **Cancel** to put them back.
 
-![The Move to artboard dialog.](help/move-to-artboard.png)
+![The Move to page dialog.](help/move-to-artboard.png)
 
 - The layers keep their place on the canvas, but now belong to the other artboard.
 - Their keys in the old artboard's timelines are removed.
@@ -11117,9 +11129,12 @@ Every field has its name on the left, in one column, and its box to the right. T
 - A long name wraps onto a second line inside its column instead of pushing the box along.
 - Dropdowns, text boxes, number boxes and colour boxes are the same height.
 - A small unit (%, px, ms) or a key diamond (the ◆ that adds a keyframe) has its own space at the right end. The space is kept whether or not the row has one, so the right edges match.
-- Two number boxes can share a line (X and Y, W and H, Rotation and Opacity), with a narrower name column. A dropdown or a text box always has a line to itself.
+- The whole panel is one grid of four columns: a name, a box, a second name, a second box. A single field has its name in the first column and its box running across the other three. Two number boxes share a line (X and Y, W and H, Rotation and Opacity), and the second name is in the same place in every pair, so the second boxes line up too. A dropdown or a text box always has a line to itself.
 - A name goes above its box only for a text area, code and lists.
-- Tick boxes sit on the left edge, two to a line.
+- Tick boxes start under the boxes, not under the names. Two of them share a line, one under each box.
+- Rows of buttons are equal-width cells from the left edge, and wrap onto a new line when they would be squeezed.
+- Every line is the same height and the same distance from the next. A group of settings starts a little lower than the line before it.
+- Make the panel narrow (drag its edge) and the pairs turn into one field per line, so nothing is squeezed.
 - The Interactions settings column and the Timeline's Keyframe column use the same layout.
 
 ## Folding sections
@@ -11305,7 +11320,7 @@ Text doesn't pop from one font to another. The player waits up to 1.5 seconds fo
 ## Several styles in one text layer
 Double-click a text layer to edit it. A small **toolbar floats over the text** while you do, like the one in a word processor:
 
-![The toolbar over a text layer being edited, with "big" bold and a colour, size and link set on other words.](help/text-toolbar.png)
+![The toolbar over a text layer being edited: bold, italic, underline, strike-through, colour, size and font, with a word in bold on the layer.](help/text-toolbar.png)
 
 Select some of the text (or just put the caret in a word) and use:
 
@@ -11448,11 +11463,14 @@ Use the arrows to reorder entries and the bin to delete one. **Copy as text** pu
 Link each entry to the files it covers. Once the list has entries, the [Assets](assets) panel marks every file that no entry covers (**no attribution** in the details view, a **No attribution** tag on a thumbnail) and says how many there are. **Add for files without one** in this tab makes one entry for each of them, named after the file, for you to fill in. Deleting a file takes it off the entries that listed it.
 
 ## Showing it to learners
-- **Show a Credits button to learners** adds a small **Credits** button in the bottom left corner of the player. It opens a dialog with the list as readable citations, under the heading you choose (the default is *Credits and references*). Links open in a new tab. It works from the keyboard: the dialog takes focus, <kbd>Tab</kbd> stays inside it, <kbd>Esc</kbd> or **Close** shuts it and focus goes back to the button. It also works on a shared link, where the page runs in its sandbox.
+- **Show a Credits button to learners** adds a small, quiet **Credits** button in the bottom left corner of the page. It sits inside the page, so when the page does not fill the player (a wide page in a tall frame) it stays on the page and never out in the empty space round it. It opens a dialog with the list as readable citations, under the heading you choose (the default is *Credits and references*). Links open in a new tab. It works from the keyboard: the dialog takes focus, <kbd>Tab</kbd> stays inside it, <kbd>Esc</kbd> or **Close** shuts it and focus goes back to the button. It also works on a shared link, where the page runs in its sandbox.
 - **Keep the list in exported and shared pages** puts the list (without your notes) into pages you download or share even when there is no button, for anyone who reads the page's data. While the button is on this is always the case, since the button needs the list.
 - With both off, the list is your own record. It stays in the editor, in the project file (**Export** as \`.ixp\` or JSON) and in templates made from the project, notes included, and the pages you export and share carry none of it.
 
 The same two settings are in the **Credits** section of the project settings (see [Project settings](project-settings)). Preview shows the button when it is on.
+
+## A Credits button of your own
+The automatic button has one fixed place. To put Credits where it suits the page, draw a small button or link, give it an **On pointer** click and wire that to **Open credits** (Navigation, in the Interactions tab). It opens the same list, with the same keyboard behaviour, and focus goes back to your button when the list closes. A page that has an **Open credits** node does not also get the automatic button, so there are never two. Pages without one still get it while the setting is on, and the list is kept in exported pages whenever a page opens it. With no entries yet, the list says no credits have been added. Every starter on the Templates tab comes with one of these on its first page: see [Branded starter packs](branded-starters).
 
 ## Working together
 The list is part of the project, so people editing it live see each other's changes like any other edit, and undo covers it.
@@ -13457,7 +13475,7 @@ A question keeps its settings on its frame, and each part layer is marked as par
     keywords: "command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share",
     body: `Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
 
-![The command palette searching for timeline: the Open Timeline command, then matching help pages.](help/command-palette.png)
+![The command palette searching for timeline: the New timeline and Open Timeline commands, then matching help pages.](help/command-palette.png)
 
 Each row shows its **shortcut** if it has one (your own keys, if you changed them), or the kind of command it is. A command that cannot run at the moment (nothing selected, nothing to undo) is greyed and says why. A switch shows **On** or **Off**, and running it flips it. Press <kbd>F1</kbd> inside it to search the help instead. Matching help pages are listed under the commands, labelled **Help**, and <kbd>Enter</kbd> on one opens it.
 
@@ -15534,6 +15552,7 @@ You get a checklist of everything to change, like any other [template](templates
 
 ## On every starter page
 - Back and Next sit in a bar along the bottom of every page: Back on the left, Next on the right.
+- The first page has a small **Credits** button in a corner (bottom right, level with the footer line, unless something of the starter's is in the way). It opens the project's list of credits, which you fill in under [Attributions](attributions); delete the button if you have nothing to credit. Each page of a phone version has its own.
 - Checklist items are short, one job each, with **Why and how** folded underneath.
 - Every starter's graphs and pages carry [notes](notes#notes-in-starters-and-examples) that say what each part does, why it is built that way and what to change.
 - Every page is checked in every colourway, so a button never lands on text and nothing crowds the logo.

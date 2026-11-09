@@ -704,10 +704,8 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <WeightSection ab={ab} project={project} />
       <Section help="project-settings" title="Project">
         <ColourwayRow project={project} />
-        <div>
-          <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
-          <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
-        </div>
+        <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
+        <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
         <TextField label="Description" value={project.settings.description} multiline onChange={(v) => setProject((p) => (p.settings.description = v), 'project-desc')} />
         <SelectField<FitMode>
           label="Fit"
@@ -2668,7 +2666,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
               />
             )}
             {b.entries.map((e, k) => (
-              <Row key={k}>
+              <Row key={k} className="blend-entry">
                 <SelectField label={k === 0 ? 'Timelines' : undefined} value={e.timeline ?? ''} options={tls} onChange={(v) => update((bs) => void (bs[i].entries[k].timeline = v || null))} />
                 {oneD ? (
                   <NumberField title="Where this timeline sits along the input" value={e.value ?? k} step={0.1} onChange={(v) => update((bs) => void (bs[i].entries[k].value = v), `blend-val-${b.id}-${k}`)} />

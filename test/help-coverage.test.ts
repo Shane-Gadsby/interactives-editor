@@ -11,6 +11,8 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Credits on every starter': [['attributions', 'A Credits button of your own'], ['branded-starters', 'button in a corner']],
+  'Smaller saves and a faster first load': [['interface', 'sent squeezed']],
   'Shorter Inspector wording': [['properties-panel', 'More about']],
   'Preferences, redesigned': [['preferences', 'Reset this page']],
   'Keyboard sets': [['shortcuts', 'Illustration style']],
@@ -116,6 +118,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'New starters: Listening lab,': [['branded-starters', 'Listening lab']],
   'New branded set Listen,': [['branded-starters', 'Observe and tag']],
   'Property fields line up': [['properties-panel', 'How fields line up']],
+  'Property fields on a grid': [['properties-panel', 'one grid of four columns']],
   'Gold instead of blue': [['preferences', 'the same gold with a thin dark edge']],
   'Faster on big projects': [['interface', 'Big projects']],
   'Opens faster': [['interface', 'Opening the editor']],

@@ -9,6 +9,7 @@ let port = Number(process.env.PORT) || 3048,
 	mongoConnect = require('../suite-libs/mongo-connect'),
 	client = mongoConnect(),
 	cacheHeaders = require('../suite-libs/cache-headers'),
+	precompressed = require('./precompressed'),
 	sessionCheck = require('../suite-libs/session-check'),
 	path = require('path'),
 	crypto = require('crypto'),
@@ -4750,8 +4751,13 @@ router.get(['/', '/index.html'], cacheHeaders.document, (req, res) => {
 })
 
 //Vite's output is content hashed, so those files can be cached hard. Everything else goes through the suite's rules
-router.use('/assets', express.static(`${__dirname}/dist/assets`, {immutable: true, maxAge: '1y'}))
-router.use(express.static(`${__dirname}/dist`, cacheHeaders.staticOptions))
+//Compressed copies of the text files (brotli, gzip) are made in the background after boot, into storage/_compressed
+//(outside git), and handed out ahead of express.static to browsers that accept them. Until a file's copy exists, or when
+//one can't be used (a Range request, an out of date copy), the plain file goes out as before
+let assetOptions = {immutable: true, maxAge: '1y'},
+	compressed = precompressed(`${__dirname}/dist`, `${storageDir}/_compressed`)
+router.use('/assets', compressed.serve(`${__dirname}/dist/assets`, assetOptions), express.static(`${__dirname}/dist/assets`, assetOptions))
+router.use(compressed.serve(`${__dirname}/dist`, cacheHeaders.staticOptions), express.static(`${__dirname}/dist`, cacheHeaders.staticOptions))
 
 //The editor routes in the browser (#/project/<id>), so anything else really is a 404
 app.use(`/${appName}`, router)
@@ -4838,6 +4844,14 @@ client.connect()
 			}
 
 			console.log(`${appName} started on port: ${port} - Date: ${new Date()}`)
+
+			//Not before we are answering, and not at all with INTERACTIVES_PRECOMPRESS=0. A restart finds the copies it
+			//made last time and only does the files that changed
+			if (process.env.INTERACTIVES_PRECOMPRESS !== '0') {
+				compressed.build()
+					.then((r) => console.log(`${appName}: compressed copies ready, ${r.made} made, ${r.reused} reused, ${r.removed} cleared, ${(r.br / 1024).toFixed(0)} KB brotli in ${(r.ms / 1000).toFixed(1)} s`))
+					.catch((err) => console.warn(`${appName}: making compressed copies failed (plain files are served)`, err.message))
+			}
 		})
 	})
 	.catch((err) => {
