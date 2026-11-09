@@ -19,6 +19,7 @@ import { ensureCaptionTrack, ensureDescriptionTrack, findTrack, addCue } from '.
 import { MediaEditor, MediaLabels, MediaLanes, TranscriptDialog, addSoundToTimeline, exportCaptions, importCaptionsInto, type MediaCtx, type MediaSel } from './TimelineMedia';
 import { promptDialog } from '../components/dialogs';
 import { magnetNudge, staggerSelected } from '../lib/key-edit';
+import { addTextDip, isHoldTrack, isTextTrack, DIP_LENGTHS, DIP_STYLES, type DipStyle } from '../lib/swap-text';
 
 /** How close (in screen pixels) a dragged key has to get to the playhead or a marker to snap onto it. */
 const MAGNET_PX = 6;
@@ -99,12 +100,23 @@ export function TimelinePanel() {
     }
     return m;
   }, [tl?.tracks]);
+  // Tracks whose value does not ease (text, true/false, a list): their keys hold, so they are drawn as squares with a flat bar
+  const holds = useMemo(() => {
+    const set = new Set<string>();
+    for (const tr of tl?.tracks ?? []) if (isHoldTrack(tr.prop, nodeIndex.get(tr.nodeId))) set.add(tr.id);
+    return set;
+  }, [tl?.tracks, nodeIndex]);
   const lane = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(600);
   const [addProp, setAddProp] = useState('x');
   // The marker on the ruler being edited
   const [markerId, setMarkerId] = useState<string | null>(null);
   const [markerMenu, setMarkerMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  // The menu of a text key (right-click, or the menu key on it): Swap text dips
+  const [keyMenu, setKeyMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  // How long and what kind of dip the Keyframe panel adds around a text change
+  const [dipStyle, setDipStyle] = useState<DipStyle>('fade');
+  const [dipMs, setDipMs] = useState(300);
   // The tween (span between a key and the next) whose easing is being edited, named by its starting key
   const [tween, setTween] = useState<{ trackId: string; keyId: string } | null>(null);
   // Shape-key point groups opened or folded by hand (otherwise by how many there are)
@@ -388,6 +400,25 @@ export function TimelinePanel() {
 
   const keyDown = (e: React.PointerEvent, trackId: string, key: Keyframe) => keysDown(e, [`${trackId}:${key.id}`], key.t);
 
+  /** Swap text: key a dip around this text change, then tell the person what happened. */
+  const dipAround = (trackId: string, keyId: string, style: DipStyle, ms: number) => {
+    const tr = tl.tracks.find((t) => t.id === trackId);
+    const node = tr ? nodeIndex.get(tr.nodeId) : undefined;
+    if (!tr || !node) return;
+    let done = false;
+    setTl((d) => void (done = addTextDip(d, node, trackId, keyId, style, ms)));
+    store().toast(done ? `Added a ${DIP_STYLES.find((x) => x.value === style)!.label.toLowerCase()} dip around the text change. The new keys are ordinary keys: move or edit them like any other` : 'Nothing to dip: this key is the first text on the layer, so there is no change to soften (or there is no room either side of it)');
+  };
+  const keyMenuItems = (trackId: string, key: Keyframe): MenuItem[] => [
+    { heading: 'Swap text' },
+    // flat, so every choice is one Tab away (a submenu only opens on hover)
+    ...DIP_STYLES.flatMap((st) => DIP_LENGTHS.map((len) => ({ label: `${st.label}, ${len.label}`, onClick: () => dipAround(trackId, key.id, st.value, len.ms) }))),
+  ];
+  const openKeyMenu = (x: number, y: number, trackId: string, key: Keyframe) => {
+    store().set({ selectedKeys: [`${trackId}:${key.id}`], playhead: key.t, previewPlaying: false });
+    setKeyMenu({ x, y, items: keyMenuItems(trackId, key) });
+  };
+
   /** Press on one key, or on a layer's summary diamond (all of its keys at that time): select, then drag them. */
   const keysDown = (e: React.PointerEvent, refs: string[], t: number) => {
     e.stopPropagation();
@@ -611,7 +642,7 @@ export function TimelinePanel() {
             )}
           </div>
           <MediaLanes ctx={mediaCtx} />
-          <TrackLanes byNode={byNode} duration={tl.duration} pxPerMs={pxPerMs} selectedKeys={s.selectedKeys} tween={tween} pointsOpen={pointsOpen} h={{ scrub, keyDown, keysDown, setTween }} />
+          <TrackLanes byNode={byNode} holds={holds} duration={tl.duration} pxPerMs={pxPerMs} selectedKeys={s.selectedKeys} tween={tween} pointsOpen={pointsOpen} h={{ scrub, keyDown, keysDown, setTween, openKeyMenu }} />
           {selMarker && <div className="marker-line" style={{ left: X(Math.min(selMarker.time, tl.duration)) }} aria-hidden="true" />}
           <div className="playhead" style={{ left: X(Math.min(s.playhead, tl.duration)) }} />
         </div>
@@ -644,6 +675,7 @@ export function TimelinePanel() {
             </div>
           </div>
         )}
+        {keyMenu && <ContextMenu x={keyMenu.x} y={keyMenu.y} items={keyMenu.items} onClose={() => setKeyMenu(null)} />}
         {markerMenu && <ContextMenu x={markerMenu.x} y={markerMenu.y} items={markerMenu.items} onClose={() => setMarkerMenu(null)} />}
         {selectedKey && (
           <div className="key-editor">
@@ -679,7 +711,23 @@ export function TimelinePanel() {
                 }, 'key-v')
               }
             />
-            <p className="hint">Easing belongs to the tweens: click the line between two keys to change how it moves.</p>
+            {isHoldTrack(selectedKey.track.prop, locate(ab, selectedKey.track.nodeId)?.node) ? (
+              <>
+                <p className="hint">This holds until the next key, then switches: there is no easing to set.</p>
+                {isTextTrack(selectedKey.track.prop, locate(ab, selectedKey.track.nodeId)?.node) && selectedKey.track.keys[0].id !== selectedKey.key.id && (
+                  <div className="swap-text" role="group" aria-label="Swap text dip">
+                    <div className="field-label block">Swap text</div>
+                    <SelectField<DipStyle> label="Dip" title="What goes down around the change: the old words fade or blur out, the text swaps while it is hidden, and the new words come back in" value={dipStyle} options={DIP_STYLES} onChange={setDipStyle} />
+                    <NumberField label="Each side" title="How long the dip lasts before and after the change. Cut short where the next text key is close" value={dipMs} min={10} step={50} suffix="ms" onChange={(v) => setDipMs(Math.max(10, Math.round(v)))} />
+                    <button className="btn" title="Key the dip as ordinary keys on this layer's opacity and blur, which you can then edit. With reduced motion the text just changes" onClick={() => dipAround(selectedKey.track.id, selectedKey.key.id, dipStyle, dipMs)}>
+                      Add the dip
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="hint">Easing belongs to the tweens: click the line between two keys to change how it moves.</p>
+            )}
           </div>
         )}
         {!selectedKey && selectedTween && (
@@ -810,6 +858,7 @@ interface LaneHandlers {
   keyDown: (e: React.PointerEvent, trackId: string, key: Keyframe) => void;
   keysDown: (e: React.PointerEvent, refs: string[], t: number) => void;
   setTween: (t: { trackId: string; keyId: string } | null) => void;
+  openKeyMenu: (x: number, y: number, trackId: string, key: Keyframe) => void;
 }
 
 /**
@@ -818,15 +867,20 @@ interface LaneHandlers {
  * close over the same tracks and scale the memo is keyed on, so the ones from the last draw are always right.
  */
 const TrackLanes = memo(
-  function TrackLanes({ byNode, pxPerMs, selectedKeys, tween, pointsOpen, h }: { byNode: TrackMap; duration: number; pxPerMs: number; selectedKeys: string[]; tween: { trackId: string; keyId: string } | null; pointsOpen: Record<string, boolean>; h: LaneHandlers }) {
+  function TrackLanes({ byNode, holds, pxPerMs, selectedKeys, tween, pointsOpen, h }: { byNode: TrackMap; holds: ReadonlySet<string>; duration: number; pxPerMs: number; selectedKeys: string[]; tween: { trackId: string; keyId: string } | null; pointsOpen: Record<string, boolean>; h: LaneHandlers }) {
     const X = (t: number) => 12 + t * pxPerMs;
     const isSel = (refs: string[]) => refs.every((r) => selectedKeys.includes(r));
     /** One track's lane: its tweens (click for easing) and keys. */
-    const trackLane = (tr: TL['tracks'][number]) => (
-      <div key={tr.id} className="lane" onPointerDown={h.scrub}>
+    const trackLane = (tr: TL['tracks'][number]) => {
+      const hold = holds.has(tr.id);
+      return (
+      <div key={tr.id} className={`lane${hold ? ' hold-lane' : ''}`} onPointerDown={h.scrub}>
         {tr.keys.slice(0, -1).map((k, i) => {
           const w = X(tr.keys[i + 1].t) - X(k.t);
           const sel = tween?.trackId === tr.id && tween.keyId === k.id;
+          // Text and on/off values do not ease: they hold until the next key, so the bar is flat and there is no curve to open
+          if (hold)
+            return <span key={`seg-${k.id}`} className="segment hold" style={{ left: X(k.t), width: w }} title={`Holds “${String(k.value)}” from ${k.t} to ${tr.keys[i + 1].t} ms, then switches`} />;
           return (
             <span
               key={`seg-${k.id}`}
@@ -846,14 +900,37 @@ const TrackLanes = memo(
         {tr.keys.map((k) => (
           <span
             key={k.id}
-            className={`key${selectedKeys.includes(`${tr.id}:${k.id}`) ? ' selected' : ''}`}
+            className={`key${hold ? ' hold' : ''}${selectedKeys.includes(`${tr.id}:${k.id}`) ? ' selected' : ''}`}
             style={{ left: X(k.t) }}
-            title={`${k.t} ms: ${String(k.value)}`}
+            title={hold ? `${k.t} ms: switches to “${String(k.value)}” here and holds${isTextTrack(tr.prop) ? '. Right-click for Swap text dips' : ''}` : `${k.t} ms: ${String(k.value)}`}
+            tabIndex={0}
+            role="button"
+            aria-label={`Key at ${k.t} ms: ${String(k.value)}${hold ? ' (a hold key)' : ''}`}
             onPointerDown={(e) => h.keyDown(e, tr.id, k)}
+            onContextMenu={
+              hold && isTextTrack(tr.prop)
+                ? (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    h.openKeyMenu(e.clientX, e.clientY, tr.id, k);
+                  }
+                : undefined
+            }
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                store().set({ selectedKeys: [`${tr.id}:${k.id}`], playhead: k.t, previewPlaying: false });
+              } else if (hold && isTextTrack(tr.prop) && (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10'))) {
+                e.preventDefault();
+                const r = e.currentTarget.getBoundingClientRect();
+                h.openKeyMenu(r.left, r.bottom, tr.id, k);
+              }
+            }}
           />
         ))}
       </div>
-    );
+      );
+    };
     return (
       <>
         {[...byNode.entries()].map(([nodeId, tracks]) => (
@@ -897,7 +974,7 @@ const TrackLanes = memo(
       </>
     );
   },
-  (a, b) => a.byNode === b.byNode && a.duration === b.duration && a.pxPerMs === b.pxPerMs && a.selectedKeys === b.selectedKeys && a.tween === b.tween && a.pointsOpen === b.pointsOpen,
+  (a, b) => a.byNode === b.byNode && a.holds === b.holds && a.duration === b.duration && a.pxPerMs === b.pxPerMs && a.selectedKeys === b.selectedKeys && a.tween === b.tween && a.pointsOpen === b.pointsOpen,
 );
 
 function KeyValueField({ prop, value, kids, node, onChange }: { prop: string; value: Keyframe['value']; kids: SceneNode[]; node?: SceneNode; onChange: (v: Keyframe['value']) => void }) {

@@ -223,6 +223,7 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
                 onChange={(p) => (p?.type === 'solid' && s.paint.type === 'solid' ? set({ [`${prefix}.paint.color`]: p.color }, `stroke-paint-${i}`) : set({ [`${prefix}.paint`]: p! }, `stroke-paint-${i}`))}
               />
             </PropRow>
+            {s.paint.type === 'solid' && <KeyRow node={n} ids={ids} prop={`${prefix}.paint.color`} />}
             <Row>
               <Num node={n} ids={ids} prop={`${prefix}.width`} label="W" min={0} />
               <TextField
