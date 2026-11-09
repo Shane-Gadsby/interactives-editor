@@ -1459,11 +1459,29 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
     keywords: 'button input text field checkbox slider range select dropdown link embed iframe html video aria accessibility',
     body: `Web elements are real HTML controls, so they work with keyboards, screen readers and forms.
 
-- **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react. Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)). **Disabled** (also bindable, for a Next button that waits for an answer) greys it out and takes it out of the Tab sequence, and a disabled button or input looks dimmed by itself: **Disabled look** sets how opaque it is (0.5 by default, 1 for no dimming). A layer whose Opacity is bound keeps doing its own dimming.
-- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). **Bind to a variable…** (under *Value*) ties the box to a variable with an ordinary [data binding](bindings) on its **Value**, set to **⇄ Both**: typing writes the variable and the variable fills the box. Change the way, or the variable, under **Data bindings**; choose **Out →** to only write the variable and keep the box's own value. (Older projects that had a *Variable* setting on an input are changed to this when they open.) **When a value changes** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test. **Block paste and drop** refuses pasted or dragged text, so the answer has to be typed. To do something when Enter is pressed in a text box, use a **When a key is pressed** node set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions)).
-- **Link**: text that opens a URL. **Fit text to box** works here too.
-- **Embed**: an iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
-- **Video**: a video file or URL.
+## Button
+Press <kbd>B</kbd> to draw one. A button has a label (which can use \`{expressions}\`), fill, stroke and corner radius. Add a **When clicked or hovered** event to react to a click.
+- Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)).
+- **Disabled** (also bindable, for a Next button that waits for an answer) greys it out and takes it out of the Tab sequence.
+- **Disabled look** sets how dimmed a disabled button or input looks: 0.5 by default, 1 for no dimming. A layer whose Opacity is bound keeps doing its own dimming.
+- **Small buttons** keep the size you draw. A button narrower than about 80 px no longer grows by its padding, so a dot-sized button really is dot-sized.
+
+## Input
+An input is one of: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select).
+- **Bind to a variable…** (under *Value*) ties the box to a variable with an ordinary [data binding](bindings) on its **Value**, set to **⇄ Both**: typing writes the variable and the variable fills the box. Change the way, or the variable, under **Data bindings**. Choose **Out →** to only write the variable and keep the box's own value. Older projects that had a *Variable* setting on an input are changed to this when they open.
+- **When a value changes** reacts to what was typed.
+- **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test.
+- **Block paste and drop** refuses pasted or dragged text, so the answer has to be typed.
+- To do something when Enter is pressed in a text box, use a **When a key is pressed** event set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions#when-a-key-is-pressed)).
+
+## Link
+Text that opens a URL. **Fit text to box** works here too. For making any other layer a link, see [Links and cursors](links-cursors).
+
+## Embed
+An iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
+
+## Video
+A video file or URL.
 
 ## Accessibility
 Every layer has an **Accessibility** section (roles, text alternative, keyboard reach, hiding decorative layers): see [Accessibility](accessibility). The **CSS class** is in the Advanced section. The [Accessibility checker](accessibility-checker) lists the layers that need a text alternative. The player honours the viewer's *reduce motion* setting when the project setting **Respect reduced motion** is on.`,
@@ -1485,6 +1503,8 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - A **Checkbox** role needs its state told: bind **Checked (checkbox role)** in Data bindings to the variable that holds it (see [Bindings](bindings)).
 - **Pressed state** and **Current**: see [Pressed and current](accessibility#pressed-and-current).
 - **Shortcut**: a key that clicks the layer, see [Shortcuts](accessibility#shortcuts).
+- **Disabled look**: how dimmed a disabled button or input looks. See [Web elements](web-elements).
+- A frame can be a **dialog**: see [Dialogs](accessibility#dialogs). A list, grid or radio group can use **Keyboard navigation**: see [Keyboard navigation](accessibility#keyboard-navigation).
 - Buttons, inputs and links show only the text alternative and description. They already have the right role and keyboard behaviour.
 
 ## Describing a picture as you add it
@@ -1494,8 +1514,13 @@ The box never stops you doing anything else. Its example text comes from the fil
 
 Turn the box off in [Preferences](preferences) (**Ask what a picture shows**) if you add many pictures at once and would rather describe them later from the checker.
 
+## The focus ring
+**Keyboard focus you can always see.** Whenever the keyboard moves to a layer, a ring shows which one. It appears for the keyboard only, not after a mouse click.
+
+The ring is two-tone: the colourway's focus colour with a thin black or white edge. That way it shows on white pages, dark gradients and deep panels alike. Buttons, inputs and links show the same ring instead of the browser's own, so every tab stop looks the same. Nothing needs setting up. The focus colour follows the colourway you picked.
+
 ## What the keyboard does
-- **Tab** and **Shift+Tab** move between tab stops, in layer order unless you set a tab order (below). A visible ring shows where the focus is (only for the keyboard, not after a mouse click). It is two tones, the theme's focus colour with a black or white halo either side of it, so it can be seen on any background.
+- **Tab** and **Shift+Tab** move between tab stops, in layer order unless you set a tab order (below). A visible ring shows where the focus is (see [The focus ring](accessibility#the-focus-ring)).
 - **Enter** clicks the focused layer, **Space** clicks it when released, the same way a real button does. It runs the layer's *When clicked or hovered → Click* nodes exactly like a mouse click, with the pointer position at the layer's centre.
 - Only the layer itself is activated. A button or input inside a clickable frame does its own thing, so nothing runs twice.
 - An Enter or Space that clicked a layer, or that was pressed on a button or link, does not also run a *When a key is pressed* node for the same key, so a game's "press Space" and a button's click can't both fire from one press.
@@ -1508,12 +1533,22 @@ A button that is on or off (a toggle, a segmented control, a filter chip) should
 **Current** marks the one layer of a set that is where you are: the open tab, the current page in a list, the step you are on. *Yes* is aria-current true, and *Current page*, *Current step* and *Current location* say which kind. It works on any layer, buttons and links included. Bind **Current (true, or page, step, location)** in Data bindings, for example \`tab == 2\`, or an expression that gives \`"page"\` for the current one and false for the rest. Use it instead of describing the state in the text alternative ("Showing now").
 
 ## Shortcuts
-A layer's **Shortcut** is a key, or a key with modifiers (\`r\`, \`1\`, \`Ctrl+Enter\`, \`Alt+N\`, \`Shift+/\`), that clicks the layer from anywhere on the page: it runs the layer's *When clicked or hovered → Click* flows, presses a button or follows a link, the way Enter on the layer does. It follows the same rules as a *When a key is pressed* node: keys typed into a text box are left alone (unless the shortcut holds Ctrl, Alt or Meta, so Ctrl+Enter can submit from a text area), holding a key does not repeat it, and an extra Ctrl, Alt or Meta means a browser shortcut, so it is ignored. A hidden or disabled layer ignores its shortcut, and while a modal [dialog](accessibility#dialogs) is open the layers behind it do too. A layer that repeats uses its first copy. Screen readers are told the key (aria-keyshortcuts); show it in the label too, such as "Replay (R)". The field warns when two layers use the same keys, or when a *When a key is pressed* node listens for them as well. Shortcuts count as the key way to a clickable shape for the [Accessibility checker](accessibility-checker).
+A layer's **Shortcut** is a key, or a key with modifiers (\`r\`, \`1\`, \`Ctrl+Enter\`, \`Alt+N\`, \`Shift+/\`), that clicks the layer from anywhere on the page: it runs the layer's *When clicked or hovered → Click* flows, presses a button or follows a link, the way Enter on the layer does.
+
+It follows the same rules as a *When a key is pressed* node: keys typed into a text box are left alone (unless the shortcut holds Ctrl, Alt or Meta, so Ctrl+Enter can submit from a text area), holding a key does not repeat it, and an extra Ctrl, Alt or Meta means a browser shortcut, so it is ignored.
+
+A hidden or disabled layer ignores its shortcut, and while a modal [dialog](accessibility#dialogs) is open the layers behind it do too. A layer that repeats uses its first copy.
+
+Screen readers are told the key (aria-keyshortcuts); show it in the label too, such as "Replay (R)". The field warns when two layers use the same keys, or when a *When a key is pressed* node listens for them as well. Shortcuts count as the key way to a clickable shape for the [Accessibility checker](accessibility-checker).
 
 ## Dialogs
 Select a **frame** and tick **This frame is a dialog** in its *Dialog* section. The player then announces it as a dialog (role dialog, with aria-modal when **Modal**, and the frame's **Text alternative** as its name, so give it one). The dialog is **open while the frame is visible**, so show it however you like: bind its Visible to a variable, use a *Show or hide a layer* node, or pick an **Open variable** and the frame shows while that variable is on (true, not 0, not empty).
 
-When it opens, focus moves inside: to the **Initial focus** layer if you picked one, otherwise the first button, field or clickable layer in it, otherwise the dialog itself. While a **modal** dialog is open, Tab and Shift+Tab stay inside it, focus that slips behind it is brought back, and clicks on the rest of the artboard are ignored (tick **Close on click outside** to make them close it instead). **Escape** closes the dialog on top: it turns the Open variable off (false, 0 or empty) or, with no variable, hides the frame. When it closes, **Return focus** puts focus back on the layer that had it when the dialog opened. A dialog that is showing from the start does not take focus. A **Scrim** paints a colour over the rest of the artboard behind the dialog (it is drawn as a shadow, so it follows the frame and goes when the frame hides).
+When it opens, focus moves inside: to the **Initial focus** layer if you picked one, otherwise the first button, field or clickable layer in it, otherwise the dialog itself.
+
+While a **modal** dialog is open, Tab and Shift+Tab stay inside it, focus that slips behind it is brought back, and clicks on the rest of the artboard are ignored (tick **Close on click outside** to make them close it instead).
+
+**Escape** closes the dialog on top: it turns the Open variable off (false, 0 or empty) or, with no variable, hides the frame. When it closes, **Return focus** puts focus back on the layer that had it when the dialog opened. A dialog that is showing from the start does not take focus. A **Scrim** paints a colour over the rest of the artboard behind the dialog (it is drawn as a shadow, so it follows the frame and goes when the frame hides).
 
 A dialog works inside an iframe or a page that embeds the player: the trap, Escape and focus use the player's own document. Keep the dialog at the top level of the artboard, not inside a clipping frame, so the scrim and the "outside" are the whole artboard. The [checker](accessibility-checker) flags a dialog with no name or nothing inside it a keyboard can reach.
 
@@ -1526,7 +1561,9 @@ A list of options is one Tab stop, not one per option. Select a **repeater**, or
 
 **Focused item** writes the focused item's number (from 0) to a number variable, and setting that variable moves the Tab stop, and the focus itself when it is inside the list at the time (so typing a letter that moves a cursor along a word moves the keyboard focus with it, and the next arrow goes on from there). To move focus into the list from outside (a clue button that picks a square), use *Focus layer* on the list: it lands on the Tab stop.
 
-**Count hidden items** keeps every copy's number even when some are hidden (a square whose *Visible* is bound to false, a blank in a crossword), so item 12 stays item 12 and the index variable can be used straight as a position in your list. A hidden item is never focused, and in a grid the arrows step over it to the next shown item in the same row or column. Without it hidden copies are not counted, so the numbers shift. The number also arrives as \`event.index\` in *When a layer is focused*, *When clicked or hovered* and *When a key is pressed* events for the items (as it already does for a repeater's copies). Keys typed into a text box and the arrows of a [draggable](drag-and-drop) item are left alone, and **a *When a key is pressed* node you wired for an arrow wins**: the navigation does nothing for a key that one of your nodes names, so nothing fires twice.
+**Count hidden items** keeps every copy's number even when some are hidden (a square whose *Visible* is bound to false, a blank in a crossword), so item 12 stays item 12 and the index variable can be used straight as a position in your list. A hidden item is never focused, and in a grid the arrows step over it to the next shown item in the same row or column. Without it hidden copies are not counted, so the numbers shift.
+
+The number also arrives as \`event.index\` in *When a layer is focused*, *When clicked or hovered* and *When a key is pressed* events for the items (as it already does for a repeater's copies). Keys typed into a text box and the arrows of a [draggable](drag-and-drop) item are left alone, and **a *When a key is pressed* node you wired for an arrow wins**: the navigation does nothing for a key that one of your nodes names, so nothing fires twice.
 
 ## Tab order
 With nothing selected, the **Tab order** section in the inspector lists every tab stop on the artboard in the order Tab visits them. Use the arrows to move a layer earlier or later, or click its name to select it. **Reset to layer order** goes back to the default. The order only applies within the player; stops you haven't placed follow the others in layer order.
@@ -1535,7 +1572,11 @@ With nothing selected, the **Tab order** section in the inspector lists every ta
 The **Announce** action says something to screen readers without showing anything: write the text as an expression, such as \`"Correct, " + score + " of 5"\`. *Polite* waits for the current speech to finish; *Assertive* interrupts, for errors and urgent feedback. Scripts do the same with \`ix.announce(text, 'polite' | 'assertive')\`. In **Preview**, a strip under the preview shows what would be said, once you switch **Screen reader** on (a button in the Preview header, or Preferences; it is off by default).
 
 ## Turning it off
-**Preferences → Accessibility features** (also a button in Preview) switches all of the above off in Preview: no extra tab stops, no keyboard clicks, no roles, no announcements, as projects played before these features existed. It is on by default. The **Screen reader** strip under Preview, which shows what would be announced, is a separate preference (also a button in the Preview header) and is off by default. If something looks wrong, check it with the setting off; if it goes away, report it. Exported files and embedded players keep the features on. A page embedding the player can pass \`accessibility: false\` (or \`accessibility="off"\` on the web component) to turn them off.
+**Preferences → Accessibility features** (also a button in Preview) switches all of the above off in Preview: no extra tab stops, no keyboard clicks, no roles, no announcements, as projects played before these features existed. It is on by default.
+
+The **Screen reader** strip under Preview, which shows what would be announced, is a separate preference (also a button in the Preview header) and is off by default.
+
+If something looks wrong, check it with the setting off; if it goes away, report it. Exported files and embedded players keep the features on. A page embedding the player can pass \`accessibility: false\` (or \`accessibility="off"\` on the web component) to turn them off.
 
 ## What it doesn't do
 Reading order is the layer order (rearrange layers to change it). Moving focus after a button changes the artboard isn't automatic; use *Focus layer* to put it somewhere sensible. Colour contrast, missing descriptions and other problems are for an accessibility checker, not these settings.`,
@@ -1552,7 +1593,37 @@ In the **Link** section, give any layer a **URL** and it becomes a real link. **
 The **Open a web address** action does the same from an interaction.
 
 ## Go to a page
-The **Go to page** section links a layer to another page. Choose the page from the list, or drag the round **Go to page** handle that sits on the selected layer on the canvas onto the page you want: the page lights up as you pass over it, and letting go makes the link. Choosing **No page** (or dragging it onto the empty canvas) takes the link away. There is nothing special behind it: the editor writes a **When clicked or hovered** event on the layer and a **Go to a page** node after it, which you can see and change in **Interactions**, and the list follows if you edit them there. A click that has an **Only if**, or one that does something else first, is left as you built it (the link is added after the existing click). Faint arrows between the pages on the canvas show every route the project can take, from these links and from Next and Previous steps; switch them off from the canvas's right-click menu. They are only in the editor. **How the page changes** picks the look: a fade, a slide, a wipe in any of four directions or diagonally, a push, an **iris** (a circle that opens, from the clicked layer by default), a **zoom** into the clicked layer, a **star**, **diamond** or **heart** that opens out (from the clicked layer too), a **clock** sweep, **barn doors**, **blinds**, a **grid of squares**, **crosshatch**, **dots**, **dissolve** or a **cube** that turns. **Speed** (Slow, Medium, Fast or Custom) says how long it takes, and shows for every look but instant. A learner whose device asks for less motion always gets an instant change.
+The **Go to page** section links a layer to another page, so clicking it opens that page.
+
+**Link a page by dragging.** Select the layer. A round **Go to page** handle sits on it on the canvas. Drag the handle onto the page you want: the page lights up as you pass over it, and letting go makes the link. Or choose the page from the **Goes to** list in the section. **No page** (or dragging the handle onto empty canvas) takes the link away.
+
+Nothing special is behind it. The editor writes a **When clicked or hovered** event on the layer and a **Go to a page** node after it. You can see and change both in [Interactions](interactions), and the list follows if you edit them there. A click that has an **Only if**, or that does something else first, is left as you built it, and the link is added after what is there.
+
+Faint arrows between the pages on the canvas show every route the project can take, from these links and from Next and Previous steps. Switch them off from the canvas's right-click menu. They show only in the editor.
+
+For Back, Next and a page counter along the bottom of your pages, see [Page navigation](page-navigation).
+
+## How the page changes
+**How the page changes** picks the look of a change of page. It appears wherever you choose one: here, **Go to a page** in the graph (where it is called **Transition**), **+ When clicked…**, [Page navigation](page-navigation) and a layer's **Go to page**. These are the looks, by the names the editor shows:
+- **Instant** and **Fade**.
+- **Slide left**, **Slide right** and **Slide up**.
+- **Wipe left**, **Wipe right**, **Wipe up** and **Wipe down**: the new page is uncovered from that edge. **Wipe diagonally** starts from the top left corner.
+- **Push left**, **Push right**, **Push up** and **Push down**: the new page shoves the old one off, which dims as it goes.
+- **Iris (a circle opens)** and **Zoom in** (the old page grows round a point as it fades, and the new one grows in).
+- **Star (opens out)**, **Diamond (opens out)** and **Heart (opens out)**, and **Clock (sweeps round)**, a hand that sweeps the new page in.
+- **Barn doors (open from the middle)**, **Blinds**, **Grid of squares**, **Crosshatch** and **Dots**: shapes or lines that grow until they meet.
+- **Dissolve**: the new page appears a scatter of pixels at a time.
+- **Cube (turns)**: both pages turn like the sides of a box.
+
+Dissolve is the heaviest for the device to draw, so on a big stage or an older laptop it is the one most likely to stutter.
+
+Iris, Zoom in, Star, Diamond, Heart and Clock start from **Opens from**: **The clicked layer** (the middle of the page when nothing was clicked, say from a timer), **The middle of the page**, or **A point on the page** that you give as percentages.
+
+**Speed** says how long the change takes: **Slow** (600 ms), **Medium** (300 ms), **Fast** (150 ms) or **Custom**, which shows a box for the milliseconds. It sits beside the look and is left out for Instant. Medium is what every page change already had, so nothing in an existing project plays differently. The Inspector's sentences say it too, as in "go to the next page (iris, slow)".
+
+A learner whose device asks for less motion always gets an instant change.
+
+In a script, \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer named Door, and a point is \`{ x: 25, y: 50, percent: true }\`. See [Scripts](scripts).
 
 ## Cursor
 **Cursor on hover** sets the cursor shown while the pointer is over the layer and its children, the way CSS \`:hover { cursor: pointer }\` works. *Automatic* gives links and layers with a click, press or release interaction a pointer. Choose the cursor shown over the layer (pointer, grab, crosshair, text, not-allowed, …) or **Custom image** with a hotspot (the point of the image that clicks). Change it at runtime with **Change the mouse pointer**, \`ix.setCursor('grab')\` or \`node.set('cursor', …)\`. Browsers may ignore a custom image over 32×32 px.`,
@@ -1574,8 +1645,14 @@ The **Go to page** section links a layer to another page. Choose the page from t
 
 It all goes along the bottom of the page, in a bottom bar. Back is hidden on the first page and Next on the last, and the number and bar follow the order of your pages (see **Go to a page** in [Interactions](interactions)), so adding, removing or moving a page needs no rewiring. The colours come from your project's colours, so they follow the theme and a branded project's look, and on a branded page the bar sits inside the content box, clear of the logo and footer.
 
-Nothing is hidden: you get ordinary buttons, text, a progress bar and the clicks and **Go to a page** nodes in **Interactions**, all of which you can restyle, move or rewire. They are tagged, so adding navigation again with another style swaps the old one for the new (and **Remove** takes it away). A page that already has its own Next or Back button is left alone, and the message says which. Page dots are drawn for the number of pages there are now: press **Add** again after adding or removing pages to refresh them. **How the page changes**, above the buttons, is the look Back and Next use (a fade unless you choose another), and **Speed** under it is how long that takes (Slow, Medium, Fast or Custom milliseconds); both are written into the **Go to a page** nodes, where you can change it afterwards.
+Nothing is hidden: you get ordinary buttons, text, a progress bar and the clicks and **Go to a page** nodes in **Interactions**, all of which you can restyle, move or rewire. They are tagged, so adding navigation again with another style swaps the old one for the new (and **Remove** takes it away). A page that already has its own Next or Back button is left alone, and the message says which.
 
+Page dots are drawn for the number of pages there are now: press **Add** again after adding or removing pages to refresh them.
+
+## How the page changes
+**How the page changes**, above the buttons, is the look Back and Next use (a fade unless you choose another), and **Speed** under it is how long that takes. Both are written into the **Go to a page** nodes, where you can change them afterwards. The looks and speeds are listed in [How the page changes](links-cursors#how-the-page-changes).
+
+## Where it goes
 Buttons go on the page itself. A [page master](page-master) can hold the logo and the footer but not buttons, so the master is not where this goes.`,
   },
   {
@@ -1591,6 +1668,8 @@ Buttons go on the page itself. A [page master](page-master) can hold the logo an
 1. Draw the whole thing on one page: the map with a layer for each place, or the comic page with a layer around each panel. Give the layers names you will recognise.
 2. Select a button (or any layer) and press **+ When clicked…** in its **Interactions** section. Choose **Move the view to a layer…** and pick the layer to travel to.
 3. Add a second one on a button that brings the learner back: **Show the whole page again**.
+
+The same choices are in the Interactions palette under Navigation, as the **Move the view to a layer** node (its technical name is **Move view**).
 
 ## The settings
 
@@ -1647,6 +1726,13 @@ Pressing <kbd>Ctrl</kbd>+<kbd>C</kbd> copies keys while your last click was in t
 
 **Stagger.** Select two or more layers that have keys on the timeline and press **Stagger…** in the Timeline bar. Enter a step in milliseconds: the first layer stays where it is, the next one's keys move later by the step, the next by twice the step, and so on. The order is the Layers panel's, top to bottom; layers with no keys on the timeline are skipped. A negative step runs the other way. Run it again and the offsets add up. If any key would leave the timeline, nothing moves and the message says how long to make it. It is one undo step.
 
+## Keys on the keyboard
+These work after you click in the Timeline. The full list is on the [Keyboard shortcuts](shortcuts#timeline) page.
+- <kbd>Space</kbd> or <kbd>K</kbd> plays and pauses. <kbd>J</kbd> or <kbd>Home</kbd> goes to the start.
+- <kbd>,</kbd> and <kbd>.</kbd> step back and forward one frame. Add <kbd>Shift</kbd> to jump between keys instead.
+- <kbd>P</kbd>, <kbd>S</kbd>, <kbd>R</kbd>, <kbd>T</kbd> and <kbd>A</kbd> take you to the selected layer's **P**osition, **S**cale, **R**otation, opacity (**T**ransparency) and **A**nchor point. The Properties panel opens that field and focuses it, and the Timeline marks that property's track if the layer has one.
+- <kbd>Shift</kbd>+<kbd>L</kbd> shows or hides [the list of timelines](timelines#the-list-of-timelines).
+
 ## Timeline settings
 The Timeline bar shows a short summary (length, loop, speed, autoplay, frame rate). Click the **gear** beside it to change them, and to rename the timeline; Esc or a click outside closes it.
 
@@ -1670,16 +1756,29 @@ Words can change on a timeline too: a title that says *hello* at 0 and *world* a
 1. Open the Timeline, select the text layer and put the playhead where the first words should show. Click the diamond beside **Text**.
 2. Move the playhead to when it should change, type the new words in the **Text** field (or turn on **Record** first), and click the diamond again.
 
-Text does not glide: it holds the old words until the next key and then switches. So text keys are drawn as **squares** joined by a flat bar, not as diamonds with a curve. (True/false values such as **Visible** and **Disabled** are drawn the same way.) There is no easing to set for them.
+Text does not glide: it holds the old words until the next key and then switches. So text keys are drawn as **squares** joined by a flat bar, not as diamonds with a curve. (True/false values such as **Visible** and **Disabled** are drawn the same way.) There is no easing to set for them. Words are never mixed in between, even when they look like a colour, such as *red*.
 
-**Swap text.** A hard switch can look abrupt. Right-click a text key (or select it and press the menu key, or open its **Keyframe** panel) to add a **dip**: the old words fade or blur out, the words change while they are hidden, and the new words come back in. Choose **Fade out and in**, **Blur out and in** or **Fade and blur**, and how long each side lasts: **Quick** (150 ms), **Normal** (300 ms) or **Slow** (600 ms), or type your own in the Keyframe panel. The dip is made of ordinary keys on the layer's *Opacity* and *Blur* (so you can move or reshape them afterwards), cut short where another text key is close. By default the dip **stays with its text key**: drag the text key, or type a new time for it, and its dip moves by the same amount; delete the text key and its dip goes too. Edit one of the dip's own keys by hand (drag it on its own, or change its time or value) and that key lets go and is an ordinary key from then on, while the rest still follow. Turn off **Keep the dip with this text key** in the Keyframe panel to make the dip as plain keys that never follow. Moving the dip does not re-fit it: it keeps its length, so if it lands on another text key, run **Swap text** again. Running it again on the same key replaces the dip. For viewers who ask for less motion the dip is left out and the words simply change.
+## Swap text
+A hard switch can look abrupt. Right-click a text key (or select it and press the menu key, or open its **Keyframe** panel) to add a **Swap text** dip: the old words fade or blur out, the words change while they are hidden, and the new words come back in.
 
-The first text key has no earlier words to change from, so it has no dip.
+Choose **Fade out and in**, **Blur out and in** or **Fade and blur**, and how long each side lasts: **Quick** (150 ms), **Normal** (300 ms) or **Slow** (600 ms), or type your own in the Keyframe panel.
+
+The dip is made of ordinary keys on the layer's *Opacity* and *Blur*, so you can move or reshape them afterwards. It is cut short where another text key is close. For viewers who ask for less motion the dip is left out and the words change at once. The first text key has no earlier words to change from, so it has no dip.
+
+**Swap text stays with its text key.** Drag the text key, or type a new time for it, and its dip moves by the same amount. Delete the text key and its dip goes too. The dip's keys that are tied to the text key are drawn as hollow diamonds.
+
+Edit one of the dip's own keys by hand (drag it on its own, or change its time or value) and that key lets go and is an ordinary key from then on, while the rest still follow. To make the dip as plain keys that never follow, turn off **Keep the dip with this text key** in the Keyframe panel.
+
+Moving the dip does not re-fit it: it keeps its length, so if it lands on another text key, run **Swap text** again. Running it again on the same key replaces the dip.
 
 ## Markers
-A **marker** is a named point in time. Press **+ Marker** to add one at the playhead; it shows as a flag on the ruler and is called *Marker 1*, *Marker 2* and so on until you rename it. **Click** a marker to select it: it turns yellow, a dashed line runs down through the tracks, and a **Marker** panel appears at the right of the timeline with its name, its time, and (when [Steps](steps) use the timeline) its title and caption. Drag it to move it, press the <kbd>←</kbd> and <kbd>→</kbd> arrow keys to nudge it (10 ms, 100 ms with Shift, or one frame when the timeline has a frame rate), and press <kbd>Delete</kbd> to remove it. Right-click a marker for the same things as a menu, and right-click the ruler to add a marker there.
+A **marker** is a named point in time. Press **+ Marker** to add one at the playhead; it shows as a flag on the ruler and is called *Marker 1*, *Marker 2* and so on until you rename it. **Click** a marker to select it: it turns yellow, a dashed line runs down through the tracks, and a **Marker** panel appears at the right of the timeline with its name, its time, and (when [Steps](steps) use the timeline) its title and caption.
 
-To **do something when playback reaches a marker**, select it and press **+ When the playhead reaches this…**. That adds a **When an animation reaches a marker** node for the marker and a **Change a value or counter** node after it, and opens the Interactions tab on the Set variable node: pick the variable and the value there. The Marker panel says how many interactions already use the marker and has an **Open** link to them. If you rename the marker the nodes follow it. A **When an animation reaches a marker** node runs its flow whenever playback passes the marker: going forwards or in reverse, and on every lap of a loop or ping-pong. Leave *Marker name* empty to react to every marker on the timeline; \`event.marker\` and \`event.time\` say which one fired. Scrubbing and seeking do not fire markers, only playing.
+Drag it to move it, press the <kbd>←</kbd> and <kbd>→</kbd> arrow keys to nudge it (10 ms, 100 ms with Shift, or one frame when the timeline has a frame rate), and press <kbd>Delete</kbd> to remove it. Right-click a marker for the same things as a menu, and right-click the ruler to add a marker there.
+
+To **do something when playback reaches a marker**, select it and press **+ When the playhead reaches this…**. That adds a **When an animation reaches a marker** node for the marker and a **Change a value or counter** node after it, and opens the Interactions tab on the Set variable node: pick the variable and the value there. The Marker panel says how many interactions already use the marker and has an **Open** link to them. If you rename the marker the nodes follow it.
+
+A **When an animation reaches a marker** node runs its flow whenever playback passes the marker: going forwards or in reverse, and on every lap of a loop or ping-pong. Leave *Marker name* empty to react to every marker on the timeline; \`event.marker\` and \`event.time\` say which one fired. Scrubbing and seeking do not fire markers, only playing.
 
 ![The timeline bar and tracks. The flag on the ruler is a marker.](help/timeline-markers.png)
 
@@ -1691,13 +1790,13 @@ Beside the Timeline is a list of every timeline on the open artboard (or compone
 - Double-click a name, or use the pencil, to rename it. Two timelines on one artboard cannot share a name.
 - Drag a row, or use the arrows, to reorder. The order matters for timelines that **hold their end pose**: a later one wins over an earlier one on the properties both key.
 - The copy button makes a duplicate right after it (it does not autoplay, so the two do not both start). The bin deletes it and warns first when something plays it: those interactions will stop working until you point them at another timeline.
-- On a component (an artboard that other artboards place as a layer) the list suggests the usual states, **Idle**, **Hover** and **Pressed**, and adds an empty timeline for any that is missing. A timeline named with a word like rest, over, click or down counts as that state.
-- The **List** button on the Timeline bar, the **x** on the list and the **View** menu all show and hide the list, and your choice is remembered for you.
+- On a component (a page that other pages place as a layer) the list says *Components usually have a timeline for each state. Missing:* and offers **+ Idle**, **+ Hover** and **+ Pressed** buttons for any that are missing. Each adds an empty timeline with that name. A timeline named with a word like rest, over, click or down counts as that state.
+- To hide the list, press the **x** at its top. To bring it back, press **Show the list** on the Timeline bar (in Design view), tick **Show the list of timelines** in the **View** menu, or press <kbd>Shift</kbd>+<kbd>L</kbd>. Your choice is remembered for you.
 
 ## Sound and captions rows
 Sound, Captions and Descriptions sit under the ruler in one group. When a timeline has no sound, captions or descriptions the group is folded to a single row, **Sound and captions**, that says what is in it. When it has some, the group is open. Click the arrow on that row to open or fold it by hand. Folded, the row still draws a mark for each clip and each cue along the time axis, so you can see where they are.
 
-The **View** button (the eye) on the Timeline bar lets you hide the Sound, Captions or Descriptions lane altogether, and turn off folding an empty group. Hiding a lane also hides its Add controls: turn it back on in the same menu. These choices are kept for you across projects.
+The **View** button (the eye) on the Timeline bar opens a menu with **Show the Sound lane**, **Show the Captions lane** and **Show the Descriptions lane**, which hide a lane altogether, and **Fold Sound and captions when empty**, which you can untick to keep the group open. Hiding a lane also hides its Add controls: tick it again in the same menu. These choices are kept for you across projects.
 
 ## Design view and timeline view
 There are two ways to look at an artboard.
@@ -1711,7 +1810,9 @@ Choose **Design view (no timeline)** in the same dropdown to go back. Record tur
 Two properties are not numbers. **Solo: active child** on a [solo group](groups-frames) switches which child shows, and **Draw order (children)** changes which child is in front. Both step at their keys instead of blending. Key them from the group's Solo and Draw order sections in the inspector.
 
 ## Playing from interactions
-**Play or stop an animation** plays, restarts, pauses, stops, reverses, toggles or jumps to a time in a timeline. Give *Play*, *Restart* or *Reverse* a **Blend in** time (ms) to fade the timeline's pose in over the pose the layers have now instead of cutting to it: numbers and colours mix, anything else switches once the new pose weighs more. That is how to switch between looks (idle to wave) smoothly. Blend-in is off with reduced motion. For what the look being left does meanwhile, the easing of the blend and cutting in on one, see [Transitions between looks](timelines#transitions-between-looks). From scripts: \`ix.timeline('Intro').play()\`. **When an animation finishes** fires when one finishes, and **When an animation reaches a marker** fires at each [marker](timelines#markers).
+**Play or stop an animation** plays, restarts, pauses, stops, reverses, toggles or jumps to a time in a timeline. Give *Play*, *Restart* or *Reverse* a **Blend in** time (ms) to fade the timeline's pose in over the pose the layers have now instead of cutting to it: numbers and colours mix, anything else switches once the new pose weighs more. That is how to switch between looks (idle to wave) smoothly. Blend-in is off with reduced motion.
+
+For what the look being left does meanwhile, the easing of the blend and cutting in on one, see [Transitions between looks](timelines#transitions-between-looks). From scripts: \`ix.timeline('Intro').play()\`. **When an animation finishes** fires when one finishes, and **When an animation reaches a marker** fires at each [marker](timelines#markers).
 
 ## Transitions between looks
 A transition is a **Blend in** on the node that starts the next look (**Play or stop an animation**, or **Start a blend** for a [blend](blends)). These settings shape it:
@@ -1739,7 +1840,9 @@ Put **Wait for time in timeline** after a condition to leave "no sooner than" a 
     group: 'Motion',
     summary: 'Fade in, Slide in, Pop, Pulse, Shake and Fade out on any layer, with one click.',
     keywords: 'animate animation preset fade in slide in pop pulse shake fade out entrance appear intro attention wiggle bounce click page opens delay reduced motion',
-    body: `Select a layer and open **Animate** in the Properties panel (or right-click the layer and choose **Animate**). Pick a preset and the layer is animated.
+    body: `**Animation presets** are ready-made movements for a layer: Fade in, Slide in, Pop, Pulse, Shake and Fade out, each added with one click and no timeline to build.
+
+Select a layer and open **Animate** in the Properties panel (or right-click the layer and choose **Animate**). Pick a preset and the layer is animated.
 
 ![The Animate section of the Properties panel: the six preset buttons, When, Slide in from, Delay and Length.](help/animation-presets.png)
 
@@ -1861,7 +1964,7 @@ Examples: a dial that turns with a variable, a character whose eyes follow the p
     keywords: 'blend mix weight 1d direct additive layer timelines locomotion speed rive blend state input transition smooth ease exit time gradually jump',
     body: `A **blend** plays several [timelines](timelines) together and mixes their poses. How much each one counts comes from number [variables](variables), so a single number can turn *idle* into *walk* into *run*.
 
-Add one in the **Blends** section of the artboard (select the artboard), then start it with a **Start a blend** node (or tick *Start with the artboard*). **Stop a blend** ends it.
+Add one in the **Blends** section of the artboard (select the artboard; it sits directly above **Joysticks**), then start it with a **Start a blend** node (or tick *Start with the artboard*). **Stop a blend** ends it.
 
 ![The Blends section with the example blend: Mode, Input, Start with the artboard and two timelines.](help/blends-section.png)
 
@@ -1898,7 +2001,9 @@ Use **Direct** when each pose should have its own weight (e.g. a *smile* and a *
 While a blend is on, each of its timelines plays on a playhead of the blend's own, following the timeline's loop setting. The same timeline can also play normally. Every frame the order is: normal timelines, [joysticks](joysticks), blends (in the order listed), then Animate property tweens. A blend therefore wins over a normal timeline animating the same property, except that Additive blends add to what the timeline wrote. *Start a blend* does nothing if the blend is already on; *Stop a blend* leaves the mixed pose where it is (Additive blends excepted).
 
 ## Easing a jump: Transition
-A number that jumps (a counter going from 0 to 1 when a button is pressed) makes the mix jump too. Give the blend a **Transition (ms)** and it eases its own mix to the new number over that long instead, say 250 for a quarter of a second. **Transition easing** shapes it (linear sweeps evenly). The variable itself changes at once and is not touched, so anything else that reads it is unaffected. If the number changes again half way, the mix turns round from wherever it has got to. With the viewer's reduced motion setting on, the mix follows the number at once. There is no setting on a connector in the graph: connections carry no values here, so the time lives on the blend.
+A number that jumps (a counter going from 0 to 1 when a button is pressed) makes the mix jump too. Give the blend a **Transition (ms)** and it eases its own mix to the new number over that long instead, say 250 for a quarter of a second. **Transition easing** shapes it (linear sweeps evenly).
+
+The variable itself changes at once and is not touched, so anything else that reads it is unaffected. If the number changes again half way, the mix turns round from wherever it has got to. With the viewer's reduced motion setting on, the mix follows the number at once. There is no setting on a connector in the graph: connections carry no values here, so the time lives on the blend.
 
 To ease the number itself, so that everything reading it moves smoothly (a bar bound to it, a text showing it), use **Over (ms)** on **Change a value or counter** (Set variable) with *Set to* or *Add*. Use that when you want the number visible as it moves, and a blend's Transition when only the pose should be smooth.
 
@@ -1989,16 +2094,32 @@ Pick a frame under **Scroll to scrub** and scrolling it moves the timeline: the 
 ## Sound
 - **Moving and trimming.** Drag a clip to start it later or earlier. Drag its left edge to skip the start of the file, its right edge to stop it sooner. The fields beside the timeline give exact milliseconds.
 - **Volume.** The clip has a level, and **volume keys** that multiply it over time: double-click the clip to add one, drag it up and down for the level and sideways for the time. **Fade out** adds two keys for you.
-- **Role.** **Narration** (the default) is speech and needs captions. **Music** and **Sound effect** do not. Muting a clip (the **M** button) keeps it in step but silent.
+- **Role.** **Narration** (the default) is speech and needs captions. **Music** and **Sound effect** do not. For music that runs across pages, see [Soundtrack music](captions#soundtrack-music). Muting a clip (the **M** button) keeps it in step but silent.
 - **It follows the timeline.** The sound plays when the timeline plays forwards inside the clip. It is silent when the timeline is paused, reversed or outside the clip, and it follows the timeline's speed (between a quarter and four times). When a timeline blends in, its sound comes in with it. A timeline that never started stays silent.
 - **Speed and pitch.** At another speed a clip keeps its pitch (it is time-stretched, like a browser's own audio player does it), so a voice at 1.25x sounds quicker, not higher. Untick **Keep pitch at other speeds** in the clip's settings for the record-player effect instead: faster is higher, slower is lower.
 - **Play sound, with options.** The **Play sound** node has a **Volume** (0 to 1), a **Speed** (0.25 to 4, 1 is as recorded) and a **Loop**. Each one takes a plain value or an expression, so a variable can drive them (a speed slider, a "looping" toggle). **Keep the pitch when the speed changes** is on by default, so a slowed clip stays at its own pitch where the browser allows it. **Stop other sounds first** is for comparing two clips: only one is heard at a time. Leave all of these alone and the node plays the sound once at full volume, as it always did.
-- **Soundtrack (music across pages).** Tick **Soundtrack: keep playing on the next pages** on a **Play sound** node (tick **Loop** too for music that goes round) and that sound is the project's music. It carries on when the page changes, instead of ending with the page. It goes quiet (to a quarter) while a narration clip, a description or **Speak** is heard over it, and comes back up after. It ends at a **Stop sound** node (it fades out), when the project is closed, or when the viewer starts over. There is one soundtrack at a time: a page that starts the one already playing just carries on (no second copy, so every page can start it safely), and a different one is crossfaded to. A paused project or a hidden tab keeps the music going silently and brings it back with the page. In a **When clicked…** behaviour, choose **Play music that carries on across pages** or **Stop the music**. Starting it inside an instance still makes it the project's. The viewer's sound button silences it like any other sound.
 - **Which sound.** Pick it in **Sound**, or fill **Sound from expression** to work it out while the project runs: a list item's sound field (an asset's name or id), say, so one button and one node can play any clip in a repeater. When the expression is filled it wins, and an empty answer plays nothing.
 - **Stopped, and what is playing.** **Play sound** and **Play recording** have a **Stopped** output. Wire it and **When it finishes** only continues when the sound really ends; if a **Stop sound** node (or another sound with **Stop other sounds first**) cuts it short, the flow goes out of **Stopped** instead. With the next node set to run straight away, or a loop, **Stopped** still fires later when it is stopped. Leave it unwired and nothing changes from before. In formulas, \`soundPlaying()\` is true while any Play sound sound is going (\`soundPlaying("Ding")\` for one asset by name), and \`soundsPlaying\` lists their names, so one button can read "Stop" while its sound plays. Scripts have \`ix.soundPlaying()\` and \`ix.soundsPlaying()\`.
 - **Stopping a loop.** A looping sound plays until a **Stop sound** node ends it (all of them, or just one sound), or until the viewer leaves the page, pauses the project or the tab goes to the background (the soundtrack is the exception: it carries on across pages). A loop never finishes, so the next node runs straight away. **Stop sound** also cuts a sound that is still playing once. It does not touch timeline audio, which follows its timeline.
 - **Media keys don't touch it.** Sound plays through the browser's Web Audio, not an audio player of its own, so the keyboard's play/pause key, headphone buttons and the system's media controls don't stop it behind the project's back. Only the project (its timelines and **Play sound**) decides what sounds.
 - **When the browser says no.** Browsers will not start sound until the viewer has clicked, tapped or pressed a key. Then the player shows **Sound is waiting. Press to start it**, and any click or key press on the page starts it too. That includes a **Play sound** that runs before anyone has clicked (from **When the page is shown** or a timer): it waits and plays at that first press. If several are waiting, only the latest plays, so a run of hover sounds doesn't all go off at once. Put a **Start** button in front of an autoplaying narration if the first seconds matter.
+
+## Soundtrack music
+Music that carries on from page to page, instead of ending when the page changes.
+
+1. In **Interactions**, add a **Play sound** node and pick the music.
+2. Tick **Soundtrack: keep playing on the next pages**, and **Loop** too if the music should go round.
+3. Start it from the first page (or any page). Every page can safely start it.
+
+Without the nodes, **+ When clicked…** on a layer has **Play music that carries on across pages** and **Stop the music**.
+
+What it does:
+- It carries on when the page changes, and keeps going silently if the project is paused or the tab is hidden, coming back with the page.
+- It goes quiet (to a quarter) while a narration clip, a description or **Speak** is heard over it, and comes back up after.
+- There is one soundtrack at a time. A page that starts the one already playing carries on, with no second copy. Starting a different one crossfades to it.
+- It ends at a **Stop sound** node (it fades out), when the project is closed, or when the viewer starts over.
+- Starting it inside an embedded page still makes it the project's.
+- The viewer's sound button silences it like any other sound.
 
 ## Captions
 - **Typing, pasting, importing.** Double-click empty space in a caption lane for a new caption, or use the **Captions** menu: **New caption at the playhead**, **Paste a transcript…**, **Import WebVTT or SRT…**, **Export WebVTT**, **Export SRT** and **Add a language…**.
@@ -2088,7 +2209,9 @@ Reading **while the video waits** (it pauses itself for a description that does 
 ## Three ways to use it
 - **Project setting.** In Project settings open **Read aloud** and tick **Offer read-aloud**. Every artboard gets one **Listen** button, a pause and a speed choice in the same corner. It reads the text layers that show, in layer order. Set **Language** (such as *en* or *fr-CA*) so only a voice for that language is used.
 - **A Listen button layer.** Press **Add a Listen button to this artboard** in the same section. It is an ordinary button with two nodes behind it (one reads the artboard, one stops it), and a line that shows when the device has no voice. Restyle and move it as you like.
-- **The Read aloud node.** In the Interactions tab, **Read aloud** says a text expression, a question and its options, the feedback after a check, or the whole artboard. The same node can **stop**, **pause**, **carry on**, say the **last thing again**, and make the learner's speed **slower** or **faster**. **Continue when it finishes** holds the next node until the words are said. **With no voice** set to *Announce the same words to screen readers* sends the words to the live region when the device has no voice for the language, so nobody misses feedback; **Only speak when** takes a condition (a "spoken prompts" variable, say) and while it is false the voice stays quiet and the words are announced instead if that choice is on.
+- **The Read aloud node.** In the Interactions tab, **Read aloud** says a text expression, a question and its options, the feedback after a check, or the whole artboard.
+
+The same node can **stop**, **pause**, **carry on**, say the **last thing again**, and make the learner's speed **slower** or **faster**. **Continue when it finishes** holds the next node until the words are said. **With no voice** set to *Announce the same words to screen readers* sends the words to the live region when the device has no voice for the language, so nobody misses feedback; **Only speak when** takes a condition (a "spoken prompts" variable, say) and while it is false the voice stays quiet and the words are announced instead if that choice is on.
 
 ## What the learner gets
 **Listen** starts it, the same button pauses and carries on, and a speed menu offers 0.75, 1, 1.25 and 1.5. The speed is remembered in their browser with their caption and sound choices. Reading never starts by itself: iOS only lets the first words start from a tap, and a voice starting uninvited clashes with a screen reader. Speech stops when the learner moves to another artboard.
@@ -2112,6 +2235,7 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
 - Maths, drug names, abbreviations and mixed-language text read badly: use **Say it like**.
 - A screen reader user already has a reader, and two voices at once is worse than one. The Listen button is a plain button they can skip, and it is not the route to offer them.
 - The first words must start from a click or tap, so put a Read aloud node behind a button or key, not a timer.
+- Music marked as a **Soundtrack** goes quiet under the voice and comes back after it: see [Soundtrack music](captions#soundtrack-music).
 - The **Audio-first quiz** starter (Templates, Built-in, Quizzes and questions) is a whole quiz built on this: it reads each question and its options, the keys 1 to 4 answer, R repeats, S slows, H gives a hint and Space pauses, and the score page speaks the score and offers the missed questions again. With no voice it is an ordinary keyboard quiz.`,
   },
   {
@@ -2122,37 +2246,72 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
     keywords: 'interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing behaviour recipe when clicked hovered show hide next page sound counter switch sentences read explain condition picker only if turn off remove',
     body: `Open the **Interactions** tab. Each page has its own graph. The nodes are named for what happens (*When clicked or hovered*, *Play or stop an animation*); hover one to see the technical name it has in the file (*On pointer*, *Control timeline*), which is also in the [node reference](interaction-nodes) and what search finds. Preferences has a **Technical wording** switch if you would rather see those.
 
-**Room for the graph.** The bottom panel is a short strip, so opening **Interactions** (from a layer's **+ On click**, one of its interaction chips, or the tab itself) lifts the panel to a comfortable height, and puts it back when you move to another tab. It only does that when the panel is still at its normal height: one you sized yourself is left alone. Drag the top edge of the panel while the graph is open and that height is remembered for next time (in this browser).
+## Room for the graph
+The bottom panel is a short strip, so opening **Interactions** (from a layer's **+ When clicked…**, one of its interaction chips, or the tab itself) lifts the panel to a comfortable height, and puts it back when you move to another tab. It only does that when the panel is still at its normal height: one you sized yourself is left alone. Drag the top edge of the panel while the graph is open and that height is remembered for next time (in this browser).
 
-**See-through layers don't take clicks.** While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
+## See-through layers don't take clicks
+While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
 
 ![The Interactions section of a layer whose opacity is 50%: the note says it can't be clicked while playing until it is fully showing, and the Clickable while see-through tick overrides that.](help/see-through-toggle.png)
 
+## The three kinds of node
 - **Events** (green) start a flow: a click, a key, a timer, a variable changing, a timeline ending, a message from the host page, scrolling, data loading, the artboard starting, or the activity loading.
 - **Actions** (blue) do something and continue: **Play or stop an animation**, **Start a blend**, **Wait** (milliseconds, or an expression such as \`pace <= 4 ? 4000 : 8000\`, worked out when the wait starts), **Wait for blend-in**, **Wait for time in timeline**, **Change a value or counter**, **Put values back to the start**, **Change a layer's setting**, **Animate a layer's setting**, **Show or hide a layer**, **Go to a page**, **Open a web address**, **Play sound**, **Control video**, **Run script**, **Send message**, **Wait** and more.
 - **Logic** (purple) chooses where to go: **Check a condition** (a **true** and a **false** output), **Alternate between two paths** (alternates between **a** and **b**), **Only the first time**, **Do these in order** (runs **1**, then **2**, then **3**) and **Random** (continues down one of up to six outputs, picked at random; *Weights* is a list that sets each output's chance, [1, 3] making the second three times as likely, and *Only if* is a list of conditions, so an output whose condition is false is never picked).
 
 ![The Interactions tab: the node palette, the graph and the settings of the selected node.](help/interactions-panel.png)
 
-**When clicked or hovered** reacts to a click, double click, press, release, hover start and end, the pointer **moving over** a layer, and **dragging** it: *Drag starts* (once the pointer has moved a few pixels with the button held), *Dragging* (on every move after that, even outside the layer) and *Drag ends*. Moves and drags give \`event.x\` and \`event.y\` (artboard coordinates) and \`event.stepX\`, \`event.stepY\` (movement since the last event); drags also give \`event.dx\` and \`event.dy\` (movement since the press), so *Change a layer's setting* with \`x\` and an expression like \`start + event.dx\` moves a layer with the pointer. Drags also give \`event.index\`, the [repeated](repeaters) copy the pointer is over right now (\`null\` over anything else), and \`event.startIndex\`, the copy it was pressed on, so a word-search grid or a board of cells can tell which cell the learner has reached without any maths on positions.
+## When clicked or hovered
+This event reacts to a click, double click, press, release, hover start and end, the pointer **moving over** a layer, and **dragging** it: *Drag starts* (once the pointer has moved a few pixels with the button held), *Dragging* (on every move after that, even outside the layer) and *Drag ends*. 
 
-**Which layer inside was hit.** With a layer picked, *When clicked or hovered*, *When a key is pressed* and *When a layer is focused* also give \`event.child\`, the name of the layer's own child (the direct child, however deep the hit) that the event landed in, and \`event.childIndex\`, that child's place in the layer from 0 (they are \`null\` and \`-1\` when it landed on the layer itself). For a [repeater](repeaters) the children are its copies, so \`event.childIndex\` is the copy. Put one *When clicked or hovered* on the group that holds a row of hotspots, dots or cards and use \`event.child\` or \`event.childIndex\` in the flow, instead of one event and one chain of nodes for each. Adding an item is then duplicating a layer. Tick **Only when a child is hit** to leave out clicks that land on the group's own background.
+Moves and drags give \`event.x\` and \`event.y\` (artboard coordinates) and \`event.stepX\`, \`event.stepY\` (movement since the last event); drags also give \`event.dx\` and \`event.dy\` (movement since the press), so *Change a layer's setting* with \`x\` and an expression like \`start + event.dx\` moves a layer with the pointer.
 
-**When a key is pressed** reacts to a key going down or up anywhere on the page (the page itself, not only the artboard). Leave **Key** empty for any key, or write a name such as \`ArrowLeft\`, \`Enter\`, \`a\` or \`Space\`. Tick **Shift held**, **Ctrl held**, **Alt held** or **Meta held** to ask for a chord; they must all be down. A key held down fires once, unless **Fire again while held** is ticked. \`event.key\`, \`event.code\` and \`event.shift\`, \`event.ctrl\`, \`event.alt\`, \`event.meta\` say what was pressed. Pick a layer in **Only while this layer has focus** to hear the key only while that layer, or a layer inside it, has keyboard focus (the layer becomes a tab stop, and you can use the [Focus layer node](interaction-nodes) to move the focus there); leave it empty to react wherever the focus is. Keys typed into a text box or text area are left alone, so typing never sets a flow off. To run something when the learner presses **Enter in a box** (an answer box that checks, a search that runs), set **Key** to \`Enter\`, pick the box (or the frame around it) in **Only while this layer has focus**, and tick **Also while typing in a text box**. A key that runs a flow is not also used by the browser: an arrow key, <kbd>Space</kbd>, Page Up and Down, Home, End, Enter, Backspace or a letter that a *When a key is pressed* node handled does not also scroll the page, so a game or a grid can use them. Tab, Escape, the function keys and anything held with Ctrl, Alt or Meta are never taken, and a *When a key is pressed* with no key and no layer picked (it hears everything) takes nothing. Tick **Let the browser act too** on a node that should leave the key to the page as well.
+Drags also give \`event.index\`, the [repeated](repeaters) copy the pointer is over right now (\`null\` over anything else), and \`event.startIndex\`, the copy it was pressed on, so a word-search grid or a board of cells can tell which cell the learner has reached without any maths on positions.
 
-**Before activity loads** and **When the activity has loaded** run once each time the activity is opened, unlike **When the page is shown**, which runs every time an artboard is shown. *Before activity loads* runs first, before anything is on screen, and the activity waits for everything it sets off to finish (up to 10 seconds) before it shows: the place for a **Load saved progress** or a **Change a value or counter** that the first frame should already have. *When the activity has loaded* runs once the activity is showing, just before the first *When the page is shown*. Both fire on the artboard the activity opens on, so put them in that artboard's graph. **Start over** doesn't run them again.
+### Which layer inside was hit
+With a layer picked, *When clicked or hovered*, *When a key is pressed* and *When a layer is focused* also give \`event.child\`, the name of the layer's own child (the direct child, however deep the hit) that the event landed in, and \`event.childIndex\`, that child's place in the layer from 0 (they are \`null\` and \`-1\` when it landed on the layer itself). For a [repeater](repeaters) the children are its copies, so \`event.childIndex\` is the copy. Put one *When clicked or hovered* on the group that holds a row of hotspots, dots or cards and use \`event.child\` or \`event.childIndex\` in the flow, instead of one event and one chain of nodes for each. Adding an item is then duplicating a layer. Tick **Only when a child is hit** to leave out clicks that land on the group's own background.
 
-**When a layer is focused** reacts to a layer gaining or losing keyboard focus, which is what tabbing, clicking or the **Focus layer** action does. A layer with a *When a layer is focused* node becomes a tab stop; buttons, inputs and links already are, and so is any layer with a click or a button role (see [Accessibility](accessibility)). **Focus layer** gives a layer focus, or clears whatever has it (for example on <kbd>Escape</kbd>). It draws any change that has not been drawn yet first, so a layer an earlier node has just shown can take the focus straight away without a **Wait** in front of it. A layer that is still hidden or disabled is tried again for a few frames, then left alone.
+## When a key is pressed
+This event reacts to a key going down or up anywhere on the page (the page itself, not only the artboard). Leave **Key** empty for any key, or write a name such as \`ArrowLeft\`, \`Enter\`, \`a\` or \`Space\`. Tick **Shift held**, **Ctrl held**, **Alt held** or **Meta held** to ask for a chord; they must all be down. A key held down fires once, unless **Fire again while held** is ticked. \`event.key\`, \`event.code\` and \`event.shift\`, \`event.ctrl\`, \`event.alt\`, \`event.meta\` say what was pressed.
 
-**Only if.** Every event node has an **Only if** field. Leave it empty and the event always runs its flow. Write an expression and the flow runs only when it is true: \`running\` on a timer, \`event.value >= 0\` on a variable change, \`selected >= 0\` on a key. \`event\` is in scope, so it can look at what fired. The condition is on the node, with a short \`if …\` under its name, so the graph reads without a guard **Check a condition** after every event. A key whose condition is false is not taken from the browser either, so the page still scrolls.
+Pick a layer in **Only while this layer has focus** to hear the key only while that layer, or a layer inside it, has keyboard focus (the layer becomes a tab stop, and you can use the [Focus layer node](interaction-nodes) to move the focus there); leave it empty to react wherever the focus is. Keys typed into a text box or text area are left alone, so typing never sets a flow off.
 
-**On timer.** *Every (ms)* is an expression read again every time round, so a pace can follow a variable (\`1500 - level * 100\`). **Only while** is a condition: while it is false the timer does not fire and its time does not count, and when it turns true the wait starts over, so \`running\` makes a timer you can stop and start. Tick **Steady** for a clock or a beat: each fire is planned from the start, so a slow moment is made up for and the timer does not drift. \`event.count\` is how many times it has fired and \`event.elapsed\` how many milliseconds it has been running. The editor's canvas does not run timers; Preview does.
+To run something when the learner presses **Enter in a box** (an answer box that checks, a search that runs), set **Key** to \`Enter\`, pick the box (or the frame around it) in **Only while this layer has focus**, and tick **Also while typing in a text box**.
 
-**Countdown / clock** keeps time for you. Pick a number variable, then **Start** it counting **down** from a number of seconds, or **up** (to a limit, or without end when the limit is 0). It writes the variable about four times a second, as whole seconds by default, so a text layer showing \`{left}\` is a countdown. **Pause** holds it, **Resume** carries on, **Reset** puts the variable back and stops it. When a countdown reaches 0 (or a clock its limit) the **Time up** output continues. Leaving the artboard holds the clock still where it was; a new **Start** or **Resume** takes it up again. There is one clock for each variable.
+A key that runs a flow is not also used by the browser: an arrow key, <kbd>Space</kbd>, Page Up and Down, Home, End, Enter, Backspace or a letter that a *When a key is pressed* node handled does not also scroll the page, so a game or a grid can use them. Tab, Escape, the function keys and anything held with Ctrl, Alt or Meta are never taken, and a *When a key is pressed* with no key and no layer picked (it hears everything) takes nothing. Tick **Let the browser act too** on a node that should leave the key to the page as well.
 
-**Go to a page** goes to the artboard you pick, or to **Next artboard** or **Previous artboard**, or **Back** to where the learner came from (their own path, however they got there), or to the artboard an **expression** names (a name or an id). Next and previous follow the artboards in the project's order, in the artboard's [group](artboards) when it is in one (an artboard in no group counts every page), leaving out the narrow and wide versions of a [responsive set](responsive) and a library component's own copy. Duplicating or reordering a page keeps the links right, with no neighbours to rewire. When there is nowhere to go (the last page, the first, nothing to go back to, a name that matches nothing) the flow continues from the **No artboard** output, so a Next button can do something else on the last page. In an expression, \`pageNumber\` is the page's place from 1 and \`pageCount\` how many pages there are, for a footer like \`Page {pageNumber} of {pageCount}\`; \`artboard.index\` (from 0), \`artboard.count\` and \`artboard.group\` say the same. **Go to step** is the other kind of Next: it moves through the steps of one artboard. Its **Transition** is one of: instant, fade, slide left, right or up, wipe left, right, up or down (the new page is uncovered from that edge), push left, right, up or down (the new page shoves the old one off, which dims), **iris** (a circle opens over the old page), **zoom** (the old page grows round a point as it fades, the new one grows in), **wipe diagonally** (from the top left corner), **barn doors** (opening from the middle), a **star**, **diamond** or **heart** that opens out, a **clock** hand that sweeps round, **blinds**, a **grid of squares**, **crosshatch** lines or **dots** that grow until they meet, **dissolve** (the new page appears a scatter of pixels at a time, the same noise as the Dissolve blend mode) and **cube** (both pages turn like the sides of a box; what is behind the stage shows round it as it turns). Dissolve is the heaviest for the device to draw, so on a big stage or an older laptop it is the one most likely to stutter. Iris, zoom, star, diamond, heart and clock start from **Opens from**: the layer that was clicked (the middle of the page when nothing was clicked, say from a timer), the middle of the page, or a point you give as percentages. Scripts use the same names: \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer named Door, and a point is \`{ x: 25, y: 50, percent: true }\`. **Speed** (the \`duration\`, in milliseconds) is offered as **Slow** (600), **Medium** (300, what it has always been), **Fast** (150) or **Custom**, which shows the number; it is stored as that plain number, so a project saved before the choice existed shows the right one, and it is not asked for an instant change. Reduced motion makes every one instant.
+## When the activity opens
+**Before activity loads** and **When the activity has loaded** run once each time the activity is opened, unlike **When the page is shown**, which runs every time an artboard is shown.
 
-Drag from an output port to the next node's input to connect them. Actions that take time (**Play or stop an animation**, **Animate a layer's setting**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away. Let go on empty space instead and a menu offers only the nodes that fit (actions and logic when you drag from an output, anything with an output when you drag backwards from an input); the one you pick is added where you let go and connected for you, and one <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes the node and its connection back together (clicking a node only selects it, which is not an undo step). Press <kbd>Escape</kbd> or click away to cancel.
+*Before activity loads* runs first, before anything is on screen, and the activity waits for everything it sets off to finish (up to 10 seconds) before it shows: the place for a **Load saved progress** or a **Change a value or counter** that the first frame should already have. *When the activity has loaded* runs once the activity is showing, just before the first *When the page is shown*. Both fire on the artboard the activity opens on, so put them in that artboard's graph. **Start over** doesn't run them again.
+
+## When a layer is focused
+This event reacts to a layer gaining or losing keyboard focus, which is what tabbing, clicking or the **Focus layer** action does. A layer with a *When a layer is focused* node becomes a tab stop; buttons, inputs and links already are, and so is any layer with a click or a button role (see [Accessibility](accessibility)). **Focus layer** gives a layer focus, or clears whatever has it (for example on <kbd>Escape</kbd>). It draws any change that has not been drawn yet first, so a layer an earlier node has just shown can take the focus straight away without a **Wait** in front of it. A layer that is still hidden or disabled is tried again for a few frames, then left alone.
+
+## Only if
+Every event node has an **Only if** field. Leave it empty and the event always runs its flow. Write an expression and the flow runs only when it is true: \`running\` on a timer, \`event.value >= 0\` on a variable change, \`selected >= 0\` on a key. \`event\` is in scope, so it can look at what fired. The condition is on the node, with a short \`if …\` under its name, so the graph reads without a guard **Check a condition** after every event. A key whose condition is false is not taken from the browser either, so the page still scrolls.
+
+## On timer
+*Every (ms)* is an expression read again every time round, so a pace can follow a variable (\`1500 - level * 100\`). **Only while** is a condition: while it is false the timer does not fire and its time does not count, and when it turns true the wait starts over, so \`running\` makes a timer you can stop and start. Tick **Steady** for a clock or a beat: each fire is planned from the start, so a slow moment is made up for and the timer does not drift. \`event.count\` is how many times it has fired and \`event.elapsed\` how many milliseconds it has been running. The editor's canvas does not run timers; Preview does.
+
+## Countdown / clock
+The **Countdown / clock** node keeps time for you. Pick a number variable, then **Start** it counting **down** from a number of seconds, or **up** (to a limit, or without end when the limit is 0). It writes the variable about four times a second, as whole seconds by default, so a text layer showing \`{left}\` is a countdown. **Pause** holds it, **Resume** carries on, **Reset** puts the variable back and stops it. When a countdown reaches 0 (or a clock its limit) the **Time up** output continues. Leaving the artboard holds the clock still where it was; a new **Start** or **Resume** takes it up again. There is one clock for each variable.
+
+## Go to a page
+The **Go to a page** node goes to the page you pick, or to **Next artboard** or **Previous artboard**, or **Back** to where the learner came from (their own path, however they got there), or to the artboard an **expression** names (a name or an id). Next and previous follow the artboards in the project's order, in the artboard's [group](artboards) when it is in one (an artboard in no group counts every page), leaving out the narrow and wide versions of a [responsive set](responsive) and a library component's own copy. Duplicating or reordering a page keeps the links right, with no neighbours to rewire.
+
+When there is nowhere to go (the last page, the first, nothing to go back to, a name that matches nothing) the flow continues from the **No artboard** output, so a Next button can do something else on the last page.
+
+In an expression, \`pageNumber\` is the page's place from 1 and \`pageCount\` how many pages there are, for a footer like \`Page {pageNumber} of {pageCount}\`; \`artboard.index\` (from 0), \`artboard.count\` and \`artboard.group\` say the same.
+
+**Go to step** is the other kind of Next: it moves through the steps of one artboard.
+
+Its **Transition** is how the page changes, and **Speed** is how long that takes: see [How the page changes](links-cursors#how-the-page-changes) for every look, **Opens from** and the speeds.
+
+## Connecting and adding nodes
+Drag from an output port to the next node's input to connect them. Actions that take time (**Play or stop an animation**, **Animate a layer's setting**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away.
+
+Let go on empty space instead and a menu offers only the nodes that fit (actions and logic when you drag from an output, anything with an output when you drag backwards from an input); the one you pick is added where you let go and connected for you, and one <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes the node and its connection back together (clicking a node only selects it, which is not an undo step). Press <kbd>Escape</kbd> or click away to cancel.
 
 ![Dragging a connection into empty space adds a node and joins it.](help/drag-to-connect.mp4)
 
@@ -2166,8 +2325,10 @@ A **graph note** is the same sticky note as on the canvas, but it lives in a gra
 - The **eye button** that hides the notes on the canvas hides graph notes too, and its count includes them. Copying a node or group copies the notes that follow it.
 
 ## The palette, search and the artboard picker
+The left column of the **Interactions panel** holds the artboard picker, the node search and the palette.
 - The **artboard picker** at the top of the left column says whose graph you are looking at, with its node count (**Word · 12 nodes**, or **no nodes yet**). Open it to switch: the artboards are grouped as in the Layers panel, and page masters are listed apart at the end. With many artboards it has a search box. It is the same thing as selecting the artboard on the canvas or in Layers, so each follows the other, and picking one also brings the canvas to that artboard. <kbd>Alt</kbd>+<kbd>Up</kbd> and <kbd>Alt</kbd>+<kbd>Down</kbd> (or <kbd>Ctrl</kbd>+<kbd>[</kbd> and <kbd>Ctrl</kbd>+<kbd>]</kbd>) step to the previous or next artboard's graph while you are in the Interactions tab. Choosing an artboard changes what you see, never the project, so nobody else editing is disturbed.
 - **Search nodes** finds a node by what it does, not only by its name: *goto*, *navigate* or *page* find **Go to a page**; *condition* finds **Check a condition**; *wait*, *delay* or *pause* find **Wait**; *audio* finds **Play sound**; *tap* finds **When clicked or hovered**. Small typos are forgiven. Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> anywhere in the tab to go to it, <kbd>Esc</kbd> to clear it, <kbd>Enter</kbd> to add the best match, or the down arrow to move onto the matches. The menu you get from right-clicking the graph, or from dragging a connection into empty space, searches the same way.
+- Select a node and its settings open with a one-sentence description and a **More about … →** link to its full entry in the [node reference](interaction-nodes).
 - The **Events**, **Actions** and **Logic** chips show just that kind, and **Topics** has a chip for each topic (Pointer and keys, Variables, Questions, Dragging and so on). Chips combine with each other and with what you type.
 - Each topic heading folds. Click it (or press <kbd>Enter</kbd> or <kbd>Space</kbd> on it) to fold or open it; a folded one still shows how many nodes it holds. <kbd>Alt</kbd>+click, or right-click and **Only this one open**, leaves just that topic open, and the right-click menu also has **Fold all** and **Open all**. Which are open is remembered in this browser, with the common ones open to begin with. While you search or use a chip, every topic with a hit opens for as long as you do, and your folds come back when you clear it.
 
@@ -2208,7 +2369,12 @@ Pick one, answer the question it asks (the line at the bottom reads back what it
 
 The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the event, for building the flow by hand in the graph.
 
-**It shows you what it made.** The moment you press **Add** (or add an empty event, or a **When the playhead reaches this…** from a marker), the bottom panel opens on **Interactions** (unfolded if it was put away, and switched over if another tab was showing), the graph pans and zooms so the new nodes fit with a little room round them (never closer than 100%), they are picked together, and they glow for a moment (no glow, and no animated pan, if your computer is set to reduce motion). Keyboard focus moves to the new **When clicked or hovered** event, so <kbd>Del</kbd> and the arrow keys now act on the graph, and a screen reader is told, for example, **Added When clicked: go to the next page**. Nothing moves when the change is someone else's live edit, an undo or redo, or an agent's. If you build only from the Inspector and want the view left alone, untick **Show new interactions in the graph** in Preferences: the nodes are then just picked in the graph, as before.
+### See what you just added
+**See what you just added.** The moment you press **Add** (or add an empty event, or a **When the playhead reaches this…** from a marker), the bottom panel opens on **Interactions** (unfolded if it was put away, and switched over if another tab was showing), the graph pans and zooms so the new nodes fit with a little room round them (never closer than 100%), they are picked together, and they glow for a moment (no glow, and no animated pan, if your computer is set to reduce motion).
+
+Keyboard focus moves to the new **When clicked or hovered** event, so <kbd>Del</kbd> and the arrow keys now act on the graph, and a screen reader is told, for example, **Added When clicked: go to the next page**.
+
+Nothing moves when the change is someone else's live edit, an undo or redo, or an agent's. If you build only from the Inspector and want the view left alone, untick **Show new interactions in the graph** in Preferences: the nodes are then just picked in the graph, as before.
 
 ## What a layer does, in sentences
 The Inspector's **Interactions** section lists what the layer does as sentences made from its graph: **When clicked: show Hint text, then wait 2 s, then hide Hint text.** A check reads **check whether score is at least 5 (if so: …; if not: …)**, and a long chain stops with **and 4 more steps**. An event with nothing joined to it says **nothing happens yet**, so a click that does nothing is no longer a mystery. Under each sentence:
@@ -2220,9 +2386,22 @@ The Inspector's **Interactions** section lists what the layer does as sentences 
 The **Read as sentences** button over the graph (beside **Graph**) shows the whole page as sentences, one block per event, with the steps and the ways a check splits underneath. It is read only and made from the graph each time, so it cannot say something the graph does not. Pick a line to see that node's settings, **Show in graph** to go back to it, or **Copy as text** for all of it. Steps nothing starts are listed at the end as **Not joined to anything, so these never run**. It is the quickest way to understand a template someone else built.
 
 ## Conditions with pickers
-Wherever the graph asks for a yes/no condition (a **Check a condition** node's condition, an event's **Only if**, a timer's **Only while**, and the formula of a yes/no binding such as visible), the field is three pickers: a value (a variable), how to compare it (**is**, **is not**, **is at least**, **is at most**, **is more than**, **is less than**, **contains**, **is empty**, **is not empty**, **is on**, **is off**) and what to compare it with (a number, a piece of text, on or off, or another value). **+ and** and **+ or** add rows. **Edit as formula** shows the formula the pickers write (\`score >= 5 && !done\`) and lets you type it. A formula the pickers cannot show in full, such as one with arithmetic, brackets or a function, simply opens as a formula and is never rewritten. The line under it says what it works out to now.
+Wherever the graph asks for a yes/no condition (a **Check a condition** node's condition, an event's **Only if**, a timer's **Only while**, and the formula of a yes/no binding such as visible), the field is three pickers: a value (a variable), how to compare it (**is**, **is not**, **is at least**, **is at most**, **is more than**, **is less than**, **contains**, **is empty**, **is not empty**, **is on**, **is off**) and what to compare it with (a number, a piece of text, on or off, or another value).
 
-Test in **Preview**: the event list shows each event as it fires. Every node is listed in [Interaction node reference](interaction-nodes). For a walk-through, see [Tutorial 2](tutorial-first-interaction).
+**+ and** and **+ or** add rows. **Edit as formula** shows the formula the pickers write (\`score >= 5 && !done\`) and lets you type it. A formula the pickers cannot show in full, such as one with arithmetic, brackets or a function, simply opens as a formula and is never rewritten. The line under it says what it works out to now.
+
+## See what ran
+Press **Preview** to test. The Events list shows each event as it fires. For the whole picture, press **Beside editor** in the Preview's top bar and Preview moves up to the right, leaving the canvas and this graph showing underneath.
+
+While you click through it:
+- Every node that runs lights up green, with the word *ran*.
+- An event whose **Only if** said no goes grey (*held back*).
+- The wire that was followed pulses.
+- A ring flashes round the layer you clicked: green when the click started something, red when it started nothing.
+
+When a click starts nothing, the Events list says why under **Why did nothing happen?**. See [Preview](interface#preview) for the rest. The lights show only in the editor, never in exports or shared links.
+
+Every node is listed in [Interaction node reference](interaction-nodes). For a walk-through, see [Tutorial 2](tutorial-first-interaction).
 
 ## What's in scope
 Expression fields can use every variable and data source by name, \`event\` (details of what fired: \`event.key\`, \`event.x\`, \`event.index\` for a repeated copy, \`event.child\` for the layer inside that was hit, \`event.count\` and \`event.elapsed\` on a timer, \`event.payload\` for a message), \`pageNumber\` and \`pageCount\`, and \`Math\`.
