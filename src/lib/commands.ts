@@ -8,11 +8,11 @@ import { store } from '../store/store';
 import { prefs, setPrefs } from './prefs';
 import { SNAP_ITEMS, toggleSnap } from './snapping';
 import { TOOL_HELP } from '../help/context';
-import { keyHints, runCommand } from './keymap';
+import { commandById, keyHints, keymapIdFor, runCommand } from './keymap';
 import { openShortcuts } from './shortcuts-sheet';
 import { ANIM_PRESETS, animOptions } from './animate-presets';
 import { RECIPES } from './recipes';
-import { ALL_PANELS, setDock, showPanel, type PanelId } from './dock';
+import { ALL_PANELS, resetDock, setDock, showAll, showPanel, type PanelId } from './dock';
 import { BUILT_IN, applyWorkspace, savedWorkspaces } from './workspaces';
 import { lookDefaults } from './themes';
 import { fontStack } from './font-catalog';
@@ -20,11 +20,15 @@ import { addQuestion } from './question-kit';
 import { addPageNavigation } from './page-nav';
 import { setShowRoutes, showRoutes } from './page-routes-pref';
 import { openBehaviours } from '../components/BehaviourDialog';
-import { requestAppAction } from './app-actions';
+import { requestAppAction, type AppAction } from './app-actions';
 import { openShareForReview } from './comments';
 import { importGiftFile } from './gift-import';
 import { openPasteQuestions } from '../components/PasteQuestionsModal';
-import { deleteSelectionCommand } from './artboard-commands';
+import { deleteSelectionCommand, fitPageCommand, groupArtboardsCommand, renameGroupCommand, selectionGroupInfo } from './artboard-commands';
+import { pickedArtboardIds } from './artboard-groups';
+import { addInteraction } from './interaction-add';
+import { selectSameItems } from './layer-find';
+import { linkColoursCommand } from './link-colours-action';
 import { tidyArtboardsCommand } from './tidy-command';
 import { openHelpSearch } from '../help/Help';
 import type { BottomTab, Tool } from '../store/store';
@@ -41,6 +45,8 @@ export interface Command {
   hint?: string;
   /** A switch: whether it is on now (the palette says On or Off). */
   on?: boolean;
+  /** One of a list that follows the project (a page, a layer, a saved workspace): it cannot have a key of its own. */
+  dynamic?: boolean;
   /** Why it cannot run right now, when it cannot. */
   disabled?: string;
   run: () => void;
@@ -53,7 +59,7 @@ export function registerCommandProvider(fn: () => Command[]): () => void {
   return () => void providers.delete(fn);
 }
 
-const NEW_LAYERS: { type: NodeType; label: string; words: string }[] = [
+export const NEW_LAYERS: { type: NodeType; label: string; words: string }[] = [
   { type: 'rect', label: 'Rectangle', words: 'box square shape' },
   { type: 'ellipse', label: 'Ellipse', words: 'circle oval shape' },
   { type: 'polygon', label: 'Polygon', words: 'shape triangle' },
@@ -94,6 +100,27 @@ export const PANEL_NAMES: Record<PanelId, { label: string; words: string }> = {
 };
 
 const BOTTOM_TABS: PanelId[] = ['timeline', 'logic', 'scripts', 'variables', 'data', 'usage', 'a11y', 'insights', 'interface', 'checklist', 'content', 'themes', 'credits'];
+
+/** Show a panel (and bring its tab forward when it lives in the bottom tabs). */
+export function openPanel(id: PanelId): void {
+  setDock((l) => showPanel(l, id));
+  if (BOTTOM_TABS.includes(id)) store().set({ bottomTab: id as BottomTab });
+}
+
+/** The exports the top bar has, as the app actions that run them (the page ones need an open page). */
+export const EXPORTS: readonly [string, string, string][] = [
+  ['export-html', 'Export: single HTML file', 'download standalone'],
+  ['export-package', 'Export: project package', 'download ixp backup'],
+  ['export-json', 'Export: project JSON', 'download document'],
+  ['export-dts', 'Export: TypeScript definitions (.d.ts)', 'download types public interface'],
+  ['export-png', 'Export: PNG picture of this page', 'download image'],
+  ['export-png-1x', 'Export: PNG picture of this page at actual size', 'download image 1x'],
+  ['export-svg', 'Export: SVG picture of this page', 'download image vector'],
+  ['export-lottie', 'Export: Lottie animation of this page', 'download json'],
+  ['export-dotlottie', 'Export: dotLottie animation of this page', 'download lottie package'],
+  ['motion', 'Export: video, GIF or frames', 'download mp4 webm animation'],
+];
+const NO_PAGE_NEEDED = ['export-html', 'export-package', 'export-json', 'export-dts'];
 
 /** Put the view on a page: it becomes the open one and the canvas pans and zooms to it. */
 export function goToPage(id: string): void {
@@ -164,19 +191,35 @@ export function buildCommands(): Command[] {
   add({ id: 'question:gift', title: 'Import questions from a GIFT file', group: 'Questions', words: 'moodle quiz', run: () => void importGiftFile() });
 
   //---- Pages
-  p.artboards.forEach((a) => add({ id: `page:${a.id}`, title: `Go to page: ${a.name}`, group: 'Pages', words: 'open show jump', run: () => goToPage(a.id) }));
+  p.artboards.forEach((a) => add({ id: `page:${a.id}`, title: `Go to page: ${a.name}`, group: 'Pages', words: 'open show jump', dynamic: true, run: () => goToPage(a.id) }));
   add({ id: 'page:component', title: 'Insert a component here…', group: 'Pages', words: 'place instance embed page artboard reuse', disabled: noPage ?? (p.artboards.length < 2 ? 'Needs two or more pages' : undefined), run: () => void openInsertComponentPicker() });
   add({ id: 'page:start', title: 'Make this the start page', group: 'Pages', words: 'first page opens', disabled: noPage ?? (p.settings.startArtboardId === ab?.id ? 'It already is' : undefined), run: () => s.update((d) => void (d.settings.startArtboardId = ab!.id)) });
   add({ id: 'page:duplicate', title: 'Duplicate this page', group: 'Pages', words: 'copy artboard', disabled: noPage, run: () => s.duplicateArtboards([ab!.id]) });
   add({ id: 'page:nav', title: 'Add Back and Next buttons to every page', group: 'Pages', words: 'navigation arrows move between pages', disabled: p.artboards.length < 2 ? 'Needs two or more pages' : undefined, run: () => s.update((d) => void addPageNavigation(d, d.artboards.map((a) => a.id), 'back-next')) });
   add({ id: 'page:tidy', title: 'Tidy up the pages on the canvas', group: 'Pages', words: 'arrange grid artboards', disabled: p.artboards.filter((a) => !a.canvasHidden).length < 2 ? 'Needs two or more pages' : undefined, run: () => tidyArtboardsCommand() });
+  add({ id: 'page:zoom', title: 'Zoom to the open page', group: 'Pages', words: 'fit artboard view', disabled: noPage, run: () => void runCommand('zoom-page') });
+  add({ id: 'page:fit-selection', title: 'Fit page to selection', group: 'Pages', words: 'artboard resize shrink wrap crop trim bounds selected layers', disabled: noPage ?? noSel, run: () => void fitPageCommand() });
+  add({ id: 'page:fit-padding', title: 'Fit page to selection with space around…', group: 'Pages', words: 'artboard resize padding margin selected layers', disabled: noPage ?? noSel, run: () => void fitPageCommand({ ask: true }) });
+  add({ id: 'page:fit-layers', title: 'Fit page to all its layers', group: 'Pages', words: 'artboard resize shrink wrap crop trim bounds', disabled: noPage ?? (ab?.children.length ? undefined : 'This page has no layers'), run: () => void fitPageCommand({ layers: true }) });
+  add({ id: 'page:group', title: 'Group the picked pages…', group: 'Pages', words: 'folder artboards together', disabled: noPage, run: () => void groupArtboardsCommand(pickedArtboardIds(s.get())) });
+  add({ id: 'page:master', title: 'Make this page a master', group: 'Pages', words: 'page master shared layers logo footer', disabled: noPage ?? (ab?.isMaster ? 'It already is' : ab?.master ? 'It uses a master itself' : ab?.library ? 'A library page is read-only' : undefined), run: () => s.markAsMaster(ab!.id, true) });
+  {
+    const picked = pickedArtboardIds(s.get());
+    const group = picked.length ? selectionGroupInfo(picked) : null;
+    add({ id: 'page:ungroup', title: 'Take the picked pages out of their group', group: 'Pages', words: 'folder artboards ungroup leave', disabled: noPage ?? (group?.inAGroup ? undefined : 'The picked pages are not in a group'), run: () => s.leaveArtboardGroups(picked) });
+    add({ id: 'page:rename-group', title: 'Rename the group of the picked pages…', group: 'Pages', words: 'folder artboards', disabled: noPage ?? (group?.oneGroup ? undefined : 'Pick pages from one group first'), run: () => void renameGroupCommand(group!.oneGroup!) });
+    add({ id: 'page:select-group', title: 'Pick every page in the same group', group: 'Pages', words: 'folder artboards select all', disabled: noPage ?? (group?.oneGroup ? undefined : 'Pick pages from one group first'), run: () => s.pickGroup(group!.oneGroup!) });
+  }
+  add({ id: 'page:edit-master', title: 'Select the master this page draws', group: 'Pages', words: 'page master shared layers', disabled: noPage ?? (ab?.master ? undefined : 'This page does not use a master'), run: () => s.editMasterOf(ab!.id) });
+  add({ id: 'page:unmaster', title: 'Stop this page being a master', group: 'Pages', words: 'page master shared layers', disabled: noPage ?? (ab?.isMaster ? undefined : 'This page is not a master'), run: () => s.markAsMaster(ab!.id, false) });
+  add({ id: 'page:link-colours', title: 'Link colours to tokens…', group: 'Pages', words: 'theme tokens plain colours', disabled: noPage, run: () => void linkColoursCommand(pickedArtboardIds(s.get())) });
   add({ id: 'page:arrows', title: 'Page arrows on the canvas', group: 'View', words: 'routes links between pages show hide', on: showRoutes(), run: () => setShowRoutes(!showRoutes()) });
 
   //---- Layers: go to one of the open page's layers
   if (ab) {
     let n = 0;
     walk(ab.children, (l) => {
-      if (n++ < 80) add({ id: `layer:${l.id}`, title: `Select layer: ${l.name}`, group: 'Layers', words: `go to find ${l.type}`, run: () => s.select([l.id], { artboardId: ab.id }) });
+      if (n++ < 80) add({ id: `layer:${l.id}`, title: `Select layer: ${l.name}`, group: 'Layers', words: `go to find ${l.type}`, dynamic: true, run: () => s.select([l.id], { artboardId: ab.id }) });
     });
   }
 
@@ -193,7 +236,14 @@ export function buildCommands(): Command[] {
   selCmd('back', 'Send to back', () => s.reorder(-Infinity), { hint: keyHints('back'), words: 'order bottom' });
   const hidden = sel.length > 0 && sel.every((l) => l.visible === false);
   selCmd('hide', hidden ? 'Show the selected layers' : 'Hide the selected layers', () => s.setProps(sel.map((l) => l.id), { visible: hidden }), { words: hidden ? 'visible unhide' : 'invisible' });
-  selCmd('lock', 'Lock the selected layers', () => s.setProps(sel.map((l) => l.id), { locked: true }), { words: 'stop moving' });
+  const locked = sel.length > 0 && sel.every((l) => l.locked);
+  selCmd('lock', locked ? 'Unlock the selected layers' : 'Lock the selected layers', () => s.setProps(sel.map((l) => l.id), { locked: !locked }), { words: locked ? 'stop moving free' : 'stop moving' });
+  for (const op of ['union', 'subtract', 'intersect', 'exclude'] as const) {
+    selCmd(op, `Combine shapes: ${op}`, () => s.booleanSelection(op), { words: 'boolean pathfinder merge cut shapes', disabled: sel.length > 1 ? undefined : 'Select two or more shapes first' });
+  }
+  const same = (ab && one ? selectSameItems(ab, one) : []) as { disabled?: boolean; onClick?: () => void }[];
+  selCmd('same-fill', 'Select every layer with the same fill', () => same[0]?.onClick?.(), { words: 'colour match', disabled: noOne ?? (same[0]?.disabled ? 'This layer has no fill' : undefined) });
+  selCmd('same-font', 'Select every layer in the same font', () => same[1]?.onClick?.(), { words: 'typeface text match', disabled: noOne ?? (same[1]?.disabled ? 'This layer has no font' : undefined) });
 
   //---- Animate
   for (const a of ANIM_PRESETS) {
@@ -212,10 +262,19 @@ export function buildCommands(): Command[] {
     });
   }
 
+  for (const [id, title, trigger] of [['click', 'When clicked…', 'click'], ['hover', 'When hovered…', 'pointerenter']] as const) {
+    add({ id: `behaviour:${id}`, title: `Add an interaction: ${title.toLowerCase()}`, group: 'Behaviours', words: 'interaction recipe behaviour choose', disabled: noOne, run: () => openBehaviours({ abId: ab!.id, layerId: one!.id, trigger }) });
+  }
+  for (const [id, title, type] of [['empty-click', 'an empty On click event', 'click'], ['empty-hover', 'an empty On hover event', 'pointerenter']] as const) {
+    add({ id: `behaviour:${id}`, title: `Add ${title}`, group: 'Behaviours', words: 'interaction event graph pointer nothing joined', disabled: noOne, run: () => addInteraction(ab!, one!.id, type) });
+  }
+
   //---- View and toggles
   add({ id: 'view:fit', title: 'Zoom to fit everything', group: 'View', hint: keyHints('zoom-fit'), run: () => void runCommand('zoom-fit') });
   add({ id: 'view:selection', title: 'Zoom to the selection', group: 'View', hint: keyHints('zoom-selection'), run: () => void runCommand('zoom-selection') });
   add({ id: 'view:100', title: 'Zoom to 100%', group: 'View', hint: keyHints('zoom-100'), words: 'actual size', run: () => void runCommand('zoom-100') });
+  add({ id: 'view:zoom-in', title: 'Zoom in', group: 'View', words: 'bigger closer magnify', run: () => void runCommand('zoom-in') });
+  add({ id: 'view:zoom-out', title: 'Zoom out', group: 'View', words: 'smaller further', run: () => void runCommand('zoom-out') });
   add({ id: 'view:grid', title: 'Show the grid', group: 'View', hint: keyHints('toggle-grid'), on: pr.showGrid, words: 'toggle lines', run: () => setPrefs({ showGrid: !prefs().showGrid }) });
   add({ id: 'view:rulers', title: 'Show rulers', group: 'View', hint: keyHints('toggle-rulers'), on: pr.rulers, words: 'toggle guides', run: () => setPrefs({ rulers: !prefs().rulers }) });
   {
@@ -233,6 +292,10 @@ export function buildCommands(): Command[] {
   //---- Tools
   for (const tool of Object.keys(TOOL_HELP) as Tool[]) add({ id: `tool:${tool}`, title: `Tool: ${TOOL_HELP[tool].label.replace(/ tool$/i, '')}`, group: 'Tools', hint: keyHints(`tool.${tool}`), words: 'draw pick', run: () => s.set({ tool, editingPathId: null }) });
 
+  //---- Timeline
+  add({ id: 'timeline:record', title: 'Record: property changes become keys', group: 'Animate', words: 'keyframe auto recording', on: st.recording, disabled: noPage, run: () => s.set({ recording: !store().get().recording }) });
+  add({ id: 'timeline:new', title: 'New timeline', group: 'Animate', words: 'add animation', disabled: noPage, run: () => void s.addTimeline() });
+
   //---- Panels and workspaces
   for (const id of ALL_PANELS) {
     const n = PANEL_NAMES[id];
@@ -241,14 +304,14 @@ export function buildCommands(): Command[] {
       title: `Open ${n.label}`,
       group: 'Panels',
       words: `show panel tab ${n.words}`,
-      run: () => {
-        setDock((l) => showPanel(l, id));
-        if (BOTTOM_TABS.includes(id)) s.set({ bottomTab: id as BottomTab });
-      },
+      run: () => openPanel(id),
     });
   }
+  add({ id: 'dock:reset', title: 'Put the panels back where they started', group: 'Panels', words: 'reset layout dock arrangement', run: () => (resetDock(), s.set({ bottomTab: 'timeline' })) });
+  add({ id: 'dock:show-all', title: 'Show all panels and tools', group: 'Panels', words: 'essentials unhide everything', run: () => setDock(showAll) });
+  add({ id: 'dock:fold-top', title: 'Fold or unfold the top panels', group: 'Panels', words: 'collapse tabs', run: () => setDock((l) => ({ ...l, topFolded: !l.topFolded })) });
   for (const w of BUILT_IN) add({ id: `workspace:${w.id}`, title: `Workspace: ${w.name}`, group: 'Workspaces', words: `layout arrangement panels ${w.about}`, run: () => applyWorkspace(w.make()) });
-  for (const w of savedWorkspaces()) add({ id: `workspace:${w.id}`, title: `Workspace: ${w.name}`, group: 'Workspaces', words: 'layout arrangement panels saved', run: () => applyWorkspace(w) });
+  for (const w of savedWorkspaces()) add({ id: `workspace:${w.id}`, title: `Workspace: ${w.name}`, group: 'Workspaces', words: 'layout arrangement panels saved', dynamic: true, run: () => applyWorkspace(w) });
 
   //---- Project
   add({ id: 'project:preview', title: 'Preview', group: 'Project', words: 'play run test', run: () => requestAppAction('preview') });
@@ -261,17 +324,11 @@ export function buildCommands(): Command[] {
   add({ id: 'project:save', title: 'Save now', group: 'Project', hint: keyHints('save'), run: () => void (window as unknown as { __ixForceSave?: () => Promise<void> }).__ixForceSave?.() });
   add({ id: 'project:undo', title: 'Undo', group: 'Project', hint: keyHints('undo'), disabled: s.canUndo() ? undefined : 'Nothing to undo', run: () => s.undo() });
   add({ id: 'project:redo', title: 'Redo', group: 'Project', hint: keyHints('redo'), disabled: s.canRedo() ? undefined : 'Nothing to redo', run: () => s.redo() });
-  for (const [id, title, words] of [
-    ['export-html', 'Export: single HTML file', 'download standalone'],
-    ['export-package', 'Export: project package', 'download ixp backup'],
-    ['export-json', 'Export: project JSON', 'download document'],
-    ['export-png', 'Export: PNG picture of this page', 'download image'],
-    ['export-svg', 'Export: SVG picture of this page', 'download image vector'],
-    ['export-lottie', 'Export: Lottie animation of this page', 'download json'],
-    ['motion', 'Export: video, GIF or frames', 'download mp4 webm animation'],
-  ] as const) {
-    add({ id: `project:${id}`, title, group: 'Project', words, disabled: id === 'export-html' || id === 'export-package' || id === 'export-json' ? undefined : noPage, run: () => requestAppAction(id) });
+  for (const [id, title, words] of EXPORTS) {
+    add({ id: `project:${id}`, title, group: 'Project', words, disabled: NO_PAGE_NEEDED.includes(id) ? undefined : noPage, run: () => requestAppAction(id as AppAction) });
   }
+  add({ id: 'project:reference', title: 'Public interface reference…', group: 'Project', words: 'embedding page set read hear api', run: () => requestAppAction('reference') });
+  add({ id: 'project:home', title: 'Back to all projects', group: 'Project', words: 'home close projects list', run: () => requestAppAction('home') });
   add({ id: 'project:keys', title: 'Keyboard shortcuts', group: 'Project', hint: keyHints('shortcuts'), words: 'keys sheet rebind customise keymap', run: () => openShortcuts(false) });
   add({ id: 'project:help', title: 'Search the help', group: 'Project', hint: keyHints('help-search'), words: 'docs how to', run: () => openHelpSearch() });
 
@@ -282,6 +339,8 @@ export function buildCommands(): Command[] {
       /* a provider that breaks only loses its own commands */
     }
   }
+  //Any command with a key in the keymap shows it (the person's own keys too), whether or not it was given a hint above
+  for (const c of out) if (!c.hint) c.hint = commandById(keymapIdFor(c.id)) ? keyHints(keymapIdFor(c.id)) || undefined : undefined;
   return out;
 }
 

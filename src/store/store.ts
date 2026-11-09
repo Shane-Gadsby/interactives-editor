@@ -833,17 +833,30 @@ export class EditorStore {
   /**
    * Resize the artboard to the bounds of the selected layers, keeping everything where it is on the canvas: the artboard moves
    * to the selection's corner, its top-level layers (and their x/y keyframes) shift by the same amount the other way. Only for
-   * a selection on one artboard (a layer selection always is; with several artboards picked it does nothing).
+   * a selection on one artboard (a layer selection always is; with several artboards picked it does nothing). `padding` leaves
+   * that many pixels of space around the layers.
    */
-  fitArtboardToSelection(): boolean {
+  fitArtboardToSelection(opts: { padding?: number } = {}): boolean {
     const ab = this.artboard();
     if (!ab || !this.state.selection.length || pickedArtboardIds(this.state).length > 1) return false;
-    const b = selectionBounds(ab, topmost(ab, this.state.selection));
+    return this.fitArtboardTo(ab, topmost(ab, this.state.selection), opts.padding ?? 0);
+  }
+
+  /** The same, to every layer on the open page (shrink-wrap the page), for when nothing is selected. */
+  fitArtboardToLayers(opts: { padding?: number } = {}): boolean {
+    const ab = this.artboard();
+    if (!ab || !ab.children.length) return false;
+    return this.fitArtboardTo(ab, ab.children.map((n) => n.id), opts.padding ?? 0);
+  }
+
+  private fitArtboardTo(ab: Artboard, ids: string[], padding: number): boolean {
+    const b = selectionBounds(ab, ids);
     if (!b || b.width < 1 || b.height < 1) return false;
-    const x0 = Math.floor(b.x);
-    const y0 = Math.floor(b.y);
-    const w = Math.ceil(b.x + b.width) - x0;
-    const h = Math.ceil(b.y + b.height) - y0;
+    const pad = Math.max(0, Math.round(padding) || 0);
+    const x0 = Math.floor(b.x) - pad;
+    const y0 = Math.floor(b.y) - pad;
+    const w = Math.ceil(b.x + b.width) - x0 + pad;
+    const h = Math.ceil(b.y + b.height) - y0 + pad;
     if (!x0 && !y0 && w === ab.width && h === ab.height) return false;
     track('doc', 'fit-artboard');
     this.update((d) => {

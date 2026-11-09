@@ -498,13 +498,13 @@ const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], co
 			)
 		}
 		//The person's own keyboard shortcuts: command id to a short list of key combos (lib/keymap.ts). Ids and combos are
-		//plain short strings, at most 250 commands with 4 combos each, and anything else is dropped
+		//plain short strings, at most 600 commands with 4 combos each (the registry has about 250: every panel, tool and action can take a key), and anything else is dropped
 		if (p?.keymap && typeof p.keymap === 'object' && !Array.isArray(p.keymap)) {
 			out.keymap = Object.fromEntries(
 				Object.entries(p.keymap)
 					.filter(([k, v]) => /^[a-z][a-z0-9.-]{0,59}$/i.test(k) && Array.isArray(v))
 					.map(([k, v]) => [k, v.filter((c) => typeof c === 'string' && c.length > 0 && c.length <= 24 && /^[A-Za-z0-9+,./\\[\]';=`-]+$/.test(c)).slice(0, 4)])
-					.slice(0, 250)
+					.slice(0, 600)
 			)
 		}
 		//What the first-run screen and the Getting started strip remember (which jobs are ticked, whether it was put away).

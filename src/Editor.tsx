@@ -334,7 +334,7 @@ function useShortcuts() {
   }, []);
 }
 
-function zoomTo(mode: 'fit' | '100' | 'selection') {
+function zoomTo(mode: 'fit' | '100' | 'selection' | 'page') {
   const s = store();
   const st = s.get();
   const el = document.querySelector('.canvas') as HTMLElement | null;
@@ -342,7 +342,10 @@ function zoomTo(mode: 'fit' | '100' | 'selection') {
   const W = el.clientWidth;
   const H = el.clientHeight;
   let box: { x: number; y: number; width: number; height: number } | null = null;
-  if (mode === 'selection') {
+  if (mode === 'page') {
+    const ab = s.artboard();
+    if (ab) box = { x: ab.canvasX, y: ab.canvasY, width: ab.width, height: ab.height };
+  } else if (mode === 'selection') {
     const ab = s.artboard();
     const b = ab && (st.selection.length ? selectionBounds(ab, st.selection) : { x: 0, y: 0, width: ab.width, height: ab.height });
     if (ab && b) box = { x: ab.canvasX + b.x, y: ab.canvasY + b.y, width: b.width, height: b.height };
@@ -649,9 +652,10 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
     const pack = checked(() => downloadPackage(st.get().project));
     if (a === 'export-html') return gated('export', () => void run(html));
     if (a === 'export-package') return gated('export', () => void run(pack));
-    const file = a === 'export-html-now' ? html : a === 'export-package-now' ? pack : a === 'export-json' ? checked(() => downloadJson(st.get().project)) : a === 'export-png' ? () => exportPicture('png', 2) : a === 'export-svg' ? () => exportPicture('svg', 1) : a === 'export-lottie' ? () => exportActiveAsLottie('json') : null;
+    const file = a === 'export-html-now' ? html : a === 'export-package-now' ? pack : a === 'export-json' ? checked(() => downloadJson(st.get().project)) : a === 'export-png' ? () => exportPicture('png', 2) : a === 'export-svg' ? () => exportPicture('svg', 1) : a === 'export-lottie' ? () => exportActiveAsLottie('json') : a === 'export-dotlottie' ? () => exportActiveAsLottie('lottie') : a === 'export-png-1x' ? () => exportPicture('png', 1) : a === 'export-dts' ? checked(() => exportDefinitions()) : null;
     if (file) return void run(file);
-    if (a === 'preview') onPreview();
+    if (a === 'home') home();
+    else if (a === 'preview') onPreview();
     else if (a === 'share') gated('share', () => setShareOpen(true));
     else if (a === 'invite') setInviteOpen(true);
     else if (a === 'template') setTemplateOpen(true);
@@ -710,11 +714,15 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       <IconButton icon={<Icons.undo />} title={withKey('Undo', 'undo')} onClick={() => st.undo()} disabled={!st.canUndo()} />
       <IconButton icon={<Icons.redo />} title={withKey('Redo', 'redo')} onClick={() => st.redo()} disabled={!st.canRedo()} />
       <div className="zoom-ctl">
-        <button onClick={() => st.set({ zoom: Math.max(0.05, s.zoom / 1.25) })}>−</button>
+        <button title={withKey('Zoom out', 'zoom-out')} aria-label="Zoom out" onClick={() => st.set({ zoom: Math.max(0.05, s.zoom / 1.25) })}>
+          −
+        </button>
         <button className="zoom-val" title={withKey('Fit all', 'zoom-fit')} onClick={() => zoomTo('fit')}>
           {Math.round(s.zoom * 100)}%
         </button>
-        <button onClick={() => st.set({ zoom: Math.min(32, s.zoom * 1.25) })}>+</button>
+        <button title={withKey('Zoom in', 'zoom-in')} aria-label="Zoom in" onClick={() => st.set({ zoom: Math.min(32, s.zoom * 1.25) })}>
+          +
+        </button>
       </div>
       <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)} />
       <IconButton icon={<Icons.search />} title={withKey('Find a command and do it: add a layer, go to a page, turn the grid on, share...', 'palette')} onClick={() => void openPalette(false)} />

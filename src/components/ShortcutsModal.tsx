@@ -7,6 +7,7 @@ import { IconButton } from './ui';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
 import { confirmDialog } from './dialogs';
+import { ensureCommandKeys } from '../lib/command-keys';
 
 const WHERE: Record<Context, string> = {
   everywhere: 'Everywhere',
@@ -46,6 +47,9 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
   const [byCombo, setByCombo] = useState('');
   const [rec, setRec] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
+  const [onlyKeyed, setOnlyKeyed] = useState(false);
+  //Every panel, window, tool and action can be given a key, so they are all in the list
+  ensureCommandKeys();
   const box = useRef<HTMLDivElement>(null);
   const search = useRef<HTMLInputElement>(null);
 
@@ -116,13 +120,14 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
     () =>
       COMMANDS.filter((c) => {
         if (byCombo) return bindingsOf(c.id).includes(byCombo);
+        if (onlyKeyed && !bindingsOf(c.id).length) return false;
         if (!needle) return true;
         const text = `${c.name} ${c.group} ${WHERE[c.context]} ${c.words ?? ''} ${bindingsOf(c.id).map((k) => formatCombo(k)).join(' ')}`.toLowerCase();
         return needle.split(/\s+/).every((w) => text.includes(w));
       }),
     // the keys are read from the person's preferences, so a change to them redoes the list
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [needle, byCombo, p.keymap, p.keymapPreset],
+    [needle, byCombo, onlyKeyed, p.keymap, p.keymapPreset],
   );
   const clashes = allConflicts();
   const overrides = Object.keys(p.keymap ?? {}).length;
@@ -173,6 +178,10 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
           <label className="field check-field" title="Turn off the shortcuts that are a single letter, number or Space (V, H, P, S...). Ones with Ctrl, Alt or Cmd, and keys like Delete, the arrows and F2, still work. The tool bar and menus do the same jobs. For people who use speech input or can press keys by accident">
             <input type="checkbox" checked={p.singleKeys !== false} onChange={(e) => setPrefs({ singleKeys: e.target.checked })} />
             <span>One-key shortcuts (V, H, P...)</span>
+          </label>
+          <label className="field check-field" title="Hide the commands that have no key yet. Every panel, tool and action is in the list so any of them can be given one: search for it, then Set key">
+            <input type="checkbox" checked={onlyKeyed} onChange={(e) => setOnlyKeyed(e.target.checked)} />
+            <span>Only ones with a key</span>
           </label>
           <button type="button" className="btn small-btn" disabled={!overrides && (p.keymapPreset ?? 'default') === 'default'} onClick={() => void reset()} title="Put every key back to the default">
             Reset all

@@ -21,8 +21,6 @@ import {
   starPoints,
   subPathsToD,
   sampleArtboard,
-  uid,
-  defaultParams,
   applyConstraints,
   nodeRuns,
   rotationFor,
@@ -55,7 +53,7 @@ import { drawnBox, drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorne
 import { isBrandHeld } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
 import { groupFrame, groupMembers, pickedArtboardIds } from '../lib/artboard-groups';
-import { artboardMenuItems } from '../lib/artboard-commands';
+import { artboardMenuItems, fitPageCommand } from '../lib/artboard-commands';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
@@ -89,7 +87,7 @@ import { liveSession } from '../lib/live';
 import { bendPaths, hasShapeKeys, nearestSegment, shapeToPaths, type SegmentHit } from '../lib/path-edit';
 import { confirmDialog } from '../components/dialogs';
 import { openBehaviours } from '../components/BehaviourDialog';
-import { revealAdded } from '../lib/graph-reveal';
+import { addInteraction } from '../lib/interaction-add';
 import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
 import { rangeLabel } from '../lib/variants-edit';
 import { ANIM_PRESETS, animOptions } from '../lib/animate-presets';
@@ -2194,7 +2192,7 @@ export function Canvas() {
         },
         { label: 'Group', hint: keyHints('group'), onClick: () => s2.groupSelection() },
         //Selections are on one artboard; with several artboards picked it isn't offered
-        ...(pickedArtboardIds(s2.get()).length > 1 ? [] : [{ label: 'Fit page to selection', title: 'Resize the page to just these layers, keeping them where they are', onClick: () => s2.fitArtboardToSelection() } as MenuItem]),
+        ...(pickedArtboardIds(s2.get()).length > 1 ? [] : [{ label: 'Fit page to selection', hint: keyHints('fit-page-selection'), title: 'Resize the page to just these layers, keeping them where they are', onClick: () => void fitPageCommand() } as MenuItem, { label: 'Fit page to selection with space around…', title: 'The same, leaving room around the layers (you choose how much)', onClick: () => void fitPageCommand({ ask: true }) } as MenuItem]),
         ...(one && (one.type === 'group' || one.type === 'frame') ? [{ label: 'Ungroup', hint: keyHints('ungroup'), onClick: () => s2.ungroupSelection() } as MenuItem] : []),
         ...(sel.length > 1
           ? [
@@ -2205,8 +2203,8 @@ export function Canvas() {
             ]
           : []),
         { separator: true },
-        { label: one?.visible === false ? 'Show' : 'Hide', onClick: () => s2.setProps(sel.map((n) => n.id), { visible: one?.visible === false }) },
-        { label: 'Lock', onClick: () => s2.setProps(sel.map((n) => n.id), { locked: true }) },
+        { label: one?.visible === false ? 'Show' : 'Hide', hint: keyHints('hide-layers'), onClick: () => s2.setProps(sel.map((n) => n.id), { visible: one?.visible === false }) },
+        { label: 'Lock', hint: keyHints('lock-layers'), onClick: () => s2.setProps(sel.map((n) => n.id), { locked: true }) },
         ...(sel.every((n) => n.type !== 'bone')
           ? [
               {
@@ -2253,7 +2251,8 @@ export function Canvas() {
         ...(ids.length === 1
           ? [
               { label: 'Make start page', disabled: st.project.settings.startArtboardId === hab.id, onClick: () => s2.update((d) => void (d.settings.startArtboardId = hab.id)) } as MenuItem,
-              { label: 'Zoom to page', onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) } as MenuItem,
+              { label: 'Zoom to page', hint: keyHints('zoom-page'), onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) } as MenuItem,
+              { label: 'Fit page to its layers', hint: keyHints('fit-page-layers'), title: 'Resize the page to just the layers on it, keeping them where they are', disabled: !hab.children.length, onClick: () => (s2.set({ activeArtboardId: hab.id }), void fitPageCommand({ layers: true })) } as MenuItem,
               artboardGridMenu(hab),
               { separator: true } as MenuItem,
             ]
@@ -2274,16 +2273,6 @@ export function Canvas() {
       ];
     }
     setMenu({ x: e.clientX, y: e.clientY, items });
-  }
-
-  /** Add just an "On pointer" event for a layer, with nothing joined to it (the recipes in the behaviour dialog add the action too), and open the Interactions tab on it. */
-  function addInteraction(ab: Artboard, nodeId: string, type: 'click' | 'pointerenter') {
-    const ev = { id: uid('lg'), kind: 'event.pointer', x: 40, y: 40 + ab.logic.nodes.length * 30, params: { ...defaultParams('event.pointer'), target: nodeId, type } };
-    store().update((d) => {
-      const a = d.artboards.find((x) => x.id === ab.id);
-      a?.logic.nodes.push(ev);
-    });
-    revealAdded({ abId: ab.id, ids: [ev.id], focusId: ev.id, say: `Added an empty ${type === 'click' ? 'When clicked' : 'When hovered'} event`, quiet: () => store().set({ bottomTab: 'logic', logicSelection: ev.id }) });
   }
 
   function zoomToBox(b: Rect) {
