@@ -187,12 +187,19 @@ function GroupNode({ data, selected }: NodeProps<Node<GroupData>>) {
 
 const nodeTypes = { ix: IxNode, ixgroup: GroupNode, ixnote: GraphNoteNode };
 
+//Layer names of an artboard, kept for as long as its layers are the same objects (every node on the graph reads them)
+const layerNames = new WeakMap<object, Map<string, string>>();
+
 export function summarize(n: LogicNode, ab: Artboard, project: Project): string {
   const def = CATALOG_BY_KIND[n.kind];
   if (!def) return '';
   const parts: string[] = [];
-  const names = new Map<string, string>();
-  walk(ab.children, (x) => names.set(x.id, x.name));
+  let names = layerNames.get(ab.children);
+  if (!names) {
+    names = new Map<string, string>();
+    walk(ab.children, (x) => names!.set(x.id, x.name));
+    layerNames.set(ab.children, names);
+  }
   for (const p of def.params) {
     if (p.showIf && !p.showIf.values.includes(n.params[p.showIf.key] ?? defaultParams(n.kind)[p.showIf.key])) continue;
     const v = n.params[p.key];
@@ -261,6 +268,12 @@ export function LogicGraph() {
 
   //The nodes just added glow for a moment (not at all with reduced motion)
   const [glow, setGlow] = useState<string[]>([]);
+  //A node the flow didn't change keeps its object, so React Flow leaves it alone (a click on one node in a big graph redrew every node)
+  const kept = useRef(new Map<string, { logic: LogicNode; summary: string; selected: boolean; revealed: boolean; node: Node<IxNodeData> }>());
+  useEffect(() => {
+    const here = new Set((ab?.logic.nodes ?? []).map((n) => n.id));
+    for (const id of kept.current.keys()) if (!here.has(id)) kept.current.delete(id);
+  }, [ab?.logic.nodes]);
   const nodes: Node<IxNodeData>[] = useMemo(
     () =>
       [
@@ -279,13 +292,16 @@ export function LogicGraph() {
               selected: chosen.includes(g.id),
             }) as unknown as Node<IxNodeData>,
         ),
-        ...(ab?.logic.nodes ?? []).map((n) => ({
-          id: n.id,
-          type: 'ix',
-          position: { x: n.x, y: n.y },
-          data: { logic: n, summary: ab ? summarize(n, ab, s.project) : '', ...(glow.includes(n.id) ? { revealed: true } : {}) },
-          selected: chosen.includes(n.id),
-        })),
+        ...(ab?.logic.nodes ?? []).map((n) => {
+          const summary = ab ? summarize(n, ab, s.project) : '';
+          const selected = chosen.includes(n.id);
+          const revealed = glow.includes(n.id);
+          const had = kept.current.get(n.id);
+          if (had && had.logic === n && had.summary === summary && had.selected === selected && had.revealed === revealed) return had.node;
+          const node: Node<IxNodeData> = { id: n.id, type: 'ix', position: { x: n.x, y: n.y }, data: { logic: n, summary, ...(revealed ? { revealed: true } : {}) }, selected };
+          kept.current.set(n.id, { logic: n, summary, selected, revealed, node });
+          return node;
+        }),
         // Sticky notes for the people editing the graph (hidden with the canvas notes, and never in the player)
         ...(showNotes && ab
           ? (ab.logic.notes ?? []).map((note) => {
@@ -1011,6 +1027,12 @@ export function LogicGraph() {
     }
   };
 
+  //React Flow hands these to every node it draws, so a new function on each render would draw every node again
+  const onNodeContextMenu = (e: React.MouseEvent, node: Node) => (isNote(node.id) ? noteMenu(e, node.id) : isGroup(node.id) ? groupMenu(e, node.id) : nodeMenu(e, node.id));
+  const nodeHandlers = useRef({ onNodeClick, onNodeContextMenu });
+  nodeHandlers.current = { onNodeClick, onNodeContextMenu };
+  const stableNodeHandlers = useMemo(() => ({ onNodeClick: (e: React.MouseEvent, node: Node) => nodeHandlers.current.onNodeClick(e, node), onNodeContextMenu: (e: React.MouseEvent, node: Node) => nodeHandlers.current.onNodeContextMenu(e, node) }), []);
+
   return (
     <div className="logic-root" onKeyDownCapture={panelKeys}>
     <SplitColumns id="logic" columns={[{ width: 200, min: 120, max: 360 }, 'flex', { width: 260, min: 200, max: 560 }]} className="logic">
@@ -1087,7 +1109,7 @@ export function LogicGraph() {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
-          onNodeClick={onNodeClick}
+          onNodeClick={stableNodeHandlers.onNodeClick}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onConnectEnd={onConnectEnd}
@@ -1097,7 +1119,7 @@ export function LogicGraph() {
             setSelEdges([]);
           }}
           onPaneContextMenu={paneMenu}
-          onNodeContextMenu={(e, node) => (isNote(node.id) ? noteMenu(e, node.id) : isGroup(node.id) ? groupMenu(e, node.id) : nodeMenu(e, node.id))}
+          onNodeContextMenu={stableNodeHandlers.onNodeContextMenu}
           onEdgeContextMenu={(e, edge) => edgeMenu(e, edge.id)}
           fitView={ab.logic.nodes.length > 0}
           fitViewOptions={{ maxZoom: 1 }}

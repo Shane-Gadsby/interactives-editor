@@ -245,7 +245,7 @@ From left to right:
 
 - **All projects** (the house): back to your [projects page](projects), with the project you left highlighted for a moment.
 - The **project name**. Click to rename.
-- The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason). A save that failed because of the network or the server tries again by itself, and says **Saved again** when it gets there.
+- The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason). A save that failed because of the network or the server tries again by itself, and says **Saved again** when it gets there. A big project is sent squeezed (compressed), so saving it takes far less of a slow upload, and there is nothing to switch on.
 - **Live**: the project's live connection, **Live**, **Reconnecting** or **Deleted**. When other people are in the project too, their initials show beside it. See [Live editing and saving](live-editing).
 - **Revision history** (the clock): earlier saved versions of the project.
 - **Undo** and **Redo**.
@@ -374,7 +374,11 @@ Press **Beside editor** in the Preview's header and Preview moves up to the righ
 
 When a click starts nothing, the Events list says why under **Why did nothing happen?**. Either nothing listens for a click on that layer, the click landed on empty space, or an **Only if** said no. Click an event's name in the list to select its node in the graph.
 
-The lights are only in the editor. Exports and shared links never carry them, and with reduced motion on they hold still instead of pulsing. See [Interactions](interactions) for the graph.`,
+The lights are only in the editor. Exports and shared links never carry them, and with reduced motion on they hold still instead of pulsing. See [Interactions](interactions) for the graph.
+
+## Big projects
+
+The editor stays quick on large projects: a change only lays out again the pages it touched, even with auto layout on every page, and picking or dragging a node in a big Interactions graph only redraws that node. What slows a big project down most is how much is on screen at once, so fold away panels and pages you are not using, and zoom in on the page you are working on.`,
   },
   {
     id: 'canvas',
@@ -907,7 +911,7 @@ Clicking selects the layer afterwards, ready to edit.
 ## Moving layers to another artboard
 Select layers and drag them on the canvas. If you let go over a **different artboard**, a dialog asks **Move to artboard**: *Move “Card” to the artboard “Menu”?* Press **Move** to do it or **Cancel** to put them back.
 
-![The Move to artboard dialog.](help/move-to-artboard.png)
+![The Move to page dialog.](help/move-to-artboard.png)
 
 - The layers keep their place on the canvas, but now belong to the other artboard.
 - Their keys in the old artboard's timelines are removed.
@@ -1125,7 +1129,7 @@ Text doesn't pop from one font to another. The player waits up to 1.5 seconds fo
 ## Several styles in one text layer
 Double-click a text layer to edit it. A small **toolbar floats over the text** while you do, like the one in a word processor:
 
-![The toolbar over a text layer being edited, with "big" bold and a colour, size and link set on other words.](help/text-toolbar.png)
+![The toolbar over a text layer being edited: bold, italic, underline, strike-through, colour, size and font, with a word in bold on the layer.](help/text-toolbar.png)
 
 Select some of the text (or just put the caret in a word) and use:
 
@@ -3287,7 +3291,7 @@ A question keeps its settings on its frame, and each part layer is marked as par
     keywords: 'command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share',
     body: `Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
 
-![The command palette searching for timeline: the Open Timeline command, then matching help pages.](help/command-palette.png)
+![The command palette searching for timeline: the New timeline and Open Timeline commands, then matching help pages.](help/command-palette.png)
 
 Each row shows its **shortcut** if it has one (your own keys, if you changed them), or the kind of command it is. A command that cannot run at the moment (nothing selected, nothing to undo) is greyed and says why. A switch shows **On** or **Off**, and running it flips it. Press <kbd>F1</kbd> inside it to search the help instead. Matching help pages are listed under the commands, labelled **Help**, and <kbd>Enter</kbd> on one opens it.
 

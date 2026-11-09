@@ -11,6 +11,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Smaller saves and a faster first load': [['interface', 'sent squeezed']],
   'Shorter Inspector wording': [['properties-panel', 'More about']],
   'Preferences, redesigned': [['preferences', 'Reset this page']],
   'Keyboard sets': [['shortcuts', 'Illustration style']],
@@ -118,6 +119,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Property fields line up': [['properties-panel', 'How fields line up']],
   'Property fields on a grid': [['properties-panel', 'one grid of four columns']],
   'Gold instead of blue': [['preferences', 'the same gold with a thin dark edge']],
+  'Faster on big projects': [['interface', 'Big projects']],
 };
 
 //Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone
