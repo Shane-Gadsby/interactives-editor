@@ -10570,7 +10570,11 @@ The lights are only in the editor. Exports and shared links never carry them, an
 
 ## Big projects
 
-The editor stays quick on large projects: a change only lays out again the pages it touched, even with auto layout on every page, and picking or dragging a node in a big Interactions graph only redraws that node. What slows a big project down most is how much is on screen at once, so fold away panels and pages you are not using, and zoom in on the page you are working on.`
+The editor stays quick on large projects: a change only lays out again the pages it touched, even with auto layout on every page, and picking or dragging a node in a big Interactions graph only redraws that node. What slows a big project down most is how much is on screen at once, so fold away panels and pages you are not using, and zoom in on the page you are working on.
+
+## Opening the editor
+
+The editor draws its frames straight away and fills them in as your project arrives. Help, the starter templates, the code boxes, the Interactions graph and the Preview player are fetched the first time you use them, and the editor fetches the likely ones quietly a moment after opening, so they are usually there before you ask. On a slow connection the first use of one of them can show a short **Loading** line where it will appear.`
   },
   {
     id: "canvas",

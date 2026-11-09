@@ -12098,9 +12098,14 @@ button.flow-text:focus-visible {
 /* ---------------------------------------------------------------- pivot (a 3x3 picker, then X and Y as a pair row) */
 .prop-row.pivot-row {
   display: block;
+  /* the dots and the X and Y pair get room round them, they were crowding the next row */
+  margin: var(--group-gap) 0;
 }
 .pivot-row .li-picker-field {
   flex: none;
+}
+.pivot-row .pivot-nums {
+  margin-top: var(--row-gap);
 }
 
 /* ---------------------------------------------------------------- a message with an Undo or Redo button */
