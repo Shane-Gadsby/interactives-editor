@@ -57,6 +57,7 @@ import { artboardMenuItems } from '../lib/artboard-commands';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
+import { PAGE_DRAG, componentChoices, wouldLoop, getDraggedPage, insertComponent, openInsertComponentPicker } from '../lib/components';
 import { ALT_DRAG_HINT, ALT_DRAG_TIP, altHintDue, useAltHeld } from '../lib/alt-drag';
 import { artboardGridMenu, gridMenu } from '../components/grid-menu';
 import { gridFor, gridLabel, gridLook } from '../lib/grid';
@@ -196,6 +197,8 @@ export function Canvas() {
   const [dragCursorNow, setDragCursorNow] = useState<string | null>(null);
   // Alt held: what can be dragged shows a copy cursor. A note about it comes up on the first few plain drags
   const altHeld = useAltHeld();
+  // The page a page dragged from the Layers list would be placed in
+  const [dropHost, setDropHost] = useState<string | null>(null);
   const [altHint, setAltHint] = useState<{ x: number; y: number } | null>(null);
   const showAltHint = (e: { clientX: number; clientY: number }) => {
     const r = vp.current?.getBoundingClientRect();
@@ -1526,6 +1529,15 @@ export function Canvas() {
 
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault();
+    // A page dragged out of the Layers list: placed in the page it is dropped on, as a component
+    setDropHost(null);
+    const page = e.dataTransfer.getData(PAGE_DRAG);
+    if (page) {
+      const w = toWorld(e.clientX, e.clientY);
+      const ab = abAt(w);
+      if (ab) insertComponent(page, ab.id, local(ab, w));
+      return;
+    }
     // A component dragged from the Libraries panel
     const comp = e.dataTransfer.getData(COMPONENT_DRAG);
     if (comp) {
@@ -1657,6 +1669,8 @@ export function Canvas() {
         </text>
       </g>,
     );
+    // a page being dragged in from the Layers list: this one is where it would be placed
+    if (ab.id === dropHost) overlay.push(<rect key={`drop-host-${ab.id}`} className="drop-host" x={tl.x} y={tl.y} width={ab.width * zoom} height={ab.height * zoom} />);
     // Artboards of a responsive set: one pill per member on the label line, to jump between them
     const members = setMembers(project.artboards, ab);
     const pillText = (m: Artboard) => `${m.name} ${rangeLabel(project.artboards, m)}`;
@@ -2101,6 +2115,13 @@ export function Canvas() {
         },
       })),
     });
+    //Right-click inside a page: put another page here as a component (a library copy is read-only, so not there)
+    const insertHere = (ab: Artboard): MenuItem => ({
+      label: 'Insert component here…',
+      title: 'Place another page inside this one, here, as a component',
+      disabled: !!ab.library || componentChoices(st.project, ab.id).length === 0,
+      onClick: () => void openInsertComponentPicker({ hostId: ab.id, at: local(ab, w) }),
+    });
     const paste: MenuItem = {
       label: 'Paste',
       hint: 'Ctrl+V',
@@ -2191,6 +2212,7 @@ export function Canvas() {
           : []),
         { separator: true },
         newHere(hab),
+        insertHere(hab),
       ];
     } else if (hab) {
       // An artboard's empty area: the artboard (or the artboards, when this one is among several selected)
@@ -2199,6 +2221,7 @@ export function Canvas() {
       items = [
         { heading: ids.length > 1 ? `${ids.length} pages` : hab.name },
         newHere(hab),
+        insertHere(hab),
         paste,
         { separator: true },
         ...(ids.length === 1
@@ -2317,6 +2340,17 @@ export function Canvas() {
         e.preventDefault();
         // Files and library components are copied in, not moved
         e.dataTransfer.dropEffect = 'copy';
+        // A page from the Layers list: outline the page it would land in
+        if (e.dataTransfer.types.includes(PAGE_DRAG)) {
+          const over = abAt(toWorld(e.clientX, e.clientY));
+          const from = getDraggedPage();
+          const ok = !!over && !over.library && !(from && wouldLoop(store().get().project, over.id, from));
+          e.dataTransfer.dropEffect = ok ? 'copy' : 'none';
+          setDropHost((cur) => (ok ? (cur === over!.id ? cur : over!.id) : cur ? null : cur));
+        }
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropHost(null);
       }}
       onDrop={onDrop}
       onContextMenu={openMenu}

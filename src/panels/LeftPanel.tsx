@@ -31,6 +31,7 @@ import { brandHeldIds } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
 import { extendLayers, pickLayer } from '../lib/layer-range';
 import { ALT_DRAG_HINT, ALT_DRAG_TIP, altHintDue } from '../lib/alt-drag';
+import { PAGE_DRAG, setDraggedPage } from '../lib/components';
 import { INDENT, ROW_H, ROW_PAD, depthAtX, dropRows, slotAt, type DropSlot } from '../lib/layer-drop';
 
 export function LeftPanel() {
@@ -336,6 +337,15 @@ export function Layers() {
       <div
         key={`ab-${ab.id}`}
         className={`artboard-row${pickedAbs.includes(ab.id) ? ' selected' : ''}${active ? ' active' : ''}${ab.variantOf ? ' variant' : ''}${grouped ? ' in-group' : ''}`}
+        draggable
+        title="Drag onto another page on the canvas to place this page in it as a component"
+        onDragStart={(e) => {
+          e.dataTransfer.setData(PAGE_DRAG, ab.id);
+          e.dataTransfer.setData('text/plain', ab.name);
+          e.dataTransfer.effectAllowed = 'copy';
+          setDraggedPage(ab.id);
+        }}
+        onDragEnd={() => setDraggedPage(null)}
         onClick={(e) => pickBoard(ab, e)}
         onContextMenu={(e) => boardMenu(e, ab)}
       >

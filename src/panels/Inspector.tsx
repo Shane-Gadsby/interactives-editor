@@ -668,9 +668,9 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <Row>
           <SelectField
             label="Use in"
-            title="Place this page as an instance inside another page"
+            title="Place this page inside another page, as a component. You can also right-click it and choose Place in…, or drag its row from the Layers list onto the other page"
             value=""
-            options={[{ value: '', label: 'Instance in…' }, ...project.artboards.filter((a) => a.id !== ab.id).map((a) => ({ value: a.id, label: a.name }))]}
+            options={[{ value: '', label: 'Component in…' }, ...project.artboards.filter((a) => a.id !== ab.id).map((a) => ({ value: a.id, label: a.name }))]}
             onChange={(target) => {
               if (!target) return;
               const host = project.artboards.find((a) => a.id === target)!;
@@ -2140,7 +2140,7 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
   const target = project.artboards.find((a) => a.id === node.artboardId);
   const [inputs, setInputs] = useState(JSON.stringify(node.inputs ?? {}, null, 0));
   return (
-    <Section help="instances" title="Instance">
+    <Section help="instances" id="Instance" title="Component">
       <SelectField
         label="Artboard"
         value={node.artboardId}

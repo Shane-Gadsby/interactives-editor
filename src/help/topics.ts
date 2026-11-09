@@ -1235,9 +1235,16 @@ Pictures (PNG, SVG, PDF, animated GIF), thumbnails, the single-file export, \`.i
     group: 'Design',
     summary: 'Place one artboard inside another, with its own timelines, interactions and inputs.',
     keywords: 'component nested artboard reuse symbol instance inputs',
-    body: `Any artboard can be placed inside another as an **instance**: a live copy that runs its own timelines and interactions on the parent's clock. Edit the source artboard and every instance updates.
+    body: `Any artboard can be placed inside another as a **component** (the layer it makes is called an **instance**, and the Inspector shows it as **Component**): a live copy that runs its own timelines and interactions on the parent's clock. Edit the source artboard and every instance updates.
 
-- Select the artboard you want to reuse and pick the artboard to put it in from **Use in** (it says **Instance in…**). Or choose an artboard in an instance layer's **Artboard** field.
+A page placed inside another is a **component**. There are four ways to place one, and all of them make the same instance layer:
+
+- **From the page you are working on:** right-click an empty part of the page (or a layer on it) and choose **Insert component here…**. A box lists the other pages, type a few letters of the name to find one and press <kbd>Enter</kbd>. It lands centred where you right-clicked. **Insert a component here…** is also in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>), where it puts the component in the middle of the open page.
+- **By dragging:** drag a page's row from the **Layers** list onto another page on the canvas. The page it would land in is outlined in gold, and the component lands centred under the pointer.
+- **From the page you want to reuse:** right-click it (its name on the canvas, or its row in **Layers**) and choose **Place in…**, then the page to put it in. Or select it and pick the page from **Use in** (it says **Component in…**).
+- Or choose an artboard in an instance layer's **Artboard** field.
+
+A component bigger than the page it goes on is shrunk to fit. Pages that would contain each other, and library copies (read-only until detached), aren't offered.
 - **Fit** decides how the artboard sits in the instance's box: **Stretch to the box**, **Contain**, **Cover** or **Actual size, centred**. **Reset size** puts the box back to the artboard's own size, and **Edit** followed by the artboard's name jumps to the source artboard.
 - **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. Write them as JSON, such as \`{"level": 3}\`.
 - Messages sent inside an instance (**Send message**, \`ix.emit\`) bubble up to the parent.

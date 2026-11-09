@@ -1,6 +1,7 @@
 //The command palette's list (Ctrl/Cmd+K): every "do this" the editor has, in plain words, with its shortcut where it has one. The
 //menus, tool bar and key handler stay as they are; each command here calls the same function they do. Built fresh each time the
 //palette opens, from the open project and selection, so "Go to page" lists the pages and a command that cannot run now says why.
+import { openInsertComponentPicker } from './components';
 import { QUESTION_KINDS, createNode, walk, type NodeType, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { prefs, setPrefs } from './prefs';
@@ -163,6 +164,7 @@ export function buildCommands(): Command[] {
 
   //---- Pages
   p.artboards.forEach((a) => add({ id: `page:${a.id}`, title: `Go to page: ${a.name}`, group: 'Pages', words: 'open show jump', run: () => goToPage(a.id) }));
+  add({ id: 'page:component', title: 'Insert a component here…', group: 'Pages', words: 'place instance embed page artboard reuse', disabled: noPage ?? (p.artboards.length < 2 ? 'Needs two or more pages' : undefined), run: () => void openInsertComponentPicker() });
   add({ id: 'page:start', title: 'Make this the start page', group: 'Pages', words: 'first page opens', disabled: noPage ?? (p.settings.startArtboardId === ab?.id ? 'It already is' : undefined), run: () => s.update((d) => void (d.settings.startArtboardId = ab!.id)) });
   add({ id: 'page:duplicate', title: 'Duplicate this page', group: 'Pages', words: 'copy artboard', disabled: noPage, run: () => s.duplicateArtboards([ab!.id]) });
   add({ id: 'page:nav', title: 'Add Back and Next buttons to every page', group: 'Pages', words: 'navigation arrows move between pages', disabled: p.artboards.length < 2 ? 'Needs two or more pages' : undefined, run: () => s.update((d) => void addPageNavigation(d, d.artboards.map((a) => a.id), 'back-next')) });

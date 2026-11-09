@@ -1946,6 +1946,13 @@ body.col-resizing * {
   stroke-dasharray: 7 5;
   pointer-events: none;
 }
+/* the page a page dragged from the Layers list would be placed in (Canvas dropHost) */
+.drop-host {
+  fill: color-mix(in srgb, var(--primary-bg) 14%, transparent);
+  stroke: var(--primary-bg);
+  stroke-width: 3;
+  pointer-events: none;
+}
 /* Alt down: what Alt-drag copies shows the copy cursor (Canvas altHeld) */
 .canvas.alt-held .ab-label,
 .canvas.alt-held .ab-label-chip,
