@@ -10512,32 +10512,61 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     id: "preferences",
     title: "Preferences",
     group: "Getting started",
-    summary: "Your own editor settings: wheel, theme, code editor colours, default font, rulers, grid and snapping, tooltips, layers outside clipped artboards.",
-    keywords: "settings options wheel tooltips",
-    body: `![The Preferences dialog.](help/preferences.png)
+    summary: "Your own editor settings in one window, in pages: look, canvas and snapping, timeline, interactions, fonts, accessibility, keyboard shortcuts and sets of keys, and your workspace.",
+    keywords: "settings options wheel tooltips preferences window pages tabs search reset",
+    body: `![The Preferences window, on the General page.](help/preferences.png)
 
-Open **Preferences** from the gear in the top bar (or on the projects page). They are yours: saved with your account, so they follow you to any browser you sign in on. The small **(i)** icon in the title bar shows the version of Interactives you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. It is the first thing to put in a problem report, and the same icon is beside **Help** on the help and projects pages.
+Open **Preferences** from the gear in the top bar (or on the projects page), or press <kbd>?</kbd> for the **Keyboard shortcuts** page. It is one window with a list of **pages** down the left and the settings of one page on the right. They are yours: saved with your account, so they follow you to any browser you sign in on. The small **(i)** icon in the title bar shows the version of Interactives you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. It is the first thing to put in a problem report, and the same icon is beside **Help** on the help and projects pages.
 
-- **Mouse wheel**: *Zoom (Shift+wheel pans)* or *Pan (Ctrl+wheel zooms)*. See [Moving around the canvas](canvas).
-- **Section and tool order**: **Reset section and tool order** puts the Properties panel's sections and the tool bar's groups and tools back in the editor's own order, after you have dragged them about. See [Moving sections](properties-panel#moving-sections).
-- **Keyboard**: **One-key shortcuts** switches off every shortcut that is a single letter, number or Space, and **Keyboard shortcuts…** opens the sheet where you see every key and change them to your own. See [Keyboard shortcuts](shortcuts).
+## Using the window
+- **Changes apply at once.** There is no OK and no Cancel: tick a box and the editor changes. <kbd>Esc</kbd> or the **×** closes the window.
+- **Search all preferences** (the box in the title bar) finds a setting on any page by its name, by what it does or by another word for it (try *dark*, *alt text*, *pan*, *typeface*). Pick a result, or press <kbd>Enter</kbd> for the first, and the window goes to that page, scrolls to the setting, marks it for a moment and puts focus on it. When shortcuts match too, the last result opens the Keyboard shortcuts page with your search filled in. <kbd>Esc</kbd> clears the search first.
+- **Reset this page** puts every setting on the page you are looking at back to how the editor starts (it asks first, and is greyed out when the page is already as it starts). **Reset everything** does it for every page, and puts your keys back to the Default set. The keyboard sets and workspace layouts you saved stay, and so do your projects.
+- Drag the corner of the window to make it bigger or smaller (double-click the corner to put it back). On a phone or a narrow window it fills the screen and the pages become a row of tabs along the top.
+- With the keyboard: <kbd>Tab</kbd> goes into the list of pages, <kbd>↑</kbd> and <kbd>↓</kbd> (<kbd>←</kbd> and <kbd>→</kbd> in the narrow row) move between pages, <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last, and <kbd>Tab</kbd> again goes to the settings. A screen reader hears a list of tabs, one panel, and each field with its name. The editor's own keys stand down while the window is open.
+
+## General
 - **Theme**: *Dark*, *Light*, or *Auto (follow the system)*. Both are made from the StudyDesk palette (the same colours as the rest of the Toolbox): its greys, its blue for selection and focus, and UniSQ gold on primary buttons, the open tab and the line under the top bar. In Light, the palette's grey for secondary text is a little under the usual contrast guideline (4.4:1 on panels, 4.1:1 on the background, against 4.5:1); it is left as the palette has it so the editor matches the Toolbox.
 - **Code editor colours**: *Follow the editor* (the default), *Light* or *Dark*. It is the colours of every code box: the **Scripts** tab, the raw text of a data file, and the HTML and code fields in the Inspector. *Follow the editor* draws code light when the editor is light (or Auto on a light system) and dark when it is dark, and switches the moment the theme does. *Light* or *Dark* keeps the code that way whatever the editor does, so you can have a dark editor with light code or the other way round. The light colours are all at least 4.5:1 on their background. The same three buttons are in the header of the Scripts tab and of a data file's raw text, so you can change it where you are typing. It is yours, not the project's: nobody else sees it, and it follows you between browsers.
-- **Workspace** (in the editor only): switch every panel's place in one go. **Standard** is where everything starts; **Essentials** puts away every panel and tool group a first project does not need (see [Your first five minutes](welcome#your-first-five-minutes)); **Animate** has a tall timeline; **Interactions** has a big interaction graph with Variables and Scripts beside the properties; **Big canvas** puts all the panels in one column on the right and folds the bottom away; **Review** opens Comments and the accessibility checker. **Save current layout as…** keeps the way you've arranged things (see [Arranging the panels](interface#arranging-the-panels)) under a name of your own, up to 12, with rename and delete beside each. Saved workspaces follow you to any browser you sign in on.
-- **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. It is Open Sans unless you change it. Click the box and type to search every Google font (the chips narrow it by Sans, Serif, Display, Handwriting or Mono), then pick one with <kbd>Enter</kbd> or a click; <kbd>Esc</kbd> closes the list. A name that isn't on the list can be used as typed. It applies to projects and text you make from now on, not to ones that exist.
-- **Canvas**: **Show rulers** (rulers and guides on the canvas, also <kbd>Shift</kbd>+<kbd>R</kbd>), **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>), **Snapping** and a switch for each target (**Snap to grid** is <kbd>Ctrl</kbd>+<kbd>'</kbd>; the others are artboard, layers, guides, spacing, pixels and points), **Snap distance**, **Grid size** (1 to 512 px, with presets under it) and **Stronger line every** (cells, 1 to 32). See [The grid and snapping](grid). These follow you with your account like the rest.
-- **Show layers outside clipped artboards**: on by default. When an artboard has **Clip content to artboard** on, the parts of layers that hang outside it are drawn faintly, in diagonal stripes, beside it on the canvas, so you can still see them and click them to select. It is only how the canvas looks: Preview and exports still clip. Switch it off if the faint shapes get in the way.
 - **Show tooltips**: explanations when you hover buttons and fields.
 - **Getting started strip**: the five jobs along the top of the editor that tick themselves. On until you put it away or tick all five; turning it on again brings it back (with the ticks kept, or cleared if all five were done). See [Your first five minutes](welcome#your-first-five-minutes).
-- **Accessibility features**: on by default. Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview (and in the exports you make, which always keep them on). Switch it off to check whether a problem comes from it. See [Accessibility](accessibility).
+- **Always show the Alt-drag hint**: off by default. Dragging a layer, a page or a row in Layers says that holding <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) drags a copy, for your first three drags. Tick this to see it on every drag.
+- **Comment notices**: a bell on the projects page, and a message while a project is open, when a review comment is handed to you, mentions you or gets a reply in a conversation you are in.
+
+## Canvas and guides
+- **Mouse wheel**: *Zoom (Shift+wheel pans)* or *Pan (Ctrl+wheel zooms)*. See [Moving around the canvas](canvas).
+- **Canvas**: **Show rulers** (rulers and guides on the canvas, also <kbd>Shift</kbd>+<kbd>R</kbd>), **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>), **Snapping** and a switch for each target (**Snap to grid** is <kbd>Ctrl</kbd>+<kbd>'</kbd>; the others are artboard, layers, guides, spacing, pixels and points), **Snap distance**, **Grid size** (1 to 512 px, with presets under it) and **Stronger line every** (cells, 1 to 32). See [The grid and snapping](grid). These follow you with your account like the rest.
+- **Show layers outside clipped artboards**: on by default. When an artboard has **Clip content to artboard** on, the parts of layers that hang outside it are drawn faintly, in diagonal stripes, beside it on the canvas, so you can still see them and click them to select. It is only how the canvas looks: Preview and exports still clip. Switch it off if the faint shapes get in the way.
+- **Show notes on the canvas**: the sticky notes authors leave, including the explanations a template comes with. Players, Preview and exports never show them.
+
+## Timeline
+- **Show the list of timelines** (the column beside the Timeline), **Fold Sound and captions when empty**, and **Show the Sound lane**, **Show the Captions lane** and **Show the Descriptions lane**. The Timeline's own **View** menu has the same switches. See [Timelines](timelines).
+
+## Interactions
 - **Technical wording**: off by default. The interaction nodes and their choices read as what happens (*When clicked or hovered*, *Change a value or counter*, *Flip on or off*). Turn it on to see the names they have in the file (*On pointer*, *Set variable*, *Toggle (boolean)*), which is what an agent or a script sees. Search and help find either name whichever is showing. Pages are still called artboards in the advanced settings.
 - **Show new interactions in the graph**: on by default. After **+ When clicked…** (or hovered, an empty event, or **When the playhead reaches this…**) the Interactions tab opens, frames the new nodes and puts keyboard focus on the new event. Turn it off if you build only from the Inspector and want the view left alone: the new nodes are then only picked in the graph. See [Interactions](interactions).
-- **Always show the Alt-drag hint**: off by default. Dragging a layer, a page or a row in Layers says that holding <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) drags a copy, for your first three drags. Tick this to see it on every drag.
+
+## Text and fonts
+- **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. It is Open Sans unless you change it. Click the box and type to search every Google font (the chips narrow it by Sans, Serif, Display, Handwriting or Mono), then pick one with <kbd>Enter</kbd> or a click; <kbd>Esc</kbd> closes the list. A name that isn't on the list can be used as typed. It applies to projects and text you make from now on, not to ones that exist.
+
+## Accessibility
+- **Accessibility features**: on by default. Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview (and in the exports you make, which always keep them on). Switch it off to check whether a problem comes from it. See [Accessibility](accessibility).
 - **Ask what a picture shows**: on by default. When you add a picture or video, a small box at the top of its settings asks what it shows. See [Describing a picture as you add it](accessibility#describing-a-picture-as-you-add-it). Switch it off if you add a lot of pictures at once.
-- **Recording**: there is none to set. See [What the editor records](what-is-recorded).
 - **Screen reader strip**: off by default. A strip under Preview that shows what a screen reader would be told by Announce nodes, as it is spoken. It only shows while Accessibility features is on. The same switch is in the Preview header, next to Accessibility.
 
-Press <kbd>Esc</kbd> or the **×** to close. Project-wide settings (start artboard, fit, sandbox) are in the inspector with nothing selected. See [Project settings](project-settings).`
+## Keyboard shortcuts
+The whole shortcuts sheet is this page: a **Keyboard set** picker at the top (see [Keyboard shortcuts](shortcuts#keyboard-sets)), **One-key shortcuts** (switches off every shortcut that is a single letter, number or Space), and then every command with its keys, to search and change. The <kbd>?</kbd> key and **Keyboard shortcuts** in the command palette open the window on this page. See [Keyboard shortcuts](shortcuts).
+
+![The Keyboard shortcuts page.](help/preferences-keys.png)
+
+## Workspace
+*(In the editor only.)*
+- **Panel layouts**: switch every panel's place in one go. **Standard** is where everything starts; **Essentials** puts away every panel and tool group a first project does not need (see [Your first five minutes](welcome#your-first-five-minutes)); **Animate** has a tall timeline; **Interactions** has a big interaction graph with Variables and Scripts beside the properties; **Big canvas** puts all the panels in one column on the right and folds the bottom away; **Review** opens Comments and the accessibility checker. **Save current layout as…** keeps the way you've arranged things (see [Arranging the panels](interface#arranging-the-panels)) under a name of your own, up to 12, with rename and delete beside each. Saved workspaces follow you to any browser you sign in on.
+- **Section and tool order**: **Reset section and tool order** puts the Properties panel's sections and the tool bar's groups and tools back in the editor's own order, after you have dragged them about. See [Moving sections](properties-panel#moving-sections).
+
+- **Recording**: there is none to set. See [What the editor records](what-is-recorded).
+
+Project-wide settings (start artboard, fit, sandbox) are in the inspector with nothing selected. See [Project settings](project-settings).`
   },
   {
     id: "what-is-recorded",
@@ -10612,7 +10641,7 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
     group: "Getting started",
     summary: "Every keyboard shortcut in the editor, and how to change the keys to your own.",
     keywords: "keys hotkeys keyboard rebind customise remap keymap shortcuts sheet single key wcag",
-    body: `Press <kbd>?</kbd> (or <kbd>Ctrl</kbd>+<kbd>/</kbd>) anywhere to open the **Keyboard shortcuts** sheet: every shortcut in plain words, grouped, with the part of the editor it works in. The tables below are the keys the editor starts with (on a Mac, <kbd>Ctrl</kbd> is <kbd>Cmd</kbd> and <kbd>Alt</kbd> is <kbd>Option</kbd>); the sheet and every tooltip show **your** keys.
+    body: `Press <kbd>?</kbd> (or <kbd>Ctrl</kbd>+<kbd>/</kbd>) anywhere to open the **Keyboard shortcuts** page of [Preferences](preferences): every shortcut in plain words, grouped, with the part of the editor it works in. Press it again to close. The tables below are the keys the editor starts with (on a Mac, <kbd>Ctrl</kbd> is <kbd>Cmd</kbd> and <kbd>Alt</kbd> is <kbd>Option</kbd>); the sheet and every tooltip show **your** keys.
 
 ## Every panel, tool and action can have a key
 The sheet lists **everything** you can do in the editor, not just the ones that start with a key: every tool, every panel (Open Layers, Open Timeline, Open Accessibility...), the windows (Preferences, Share, Export, Revision history), the layers you can add, the page commands, the animation presets, the interaction recipes, the question types, the workspaces and the export types. Most start with **No key**. Search for the one you want (the search matches what it does, not only its name), press **Set key**, and press the keys. **Only ones with a key** hides the rest when you just want a reminder of the keys you have. Anything that depends on what you have picked tells you what to pick first when you press its key with nothing picked (*Select one layer first*).
@@ -10620,14 +10649,30 @@ The sheet lists **everything** you can do in the editor, not just the ones that 
 The new commands that come with a key (others have none): <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> fits the page to the selected layers (below), <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> hides or shows the selected layers and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd> locks or unlocks them.
 
 ## Changing the keys
-- Open the sheet with <kbd>?</kbd>, or **Preferences → Keyboard shortcuts…**, or the command palette.
+- Open the page with <kbd>?</kbd>, or **Preferences → Keyboard shortcuts**, or the command palette.
 - **Search** by what a command is called, or press **Find a key** and then the keys to see what they do.
-- **Add key** (or **Set key** on a command with none) listens for the next keys you press; <kbd>Esc</kbd> cancels. The **×** beside a key takes it off. **Reset** puts that command back to its default; **Reset all** does it for everything.
+- **Add key** (or **Set key** on a command with none) listens for the next keys you press; <kbd>Esc</kbd> cancels. The **×** beside a key takes it off. **Reset** puts that command back to its default; **Reset this page** (at the bottom of the window) does it for every key, back to the Default set.
 - If another command in the same place already uses the keys you pressed, the sheet says which and asks whether to move it over. A key used twice shows a warning at the top; only the command earlier in the list works.
-- **Start from** picks a set of keys to begin with: *Default*, or *Illustration style* (shapes on the keys drawing programs usually use). Your own changes stay on top of whichever you pick.
+- The **Keyboard set** at the top picks a set of keys to begin with: *Default*, or *Illustration style* (shapes on the keys drawing programs usually use). Your own changes stay on top of whichever you pick, and you can keep them as a set of your own (below).
 - Your keys are saved with **you**, like your other preferences: they follow you between browsers and are never saved in a project. New default keys still reach you for anything you did not change.
-- **One-key shortcuts** (also in Preferences) turns off every shortcut that is a single letter, number or Space (V, H, P, S, Space...). Shortcuts with <kbd>Ctrl</kbd> or <kbd>Alt</kbd>, and keys such as <kbd>Delete</kbd>, the arrows and <kbd>F2</kbd>, keep working, and the tool bar and menus do the same jobs. It is there for people who use speech input or press keys by accident.
+- **One-key shortcuts** turns off every shortcut that is a single letter, number or Space (V, H, P, S, Space...). Shortcuts with <kbd>Ctrl</kbd> or <kbd>Alt</kbd>, and keys such as <kbd>Delete</kbd>, the arrows and <kbd>F2</kbd>, keep working, and the tool bar and menus do the same jobs. It is there for people who use speech input or press keys by accident.
 - A one-key shortcut never fires while you are typing in a box.
+
+## Keyboard sets
+Keep more than one set of keys and swap between them. The **Keyboard set** box at the top of the page picks the set in use, and applies it the moment you pick:
+
+![The set picker and its More menu.](help/keyboard-sets.png)
+
+- **Default** and **Illustration style** are built in and never change. Change a key while one of them is picked and the box reads *Default (changed)*: your changes sit on top of it until you save them.
+- **Save as…** keeps the keys in use under a name of your own and carries on with that set. From then on every key you change is kept in it. Sets are listed under **Mine** in the box, up to 16.
+- **More** has **Rename…**, **Duplicate** (a copy to change without touching the first), **Delete…** (your keys go back to the Default set), **Export to a file**, **Share…** and **Import…**. Rename, Duplicate and Delete are for your own sets only.
+- Switching away from keys you changed but did not save asks first, and offers to save them as a set.
+- **Export to a file** saves a small \`.keymap.json\` file. **Share…** gives a **share code** to copy and a **link**: anyone signed in to the editor can paste the code into **Import…**, or open the link, and see the keys before they are added. The set travels inside the code and the link, so nothing is kept on a server, and what you share is a copy.
+- **Import…** takes a share code, a link or the text of an exported file (or **Choose a file…**) and shows what it would do **before anything is added**: how many commands it gives keys to, any commands this editor does not have (left out), keys that are not keys (left out), and any key that two commands in the same place would share. It is always added as a new set (never over one of yours), either **Add and use it** or **Add, keep my keys**.
+
+![Importing a set: what it would do, and the key two commands would share.](help/keyboard-sets-import.png)
+
+Your sets, like your keys, are saved with you: they follow you between browsers and are never saved in a project.
 
 The same letter can mean different things in different places: a key looks first at the panel you last clicked in. Click in the Timeline and <kbd>P</kbd>, <kbd>S</kbd>, <kbd>R</kbd>, <kbd>T</kbd> and <kbd>A</kbd> take you to a property (below); click the canvas, the Layers list or anywhere else and they are tools again.
 

@@ -303,7 +303,7 @@ describe('dragging a section by its title', () => {
 describe('Preferences: Reset section and tool order', () => {
   it('is off until something has been moved, then puts everything back and says so', async () => {
     const { PrefsModal } = await import('../src/components/PrefsModal');
-    act(() => root.render(<PrefsModal onClose={() => undefined} />));
+    act(() => root.render(<PrefsModal workspace page="workspace" onClose={() => undefined} />));
     const btn = () => [...document.querySelectorAll<HTMLButtonElement>('[aria-label="Section and tool order"] button')].find((b) => b.textContent === 'Reset section and tool order')!;
     expect(btn().disabled).toBe(true);
     act(() => {

@@ -10,7 +10,7 @@ import { downloadPackage } from './lib/export';
 import { pickFiles } from './lib/insert';
 import { confirmDialog, promptDialog } from './components/dialogs';
 import { Icons } from './components/icons';
-import { PrefsModal } from './components/PrefsModal';
+import { openPrefs } from './lib/prefs-window';
 import { DEFAULT_FONT, prefs, usePrefs } from './lib/prefs';
 import { FirstRun } from './components/FirstRun';
 import { ensureGoogleFont, loadCatalog } from './lib/font-catalog';
@@ -198,7 +198,6 @@ export function Home({ open }: { open: (id: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [who, setWho] = useState<SessionInfo | null>(null);
   const [power, setPower] = useState(false);
-  const [prefsOpen, setPrefsOpen] = useState(false);
   // The toolbox session's own view of who this is (the server's check can be missing in local dev)
   const [me2, setMe2] = useState<SessionUser | null>(null);
   useEffect(() => {
@@ -442,10 +441,9 @@ export function Home({ open }: { open: (id: string) => void }) {
             </>
           )}
           <NoticeBell open={open} />
-          <button className="icon-btn" title="Preferences (theme, mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)}>
+          <button className="icon-btn" title="Preferences (theme, mouse wheel, tooltips)" onClick={() => openPrefs()}>
             <Icons.gear width={16} />
           </button>
-          {prefsOpen && <PrefsModal onClose={() => setPrefsOpen(false)} />}
           <a className="btn" href="#/help" title="How to use Interactives (F1 to search)">
             <Icons.help width={14} /> Help
           </a>

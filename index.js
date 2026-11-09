@@ -478,6 +478,12 @@ fontsProxy.prewarm()
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
 const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], codeTheme: ['follow', 'light', 'dark'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean', technicalWording: 'boolean', showNewInteractions: 'boolean', altDragHintAlways: 'boolean', gettingStarted: 'boolean', timelineList: 'boolean', timelineFoldEmpty: 'boolean', timelineHideSound: 'boolean', timelineHideCaptions: 'boolean', timelineHideDescriptions: 'boolean', singleKeys: 'boolean', keymapPreset: ['default', 'illustration']},
+	cleanKeymap = (m) => Object.fromEntries(
+		Object.entries(m)
+			.filter(([k, v]) => /^[a-z][a-z0-9.-]{0,59}$/i.test(k) && Array.isArray(v))
+			.map(([k, v]) => [k, v.filter((c) => typeof c === 'string' && c.length > 0 && c.length <= 24 && /^[A-Za-z0-9+,./\\[\]';=`-]+$/.test(c)).slice(0, 4)])
+			.slice(0, 600)
+	),
 	cleanPrefs = (p) => {
 		let out = {}
 		for (let [k, rule] of Object.entries(PREF_KEYS)) {
@@ -512,14 +518,20 @@ const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], co
 		}
 		//The person's own keyboard shortcuts: command id to a short list of key combos (lib/keymap.ts). Ids and combos are
 		//plain short strings, at most 600 commands with 4 combos each (the registry has about 250: every panel, tool and action can take a key), and anything else is dropped
-		if (p?.keymap && typeof p.keymap === 'object' && !Array.isArray(p.keymap)) {
-			out.keymap = Object.fromEntries(
-				Object.entries(p.keymap)
-					.filter(([k, v]) => /^[a-z][a-z0-9.-]{0,59}$/i.test(k) && Array.isArray(v))
-					.map(([k, v]) => [k, v.filter((c) => typeof c === 'string' && c.length > 0 && c.length <= 24 && /^[A-Za-z0-9+,./\\[\]';=`-]+$/.test(c)).slice(0, 4)])
-					.slice(0, 600)
-			)
+		if (p?.keymap && typeof p.keymap === 'object' && !Array.isArray(p.keymap)) out.keymap = cleanKeymap(p.keymap)
+		//Keyboard shortcut sets saved under a name (lib/keymap-sets.ts): an id, a name, which built-in set they start from and
+		//the keys changed on top (same rule as keymap). At most 16, none bigger than 10 KB, ids all different. keymapActive is
+		//the id of the one the keys in use belong to
+		if (Array.isArray(p?.keymapSets)) {
+			let seen = new Set()
+			out.keymapSets = p.keymapSets
+				.filter((s) => s && typeof s === 'object' && !Array.isArray(s) && typeof s.id === 'string' && /^[\w-]{1,40}$/.test(s.id) && typeof s.name === 'string' && s.name.trim().length > 0 && s.name.length <= 60 && ['default', 'illustration'].includes(s.base) && s.keys && typeof s.keys === 'object' && !Array.isArray(s.keys))
+				.filter((s) => !seen.has(s.id) && seen.add(s.id))
+				.map((s) => ({id: s.id, name: s.name.trim(), base: s.base, keys: cleanKeymap(s.keys)}))
+				.filter((s) => JSON.stringify(s).length <= 10000)
+				.slice(0, 16)
 		}
+		if (typeof p?.keymapActive === 'string' && /^[\w-]{1,40}$/.test(p.keymapActive)) out.keymapActive = p.keymapActive
 		//What the first-run screen and the Getting started strip remember (which jobs are ticked, whether it was put away).
 		//Short keys to booleans, at most 40, same rule as the folds
 		if (p?.onboarding && typeof p.onboarding === 'object' && !Array.isArray(p.onboarding)) {
@@ -546,7 +558,7 @@ router.get('/api/prefs', async (req, res) => {
 	res.json({user, prefs: doc?.prefs || {}})
 })
 
-router.put('/api/prefs', express.json({limit: '128kb'}), async (req, res) => {
+router.put('/api/prefs', express.json({limit: '512kb'}), async (req, res) => {
 	let user = whoIs(req)?.username || 'guest',
 		clean = cleanPrefs(req.body.prefs)
 	await prefs.updateOne({_id: user}, {$set: {prefs: clean, updated: new Date()}}, {upsert: true})

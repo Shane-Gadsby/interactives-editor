@@ -12,7 +12,7 @@ import { ensureCommandKeys } from '../src/lib/command-keys';
 import { buildCommands } from '../src/lib/commands';
 import { artboardMenuItems, fitPageCommand } from '../src/lib/artboard-commands';
 import { closeShortcuts, openShortcuts } from '../src/lib/shortcuts-sheet';
-import { ShortcutsHost } from '../src/components/ShortcutsModal';
+import { PrefsHost as ShortcutsHost } from '../src/components/PrefsModal';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -144,7 +144,7 @@ describe('the sheet', () => {
     const root = createRoot(host);
     act(() => root.render(<ShortcutsHost />));
     act(() => openShortcuts(false));
-    const heads = () => [...document.querySelectorAll('.keys-group h3')].map((h) => h.textContent);
+    const heads = () => [...document.querySelectorAll('.keys-group h4')].map((h) => h.textContent);
     expect(heads()).toEqual(expect.arrayContaining(['Add', 'Pages', 'Panels and help', 'Workspaces', 'Behaviours', 'Questions', 'Animate']));
     const names = () => [...document.querySelectorAll('.keys-name')].map((n) => n.textContent);
     expect(names()).toEqual(expect.arrayContaining(['Fit page to selection', 'Open Assets', 'Add rectangle']));
