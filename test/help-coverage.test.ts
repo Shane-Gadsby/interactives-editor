@@ -115,10 +115,11 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Puzzle layouts from a': [['branded-starters', 'Crossword']],
   'New starters: Listening lab,': [['branded-starters', 'Listening lab']],
   'New branded set Listen,': [['branded-starters', 'Observe and tag']],
+  'Property fields line up': [['properties-panel', 'How fields line up']],
 };
 
 //Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone
-const UPCOMING = new Set(['Help, in plain words', 'Small fixes from the docs pass']);
+const UPCOMING = new Set(['Help, in plain words', 'Small fixes from the docs pass', 'Property fields line up']);
 
 const section = (): string[] => {
   const text = readFileSync(join(__dirname, '..', 'CHANGELOG.md'), 'utf8');

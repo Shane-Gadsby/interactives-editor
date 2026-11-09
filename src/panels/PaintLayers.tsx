@@ -94,8 +94,10 @@ function FxFields({ n, ids, prefix, set }: { n: Painted; ids: string[]; prefix: 
       </Row>
       <Row>
         <Num node={n} ids={ids} prop={`${prefix}.feather`} label="Feather" title="Soft blur of this paint alone, in pixels. With an offset and a dark, see-through colour it makes a drop shadow" min={0} />
-        <Num node={n} ids={ids} prop={`${prefix}.offsetX`} label="X" title="Shift this paint sideways, in pixels" />
-        <Num node={n} ids={ids} prop={`${prefix}.offsetY`} label="Y" title="Shift this paint down, in pixels" />
+      </Row>
+      <Row>
+        <Num node={n} ids={ids} prop={`${prefix}.offsetX`} label={'Offset\u00a0X'} title="Shift this paint sideways, in pixels" />
+        <Num node={n} ids={ids} prop={`${prefix}.offsetY`} label={'Offset\u00a0Y'} title="Shift this paint down, in pixels" />
       </Row>
     </>
   );

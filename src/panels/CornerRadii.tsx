@@ -59,7 +59,7 @@ export function CornerRadii({ nodes }: { nodes: SceneNode[] }) {
     </div>
   );
   return (
-    <div className="corner-radii labels-66">
+    <div className="corner-radii">
       <div className="corner-head">
         <span className="field-label">Radius</span>
         <button

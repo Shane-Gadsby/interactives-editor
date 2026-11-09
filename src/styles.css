@@ -373,24 +373,9 @@ code,
   white-space: nowrap;
   flex: none;
 }
-/* The one-letter labels (X, Y, W, Sx, Ox, a) share a width, so a column of them lines up */
-.inspector .number-field > .field-label {
-  width: 18px;
-}
-/* A run of rows whose labels differ in length: give them one width so the boxes line up (labels-54, labels-66) */
-.inspector .labels-54 .field-label {
-  flex: none;
-  width: 54px;
-  white-space: nowrap;
-}
-.inspector .labels-66 .field-label {
-  flex: none;
-  width: 66px;
-  white-space: nowrap;
-}
 .field-label.block {
   display: block;
-  margin: 8px 0 4px;
+  margin: 6px 0 3px;
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -426,11 +411,6 @@ code,
 .text-field.multiline {
   align-items: flex-start;
   flex-direction: column;
-}
-.field-suffix {
-  color: var(--muted);
-  font-size: 11px;
-  margin-left: -2px;
 }
 /* Native sliders, ticks and radios take the palette gold, like every other chosen state */
 input[type='range'],
@@ -593,56 +573,202 @@ progress {
   justify-content: space-between;
 }
 
-/* ---------------------------------------------------------------- inspector fit
-   Nothing in the inspector clips its value. A field has a smallest size it is still readable at (a three digit number,
-   a short dropdown word, a hex colour), rows wrap onto a second line when their fields would shrink below that, and
-   labels of more than one word wrap inside their own box instead of pushing the field out of the panel. */
-.inspector .row {
+/* ---------------------------------------------------------------- field rows
+   One layout for every field in the Properties panel and the graph's node settings (.inspector, .param-form).
+   A field is a grid of three columns: the label (one width, --label-w, and a longer label wraps to a second line inside
+   it instead of widening it), the control (inputs, dropdowns and colour boxes all start at the same x and run to the same
+   right edge) and a small trailing slot for a unit (x, %, ms). A key diamond has a slot of its own just outside the field
+   (--field-key) that is kept whether or not the diamond is showing, so a row with an extra and a row without end in the
+   same place. A row with two or more fields (X and Y) uses the narrower label columns, so they fit side by side.
+   Only a text area (and code, lists and tables, with .field-label.block) puts its label above, in the same small label.
+   Checkboxes sit on the left edge, two to a line in equal halves. Components say which kind of field they are with
+   fieldClass() in components/ui.tsx, and test/field-layout.test.tsx holds this contract. */
+:root {
+  --label-w: 76px;
+  --label-w-sm: 48px;
+  --label-w-xs: 16px;
+  --field-trail-wide: 16px;
+  --field-trail-tight: 10px;
+  --field-trail: var(--field-trail-wide);
+  --field-key: 14px;
+  --field-gap: 6px;
+  --field-h: 26px;
+  /* the gap between the two halves of a pair row, which is also where a link button sits */
+  --pair-channel: 22px;
+  --link-w: 14px;
+}
+:is(.param-form, .key-editor) {
+  --field-key: 0px;
+}
+:is(.inspector, .param-form, .key-editor) .row {
   flex-wrap: wrap;
-  gap: 4px 8px;
+  gap: 4px var(--field-gap);
 }
-.inspector .row > .field:not(.check-field),
-.inspector .row > .keyed {
-  min-width: min-content;
+:is(.inspector, .param-form, .key-editor) .field:not(.check-field) {
+  display: grid;
+  grid-template-columns: var(--fl, var(--label-w)) minmax(var(--ctl-min, 44px), 1fr) var(--field-trail);
+  align-items: center;
+  column-gap: var(--field-gap);
+  margin-right: var(--field-key);
 }
-.inspector .field-label {
-  flex: 0 1 auto;
-  min-width: min-content;
+:is(.inspector, .param-form, .key-editor) .keyed > .field {
+  margin-right: 0;
+}
+:is(.inspector, .param-form, .key-editor) .field.unlabelled:not(.check-field) {
+  grid-template-columns: minmax(var(--ctl-min, 44px), 1fr) var(--field-trail);
+}
+:is(.inspector, .param-form, .key-editor) .field.stacked:not(.check-field) {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  row-gap: 3px;
+}
+:is(.inspector, .param-form, .key-editor) .field-label {
+  min-width: 0;
   white-space: normal;
   overflow-wrap: normal;
   line-height: 1.2;
 }
-.inspector .field:not(.text-field.multiline) input:not([type='checkbox']):not([type='color']):not(.alpha),
-.inspector .field select {
+.field-trail {
+  min-width: 0;
+  margin-left: -2px;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1;
+  white-space: nowrap;
+}
+/* outside the property panels an empty slot takes no room (only there is it a grid column) */
+.field-trail:empty {
+  display: none;
+}
+:is(.inspector, .param-form, .key-editor) .field-trail:empty {
+  display: block;
+}
+/* the controls share a height, border and padding wherever they are */
+:is(.inspector, .param-form, .key-editor) .field:not(.check-field) :is(input:not([type='checkbox'], [type='color'], .alpha), select) {
+  height: var(--field-h);
+  min-width: 0;
+}
+:is(.inspector, .param-form, .key-editor) .number-field {
+  --ctl-min: 36px;
+}
+:is(.inspector, .param-form, .key-editor) .select-field {
+  --ctl-min: 64px;
+}
+:is(.inspector, .param-form, .key-editor) .color-field {
+  --ctl-min: 130px;
+}
+:is(.inspector, .param-form, .key-editor) .field.stacked textarea {
+  min-height: calc(var(--field-h) * 2);
+}
+/* one slot per field: a row with two or more of them splits evenly and never wraps */
+:is(.inspector, .param-form, .key-editor) .row > :is(.field, .keyed) {
+  flex: 1 1 0;
+  min-width: min-content;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :where(.field, .keyed) ~ :where(.field, .keyed)) {
+  --fl: var(--label-w-sm);
+  --field-trail: var(--field-trail-tight);
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :where(.field, .keyed) ~ :where(.field, .keyed)) > :is(.field, .keyed) {
   flex: 1 1 0;
 }
-.inspector .number-field input:not([type='checkbox']):not([type='color']) {
-  min-width: 32px;
-  padding: 0 4px;
+/* a dropdown, a text box or a px/percent box needs more than half a row, so it never shares a line with another field: each is a single row again, in the one label column */
+:is(.inspector, .param-form, .key-editor) .row:has(> :where(.select-field, .text-field, .unit-field, .keyed:has(> :is(.select-field, .text-field, .unit-field))) ~ :where(.field, .keyed), > :where(.field, .keyed) ~ :where(.select-field, .text-field, .unit-field, .keyed:has(> :is(.select-field, .text-field, .unit-field)))) {
+  --fl: var(--label-w);
+  --field-trail: var(--field-trail-wide);
+  flex-wrap: wrap;
 }
-.inspector .text-field:not(.multiline) input {
-  min-width: 56px;
+:is(.inspector, .param-form, .key-editor) .row:has(> :where(.select-field, .text-field, .unit-field, .keyed:has(> :is(.select-field, .text-field, .unit-field))) ~ :where(.field, .keyed), > :where(.field, .keyed) ~ :where(.select-field, .text-field, .unit-field, .keyed:has(> :is(.select-field, .text-field, .unit-field)))) > :is(.field, .keyed) {
+  flex: 1 1 100%;
 }
-.inspector .select-field select {
-  min-width: 84px;
+/* four unlabelled boxes (padding, margin) go two by two */
+:is(.inspector, .param-form, .key-editor) .row:has(> .field.unlabelled ~ .field.unlabelled ~ .field.unlabelled) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--pair-channel);
 }
-/* Dropdowns need more room than numbers: a row of a dropdown and a number gives the dropdown the larger share */
-.inspector .row > .select-field {
-  flex-grow: 2;
+:is(.inspector, .param-form, .key-editor) .row:has(> :where(.field, .keyed) ~ :where(.field, .keyed)) .field.lbl-xs {
+  --fl: var(--label-w-xs);
 }
-.inspector .color-field {
-  gap: 4px;
+:is(.inspector, .param-form, .key-editor) .keyed {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding-right: var(--field-key);
 }
-.inspector .color-field input.color-text:not([type='color']) {
-  min-width: 68px;
+:is(.inspector, .param-form, .key-editor) .keyed > .key-btn {
+  flex: none;
+  width: var(--field-key);
+  margin-right: calc(-1 * var(--field-key));
+  padding: 0;
+  text-align: center;
 }
-.inspector .check-field {
+/* checkboxes: the box then its words, on the left edge */
+:is(.inspector, .param-form, .key-editor) .check-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex: 0 1 auto;
-  gap: 4px;
 }
-.inspector .check-field input {
+:is(.inspector, .param-form, .key-editor) .check-field input {
   flex: none;
   margin: 0;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :where(.field, .keyed) ~ :where(.field, .keyed)) > .check-field {
+  flex: 1 1 0;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> :where(.field, .keyed) ~ :where(.field, .keyed)):not(:has(> :where(.field, .keyed) ~ :where(.field, .keyed) ~ :where(.field, .keyed))) {
+  column-gap: var(--pair-channel);
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .link-toggle, > .link-gap) {
+  column-gap: calc((var(--pair-channel) - var(--link-w)) / 2);
+}
+:is(.inspector, .param-form, .key-editor) .row > :is(.link-toggle, .link-gap) {
+  width: var(--link-w);
+}
+:is(.inspector, .param-form, .key-editor) .field.li-picker-field {
+  align-items: start;
+}
+:is(.inspector, .param-form, .key-editor) .li-picker {
+  justify-self: start;
+}
+/* a label with a group of buttons beside it (animation presets): the buttons start in the control column and wrap there */
+:is(.inspector, .param-form, .key-editor) .row > .field-label {
+  flex: 0 0 var(--label-w);
+  padding-top: 5px;
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .field-label) {
+  align-items: flex-start;
+}
+:is(.inspector, .param-form, .key-editor) .row > .anim-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* the colour field: swatch, palette, hex and opacity are one control */
+.color-field > .field-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+:is(.inspector, .param-form, .key-editor) .color-field > .field-control input.color-text:not([type='color']) {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+:is(.inspector, .param-form, .key-editor) .color-field .swatch {
+  width: var(--field-h);
+  height: var(--field-h);
+}
+:is(.inspector, .param-form, .key-editor) .color-field .palette-btn {
+  height: var(--field-h);
+}
+/* the px or percent button sits inside the box, at its right end */
+.unit-field > .unit-toggle {
+  right: calc(var(--field-trail) + var(--field-gap) + 2px);
 }
 
 /* ---------------------------------------------------------------- sections */
@@ -4888,7 +5014,7 @@ textarea.form-text {
 }
 .field-label[data-tip],
 .field[data-tip] > .field-label,
-.field[data-tip] > span:not(.swatch) {
+.field[data-tip] > span:not(.swatch, .field-trail, .field-control) {
   text-decoration: underline dotted var(--line-2);
   text-underline-offset: 3px;
 }
@@ -11624,21 +11750,12 @@ button.flow-text:focus-visible {
   padding: 0;
   list-style: none;
 }
-/* ---------------------------------------------------------------- pivot (a 3x3 picker and two percents) */
+/* ---------------------------------------------------------------- pivot (a 3x3 picker, then X and Y as a pair row) */
 .prop-row.pivot-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  display: block;
 }
 .pivot-row .li-picker-field {
   flex: none;
-}
-.pivot-nums {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
 }
 
 /* ---------------------------------------------------------------- a message with an Undo or Redo button */
