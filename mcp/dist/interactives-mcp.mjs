@@ -9723,7 +9723,7 @@ function requireReact() {
 requireReact();
 const DEFAULT_GRID = { size: 8, subdivisions: 4 };
 const DEFAULT_FONT = "Open Sans";
-const DEFAULTS = { technicalWording: false, askPictureDescription: true, wheel: "zoom", tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: "dark", defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true };
+const DEFAULTS = { technicalWording: false, askPictureDescription: true, wheel: "zoom", tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: "dark", codeTheme: "follow", defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true };
 const LAST_USER = "ix-prefs-user";
 const keyFor = (user2) => `ix-prefs:${user2}`;
 const read = (key) => {
@@ -10474,7 +10474,7 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     id: "preferences",
     title: "Preferences",
     group: "Getting started",
-    summary: "Your own editor settings: wheel, theme, default font, rulers, grid and snapping, tooltips, layers outside clipped artboards.",
+    summary: "Your own editor settings: wheel, theme, code editor colours, default font, rulers, grid and snapping, tooltips, layers outside clipped artboards.",
     keywords: "settings options wheel tooltips",
     body: `![The Preferences dialog.](help/preferences.png)
 
@@ -10482,6 +10482,7 @@ Open **Preferences** from the gear in the top bar (or on the projects page). The
 
 - **Mouse wheel**: *Zoom (Shift+wheel pans)* or *Pan (Ctrl+wheel zooms)*. See [Moving around the canvas](canvas).
 - **Theme**: *Dark*, *Light*, or *Auto (follow the system)*. Both are made from the StudyDesk palette (the same colours as the rest of the Toolbox): its greys, its blue for selection and focus, and UniSQ gold on primary buttons, the open tab and the line under the top bar. In Light, the palette's grey for secondary text is a little under the usual contrast guideline (4.4:1 on panels, 4.1:1 on the background, against 4.5:1); it is left as the palette has it so the editor matches the Toolbox.
+- **Code editor colours**: *Follow the editor* (the default), *Light* or *Dark*. It is the colours of every code box: the **Scripts** tab, the raw text of a data file, and the HTML and code fields in the Inspector. *Follow the editor* draws code light when the editor is light (or Auto on a light system) and dark when it is dark, and switches the moment the theme does. *Light* or *Dark* keeps the code that way whatever the editor does, so you can have a dark editor with light code or the other way round. The light colours are all at least 4.5:1 on their background. The same three buttons are in the header of the Scripts tab and of a data file's raw text, so you can change it where you are typing. It is yours, not the project's: nobody else sees it, and it follows you between browsers.
 - **Workspace** (in the editor only): switch every panel's place in one go. **Standard** is where everything starts; **Essentials** puts away every panel and tool group a first project does not need (see [Your first five minutes](welcome#your-first-five-minutes)); **Animate** has a tall timeline; **Interactions** has a big interaction graph with Variables and Scripts beside the properties; **Big canvas** puts all the panels in one column on the right and folds the bottom away; **Review** opens Comments and the accessibility checker. **Save current layout as…** keeps the way you've arranged things (see [Arranging the panels](interface#arranging-the-panels)) under a name of your own, up to 12, with rename and delete beside each. Saved workspaces follow you to any browser you sign in on.
 - **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. It is Open Sans unless you change it. Click the box and type to search every Google font (the chips narrow it by Sans, Serif, Display, Handwriting or Mono), then pick one with <kbd>Enter</kbd> or a click; <kbd>Esc</kbd> closes the list. A name that isn't on the list can be used as typed. It applies to projects and text you make from now on, not to ones that exist.
 - **Canvas**: **Show rulers** (rulers and guides on the canvas, also <kbd>Shift</kbd>+<kbd>R</kbd>), **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>), **Snapping** and a switch for each target (**Snap to grid** is <kbd>Ctrl</kbd>+<kbd>'</kbd>; the others are artboard, layers, guides, spacing, pixels and points), **Snap distance**, **Grid size** (1 to 512 px, with presets under it) and **Stronger line every** (cells, 1 to 32). See [The grid and snapping](grid). These follow you with your account like the rest.
@@ -12881,6 +12882,8 @@ Choices and lists work with bindings like any other value: bind a fill colour to
     keywords: "script javascript code ix api sandbox quickjs wasm onframe animate await",
     body: `Scripts are JavaScript for what the nodes can't do. Add them in the **Scripts** tab. A script runs on start (tick **Run on start**) or from a **Run script** node; short code can go straight into a **Run code** node.
 
+The **Code colours** buttons at the top right of the script (**Follow**, **Light**, **Dark**) set the colours of the code box. **Follow** goes light or dark with the editor's theme; the other two stay as they are. It is a [preference](preferences) that applies to every code box, and it is yours, not the project's.
+
 \`\`\`
 const ball = ix.node('Ball');
 ix.onFrame((dt) => ball.set('x', (ball.get('x') + dt * 0.1) % ix.artboard.width));
@@ -13371,7 +13374,7 @@ Use a source by its **name** anywhere expressions go: \`{products.length} produc
 A source **From: Uploaded file** can be edited right there, in two ways, and both change the same text:
 
 - **Table** (CSV and TSV, and JSON that is a list of flat objects) or **Tree** (any other JSON): change a cell or a value by typing in it. Above it, buttons add, copy, delete and move rows and columns (or, in a tree, add inside or next to a row, copy, delete, move, open or close everything), and **Cell holds** (or **Holds**) changes a value between text, number, yes/no, empty, list and group, so 12 and "12" are not the same thing. In a tree, a list of flat objects opens as a table (the **Table / List** switch turns that off), so \`opening\` or \`choices\` inside a bigger file are edited like a spreadsheet.
-- **Raw text**: the file's own text, coloured for its format (JSON, and a colour for each column of a CSV or TSV). A mistake in JSON is marked on its line with the line and column and what is wrong; **Go to this spot** (the line and column link) jumps to it. **Tidy up** lays JSON out again with two-space indents.
+- **Raw text**: the file's own text, coloured for its format (JSON, and a colour for each column of a CSV or TSV). A mistake in JSON is marked on its line with the line and column and what is wrong; **Go to this spot** (the line and column link) jumps to it. **Tidy up** lays JSON out again with two-space indents. The **Code colours** buttons beside it (**Follow**, **Light**, **Dark**) set the colours of the text box: **Follow** goes light or dark with the editor's theme. See [Preferences](preferences).
 
 A change is saved a moment after you stop typing (or when you leave the box), as a new version of the file, so **Undo** and **Redo** bring the old text back, other people editing see the change, and the canvas, bindings, repeaters and Preview use it at once. JSON that doesn't parse is **not** saved: the interactive keeps using the last good version until it does. CSV and TSV never fail to parse, but a quote that never closes or a row with the wrong number of cells gets a warning.
 
