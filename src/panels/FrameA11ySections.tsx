@@ -178,7 +178,7 @@ export function KeyNavSection({ node, project }: { node: Container; project: Pro
             value={!!k.countHidden}
             onChange={(v) => update({ countHidden: v ? true : undefined })}
           />
-          {k.mode === 'radio' && <SectionBlurb text="Moving to an item clicks it, so the flows that choose an option run." name="keyboard navigation" help={['accessibility', 'keyboard-navigation']} />}
+          {k.mode === 'radio' && <SectionBlurb text="Moving to an item clicks it, so the flows that choose an option run." name="Keyboard navigation" help={['accessibility', 'keyboard-navigation']} />}
           {!rep && <div className="muted small">The items are this {node.type}'s layers that a keyboard can reach.</div>}
         </>
       )}

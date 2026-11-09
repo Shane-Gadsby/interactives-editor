@@ -173,7 +173,7 @@ export function ConnectorSection({ nodes, project, ab }: { nodes: ConnectorNode[
           </Row>
         </>
       )}
-      <SectionBlurb text="The line is the Stroke and the label's background is the Fill. Move the layers it joins, not the connector." name="connectors" help={['connectors', 'the-connector-section']} />
+      <SectionBlurb text="The line is the Stroke and the label's background is the Fill. Move the layers it joins, not the connector." name="Connector" help={['connectors', 'the-connector-section']} />
     </Section>
   );
 }

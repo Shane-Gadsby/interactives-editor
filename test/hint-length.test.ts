@@ -18,7 +18,7 @@ import { SectionBlurb } from '../src/components/SectionBlurb';
  */
 const BUDGET = 120;
 const ROOT = join(__dirname, '..', 'src');
-const SCAN = [join(ROOT, 'panels')];
+const SCAN = [join(ROOT, 'panels'), join(ROOT, 'components', 'ProjectModals.tsx'), join(ROOT, 'Home.tsx')];
 // Status and warning messages that are not explainers, and so are not held to the budget. Keyed by file and the start of the text.
 const EXCEPTIONS: Record<string, string> = {
   // says plainly what the guard cannot do, in the section itself (test/word-audio-own.test.tsx holds it to that)
@@ -26,6 +26,7 @@ const EXCEPTIONS: Record<string, string> = {
 };
 
 function walk(dir: string, out: string[] = []): string[] {
+  if (dir.endsWith('.tsx')) return [...out, dir];
   for (const f of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, f.name);
     if (f.isDirectory()) walk(p, out);

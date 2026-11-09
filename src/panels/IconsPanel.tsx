@@ -111,7 +111,7 @@ export function IconsPanel() {
           ))}
         </ul>
       )}
-      <SectionBlurb text="The Toolbox’s own Icon Set, added as vector layers you can recolour." name="icons" help={['icons']} />
+      <SectionBlurb text="The Toolbox’s own Icon Set, added as vector layers you can recolour." name="Icons" help={['icons']} />
     </div>
   );
 }

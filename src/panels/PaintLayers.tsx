@@ -265,7 +265,7 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
         );
       })}
       {!list.length && <p className="hint">No stroke. Use + to add one.</p>}
-      {list.length > 0 && (n.type === 'path' || n.type === 'polygon' || n.type === 'star') && <SectionBlurb text="Paths are stroked on the line unless you pick Inside or Outside; boxes stroke inside the edge." name="strokes" help={['fill-stroke', 'stroke']} />}
+      {list.length > 0 && (n.type === 'path' || n.type === 'polygon' || n.type === 'star') && <SectionBlurb text="Paths are stroked on the line unless you pick Inside or Outside; boxes stroke inside the edge." name="Stroke" help={['fill-stroke', 'stroke']} />}
     </Section>
   );
 }

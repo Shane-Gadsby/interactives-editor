@@ -57,7 +57,7 @@ export function AnimateSection({ nodes }: { nodes: SceneNode[] }) {
           {said}
         </p>
       ) : (
-        <SectionBlurb text="Pick one to add it as a timeline you can open and change." name="animation presets" help={['animation-presets', 'what-it-writes']} />
+        <SectionBlurb text="Pick one to add it as a timeline you can open and change." name="Animate" help={['animation-presets', 'what-it-writes']} />
       )}
     </Section>
   );

@@ -1947,7 +1947,7 @@ function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Pr
           <NumberField label="Hot y" value={n.cursorHotspot?.y ?? 0} min={0} onChange={(y) => set({ cursorHotspot: { x: n.cursorHotspot?.x ?? 0, y } })} />
         </Row>
       )}
-      <SectionBlurb text="The mouse pointer shown over this layer in Preview and the exported player." name="Cursor" help={['links-cursors', 'cursor']} />
+      <SectionBlurb text="The mouse pointer shown over this layer in Preview and the exported player." name="Cursor on hover" help={['links-cursors', 'cursor']} />
     </Section>
     </>
   );
@@ -2051,7 +2051,7 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
                 Inside the copies, use <code>item</code> and <code>index</code>, e.g. <code>{'{item.name}'}</code>. {lists.length ? `Lists: ${lists.join(', ')}.` : 'Items can be a data source or any list.'}
               </>
             }
-            name="repeaters"
+            name="Repeat (list)"
             help={['repeaters']}
           />
           {!node.children.length && <p className="error small">Put a layer inside this {node.type} to use as the template.</p>}
@@ -2200,7 +2200,7 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
               Remove auto layout
             </button>
           </Row>
-          <SectionBlurb text="Children sit in layer order, and hidden layers take no space." name="auto layout" help={['auto-layout']} />
+          <SectionBlurb text="Children sit in layer order, and hidden layers take no space." name="Auto layout" help={['auto-layout']} />
         </>
       )}
     </Section>
@@ -2257,7 +2257,7 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
           }
         }}
       />
-      <SectionBlurb text="An instance runs its artboard on its own. Inputs set its variables' starting values by name." name="instances" help={['instances']} />
+      <SectionBlurb text="An instance runs its artboard on its own. Inputs set its variables' starting values by name." name="Component" help={['instances']} />
     </Section>
   );
 }
@@ -2314,7 +2314,7 @@ function TextModifiersSection({ node }: { node: Extract<SceneNode, { type: 'text
           </button>
         ))}
       </Row>
-      {!list.length && <SectionBlurb text="Animate letters, words or lines one after another. Try a preset." name="text modifiers" help={['text-modifiers']} />}
+      {!list.length && <SectionBlurb text="Animate letters, words or lines one after another. Try a preset." name="Text modifiers" help={['text-modifiers']} />}
       {list.map((raw, i) => {
         const m = { ...defaultModifier(), ...raw };
         const P = (k: string) => `modifiers.${i}.${k}`;
@@ -2446,7 +2446,7 @@ function ConstraintsSection({ node }: { node: SceneNode }) {
       defaultOpen={list.length > 0}
       actions={<IconButton icon={<Icons.plus />} title="Add a constraint" onClick={() => add('followPath')} />}
     >
-      {!list.length && <SectionBlurb text="Tie this layer to another: follow a path, or copy its position, rotation or scale." name="constraints" help={['constraints']} />}
+      {!list.length && <SectionBlurb text="Tie this layer to another: follow a path, or copy its position, rotation or scale." name="Constraints" help={['constraints']} />}
       {list.map((c, i) => (
         <div key={c.id} className="constraint">
           <Row>

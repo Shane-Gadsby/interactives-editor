@@ -250,7 +250,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
           {share === null && (
             <>
               <p>A share link plays this project in the browser, exactly like the exported HTML file. It is a snapshot: update it when you want people to see your latest changes.</p>
-              <p className="hint">Anyone who has the link can view the project (not edit it). Links are long and random, so they can't be guessed, and you can turn the link off at any time.</p>
+              <p className="hint">Anyone with the link can view the project, not edit it. You can turn the link off at any time.</p>
               <button className="btn primary" disabled={!!busy} onClick={publish}>
                 {busy ?? 'Create share link'}
               </button>
@@ -277,14 +277,17 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
               </div>
               <p className="small muted">Last updated {when(share.updated)}.</p>
               {serverMarked.marked > 0 && (
-                <p className="small muted">
-                  {serverMarked.marked === 1 ? '1 question is' : `${serverMarked.marked} questions are`} marked on the server: both links serve the project without {serverMarked.marked === 1 ? 'its' : 'their'} right answers, and the score the server works out is the one recorded. Learners need the Link for StudyDesk to have an answer checked. Update the link after changing a question. Files you export and the Preview still carry the answers.
-                  {serverMarked.inPage > 0 && ` ${serverMarked.inPage === 1 ? '1 more is' : `${serverMarked.inPage} more are`} set that way but can't be, so ${serverMarked.inPage === 1 ? 'it is' : 'they are'} marked in the page.`}
-                </p>
+                <>
+                  <p className="small muted">
+                    {serverMarked.marked === 1 ? '1 question is' : `${serverMarked.marked} questions are`} marked on the server, so the links leave out right answers. Update a link after changing one.
+                  </p>
+                  <p className="small muted">Learners need the Link for StudyDesk to get answers checked. Exports and Preview still carry the answers.</p>
+                  {serverMarked.inPage > 0 && <p className="small muted">{`${serverMarked.inPage === 1 ? '1 more is' : `${serverMarked.inPage} more are`} set that way but can't be, so ${serverMarked.inPage === 1 ? 'it is' : 'they are'} marked in the page.`}</p>}
+                </>
               )}
               <div className="learner-link">
                 <strong>Link for StudyDesk</strong>
-                <p className="small muted">Use this one in StudyDesk instead, when you want each learner's score, completion and progress kept, and what they do counted for Insights. Learners signed in to StudyDesk resume where they left off; anyone else plays as with the link above.</p>
+                <p className="small muted">Use this one in StudyDesk to keep each learner's score and progress. Signed in learners pick up where they left off.</p>
                 <div className="share-url">
                   <input readOnly value={learnerUrl(share.token)} aria-label="Link for StudyDesk" onFocus={(e) => e.target.select()} />
                   <button
@@ -306,8 +309,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
               <div className="learner-link embed-code">
                 <strong>Embed code</strong>
                 <p className="small muted">
-                  Paste this into the Source code view of a StudyDesk, StaffDesk or open site page, the way you would any other Toolbox item. It is the Link for StudyDesk in an iframe, sized to the project's shape and
-                  resized by the page as the project resizes{share.sensors?.microphone || share.sensors?.camera ? `, and it is allowed to use the ${[share.sensors.microphone && 'microphone', share.sensors.camera && 'camera'].filter(Boolean).join(' and ')} the project asked for` : ''}. The same code works in all three.
+                  Paste this into the Source code view of a StudyDesk, StaffDesk or open site page{share.sensors?.microphone || share.sensors?.camera ? '. It may use the microphone or camera' : ''}.
                 </p>
                 <textarea className="embed-text" readOnly rows={4} value={embed} aria-label="Embed code" onFocus={(e) => e.target.select()} />
                 <div className="row">
@@ -346,7 +348,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
                 />
                 <span>
                   <strong>Allow remix</strong>
-                  <span className="muted small block"> Staff who open the Link for StudyDesk get a "Remix this" button that copies the project, as it is now, into their own projects. Your project is not changed, and the copy is theirs.</span>
+                  <span className="muted small block"> Staff who open the Link for StudyDesk get a "Remix this" button that copies the project for them. Yours is not changed.</span>
                 </span>
               </label>
               <div className="row">
@@ -409,7 +411,7 @@ export function ReviewLinkSection({ projectId }: { projectId: string }) {
       {link === undefined && !error && <p className="small muted">Checking…</p>}
       {link === null && (
         <>
-          <p className="small muted">For subject experts and reviewers. They see the project as it is now, leave notes pinned to a layer or a spot, reply and resolve, and you see them under Comments. The notes stay on the server: they are never part of the project, an export or the share link.</p>
+          <p className="small muted">Reviewers leave notes on a layer or a spot. You see them under Comments. They never go in an export.</p>
           <button className="btn" disabled={busy} onClick={() => void run(async () => setLink(await putReview(projectId, false)))} title="Create a link that lets signed in StudyDesk users view the project and comment">
             Create review link
           </button>

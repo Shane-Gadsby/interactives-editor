@@ -37,7 +37,7 @@ export function WeightSection({ ab, project }: { ab: Artboard; project: Project 
     <Section id="download-size" help="download-size" title={`Download size: ${say(mine.bytes)}`} defaultOpen={false}>
       <SectionBlurb
         text={mine.files.length ? `This artboard needs ${mine.files.length} file${mine.files.length === 1 ? '' : 's'}: ${kindSummary(mine.byKind, say)}.` : 'This artboard needs no pictures, video or sound files, so it costs a learner nothing to open.'}
-        name="download size"
+        name="Download size"
         help={['download-size', 'seeing-what-an-artboard-weighs']}
       />
       {shown.length > 0 && (
@@ -77,7 +77,7 @@ export function WeightSection({ ab, project }: { ab: Artboard; project: Project 
       {weight.shared.bytes > 0 && <p className="hint">Not counted: {say(weight.shared.bytes)} of font and data files, which load with every artboard.</p>}
       <SectionBlurb
         text={embedded ? 'This project holds every file in one page, so these sizes are what each version costs when hosted separately.' : 'Each file counts once, however many layers use it.'}
-        name="download size"
+        name="Download size"
         help={['download-size', 'showing-a-size-to-learners']}
       />
     </Section>

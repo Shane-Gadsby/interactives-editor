@@ -38,7 +38,7 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 	const own = project.artboards.filter((a) => targets.includes(a.id) && hasOwnNavigation(a)).length;
 	return (
 		<Section help="page-navigation" title="Page navigation" defaultOpen={everyone.length > 1}>
-			<SectionBlurb text="Back, Next and a page number along the bottom, in one click. They are ordinary layers you can change." name="page navigation" help={['page-navigation']} />
+			<SectionBlurb text="Back, Next and a page number along the bottom, in one click. They are ordinary layers you can change." name="Page navigation" help={['page-navigation']} />
 			<Row k="Navigation style" words={['next', 'back', 'previous', 'dots', 'progress bar', 'page number', 'buttons']}>
 			<div role="radiogroup" aria-label="Navigation style" className="nav-styles">
 				{NAV_STYLES.map((s) => (
