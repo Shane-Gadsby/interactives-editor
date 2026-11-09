@@ -10554,7 +10554,11 @@ Press **Beside editor** in the Preview's header and Preview moves up to the righ
 
 When a click starts nothing, the Events list says why under **Why did nothing happen?**. Either nothing listens for a click on that layer, the click landed on empty space, or an **Only if** said no. Click an event's name in the list to select its node in the graph.
 
-The lights are only in the editor. Exports and shared links never carry them, and with reduced motion on they hold still instead of pulsing. See [Interactions](interactions) for the graph.`
+The lights are only in the editor. Exports and shared links never carry them, and with reduced motion on they hold still instead of pulsing. See [Interactions](interactions) for the graph.
+
+## Big projects
+
+The editor stays quick on large projects: a change only lays out again the pages it touched, even with auto layout on every page, and picking or dragging a node in a big Interactions graph only redraws that node. What slows a big project down most is how much is on screen at once, so fold away panels and pages you are not using, and zoom in on the page you are working on.`
   },
   {
     id: "canvas",

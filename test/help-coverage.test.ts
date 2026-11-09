@@ -117,6 +117,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'New branded set Listen,': [['branded-starters', 'Observe and tag']],
   'Property fields line up': [['properties-panel', 'How fields line up']],
   'Gold instead of blue': [['preferences', 'the same gold with a thin dark edge']],
+  'Faster on big projects': [['interface', 'Big projects']],
 };
 
 //Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone
