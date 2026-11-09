@@ -11117,9 +11117,12 @@ Every field has its name on the left, in one column, and its box to the right. T
 - A long name wraps onto a second line inside its column instead of pushing the box along.
 - Dropdowns, text boxes, number boxes and colour boxes are the same height.
 - A small unit (%, px, ms) or a key diamond (the ◆ that adds a keyframe) has its own space at the right end. The space is kept whether or not the row has one, so the right edges match.
-- Two number boxes can share a line (X and Y, W and H, Rotation and Opacity), with a narrower name column. A dropdown or a text box always has a line to itself.
+- The whole panel is one grid of four columns: a name, a box, a second name, a second box. A single field has its name in the first column and its box running across the other three. Two number boxes share a line (X and Y, W and H, Rotation and Opacity), and the second name is in the same place in every pair, so the second boxes line up too. A dropdown or a text box always has a line to itself.
 - A name goes above its box only for a text area, code and lists.
-- Tick boxes sit on the left edge, two to a line.
+- Tick boxes start under the boxes, not under the names. Two of them share a line, one under each box.
+- Rows of buttons are equal-width cells from the left edge, and wrap onto a new line when they would be squeezed.
+- Every line is the same height and the same distance from the next. A group of settings starts a little lower than the line before it.
+- Make the panel narrow (drag its edge) and the pairs turn into one field per line, so nothing is squeezed.
 - The Interactions settings column and the Timeline's Keyframe column use the same layout.
 
 ## Folding sections
