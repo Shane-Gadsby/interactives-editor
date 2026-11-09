@@ -68,7 +68,8 @@ import { artboardChoices } from '../lib/variants-edit';
 import { nodeMenuItems } from '../lib/node-menu';
 import { GraphPalette } from './GraphPalette';
 import { FlowSentences } from './FlowSentences';
-import { stepArtboard, stepKey } from './ArtboardPicker';
+import { stepArtboard } from './ArtboardPicker';
+import { CONTEXT_ORDER, commandFor, keyHints, matches } from '../lib/keymap';
 import { GraphNoteForm, GraphNoteNode, resizing as noteResizing, type GraphNoteData } from './GraphNoteNode';
 import { flashOf, useFlowVersion, wireClass } from '../lib/run-flow';
 import { labelOfKind, nodeAka, nodeHeading, nodeLabel, nodeTip, plainParam, pw, optionLabel, useTechnicalWording } from '../lib/plain-words';
@@ -724,8 +725,8 @@ export function LogicGraph() {
         { label: 'Add note to this group', title: 'A sticky note that moves with this group. Players never see it', onClick: () => void addNoteAt({ x: g.x, y: g.y - 130 }, id) },
         { label: 'Colour', items: GROUP_COLORS.map((c) => ({ label: c.label, color: c.value || 'var(--muted)', onClick: () => updateGroup(g.id, (x) => (c.value ? (x.color = c.value) : delete x.color)) })) },
         { separator: true },
-        { label: 'Copy group and its nodes', hint: 'Ctrl+C', onClick: () => copySelection([id]) },
-        { label: 'Duplicate group and its nodes', hint: 'Ctrl+D', onClick: () => duplicate([id]) },
+        { label: 'Copy group and its nodes', hint: keyHints('graph-copy'), onClick: () => copySelection([id]) },
+        { label: 'Duplicate group and its nodes', hint: keyHints('graph-duplicate'), onClick: () => duplicate([id]) },
         { separator: true },
         { label: 'Ungroup (keep the nodes)', onClick: () => ungroup(id) },
         {
@@ -764,7 +765,7 @@ export function LogicGraph() {
         { label: 'New group here', onClick: () => addGroup({ x: at?.x ?? 0, y: at?.y ?? 0, width: 360, height: 220 }) },
         { label: 'Add note here', title: 'A sticky note for the people editing this graph. Players never see it', onClick: () => void addNoteAt(at) },
         { label: 'Tidy up', title: 'Lay the graph out in columns from its events, with as few crossing connections as possible, and fit groups to their nodes', onClick: tidy },
-        { label: 'Paste', hint: 'Ctrl+V', onClick: () => pasteFromClipboard(at) },
+        { label: 'Paste', hint: keyHints('paste'), onClick: () => pasteFromClipboard(at) },
       ],
       search: 'Find a node…',
     });
@@ -816,14 +817,14 @@ export function LogicGraph() {
       });
     items.push(
       { separator: true },
-      { label: 'Cut', hint: 'Ctrl+X', onClick: () => copySelection([id], true) },
-      { label: 'Copy', hint: 'Ctrl+C', onClick: () => copySelection([id]) },
-      { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate([id]) },
-      { label: 'Put in a new group', hint: 'Ctrl+G', title: 'Draw a labelled frame around this node; drag other nodes into it', onClick: () => groupAround([id]) },
+      { label: 'Cut', hint: keyHints('graph-cut'), onClick: () => copySelection([id], true) },
+      { label: 'Copy', hint: keyHints('graph-copy'), onClick: () => copySelection([id]) },
+      { label: 'Duplicate', hint: keyHints('graph-duplicate'), onClick: () => duplicate([id]) },
+      { label: 'Put in a new group', hint: keyHints('graph-group'), title: 'Draw a labelled frame around this node; drag other nodes into it', onClick: () => groupAround([id]) },
       { label: 'Add note to this node', title: 'A sticky note that moves with this node. Players never see it', onClick: () => void addNoteAt({ x: n.x, y: n.y - 130 }, id) },
       { label: 'Help for this node', onClick: () => openHelp('interaction-nodes', slug(nodeHeading(def))) },
       { separator: true },
-      { label: 'Delete', hint: 'Del', danger: true, onClick: () => removeNodes([id]) },
+      { label: 'Delete', hint: keyHints('graph-delete'), danger: true, onClick: () => removeNodes([id]) },
     );
     setMenu({ x: e.clientX, y: e.clientY, items });
   };
@@ -840,11 +841,11 @@ export function LogicGraph() {
     const what = [nodeIds.length && `${nodeIds.length} node${nodeIds.length === 1 ? '' : 's'}`, groupCount && `${groupCount} group${groupCount === 1 ? '' : 's'}`, noteCount && `${noteCount} note${noteCount === 1 ? '' : 's'}`].filter(Boolean).join(' and ');
     const items: MenuItem[] = [
       { heading: `${what} selected` },
-      { label: 'Cut', hint: 'Ctrl+X', onClick: () => copySelection(ids, true) },
-      { label: 'Copy', hint: 'Ctrl+C', title: 'Copies them with the connections between them; pasted copies are wired to each other the same way', onClick: () => copySelection(ids) },
-      { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate(ids) },
+      { label: 'Cut', hint: keyHints('graph-cut'), onClick: () => copySelection(ids, true) },
+      { label: 'Copy', hint: keyHints('graph-copy'), title: 'Copies them with the connections between them; pasted copies are wired to each other the same way', onClick: () => copySelection(ids) },
+      { label: 'Duplicate', hint: keyHints('graph-duplicate'), onClick: () => duplicate(ids) },
     ];
-    if (nodeIds.length) items.push({ label: 'Put in a new group', hint: 'Ctrl+G', title: 'Draw a labelled frame around the selected nodes', onClick: () => groupAround(nodeIds) });
+    if (nodeIds.length) items.push({ label: 'Put in a new group', hint: keyHints('graph-group'), title: 'Draw a labelled frame around the selected nodes', onClick: () => groupAround(nodeIds) });
     if (touching.length)
       items.push({
         label: 'Disconnect',
@@ -854,7 +855,7 @@ export function LogicGraph() {
           { label: `All (${touching.length})`, onClick: () => removeEdges(touching.map((x) => x.id)) },
         ],
       });
-    items.push({ label: 'Tidy up the graph', onClick: tidy }, { separator: true }, { label: 'Delete', hint: 'Del', danger: true, onClick: () => void deleteSelected() });
+    items.push({ label: 'Tidy up the graph', onClick: tidy }, { separator: true }, { label: 'Delete', hint: keyHints('graph-delete'), danger: true, onClick: () => void deleteSelected() });
     setMenu({ x: e.clientX, y: e.clientY, items });
   };
 
@@ -868,11 +869,11 @@ export function LogicGraph() {
       y: e.clientY,
       items: [
         { heading: 'Note' },
-        { label: 'Edit text', hint: 'Enter', onClick: () => store().set({ editingNote: id }) },
+        { label: 'Edit text', hint: keyHints('graph-edit-note'), onClick: () => store().set({ editingNote: id }) },
         { label: 'Colour', items: NOTE_COLOURS.map((c) => ({ label: { gold: 'Yellow', orange: 'Orange', green: 'Green', sky: 'Blue', purple: 'Purple', rose: 'Pink' }[c], onClick: () => patchGraphNote(id, { colour: c }) })) },
         ...(note.anchor ? [{ label: 'Stop following', onClick: () => void attachGraphNote(id, null) } as MenuItem] : []),
         { separator: true },
-        { label: 'Delete note', hint: 'Del', danger: true, onClick: () => removeGraphNotes([id]) },
+        { label: 'Delete note', hint: keyHints('graph-delete'), danger: true, onClick: () => removeGraphNotes([id]) },
       ],
     });
   };
@@ -881,7 +882,7 @@ export function LogicGraph() {
     e.preventDefault();
     setSelEdges([edgeId]);
     select([], null);
-    setMenu({ x: e.clientX, y: e.clientY, items: [{ label: 'Delete connection', hint: 'Del', danger: true, onClick: () => removeEdges([edgeId]) }] });
+    setMenu({ x: e.clientX, y: e.clientY, items: [{ label: 'Delete connection', hint: keyHints('graph-delete'), danger: true, onClick: () => removeEdges([edgeId]) }] });
   };
 
   // Frame the graph when switching artboards, or when nodes appear in a graph that was empty.
@@ -900,14 +901,15 @@ export function LogicGraph() {
   const panelKeys = (e: React.KeyboardEvent) => {
     const t = e.target as HTMLElement;
     const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || t.isContentEditable || !!t.closest('.cm-editor');
-    if ((e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) || ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f')) {
+    //(the keys are the keymap's, so they follow what the person set)
+    if (matches(e, 'graph-search') && (!typing || e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       e.stopPropagation();
       searchRef.current?.focus();
       searchRef.current?.select();
       return;
     }
-    const dir = stepKey(e);
+    const dir = matches(e, 'graph-next-page') ? 1 : matches(e, 'graph-prev-page') ? -1 : null;
     if (dir && !t.closest('.cm-editor') && !t.closest('.search-pop')) {
       e.preventDefault();
       e.stopPropagation();
@@ -937,34 +939,33 @@ export function LogicGraph() {
           e.stopPropagation();
           const t = e.target as HTMLElement;
           if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.closest('.cm-editor')) return;
-          const mod = e.ctrlKey || e.metaKey;
-          const k = e.key.toLowerCase();
-          if (e.key === 'Delete' || e.key === 'Backspace') {
+          const cmd = commandFor(e, CONTEXT_ORDER.graph)?.id;
+          if (cmd === 'graph-delete') {
             e.preventDefault();
             void deleteSelected();
-          } else if ((e.key === 'Enter' || e.key === 'F2') && chosenNow().length === 1 && isNote(chosenNow()[0])) {
+          } else if (cmd === 'graph-edit-note' && chosenNow().length === 1 && isNote(chosenNow()[0])) {
             //Enter on a picked note opens it for typing, like a note on the canvas
             e.preventDefault();
             store().set({ editingNote: chosenNow()[0] });
-          } else if (mod && k === 'a') {
+          } else if (cmd === 'graph-select-all') {
             e.preventDefault();
             select([...(ab.logic.groups ?? []).map((g) => g.id), ...ab.logic.nodes.map((n) => n.id), ...(showNotes ? (ab.logic.notes ?? []).map((n) => n.id) : [])]);
-          } else if (mod && k === 'g' && chosenNow().some((id) => !isGroup(id) && !isNote(id))) {
+          } else if (cmd === 'graph-group' && chosenNow().some((id) => !isGroup(id) && !isNote(id))) {
             e.preventDefault();
             groupAround(chosenNow());
-          } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+          } else if (cmd === 'undo' || cmd === 'redo') {
             // The graph keeps the key to itself (stopPropagation above), so undo and redo have to be handled here
             e.preventDefault();
-            if (e.key.toLowerCase() === 'y' || e.shiftKey) store().redo();
+            if (cmd === 'redo') store().redo();
             else store().undo();
-          } else if (mod && k === 'd' && chosenNow().length) {
+          } else if (cmd === 'graph-duplicate' && chosenNow().length) {
             e.preventDefault();
             duplicate(chosenNow());
-          } else if (mod && (k === 'c' || k === 'x') && chosenNow().length) {
+          } else if ((cmd === 'graph-copy' || cmd === 'graph-cut') && chosenNow().length) {
             //Leave it alone when there's text selected in a node, so copying that still works
             if (window.getSelection()?.toString()) return;
             e.preventDefault();
-            copySelection(chosenNow(), k === 'x');
+            copySelection(chosenNow(), cmd === 'graph-cut');
           }
         }}
         onPaste={(e) => {

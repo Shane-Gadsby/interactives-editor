@@ -145,7 +145,7 @@ Prefer to start from something finished? The **Templates** tab on the projects p
 
 ## Where to get help
 
-Press <kbd>F1</kbd> anywhere to search these pages, <kbd>Ctrl</kbd>+<kbd>K</kbd> to find a command and do it (it lists matching help pages too, see [The command palette](command-palette)), or <kbd>?</kbd> for the page about what you have selected. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
+Press <kbd>F1</kbd> anywhere to search these pages, <kbd>Ctrl</kbd>+<kbd>K</kbd> to find a command and do it (it lists matching help pages too, see [The command palette](command-palette)), or <kbd>Shift</kbd>+<kbd>F1</kbd> for the page about what you have selected (<kbd>?</kbd> lists every [keyboard shortcut](shortcuts)). The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
 
 > Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`,
   },
@@ -324,6 +324,7 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
 Open **Preferences** from the gear in the top bar (or on the projects page). They are yours: saved with your account, so they follow you to any browser you sign in on. The small **(i)** icon in the title bar shows the version of Interactives you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. It is the first thing to put in a problem report, and the same icon is beside **Help** on the help and projects pages.
 
 - **Mouse wheel**: *Zoom (Shift+wheel pans)* or *Pan (Ctrl+wheel zooms)*. See [Moving around the canvas](canvas).
+- **Keyboard**: **One-key shortcuts** switches off every shortcut that is a single letter, number or Space, and **Keyboard shortcuts…** opens the sheet where you see every key and change them to your own. See [Keyboard shortcuts](shortcuts).
 - **Theme**: *Dark*, *Light*, or *Auto (follow the system)*. Both are made from the StudyDesk palette (the same colours as the rest of the Toolbox): its greys, its blue for selection and focus, and UniSQ gold on primary buttons, the open tab and the line under the top bar. In Light, the palette's grey for secondary text is a little under the usual contrast guideline (4.4:1 on panels, 4.1:1 on the background, against 4.5:1); it is left as the palette has it so the editor matches the Toolbox.
 - **Code editor colours**: *Follow the editor* (the default), *Light* or *Dark*. It is the colours of every code box: the **Scripts** tab, the raw text of a data file, and the HTML and code fields in the Inspector. *Follow the editor* draws code light when the editor is light (or Auto on a light system) and dark when it is dark, and switches the moment the theme does. *Light* or *Dark* keeps the code that way whatever the editor does, so you can have a dark editor with light code or the other way round. The light colours are all at least 4.5:1 on their background. The same three buttons are in the header of the Scripts tab and of a data file's raw text, so you can change it where you are typing. It is yours, not the project's: nobody else sees it, and it follows you between browsers.
 - **Workspace** (in the editor only): switch every panel's place in one go. **Standard** is where everything starts; **Essentials** puts away every panel and tool group a first project does not need (see [Your first five minutes](welcome#your-first-five-minutes)); **Animate** has a tall timeline; **Interactions** has a big interaction graph with Variables and Scripts beside the properties; **Big canvas** puts all the panels in one column on the right and folds the bottom away; **Review** opens Comments and the accessibility checker. **Save current layout as…** keeps the way you've arranged things (see [Arranging the panels](interface#arranging-the-panels)) under a name of your own, up to 12, with rename and delete beside each. Saved workspaces follow you to any browser you sign in on.
@@ -411,9 +412,23 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
     id: 'shortcuts',
     title: 'Keyboard shortcuts',
     group: 'Getting started',
-    summary: 'Every keyboard shortcut in the editor.',
-    keywords: 'keys hotkeys keyboard',
-    body: `## Tools
+    summary: 'Every keyboard shortcut in the editor, and how to change the keys to your own.',
+    keywords: 'keys hotkeys keyboard rebind customise remap keymap shortcuts sheet single key wcag',
+    body: `Press <kbd>?</kbd> (or <kbd>Ctrl</kbd>+<kbd>/</kbd>) anywhere to open the **Keyboard shortcuts** sheet: every shortcut in plain words, grouped, with the part of the editor it works in. The tables below are the keys the editor starts with (on a Mac, <kbd>Ctrl</kbd> is <kbd>Cmd</kbd> and <kbd>Alt</kbd> is <kbd>Option</kbd>); the sheet and every tooltip show **your** keys.
+
+## Changing the keys
+- Open the sheet with <kbd>?</kbd>, or **Preferences → Keyboard shortcuts…**, or the command palette.
+- **Search** by what a command is called, or press **Find a key** and then the keys to see what they do.
+- **Add key** (or **Set key** on a command with none) listens for the next keys you press; <kbd>Esc</kbd> cancels. The **×** beside a key takes it off. **Reset** puts that command back to its default; **Reset all** does it for everything.
+- If another command in the same place already uses the keys you pressed, the sheet says which and asks whether to move it over. A key used twice shows a warning at the top; only the command earlier in the list works.
+- **Start from** picks a set of keys to begin with: *Default*, or *Illustration style* (shapes on the keys drawing programs usually use). Your own changes stay on top of whichever you pick.
+- Your keys are saved with **you**, like your other preferences: they follow you between browsers and are never saved in a project. New default keys still reach you for anything you did not change.
+- **One-key shortcuts** (also in Preferences) turns off every shortcut that is a single letter, number or Space (V, H, P, S, Space...). Shortcuts with <kbd>Ctrl</kbd> or <kbd>Alt</kbd>, and keys such as <kbd>Delete</kbd>, the arrows and <kbd>F2</kbd>, keep working, and the tool bar and menus do the same jobs. It is there for people who use speech input or press keys by accident.
+- A one-key shortcut never fires while you are typing in a box.
+
+The same letter can mean different things in different places: a key looks first at the panel you last clicked in. Click in the Timeline and <kbd>P</kbd>, <kbd>S</kbd>, <kbd>R</kbd>, <kbd>T</kbd> and <kbd>A</kbd> take you to a property (below); click the canvas, the Layers list or anywhere else and they are tools again.
+
+## Tools
 | Key | Tool |
 |---|---|
 | <kbd>V</kbd> | Select |
@@ -446,7 +461,10 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>]</kbd> / <kbd>[</kbd> | Bring forward / send backward (<kbd>Ctrl</kbd> for front / back) |
 | <kbd>Enter</kbd> | Go into a group or frame, edit a path's points, or edit text |
 | <kbd>Escape</kbd> | Stop editing, go up a level, clear the selection, then back to Select |
+| <kbd>F2</kbd> | Rename the selected layer in the Layers list |
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> | Save now |
+
+Deleting with the keyboard tells you what went (*Deleted Blend ball.*) with an **Undo** button, and asks first before a whole page goes.
 
 After a big change (tidying the artboards, linking colours to tokens, deleting a page, moving layers to another page, replacing a file, importing a file, changing the colourway, applying accessibility fixes, updating from a template) the message at the bottom carries an **Undo** button. It takes back exactly that change, even if it took several steps, and then says **Undone** with a **Redo** button. The moment you change anything else the button greys out, so it can never take back something you did afterwards; <kbd>Ctrl</kbd>+<kbd>Z</kbd> still undoes the latest change as always. The messages go away after a few seconds.
 
@@ -460,11 +478,29 @@ After a big change (tidying the artboards, linking colours to tokens, deleting a
 | <kbd>Shift</kbd>+<kbd>G</kbd> | Show or hide the grid |
 | <kbd>Ctrl</kbd>+<kbd>'</kbd> | Turn the Grid snap target on or off (it switches snapping on too, if it was off) |
 
+## Timeline
+These work after you click in the Timeline.
+
+| Key | Does |
+|---|---|
+| <kbd>Space</kbd> or <kbd>K</kbd> | Play or pause the Timeline |
+| <kbd>L</kbd> | Play |
+| <kbd>J</kbd> or <kbd>Home</kbd> / <kbd>End</kbd> | Go to the start / the end |
+| <kbd>,</kbd> / <kbd>.</kbd> | Step back / forward one frame (on the timeline's frame rate, 30 per second if it has none) |
+| <kbd>Shift</kbd>+<kbd>,</kbd> / <kbd>Shift</kbd>+<kbd>.</kbd> | Jump to the previous / next key of the selected layers (of every layer when none is selected) |
+| <kbd>P</kbd> / <kbd>S</kbd> / <kbd>R</kbd> / <kbd>T</kbd> / <kbd>A</kbd> | Go to the selected layer's **P**osition, **S**cale, **R**otation, opacity (**T**ransparency) or **A**nchor point: the Properties panel opens that field and focuses it, and the Timeline track for it, if the layer has one, is marked |
+
+## Properties
+| Key | Does |
+|---|---|
+| <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> | Go to the property search box (it is the **/** in the box) |
+
 ## Help
 | Key | Does |
 |---|---|
+| <kbd>?</kbd> or <kbd>Ctrl</kbd>+<kbd>/</kbd> | This sheet of keyboard shortcuts |
 | <kbd>F1</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
-| <kbd>?</kbd> | Open the help for what is highlighted (the Help button); <kbd>?</kbd> again closes it |
+| <kbd>Shift</kbd>+<kbd>F1</kbd> | Open the help for what is highlighted (the Help button); again closes it |
 | <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) | The [command palette](command-palette): type what you want to do (add a button, go to a page, turn the grid on, share) and press <kbd>Enter</kbd>. Matching help pages are listed under the commands. While editing text it is the link shortcut instead |
 | <kbd>Alt</kbd>+<kbd>Left</kbd> / <kbd>Alt</kbd>+<kbd>Right</kbd> | Back and forward through the pages you have read, in the help drawer |
 | <kbd>?</kbd> | Open the help |
@@ -483,8 +519,11 @@ Double-click a text layer to edit it. Select some of the text, then:
 ## Interactions, dialogs and Preview
 | Key | Does |
 |---|---|
-| <kbd>Del</kbd> / <kbd>Backspace</kbd> | Delete the selected node or connection in the graph |
+| <kbd>Del</kbd> / <kbd>Backspace</kbd> | Delete the selected node or connection in the graph. After you click in the graph this is always the graph's, never the selected layer's |
 | <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate the selected node |
+| <kbd>Ctrl</kbd>+<kbd>A</kbd> / <kbd>Ctrl</kbd>+<kbd>G</kbd> | Select everything in the graph / group the picked nodes |
+| <kbd>/</kbd> | Go to the node search |
+| <kbd>Alt</kbd>+<kbd>Up</kbd> / <kbd>Down</kbd> (or <kbd>Ctrl</kbd>+<kbd>[</kbd> / <kbd>]</kbd>) | The previous / next page's graph |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>Ctrl</kbd>+<kbd>X</kbd> / <kbd>Ctrl</kbd>+<kbd>V</kbd> | Copy, cut or paste the selected node in the graph (it pastes into another artboard's graph too) |
 | <kbd>Enter</kbd> / <kbd>Esc</kbd> | Accept / cancel a [dialog](dialogs) |
 | <kbd>Esc</kbd> | Close the Preview, Preferences or any open box |
@@ -4583,9 +4622,9 @@ Check the projects page for an active folder, tag or search (the **Clear filters
     summary: 'Search, tooltips and help links.',
     keywords: 'help docs search tooltip question',
     body: `- **Search**: press <kbd>F1</kbd> anywhere for quick search (or <kbd>Ctrl</kbd>+<kbd>K</kbd>, the [command palette](command-palette), which lists help pages under its commands), or type in the drawer's **Search help** box. Type a few words and press <kbd>Enter</kbd> to open the best match.
-- **The Help button** (top bar, or <kbd>?</kbd>) opens the page for whatever is highlighted, in this order: the **field** you last clicked in Properties (its section's page, or its own when it has one); the **node** selected in Interactions or the **keyframe** selected in the Timeline, while that is the panel you are working in; the **tool** you picked on the tool bar (not Select or Hand); the **layer type** you selected (Chart, Text, Button, Rectangle...); a selected **artboard** or **page master**; the **panel** you last worked in; then the general help. Its tooltip names what it will open, and the drawer says "Help for Chart layer" at the top with a **Back to general help** link. Only selection and focus count, not what the pointer is over. The tool bar has no Help button of its own: right-click it for **Help for the tools**. <kbd>Ctrl</kbd>+<kbd>K</kbd> is the quick search.
+- **The Help button** (top bar, or <kbd>Shift</kbd>+<kbd>F1</kbd>) opens the page for whatever is highlighted, in this order: the **field** you last clicked in Properties (its section's page, or its own when it has one); the **node** selected in Interactions or the **keyframe** selected in the Timeline, while that is the panel you are working in; the **tool** you picked on the tool bar (not Select or Hand); the **layer type** you selected (Chart, Text, Button, Rectangle...); a selected **artboard** or **page master**; the **panel** you last worked in; then the general help. Its tooltip names what it will open, and the drawer says "Help for Chart layer" at the top with a **Back to general help** link. Only selection and focus count, not what the pointer is over. The tool bar has no Help button of its own: right-click it for **Help for the tools**. <kbd>Ctrl</kbd>+<kbd>K</kbd> is the quick search.
 - **Home, Back and Forward**: the three buttons at the left of the drawer's top. **Home** is the welcome page. **Back** and **Forward** walk through the pages and sections you have visited (links, search results and the Help button all count), and each page comes back scrolled to where you left it. <kbd>Alt</kbd>+<kbd>Left</kbd> and <kbd>Alt</kbd>+<kbd>Right</kbd> do the same while the drawer has the focus, and so do the mouse's back and forward buttons over it. The history is kept when you close the drawer, so Back from a new Help button press returns to what you were reading. The full help page (the **new tab** button) uses the browser's own Back and Forward, since each page has its own address.
-- **While Preview is open**: Preview sits above the help drawer so it never covers its controls. Asking for help then (the Help button, <kbd>F1</kbd>, <kbd>?</kbd>, a **?** link) opens the help in a new window instead. <kbd>Esc</kbd> closes Preview, not a drawer behind it, and Tab stays inside Preview until you close it.
+- **While Preview is open**: Preview sits above the help drawer so it never covers its controls. Asking for help then (the Help button, <kbd>F1</kbd>, <kbd>Shift</kbd>+<kbd>F1</kbd>, a **?** link) opens the help in a new window instead. <kbd>Esc</kbd> closes Preview, not a drawer behind it, and Tab stays inside Preview until you close it.
 - **The Help link** is also on the projects page.
 - **Getting started**: the five tutorials start at [Tutorial 1](tutorial-first-animation). Stuck? [Troubleshooting and common questions](troubleshooting).
 - **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.

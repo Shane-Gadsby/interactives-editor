@@ -10,7 +10,7 @@ import { prefs, setPrefs } from '../src/lib/prefs';
 import { closeHelp, HelpHost } from '../src/help/Help';
 import { CommandPalette } from '../src/components/CommandPalette';
 import { closePalette, openPalette } from '../src/lib/command-palette';
-import { TOOL_KEYS } from '../src/lib/tool-keys';
+import { COMMANDS } from '../src/lib/keymap';
 import { RECIPES } from '../src/lib/recipes';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -39,7 +39,7 @@ describe('the command list', () => {
       expect(ids).toContain(`panel:${p}`);
       expect(PANEL_NAMES[p]).toBeTruthy();
     }
-    for (const tool of Object.values(TOOL_KEYS)) expect(ids).toContain(`tool:${tool}`);
+    for (const c of COMMANDS.filter((x) => x.id.startsWith('tool.'))) expect(ids).toContain(`tool:${c.id.slice(5)}`);
     for (const w of ['standard', 'animate', 'interactions']) expect(ids).toContain(`workspace:${w}`);
     for (const r of RECIPES) expect(ids).toContain(`behaviour:${r.id}`);
     expect(ids).toEqual(expect.arrayContaining(['page:p1', 'page:p2'].map((x) => x)));

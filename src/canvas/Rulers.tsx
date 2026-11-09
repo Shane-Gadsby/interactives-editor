@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { keyHint } from '../lib/keymap';
 import type { Artboard } from 'interactives-player';
 import { store } from '../store/store';
 
@@ -108,7 +109,7 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
           {drag.at}
         </div>
       )}
-      <div className="canvas-ruler top" title="Drag down to make a horizontal guide (Shift+R hides rulers)" onPointerDown={(e) => start(e, 'y', null)}>
+      <div className="canvas-ruler top" title={`Drag down to make a horizontal guide${keyHint('toggle-rulers') ? ` (${keyHint('toggle-rulers')} hides rulers)` : ''}`} onPointerDown={(e) => start(e, 'y', null)}>
         {ticks(width, ox).map((v) => (
           <span key={v} style={{ left: ox + v * zoom }}>
             {v}

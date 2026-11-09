@@ -2,6 +2,7 @@ import { CATALOG_BY_KIND, type NodeType } from 'interactives-player';
 import type { Tool } from '../store/store';
 import { slug } from './markdown';
 import { nodeHeading, nodeLabel } from '../lib/plain-words';
+import { keyHint } from '../lib/keymap';
 
 /**
  * What the Help button opens: one table from "what is highlighted" to a help topic and anchor. test/help-context.test.ts
@@ -152,4 +153,7 @@ export function resolveHelp(f: HelpFocus): HelpTarget {
   return GENERAL_HELP;
 }
 
-export const helpTooltip = (t: HelpTarget): string => (t === GENERAL_HELP ? 'Help (? to open, F1 to search)' : `Help: ${t.label} (? to open, F1 to search)`);
+export const helpTooltip = (t: HelpTarget): string => {
+  const keys = [keyHint('help-context') && `${keyHint('help-context')} to open`, keyHint('help-search') && `${keyHint('help-search')} to search`].filter(Boolean).join(', ');
+  return `${t === GENERAL_HELP ? 'Help' : `Help: ${t.label}`}${keys ? ` (${keys})` : ''}`;
+};

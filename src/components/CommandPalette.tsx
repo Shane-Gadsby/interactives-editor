@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { matches } from '../lib/keymap';
 import { closePalette, registerPaletteHost, usePaletteOpen } from '../lib/command-palette';
 import { buildCommands, noteCommandUsed, searchCommands, suggestedCommands, type Command } from '../lib/commands';
 import { searchHelp, type HelpHit } from '../help/search';
@@ -65,7 +66,7 @@ function Palette({ onClose }: { onClose: () => void }) {
             else if (e.key === 'Enter') (e.preventDefault(), pick(rows[sel]));
             else if (e.key === 'Escape') onClose();
             else if (e.key === 'F1') (e.preventDefault(), onClose(), openHelpSearch());
-            else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') (e.preventDefault(), onClose());
+            else if (matches(e, 'palette')) (e.preventDefault(), onClose());
           }}
         />
         <ul id="palette-list" role="listbox" aria-label="Commands" ref={list}>

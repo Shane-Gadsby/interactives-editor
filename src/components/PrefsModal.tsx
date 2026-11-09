@@ -10,6 +10,7 @@ import { HelpLink } from '../help/Help';
 import { BUILT_IN, applyWorkspace, deleteWorkspace, renameWorkspace, saveWorkspace, savedWorkspaces, MAX_SAVED } from '../lib/workspaces';
 import { confirmDialog, promptDialog } from './dialogs';
 import { restartTips, stripShown } from '../lib/onboarding';
+import { openShortcuts } from '../lib/shortcuts-sheet';
 import { CODE_THEMES, type CodeTheme } from '../lib/code-theme';
 
 /** Personal preferences, kept in this browser. */
@@ -68,6 +69,13 @@ export function PrefsModal({ onClose, workspace = false }: { onClose: () => void
             typedLabel={(name) => `Use “${name}” (not in the list)`}
             onPick={(o) => setPrefs({ defaultFont: o.family.trim() || DEFAULT_FONT })}
           />
+          <section className="prefs-keys" aria-label="Keyboard">
+            <div className="field-label block">Keyboard</div>
+            <CheckField label="One-key shortcuts (V, H, P...)" title="Turn off the shortcuts that are a single letter, number or Space. Ones with Ctrl, Alt or Cmd, and keys like Delete and the arrows, still work, and the tool bar does the same jobs" value={p.singleKeys !== false} onChange={(v) => setPrefs({ singleKeys: v })} />
+            <button type="button" className="btn" title="See every shortcut, search them, and change the keys to ones you like. Your keys are saved with you, never in the project" onClick={() => openShortcuts(false)}>
+              Keyboard shortcuts…
+            </button>
+          </section>
           <section className="prefs-canvas" aria-label="Canvas">
             <div className="field-label block">Canvas</div>
             <CheckField label="Show rulers" title="Rulers along the canvas edges; drag from them to make guides (Shift+R)" value={p.rulers} onChange={(v) => setPrefs({ rulers: v })} />

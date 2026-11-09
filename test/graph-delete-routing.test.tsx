@@ -50,7 +50,9 @@ describe('Delete goes to the panel you last pressed in', () => {
     expect(areaOf(document.body)).toBe('other');
     const lane = document.createElement('div');
     lane.className = 'timeline-lanes';
-    expect(areaOf(lane.appendChild(document.createElement('span')))).toBe('timeline');
+    expect(areaOf(lane.appendChild(document.createElement('span')))).toBe('other');
+    lane.className = 'timeline';
+    expect(areaOf(lane.firstChild)).toBe('timeline');
   });
 
   it('a press on a node puts focus in the graph, so Delete is the graph\'s', async () => {

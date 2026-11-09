@@ -4,7 +4,6 @@ import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName,
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
 import { ToastView } from './components/ToastView';
-import { canCrop } from './lib/crop';
 import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
 import { assetUrls } from './lib/assets';
@@ -13,19 +12,19 @@ import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, 
 import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
 import { importGiftFile } from './lib/gift-import';
-import { TOOL_KEYS } from './lib/tool-keys';
-import { routeToGraph, watchKeyArea } from './lib/key-area';
+import { watchKeyArea } from './lib/key-area';
+import { keyHint, keyHints, keysSuspended, withKey } from './lib/keymap';
+import { handleEditorKey, installEditorKeys } from './lib/editor-keys';
+import { installTimelineKeys } from './lib/timeline-keys';
 import { CommandPalette } from './components/CommandPalette';
 import { BeforeYouShareModal } from './components/BeforeShare';
 import { checkBeforeShare } from './lib/before-share';
 import { openPalette } from './lib/command-palette';
 import { APP_ACTION_EVENT, type AppAction } from './lib/app-actions';
 import { PasteQuestionsModal } from './components/PasteQuestionsModal';
-import { copySelection, pasteNodes } from './lib/clipboard';
-import { copySelectedKeys, isKeyClipText, keyContext, keysCopiedLast, pasteKeys, watchKeyContext } from './lib/key-edit';
+import { pasteNodes } from './lib/clipboard';
+import { isKeyClipText, keysCopiedLast, pasteKeys, watchKeyContext } from './lib/key-edit';
 import { Canvas } from './canvas/Canvas';
-import { deleteSelectedKeys } from './panels/Timeline';
-import { deleteSelectionCommand } from './lib/artboard-commands';
 import { ThemeFixedHint } from './components/ThemeFixedHint';
 import { ReferenceModal } from './panels/InterfacePanel';
 import { MotionExportModal } from './components/MotionExportModal';
@@ -54,8 +53,7 @@ import { toolGroupsInUse } from './lib/essentials';
 import { GettingStarted } from './components/GettingStarted';
 import { watchGettingStarted } from './lib/onboarding';
 import { applyNewcomerEssentials } from './lib/workspaces';
-import { gridFor, nudgeDelta, shiftSteps } from './lib/grid';
-import { snapAny, snapSettings, toggleSnap } from './lib/snapping';
+import { snapAny, snapSettings } from './lib/snapping';
 import { SnapMenu } from './components/SnapMenu';
 import { gridMenu } from './components/grid-menu';
 import { MediaCatalogueModal } from './components/MediaCatalogueModal';
@@ -67,7 +65,6 @@ import { noteIfStale } from './lib/stale-build';
 import { primeStills, releaseStills } from './lib/still-cache';
 import { noteProjectDiagnostic, reportError, setProject, span, track } from './lib/analytics';
 import { observeStore } from './lib/usage';
-import { keyMoveTarget } from './lib/layer-drop';
 import { SHARE_FOR_REVIEW_EVENT, comments, openShareForReview, readNotices } from './lib/comments';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
@@ -292,147 +289,17 @@ function useAutosave() {
 
 function useShortcuts() {
   useEffect(() => {
+    installEditorKeys(zoomTo);
+    installTimelineKeys();
     //Ctrl+S saves the project from anywhere in the editor, a text box, the code editor and the graph included (panels that
     //keep their keys to themselves too, hence the capture phase), and never lets the browser save the page's html instead
     const onSave = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== 's') return;
       e.preventDefault();
-      void (window as unknown as { __ixForceSave?: () => Promise<void> }).__ixForceSave?.();
+      if (!keysSuspended()) void (window as unknown as { __ixForceSave?: () => Promise<void> }).__ixForceSave?.();
     };
     window.addEventListener('keydown', onSave, true);
-    const onKey = (e: KeyboardEvent) => {
-      const t = e.target instanceof HTMLElement ? e.target : null;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || t.closest('.cm-editor') || t.closest('.react-flow') || t.closest('.note'))) return;
-      //The graph was the last place pressed: its keys are its own, never the canvas selection's
-      if (routeToGraph(e)) return;
-      const s = store();
-      const st = s.get();
-      const mod = e.ctrlKey || e.metaKey;
-      const k = e.key.toLowerCase();
-      if (mod && k === 'z') {
-        e.preventDefault();
-        if (e.shiftKey) s.redo();
-        else s.undo();
-        return;
-      }
-      if (mod && k === 'y') {
-        e.preventDefault();
-        s.redo();
-        return;
-      }
-      if (mod && k === 'd') {
-        e.preventDefault();
-        s.duplicateSelection();
-        return;
-      }
-      if (mod && k === 'g') {
-        e.preventDefault();
-        if (e.shiftKey) s.ungroupSelection();
-        else s.groupSelection();
-        return;
-      }
-      if (mod && k === 'c') {
-        if (!(keyContext() && copySelectedKeys())) copySelection();
-        return;
-      }
-      if (mod && k === 'x') {
-        if (keyContext() && copySelectedKeys(true)) deleteSelectedKeys();
-        else copySelection(true);
-        return;
-      }
-      if (mod && k === 'a') {
-        e.preventDefault();
-        const ab = s.artboard();
-        if (ab) s.select(ab.children.filter((n) => !n.locked).map((n) => n.id));
-        return;
-      }
-      if (mod && (k === '0' || k === '1')) {
-        e.preventDefault();
-        zoomTo(k === '0' ? 'fit' : '100');
-        return;
-      }
-      if (e.shiftKey && !mod && k === 'j') {
-        e.preventDefault();
-        s.set({ showBones: !st.showBones });
-        return;
-      }
-      if (e.shiftKey && !mod && k === 'r') {
-        e.preventDefault();
-        setPrefs({ rulers: !prefs().rulers });
-        return;
-      }
-      if (e.shiftKey && !mod && !e.altKey && k === 'g') {
-        e.preventDefault();
-        setPrefs({ showGrid: !prefs().showGrid });
-        return;
-      }
-      if (mod && !e.shiftKey && !e.altKey && e.key === "'") {
-        e.preventDefault();
-        toggleSnap('grid');
-        return;
-      }
-      if (e.shiftKey && (e.code === 'Digit1' || e.code === 'Digit2')) {
-        e.preventDefault();
-        zoomTo(e.code === 'Digit1' ? 'fit' : 'selection');
-        return;
-      }
-      if (k === 'delete' || k === 'backspace') {
-        e.preventDefault();
-        if (!deleteSelectedKeys()) void deleteSelectionCommand({ keyboard: true });
-        return;
-      }
-      if (k === 'escape') {
-        if (st.croppingId) s.set({ croppingId: null });
-        else if (st.editingTextId) s.set({ editingTextId: null });
-        else if (st.focusId) s.set({ selection: [st.focusId], focusId: null }); else if (st.selection.length || st.artboardSelected) s.set({ selection: [], artboardSelected: false });
-        else s.set({ tool: 'select' });
-        return;
-      }
-      if (k === 'enter' && st.selection.length === 1) {
-        const n = s.selectedNodes()[0];
-        if (n?.type === 'group' || n?.type === 'frame') s.set({ focusId: n.id, selection: n.children.map((c) => c.id).slice(-1) });
-        else if (n?.type === 'path') s.set({ editingPathId: n.id });
-        else if (n?.type === 'text' || n?.type === 'button' || n?.type === 'link') s.set({ editingTextId: n.id });
-        else if (n?.type === 'image' && canCrop(n)) s.set({ croppingId: n.id });
-        return;
-      }
-      if (e.altKey && !mod && k.startsWith('arrow') && st.selection.length === 1) {
-        // Keyboard version of dragging in the Layers panel: up/down step past a layer, left/right leave or enter a group
-        e.preventDefault();
-        const ab = s.artboard();
-        const to = ab && keyMoveTarget(ab, st.selection[0], k === 'arrowup' ? 'up' : k === 'arrowdown' ? 'down' : k === 'arrowleft' ? 'out' : 'in');
-        if (to) s.moveNode(st.selection[0], to.parentId, to.at);
-        return;
-      }
-      if (k.startsWith('arrow') && st.selection.length) {
-        e.preventDefault();
-        const d = e.shiftKey ? 10 : 1;
-        let dx = k === 'arrowleft' ? -d : k === 'arrowright' ? d : 0;
-        let dy = k === 'arrowup' ? -d : k === 'arrowdown' ? d : 0;
-        // With the grid on a nudge goes to the next grid line (Shift: a major step), by the selection's edge. Ctrl turns it off
-        const ab = snapSettings().grid && !mod ? s.artboard() : null;
-        const sb = ab && selectionBounds(ab, st.selection);
-        if (ab && sb) {
-          const g = gridFor(ab, prefs());
-          const steps = e.shiftKey ? shiftSteps(g) : 1;
-          if (dx) dx = nudgeDelta(sb.x, dx < 0 ? -1 : 1, g.size, steps);
-          if (dy) dy = nudgeDelta(sb.y, dy < 0 ? -1 : 1, g.size, steps);
-        }
-        const changes = new Map<string, Record<string, unknown>>();
-        for (const n of s.selectedNodes()) if (!n.locked) changes.set(n.id, { x: n.x + dx, y: n.y + dy });
-        s.setEach(changes, 'nudge');
-        return;
-      }
-      if (k === ']' || k === '[') {
-        e.preventDefault();
-        s.reorder(k === ']' ? (mod ? Infinity : 1) : mod ? -Infinity : -1);
-        return;
-      }
-      if (!mod && !e.altKey && TOOL_KEYS[k]) {
-        s.set({ tool: TOOL_KEYS[k], editingPathId: null });
-        return;
-      }
-    };
+    const onKey = handleEditorKey;
     const onPaste = async (e: ClipboardEvent) => {
       const t = e.target instanceof HTMLElement ? e.target : null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.closest('.cm-editor'))) return;
@@ -710,6 +577,7 @@ function ThemeSwitch() {
 }
 
 function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }) {
+  usePrefs();
   const helpTitle = useHeaderHelpTitle();
   const s = useEditor((st) => ({ name: st.project.name, saveState: st.saveState, saveError: st.saveError, zoom: st.zoom, rev: st.project.updated, live: st.live, peers: st.peers }));
   const [menu, setMenu] = useState(false);
@@ -837,17 +705,17 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       </div>
       <ThemeSwitch />
       <IconButton icon={<Icons.history />} title="Revision history: earlier saved versions of this project" onClick={() => setHistoryOpen(true)} />
-      <IconButton icon={<Icons.undo />} title="Undo (Ctrl+Z)" onClick={() => st.undo()} disabled={!st.canUndo()} />
-      <IconButton icon={<Icons.redo />} title="Redo (Ctrl+Shift+Z)" onClick={() => st.redo()} disabled={!st.canRedo()} />
+      <IconButton icon={<Icons.undo />} title={withKey('Undo', 'undo')} onClick={() => st.undo()} disabled={!st.canUndo()} />
+      <IconButton icon={<Icons.redo />} title={withKey('Redo', 'redo')} onClick={() => st.redo()} disabled={!st.canRedo()} />
       <div className="zoom-ctl">
         <button onClick={() => st.set({ zoom: Math.max(0.05, s.zoom / 1.25) })}>−</button>
-        <button className="zoom-val" title="Fit all (Shift+1)" onClick={() => zoomTo('fit')}>
+        <button className="zoom-val" title={withKey('Fit all', 'zoom-fit')} onClick={() => zoomTo('fit')}>
           {Math.round(s.zoom * 100)}%
         </button>
         <button onClick={() => st.set({ zoom: Math.min(32, s.zoom * 1.25) })}>+</button>
       </div>
       <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)} />
-      <IconButton icon={<Icons.search />} title="Find a command and do it: add a layer, go to a page, turn the grid on, share... (Ctrl+K)" onClick={() => void openPalette(false)} />
+      <IconButton icon={<Icons.search />} title={withKey('Find a command and do it: add a layer, go to a page, turn the grid on, share...', 'palette')} onClick={() => void openPalette(false)} />
       <IconButton icon={<Icons.help />} title={helpTitle} onClick={openHeaderHelp} />
       {prefsOpen && <PrefsModal workspace onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
@@ -943,32 +811,38 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   );
 }
 
-const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
-  { tool: 'select', icon: 'select', label: 'Select', key: 'V' },
-  { tool: 'hand', icon: 'hand', label: 'Hand', key: 'H / Space' },
-  { tool: 'artboard', icon: 'artboard', label: 'Page', key: 'A' },
-  { tool: 'frame', icon: 'frame', label: 'Frame', key: 'F' },
-  { tool: 'rect', icon: 'rect', label: 'Rectangle', key: 'R' },
-  { tool: 'ellipse', icon: 'ellipse', label: 'Ellipse', key: 'O' },
+//The tool's tooltip with the keys it has now: the person's own, from the keymap
+const toolTip = (label: string, tool: Tool) => {
+  const keys = [keyHints(`tool.${tool}`), tool === 'hand' ? keyHints('hand-hold') : ''].filter(Boolean).join(' or ');
+  return keys ? `${label} (${keys})` : label;
+};
+
+const TOOLS: { tool: Tool; icon: IconName; label: string }[] = [
+  { tool: 'select', icon: 'select', label: 'Select' },
+  { tool: 'hand', icon: 'hand', label: 'Hand' },
+  { tool: 'artboard', icon: 'artboard', label: 'Page' },
+  { tool: 'frame', icon: 'frame', label: 'Frame' },
+  { tool: 'rect', icon: 'rect', label: 'Rectangle' },
+  { tool: 'ellipse', icon: 'ellipse', label: 'Ellipse' },
   { tool: 'polygon', icon: 'polygon', label: 'Polygon' },
   { tool: 'star', icon: 'star', label: 'Star' },
-  { tool: 'line', icon: 'line', label: 'Line', key: 'L' },
-  { tool: 'connector', icon: 'connector', label: 'Connector (drag from one layer to another to join them with a line or arrow that follows them)', key: 'K' },
-  { tool: 'pen', icon: 'pen', label: 'Pen', key: 'P' },
-  { tool: 'pencil', icon: 'pencil', label: 'Pencil (freehand)', key: 'N' },
-  { tool: 'bend', icon: 'bend', label: 'Bend (drag an edge into a curve; Alt bends one side)', key: 'W' },
-  { tool: 'text', icon: 'text', label: 'Text', key: 'T' },
+  { tool: 'line', icon: 'line', label: 'Line' },
+  { tool: 'connector', icon: 'connector', label: 'Connector (drag from one layer to another to join them with a line or arrow that follows them)' },
+  { tool: 'pen', icon: 'pen', label: 'Pen' },
+  { tool: 'pencil', icon: 'pencil', label: 'Pencil (freehand)' },
+  { tool: 'bend', icon: 'bend', label: 'Bend (drag an edge into a curve; Alt bends one side)' },
+  { tool: 'text', icon: 'text', label: 'Text' },
   { tool: 'draw', icon: 'draw', label: 'Script layer (generative art, charts)' },
   { tool: 'shader', icon: 'shader', label: 'Shader layer (GPU effects, backdrops)' },
   { tool: 'progress', icon: 'progress', label: 'Progress bar (a bar that fills to a value, for scores, steps and timers)' },
   { tool: 'chart', icon: 'chart', label: 'Chart (bar, column, line, pie and donut charts from a list)' },
-  { tool: 'bone', icon: 'bone', label: 'Bone (drag to draw one; start on a bone tip to continue the chain)', key: 'J' },
-  { tool: 'comment', icon: 'comment', label: 'Comment (click where you want to say something; reviewers see these, exports never do)', key: 'C' },
-  { tool: 'note', icon: 'note', label: 'Note (draw a sticky note for the people making this project; players and exports never see it)', key: 'S' },
+  { tool: 'bone', icon: 'bone', label: 'Bone (drag to draw one; start on a bone tip to continue the chain)' },
+  { tool: 'comment', icon: 'comment', label: 'Comment (click where you want to say something; reviewers see these, exports never do)' },
+  { tool: 'note', icon: 'note', label: 'Note (draw a sticky note for the people making this project; players and exports never see it)' },
 ];
 
-const WEB_TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
-  { tool: 'button', icon: 'button', label: 'Button', key: 'B' },
+const WEB_TOOLS: { tool: Tool; icon: IconName; label: string }[] = [
+  { tool: 'button', icon: 'button', label: 'Button' },
   { tool: 'input', icon: 'input', label: 'Input field' },
   { tool: 'link', icon: 'link', label: 'Link' },
   { tool: 'embed', icon: 'embed', label: 'Embed (HTML or iframe)' },
@@ -1120,7 +994,7 @@ export function Toolbar() {
     const t = all.find((x) => x.tool === id);
     if (!t) return null;
     const I = Icons[t.icon];
-    return <IconButton key={t.tool} icon={<I />} title={`${t.label}${t.key ? ` (${t.key})` : ''}`} active={tool === t.tool} onClick={() => store().set({ tool: t.tool, editingPathId: null })} />;
+    return <IconButton key={t.tool} icon={<I />} title={toolTip(t.label, t.tool)} active={tool === t.tool} onClick={() => store().set({ tool: t.tool, editingPathId: null })} />;
   };
   const image = (
     <IconButton
@@ -1136,7 +1010,7 @@ export function Toolbar() {
   );
   //an action, not a tool mode: it opens the modal and never stays lit
   const catalogue = <IconButton key="catalogue" icon={<Icons.catalogue />} title="Media Catalogue: find a photo and put it on the artboard as a picture" onClick={() => setCatalogueOpen(true)} />;
-  const bones = <IconButton key="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={showBones ? 'Hide bones on the canvas (Shift+J)' : 'Show bones on the canvas (Shift+J)'} onClick={() => store().set({ showBones: !showBones })} />;
+  const bones = <IconButton key="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={withKey(showBones ? 'Hide bones on the canvas' : 'Show bones on the canvas', 'toggle-bones')} onClick={() => store().set({ showBones: !showBones })} />;
   return (
     <nav
       className={`toolbar${horizontal ? ' horizontal' : ''}`}
@@ -1189,7 +1063,7 @@ export function Toolbar() {
       <div className="tool-grid">
         <IconButton
           icon={<Icons.grid />}
-          title={`${snapPrefs.showGrid ? 'Hide' : 'Show'} the grid (Shift+G). Right-click for the grid size`}
+          title={`${snapPrefs.showGrid ? 'Hide' : 'Show'} the grid${keyHint('toggle-grid') ? ` (${keyHint('toggle-grid')})` : ''}. Right-click for the grid size`}
           active={snapPrefs.showGrid}
           pressed={snapPrefs.showGrid}
           onClick={() => setPrefs({ showGrid: !snapPrefs.showGrid })}
@@ -1197,7 +1071,7 @@ export function Toolbar() {
         />
         <IconButton
           icon={<Icons.magnet />}
-          title={`Snapping is ${snapPrefs.snapOn ? (snapAny(snapSettings(snapPrefs)) ? 'on' : 'on, with nothing ticked') : 'off'}: click for the targets (grid, artboard, layers, guides, spacing, pixels, points). Hold Ctrl while dragging to skip it, Ctrl+' toggles the grid`}
+          title={`Snapping is ${snapPrefs.snapOn ? (snapAny(snapSettings(snapPrefs)) ? 'on' : 'on, with nothing ticked') : 'off'}: click for the targets (grid, artboard, layers, guides, spacing, pixels, points). Hold Ctrl while dragging to skip it${keyHint('snap-grid') ? `, ${keyHint('snap-grid')} toggles the grid` : ''}`}
           active={snapPrefs.snapOn && snapAny(snapSettings(snapPrefs))}
           pressed={snapPrefs.snapOn}
           popup="menu"

@@ -119,6 +119,17 @@ describe('preferences', () => {
     expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs.sectionFolds).toEqual(kept);
   });
 
+  it('keeps each person\'s keyboard shortcuts as command ids to a few short key combos, and the one-key switch and preset', async () => {
+    const keys = { keymap: { 'tool.pen': ['Shift+P'], undo: ['Mod+Z', 'Mod+U'], 'zoom-fit': ['Mod+0'] }, keymapPreset: 'illustration', singleKeys: false };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: keys } })).json.prefs).toEqual(keys);
+    expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs).toEqual(keys);
+    const mixed = { ok: ['A', 'Mod+Shift+,', 'Mod+\\'], 'bad id!': ['A'], '__proto__': ['A'], text: 'A', five: ['A', 'B', 'C', 'D', 'E'], junk: ['<script>', 'x'.repeat(30), 7, 'A b'] };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymap: mixed, keymapPreset: 'other', singleKeys: 'no' } } })).json.prefs).toEqual({ keymap: { ok: ['A', 'Mod+Shift+,', 'Mod+\\'], five: ['A', 'B', 'C', 'D'], junk: [] } });
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymap: ['A'] } } })).json.prefs).toEqual({});
+    const many = Object.fromEntries(Array.from({ length: 400 }, (_, i) => [`cmd.${i}`, ['A']]));
+    expect(Object.keys((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymap: many } } })).json.prefs.keymap)).toHaveLength(250);
+  });
+
   it('keeps what first-run remembers as short keys to booleans, at most 40, and the strip switch', async () => {
     const o = { 'job-shape': true, dismissed: false, welcomed: true };
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { onboarding: o, gettingStarted: false } } })).json.prefs).toEqual({ onboarding: o, gettingStarted: false });

@@ -477,7 +477,7 @@ fontsProxy.prewarm()
 
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
-const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], codeTheme: ['follow', 'light', 'dark'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean', technicalWording: 'boolean', gettingStarted: 'boolean'},
+const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], codeTheme: ['follow', 'light', 'dark'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean', technicalWording: 'boolean', gettingStarted: 'boolean', singleKeys: 'boolean', keymapPreset: ['default', 'illustration']},
 	cleanPrefs = (p) => {
 		let out = {}
 		for (let [k, rule] of Object.entries(PREF_KEYS)) {
@@ -495,6 +495,16 @@ const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], co
 				Object.entries(p.sectionFolds)
 					.filter(([k, v]) => k.length > 0 && k.length <= 60 && k !== '__proto__' && typeof v === 'boolean')
 					.slice(0, 300)
+			)
+		}
+		//The person's own keyboard shortcuts: command id to a short list of key combos (lib/keymap.ts). Ids and combos are
+		//plain short strings, at most 250 commands with 4 combos each, and anything else is dropped
+		if (p?.keymap && typeof p.keymap === 'object' && !Array.isArray(p.keymap)) {
+			out.keymap = Object.fromEntries(
+				Object.entries(p.keymap)
+					.filter(([k, v]) => /^[a-z][a-z0-9.-]{0,59}$/i.test(k) && Array.isArray(v))
+					.map(([k, v]) => [k, v.filter((c) => typeof c === 'string' && c.length > 0 && c.length <= 24 && /^[A-Za-z0-9+,./\\[\]';=`-]+$/.test(c)).slice(0, 4)])
+					.slice(0, 250)
 			)
 		}
 		//What the first-run screen and the Getting started strip remember (which jobs are ticked, whether it was put away).

@@ -1,5 +1,6 @@
 // The artboard commands the canvas, the Layers panel and the keyboard share: each asks what it needs to (a name, a yes), then
 // does one store operation. The store methods themselves never ask anything, so they stay easy to test.
+import { keyHints } from './keymap';
 import { store } from '../store/store';
 import { confirmDialog, promptDialog } from '../components/dialogs';
 import type { MenuItem } from '../components/ContextMenu';
@@ -107,7 +108,7 @@ export function artboardMenuItems(ids: string[], gid?: string): MenuItem[] {
   }
   items.push({ label: 'Link colours to tokens…', title: 'Turn the plain colours on these pages that are the same as a token\'s colour into that token, so they change with the theme', onClick: () => void linkColoursCommand(target) });
   items.push({ label: 'Duplicate', onClick: () => s.duplicateArtboards(target) });
-  items.push({ label: gid ? 'Delete pages in group' : boards.length > 1 ? 'Delete pages' : 'Delete page', hint: gid ? undefined : 'Del', danger: true, onClick: () => void deleteArtboardsCommand(target) });
+  items.push({ label: gid ? 'Delete pages in group' : boards.length > 1 ? 'Delete pages' : 'Delete page', hint: gid ? undefined : keyHints('delete'), danger: true, onClick: () => void deleteArtboardsCommand(target) });
   return items;
 }
 

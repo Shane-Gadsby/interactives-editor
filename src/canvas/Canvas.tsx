@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { keyHints, runCommand } from '../lib/keymap';
+import { windowCommand } from '../lib/key-area';
 import {
   LIGHT_LOOK,
   apply,
@@ -183,6 +185,7 @@ export function Canvas() {
   const vp = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
   const spaceDown = useRef(false);
+  const holdCode = useRef('');
   // What the pointer would do here (set while it moves with no drag going), and what the drag going now is doing
   const [hoverCursor, setHoverCursor] = useState<string | null>(null);
   // A note beside the pointer when pressing here will ask something first (the Bend tool converting a shape to a path,
@@ -361,7 +364,9 @@ export function Canvas() {
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !isTyping(e)) {
+      //Hold to pan: the key is the keymap's (Space unless the person moved it), and in the Timeline the same key plays instead
+      if (!isTyping(e) && windowCommand(e)?.id === 'hand-hold') {
+        holdCode.current = e.code;
         spaceDown.current = true;
         setSpaceHeld(true);
       }
@@ -383,7 +388,8 @@ export function Canvas() {
       }
     };
     const up = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
+      if (holdCode.current && e.code === holdCode.current) {
+        holdCode.current = '';
         spaceDown.current = false;
         setSpaceHeld(false);
       }
@@ -2072,7 +2078,7 @@ export function Canvas() {
     });
     const paste: MenuItem = {
       label: 'Paste',
-      hint: 'Ctrl+V',
+      hint: keyHints('paste'),
       onClick: () => {
         void (navigator.clipboard?.readText?.() ?? Promise.resolve('')).then((t) => pasteNodes(t), () => pasteNodes());
       },
@@ -2099,25 +2105,25 @@ export function Canvas() {
       const one = sel.length === 1 ? sel[0] : null;
       items = [
         { heading: one ? one.name : `${sel.length} layers` },
-        { label: 'Cut', hint: 'Ctrl+X', onClick: () => copySelection(true) },
-        { label: 'Copy', hint: 'Ctrl+C', onClick: () => copySelection() },
+        { label: 'Cut', hint: keyHints('cut'), onClick: () => copySelection(true) },
+        { label: 'Copy', hint: keyHints('copy'), onClick: () => copySelection() },
         paste,
-        { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => s2.duplicateSelection() },
-        { label: 'Delete', hint: 'Del', danger: true, onClick: () => s2.deleteSelection() },
+        { label: 'Duplicate', hint: keyHints('duplicate'), onClick: () => s2.duplicateSelection() },
+        { label: 'Delete', hint: keyHints('delete'), danger: true, onClick: () => s2.deleteSelection() },
         { separator: true },
         {
           label: 'Order',
           items: [
-            { label: 'Bring to front', hint: 'Ctrl+]', onClick: () => s2.reorder(Infinity) },
-            { label: 'Bring forward', hint: ']', onClick: () => s2.reorder(1) },
-            { label: 'Send backward', hint: '[', onClick: () => s2.reorder(-1) },
-            { label: 'Send to back', hint: 'Ctrl+[', onClick: () => s2.reorder(-Infinity) },
+            { label: 'Bring to front', hint: keyHints('front'), onClick: () => s2.reorder(Infinity) },
+            { label: 'Bring forward', hint: keyHints('forward'), onClick: () => s2.reorder(1) },
+            { label: 'Send backward', hint: keyHints('backward'), onClick: () => s2.reorder(-1) },
+            { label: 'Send to back', hint: keyHints('back'), onClick: () => s2.reorder(-Infinity) },
           ],
         },
-        { label: 'Group', hint: 'Ctrl+G', onClick: () => s2.groupSelection() },
+        { label: 'Group', hint: keyHints('group'), onClick: () => s2.groupSelection() },
         //Selections are on one artboard; with several artboards picked it isn't offered
         ...(pickedArtboardIds(s2.get()).length > 1 ? [] : [{ label: 'Fit page to selection', title: 'Resize the page to just these layers, keeping them where they are', onClick: () => s2.fitArtboardToSelection() } as MenuItem]),
-        ...(one && (one.type === 'group' || one.type === 'frame') ? [{ label: 'Ungroup', hint: 'Ctrl+Shift+G', onClick: () => s2.ungroupSelection() } as MenuItem] : []),
+        ...(one && (one.type === 'group' || one.type === 'frame') ? [{ label: 'Ungroup', hint: keyHints('ungroup'), onClick: () => s2.ungroupSelection() } as MenuItem] : []),
         ...(sel.length > 1
           ? [
               {
@@ -2154,8 +2160,8 @@ export function Canvas() {
                   { label: 'Empty On hover event', title: 'Just the On pointer event, with nothing joined to it', onClick: () => addInteraction(hab, one.id, 'pointerenter') },
                 ],
               } as MenuItem,
-              ...(one.type === 'text' || one.type === 'button' || one.type === 'link' ? [{ label: 'Edit text', hint: 'Enter', onClick: () => s2.set({ editingTextId: one.id }) } as MenuItem] : []),
-              ...(one.type === 'image' && canCrop(one) ? [{ label: 'Crop picture', hint: 'Enter', onClick: () => s2.set({ croppingId: one.id }) } as MenuItem] : []),
+              ...(one.type === 'text' || one.type === 'button' || one.type === 'link' ? [{ label: 'Edit text', hint: keyHints('enter'), onClick: () => s2.set({ editingTextId: one.id }) } as MenuItem] : []),
+              ...(one.type === 'image' && canCrop(one) ? [{ label: 'Crop picture', hint: keyHints('enter'), onClick: () => s2.set({ croppingId: one.id }) } as MenuItem] : []),
             ]
           : []),
         { separator: true },
@@ -2187,10 +2193,10 @@ export function Canvas() {
         { separator: true },
         { label: showRoutes() ? 'Hide page arrows' : 'Show page arrows', title: 'The faint arrows between pages that show where Go to page, Next and Previous lead (editor only)', onClick: () => setShowRoutes(!showRoutes()) },
         { label: 'Tidy up pages', disabled: st.project.artboards.filter((a) => !a.canvasHidden).length < 2, onClick: tidyArtboardsCommand },
-        { label: 'Zoom to fit everything', hint: 'Shift+1', onClick: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '!', code: 'Digit1', shiftKey: true })) },
-        { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: 'Shift+R', onClick: () => setPrefs({ rulers: !prefs().rulers }) },
+        { label: 'Zoom to fit everything', hint: keyHints('zoom-fit'), onClick: () => void runCommand('zoom-fit') },
+        { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: keyHints('toggle-rulers'), onClick: () => setPrefs({ rulers: !prefs().rulers }) },
         ...gridMenu(),
-        { label: 'Help', hint: '?', onClick: openContextHelp },
+        { label: 'Help', hint: keyHints('help-context'), onClick: openContextHelp },
       ];
     }
     setMenu({ x: e.clientX, y: e.clientY, items });
@@ -2369,7 +2375,7 @@ export function Canvas() {
         <button
           type="button"
           className="canvas-status"
-          title="Snap to grid is on. Click for the snapping choices and the grid size (Ctrl while dragging skips snapping, Ctrl+' turns the grid off)"
+          title={`Snap to grid is on. Click for the snapping choices and the grid size (Ctrl while dragging skips snapping${keyHints('snap-grid') ? `, ${keyHints('snap-grid')} turns the grid off` : ''})`}
           onClick={(e) => {
             const r = e.currentTarget.getBoundingClientRect();
             setMenu({ x: r.left, y: r.top - 8, items: gridMenu() });

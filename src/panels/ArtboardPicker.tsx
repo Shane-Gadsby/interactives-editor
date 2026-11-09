@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { keyHints } from '../lib/keymap';
 import { createPortal } from 'react-dom';
 import { store, useEditor } from '../store/store';
 import { filterSections, pickerSections, showArtboard, stepTarget, type PickerRow } from '../lib/artboard-picker';
@@ -83,7 +84,7 @@ export function ArtboardPicker() {
         type="button"
         className={`ab-picker-btn${open ? ' open' : ''}`}
         aria-label={`Page: ${current?.label ?? 'none'}`}
-        title="Which page's interactions to show. Alt+Up and Alt+Down step to the one before or after"
+        title={`Which page's interactions to show.${keyHints('graph-prev-page') ? ` ${keyHints('graph-next-page')} and ${keyHints('graph-prev-page')} step to the next and the previous one` : ''}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen(!open)}

@@ -1,4 +1,5 @@
 import { track as usage } from '../lib/analytics';
+import { withKey } from '../lib/keymap';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createMixer, unlockAudio, ANIMATABLE_PROPS, animatableProp, layerOwnProps, instanceInputProps, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL, type TimelineMarker } from 'interactives-player';
@@ -471,7 +472,7 @@ export function TimelinePanel() {
             v === '__new' ? store().addTimeline() : store().set({ activeTimelineId: v === '__design' ? null : v, playhead: 0, selectedKeys: [], recording: v === '__design' ? false : store().get().recording })
           }
         />
-        <IconButton icon={s.playing ? <Icons.pause /> : <Icons.play />} title={s.playing ? 'Pause preview' : 'Play preview'} onClick={() => store().set({ previewPlaying: !s.playing, playhead: !s.playing && s.playhead >= tl.duration ? 0 : s.playhead })} />
+        <IconButton icon={s.playing ? <Icons.pause /> : <Icons.play />} title={withKey(s.playing ? 'Pause preview' : 'Play preview', 'timeline-play')} onClick={() => store().set({ previewPlaying: !s.playing, playhead: !s.playing && s.playhead >= tl.duration ? 0 : s.playhead })} />
         <IconButton icon={<Icons.stop />} title="Back to start" onClick={() => store().set({ previewPlaying: false, playhead: 0 })} />
         <IconButton icon={<Icons.record />} className="record-btn" title="Record: property changes become keyframes" active={s.recording} onClick={() => store().set({ recording: !s.recording })} />
         <span className="time-readout mono">{Math.round(s.playhead)} ms</span>
@@ -782,7 +783,7 @@ const TrackGroupLabels = memo(
               </button>
             </div>
           ) : (
-            <div key={row.tr.id} className={`track-label${pathPointProp(row.tr.prop) ? ' point-part' : ''}`}>
+            <div key={row.tr.id} className={`track-label${pathPointProp(row.tr.prop) ? ' point-part' : ''}`} data-track-prop={row.tr.prop} data-track-node={nodeId}>
               <span>{pathPointProp(row.tr.prop) ? POINT_PART_LABEL[pathPointProp(row.tr.prop)!.part] : animatableLabel(row.tr.prop, node)}</span>
               <button
                 className="mini"
