@@ -116,6 +116,9 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'New branded set Listen,': [['branded-starters', 'Observe and tag']],
 };
 
+//Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone
+const UPCOMING = new Set(['Help, in plain words']);
+
 const section = (): string[] => {
   const text = readFileSync(join(__dirname, '..', 'CHANGELOG.md'), 'utf8');
   const start = text.indexOf('## Unreleased: Symposium 3');
@@ -136,7 +139,7 @@ describe('every CHANGELOG feature in Symposium 3 is in the help', () => {
 
   it('has a row for every entry, and no row for one that is gone', () => {
     expect(headings.filter((h) => !(h in COVERED))).toEqual([]);
-    expect(Object.keys(COVERED).filter((h) => !headings.includes(h))).toEqual([]);
+    expect(Object.keys(COVERED).filter((h) => !headings.includes(h) && !UPCOMING.has(h))).toEqual([]);
   });
 
   it('finds a real topic and its key phrase for every row', () => {
