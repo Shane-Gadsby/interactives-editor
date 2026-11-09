@@ -119,6 +119,18 @@ describe('preferences', () => {
     expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs.sectionFolds).toEqual(kept);
   });
 
+  it('keeps the section and tool order as short keys to short lists of different short keys, and drops anything else', async () => {
+    const order = { sectionOrder: { 'layer:rect': ['Fill', 'Stroke', 'layer-selection'], page: ['Steps'] }, toolOrder: { groups: ['draw', 'shapes'], media: ['text', 'image'] } };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: order } })).json.prefs).toEqual(order);
+    expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs).toEqual(order);
+    const mixed = { sectionOrder: { ok: ['a', 'a', 'b', 3, null, '', 'z'.repeat(81)], notAList: 'x', empty: [], '': ['a'], ['k'.repeat(61)]: ['a'] }, toolOrder: [['a']] };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: mixed } })).json.prefs).toEqual({ sectionOrder: { ok: ['a', 'b'] } });
+    const many = { sectionOrder: Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`p${i}`, Array.from({ length: 120 }, (_, j) => `s${j}`)])) };
+    const kept = (await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: many } })).json.prefs.sectionOrder;
+    expect(Object.keys(kept)).toHaveLength(60);
+    expect(kept.p0).toHaveLength(80);
+  });
+
   it('keeps each person\'s keyboard shortcuts as command ids to a few short key combos, and the one-key switch and preset', async () => {
     const keys = { keymap: { 'tool.pen': ['Shift+P'], undo: ['Mod+Z', 'Mod+U'], 'zoom-fit': ['Mod+0'] }, keymapPreset: 'illustration', singleKeys: false };
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: keys } })).json.prefs).toEqual(keys);

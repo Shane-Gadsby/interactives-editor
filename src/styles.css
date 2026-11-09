@@ -12364,3 +12364,83 @@ button.flow-text:focus-visible {
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------- moving sections and tools (lib/reorder-drag.ts, lib/section-order.ts) */
+/* a panel whose sections have been moved: its children take the order set on them (lib/section-order.ts) */
+.reordered {
+  display: flex;
+  flex-direction: column;
+}
+.reordered > * {
+  flex: none;
+}
+/* a small grip in the left margin of a section's header, so it reads as something to pick up */
+.section-head {
+  position: relative;
+}
+.section-grip {
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 6px;
+  height: 12px;
+  margin-top: -6px;
+  opacity: 0;
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1.5px);
+  background-size: 3px 4px;
+  background-repeat: repeat;
+  color: var(--muted);
+  pointer-events: none;
+}
+.section-head:hover .section-grip,
+.section-head:focus-within .section-grip {
+  opacity: 0.8;
+}
+body.reorder-active,
+body.reorder-active * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+.reorder-lifted {
+  opacity: 0.45;
+}
+body.reorder-active .ix-tooltip {
+  display: none !important;
+}
+/* where the dropped thing will land: gold, with a dark and a light edge so it shows in both themes */
+.reorder-line {
+  position: fixed;
+  z-index: var(--z-dock-drag, 71);
+  pointer-events: none;
+  border-radius: 2px;
+  background: var(--primary-bg);
+  box-shadow:
+    0 0 0 1px var(--primary-fg),
+    0 0 0 2px color-mix(in srgb, var(--panel) 80%, transparent);
+}
+.reorder-line.noop {
+  opacity: 0.4;
+}
+.reorder-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: var(--z-dock-drag, 71);
+  pointer-events: none;
+  max-width: 220px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--primary-bg);
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+/* the thing that was just moved says so for a moment (a static outline, so reduced motion needs nothing) */
+.reorder-landed {
+  box-shadow: inset 3px 0 0 var(--primary-bg);
+}

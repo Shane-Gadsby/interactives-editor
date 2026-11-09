@@ -1,5 +1,5 @@
 import { answerPreviewProgress, forgetPreviewCourse, forgetPreviewLearner, previewCourseHas, previewLearnerHas, usesCourseCollections } from './lib/preview-learner';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
@@ -51,6 +51,8 @@ import { prefs, setPrefs, usePrefs } from './lib/prefs';
 import { hideSome, setDock, useDock } from './lib/dock';
 import { showFillIn } from './lib/content-form';
 import { toolGroupsInUse } from './lib/essentials';
+import { arrange } from './lib/reorder';
+import { toolDragStart, toolKeyMove, toolOrderMenu, TOOL_GROUPS_KEY } from './lib/tool-order';
 import { GettingStarted } from './components/GettingStarted';
 import { watchGettingStarted } from './lib/onboarding';
 import { applyNewcomerEssentials } from './lib/workspaces';
@@ -860,7 +862,7 @@ const WEB_TOOLS: { tool: Tool; icon: IconName; label: string }[] = [
 ];
 
 /** The Add question button: a menu of question types; picking one builds the question on the open artboard and selects it. */
-function AddQuestion() {
+function AddQuestion({ reorderKey }: { reorderKey?: string }) {
   const [at, setAt] = useState<{ left: number; top: number } | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   useEffect(() => {
@@ -882,6 +884,7 @@ function AddQuestion() {
     <>
       {pasteOpen && <PasteQuestionsModal onClose={() => setPasteOpen(false)} />}
       <IconButton
+        reorderKey={reorderKey}
         icon={<Icons.question />}
         title="Add question: multiple choice, true/false, fill in the blank, ordering, matching, hotspot"
         active={!!at}
@@ -979,7 +982,8 @@ function NotesToggle() {
 }
 
 export function Toolbar() {
-  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; target: EventTarget | null } | null>(null);
+  const nav = useRef<HTMLElement>(null);
   const tool = useEditor((st) => st.tool);
   const showBones = useEditor((st) => st.showBones);
   const [open, toggle] = useToolGroups();
@@ -991,6 +995,7 @@ export function Toolbar() {
   const usedAway = useEditor((st) => (away.length ? toolGroupsInUse(st.project) : '')).split(',');
   const putAway = (g: { id: string; tools: Tool[] }) => away.includes(g.id) && !usedAway.includes(g.id) && !g.tools.includes(tool);
   const horizontal = place === 'bottom' || place === 'top';
+  const shownGroups = TOOL_GROUPS.filter((g) => !putAway(g));
   const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [gridMenuAt, setGridMenuAt] = useState<{ x: number; y: number } | null>(null);
   const [snapMenuAt, setSnapMenuAt] = useState<{ x: number; y: number } | null>(null);
@@ -1004,11 +1009,12 @@ export function Toolbar() {
     const t = all.find((x) => x.tool === id);
     if (!t) return null;
     const I = Icons[t.icon];
-    return <IconButton key={t.tool} icon={<I />} title={toolTip(t.label, t.tool)} active={tool === t.tool} onClick={() => store().set({ tool: t.tool, editingPathId: null })} />;
+    return <IconButton key={t.tool} reorderKey={t.tool} icon={<I />} title={toolTip(t.label, t.tool)} active={tool === t.tool} onClick={() => store().set({ tool: t.tool, editingPathId: null })} />;
   };
   const image = (
     <IconButton
       key="image"
+      reorderKey="image"
       icon={<Icons.image />}
       title="Image"
       onClick={async () => {
@@ -1019,18 +1025,21 @@ export function Toolbar() {
     />
   );
   //an action, not a tool mode: it opens the modal and never stays lit
-  const catalogue = <IconButton key="catalogue" icon={<Icons.catalogue />} title="Media Catalogue: find a photo and put it on the artboard as a picture" onClick={() => setCatalogueOpen(true)} />;
-  const bones = <IconButton key="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={withKey(showBones ? 'Hide bones on the canvas' : 'Show bones on the canvas', 'toggle-bones')} onClick={() => store().set({ showBones: !showBones })} />;
+  const catalogue = <IconButton key="catalogue" reorderKey="catalogue" icon={<Icons.catalogue />} title="Media Catalogue: find a photo and put it on the artboard as a picture" onClick={() => setCatalogueOpen(true)} />;
+  const bones = <IconButton key="bones" reorderKey="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={withKey(showBones ? 'Hide bones on the canvas' : 'Show bones on the canvas', 'toggle-bones')} onClick={() => store().set({ showBones: !showBones })} />;
   return (
     <nav
+      ref={nav}
       className={`toolbar${horizontal ? ' horizontal' : ''}`}
       aria-orientation={horizontal ? 'horizontal' : undefined}
+      onPointerDown={(e) => toolDragStart(e, nav.current, horizontal)}
+      onKeyDown={(e) => toolKeyMove(e, nav.current)}
       onContextMenu={(e) => {
         e.preventDefault();
-        setMenu({ x: e.clientX, y: e.clientY });
+        setMenu({ x: e.clientX, y: e.clientY, target: e.target });
       }}
     >
-      {menu && <ContextMenu x={menu.x} y={menu.y} items={toolsMenu()} onClose={() => setMenu(null)} />}
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={toolsMenu(toolOrderMenu(nav.current, menu.target, horizontal))} onClose={() => setMenu(null)} />}
       {catalogueOpen && <MediaCatalogueModal onClose={() => setCatalogueOpen(false)} />}
       {gridMenuAt && <ContextMenu x={gridMenuAt.x} y={gridMenuAt.y} items={gridMenu()} onClose={() => setGridMenuAt(null)} />}
       {snapMenuAt && <SnapMenu x={snapMenuAt.x} y={snapMenuAt.y} onClose={() => setSnapMenuAt(null)} />}
@@ -1039,24 +1048,25 @@ export function Toolbar() {
         {btn('select')}
         {btn('hand')}
       </div>
-      {TOOL_GROUPS.filter((g) => !putAway(g)).map((g) => {
+      {arrange(
+        shownGroups.map((g) => g.id),
+        snapPrefs.toolOrder?.[TOOL_GROUPS_KEY],
+      ).map((id) => {
+        const g = shownGroups.find((x) => x.id === id)!;
         const isOpen = !!open[g.id];
         const activeHere = g.tools.includes(tool);
+        // the group's tools and its extra buttons, in the person's order
+        const extras: Record<string, ReactNode> = g.id === 'media' ? { image, catalogue } : g.id === 'web' ? { question: <AddQuestion key="q" reorderKey="question" /> } : g.id === 'rig' ? { bones } : {};
+        const keys = [...(g.tools as string[]), ...Object.keys(extras)];
         return (
-          <div key={g.id} className={`tool-group${isOpen ? ' open' : ''}`}>
-            <button type="button" className="tool-group-head" aria-expanded={isOpen} title={`${isOpen ? 'Fold' : 'Show'} the ${g.label} tools`} onClick={() => toggle(g.id)}>
+          <div key={g.id} className={`tool-group${isOpen ? ' open' : ''}`} data-reorder-key={g.id}>
+            <button type="button" className="tool-group-head" aria-expanded={isOpen} aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" title={`${isOpen ? 'Fold' : 'Show'} the ${g.label} tools. Drag to move the group, or press Alt+arrow`} onClick={() => toggle(g.id)}>
               <span className="section-chev" aria-hidden="true" />
               {g.label}
             </button>
             <div className="tool-grid">
               {isOpen ? (
-                <>
-                  {g.tools.map(btn)}
-                  {g.id === 'media' && image}
-                  {g.id === 'media' && catalogue}
-                  {g.id === 'web' && <AddQuestion key="q" />}
-                  {g.id === 'rig' && bones}
-                </>
+                <>{arrange(keys, snapPrefs.toolOrder?.[g.id]).map((k) => extras[k] ?? btn(k as Tool))}</>
               ) : (
                 activeHere && btn(tool)
               )}

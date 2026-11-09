@@ -7,7 +7,9 @@ import { Icons } from './icons';
 import { TokensTab, tokenSummary, linked, useBrandLocked, useThemeState } from './TokenPicker';
 import { FIELD_TIPS } from './tips';
 import { useRowSearch, useSectionSearch, RowScope, SectionScope } from '../lib/prop-search';
-import { ContextMenu } from './ContextMenu';
+import { ContextMenu, type MenuItem } from './ContextMenu';
+import { moveSection, sectionDragStart, sectionKeyMove, sectionPlace, useSectionOrder } from '../lib/section-order';
+import { resetOrder } from '../lib/reorder';
 import { isSectionOpen, onlySectionOpen, registerSection, resetSectionFolds, sectionKey, setAllSections, setSectionOpen, useSectionFoldVersion } from '../lib/section-fold';
 
 /** An explicit title, or the standard explanation for a field label. */
@@ -627,11 +629,16 @@ export function Section({
   useLayoutEffect(() => (key ? registerSection(key, defaultOpen) : undefined), [key, defaultOpen]);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const ps = useSectionSearch(title);
+  const secRef = useRef<HTMLElement>(null);
+  const orderKey = sectionKey(id, title);
+  const scope = useSectionOrder(secRef, orderKey);
+  // the properties search sorts the sections itself while it is open, so they can't be moved then
+  const movable = !!scope && !!orderKey && !ps.searching;
   // While searching every section opens, so its rows are there to be matched; the ones with no match hide
   const shown = open || ps.searching;
   const titleText = typeof title === 'string' ? title : '';
   return (
-    <section className={`section${shown ? '' : ' closed'}${ps.hidden ? ' ps-hide' : ''}${ps.hit ? ' ps-hit' : ''}`} style={ps.searching ? { order: ps.order } : undefined} data-section={key || undefined} data-help={help} data-section-title={titleText || undefined}>
+    <section ref={secRef} className={`section${shown ? '' : ' closed'}${ps.hidden ? ' ps-hide' : ''}${ps.hit ? ' ps-hit' : ''}`} style={ps.searching ? { order: ps.order } : undefined} data-reorder-key={scope && orderKey ? orderKey : undefined} data-section={key || undefined} data-help={help} data-section-title={titleText || undefined}>
       <header className="section-head">
         <div
           className="section-title-row"
@@ -640,13 +647,25 @@ export function Section({
             if (e.altKey) onlySectionOpen(key);
             else setOpen(!open);
           }}
+          onPointerDown={(e) => movable && sectionDragStart(e, secRef.current)}
           onContextMenu={(e) => {
-            if (!collapsible) return;
+            if (!collapsible && !movable) return;
             e.preventDefault();
             setMenu({ x: e.clientX, y: e.clientY });
           }}
         >
-          <button className="section-title" aria-expanded={collapsible ? shown : undefined} title={collapsible ? `${open ? 'Collapse' : 'Expand'} (Alt-click: only this one open. Right-click: fold or unfold them all)` : undefined}>
+          {movable && <span className="section-grip" aria-hidden="true" />}
+          <button
+            className="section-title"
+            aria-expanded={collapsible ? shown : undefined}
+            aria-keyshortcuts={movable ? 'Alt+ArrowUp Alt+ArrowDown' : undefined}
+            onKeyDown={(e) => movable && sectionKeyMove(e, secRef.current)}
+            title={
+              collapsible || movable
+                ? `${collapsible ? `${open ? 'Collapse' : 'Expand'} (Alt-click: only this one open. Right-click: fold or unfold them all)` : ''}${movable ? `${collapsible ? '. ' : ''}Drag to move this section, or press Alt+Up or Alt+Down` : ''}`
+                : undefined
+            }
+          >
             {/* the chevron says it folds, and which way it is now: pointing down when open, right when closed */}
             {collapsible && <span className="section-chev" aria-hidden="true" />}
             {title}
@@ -664,11 +683,16 @@ export function Section({
           y={menu.y}
           onClose={() => setMenu(null)}
           items={[
-            { label: 'Fold all sections', onClick: () => setAllSections(false) },
-            { label: 'Unfold all sections', onClick: () => setAllSections(true) },
-            { label: 'Only this one open', hint: 'Alt-click', onClick: () => onlySectionOpen(key) },
-            { separator: true },
-            { label: 'Back to the default folds', onClick: resetSectionFolds },
+            ...(collapsible
+              ? [
+                  { label: 'Fold all sections', onClick: () => setAllSections(false) },
+                  { label: 'Unfold all sections', onClick: () => setAllSections(true) },
+                  { label: 'Only this one open', hint: 'Alt-click', onClick: () => onlySectionOpen(key) },
+                  { separator: true as const },
+                  { label: 'Back to the default folds', onClick: resetSectionFolds },
+                ]
+              : []),
+            ...(movable ? orderMenu(secRef.current, collapsible) : []),
           ]}
         />
       )}
@@ -683,9 +707,21 @@ export function Section({
   );
 }
 
-export function IconButton({ icon, title, onClick, active, disabled, className, pressed, onContextMenu, popup, expanded }: { icon: ReactNode; title: string; onClick?: (e: React.MouseEvent) => void; active?: boolean; disabled?: boolean; className?: string; pressed?: boolean; onContextMenu?: (e: React.MouseEvent) => void; popup?: 'menu'; expanded?: boolean }) {
+/** The move items of a section's right-click menu (the keyboard way is Alt+Up and Alt+Down on its header). */
+function orderMenu(el: HTMLElement | null, after: boolean): MenuItem[] {
+  const at = sectionPlace(el);
+  if (!el || !at) return [];
+  return [
+    ...(after ? [{ separator: true as const }] : []),
+    { label: 'Move this section up', hint: 'Alt+Up', disabled: at.index === 0, onClick: () => void moveSection(el, -1) },
+    { label: 'Move this section down', hint: 'Alt+Down', disabled: at.index >= at.count - 1, onClick: () => void moveSection(el, 1) },
+    { label: 'Back to the default section order', title: 'Put every section in this panel back where the editor puts it', onClick: () => resetOrder('sectionOrder', at.scope) },
+  ];
+}
+
+export function IconButton({ icon, title, onClick, active, disabled, className, pressed, onContextMenu, popup, expanded, reorderKey }: { reorderKey?: string; icon: ReactNode; title: string; onClick?: (e: React.MouseEvent) => void; active?: boolean; disabled?: boolean; className?: string; pressed?: boolean; onContextMenu?: (e: React.MouseEvent) => void; popup?: 'menu'; expanded?: boolean }) {
   return (
-    <button type="button" className={`icon-btn${active ? ' active' : ''}${className ? ' ' + className : ''}`} title={title} aria-label={title} aria-pressed={pressed} aria-haspopup={popup} aria-expanded={popup ? !!expanded : undefined} onClick={onClick} onContextMenu={onContextMenu} disabled={disabled}>
+    <button type="button" className={`icon-btn${active ? ' active' : ''}${className ? ' ' + className : ''}`} title={title} aria-label={title} aria-pressed={pressed} aria-haspopup={popup} aria-expanded={popup ? !!expanded : undefined} data-reorder-key={reorderKey} onClick={onClick} onContextMenu={onContextMenu} disabled={disabled}>
       {icon}
     </button>
   );
