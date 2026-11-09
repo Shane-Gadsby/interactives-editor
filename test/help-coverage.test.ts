@@ -35,6 +35,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Alt-drag copies more': [['layers-panel', 'Copying with Alt']],
   'Components, from where you want them': [['instances', 'Insert component here']],
   'Guides for every page': [['canvas', 'every page']],
+  'Guides are endless lines': [['canvas', 'one endless line']],
   'Timeline: the list of timelines': [['timelines', 'Nothing plays it']],
   'Timeline: Sound and captions fold': [['timelines', 'Sound and captions']],
   'Data files open in a Form': [['data-sources', 'Form']],
@@ -125,7 +126,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
 };
 
 //Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone
-const UPCOMING = new Set<string>([]);
+const UPCOMING = new Set<string>(['Guides are endless lines']);
 
 const section = (): string[] => {
   const text = readFileSync(join(__dirname, '..', 'CHANGELOG.md'), 'utf8');
