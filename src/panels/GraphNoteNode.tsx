@@ -7,6 +7,7 @@ import { Icons } from '../components/icons';
 import { store, useEditor } from '../store/store';
 import { attachGraphNote, leaveGraphNote, patchGraphNote, removeGraphNote } from '../lib/graph-notes';
 import { plainNoteText } from '../lib/note-text';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 export type GraphNoteData = { note: Note; detached: boolean; hostName: string | null };
 
@@ -87,7 +88,7 @@ export function GraphNoteForm({ note, logic }: { note: Note; logic: Pick<LogicGr
   return (
     <div className="param-form graph-note-form">
       <div className="param-title">Note</div>
-      <p className="hint">A note for the people editing this graph. Players never see it. Double-click it to type on the note itself. Light markdown works: **bold**, *italic*, - lists and [ ] tasks.</p>
+      <SectionBlurb text="A note for the people editing this graph. Players never see it." name="notes on the graph" help={['interactions', 'notes-on-the-graph']} />
       <TextField label="Text" multiline rows={6} value={note.text} commitOnBlur onChange={(v) => patchGraphNote(note.id, { text: v }, `gnote-text:${note.id}`)} />
       <div className="field">
         <span className="field-label">Colour</span>

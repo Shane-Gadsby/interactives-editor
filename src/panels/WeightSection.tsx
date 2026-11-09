@@ -6,6 +6,7 @@ import { Section } from '../components/ui';
 import { getVariantsVersion, onVariantsChange, savingsFor } from '../lib/asset-variants';
 import { optimiseSettings } from '../lib/image-optimise';
 import { kindSummary, projectWeight } from '../lib/weight';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const say = FORMULA_HELPERS.fileSize;
 
@@ -34,11 +35,11 @@ export function WeightSection({ ab, project }: { ab: Artboard; project: Project 
   const shown = mine.files.slice(0, 5);
   return (
     <Section id="download-size" help="download-size" title={`Download size: ${say(mine.bytes)}`} defaultOpen={false}>
-      <p className="hint">
-        {mine.files.length
-          ? `This artboard needs ${mine.files.length} file${mine.files.length === 1 ? '' : 's'}: ${kindSummary(mine.byKind, say)}. A learner downloads them when they get here, not before.`
-          : 'This artboard needs no pictures, video or sound files, so it costs a learner nothing to open.'}
-      </p>
+      <SectionBlurb
+        text={mine.files.length ? `This artboard needs ${mine.files.length} file${mine.files.length === 1 ? '' : 's'}: ${kindSummary(mine.byKind, say)}.` : 'This artboard needs no pictures, video or sound files, so it costs a learner nothing to open.'}
+        name="download size"
+        help={['download-size', 'seeing-what-an-artboard-weighs']}
+      />
       {shown.length > 0 && (
         <ul className="weight-files" aria-label="The heaviest files on this artboard">
           {shown.map((f) => (
@@ -74,10 +75,11 @@ export function WeightSection({ ab, project }: { ab: Artboard; project: Project 
         </PropRow>
       )}
       {weight.shared.bytes > 0 && <p className="hint">Not counted: {say(weight.shared.bytes)} of font and data files, which load with every artboard.</p>}
-      <p className="hint">
-        Each file counts once however many layers use it, and an artboard shown as an instance counts what that artboard needs. A file only another artboard links to (Go to artboard) is that artboard's. To show a size to learners use <code>{'{fileSize(downloadSize("Video"))}'}</code> in a text layer.
-        {embedded ? ' This project is one page that already holds every file, so these sizes are what each version would cost when the files are hosted separately.' : ''}
-      </p>
+      <SectionBlurb
+        text={embedded ? 'This project holds every file in one page, so these sizes are what each version costs when hosted separately.' : 'Each file counts once, however many layers use it.'}
+        name="download size"
+        help={['download-size', 'showing-a-size-to-learners']}
+      />
     </Section>
   );
 }

@@ -7,6 +7,7 @@ import { PropRow } from '../lib/prop-search';
 import { Icons } from '../components/icons';
 import { addBonesExample } from '../lib/bones-example';
 import { autoWeightPoint, bindLayer, bonesOf, setPointWeights, skinOf, unbindLayer } from '../lib/rig';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /** Run a change on the open artboard through the store (one undo step). */
 function edit(abId: string, fn: (ab: NonNullable<ReturnType<typeof getArtboard>>) => void, coalesce?: string): void {
@@ -33,11 +34,11 @@ export function BonesArtboardSection({ ab }: { ab: Artboard }) {
   const count = bonesOf(ab.children).length;
   return (
     <Section help="bones#try-bones-in-two-minutes" title="Bones" defaultOpen={false}>
-      <p className="hint">
-        {count
-          ? `${count} bone${count > 1 ? 's' : ''} on this artboard. Draw more with the Bone tool (J), then bind paths and images to them.`
-          : 'Rig a character: draw bones with the Bone tool (J), bind paths and images to them, and pose limbs with IK. Not sure where to start?'}
-      </p>
+      <SectionBlurb
+        text={count ? `${count} bone${count > 1 ? 's' : ''} on this artboard. Draw more with the Bone tool (J).` : 'Rig a character: draw bones with the Bone tool (J), then bind paths and images to them.'}
+        name="Bones"
+        help={['bones', 'drawing-bones']}
+      />
       <PropRow k="Build a rig example" words={['example rig', 'arm', 'ik', 'demo']}>
         <button className="link-btn" title={EXAMPLE_TIP} onClick={() => buildExample(ab.id)}>
           Build an example to try
@@ -55,7 +56,7 @@ export function BoneSection({ node, abId }: { node: BoneNode; abId: string }) {
   };
   return (
     <Section help="bones" title="Bone">
-      <p className="hint">The bone points along its own x axis from its base (X, Y), for its length. Turn it with ↻ or drag it on the canvas; child bones and layers inside it follow.</p>
+      <SectionBlurb text="A bone points along its own x axis from its base, for its length. Child bones and layers inside it follow." name="Bones" help={['bones', 'drawing-bones']} />
       <Row k="Add child bone" words={['skeleton', 'rig', 'joint']}>
         <button className="btn" title="Add a bone that starts at this bone's tip" onClick={addChild}>
           Add child bone
@@ -124,13 +125,11 @@ export function SkinSection({ node, abId }: { node: Extract<SceneNode, { type: '
     <Section id="skin" help="bones#skinning" title={isImage ? 'Mesh and skin' : 'Skin'} defaultOpen={!!skin}>
       {!skin && (
         <>
-          <p className="hint">
-            {allBones.length
-              ? isImage
-                ? 'Make a mesh over the picture and bind it to bones: the picture bends where the bones turn.'
-                : 'Bind the path to bones so its points follow them when they move.'
-              : 'Draw bones with the Bone tool (J) first.'}
-          </p>
+          <SectionBlurb
+            text={allBones.length ? (isImage ? 'Make a mesh over the picture and bind it to bones, so it bends where they turn.' : 'Bind the path to bones so its points follow them.') : 'Draw bones with the Bone tool (J) first.'}
+            name="skinning"
+            help={['bones', 'skinning']}
+          />
           {allBones.length > 0 && (
             <>
               {allBones.map((b) => (

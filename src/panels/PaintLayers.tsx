@@ -7,6 +7,7 @@ import { assetUrls } from '../lib/assets';
 import { IconButton, Row, Section, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { KeyRow, Num, PaintField, useSetter, useShown } from './Inspector';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /**
  * The Fill and Stroke sections. A shape has a list of fills and a list of strokes (`fill` + `fills`, `stroke` +
@@ -264,7 +265,7 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
         );
       })}
       {!list.length && <p className="hint">No stroke. Use + to add one.</p>}
-      {list.length > 0 && (n.type === 'path' || n.type === 'polygon' || n.type === 'star') && <p className="hint">Vector strokes are centred on the path unless you pick Inside or Outside; box strokes sit inside the edge.</p>}
+      {list.length > 0 && (n.type === 'path' || n.type === 'polygon' || n.type === 'star') && <SectionBlurb text="Paths are stroked on the line unless you pick Inside or Outside; boxes stroke inside the edge." name="strokes" help={['fill-stroke', 'stroke']} />}
     </Section>
   );
 }

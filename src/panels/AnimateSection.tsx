@@ -3,6 +3,7 @@ import type { SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { Row, Section, SelectField, NumberField } from '../components/ui';
 import { ANIM_PRESETS, animChoices, animOptions, setAnimChoices, type AnimPresetId, type AnimSide, type AnimWhen } from '../lib/animate-presets';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const WHEN: { value: AnimWhen; label: string }[] = [
   { value: 'start', label: 'The page opens' },
@@ -56,7 +57,7 @@ export function AnimateSection({ nodes }: { nodes: SceneNode[] }) {
           {said}
         </p>
       ) : (
-        <p className="hint">Pick one and it is added as a timeline you can open and change. Running it again on the same layer replaces it. People whose device asks for less motion see the end pose instead.</p>
+        <SectionBlurb text="Pick one to add it as a timeline you can open and change." name="animation presets" help={['animation-presets', 'what-it-writes']} />
       )}
     </Section>
   );

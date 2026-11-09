@@ -160,7 +160,7 @@ export function DataForm({ value, onChange, readOnly, label, openTree, treeName 
     <div className="data-formview" ref={root}>
       <div className="data-formview-note">
         <span>
-          Here you change what is in each field and add, copy, move or delete the items in a list. To add a new field, rename one, or change what a field holds, use <strong>{treeName}</strong>.
+          Change what is in each field, and add or delete list items. To add or rename a field, use <strong>{treeName}</strong>.
         </span>
         <button className="btn small" title={`Open ${treeName} at the top of the file`} onClick={() => openTree([])}>
           Open {treeName}

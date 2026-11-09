@@ -8,6 +8,7 @@ import { FontField, type FontPick } from '../components/FontPicker';
 import { ensureGoogleFont } from '../lib/font-catalog';
 import { Color, Num, useSetter } from './Inspector';
 import { endLayerId, inRepeaterTemplate } from '../canvas/connect';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const SIDES: { value: ConnectorSide; label: string }[] = [
   { value: 'auto', label: 'Auto (the side that faces the other end)' },
@@ -172,7 +173,7 @@ export function ConnectorSection({ nodes, project, ab }: { nodes: ConnectorNode[
           </Row>
         </>
       )}
-      <p className="hint">The line is the Stroke below (dash it, or animate its Trim end to draw it in); the label&apos;s background is the Fill. A connector is hidden while either layer is hidden or missing. Its own position and size follow the route, so there is nothing to move: move the layers.</p>
+      <SectionBlurb text="The line is the Stroke and the label's background is the Fill. Move the layers it joins, not the connector." name="connectors" help={['connectors', 'the-connector-section']} />
     </Section>
   );
 }

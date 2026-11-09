@@ -10890,7 +10890,8 @@ code {
 .preview-modal:focus {
   outline: none;
 }
-/* Node summary in the Interactions settings column, with the link on to the reference */
+/* Node summary in the Interactions settings column, and the explainer line under an Inspector section, with the link on to the help */
+.section-blurb .link-btn,
 .node-summary .link-btn {
   white-space: normal;
   text-align: left;

@@ -12,6 +12,7 @@ import { addAssetOption, withQuickAdd } from '../lib/quick-add';
 import { CONTEXT_ID, ContextPanel } from './ContextPanel';
 import { SharedForm } from './SharedForm';
 import { DataFileEditor } from './DataFileEditor';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const KINDS: { value: DataKind; label: string }[] = [
   { value: 'json', label: 'JSON' },
@@ -173,9 +174,16 @@ export function DataPanel() {
                 }
               />
             </div>
-            <p className="hint" hidden={active.source === 'shared'}>
-              Use it by name in bindings, text slots (<code>{`{${active.name}.length}`}</code>), Repeat on a group or frame, and scripts (<code>ix.data.{active.name}</code>, <code>ix.loadData</code>).
-            </p>
+            <SectionBlurb
+              hidden={active.source === 'shared'}
+              text={
+                <>
+                  Use it by name in text, bindings and scripts, like <code>{`{${active.name}.length}`}</code>.
+                </>
+              }
+              name="data sources"
+              help={['data-sources']}
+            />
           </div>
           <div className="data-preview data-editor">
             {active.source === 'shared' ? (
@@ -195,9 +203,7 @@ export function DataPanel() {
       ) : (
         <div className="data-context">
           {!s.sources.length && (
-            <p className="hint">
-              Data sources feed bindings, repeated lists and expressions from JSON, CSV, TSV or text, uploaded as files or fetched from a URL. Add one with + From file or + From URL.
-            </p>
+            <SectionBlurb text="Feed bindings and repeated lists from a file or a web address. Add one with + From file or + From URL." name="data sources" help={['data-sources']} />
           )}
           <ContextPanel />
         </div>

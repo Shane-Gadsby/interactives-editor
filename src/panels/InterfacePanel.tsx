@@ -7,6 +7,7 @@ import { Icons } from '../components/icons';
 import { Modal } from '../components/ProjectModals';
 import { download, fileSafe } from '../lib/export';
 import { acceptRename, addMessage, addUsed, addVariable, removeMessage, removeMissing, removeVariable, setMessageEntry, setRestrict, setVariableEntry, suggestions } from '../lib/public-interface';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const DIRECTIONS: { value: PublicDirection; label: string }[] = [
   { value: 'input', label: 'Input' },
@@ -217,9 +218,16 @@ export function InterfacePanel() {
           </div>
         )}
         {nothing ? (
-          <p className="hint pi-empty">
-            Nothing is public yet. Developers who embed this project then have to read through it to find which variables and messages are meant for them. List them here, with a description each, and the reference page, TypeScript definitions and <code>player.describe()</code> follow. Start with <strong>Add from what the project uses</strong>.
-          </p>
+          <SectionBlurb
+            className="pi-empty"
+            text={
+              <>
+                Nothing is public yet. List what embedding developers can use, starting with <strong>Add from what the project uses</strong>.
+              </>
+            }
+            name="the public interface"
+            help={['public-interface', 'the-list']}
+          />
         ) : (
           <div className="pi-columns">
             <section aria-label="Variables">
@@ -243,9 +251,15 @@ export function InterfacePanel() {
           </div>
         )}
         {hints.length > 0 && !nothing && <p className="hint pi-hints">{hints.length} message{hints.length === 1 ? ' is' : 's are'} used in the project and not listed. Use the + buttons to add them.</p>}
-        <p className="hint">
-          Developers see this list as <code>player.describe()</code>, in the reference page and <code>.d.ts</code>, and, for outputs, as <code>ix-variable</code> events on the element. Names are held by variable, so a rename shows up here instead of silently breaking embeds.
-        </p>
+        <SectionBlurb
+          text={
+            <>
+              Developers see this list as <code>player.describe()</code> and in the reference page.
+            </>
+          }
+          name="the public interface"
+          help={['public-interface', 'what-you-get']}
+        />
       </div>
       {showRef && <ReferenceModal onClose={() => setShowRef(false)} />}
     </div>

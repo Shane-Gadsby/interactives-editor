@@ -4,6 +4,7 @@ import { exemptionHash } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, Row, SelectField } from '../components/ui';
 import { setQuestionSettings } from '../lib/question-kit';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /** The guard settings after a change: an empty record is dropped (the question then does what it always did). */
 export function guardWith(g: QuestionGuard | undefined, patch: Partial<QuestionGuard>): QuestionGuard | undefined {
@@ -31,9 +32,7 @@ export function GuardSection({ frame, ab }: { frame: FrameNode; ab: Artboard }) 
   return (
     <>
       <div className="q-sub">Spell checkers and writing tools</div>
-      <div className="muted small">
-        Keeps a browser&apos;s spell check, Grammarly and other writing tools from helping with the word. It switches off what a page is able to switch off, and looks for what it cannot. It does not stop everything: the keyboard on a phone or tablet, or your computer&apos;s own autocorrect and text suggestions, are outside the page and cannot be seen or turned off from it (on an iPhone or iPad the autocorrect setting is only a hint). A second device cannot be seen at all. A tool that puts nothing in the page cannot be seen either. Pair it with the word being marked on the server and only in the audio.
-      </div>
+      <SectionBlurb text="Keeps spell check, Grammarly and other writing tools from helping with the word. A phone or tablet keyboard is only a hint (on iPhone), and a second device cannot be seen." name="spell checkers and writing tools" help={['question-kit', 'spelling-tests']} />
       <SelectField
         label="When a writing tool is found"
         title="Block: the learner sees a panel saying what was found and how to turn it off, and cannot carry on until it is gone. Warn only: the panel is a notice they can dismiss. Off: nothing is looked for (the options below still apply). What is found is kept with the learner's result either way, and shown in Results"
@@ -59,9 +58,15 @@ export function GuardSection({ frame, ab }: { frame: FrameNode; ab: Artboard }) 
       />
       {mode !== 'off' && (
         <div className="q-option">
-          <div className="muted small">
-            <strong>Exemption for assistive technology.</strong> Screen readers, magnifiers and switch devices are never looked for. If something a learner relies on looks like a writing tool, give them a code: they type it in the panel and are let through for the rest of their visit. Their result then says an exemption was used. The page holds only a scrambled form of the code, so share the code itself with that learner only. {g?.exempt ? 'A code is set.' : 'No code is set, so the panel has no code box.'}
-          </div>
+          <SectionBlurb
+            text={
+              <>
+                <strong>Exemption for assistive technology.</strong> A learner who is wrongly stopped types a code to carry on. {g?.exempt ? 'A code is set.' : 'No code is set.'}
+              </>
+            }
+            name="the exemption code"
+            help={['question-kit', 'spelling-tests']}
+          />
           <Row>
             <label className="field">
               <span>Exemption code</span>

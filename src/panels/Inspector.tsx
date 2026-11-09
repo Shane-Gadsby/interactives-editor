@@ -28,7 +28,6 @@ import {
   type ProgressNode,
   type ChartNode,
   type ConnectorNode,
-  DRAW_API,
   DRAW_TEMPLATES,
   type DrawTemplate,
   defaultAutoLayout,
@@ -130,6 +129,7 @@ import { CornerRadii } from './CornerRadii';
 import { hasCornerRadii } from '../lib/corner-radii';
 import { pickedArtboardIds } from '../lib/artboard-groups';
 import { ArtboardsSelection } from './ArtboardsSelection';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 
 export function Inspector() {
@@ -544,10 +544,15 @@ function LibraryArtboardSection({ ab, project }: { ab: Artboard; project: Projec
   const locked = !!link.brand && !override;
   return (
     <Section id="library-link" help={link.brand ? 'brand-kits' : 'libraries'} title={link.brand ? 'Brand kit' : 'Library'}>
-      <p className="hint">
-        {link.internal ? 'Used inside a library component. ' : ''}From <strong>{name}</strong>, version {link.version}. It is read-only here: its layers, timelines and interactions come from the library and are replaced when you update it. Instances of it in your own artboards, their inputs and your variables are yours.
-        {link.brand && ' It is part of a brand kit, so it stays linked and locked. You can move it, and change the text the kit marks as editable. Instances of it keep its proportions and can be scaled between half and double its size.'}
-      </p>
+      <SectionBlurb
+        text={
+          <>
+            {link.internal ? 'Used inside a library component. ' : ''}From <strong>{name}</strong>, version {link.version}. {link.brand ? 'Part of a brand kit, so it stays linked and locked.' : 'Read-only here: update the library to change it.'}
+          </>
+        }
+        name={link.brand ? 'brand kits' : 'libraries'}
+        help={link.brand ? ['brand-kits', 'what-is-locked'] : ['libraries', 'using-a-library']}
+      />
       <Row>
         <button
           className="btn"
@@ -775,7 +780,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <SensorsSection project={project} />
       <Section help="attributions" title="Credits" defaultOpen={false}>
         <CreditsSettingsFields />
-        <p className="hint">The entries themselves are in the Attributions tab. They are your own record unless you turn the button on.</p>
+        <SectionBlurb text="The entries are in the Attributions tab. Learners only see them if you turn the button on." name="Credits" help={['attributions', 'showing-it-to-learners']} />
         <Row k="Open Attributions" words={['credits', 'references', 'sources']}>
           <button className="btn" onClick={() => store().set({ bottomTab: 'credits', previewPlaying: false })} title="Open the Attributions tab">
             Open Attributions
@@ -795,7 +800,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <PropRow k="Add a font" words={['google fonts', 'typeface', 'upload font', 'font family']}>
         <FontPicker
           ariaLabel="Add a font"
-          title="Search every Google font and add it to this project (the player loads it). Fonts you upload in Assets show here too"
+          title="Search every Google font and add it to this project"
           placeholder="Add a Google font…"
           clearOnPick
           system={false}
@@ -806,7 +811,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           }}
         />
         </PropRow>
-        <p className="hint">Upload .woff2/.ttf files in Assets to use your own fonts.</p>
+        <SectionBlurb text="Upload .woff2 or .ttf files in Assets to use your own fonts." name="Fonts" help={['project-settings']} />
       </Section>
     </>
   );
@@ -934,7 +939,7 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
           <TextField label="CSS class" value={n.className ?? ''} onChange={(v) => set({ className: v || undefined })} />
           {n.type === 'text' && (
             <>
-              <p className="hint">The toolbar that floats over the text while you edit it (double-click the text) is the normal way to style parts of it. This list is for fixing the runs by hand.</p>
+              <SectionBlurb text="Style parts of the text with the toolbar that floats over the text while you edit. This list is for fixing runs by hand." name="Text runs" help={['text', 'several-styles-in-one-text-layer']} />
               <RunsEditor node={n} />
             </>
           )}
@@ -1402,7 +1407,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
               </button>
             </Row>
           )}
-          <p className="hint">Double-click a path to edit its points; double-click its outline to add one. Alt-click a point toggles curve/corner; Delete removes it. The Bend tool (W) drags an edge into a curve.</p>
+          <SectionBlurb text="Double-click a path to edit its points, or its outline to add one." name="editing points" help={['shapes', 'editing-points']} />
           {nodes.length === 1 && <ShapeKeys node={n} />}
         </Section>
       );
@@ -1462,9 +1467,15 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           />
           <TextSelectionHint id={n.id} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
-          <p className="hint">
-            Insert variables with <code>{'{name}'}</code>, or any expression like <code>{'{score * 10}'}</code>.
-          </p>
+          <SectionBlurb
+            text={
+              <>
+                Insert variables with <code>{'{name}'}</code>, or any expression like <code>{'{score * 10}'}</code>.
+              </>
+            }
+            name="live values in text"
+            help={['text', 'live-values-in-text']}
+          />
         </Section>
       );
     case 'image':
@@ -1660,7 +1671,15 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             options={[{ value: '', label: 'None' }, ...images.map((a) => ({ value: a.id, label: a.name })), addAssetOption('image')]}
           />
           <TextField label="Text when empty" title="What a video with no source says while playing. Empty draws a plain grey box. The editor always shows Choose a video" value={n.emptyText ?? ''} commitOnBlur onChange={(v) => set({ emptyText: v.trim() ? v : undefined })} />
-          <p className="hint">To use where the video is, whether it's playing, how long it is or which chapter it is in, add a <strong>Data binding</strong> below (Playback position, Playing, Playback speed, Length, Chapter showing, Hold paused) and pick which way it goes.</p>
+          <SectionBlurb
+            text={
+              <>
+                To use where the video is, or whether it is playing, add a <strong>Data binding</strong> below.
+              </>
+            }
+            name="video playback in variables"
+            help={['images-media', 'video-playback-in-variables']}
+          />
           <VideoCues node={n} set={(patch) => set(patch)} />
           <VideoCaptions node={n} set={(patch) => set(patch)} />
           <VideoDescriptions node={n} set={(patch) => set(patch)} />
@@ -1742,16 +1761,7 @@ function DrawSection({ nodes }: { nodes: DrawNode[] }) {
         value={n.runInEditor !== false}
         onChange={(v) => set({ runInEditor: v })}
       />
-      <details className="draw-api">
-        <summary>What can the script use?</summary>
-        <ul className="hint">
-          {DRAW_API.map(([sig, what]) => (
-            <li key={sig}>
-              <code>{sig}</code>: {what}
-            </li>
-          ))}
-        </ul>
-      </details>
+      <SectionBlurb text="The script draws with g, once a frame. The help lists everything it can use." name="the drawing API" help={['script-layers', 'the-drawing-api']} />
     </Section>
   );
 }
@@ -1816,12 +1826,12 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
       </Row>
       <CheckField
         label="Clickable while see-through"
-        title="When playing, a layer that is partly see-through (layer opacity, or a fill and stroke opacity, under 100%) normally lets the pointer through to what's underneath: no link, no hand cursor, no clicks or hovers, for it and everything inside it. Tick this to keep it clickable anyway. Hidden layers are never clickable."
+        title="Keep a partly see-through layer (opacity under 100%) clickable. Normally the pointer goes through it to what is underneath. Hidden layers are never clickable."
         value={!!node.interactiveWhenFaded}
         onChange={(v) => store().setProps([node.id], { interactiveWhenFaded: v || undefined })}
       />
       {shownAmount(node) < 1 && !node.interactiveWhenFaded && (flows.length > 0 || !!node.link?.url) ? <p className="hint">This layer is see-through ({Math.round(shownAmount(node) * 100)}%), so it can't be clicked while playing until it's fully showing.</p> : null}
-      {node.interactiveWhenFaded ? <p className="hint">Ticked: this layer stays clickable (hand cursor, clicks, hovers) even while faded out.</p> : null}
+      {node.interactiveWhenFaded ? <p className="hint">It stays clickable (hand cursor, clicks, hovers) even while faded out.</p> : null}
     </Section>
   );
 }
@@ -1876,12 +1886,13 @@ export function DepthSection({ nodes, project }: { nodes: SceneNode[]; project: 
         onChange={(v) => set({ depth: v ? v : undefined }, 'depth')}
       />
       {n.depth ? (
-        <p className="hint">
-          Moves up to {Math.round((Math.abs(depth) / 100) * (project.settings.parallax?.range ?? 40))} px{depth < 0 ? ', with the pointer' : ', against the pointer'}. Everything inside the layer goes with it.
-          {dragged ? ' A layer people can drag holds still.' : ''} Nothing moves for viewers who ask for less motion.
-        </p>
+        <SectionBlurb
+          text={`Moves up to ${Math.round((Math.abs(depth) / 100) * (project.settings.parallax?.range ?? 40))} px${depth < 0 ? ', with the pointer' : ', against the pointer'}.${dragged ? ' A layer people can drag holds still.' : ''}`}
+          name="Depth"
+          help={['fill-stroke', 'depth-parallax']}
+        />
       ) : (
-        <p className="hint">Give a background a small depth and the foreground a large one. Set the range, and whether phones tilt, in Project settings.</p>
+        <SectionBlurb text="Give a background a small depth and the foreground a large one." name="Depth" help={['fill-stroke', 'depth-parallax']} />
       )}
     </Section>
   );
@@ -1936,9 +1947,7 @@ function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Pr
           <NumberField label="Hot y" value={n.cursorHotspot?.y ?? 0} min={0} onChange={(y) => set({ cursorHotspot: { x: n.cursorHotspot?.x ?? 0, y } })} />
         </Row>
       )}
-      <p className="hint">
-        Shown on hover in Preview and the exported player. Automatic gives a pointer to links and to layers with a click, press or release interaction. Interactions (Set cursor) and scripts (<code>ix.setCursor</code>, <code>node.set('cursor', …)</code>) can change it while running. Images over 32×32 px may be ignored by browsers.
-      </p>
+      <SectionBlurb text="The mouse pointer shown over this layer in Preview and the exported player." name="Cursor" help={['links-cursors', 'cursor']} />
     </Section>
     </>
   );
@@ -2036,10 +2045,15 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
               />
             </Row>
           )}
-          <p className="hint">
-            Inside the copies, text slots and bindings can use <code>item</code> and <code>index</code>, e.g. <code>{'{item.name}'}</code>. Clicks on a copy put its position in <code>event.index</code>.
-            {lists.length ? ` Data: ${lists.join(', ')}.` : ' Add a data source in the Data tab, or use any array expression.'}
-          </p>
+          <SectionBlurb
+            text={
+              <>
+                Inside the copies, use <code>item</code> and <code>index</code>, e.g. <code>{'{item.name}'}</code>. {lists.length ? `Lists: ${lists.join(', ')}.` : 'Items can be a data source or any list.'}
+              </>
+            }
+            name="repeaters"
+            help={['repeaters']}
+          />
           {!node.children.length && <p className="error small">Put a layer inside this {node.type} to use as the template.</p>}
         </>
       )}
@@ -2186,7 +2200,7 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
               Remove auto layout
             </button>
           </Row>
-          <p className="hint">Children are placed in layer order (reorder them in Layers). Hidden layers take no space, also at runtime.</p>
+          <SectionBlurb text="Children sit in layer order, and hidden layers take no space." name="auto layout" help={['auto-layout']} />
         </>
       )}
     </Section>
@@ -2243,7 +2257,7 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
           }
         }}
       />
-      <p className="hint">An instance runs its artboard on its own in the player: its timelines, interactions and variables. Inputs set its variables' starting values by name.</p>
+      <SectionBlurb text="An instance runs its artboard on its own. Inputs set its variables' starting values by name." name="instances" help={['instances']} />
     </Section>
   );
 }
@@ -2300,7 +2314,7 @@ function TextModifiersSection({ node }: { node: Extract<SceneNode, { type: 'text
           </button>
         ))}
       </Row>
-      {!list.length && <p className="hint">Animate letters, words or lines one after another. Try a preset, or add a modifier and key its offset.</p>}
+      {!list.length && <SectionBlurb text="Animate letters, words or lines one after another. Try a preset." name="text modifiers" help={['text-modifiers']} />}
       {list.map((raw, i) => {
         const m = { ...defaultModifier(), ...raw };
         const P = (k: string) => `modifiers.${i}.${k}`;
@@ -2432,7 +2446,7 @@ function ConstraintsSection({ node }: { node: SceneNode }) {
       defaultOpen={list.length > 0}
       actions={<IconButton icon={<Icons.plus />} title="Add a constraint" onClick={() => add('followPath')} />}
     >
-      {!list.length && <p className="hint">Tie this layer to another: follow a path, or copy its position, rotation or scale.</p>}
+      {!list.length && <SectionBlurb text="Tie this layer to another: follow a path, or copy its position, rotation or scale." name="constraints" help={['constraints']} />}
       {list.map((c, i) => (
         <div key={c.id} className="constraint">
           <Row>
@@ -2521,7 +2535,7 @@ function JoysticksSection({ ab }: { ab: Artboard }) {
         />
       }
     >
-      {!list.length && <p className="hint">Set timeline positions from numbers instead of time: dials, gauges, eyes that follow the pointer.</p>}
+      {!list.length && <SectionBlurb text="Set timeline positions from numbers instead of time: dials, gauges, eyes that follow the pointer." name="Joysticks" help={['joysticks']} />}
       {list.map((j, i) => (
         <div key={j.id} className="constraint">
           <Row>
@@ -2591,7 +2605,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
         />
       }
     >
-      {!list.length && <p className="hint">Mix several timelines by a number: blend idle, walk and run by speed, or layer a lean on top of a loop. Start one with a Play blend node.</p>}
+      {!list.length && <SectionBlurb text="Mix several timelines by a number, like idle, walk and run by speed." name="Blends" help={['blends']} />}
       {!list.length && (
         <PropRow k="Build a blend example" words={['example', 'demo', 'pose', 'blend']}>
         <button

@@ -11,6 +11,7 @@ import { SearchPicker, type PickerOption } from '../components/SearchPicker';
 import { ConvertersEditor } from '../components/Converters';
 import { createVariable } from '../lib/quick-add';
 import { store } from '../store/store';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /** What a variable holds at the start, as a binding would see it (list variables are arrays). */
 function startValue(v: Variable): unknown {
@@ -122,9 +123,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
   return (
     <Section help="bindings" title="Data bindings" defaultOpen={entries.length > 0} actions={addPicker(true)}>
       {entries.length === 0 && (
-        <p className="hint">
-          Nothing is bound yet. A binding ties a property to a variable: in (visible ← lives &gt; 0, the text ← score), out (a dragged layer's x → boxX, a video's position → videoTime) or both ways.
-        </p>
+        <SectionBlurb text="Nothing is bound yet. A binding ties a property to a variable: in, out or both ways." name="data bindings" help={['bindings', 'which-way-in-out-or-both']} />
       )}
       <ExprLocals.Provider value={{ self: node }}>
       {entries.map(([p, expr], i) => (
@@ -234,11 +233,11 @@ function BindingItem({
       </div>
       {dragged && mode === 'in' && variables.some((v) => v.name === expr.trim()) && (
         <p className="hint">
-          This layer can be dragged, but with <b>← In</b> a drag doesn't change <code>{expr.trim()}</code>, so saving or remembering it keeps the old value. Choose{' '}
+          With <b>← In</b> a drag doesn't change <code>{expr.trim()}</code>. Choose{' '}
           <button type="button" className="link-btn" onClick={() => onMode('both')}>
             ⇄ Both
           </button>{' '}
-          to keep {label} and <code>{expr.trim()}</code> equal.
+          to keep {label} and it equal.
         </p>
       )}
       {mode !== 'in' ? (

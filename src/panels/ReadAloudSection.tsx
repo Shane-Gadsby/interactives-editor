@@ -3,6 +3,7 @@ import { PropRow } from '../lib/prop-search';
 import { store } from '../store/store';
 import { CheckField, Row, Section, SelectField, TextField } from '../components/ui';
 import { addListenButton } from '../lib/listen-button';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /** Edit the project's read-aloud settings, dropping a key when it goes back to its default so the document stays small. */
 export function patchReadAloud(project: Project, patch: Partial<ReadAloudSettings>): ReadAloudSettings | undefined {
@@ -62,10 +63,10 @@ export function ReadAloudSection({ project }: { project: Project }) {
             />
             <SelectField<'top' | 'bottom'> label="Button at" value={r.at ?? 'bottom'} options={[{ value: 'bottom', label: 'Bottom left' }, { value: 'top', label: 'Top left' }]} onChange={(v) => set({ at: v })} />
           </Row>
-          <p className="hint">It reads the text layers that show, in layer order. Give a layer “Say it like” text (Accessibility section) for a word a voice gets wrong.</p>
+          <SectionBlurb text="It reads the text layers that show, in layer order. “Say it like” text fixes a word a voice gets wrong." name="read aloud" help={['read-aloud', 'words-a-voice-gets-wrong']} />
         </>
       )}
-      <p className="hint">Prefer your own button? Add a Listen button layer to this artboard, or use the Read aloud node in the Interactions tab.</p>
+      <SectionBlurb text="Prefer your own button? Add a Listen button layer, or use the Read aloud node." name="read aloud" help={['read-aloud', 'three-ways-to-use-it']} />
       <PropRow k="Add a Listen button" words={['read aloud', 'speech', 'text to speech', 'audio']}>
       <button className="btn" onClick={addLayer} title="Adds a Listen button layer to the open artboard, wired to read the artboard aloud">
         Add a Listen button to this artboard

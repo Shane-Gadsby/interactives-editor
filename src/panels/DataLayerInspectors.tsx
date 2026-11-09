@@ -10,6 +10,7 @@ import { lookFor } from '../lib/themes';
 import { previewScope } from '../lib/data';
 import { Color, KeyRow, Num, PaintField, useSetter } from './Inspector';
 import { PropRow } from '../lib/prop-search';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /** A progress layer: the value it shows, how it grows, its bar, and what assistive tech is told. The track is the Fill and Stroke sections. */
 export function ProgressSection({ nodes, project }: { nodes: ProgressNode[]; project: Project }) {
@@ -64,7 +65,7 @@ export function ProgressSection({ nodes, project }: { nodes: ProgressNode[]; pro
           onChange={(v) => set({ valueText: v || undefined }, `valuetext-${n.id}`)}
         />
       )}
-      <p className="hint">The track is the layer&apos;s Fill and Stroke below. A bar for a screen reader needs a text alternative (Accessibility).</p>
+      <SectionBlurb text="The track is the layer's Fill and Stroke below." name="progress bars" help={['progress-bars', 'look']} />
     </Section>
   );
 }
@@ -218,7 +219,7 @@ export function ChartSection({ nodes, project, ab }: { nodes: ChartNode[]; proje
       </Row>
       <CheckField label="Grow in" title="The marks grow in when the chart first appears. Not for viewers who ask their device for less motion" value={n.animate} onChange={(v) => set({ animate: v })} />
       <CheckField label="Table for screen readers" title="The same numbers as a table that only a screen reader finds. Leave it on unless a text alternative says it all" value={n.table} onChange={(v) => set({ table: v })} />
-      <p className="hint">Hover or Tab to a bar, slice or point to read it; the arrow keys move between them. A click on one gives On pointer nodes <code>event.index</code>. Give the chart a text alternative (Accessibility).</p>
+      <SectionBlurb text="Hover or Tab to a bar, slice or point to read it. Give the chart a text alternative in Accessibility." name="charts" help={['charts', 'reading-it']} />
     </Section>
   );
 }

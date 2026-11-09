@@ -1,5 +1,6 @@
 import { uid, type VideoChapter, type VideoCue, type VideoNode } from 'interactives-player';
 import { CheckField, NumberField, Row, TextField } from '../components/ui';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /**
  * A video layer's cue points and chapters. Cues fire the On video cue event while the video plays across them (and can
@@ -16,11 +17,7 @@ export function VideoCues({ node, set }: { node: VideoNode; set: (patch: Partial
   return (
     <>
       <div className="field-label block">Cue points</div>
-      <p className="hint">
-        {cues.length
-          ? 'The On video cue event fires when the video plays across a cue, with the cue name and time. Jumping past one fires nothing, and jumping back arms it again. A cue set to pause stops the video there, for a question; play it on with a Control video node.'
-          : 'Named points in the video that fire the On video cue event while it plays, such as where a question appears. Mark one to pause the video there.'}
-      </p>
+      <SectionBlurb text="Named points that fire the On video cue event as the video plays across them. Mark one to pause there." name="cue points" help={['images-media', 'cue-points-and-chapters']} />
       <Row k="Add a cue" words={['cue point', 'marker', 'pause', 'event']}>
         <button className="btn small-btn" onClick={addCue}>
           Add a cue
@@ -42,11 +39,7 @@ export function VideoCues({ node, set }: { node: VideoNode; set: (patch: Partial
         </div>
       ))}
       <div className="field-label block">Chapters</div>
-      <p className="hint">
-        {chapters.length
-          ? 'Sent to the video as a chapters track, which the controls of browsers that list chapters show. In formulas, self.chapters is the list and the Chapter showing binding says which one the video is in.'
-          : 'Named sections of the video. Browsers whose video controls list chapters show them, and formulas can read them.'}
-      </p>
+      <SectionBlurb text="Named sections of the video. Browsers that list chapters show them, and formulas can read them." name="chapters" help={['images-media', 'cue-points-and-chapters']} />
       <Row k="Add a chapter" words={['section', 'chapters', 'navigation']}>
         <button className="btn small-btn" onClick={addChapter}>
           Add a chapter

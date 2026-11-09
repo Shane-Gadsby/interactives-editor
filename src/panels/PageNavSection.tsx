@@ -3,6 +3,7 @@ import { DEFAULT_TRANSITION_MS, PAGE_TRANSITIONS, TIMED_TRANSITIONS, type Projec
 import { Row, Section, SelectField, SpeedField } from '../components/ui';
 import { store } from '../store/store';
 import { addPageNavigation, hasOwnNavigation, NAV_STYLES, navPages, removePageNav, PAGE_NAV_TAG, type NavResult, type NavStyle } from '../lib/page-nav';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 const hasNav = (project: Project, ids: string[]) =>
 	project.artboards.some((a) => ids.includes(a.id) && JSON.stringify(a.children).includes(`"${PAGE_NAV_TAG}"`));
@@ -37,7 +38,7 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 	const own = project.artboards.filter((a) => targets.includes(a.id) && hasOwnNavigation(a)).length;
 	return (
 		<Section help="page-navigation" title="Page navigation" defaultOpen={everyone.length > 1}>
-			<p className="hint">Back, Next and the page number along the bottom of the page, wired to the order of your pages, in one click. It is ordinary layers and Interactions you can change afterwards.</p>
+			<SectionBlurb text="Back, Next and a page number along the bottom, in one click. They are ordinary layers you can change." name="page navigation" help={['page-navigation']} />
 			<Row k="Navigation style" words={['next', 'back', 'previous', 'dots', 'progress bar', 'page number', 'buttons']}>
 			<div role="radiogroup" aria-label="Navigation style" className="nav-styles">
 				{NAV_STYLES.map((s) => (

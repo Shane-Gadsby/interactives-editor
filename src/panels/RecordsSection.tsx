@@ -1,6 +1,7 @@
 import type { Project, RecordSettings } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, Row, Section } from '../components/ui';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 type Auto = 'views' | 'clicks' | 'steps' | 'answers';
 
@@ -38,11 +39,11 @@ export function RecordsSection({ project }: { project: Project }) {
         KINDS.map((k) => (
           <CheckField key={k.key} label={k.label} title={k.title} value={r[k.key] !== false} onChange={(v) => set({ [k.key]: v ? undefined : false })} />
         ))}
-      <p className="hint">
-        {on
-          ? 'Records go to the suite analytics only when learners open the project from the Link for StudyDesk in Share link, signed in to StudyDesk. Insights shows counts, never a learner by name. Use Record nodes for anything of your own, and keep anything personal out of their names and values.'
-          : 'Nothing is recorded about what learners do. Results and progress are separate and still work.'}
-      </p>
+      <SectionBlurb
+        text={on ? 'Records reach Insights only from the Link for StudyDesk. It shows counts, never a learner by name.' : 'Nothing is recorded about what learners do. Results and progress still work.'}
+        name="learner records"
+        help={['insights', 'what-is-and-is-not-recorded']}
+      />
       <Row k="Open Insights" words={['records', 'learner records', 'responses', 'results']}>
         <button className="btn" onClick={() => store().set({ bottomTab: 'insights' })} title="Open the Insights tab">
           Open Insights

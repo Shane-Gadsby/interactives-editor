@@ -2,6 +2,7 @@ import { a11yContext, isTabStop, walk, type Artboard, type Dialog, type FrameNod
 import { store } from '../store/store';
 import { CheckField, ColorField, NumberField, Row, Section, SelectField } from '../components/ui';
 import { addVariableOption, withQuickAdd } from '../lib/quick-add';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 type Container = (SceneNode & { type: 'frame' | 'group'; children: SceneNode[] }) | FrameNode;
 
@@ -177,7 +178,7 @@ export function KeyNavSection({ node, project }: { node: Container; project: Pro
             value={!!k.countHidden}
             onChange={(v) => update({ countHidden: v ? true : undefined })}
           />
-          {k.mode === 'radio' && <div className="muted small">Moving to an item clicks it, so the flows that choose an option run. Bind the items' “Checked” to show the choice yourself, or leave it and aria-checked follows the focus.</div>}
+          {k.mode === 'radio' && <SectionBlurb text="Moving to an item clicks it, so the flows that choose an option run." name="keyboard navigation" help={['accessibility', 'keyboard-navigation']} />}
           {!rep && <div className="muted small">The items are this {node.type}'s layers that a keyboard can reach.</div>}
         </>
       )}

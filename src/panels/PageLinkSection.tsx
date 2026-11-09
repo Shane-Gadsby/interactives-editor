@@ -2,6 +2,7 @@ import { PAGE_TRANSITIONS, TIMED_TRANSITIONS, type Artboard, type Project, type 
 import { Section, SelectField, SpeedField } from '../components/ui';
 import { store } from '../store/store';
 import { linkDuration, linkedPage, linkToPage, linkTransition, pageLinksOf, pagesToLinkTo, setLinkDuration, setLinkTransition } from '../lib/page-link';
+import { SectionBlurb } from '../components/SectionBlurb';
 
 /**
  * "Go to page": which page clicking this layer opens, chosen from a list (or by dragging the handle on the canvas onto a page).
@@ -53,9 +54,11 @@ export function PageLinkSection({ node, ab, project }: { node: SceneNode; ab: Ar
 				/>
 			)}
 			{links.length > 0 && TIMED_TRANSITIONS.includes(look) && <SpeedField title="How long the page change takes" value={linkDuration(ab, node.id)} onChange={speed} />}
-			<p className="hint">
-				{to ? <>Clicking it goes to <b>{name(to)}</b>.{links.length > 1 ? ' More than one click here goes to a page: changing it changes them all.' : ''}</> : 'Pick a page, or drag the round handle on the canvas onto one. It is written as a click and a Go to artboard in Interactions.'}
-			</p>
+			<SectionBlurb
+				text={to ? <>Clicking it goes to <b>{name(to)}</b>.{links.length > 1 ? ' Changing it changes every click here that goes to a page.' : ''}</> : 'Pick a page, or drag the round handle on the canvas onto one.'}
+				name="Go to page"
+				help={['links-cursors', 'go-to-a-page']}
+			/>
 		</Section>
 	);
 }
