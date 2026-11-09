@@ -24,7 +24,7 @@ export const SNAP_ITEMS: { kind: SnapKind; label: string; pref: keyof Prefs; tip
   { kind: 'grid', label: 'Grid', pref: 'snapGrid', tip: 'Land on the grid lines (Ctrl+\'). Show grid draws them' },
   { kind: 'artboard', label: 'Artboard', pref: 'snapArtboard', tip: "The artboard's edges and centre. Artboards snap to other artboards' edges" },
   { kind: 'layers', label: 'Layers', pref: 'snapLayers', tip: "Edges and centres of other layers (the ones beside it, or all of them: see Layers: all, not just siblings)" },
-  { kind: 'guides', label: 'Guides', pref: 'snapGuides', tip: 'Ruler guides (drag out of a ruler to make one). A guide is one line across the canvas, so it snaps layers on every page it crosses' },
+  { kind: 'guides', label: 'Guides', pref: 'snapGuides', tip: 'Ruler guides (drag out of a ruler to make one). A guide is one line across the canvas, so it snaps layers on every page it crosses, whether it is universal or attached to a page' },
   { kind: 'spacing', label: 'Spacing', pref: 'snapSpacing', tip: 'Equal gaps between neighbouring layers, with the distance shown' },
   { kind: 'pixels', label: 'Pixels', pref: 'snapPixels', tip: 'Whole-pixel positions and sizes. Off lets a layer sit between pixels' },
   { kind: 'points', label: 'Points', pref: 'snapPoints', tip: 'Path anchor points and bone joints, for the pen and when editing path points' },

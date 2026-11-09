@@ -26,6 +26,8 @@ export interface Prefs {
   snapLayers: boolean;
   /** Layers reach every layer on the artboard, not only the ones in the same parent as what is dragged. */
   snapLayersAll: boolean;
+  /** Dragging a guide out of a ruler attaches it to the page under the pointer (it moves with that page). Off (the default): it is a universal guide, fixed on the canvas. Alt while dragging gives the other kind. */
+  attachGuides: boolean;
   /** Snap target Guides: ruler guides. */
   snapGuides: boolean;
   /** Snap target Spacing: equal gaps between neighbouring layers, drawn with the distance. */
@@ -108,7 +110,7 @@ export interface KeymapSet {
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { singleKeys: true, technicalWording: false, showNewInteractions: true, altDragHintAlways: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', codeTheme: 'follow', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
+const DEFAULTS: Prefs = { singleKeys: true, technicalWording: false, showNewInteractions: true, altDragHintAlways: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, attachGuides: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', codeTheme: 'follow', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
 /** What every preference starts as, for the Preferences window's Reset buttons. */
 export const PREF_DEFAULTS: Readonly<Prefs> = DEFAULTS;
 const LAST_USER = 'ix-prefs-user';

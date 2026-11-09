@@ -1,7 +1,7 @@
 //The command palette's list (Ctrl/Cmd+K): every "do this" the editor has, in plain words, with its shortcut where it has one. The
 //menus, tool bar and key handler stay as they are; each command here calls the same function they do. Built fresh each time the
 //palette opens, from the open project and selection, so "Go to page" lists the pages and a command that cannot run now says why.
-import { clearGuidesCommand, guideCount, setGuidesLocked } from './guides';
+import { clearGuidesCommand, guideCount, setGuidesLocked, universalCount } from './guides';
 import { openInsertComponentPicker } from './components';
 import { QUESTION_KINDS, createNode, walk, type NodeType, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
@@ -280,6 +280,7 @@ export function buildCommands(): Command[] {
   {
     const nothing = guideCount(p) === 0;
     add({ id: 'view:guides-lock', title: p.guidesLocked ? 'Unlock the guides' : 'Lock the guides', group: 'View', words: 'ruler guides stop moving', on: !!p.guidesLocked, run: () => setGuidesLocked(!p.guidesLocked) });
+    add({ id: 'view:guides-clear-universal', title: 'Clear universal guides', group: 'View', words: 'ruler guides canvas remove delete', disabled: noPage ?? (universalCount(p) === 0 ? 'There are no universal guides' : p.guidesLocked ? 'The guides are locked' : undefined), run: () => clearGuidesCommand('universal', ab!.id) });
     add({ id: 'view:guides-clear', title: 'Clear all guides', group: 'View', words: 'ruler guides remove delete', disabled: noPage ?? (nothing ? 'There are no guides' : p.guidesLocked ? 'The guides are locked' : undefined), run: () => clearGuidesCommand('all', ab!.id) });
   }
   add({ id: 'view:notes', title: 'Show notes', group: 'View', on: pr.showNotes, words: 'sticky toggle', run: () => setPrefs({ showNotes: !prefs().showNotes }) });

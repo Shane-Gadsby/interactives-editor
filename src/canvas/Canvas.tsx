@@ -1675,22 +1675,29 @@ export function Canvas() {
         </text>
       </g>,
     );
-    // The guides of a page that is not the open one: the open page's are the Rulers' (they can be grabbed), these only show, so
+    // The attached guides of a page that is not the open one: the open page's are the Rulers' (they can be grabbed), these only show, so
     // a guide doesn't vanish when another page takes the focus. A guide is one endless line across the canvas, so it runs through
-    // whatever pages it crosses, not just the one it belongs to.
-    if (userPrefs.rulers && !s.previewPlaying && ab.id !== s.activeArtboardId) {
+    // whatever pages it crosses, not just the one it belongs to. (Universal guides are all the Rulers'.)
+    // Every attached guide, on the open page or not, carries a small pin on the edge of its page where it meets it, which is what
+    // tells it from a universal one.
+    if (userPrefs.rulers && !s.previewPlaying) {
       for (const g of guidesOf(ab)) {
         const at = (g.axis === 'x' ? tl.x : tl.y) + g.at * zoom;
-        overlay.push(
-          <line
-            key={`gmark-${ab.id}-${g.axis}${g.index}`}
-            className="guide-mark"
-            x1={g.axis === 'x' ? at : -100000}
-            x2={g.axis === 'x' ? at : 100000}
-            y1={g.axis === 'x' ? -100000 : at}
-            y2={g.axis === 'x' ? 100000 : at}
-          />,
-        );
+        if (ab.id !== s.activeArtboardId) {
+          overlay.push(
+            <line
+              key={`gmark-${ab.id}-${g.axis}${g.index}`}
+              className="guide-mark"
+              x1={g.axis === 'x' ? at : -100000}
+              x2={g.axis === 'x' ? at : 100000}
+              y1={g.axis === 'x' ? -100000 : at}
+              y2={g.axis === 'x' ? 100000 : at}
+            />,
+          );
+        }
+        const px = g.axis === 'x' ? at : tl.x;
+        const py = g.axis === 'x' ? tl.y : at;
+        overlay.push(<rect key={`gpin-${ab.id}-${g.axis}${g.index}`} className="guide-pin" x={px - 3.5} y={py - 3.5} width={7} height={7} transform={`rotate(45 ${px} ${py})`} />);
       }
     }
     // a page being dragged in from the Layers list: this one is where it would be placed

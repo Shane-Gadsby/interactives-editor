@@ -36,8 +36,8 @@ function loadSandboxSource(): Promise<string> {
 
 /** The project without its links to files on this computer, and without editor-only settings (an artboard's own grid, the ruler guides): what an export or a share shouldn't carry. */
 export function withoutLinks(project: Project): Project {
-  if (!project.artboards.some((a) => a.source || a.grid || a.guides) && !project.guides && !project.guidesLocked) return project;
-  const { guides: _guides, guidesLocked: _locked, ...rest } = project;
+  if (!project.artboards.some((a) => a.source || a.grid || a.guides) && !project.guides && !project.canvasGuides && !project.guidesLocked) return project;
+  const { guides: _guides, canvasGuides: _universal, guidesLocked: _locked, ...rest } = project;
   return { ...rest, artboards: project.artboards.map(({ source: _source, grid: _grid, guides: _pageGuides, ...a }) => a) };
 }
 

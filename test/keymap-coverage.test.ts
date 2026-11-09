@@ -219,11 +219,13 @@ const MENUS: Record<string, Record<string, string>> = {
   'lib/components.ts': { 'Place in…': ALLOW('a list of the pages to choose from; Insert component here… is the keyed way in from the other side') },
   'canvas/Rulers.tsx': {
     'Remove guide': ALLOW('acts on the one guide the pointer is on; Clear all guides is a command'),
+    'Make it universal': ALLOW('acts on the one guide the pointer is on'),
   },
   'canvas/PageLinkLayer.tsx': { 'No page (remove the link)': ALLOW('one choice in a list of pages for a link arrow') },
   'lib/guides.ts': {
     'Clear all guides': 'view.guides-clear',
     'Clear this page’s guides': ALLOW('one choice of Clear all guides (it asks which)'),
+    'Clear universal guides': ALLOW('one choice of Clear all guides (it asks which); the palette has its own command'),
   },
   'panels/LeftPanel.tsx': { 'Make start page': 'page.start' },
   'components/Dock.tsx': {
