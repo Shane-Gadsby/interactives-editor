@@ -2,6 +2,10 @@
 
 ## Unreleased: Symposium 3
 
+- **Keyboard shortcuts you can change**: press **?** (or Ctrl+/) for the sheet of every shortcut, search them or press a key to find what it does, and give any command your own keys (saved with you, not in the project). Tooltips, menus and the command palette show your own keys. One-key shortcuts (V, H, P…) can be switched off for speech input users. **I** opens Insert component, and **Shift+L** shows or hides the list of timelines.
+- **Timeline keys**: Space or K plays, J or Home goes to the start, comma and full stop step a frame, Shift+comma and Shift+full stop jump between keys. P, S, R, T and A in the Timeline take you to the selected layer's Position, Scale, Rotation, Opacity and Anchor point.
+- **Safer Delete**: keys pressed after clicking in the graph always go to the graph, so Delete removes the node and never the layer; deleting a layer shows Undo; deleting a page from the keyboard asks first.
+- **Changed keys**: ? is now the shortcuts sheet (help for the selection is Shift+F1), Shift+letter no longer picks a tool, and Ctrl/Cmd+Shift+arrow no longer nudges by 10.
 - **Text changes on the timeline**: Text, Button label, Visible, Disabled and more now have the key diamond, text keys are drawn as squares joined by a flat bar (they hold, then switch), and right-clicking a text key adds a **Swap text** dip that fades or blurs the words out and back in around the change (left out for people who ask for less motion). Text keys no longer get mixed like colours when the words look like a colour.
 - **Blends**: Blends sits above Joysticks in a page's Inspector, and a blend has a **Transition** time and easing: when the number jumps, the mix eases over that time instead of snapping.
 - **Change a value or counter over time**: a number can ease to its new value (**Over**, **Easing**, and whether the flow carries on straight away or when it arrives).
