@@ -1,8 +1,9 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { DataKind, DataSource } from 'interactives-player';
 import { dataCache } from '../lib/data';
-import { csvToGrid, delimiterOf, gridToCsv, gridToJson, guiFor, hasError, indentOf, isFlatTable, jsonText, jsonToGrid, layoutOf, problemsOf, textOfValue, type Grid, type Json, type Problem, type Scalar } from '../lib/data-edit';
+import { csvToGrid, delimiterOf, gridToCsv, gridToJson, guiFor, hasError, indentOf, isFlatTable, jsonText, jsonToGrid, layoutOf, problemsOf, textOfValue, type Grid, type Json, type Path, type Problem, type Scalar } from '../lib/data-edit';
 import { giveOwnFile, makeEditableCopy, readAssetText, saveDataText, sharersOf } from '../lib/data-save';
+import { DataForm } from './DataForm';
 import { DataRawEditor } from './DataRawEditor';
 import { CodeThemeSwitch } from '../components/CodeThemeSwitch';
 import { DataTable } from './DataTable';
@@ -15,8 +16,8 @@ const SAVE_AFTER = 700;
 const stashed = new Map<string, { assetId: string; text: string }>();
 
 /**
- * Edit the file behind a data source: its own text with highlighting (Raw), or a table or tree of it. Both views read and
- * write the same text. A change is saved a moment after the last keystroke as a new version of the uploaded file (see
+ * Edit the file behind a data source: a form (JSON opens in it), a table or tree of it, or its own text with highlighting
+ * (Raw). Every view reads and writes the same text. A change is saved a moment after the last keystroke as a new version of the uploaded file (see
  * data-save.ts), so Undo, autosave and live editing work as for anything else; text that doesn't parse (JSON) isn't saved,
  * and the last version that did parse stays in use until it does. A URL source can be looked at but not changed here, and
  * offers a copy to edit.
@@ -27,7 +28,10 @@ export function DataFileEditor({ source }: { source: DataSource }) {
   const assetId = source.assetId ?? null;
   const [text, setText] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [view, setView] = useState<'raw' | 'gui'>('gui');
+  // JSON opens as a form; CSV and TSV as a table
+  const [view, setView] = useState<'form' | 'gui' | 'raw'>(kind === 'json' ? 'form' : 'gui');
+  // Where the form sent the tree: which spot to open it at (n counts requests, so the same spot can be asked for again)
+  const [reveal, setReveal] = useState<{ path: Path; n: number }>({ path: [], n: 0 });
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -150,7 +154,7 @@ export function DataFileEditor({ source }: { source: DataSource }) {
   const readOnly = !asset;
   const sharers = asset && assetId ? sharersOf(source.id) : [];
   const label = source.name;
-  const showing: 'raw' | 'gui' = gui === 'none' || broken ? 'raw' : view;
+  const showing: 'form' | 'raw' | 'gui' = gui === 'none' || broken ? 'raw' : kind === 'json' ? view : view === 'raw' ? 'raw' : 'gui';
 
   if (source.source === 'shared') return null;
   if (asset && !assetId) return <p className="hint">Choose a file, or upload one, to see and edit it here.</p>;
@@ -177,10 +181,24 @@ export function DataFileEditor({ source }: { source: DataSource }) {
     }
     const indent = indentOf(shownText);
     const write = (v: Json) => edit(jsonText(v, indent === 0 ? 0 : indent, layout.trailing || !shownText.trim()));
-    if (gui === 'table' && (isFlatTable(value) || (Array.isArray(value) && !value.length))) {
+    if (showing === 'form') {
+      body = (
+        <DataForm
+          value={value}
+          readOnly={readOnly}
+          label={label}
+          treeName={gui === 'table' ? 'Table' : 'Tree'}
+          onChange={write}
+          openTree={(path) => {
+            setView('gui');
+            setReveal((r) => ({ path, n: r.n + 1 }));
+          }}
+        />
+      );
+    } else if (gui === 'table' && (isFlatTable(value) || (Array.isArray(value) && !value.length))) {
       const grid: Grid = jsonToGrid(value as Record<string, Scalar>[]);
       body = <DataTable grid={grid} readOnly={readOnly} label={label} onProblem={setNote} onChange={(g) => write(gridToJson(g))} />;
-    } else body = <DataTree value={value} readOnly={readOnly} label={label} onProblem={setNote} onChange={write} />;
+    } else body = <DataTree value={value} readOnly={readOnly} label={label} onProblem={setNote} onChange={write} reveal={reveal} />;
   }
 
   const status = readOnly
@@ -199,7 +217,15 @@ export function DataFileEditor({ source }: { source: DataSource }) {
     <div className="data-file" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && flush()}>
       <div className="data-file-head">
         <div className="seg" role="group" aria-label="How to show the file">
-          <button className={`seg-btn${showing === 'gui' ? ' on' : ''}`} aria-pressed={showing === 'gui'} disabled={gui === 'none' || broken} title={gui === 'none' ? 'Plain text has no table or tree, only the text' : broken ? 'Fix the error in the text first; the table and tree need a file that parses' : gui === 'table' ? 'Edit the rows and columns as a table' : 'Edit the file as a tree you can open and close'} onClick={() => setView('gui')}>
+          {kind === 'json' && (
+            <button className={`seg-btn${showing === 'form' ? ' on' : ''}`} aria-pressed={showing === 'form'} disabled={broken} title={broken ? 'Fix the error in the text first; the form needs a file that parses' : 'Fill in the file as a form: labelled fields, and cards you can add to, copy, move and delete'} onClick={() => setView('form')}>
+              Form
+            </button>
+          )}
+          <button className={`seg-btn${showing === 'gui' ? ' on' : ''}`} aria-pressed={showing === 'gui'} disabled={gui === 'none' || broken} title={gui === 'none' ? 'Plain text has no table or tree, only the text' : broken ? 'Fix the error in the text first; the table and tree need a file that parses' : gui === 'table' ? 'Edit the rows and columns as a table' : 'Edit the file as a tree you can open and close'} onClick={() => {
+              setView('gui');
+              setReveal({ path: [], n: 0 });
+            }}>
             {gui === 'tree' ? 'Tree' : 'Table'}
           </button>
           <button className={`seg-btn${showing === 'raw' ? ' on' : ''}`} aria-pressed={showing === 'raw'} title="The file's own text, with colours for its format" onClick={() => setView('raw')}>
@@ -260,7 +286,7 @@ export function DataFileEditor({ source }: { source: DataSource }) {
           {problems.length > 3 && <li className="muted small">and {problems.length - 3} more</li>}
         </ul>
       )}
-      <div className={`data-file-body${showing === 'raw' ? ' raw' : ''}`}>{body}</div>
+      <div className={`data-file-body${showing === 'raw' ? ' raw' : ''}${showing === 'form' ? ' form' : ''}`}>{body}</div>
     </div>
   );
 }
