@@ -6160,8 +6160,21 @@ kbd {
 }
 .guide-line {
   position: absolute;
-  pointer-events: auto;
+  /* drawn across the whole canvas, but only its .guide-grab strip (over its own page) takes the pointer */
+  pointer-events: none;
   z-index: 1;
+}
+.guide-grab {
+  position: absolute;
+  pointer-events: auto;
+}
+.guide-line.x .guide-grab {
+  left: 0;
+  width: 100%;
+}
+.guide-line.y .guide-grab {
+  top: 0;
+  height: 100%;
 }
 .guide-line::after {
   content: '';

@@ -1,4 +1,4 @@
-import{bA as r,bB as m,bC as w,bD as y,bg as b,a7 as f,b8 as k,ad as h,aX as v}from"./index-C3_W142T.js";const x=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bA as r,bB as m,bC as w,bD as y,bg as b,a7 as f,b8 as k,ad as h,aX as v}from"./index-CumzF3fS.js";const x=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -635,7 +635,7 @@ The editor stays quick on large projects: a change only lays out again the pages
 
 ## Opening the editor
 
-The editor draws its frames straight away and fills them in as your project arrives. Help, the starter templates, the code boxes, the Interactions graph and the Preview player are fetched the first time you use them, and the editor fetches the likely ones quietly a moment after opening, so they are usually there before you ask. On a slow connection the first use of one of them can show a short **Loading** line where it will appear.`},{id:"canvas",title:"Moving around the canvas",group:"Getting started",summary:"Zoom, pan, fit, the wheel preference, rulers and guides.",keywords:"zoom pan scroll wheel trackpad pinch fit hand space middle mouse ctrl rulers guides project every page lock clear",body:`You move around the canvas with the mouse wheel, the Hand tool or the keyboard.
+The editor draws its frames straight away and fills them in as your project arrives. Help, the starter templates, the code boxes, the Interactions graph and the Preview player are fetched the first time you use them, and the editor fetches the likely ones quietly a moment after opening, so they are usually there before you ask. On a slow connection the first use of one of them can show a short **Loading** line where it will appear.`},{id:"canvas",title:"Moving around the canvas",group:"Getting started",summary:"Zoom, pan, fit, the wheel preference, rulers and guides.",keywords:"zoom pan scroll wheel trackpad pinch fit hand space middle mouse ctrl rulers guides endless line across canvas lock clear",body:`You move around the canvas with the mouse wheel, the Hand tool or the keyboard.
 
 ## Zoom and pan
 
@@ -657,11 +657,13 @@ The editor draws its frames straight away and fills them in as your project arri
 - Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag to drag a copy. See [Alt-drag](shortcuts#mouse).
 
 ## Rulers and guides
-Turn the rulers on with <kbd>Shift</kbd>+<kbd>R</kbd> (or **Show rulers** in Preferences). Drag out of the top ruler for a horizontal guide and out of the left ruler for a vertical one. The number beside the pointer is the guide's position in page pixels. Layers snap to guides when **Guides** is ticked in the Snap menu. Drag a guide to move it, drop it back on its ruler to remove it, and right-click it for more.
+Turn the rulers on with <kbd>Shift</kbd>+<kbd>R</kbd> (or **Show rulers** in Preferences). Drag out of the top ruler for a horizontal guide and out of the left ruler for a vertical one. The number beside the pointer is the guide's position in page pixels. Layers snap to guides when **Guides** is ticked in the Snap menu. Drag a guide to move it, drag it off its page (or back onto its ruler) and let go to remove it (a note by the pointer says so), and right-click it for more.
 
-- **Every page or this page only.** A guide for **every page** (a project guide, drawn in purple) is measured from each page's own top left corner, so it lines up on every page of the same size, and it shows on each page it falls inside. A guide for **this page only** (drawn in pink) stays on the page it was made on. Both kinds are dashed lines. Guides don't disappear when you open another page: each page keeps showing its own, a little dimmer, until you open it.
-- **Choosing.** The small button in the corner of the rulers opens the **guides menu**: **New guides go on** *Every page* or *This page only* (it starts as this page only, so a guide belongs to the page you drop it on, and your choice is remembered in this browser). Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag a new guide out to get the other kind for only that one. Right-click a guide and choose **Show on every page** or **Keep on this page only** to change it later, or **Show this page's guides on every page** in the guides menu to change them all at once.
-- **Lock and clear.** **Lock guides** stops guides being moved, removed or added by accident (they still snap). **Clear this page's guides**, **Clear the every-page guides** and **Clear all guides** are in the same menu, and **Lock the guides** and **Clear all guides** are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Undo brings cleared guides back.
+- **One endless line.** A guide is a single dashed line across the whole canvas, not a copy on each page. It belongs to the page you drop it on (it is measured from that page's top left corner, and it moves when you move that page), but it is drawn all the way across, so it shows on every page it crosses, wherever the pages are laid out, and in the gaps between them. Guides are all one colour (pink).
+- **Snapping.** A layer on any page snaps to every guide line that crosses its page, at the line's place on the canvas, whichever page the guide belongs to.
+- **Which page.** The rulers measure from the open page, and the guides of that page are the ones you can grab. The guides of the other pages are drawn too, a little dimmer, and can be grabbed once you open their page. A guide you drag out goes on the page under the pointer, and that page becomes the open one.
+- **Old projects.** Earlier versions had guides for every page. Opening one of those projects moves them onto its start page, where they now run across the canvas as endless lines (any with a negative position are dropped, since they never showed anywhere).
+- **Lock and clear.** The small button in the corner of the rulers opens the **guides menu**, which is also at the bottom of a guide's right-click menu. **Lock guides** stops guides being moved, removed or added by accident (they still snap). **Clear this page's guides** and **Clear all guides** are in the same menu, and **Lock the guides** and **Clear all guides** are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Undo brings cleared guides back.
 - Guides are for you while you edit: they never show in Preview, downloads, share links or embeds.
 
 ## Big projects and artboard pictures
@@ -960,7 +962,6 @@ Double-click a text layer to edit it. Select some of the text, then:
 ## Mouse
 | Do this | To |
 |---|---|
-| <kbd>Alt</kbd> while dragging a guide out of a ruler | Make the other kind of guide (every page, or this page only) |
 | Menu key or <kbd>Shift</kbd>+<kbd>F10</kbd> on a key in the Timeline | Open its right-click menu (a text key has **Swap text**) |
 | Hold <kbd>Alt</kbd> while drawing or resizing | Work from the centre |
 | Hold <kbd>Ctrl</kbd> while dragging | Move, resize or draw without snapping to anything (grid, artboard, layers, guides, spacing, points) |
@@ -1609,7 +1610,7 @@ The **Snap** button on the tool bar (the magnet) opens a menu that stays open wh
 - **Grid**: land on the grid lines (this is Snap to grid: <kbd>Ctrl</kbd>+<kbd>'</kbd> ticks and unticks it). Off to begin with.
 - **Artboard**: the artboard's edges and centre. Moving an artboard on the canvas, it goes to the other artboards' edges and centres.
 - **Layers**: the edges and centres of other layers. By default it means the layers beside the one you drag (the same parent); tick **Layers: all, not just siblings** to reach every layer on the artboard.
-- **Guides**: guides made from the rulers (the ones for every page and the page's own). See [Rulers and guides](canvas#rulers-and-guides).
+- **Guides**: guides made from the rulers: each is one endless line across the canvas, so it snaps layers on every page it crosses. See [Rulers and guides](canvas#rulers-and-guides).
 - **Spacing** (equal gaps): drag a layer beside two that have a gap between them and it snaps to the same gap (or centres between them), and the distances show as orange measures. It only works while moving layers.
 - **Pixels** (whole pixels): positions and sizes land on whole pixels. Untick it to let a layer sit between pixels.
 - **Points** (path points): the anchor points of paths and the joints of bones. The pen, and dragging a path point, snap to them: a ring shows the one it caught. Off to begin with.

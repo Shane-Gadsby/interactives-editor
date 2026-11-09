@@ -6,6 +6,8 @@ import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { addGuide, guidesMenuItems, guidesOf, moveGuide, removeGuide, type Axis, type GuideRef } from '../lib/guides';
 
 const SIZE = 20;
+//How far past its own page a guide can still be grabbed
+const GUIDE_REACH = 32;
 
 /** A tick spacing that leaves roughly 60-120px between labels at this zoom. */
 function stepFor(zoom: number): number {
@@ -132,7 +134,11 @@ const step = stepFor(zoom);
         title={`Guide at ${g.at}px on ${ab.name}, a line across the whole canvas: ${locked ? 'locked. Right-click for the guides menu' : 'drag to move, drag off this page (or onto the ruler) and let go to remove, right-click for more'}`}
         onPointerDown={(e) => start(e, g.axis, g)}
         onContextMenu={(e) => guideMenu(e, g)}
-      />
+      >
+        {/* the line runs across the whole canvas, but it can only be grabbed over its own page (and a little past it),
+            so it never gets in the way of clicking layers on the pages it crosses */}
+        <span className="guide-grab" style={g.axis === 'x' ? { top: oy - GUIDE_REACH, height: ab.height * zoom + GUIDE_REACH * 2 } : { left: ox - GUIDE_REACH, width: ab.width * zoom + GUIDE_REACH * 2 }} />
+      </div>
     );
   });
   //the new guide is drawn on the page it is over
