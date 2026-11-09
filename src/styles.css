@@ -3102,6 +3102,11 @@ button.twisty:hover {
   margin-left: -5px;
   top: 7px;
 }
+/* A key of a text dip that stays with its text key: a hollow diamond, solid again once it has been edited by hand */
+.key.tied:not(.selected) {
+  background: transparent;
+  border: 2px solid var(--warn);
+}
 .segment.hold {
   cursor: default;
   pointer-events: none;
