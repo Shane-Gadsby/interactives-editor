@@ -38,7 +38,7 @@ export function PivotFields({
         vertical={edgeOf(originY)}
         onChange={(h, v) => onChange({ originX: EDGE_AT[h], originY: EDGE_AT[v] })}
       />
-      <div className="pivot-nums">
+      <div className="row pivot-nums">
         <NumberField
           label={'Pivot\u00a0X'}
           title="How far across the layer the pivot sits: 0% is the left edge, 50% the middle, 100% the right (originX)"

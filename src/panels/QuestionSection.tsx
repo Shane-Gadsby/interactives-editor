@@ -458,7 +458,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       )}
 
       <div className="q-sub">Marking</div>
-      <div className="labels-54">
+      <div>
         <Row>
           <NumberField label="Points" title="Points a right answer is worth" value={q.points} min={0} step={0.5} onChange={(v) => apply({ points: v }, 'points')} />
           <NumberField label="Tries" title="How many times the answer can be checked before it locks. 0 is no limit" value={q.attempts} min={0} step={1} onChange={(v) => apply({ attempts: Math.round(v) }, 'attempts')} />
@@ -508,7 +508,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         placeholder="Optional"
         onChange={(v) => apply({ hints: v.split('\n').slice(0, MAX_HINTS) }, 'hints')}
       />
-      <div className="labels-66">
+      <div>
         <TextField label="Right" title="Said when the answer is right" value={q.feedbackCorrect} onChange={(v) => apply({ feedbackCorrect: v }, 'fb-ok')} />
         <TextField label="Wrong" title="Said when the answer is wrong" value={q.feedbackIncorrect} onChange={(v) => apply({ feedbackIncorrect: v }, 'fb-no')} />
         <TextField label="Partly right" title="Said instead of Wrong when part marks are on and some of it is right" value={q.feedbackPartial} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackPartial: v }, 'fb-part')} />

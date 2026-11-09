@@ -5,7 +5,7 @@ import { maybeStore } from '../store/store';
 import { previewScope } from '../lib/data';
 import { accept, suggest, type SuggestEnv, type Suggestion } from '../lib/suggest';
 import { checkFormula, checkTemplate, type CheckEnv, type FormulaStatus } from '../lib/expr-check';
-import { tipFor, unbroken } from './ui';
+import { FieldTrail, fieldClass, tipFor, unbroken } from './ui';
 import { useRowSearch } from '../lib/prop-search';
 
 /**
@@ -268,9 +268,10 @@ export function ExprField({
 
   return (
     <>
-      <label className={`field text-field${multiline ? ' multiline' : ''}${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
+      <label className={fieldClass('text-field', label, ps.hide, multiline ? 'multiline stacked' : '')} data-prop={ps.prop} title={tipFor(label, title)}>
         {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
         {multiline ? <textarea rows={rows ?? 3} {...props} /> : <input {...props} />}
+        {!multiline && <FieldTrail />}
       </label>
       <FormulaStatusLine status={status} onFix={fix} />
       {open &&

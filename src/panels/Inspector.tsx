@@ -704,7 +704,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <WeightSection ab={ab} project={project} />
       <Section help="project-settings" title="Project">
         <ColourwayRow project={project} />
-        <div className="labels-66">
+        <div>
           <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
           <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
         </div>

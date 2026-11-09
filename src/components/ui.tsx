@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { formatColor, isTokenRef, parseColor, speedOf, TRANSITION_SPEEDS, type Project } from 'interactives-player';
 import { HelpLink } from '../help/Help';
@@ -18,8 +18,22 @@ export function tipFor(label: ReactNode, title?: string): string | undefined {
   return typeof label === 'string' ? FIELD_TIPS[label.replace(/\u00a0/g, ' ')] : undefined;
 }
 
-/** A field label that never breaks after a hyphen ("V-align" would wrap to "V-" and "align" in a tight row). */
-export const unbroken = (label: ReactNode): ReactNode => (typeof label === 'string' ? label.replace(/-/g, '\u2011') : label);
+/** A field label that never breaks after a short hyphenated start ("V-align" would wrap to "V-" and "align" in a tight row). A longer one ("Bottom-right") may, since the label column is narrow. */
+export const unbroken = (label: ReactNode): ReactNode => (typeof label === 'string' ? label.replace(/\b(\w{1,2})-/g, '$1\u2011') : label);
+
+/**
+ * The classes every field carries, so one stylesheet block lays them all out (label column, control, trailing slot).
+ * `unlabelled` has no label column; `lbl-xs` is a one or two letter label (X, Y, Sx) that gets a narrow column when two fields share a row.
+ */
+export function fieldClass(kind: string, label: ReactNode, hide = false, extra = ''): string {
+  const short = typeof label === 'string' && label.replace(/[\s\u00a0]/g, '').length <= 2;
+  return `field ${kind}${extra ? ' ' + extra : ''}${label === undefined ? ' unlabelled' : short ? ' lbl-xs' : ''}${hide ? ' ps-hide' : ''}`;
+}
+
+/** The fixed slot at the end of a field: a unit or suffix goes in it, and it is there (empty) when there is none, so the boxes in a column end together */
+export function FieldTrail({ children }: { children?: ReactNode }) {
+  return <span className="field-trail">{children}</span>;
+}
 
 /** Number input whose label can be dragged left/right to scrub the value. */
 export function NumberField({
@@ -85,7 +99,7 @@ export function NumberField({
     el.addEventListener('pointerup', up);
   };
   return (
-    <label className={`field number-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
+    <label className={fieldClass('number-field', label, ps.hide)} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && (
         <span className="field-label scrub" onPointerDown={scrub}>
           {unbroken(label)}
@@ -115,7 +129,7 @@ export function NumberField({
           e.stopPropagation();
         }}
       />
-      {suffix && <span className="field-suffix">{suffix}</span>}
+      <FieldTrail>{suffix}</FieldTrail>
     </label>
   );
 }
@@ -170,7 +184,7 @@ export function UnitField({
     onChange(clamp(Math.round(v * 100) / 100), to);
   };
   return (
-    <label className={`field number-field unit-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
+    <label className={fieldClass('number-field', label, ps.hide, 'unit-field')} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
       <input
         value={text}
@@ -204,6 +218,7 @@ export function UnitField({
       >
         {unit === 'percent' ? '%' : 'px'}
       </button>
+      <FieldTrail />
     </label>
   );
 }
@@ -281,12 +296,12 @@ export function TextField({
       if (!multiline && e.key === 'Enter') (e.target as HTMLInputElement).blur();
     },
   };
-  // A long label would squeeze its own box to nothing at the inspector's width, so it goes above it, like a text area's
-  const stacked = multiline || (typeof label === 'string' && label.length > 14);
+  // Only a text area puts its label above it. A long label wraps inside the label column like any other
   return (
-    <label className={`field text-field${stacked ? ' multiline' : ''}${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
+    <label className={fieldClass('text-field', label, ps.hide, multiline ? 'multiline stacked' : '')} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
       {multiline ? <textarea rows={rows ?? 3} {...props} /> : <input {...props} />}
+      {!multiline && <FieldTrail />}
     </label>
   );
 }
@@ -309,7 +324,7 @@ export function SelectField<T extends string>({
   const ps = useRowSearch(label, tipFor(label, title));
   const opts = (options as (T | { value: T; label: string })[]).map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
   return (
-    <label className={`field select-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
+    <label className={fieldClass('select-field', label, ps.hide)} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
       <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value as T)} onKeyDown={(e) => e.stopPropagation()}>
         {opts.map((o) => (
@@ -318,6 +333,7 @@ export function SelectField<T extends string>({
           </option>
         ))}
       </select>
+      <FieldTrail />
     </label>
   );
 }
@@ -498,107 +514,113 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
   const [text, setText] = useState(value);
   useEffect(() => setText(value), [value]);
   const tokenTab = (tokens || locked) && ts ? { ts, onToken: (ref: string) => (onChange(ref), onCommit?.()) } : undefined;
+  // The label is a real one for the hex box when there is one
+  const hexId = useId();
+  const labelEl = (forHex: boolean) =>
+    label !== undefined && (
+      <label className="field-label" htmlFor={forHex ? hexId : undefined} title={tipFor(label, title)}>
+        {unbroken(label)}
+      </label>
+    );
   if (link) {
     return (
-      <div className={`field color-field linked${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop}>
-        {label !== undefined && (
-          <span className="field-label" title={tipFor(label, title)}>
-            {label}
+      <div className={fieldClass('color-field', label, ps.hide, 'linked')} data-prop={ps.prop}>
+        {labelEl(false)}
+        <span className="field-control">
+          <span className="swatch linked" style={{ background: link.shown }} title={link.token ? `Follows ${link.token.name}: changes with the theme` : 'Follows a token that no longer exists'}>
+            <Icons.link width={9} height={9} />
           </span>
-        )}
-        <span className="swatch linked" style={{ background: link.shown }} title={link.token ? `Follows ${link.token.name}: changes with the theme` : 'Follows a token that no longer exists'}>
-          <Icons.link width={9} height={9} />
+          <PaletteButton value={value} onPick={(v) => (onChange(v), onCommit?.())} tokenTab={tokenTab} tokensOnly={locked} />
+          <span className={`token-chip${link.token ? '' : ' missing'}`} title={link.token ? `Follows the token ${link.token.name}${ts ? ` (${tokenSummary(ts.project, link.token)})` : ''}. Edit its colours in the Themes panel` : 'This token was deleted. Detach it to keep the colour'}>
+            <span className="token-chip-name">{link.token?.name ?? 'missing token'}</span>
+            {!locked && (
+            <button
+              type="button"
+              className="token-detach"
+              title="Detach: keep the colour as it is now, as a plain colour that no longer follows the theme"
+              aria-label="Detach from the token"
+              onClick={() => {
+                onChange(formatColor(parseColor(link.shown) ?? [0, 0, 0, 1]));
+                onCommit?.();
+              }}
+            >
+              <Icons.close width={9} height={9} />
+            </button>
+            )}
+          </span>
         </span>
-        <PaletteButton value={value} onPick={(v) => (onChange(v), onCommit?.())} tokenTab={tokenTab} tokensOnly={locked} />
-        <span className={`token-chip${link.token ? '' : ' missing'}`} title={link.token ? `Follows the token ${link.token.name}${ts ? ` (${tokenSummary(ts.project, link.token)})` : ''}. Edit its colours in the Themes panel` : 'This token was deleted. Detach it to keep the colour'}>
-          <span className="token-chip-name">{link.token?.name ?? 'missing token'}</span>
-          {!locked && (
-          <button
-            type="button"
-            className="token-detach"
-            title="Detach: keep the colour as it is now, as a plain colour that no longer follows the theme"
-            aria-label="Detach from the token"
-            onClick={() => {
-              onChange(formatColor(parseColor(link.shown) ?? [0, 0, 0, 1]));
-              onCommit?.();
-            }}
-          >
-            <Icons.close width={9} height={9} />
-          </button>
-          )}
-        </span>
+        <FieldTrail />
       </div>
     );
   }
   if (locked && tokenTab) {
     return (
-      <div className={`field color-field linked${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop}>
-        {label !== undefined && (
-          <span className="field-label" title={tipFor(label, title)}>
-            {label}
-          </span>
-        )}
-        <span className="swatch" style={{ background: value }} title="Not a theme colour. Pick one from the Tokens tab" />
-        <PaletteButton value={value} onPick={() => undefined} tokenTab={tokenTab} tokensOnly />
-        <span className="muted small">Theme colours only</span>
+      <div className={fieldClass('color-field', label, ps.hide, 'linked')} data-prop={ps.prop}>
+        {labelEl(false)}
+        <span className="field-control">
+          <span className="swatch" style={{ background: value }} title="Not a theme colour. Pick one from the Tokens tab" />
+          <PaletteButton value={value} onPick={() => undefined} tokenTab={tokenTab} tokensOnly />
+          <span className="muted small">Theme colours only</span>
+        </span>
+        <FieldTrail />
       </div>
     );
   }
   return (
-    <div className={`field color-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop}>
-      {label !== undefined && (
-        <span className="field-label" title={tipFor(label, title)}>
-          {label}
+    <div className={fieldClass('color-field', label, ps.hide)} data-prop={ps.prop}>
+      {labelEl(true)}
+      <span className="field-control">
+        <span className="swatch" style={{ background: value }}>
+          <input
+            type="color"
+            value={hex}
+            onChange={(e) => {
+              const c = parseColor(e.target.value)!;
+              onChange(formatColor([c[0], c[1], c[2], rgba[3]]));
+            }}
+            onBlur={onCommit}
+          />
         </span>
-      )}
-      <span className="swatch" style={{ background: value }}>
-        <input
-          type="color"
-          value={hex}
-          onChange={(e) => {
-            const c = parseColor(e.target.value)!;
+        <PaletteButton
+          value={value}
+          tokenTab={tokenTab}
+          onPick={(v) => {
+            // Keeps the opacity already set, like the native picker does
+            const c = parseColor(v)!;
             onChange(formatColor([c[0], c[1], c[2], rgba[3]]));
+            onCommit?.();
           }}
-          onBlur={onCommit}
+        />
+        <input
+          id={hexId}
+          className="mono color-text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={() => {
+            if (parseColor(text)) onChange(text.trim());
+            else setText(value);
+            onCommit?.();
+          }}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+          }}
+        />
+        <input
+          className="alpha"
+          type="number"
+          min={0}
+          max={100}
+          value={alpha}
+          title="Opacity %"
+          onChange={(e) => {
+            const a = Math.max(0, Math.min(100, Number(e.target.value))) / 100;
+            onChange(formatColor([rgba[0], rgba[1], rgba[2], a]));
+          }}
+          onKeyDown={(e) => e.stopPropagation()}
         />
       </span>
-      <PaletteButton
-        value={value}
-        tokenTab={tokenTab}
-        onPick={(v) => {
-          // Keeps the opacity already set, like the native picker does
-          const c = parseColor(v)!;
-          onChange(formatColor([c[0], c[1], c[2], rgba[3]]));
-          onCommit?.();
-        }}
-      />
-      <input
-        className="mono color-text"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => {
-          if (parseColor(text)) onChange(text.trim());
-          else setText(value);
-          onCommit?.();
-        }}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-        }}
-      />
-      <input
-        className="alpha"
-        type="number"
-        min={0}
-        max={100}
-        value={alpha}
-        title="Opacity %"
-        onChange={(e) => {
-          const a = Math.max(0, Math.min(100, Number(e.target.value))) / 100;
-          onChange(formatColor([rgba[0], rgba[1], rgba[2], a]));
-        }}
-        onKeyDown={(e) => e.stopPropagation()}
-      />
+      <FieldTrail />
     </div>
   );
 }
