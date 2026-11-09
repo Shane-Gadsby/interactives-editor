@@ -497,6 +497,19 @@ const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], co
 					.slice(0, 300)
 			)
 		}
+		//The order the person put inspector sections (by panel kind) and tool rail groups and tools in. Short keys to short
+		//lists of short, different keys: at most 60 places, 80 keys in each, and anything else is dropped
+		for (let name of ['sectionOrder', 'toolOrder']) {
+			if (p?.[name] && typeof p[name] === 'object' && !Array.isArray(p[name])) {
+				out[name] = Object.fromEntries(
+					Object.entries(p[name])
+						.filter(([k, v]) => k.length > 0 && k.length <= 60 && k !== '__proto__' && Array.isArray(v))
+						.map(([k, v]) => [k, [...new Set(v.filter((x) => typeof x === 'string' && x.length > 0 && x.length <= 80))].slice(0, 80)])
+						.filter(([, v]) => v.length)
+						.slice(0, 60)
+				)
+			}
+		}
 		//The person's own keyboard shortcuts: command id to a short list of key combos (lib/keymap.ts). Ids and combos are
 		//plain short strings, at most 600 commands with 4 combos each (the registry has about 250: every panel, tool and action can take a key), and anything else is dropped
 		if (p?.keymap && typeof p.keymap === 'object' && !Array.isArray(p.keymap)) {

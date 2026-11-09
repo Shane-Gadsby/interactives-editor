@@ -68,6 +68,10 @@ export interface Prefs {
   technicalWording: boolean;
   /** Inspector sections the person folded or opened, by section key, only where that differs from the section's own default (lib/section-fold.ts). */
   sectionFolds?: Record<string, boolean>;
+  /** The order the person put each panel's inspector sections in, by panel kind (`layer:rect`, `page`, ...) to section keys (lib/reorder.ts). */
+  sectionOrder?: Record<string, string[]>;
+  /** The order of the tool rail's groups (`groups`) and of the tools inside each group (the group's id), as keys (lib/reorder.ts). */
+  toolOrder?: Record<string, string[]>;
   /** The "Getting started" strip in the editor (lib/onboarding.ts). On by default; it also puts itself away once every job on it is done. */
   gettingStarted: boolean;
   /** The Timeline's side list of the artboard's timelines is open (lib/timeline-list.ts). On by default. */
@@ -218,6 +222,12 @@ export async function loadUserPrefs(): Promise<void> {
     loaded(false);
     /* offline: keep the cached copy */
   }
+}
+
+/** Run `f` whenever any preference changes. Returns the cleanup. */
+export function subscribePrefs(f: () => void): () => void {
+  subs.add(f);
+  return () => subs.delete(f);
 }
 
 export function usePrefs(): Prefs {

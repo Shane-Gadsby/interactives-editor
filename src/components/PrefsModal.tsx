@@ -10,12 +10,15 @@ import { HelpLink } from '../help/Help';
 import { BUILT_IN, applyWorkspace, deleteWorkspace, renameWorkspace, saveWorkspace, savedWorkspaces, MAX_SAVED } from '../lib/workspaces';
 import { confirmDialog, promptDialog } from './dialogs';
 import { restartTips, stripShown } from '../lib/onboarding';
+import { resetAllOrders } from '../lib/reorder';
+import { announce } from '../lib/announce';
 import { openShortcuts } from '../lib/shortcuts-sheet';
 import { CODE_THEMES, type CodeTheme } from '../lib/code-theme';
 
 /** Personal preferences, kept in this browser. */
 export function PrefsModal({ onClose, workspace = false }: { onClose: () => void; workspace?: boolean }) {
   const p = usePrefs();
+  const hasOrder = Object.keys(p.sectionOrder ?? {}).length + Object.keys(p.toolOrder ?? {}).length > 0;
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', k);
@@ -74,6 +77,18 @@ export function PrefsModal({ onClose, workspace = false }: { onClose: () => void
             <CheckField label="One-key shortcuts (V, H, P...)" title="Turn off the shortcuts that are a single letter, number or Space. Ones with Ctrl, Alt or Cmd, and keys like Delete and the arrows, still work, and the tool bar does the same jobs" value={p.singleKeys !== false} onChange={(v) => setPrefs({ singleKeys: v })} />
             <button type="button" className="btn" title="See every shortcut, search them, and change the keys to ones you like. Your keys are saved with you, never in the project" onClick={() => openShortcuts(false)}>
               Keyboard shortcuts…
+            </button>
+          </section>
+          <section className="prefs-keys" aria-label="Section and tool order">
+            <div className="field-label block">Section and tool order</div>
+            <button
+              type="button"
+              className="btn"
+              disabled={!hasOrder}
+              title="You can drag the sections in the Properties panel, and the tool groups and tools, into the order you like (or press Alt and an arrow key on one). This puts every one of them back where the editor puts it. Your order is saved with you, never in the project"
+              onClick={() => (resetAllOrders(), announce('Sections and tools are back in their default order'))}
+            >
+              Reset section and tool order
             </button>
           </section>
           <section className="prefs-canvas" aria-label="Canvas">
