@@ -20,7 +20,6 @@ const MOUSE: [string, string][] = [
   ['Shift + click', 'In the Layers list, pick everything from the last one you clicked to this one; on the canvas, add to the pick'],
   ['Shift + \u2191 / \u2193', 'In the Layers list, extend the pick one layer at a time'],
   ['Ctrl + click', 'Pick the layer inside a group, or add one layer to (or take one off) the pick in the Layers list and the graph'],
-  ['Alt + drag a guide out', 'Make the other kind of guide for that one (every page, or this page only)'],
   ['Menu key or Shift + F10', 'Open the right-click menu of a key in the Timeline (a text key has Swap text)'],
   ['Space + drag', 'Pan the canvas (or use the Hand tool)'],
   ['Alt + click a section', 'Open only that section of the Properties panel'],

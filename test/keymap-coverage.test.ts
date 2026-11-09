@@ -218,16 +218,12 @@ const MENUS: Record<string, Record<string, string>> = {
   'lib/layer-find.ts': { 'Select same fill': 'sel.same-fill', 'Select same font': 'sel.same-font' },
   'lib/components.ts': { 'Place in…': ALLOW('a list of the pages to choose from; Insert component here… is the keyed way in from the other side') },
   'canvas/Rulers.tsx': {
-    'Keep on this page only': ALLOW('acts on the one guide the pointer is on; locking, sharing and clearing all of them are commands'),
     'Remove guide': ALLOW('acts on the one guide the pointer is on; Clear all guides is a command'),
-    'Show on every page': ALLOW('acts on the one guide the pointer is on; Show this page’s guides on every page is a command'),
   },
   'canvas/PageLinkLayer.tsx': { 'No page (remove the link)': ALLOW('one choice in a list of pages for a link arrow') },
   'lib/guides.ts': {
     'Clear all guides': 'view.guides-clear',
-    'Clear the every-page guides': ALLOW('one choice of Clear all guides (it asks which)'),
     'Clear this page’s guides': ALLOW('one choice of Clear all guides (it asks which)'),
-    'Show this page’s guides on every page': 'view.guides-share',
   },
   'panels/LeftPanel.tsx': { 'Make start page': 'page.start' },
   'components/Dock.tsx': {

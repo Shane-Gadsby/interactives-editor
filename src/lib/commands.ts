@@ -1,7 +1,7 @@
 //The command palette's list (Ctrl/Cmd+K): every "do this" the editor has, in plain words, with its shortcut where it has one. The
 //menus, tool bar and key handler stay as they are; each command here calls the same function they do. Built fresh each time the
 //palette opens, from the open project and selection, so "Go to page" lists the pages and a command that cannot run now says why.
-import { clearGuidesCommand, guideCount, setGuidesLocked, shareGuidesCommand } from './guides';
+import { clearGuidesCommand, guideCount, setGuidesLocked } from './guides';
 import { openInsertComponentPicker } from './components';
 import { QUESTION_KINDS, createNode, walk, type NodeType, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
@@ -278,10 +278,8 @@ export function buildCommands(): Command[] {
   add({ id: 'view:grid', title: 'Show the grid', group: 'View', hint: keyHints('toggle-grid'), on: pr.showGrid, words: 'toggle lines', run: () => setPrefs({ showGrid: !prefs().showGrid }) });
   add({ id: 'view:rulers', title: 'Show rulers', group: 'View', hint: keyHints('toggle-rulers'), on: pr.rulers, words: 'toggle guides', run: () => setPrefs({ rulers: !prefs().rulers }) });
   {
-    const gn = guideCount(p);
-    const nothing = gn.project + gn.pages === 0;
+    const nothing = guideCount(p) === 0;
     add({ id: 'view:guides-lock', title: p.guidesLocked ? 'Unlock the guides' : 'Lock the guides', group: 'View', words: 'ruler guides stop moving', on: !!p.guidesLocked, run: () => setGuidesLocked(!p.guidesLocked) });
-    add({ id: 'view:guides-share', title: "Show this page's guides on every page", group: 'View', words: 'ruler guides project all pages', disabled: noPage ?? (ab?.guides ? undefined : 'This page has no guides of its own'), run: () => shareGuidesCommand(ab!.id) });
     add({ id: 'view:guides-clear', title: 'Clear all guides', group: 'View', words: 'ruler guides remove delete', disabled: noPage ?? (nothing ? 'There are no guides' : p.guidesLocked ? 'The guides are locked' : undefined), run: () => clearGuidesCommand('all', ab!.id) });
   }
   add({ id: 'view:notes', title: 'Show notes', group: 'View', on: pr.showNotes, words: 'sticky toggle', run: () => setPrefs({ showNotes: !prefs().showNotes }) });

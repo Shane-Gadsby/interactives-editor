@@ -71,11 +71,11 @@ describe('candidates per target', () => {
     expect(t.rects).toEqual([]);
   });
 
-  it('Guides: the project guides that fall on the page snap too, the others do not', () => {
+  it('Guides: given the lines that cross the page (from any page), those are the targets instead of its own', () => {
     const { ab } = board();
-    const t = buildTargets(ab, only('guides'), new Set(), null, { x: [100, 900], y: [300, -5] });
-    expect(t.xs).toEqual([{ at: 250, kind: 'guides' }, { at: 100, kind: 'guides' }]);
-    expect(t.ys).toEqual([{ at: 420, kind: 'guides' }, { at: 300, kind: 'guides' }]);
+    const t = buildTargets(ab, only('guides'), new Set(), null, { x: [100, 250], y: [300] });
+    expect(t.xs).toEqual([{ at: 100, kind: 'guides' }, { at: 250, kind: 'guides' }]);
+    expect(t.ys).toEqual([{ at: 300, kind: 'guides' }]);
   });
 
   it('Guides: the ruler guides', () => {

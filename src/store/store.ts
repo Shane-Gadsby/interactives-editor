@@ -22,6 +22,7 @@ import {
   nodeRuns,
   retextRuns,
   sanitizeLayerInPlace,
+  migrateProjectGuides,
   setBase,
   setMembers,
   masterOf,
@@ -305,7 +306,7 @@ export class EditorStore {
   constructor(project: Project) {
     // Lay out auto-layout frames once on open, so the first edit (and its undo) starts from settled positions.
     // (an unchanged produce still freezes the document, so a stray in-place edit throws instead of corrupting history)
-    this.state = EditorStore.initial(settleLayout(lockBrandChrome(produce(project, () => undefined))));
+    this.state = EditorStore.initial(settleLayout(lockBrandChrome(produce(project, (d) => void migrateProjectGuides(d)))));
   }
 
   static initial(project: Project): EditorState {
@@ -506,7 +507,7 @@ export class EditorStore {
     this.remoteLog = [];
     this.remoteBase = this.remoteTotal;
     this.lastCoalesce = null;
-    this.state = { ...this.state, project: p, saveState: 'saved' };
+    this.state = { ...this.state, project: 'guides' in p ? produce(p, (d) => void migrateProjectGuides(d)) : p, saveState: 'saved' };
     this.sanitize();
     this.emit();
   }

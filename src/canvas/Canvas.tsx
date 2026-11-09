@@ -57,7 +57,7 @@ import { artboardMenuItems, fitPageCommand, fitPageSelectionItems } from '../lib
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
-import { GUIDE_REACH, guidesOn } from '../lib/guides';
+import { guidesAcross, guidesOf } from '../lib/guides';
 import { PAGE_DRAG, componentChoices, wouldLoop, getDraggedPage, insertComponent, openInsertComponentPicker } from '../lib/components';
 import { ALT_DRAG_HINT, ALT_DRAG_TIP, altHintDue, useAltHeld } from '../lib/alt-drag';
 import { artboardGridMenu, gridMenu } from '../components/grid-menu';
@@ -245,7 +245,7 @@ export function Canvas() {
     const proj = store().get().project;
     const c = snapCache.current;
     if (c && c.key === key && (drag.current || c.proj === proj)) return c.set;
-    const set = buildTargets(ab, sn, new Set(exclude), parent?.() ?? null, proj.guides);
+    const set = buildTargets(ab, sn, new Set(exclude), parent?.() ?? null, guidesAcross(proj, ab));
     snapCache.current = { key, proj, set };
     return set;
   };
@@ -1676,19 +1676,19 @@ export function Canvas() {
       </g>,
     );
     // The guides of a page that is not the open one: the open page's are the Rulers' (they can be grabbed), these only show, so
-    // a guide doesn't vanish when another page takes the focus. Every page shows the project's guides that fall on it.
+    // a guide doesn't vanish when another page takes the focus. A guide is one endless line across the canvas, so it runs through
+    // whatever pages it crosses, not just the one it belongs to.
     if (userPrefs.rulers && !s.previewPlaying && ab.id !== s.activeArtboardId) {
-      for (const g of guidesOn(project, ab)) {
+      for (const g of guidesOf(ab)) {
         const at = (g.axis === 'x' ? tl.x : tl.y) + g.at * zoom;
-        const [a1, a2] = g.axis === 'x' ? [tl.y, tl.y + ab.height * zoom] : [tl.x, tl.x + ab.width * zoom];
         overlay.push(
           <line
-            key={`gmark-${ab.id}-${g.scope}-${g.axis}${g.index}`}
-            className={`guide-mark ${g.scope}`}
-            x1={g.axis === 'x' ? at : a1 - GUIDE_REACH}
-            x2={g.axis === 'x' ? at : a2 + GUIDE_REACH}
-            y1={g.axis === 'x' ? a1 - GUIDE_REACH : at}
-            y2={g.axis === 'x' ? a2 + GUIDE_REACH : at}
+            key={`gmark-${ab.id}-${g.axis}${g.index}`}
+            className="guide-mark"
+            x1={g.axis === 'x' ? at : -100000}
+            x2={g.axis === 'x' ? at : 100000}
+            y1={g.axis === 'x' ? -100000 : at}
+            y2={g.axis === 'x' ? 100000 : at}
           />,
         );
       }

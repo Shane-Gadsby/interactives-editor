@@ -19,6 +19,7 @@ import { SHADER_PRESETS } from '../../interactives-player/src/shader-presets';
 import { SHADER_BUILTINS, SHADER_UNIFORM_TYPES } from '../../interactives-player/src/shader-uniforms';
 import { runsPatch } from '../../interactives-player/src/textruns';
 import { sanitizeLayerInPlace } from '../../interactives-player/src/sanitize';
+import { migrateProjectGuides } from '../../interactives-player/src/guides';
 import { liveProblems } from '../../interactives-player/src/live';
 import { checkExpression } from '../../interactives-player/src/expr';
 import { cleanNotes, makeNote, NOTE_COLOURS } from '../../interactives-player/src/notes';
@@ -68,7 +69,12 @@ async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return body as T;
 }
 
-const loadProject = async (id: string) => (await api<{ project: Project }>(`projects/${encodeURIComponent(id)}`)).project;
+const loadProject = async (id: string) => {
+  const project = (await api<{ project: Project }>(`projects/${encodeURIComponent(id)}`)).project;
+  //an old project's every-page guides are the start page's now (guides are endless lines of one page)
+  migrateProjectGuides(project);
+  return project;
+};
 
 // ---------------------------------------------------------------- live sessions (one per project)
 

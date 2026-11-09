@@ -4,7 +4,6 @@ import { createRoot, type Root } from 'react-dom/client';
 import { createProject } from 'interactives-player';
 import { EditorStore, setCurrentStore } from '../src/store/store';
 import { Rulers } from '../src/canvas/Rulers';
-import { setGuideScope } from '../src/lib/guides';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -24,8 +23,6 @@ function mouse(el: Element, type: string, x: number, y: number) {
 }
 
 beforeEach(() => {
-  // these first tests are about one page's own guides; the project ones are tested below
-  setGuideScope('page');
   s = new EditorStore(createProject('T'));
   setCurrentStore(s);
   host = document.createElement('div');
@@ -74,92 +71,75 @@ describe('ruler guides', () => {
   });
 });
 
-describe('project guides (for every page)', () => {
+describe('a guide is one endless line', () => {
   const project = () => s.get().project;
-  beforeEach(() => setGuideScope('project'));
-  afterEach(() => setGuideScope('project'));
 
-  it('a guide dragged out of a ruler is for every page by default, and Alt makes this one a page guide', () => {
+  it('there is no every-page kind: no Alt kind, no project list, one colour class', () => {
     const left = host.querySelector('.canvas-ruler.left')!;
-    mouse(left, 'pointerdown', 5, 100);
-    mouse(left, 'pointerup', 220, 100);
-    expect(project().guides).toEqual({ x: [220], y: [] });
-    expect(guides()).toEqual({ x: [], y: [] });
     act(() => void left.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 100, altKey: true })));
     mouse(left, 'pointerup', 300, 100);
     expect(guides()).toEqual({ x: [300], y: [] });
-    expect(project().guides).toEqual({ x: [220], y: [] });
-  });
-
-  it('the corner menu says which kind new guides are and flips it', () => {
-    const corner = host.querySelector('.ruler-corner') as HTMLElement;
-    act(() => void corner.click());
-    const labels = () => [...document.querySelectorAll('.ctx-menu *')].filter((n) => n.children.length === 0).map((n) => n.textContent);
-    expect(labels()).toContain('✓ Every page');
-    act(() => void ([...document.querySelectorAll<HTMLElement>('.ctx-menu *')].find((n) => n.textContent === '   This page only') as HTMLElement).click());
-    const top = host.querySelector('.canvas-ruler.top')!;
-    mouse(top, 'pointerdown', 100, 5);
-    mouse(top, 'pointerup', 100, 150);
-    expect(guides()).toEqual({ x: [], y: [150] });
     expect(project().guides).toBeUndefined();
+    expect(host.querySelector('.guide-line.project, .guide-line.page')).toBeNull();
+    expect(host.querySelector('.canvas-ruler.top')!.getAttribute('title')).not.toMatch(/every page|Alt/);
   });
 
-  it('draws project and page guides on the open page, each marked with its kind', () => {
-    act(() => s.update((d) => void ((d.guides = { x: [220], y: [] }), (d.artboards[0].guides = { x: [], y: [150] }))));
+  it('is drawn the whole way across (no length of its own, so the css stretches it over the canvas)', () => {
+    act(() => s.update((d) => void (d.artboards[0].guides = { x: [220], y: [150] })));
     draw();
-    expect(host.querySelector('.guide-line.x.project')).toBeTruthy();
-    expect(host.querySelector('.guide-line.y.page')).toBeTruthy();
+    for (const el of host.querySelectorAll<HTMLElement>('.guide-line')) {
+      expect(el.style.height).toBe('');
+      expect(el.style.width).toBe('');
+      expect(el.style.top === '' || el.style.left === '').toBe(true);
+    }
   });
 
-  it('a project guide off the page is not shown there', () => {
-    act(() => s.update((d) => void (d.guides = { x: [5000], y: [100] })));
+  it('the corner menu has lock and the two clears, and nothing about every page', () => {
+    act(() => s.update((d) => void (d.artboards[0].guides = { x: [220], y: [] })));
     draw();
-    expect(host.querySelectorAll('.guide-line')).toHaveLength(1);
-    expect(host.querySelector('.guide-line.y.project')).toBeTruthy();
+    act(() => void (host.querySelector('.ruler-corner') as HTMLElement).click());
+    const labels = [...document.querySelectorAll('.ctx-menu *')].filter((n) => n.children.length === 0 && n.textContent).map((n) => n.textContent);
+    expect(labels).toEqual(['Lock guides', 'Clear this page’s guides', 'Clear all guides']);
   });
 
-  it('a project guide can be moved and dropped back on the ruler to remove it', () => {
-    act(() => s.update((d) => void (d.guides = { x: [220], y: [] })));
+  it('a guide can be moved and dropped back on the ruler to remove it', () => {
+    act(() => s.update((d) => void (d.artboards[0].guides = { x: [220], y: [] })));
     draw();
     const line = host.querySelector('.guide-line.x')!;
     mouse(line, 'pointerdown', 220, 300);
     mouse(line, 'pointermove', 260, 300);
     mouse(line, 'pointerup', 260, 300);
-    expect(project().guides).toEqual({ x: [260], y: [] });
+    expect(guides()).toEqual({ x: [260], y: [] });
     mouse(host.querySelector('.guide-line.x')!, 'pointerdown', 260, 300);
     mouse(host.querySelector('.guide-line.x')!, 'pointerup', 5, 300);
-    expect(project().guides).toBeUndefined();
+    expect(s.get().project.artboards[0].guides).toBeUndefined();
   });
 
-  it('right-click on a guide switches it between every page and this page', () => {
+  it('right-click on a guide offers remove and the guides menu, not a kind', () => {
     act(() => s.update((d) => void (d.artboards[0].guides = { x: [220], y: [] })));
     draw();
     act(() => void host.querySelector('.guide-line.x')!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 220, clientY: 300 })));
-    const item = (t: string) => [...document.querySelectorAll<HTMLElement>('.ctx-menu *')].find((n) => n.textContent === t && n.children.length === 0)!;
-    act(() => void item('Show on every page').click());
-    expect(project().guides).toEqual({ x: [220], y: [] });
-    expect(guides()).toEqual({ x: [], y: [] });
-    draw();
-    act(() => void host.querySelector('.guide-line.x')!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 220, clientY: 300 })));
-    act(() => void item('Keep on this page only').click());
-    expect(project().guides).toBeUndefined();
-    expect(guides()).toEqual({ x: [220], y: [] });
+    const labels = [...document.querySelectorAll('.ctx-menu *')].filter((n) => n.children.length === 0).map((n) => n.textContent);
+    expect(labels).toContain('Remove guide');
+    expect(labels).toContain('Lock guides');
+    expect(labels.join('|')).not.toMatch(/every page|this page only/i);
+    act(() => void [...document.querySelectorAll<HTMLElement>('.ctx-menu *')].find((n) => n.textContent === 'Remove guide')!.click());
+    expect(s.get().project.artboards[0].guides).toBeUndefined();
   });
 
   it('locked guides cannot be moved, removed or added to', () => {
-    act(() => s.update((d) => void ((d.guides = { x: [220], y: [] }), (d.guidesLocked = true))));
+    act(() => s.update((d) => void ((d.artboards[0].guides = { x: [220], y: [] }), (d.guidesLocked = true))));
     draw();
     const line = host.querySelector('.guide-line.x')!;
     expect(line.classList.contains('locked')).toBe(true);
     mouse(line, 'pointerdown', 220, 300);
     mouse(line, 'pointermove', 260, 300);
     mouse(line, 'pointerup', 5, 300);
-    expect(project().guides).toEqual({ x: [220], y: [] });
+    expect(guides()).toEqual({ x: [220], y: [] });
     const top = host.querySelector('.canvas-ruler.top')!;
     mouse(top, 'pointerdown', 100, 5);
     mouse(top, 'pointerup', 100, 150);
-    expect(project().guides).toEqual({ x: [220], y: [] });
-    expect(guides()).toEqual({ x: [], y: [] });
+    expect(guides()).toEqual({ x: [220], y: [] });
   });
 });
 
@@ -221,9 +201,10 @@ describe('a new guide goes on the page it is dragged over', () => {
     const x = second.canvasX + 50;
     mouse(top, 'pointerdown', x, 5);
     mouse(window as unknown as Element, 'pointermove', x, 140);
-    // the preview line is drawn across the second page, not the open one
-    const pv = host.querySelector('.guide-line.preview') as HTMLElement;
-    expect(pv.style.left).toBe(`${second.canvasX - 32}px`);
+    // the preview line is the endless kind, at the place on the second page
+    const pv = host.querySelector('.guide-line.y.preview') as HTMLElement;
+    expect(pv.style.top).toBe(`${second.canvasY + 140 - 3}px`);
+    expect(pv.style.width).toBe('');
     mouse(window as unknown as Element, 'pointerup', x, 140);
     expect(s.get().project.artboards.find((a) => a.id === 'ab2')!.guides?.y).toEqual([140]);
     expect(first.guides?.y ?? []).toEqual([]);
