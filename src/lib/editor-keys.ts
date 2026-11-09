@@ -14,6 +14,7 @@ import { COMMANDS, runnerOf, setRunner } from './keymap';
 import { routeToGraph, windowCommand } from './key-area';
 import { canCrop } from './crop';
 import { openInsertComponentPicker } from './components';
+import { ensureCommandKeys } from './command-keys';
 
 type Run = (e?: KeyboardEvent) => boolean | void;
 const stop = (e?: KeyboardEvent) => e?.preventDefault();
@@ -53,7 +54,9 @@ function layerMove(e: KeyboardEvent | undefined, how: 'up' | 'down' | 'out' | 'i
   return true;
 }
 
-export function installEditorKeys(zoomTo: (mode: 'fit' | '100' | 'selection') => void): void {
+export function installEditorKeys(zoomTo: (mode: 'fit' | '100' | 'selection' | 'page') => void): void {
+  //The palette's commands get their place in the keymap first, so what is set below wins where both have one
+  ensureCommandKeys();
   const set = (id: string, run: Run) => setRunner(id, run);
   for (const c of COMMANDS) {
     if (!c.id.startsWith('tool.')) continue;
@@ -77,6 +80,9 @@ export function installEditorKeys(zoomTo: (mode: 'fit' | '100' | 'selection') =>
   set('zoom-fit', (e) => (stop(e), zoomTo('fit')));
   set('zoom-100', (e) => (stop(e), zoomTo('100')));
   set('zoom-selection', (e) => (stop(e), zoomTo('selection')));
+  set('zoom-page', (e) => (stop(e), zoomTo('page')));
+  set('zoom-in', (e) => (stop(e), store().set({ zoom: Math.min(32, store().get().zoom * 1.25) })));
+  set('zoom-out', (e) => (stop(e), store().set({ zoom: Math.max(0.05, store().get().zoom / 1.25) })));
   set('toggle-bones', (e) => (stop(e), store().set({ showBones: !store().get().showBones })));
   set('toggle-rulers', (e) => (stop(e), setPrefs({ rulers: !prefs().rulers })));
   set('toggle-grid', (e) => (stop(e), setPrefs({ showGrid: !prefs().showGrid })));

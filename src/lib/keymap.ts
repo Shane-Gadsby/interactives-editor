@@ -23,7 +23,7 @@ export interface CommandDef {
   words?: string;
 }
 
-export const GROUPS = ['Tools', 'Edit', 'Arrange', 'View', 'Timeline', 'Properties', 'Interactions graph', 'Panels and help', 'Project'] as const;
+export const GROUPS = ['Tools', 'Add', 'Edit', 'Arrange', 'Pages', 'View', 'Timeline', 'Properties', 'Animate', 'Behaviours', 'Questions', 'Interactions graph', 'Panels and help', 'Workspaces', 'Project'] as const;
 
 const C = (id: string, name: string, group: (typeof GROUPS)[number], context: Context, keys: string[], more: Partial<CommandDef> = {}): CommandDef => ({ id, name, group, context, keys, ...more });
 
@@ -77,7 +77,10 @@ export const COMMANDS: CommandDef[] = [
   C('paste', 'Paste', 'Edit', 'canvas', ['Mod+V'], { fixed: true }),
   C('enter', 'Edit the selected layer', 'Edit', 'canvas', ['Enter'], { edits: true, words: 'open group text points crop' }),
   C('escape', 'Let go (deselect, finish, back to Select)', 'Edit', 'canvas', ['Escape'], { fixed: true }),
-  C('insert-component', 'Insert a component here\u2026', 'Edit', 'canvas', ['I'], { edits: true, words: 'instance page embed place put' }),
+  C('insert-component', 'Insert a component here\u2026', 'Pages', 'canvas', ['I'], { edits: true, words: 'instance page embed place put' }),
+  C('fit-page-selection', 'Fit page to selection', 'Pages', 'canvas', ['Mod+Alt+Shift+F'], { edits: true, words: 'artboard resize shrink wrap crop trim bounds selected layers' }),
+  C('fit-page-layers', 'Fit page to all its layers', 'Pages', 'canvas', [], { edits: true, words: 'artboard resize shrink wrap crop trim bounds' }),
+  C('fit-page-padding', 'Fit page to selection with space around\u2026', 'Pages', 'canvas', [], { edits: true, words: 'artboard resize padding margin' }),
   C('rename', 'Rename the selected layer', 'Edit', 'canvas', ['F2']),
   C('undo', 'Undo', 'Edit', 'everywhere', ['Mod+Z']),
   C('redo', 'Redo', 'Edit', 'everywhere', ['Mod+Shift+Z', 'Mod+Y']),
@@ -89,6 +92,8 @@ export const COMMANDS: CommandDef[] = [
   C('front', 'Bring to front', 'Arrange', 'canvas', ['Mod+]'], { edits: true, words: 'order top' }),
   C('back', 'Send to back', 'Arrange', 'canvas', ['Mod+['], { edits: true, words: 'order bottom' }),
   ...arrows(),
+  C('hide-layers', 'Hide or show the selected layers', 'Arrange', 'canvas', ['Mod+Shift+H'], { edits: true, words: 'visible invisible toggle' }),
+  C('lock-layers', 'Lock or unlock the selected layers', 'Arrange', 'canvas', ['Mod+Shift+L'], { edits: true, words: 'stop moving toggle' }),
   C('layer-up', 'Move the layer up in the Layers list', 'Arrange', 'canvas', ['Alt+ArrowUp'], { edits: true }),
   C('layer-down', 'Move the layer down in the Layers list', 'Arrange', 'canvas', ['Alt+ArrowDown'], { edits: true }),
   C('layer-out', 'Move the layer out of its group', 'Arrange', 'canvas', ['Alt+ArrowLeft'], { edits: true }),
@@ -97,6 +102,9 @@ export const COMMANDS: CommandDef[] = [
   C('zoom-fit', 'Zoom to fit everything', 'View', 'canvas', ['Mod+0', 'Shift+1'], { words: 'all' }),
   C('zoom-100', 'Zoom to 100%', 'View', 'canvas', ['Mod+1'], { words: 'actual size' }),
   C('zoom-selection', 'Zoom to the selection', 'View', 'canvas', ['Shift+2']),
+  C('zoom-page', 'Zoom to the open page', 'View', 'canvas', [], { words: 'artboard fit' }),
+  C('zoom-in', 'Zoom in', 'View', 'canvas', [], { words: 'bigger closer magnify' }),
+  C('zoom-out', 'Zoom out', 'View', 'canvas', [], { words: 'smaller further' }),
   C('toggle-grid', 'Show or hide the grid', 'View', 'canvas', ['Shift+G']),
   C('toggle-rulers', 'Show or hide the rulers', 'View', 'canvas', ['Shift+R'], { words: 'guides' }),
   C('toggle-bones', 'Show or hide the bones', 'View', 'canvas', ['Shift+J'], { words: 'rig' }),
@@ -108,6 +116,8 @@ export const COMMANDS: CommandDef[] = [
   C('timeline-end', 'Go to the end', 'Timeline', 'timeline', ['End']),
   C('frame-back', 'Step back a frame', 'Timeline', 'timeline', [','], { words: 'nudge playhead' }),
   C('frame-forward', 'Step forward a frame', 'Timeline', 'timeline', ['.'], { words: 'nudge playhead' }),
+  C('timeline-record', 'Record: property changes become keys', 'Timeline', 'everywhere', [], { words: 'keyframe auto' }),
+  C('timeline-new', 'New timeline', 'Timeline', 'everywhere', [], { edits: true, words: 'add animation' }),
   C('timeline-list', 'Show or hide the list of timelines', 'Timeline', 'timeline', ['Shift+L'], { words: 'states side panel' }),
   C('key-prev', 'Jump to the previous key', 'Timeline', 'timeline', ['Shift+,'], { words: 'keyframe' }),
   C('key-next', 'Jump to the next key', 'Timeline', 'timeline', ['Shift+.'], { words: 'keyframe' }),
@@ -126,6 +136,8 @@ export const COMMANDS: CommandDef[] = [
   C('graph-copy', 'Copy the picked nodes', 'Interactions graph', 'graph', ['Mod+C'], { fixed: true }),
   C('graph-cut', 'Cut the picked nodes', 'Interactions graph', 'graph', ['Mod+X'], { fixed: true, edits: true }),
   C('graph-edit-note', 'Edit the picked note', 'Interactions graph', 'graph', ['Enter', 'F2'], { edits: true }),
+  C('graph-tidy', 'Tidy up the graph', 'Interactions graph', 'graph', [], { edits: true, words: 'arrange layout' }),
+  C('graph-add-note', 'Add a note to the graph', 'Interactions graph', 'graph', [], { edits: true, words: 'sticky comment' }),
   C('graph-search', 'Search the node palette', 'Interactions graph', 'graph', ['/', 'Mod+F'], { words: 'find add' }),
   C('graph-next-page', 'The next page’s graph', 'Interactions graph', 'graph', ['Alt+ArrowDown', 'Mod+]']),
   C('graph-prev-page', 'The previous page’s graph', 'Interactions graph', 'graph', ['Alt+ArrowUp', 'Mod+[']),
@@ -137,6 +149,47 @@ export const COMMANDS: CommandDef[] = [
 
   C('save', 'Save now', 'Project', 'everywhere', ['Mod+S'], { fixed: true }),
 ];
+
+/**
+ * The command palette (lib/commands.ts) and the keymap list the same actions, and the palette's are keyed automatically: its id
+ * (`panel:layers`) becomes the keymap's (`panel.layers`, lib/command-keys.ts). These are the ones that already had their own id.
+ */
+const PALETTE_ALIAS: Record<string, string> = {
+  'sel:all': 'select-all',
+  'sel:duplicate': 'duplicate',
+  'sel:delete': 'delete',
+  'sel:group': 'group',
+  'sel:ungroup': 'ungroup',
+  'sel:front': 'front',
+  'sel:forward': 'forward',
+  'sel:backward': 'backward',
+  'sel:back': 'back',
+  'sel:hide': 'hide-layers',
+  'sel:lock': 'lock-layers',
+  'view:fit': 'zoom-fit',
+  'view:selection': 'zoom-selection',
+  'view:100': 'zoom-100',
+  'view:grid': 'toggle-grid',
+  'view:rulers': 'toggle-rulers',
+  'view:bones': 'toggle-bones',
+  'view:zoom-in': 'zoom-in',
+  'view:zoom-out': 'zoom-out',
+  'page:zoom': 'zoom-page',
+  'page:component': 'insert-component',
+  'page:fit-selection': 'fit-page-selection',
+  'page:fit-layers': 'fit-page-layers',
+  'page:fit-padding': 'fit-page-padding',
+  'snap:grid': 'snap-grid',
+  'timeline:record': 'timeline-record',
+  'timeline:new': 'timeline-new',
+  'project:save': 'save',
+  'project:undo': 'undo',
+  'project:redo': 'redo',
+  'project:keys': 'shortcuts',
+  'project:help': 'help-search',
+};
+/** The keymap id of a command palette command. */
+export const keymapIdFor = (paletteId: string): string => PALETTE_ALIAS[paletteId] ?? paletteId.replace(':', '.');
 
 const runners = new Map<string, (e?: KeyboardEvent) => boolean | void>();
 

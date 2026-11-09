@@ -69,7 +69,7 @@ import { nodeMenuItems } from '../lib/node-menu';
 import { GraphPalette } from './GraphPalette';
 import { FlowSentences } from './FlowSentences';
 import { stepArtboard } from './ArtboardPicker';
-import { CONTEXT_ORDER, commandFor, keyHints, matches } from '../lib/keymap';
+import { CONTEXT_ORDER, commandFor, keyHints, matches, withKey } from '../lib/keymap';
 import { GraphNoteForm, GraphNoteNode, resizing as noteResizing, type GraphNoteData } from './GraphNoteNode';
 import { flashOf, useFlowVersion, wireClass } from '../lib/run-flow';
 import { labelOfKind, nodeAka, nodeHeading, nodeLabel, nodeTip, plainParam, pw, optionLabel, useTechnicalWording } from '../lib/plain-words';
@@ -995,6 +995,13 @@ export function LogicGraph() {
       searchRef.current?.select();
       return;
     }
+    if (!typing && (matches(e, 'graph-tidy') || matches(e, 'graph-add-note'))) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (matches(e, 'graph-tidy')) tidy();
+      else void addNoteAt();
+      return;
+    }
     const dir = matches(e, 'graph-next-page') ? 1 : matches(e, 'graph-prev-page') ? -1 : null;
     if (dir && !t.closest('.cm-editor') && !t.closest('.search-pop')) {
       e.preventDefault();
@@ -1110,10 +1117,10 @@ export function LogicGraph() {
         >
           <Background gap={16} />
           <Controls showInteractive={false}>
-            <ControlButton onClick={() => void addNoteAt()} title="Add a note: a sticky note for the people editing this graph (players never see it)" aria-label="Add a note to the graph">
+            <ControlButton onClick={() => void addNoteAt()} title={withKey('Add a note: a sticky note for the people editing this graph (players never see it)', 'graph-add-note')} aria-label="Add a note to the graph">
               <Icons.note width={14} />
             </ControlButton>
-            <ControlButton onClick={tidy} title="Tidy up: lay the graph out in columns from its events, with as few crossing connections as possible (one undo)" aria-label="Tidy up the graph">
+            <ControlButton onClick={tidy} title={withKey('Tidy up: lay the graph out in columns from its events, with as few crossing connections as possible (one undo)', 'graph-tidy')} aria-label="Tidy up the graph">
               <Icons.distH width={14} />
             </ControlButton>
           </Controls>

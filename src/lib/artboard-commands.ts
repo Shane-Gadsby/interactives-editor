@@ -123,3 +123,35 @@ export function tidyTheseCommand(ids: string[]): void {
   if (moved) s.toastUndo(`Tidied ${moved} ${moved === 1 ? 'page' : 'pages'} into a grid.`, mark);
   else s.toast('Those pages are already tidy.', 'info');
 }
+
+let lastFitPadding = 0;
+
+/**
+ * Fit page to selection (the open page shrinks or grows to the picked layers, which stay where they were on the canvas), or to
+ * every layer on it when `layers` is set. `ask` first asks how much space to leave around them. One undo step, with the message.
+ */
+export async function fitPageCommand(opts: { layers?: boolean; ask?: boolean } = {}): Promise<boolean> {
+  const s = store();
+  const st = s.get();
+  const say = (m: string) => (s.toast(m, 'info'), false);
+  if (!s.artboard()) return say('Open a page first.');
+  if (!opts.layers && !st.selection.length) return say('Pick some layers first, and the page will shrink to fit them.');
+  if (!opts.layers && pickedArtboardIds(st).length > 1) return say('Pick the layers on one page first.');
+  let padding = 0;
+  if (opts.ask) {
+    const v = await promptDialog({
+      title: 'Fit the page with space around',
+      label: 'Space around the layers, in pixels',
+      initial: String(lastFitPadding),
+      confirmLabel: 'Fit page',
+      validate: (t) => (Number.isFinite(Number(t)) && Number(t) >= 0 && Number(t) <= 2000 ? null : 'A number from 0 to 2000'),
+    });
+    if (v === null) return false;
+    padding = lastFitPadding = Math.round(Number(v));
+  }
+  const mark = s.historyMark();
+  const did = opts.layers ? s.fitArtboardToLayers({ padding }) : s.fitArtboardToSelection({ padding });
+  if (did) s.toastUndo(opts.layers ? 'The page now fits its layers.' : 'The page now fits the picked layers.', mark);
+  else say(opts.layers && !s.artboard()?.children.length ? 'There is nothing on this page to fit to.' : 'The page already fits.');
+  return did;
+}

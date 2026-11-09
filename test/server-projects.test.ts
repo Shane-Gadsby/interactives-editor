@@ -126,8 +126,8 @@ describe('preferences', () => {
     const mixed = { ok: ['A', 'Mod+Shift+,', 'Mod+\\'], 'bad id!': ['A'], '__proto__': ['A'], text: 'A', five: ['A', 'B', 'C', 'D', 'E'], junk: ['<script>', 'x'.repeat(30), 7, 'A b'] };
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymap: mixed, keymapPreset: 'other', singleKeys: 'no' } } })).json.prefs).toEqual({ keymap: { ok: ['A', 'Mod+Shift+,', 'Mod+\\'], five: ['A', 'B', 'C', 'D'], junk: [] } });
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymap: ['A'] } } })).json.prefs).toEqual({});
-    const many = Object.fromEntries(Array.from({ length: 400 }, (_, i) => [`cmd.${i}`, ['A']]));
-    expect(Object.keys((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymap: many } } })).json.prefs.keymap)).toHaveLength(250);
+    const many = Object.fromEntries(Array.from({ length: 700 }, (_, i) => [`cmd.${i}`, ['A']]));
+    expect(Object.keys((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymap: many } } })).json.prefs.keymap)).toHaveLength(600);
   });
 
   it('keeps what first-run remembers as short keys to booleans, at most 40, and the strip switch', async () => {
