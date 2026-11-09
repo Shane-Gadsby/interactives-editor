@@ -349,6 +349,17 @@ describe('applyChanges', () => {
       expect(r.project.variables[0]).toMatchObject({ initial: 7, id: first.created.v });
       expect(() => change(first.project, [{ op: 'set_variable', id: 'ghost', props: {} }])).toThrow(/no variable ghost/);
     });
+
+    it('renames a variable and what reads it, by rename_variable or a name in set_variable', () => {
+      const first = change(sample(), [{ op: 'add_variable', name: 'n', initial: 1, persist: true, ref: 'v' }, { op: 'add_variable', name: 'twice', formula: 'n * 2' }]);
+      const r = change(first.project, [{ op: 'rename_variable', id: 'n', name: 'count' }]);
+      expect(r.project.variables.map((v) => v.name)).toEqual(['count', 'twice']);
+      expect(r.project.variables[1].formula).toBe('count * 2');
+      const again = change(r.project, [{ op: 'set_variable', id: 'count', props: { name: 'total' } }]);
+      expect(again.project.variables[1].formula).toBe('total * 2');
+      expect(() => change(r.project, [{ op: 'rename_variable', id: 'count', name: 'twice' }])).toThrow(/already called twice/);
+      expect(() => change(r.project, [{ op: 'rename_variable', id: 'count', name: '9x' }])).toThrow(/not a variable name/);
+    });
   });
 
   describe('timelines', () => {

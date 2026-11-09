@@ -25,6 +25,7 @@ import { checkExpression } from '../../interactives-player/src/expr';
 import { cleanNotes, makeNote, NOTE_COLOURS } from '../../interactives-player/src/notes';
 import type { Note } from '../../interactives-player/src/format';
 import { diff } from '../shared/ops.mjs';
+import { IDENT_RE, renameVariable } from '../src/lib/rename-variable';
 import { TOPICS, topicBody } from '../src/help/topics';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
@@ -407,7 +408,24 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
       case 'set_variable': {
         const v = p.variables.find((x) => x.id === ref(c.id) || x.name === c.id);
         if (!v) throw new Error(`${where}: no variable ${String(c.id)}`);
-        Object.assign(v, resolveRefs(c.props ?? {}), { id: v.id });
+        const { name, ...rest } = resolveRefs(c.props ?? {}) as Record<string, unknown>;
+        //A new name goes through the rename, so what reads the variable follows it
+        if (typeof name === 'string' && name.trim() && name.trim() !== v.name) {
+          const to = name.trim();
+          if (!IDENT_RE.test(to) || p.variables.some((x) => x.id !== v.id && x.name === to) || p.dataSources.some((d) => d.name === to)) throw new Error(`${where}: can't rename to ${to}`);
+          renameVariable(p, v.id, to);
+        }
+        Object.assign(v, rest, { id: v.id, name: v.name });
+        break;
+      }
+      case 'rename_variable': {
+        //Through the same function as the Variables panel, so every binding, template, expression and (unless scripts: false) script follows
+        const v = p.variables.find((x) => x.id === ref(c.id) || x.name === c.id);
+        if (!v) throw new Error(`${where}: no variable ${String(c.id)}`);
+        const to = String(c.name ?? '').trim();
+        if (!IDENT_RE.test(to)) throw new Error(`${where}: ${to || 'an empty name'} is not a variable name (letters, digits and _, not starting with a digit)`);
+        if (p.variables.some((x) => x.id !== v.id && x.name === to) || p.dataSources.some((d) => d.name === to)) throw new Error(`${where}: something is already called ${to}`);
+        renameVariable(p, v.id, to, { scripts: c.scripts !== false });
         break;
       }
       case 'add_timeline': {
@@ -700,7 +718,7 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       'set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); ' +
       'add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; ' +
       'add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); ' +
-      'add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; ' +
+      'add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; rename_variable {id or name, name, scripts? (default true; false leaves scripts and code snippets alone)}: renames it and everything that names it, keeping saved learner values (never rename with set_variable); ' +
       'add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, dip?, keys: [{t, value, ease}]}], ref?} (text, label and true/false keys hold until the next key and never ease; to soften a text change key opacity and/or blur dipping to 0 / 8 either side of it on separate tracks marked dip: true, which reduced motion leaves out); ' +
       'add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; ' +
       'add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; ' +

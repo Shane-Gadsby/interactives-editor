@@ -357,7 +357,7 @@ The layout is remembered in this browser. Whatever opens a panel for you (choosi
 
 - **Now showing**: the page on screen and how many instances it contains.
 - **Timelines**: the ones running, with a progress bar (green dot = playing).
-- **Variables (live)**: every value as it changes. Type a new value and press <kbd>Enter</kbd> (or tick, or choose) to set it while it runs; filter by name when there are many.
+- **Variables (live)**: every value as it changes, starting with any saved user data or remembered progress the preview put back. Type a new value and press <kbd>Enter</kbd> (or tick, or choose) to set it while it runs; filter by name when there are many.
 - **Events** (underneath): each interaction event as it fires, which layer it came from, and what it set off, including events inside instances. Messages sent to the host page are listed too, and so are errors from script layers. With **Auto-scroll** ticked (the default) the list keeps the newest event in view; untick it to read back through earlier ones while the preview keeps running.
 
 ![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)
@@ -1570,6 +1570,8 @@ The grid is never in **Preview**, in exports, in share links or in pictures of t
     keywords: 'media catalogue photo photography gallery library insert picture image studydesk',
     icon: 'catalogue',
     body: `The **Media Catalogue** button, in the tool bar's **Media** group (open the group if it is folded) with the same icon as the catalogue button in StudyDesk's editor, opens the suite's photo library in a window over the editor. Search or browse, open a photo, and press **Insert**: the window closes and the photo is on the open artboard as an image layer, centred and scaled to fit (up to 600 px). Close the window without inserting with its **×**, <kbd>Esc</kbd> or the catalogue's own close button. If you open it with a picture layer that came from the catalogue selected, it opens where that photo was found.
+
+Where the older **Photography catalogue** still answers at that address (StudyDesk's live site, until it moves to the Media Catalogue), the button opens that one instead, and it works the same way: open a photo and press its insert button. It doesn't remember where a photo was found, so it always opens at the start.
 
 ## How it is stored
 The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
@@ -3430,10 +3432,19 @@ Ordering, categorise and hotspot questions are not pasted (add them from the Add
     title: 'Variables',
     group: 'Interactivity',
     summary: 'Named values (number, text, true/false, colour, choice) shared by the whole project.',
-    keywords: 'variable state value number string boolean color enum choice options input',
+    keywords: 'variable state value number string boolean color enum choice options input rename',
     body: `A variable is a named value the activity remembers while it runs: a score, a name, whether a panel is open. Use variables when something on one page has to change something else, on the same page or another. They belong to the project, so every page sees the same values.
 
 Add them in the **Variables** tab. Each has a name, a type and a starting value.
+
+## Renaming a variable
+Type a new name in its name box. Everything that reads it follows: bindings, \`{templates}\` in text and labels, expressions in the Interactions graph, other variables' formulas, repeaters, charts and instance inputs. A name after a dot (\`item.score\`) or inside quotes in an expression is left alone, because it isn't this variable. The editor says how many places changed, and **Undo** puts it all back in one step.
+
+You're asked first in two cases:
+- **Scripts or code snippets mention it.** They're listed with the lines that would change. Choose **Rename, scripts too**, or **Rename, leave scripts** when a script uses the same word for something of its own.
+- **It keeps learners' values** (Remember progress or Save as user data) **and it's used somewhere.** Saved values are kept under the name, so the variable remembers its old names, and the player reads a learner's saved value from the old name when it finds nothing under the new one. Nobody loses their progress.
+
+A name that another variable or a data source already has is refused. A question's own variables (\`q1_score\` and so on) are renamed with the question's **Name prefix**, not one by one.
 
 | Type | Holds |
 |---|---|

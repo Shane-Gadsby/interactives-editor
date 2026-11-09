@@ -190,7 +190,7 @@ const encodeWav = (samples, rate) => {
 module.exports = (opts) => {
 	let {express, storageDir} = opts,
 		load = opts.load || (() => require('sherpa-onnx-node')),
-		getFetch = opts.fetch || ((...a) => fetch(...a)),
+		getFetch = opts.fetch || require('./outbound-fetch'),
 		//A box that sets INTERACTIVES_VOICE_DIR has the model put there by hand and never downloads one
 		pinned = !opts.dir && !!process.env.INTERACTIVES_VOICE_DIR,
 		baseDir = opts.dir || process.env.INTERACTIVES_VOICE_DIR || path.join(storageDir, '_voice', MODEL.id),

@@ -1885,7 +1885,7 @@ const SPECS = [
 const ONLY_IF = { key: "onlyIf", label: "Only if", type: "expr", default: "", placeholder: "e.g. running", help: "Runs the flow only when this is true. event is in scope, with what this event gives" };
 for (const d of SPECS) if (d.category === "event") d.params.push(ONLY_IF);
 const CATALOG = SPECS.map((d) => ({ ...d, description: [d.summary, d.details].filter(Boolean).join(" ") }));
-Object.fromEntries(CATALOG.map((d) => [d.kind, d]));
+const CATALOG_BY_KIND = Object.fromEntries(CATALOG.map((d) => [d.kind, d]));
 const SHADER_UNIFORM_TYPES = ["float", "vec2", "vec3", "vec4", "color", "image"];
 const SHADER_BUILTINS = ["u_time", "u_resolution", "u_mouse", "u_frame", "v_uv"];
 const GLSL_WORDS = new Set(
@@ -7615,6 +7615,136 @@ function diff(a, b, path = [], out = []) {
   return out;
 }
 const PACKAGE_EXTENSION = ".ixp";
+const IDENT_RE = /^[A-Za-z_$][\w$]*$/;
+const esc = (s) => s.replace(/[$]/g, "\\$");
+function pieces(src, quotes) {
+  const out = [];
+  let i = 0;
+  let start = 0;
+  while (i < src.length) {
+    const c2 = src[i];
+    if (quotes.includes(c2)) {
+      if (i > start) out.push({ text: src.slice(start, i), quoted: false });
+      let j = i + 1;
+      while (j < src.length && src[j] !== c2 && !(c2 !== "`" && src[j] === "\n")) j += src[j] === "\\" ? 2 : 1;
+      j = Math.min(j + 1, src.length);
+      out.push({ text: src.slice(i, j), quoted: true });
+      i = start = j;
+    } else i++;
+  }
+  if (start < src.length) out.push({ text: src.slice(start), quoted: false });
+  return out;
+}
+function renameInExpr(src, from, to) {
+  if (!src || !src.includes(from)) return src;
+  const re = new RegExp(`(?<![\\w$.])${esc(from)}(?![\\w$])`, "g");
+  return pieces(src, `"'\``).map((p) => p.quoted ? p.text : p.text.replace(re, to)).join("");
+}
+function renameInTemplate(text, from, to) {
+  if (!text || !text.includes("{") || !text.includes(from)) return text;
+  return text.replace(/\{\{|\}\}|\{([^{}]+)\}/g, (m, e) => e ? `{${renameInExpr(e, from, to)}}` : m);
+}
+function renameInCode(code, from, to) {
+  if (!code || !code.includes(from)) return code;
+  return pieces(code, `"'\``).map((p) => {
+    if (!p.quoted) return renameCodeText(p.text, from, to);
+    const q = p.text[0];
+    return p.text === `${q}${from}${q}` ? `${q}${to}${q}` : p.text;
+  }).join("");
+}
+function renameCodeText(text, from, to) {
+  const re = new RegExp(`((?<![\\w$.])vars\\s*\\.\\s*)?(\\.\\s*)?(?<![\\w$])${esc(from)}(?![\\w$])`, "g");
+  return text.replace(re, (m, viaVars, dot) => viaVars ? `${viaVars}${to}` : dot ? m : to);
+}
+function eachText(p, visit) {
+  const field = (o, k, kind, where) => {
+    const v = o[k];
+    if (typeof v === "string" && v) visit(kind, () => o[k], (s) => o[k] = s, where);
+  };
+  for (const v of p.variables) field(v, "formula", "expr", `Variable ${v.name}`);
+  for (const s of p.scripts) field(s, "code", "code", `Script ${s.name}`);
+  for (const ab of p.artboards) {
+    const walk2 = (list) => {
+      for (const n of list) {
+        const where = `${n.name} on ${ab.name}`;
+        const any = n;
+        if (n.type === "draw") field(n, "code", "code", where);
+        if (n.type === "chart") {
+          field(n, "data", "expr", where);
+          field(n, "prefix", "template", where);
+          field(n, "suffix", "template", where);
+        }
+        if (n.type === "connector") {
+          for (const e of [n.from, n.to]) if (e && typeof e.layer === "object" && e.layer) field(e.layer, "index", "expr", where);
+          field(n, "label", "template", where);
+        }
+        if (n.type === "progress") field(n, "valueText", "template", where);
+        if (n.bindings) for (const k of Object.keys(n.bindings)) field(n.bindings, k, "expr", where);
+        if (n.converters) {
+          for (const list2 of Object.values(n.converters)) for (const c2 of list2 ?? []) if (c2.type === "expr") field(c2, "expr", "expr", where);
+        }
+        if (isContainer(n) && n.repeat) field(n.repeat, "items", "expr", where);
+        if (n.type === "text" || n.type === "link") field(n, "text", "template", where);
+        if (n.type === "text") for (const r2 of n.runs ?? []) {
+          field(r2, "text", "template", where);
+          if (r2.link) field(r2.link, "url", "template", where);
+        }
+        if (n.type === "button") field(n, "label", "template", where);
+        if (n.type === "link") field(n, "href", "template", where);
+        if (any.link && typeof any.link === "object") field(any.link, "url", "template", where);
+        if (isContainer(n)) walk2(n.children);
+      }
+    };
+    walk2(ab.children);
+    for (const j of ab.joysticks ?? []) {
+      field(j, "x", "expr", `Joystick ${j.name || ""} on ${ab.name}`);
+      field(j, "y", "expr", `Joystick ${j.name || ""} on ${ab.name}`);
+    }
+    for (const ln of ab.logic.nodes) {
+      const def = CATALOG_BY_KIND[ln.kind];
+      for (const prm of def?.params ?? []) {
+        if (prm.type === "expr") field(ln.params, prm.key, "expr", `${def.label} on ${ab.name}`);
+        if (ln.kind === "action.code" && prm.key === "code") field(ln.params, prm.key, "code", `Code snippet on ${ab.name}`);
+      }
+    }
+  }
+}
+function eachInstanceInputs(p, visit) {
+  const walk2 = (list) => {
+    for (const n of list) {
+      if (n.type === "instance" && n.inputs) visit(n.inputs);
+      if (isContainer(n)) walk2(n.children);
+    }
+  };
+  for (const ab of p.artboards) walk2(ab.children);
+}
+function renameVariable(d, id, to, opts2 = {}) {
+  const v = d.variables.find((x) => x.id === id);
+  if (!v || v.name === to) return 0;
+  const from = v.name;
+  let changed = 0;
+  eachText(d, (kind, get, set) => {
+    if (kind === "code" && opts2.scripts === false) return;
+    const was = get();
+    const now2 = kind === "expr" ? renameInExpr(was, from, to) : kind === "template" ? renameInTemplate(was, from, to) : renameInCode(was, from, to);
+    if (now2 !== was) {
+      set(now2);
+      changed++;
+    }
+  });
+  eachInstanceInputs(d, (inputs) => {
+    if (Object.prototype.hasOwnProperty.call(inputs, from) && !Object.prototype.hasOwnProperty.call(inputs, to)) {
+      inputs[to] = inputs[from];
+      delete inputs[from];
+      changed++;
+    }
+  });
+  if (v.persist || v.userData) v.formerNames = [from, ...(v.formerNames ?? []).filter((n) => n !== from && n !== to)].slice(0, 5);
+  else if (v.formerNames) v.formerNames = v.formerNames.filter((n) => n !== to);
+  if (v.formerNames && !v.formerNames.length) delete v.formerNames;
+  v.name = to;
+  return changed;
+}
 var react = { exports: {} };
 var react_production_min = {};
 /**
@@ -10564,7 +10694,7 @@ The layout is remembered in this browser. Whatever opens a panel for you (choosi
 
 - **Now showing**: the page on screen and how many instances it contains.
 - **Timelines**: the ones running, with a progress bar (green dot = playing).
-- **Variables (live)**: every value as it changes. Type a new value and press <kbd>Enter</kbd> (or tick, or choose) to set it while it runs; filter by name when there are many.
+- **Variables (live)**: every value as it changes, starting with any saved user data or remembered progress the preview put back. Type a new value and press <kbd>Enter</kbd> (or tick, or choose) to set it while it runs; filter by name when there are many.
 - **Events** (underneath): each interaction event as it fires, which layer it came from, and what it set off, including events inside instances. Messages sent to the host page are listed too, and so are errors from script layers. With **Auto-scroll** ticked (the default) the list keeps the newest event in view; untick it to read back through earlier ones while the preview keeps running.
 
 ![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)
@@ -11776,6 +11906,8 @@ The grid is never in **Preview**, in exports, in share links or in pictures of t
     keywords: "media catalogue photo photography gallery library insert picture image studydesk",
     icon: "catalogue",
     body: `The **Media Catalogue** button, in the tool bar's **Media** group (open the group if it is folded) with the same icon as the catalogue button in StudyDesk's editor, opens the suite's photo library in a window over the editor. Search or browse, open a photo, and press **Insert**: the window closes and the photo is on the open artboard as an image layer, centred and scaled to fit (up to 600 px). Close the window without inserting with its **×**, <kbd>Esc</kbd> or the catalogue's own close button. If you open it with a picture layer that came from the catalogue selected, it opens where that photo was found.
+
+Where the older **Photography catalogue** still answers at that address (StudyDesk's live site, until it moves to the Media Catalogue), the button opens that one instead, and it works the same way: open a photo and press its insert button. It doesn't remember where a photo was found, so it always opens at the start.
 
 ## How it is stored
 The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
@@ -13626,10 +13758,19 @@ Ordering, categorise and hotspot questions are not pasted (add them from the Add
     title: "Variables",
     group: "Interactivity",
     summary: "Named values (number, text, true/false, colour, choice) shared by the whole project.",
-    keywords: "variable state value number string boolean color enum choice options input",
+    keywords: "variable state value number string boolean color enum choice options input rename",
     body: `A variable is a named value the activity remembers while it runs: a score, a name, whether a panel is open. Use variables when something on one page has to change something else, on the same page or another. They belong to the project, so every page sees the same values.
 
 Add them in the **Variables** tab. Each has a name, a type and a starting value.
+
+## Renaming a variable
+Type a new name in its name box. Everything that reads it follows: bindings, \`{templates}\` in text and labels, expressions in the Interactions graph, other variables' formulas, repeaters, charts and instance inputs. A name after a dot (\`item.score\`) or inside quotes in an expression is left alone, because it isn't this variable. The editor says how many places changed, and **Undo** puts it all back in one step.
+
+You're asked first in two cases:
+- **Scripts or code snippets mention it.** They're listed with the lines that would change. Choose **Rename, scripts too**, or **Rename, leave scripts** when a script uses the same word for something of its own.
+- **It keeps learners' values** (Remember progress or Save as user data) **and it's used somewhere.** Saved values are kept under the name, so the variable remembers its old names, and the player reads a learner's saved value from the old name when it finds nothing under the new one. Nobody loses their progress.
+
+A name that another variable or a data source already has is refused. A question's own variables (\`q1_score\` and so on) are renamed with the question's **Name prefix**, not one by one.
 
 | Type | Holds |
 |---|---|
@@ -16453,7 +16594,22 @@ function applyChanges(p0, changes) {
       case "set_variable": {
         const v = p.variables.find((x) => x.id === ref(c2.id) || x.name === c2.id);
         if (!v) throw new Error(`${where}: no variable ${String(c2.id)}`);
-        Object.assign(v, resolveRefs(c2.props ?? {}), { id: v.id });
+        const { name, ...rest } = resolveRefs(c2.props ?? {});
+        if (typeof name === "string" && name.trim() && name.trim() !== v.name) {
+          const to = name.trim();
+          if (!IDENT_RE.test(to) || p.variables.some((x) => x.id !== v.id && x.name === to) || p.dataSources.some((d) => d.name === to)) throw new Error(`${where}: can't rename to ${to}`);
+          renameVariable(p, v.id, to);
+        }
+        Object.assign(v, rest, { id: v.id, name: v.name });
+        break;
+      }
+      case "rename_variable": {
+        const v = p.variables.find((x) => x.id === ref(c2.id) || x.name === c2.id);
+        if (!v) throw new Error(`${where}: no variable ${String(c2.id)}`);
+        const to = String(c2.name ?? "").trim();
+        if (!IDENT_RE.test(to)) throw new Error(`${where}: ${to || "an empty name"} is not a variable name (letters, digits and _, not starting with a digit)`);
+        if (p.variables.some((x) => x.id !== v.id && x.name === to) || p.dataSources.some((d) => d.name === to)) throw new Error(`${where}: something is already called ${to}`);
+        renameVariable(p, v.id, to, { scripts: c2.scripts !== false });
         break;
       }
       case "add_timeline": {
@@ -16722,7 +16878,7 @@ ${JSON.stringify(loc.node, null, 1)}`);
   },
   {
     name: "edit",
-    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, dip?, keys: [{t, value, ease}]}], ref?} (text, label and true/false keys hold until the next key and never ease; to soften a text change key opacity and/or blur dipping to 0 / 8 either side of it on separate tracks marked dip: true, which reduced motion leaves out); add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
+    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; rename_variable {id or name, name, scripts? (default true; false leaves scripts and code snippets alone)}: renames it and everything that names it, keeping saved learner values (never rename with set_variable); add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, dip?, keys: [{t, value, ease}]}], ref?} (text, label and true/false keys hold until the next key and never ease; to soften a text change key opacity and/or blur dipping to 0 / 8 either side of it on separate tracks marked dip: true, which reduced motion leaves out); add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
     inputSchema: S({ project_id: str("Project id"), changes: { type: "array", items: { type: "object" } }, explain: str("One line saying what this does (shown in the editor log)") }, ["project_id", "changes"]),
     run: async (a) => {
       const s = join(String(a.project_id));

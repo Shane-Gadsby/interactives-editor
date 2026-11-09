@@ -75,7 +75,13 @@ export function parseCatalogueMessage(data: unknown, origin: string, expected: s
   } catch {
     return null;
   }
-  if (!/^https?:$/.test(url.protocol) || url.origin !== expected) return null;
+  if (!/^https?:$/.test(url.protocol)) return null;
+  if (url.origin !== expected) {
+    // The legacy photography gallery (what /media-catalogue still is on prod until the cutover) writes its photos on the
+    // other university name's host. Same server, same paths, so the photo is taken at the catalogue's own address.
+    if (url.origin !== sisterOrigin(expected)) return null;
+    url = new URL(url.pathname + url.search, expected);
+  }
   const file = decodeURIComponentSafe(url.pathname.split('/').filter(Boolean).pop() ?? '');
   const ext = /\.([a-z0-9]+)$/i.exec(file)?.[1].toLowerCase() ?? '';
   return {
@@ -88,6 +94,22 @@ export function parseCatalogueMessage(data: unknown, origin: string, expected: s
       catalogue: sensibleCatalogue(attrs['data-media-catalogue']),
     },
   };
+}
+
+/** The same server under the university's other name (lti.usq.edu.au and lti.unisq.edu.au, test's too), or null when the host has neither. */
+export function sisterOrigin(origin: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(origin);
+  } catch {
+    return null;
+  }
+  const parts = u.hostname.split('.');
+  const i = parts.findIndex((p) => p === 'usq' || p === 'unisq');
+  if (i < 0 || parts.slice(i + 1).join('.') !== 'edu.au') return null;
+  parts[i] = parts[i] === 'usq' ? 'unisq' : 'usq';
+  u.hostname = parts.join('.');
+  return u.origin;
 }
 
 function decodeURIComponentSafe(s: string): string {
