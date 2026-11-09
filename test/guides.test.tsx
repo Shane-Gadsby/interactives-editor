@@ -169,44 +169,46 @@ describe('universal guides (canvas coordinates)', () => {
   });
 });
 
-describe('a guide is an endless line (guidesAcross)', () => {
-  it('a guide of A lands on B at the canvas place, where B is under that line', () => {
+describe('what layers snap to on a page (guidesAcross)', () => {
+  it('an attached guide of A is not a snap line on B, even where its line would run through B', () => {
     const p = make();
     // A is at 0..800 x 0..600, B at 1000..1400 x 0..300
     p.artboards[1].canvasY = 100;
     p.artboards[0].guides = { x: [900, 100], y: [150, 450] };
-    // vertical lines: A's 900 is at canvas x 900, nowhere on B (starts at 1000); 100 is not on B either
-    // horizontal lines: canvas y 150 is 50 down B (which starts at 100), 450 is below B (it ends at 400)
-    expect(guidesAcross(p, p.artboards[1])).toEqual({ x: [], y: [50] });
-    // on A itself its own lines fall on it (the 900 is past its right edge)
+    // canvas y 150 is 50 down B, but A's guide is only drawn across A (and a little past it), so B does not snap to it
+    expect(guidesAcross(p, p.artboards[1])).toEqual({ x: [], y: [] });
+    // on A itself its own lines count (the 900 is past its right edge)
     expect(guidesAcross(p, p.artboards[0])).toEqual({ x: [100], y: [150, 450] });
   });
 
-  it('a guide of B crosses A when B is to its left or above, and moves with the page', () => {
+  it('a universal guide is a snap line on every page it crosses, in that page\'s pixels', () => {
     const p = make();
-    p.artboards[1].guides = { x: [], y: [200] };
-    // B is level with A (both top at 0): the line is 200 down both
-    expect(guidesAcross(p, p.artboards[0]).y).toEqual([200]);
-    p.artboards[1].canvasY = 300;
-    expect(guidesAcross(p, p.artboards[0]).y).toEqual([500]);
-    p.artboards[1].canvasY = 1000;
-    expect(guidesAcross(p, p.artboards[0]).y).toEqual([]);
+    p.artboards[1].canvasY = 100;
+    addUniversalGuide(p, 'y', 150);
+    expect(guidesAcross(p, p.artboards[0]).y).toEqual([150]);
+    expect(guidesAcross(p, p.artboards[1]).y).toEqual([50]);
   });
 
-  it('a line that has no page under it on that axis crosses nothing, a vertical one needs the page\'s x range', () => {
+  it('a guide of B does not reach A, and moves with its page', () => {
     const p = make();
-    p.artboards[1].guides = { x: [10], y: [] };
-    // B's 10 is canvas x 1010: past A (0..800)
+    p.artboards[1].guides = { x: [], y: [200] };
+    expect(guidesAcross(p, p.artboards[0]).y).toEqual([]);
+    expect(guidesAcross(p, p.artboards[1]).y).toEqual([200]);
+    p.artboards[1].canvasY = 300;
+    expect(guidesAcross(p, p.artboards[1]).y).toEqual([200]);
+  });
+
+  it('a universal line that has no page under it on that axis crosses nothing, a vertical one needs the page\'s x range', () => {
+    const p = make();
+    addUniversalGuide(p, 'x', 1010);
+    // canvas x 1010 is past A (0..800)
     expect(guidesAcross(p, p.artboards[0]).x).toEqual([]);
     expect(guidesAcross(p, p.artboards[1]).x).toEqual([10]);
   });
 
-  it('hidden library copies have no guides on show, and duplicates are listed once', () => {
+  it('a line that is both a page\'s own and a universal one is listed once', () => {
     const p = make();
-    p.artboards[1].canvasHidden = true;
-    p.artboards[1].guides = { x: [], y: [10] };
-    expect(guidesAcross(p, p.artboards[0]).y).toEqual([]);
-    p.artboards[1].canvasHidden = false;
+    addUniversalGuide(p, 'y', 10);
     p.artboards[0].guides = { x: [], y: [10] };
     expect(guidesAcross(p, p.artboards[0]).y).toEqual([10]);
   });
@@ -269,18 +271,19 @@ describe('guides in the editor', () => {
     vi.unstubAllGlobals();
   });
 
-  it('a page that is not the open one still draws its guides, endless and dimmed, in the one colour', () => {
+  it('a page that is not the open one still draws its guides, the length of the page and a little past it, dimmed, in the one colour', () => {
     s.update((d) => void ((d.artboards[1].guides = { x: [100], y: [50] })));
     setPrefs({ rulers: true });
     act(() => root.render(<Canvas />));
     // A is open: B's two marks show, A's own are the rulers'
     const marks = [...host.querySelectorAll('.guide-mark')];
     expect(marks.map((n) => n.getAttribute('class'))).toEqual(['guide-mark', 'guide-mark']);
-    // each runs far past B (it is not limited to the page)
-    for (const m of marks) {
-      const span = Math.abs(Number(m.getAttribute('x2')) - Number(m.getAttribute('x1'))) + Math.abs(Number(m.getAttribute('y2')) - Number(m.getAttribute('y1')));
-      expect(span).toBeGreaterThan(100000);
-    }
+    // each runs the length of B and the reach (32) past each end, not the whole canvas
+    const b = s.get().project.artboards[1];
+    const z = s.get().zoom;
+    const spans = marks.map((m) => Math.abs(Number(m.getAttribute('x2')) - Number(m.getAttribute('x1'))) + Math.abs(Number(m.getAttribute('y2')) - Number(m.getAttribute('y1'))));
+    expect(spans[0]).toBeCloseTo(b.height * z + 64, 3);
+    expect(spans[1]).toBeCloseTo(b.width * z + 64, 3);
     // open B: now A has none, so no marks
     act(() => s.set({ activeArtboardId: s.get().project.artboards[1].id }));
     expect(host.querySelectorAll('.guide-mark')).toHaveLength(0);
@@ -322,11 +325,11 @@ describe('guides in the editor', () => {
     const clear = items.find((i) => 'label' in i && i.label === 'Clear all guides') as { disabled?: boolean };
     expect(clear.disabled).toBe(true);
   });
-  it('every attached guide has a pin where it meets its page, the open page\'s included; universal ones have none', () => {
+  it('there is no pin on an attached guide, and the other page\'s line is the only dim mark', () => {
     s.update((d) => void ((d.artboards[0].guides = { x: [100], y: [] }), (d.artboards[1].guides = { x: [], y: [50] }), (d.canvasGuides = { x: [300], y: [] })));
     setPrefs({ rulers: true });
     act(() => root.render(<Canvas />));
-    expect(host.querySelectorAll('.guide-pin')).toHaveLength(2);
+    expect(host.querySelectorAll('.guide-pin')).toHaveLength(0);
     // and only the other page's line is a dim mark; the open page's is the rulers'
     expect(host.querySelectorAll('.guide-mark')).toHaveLength(1);
   });
@@ -362,8 +365,8 @@ describe('how a guide looks', () => {
     expect(rule('.guide-mark')).toMatch(/stroke:\s*var\(--guide\)/);
     expect(rule('.guide-mark')).toMatch(/stroke-dasharray/);
     expect(css).not.toMatch(/\.guide-(line|mark|pos)\.project/);
-    // the pin on an attached guide is the same colour, and the overlay sits above the guide lines so handles beat a guide's grab strip
-    expect(rule('.guide-pin')).toMatch(/fill:\s*var\(--guide\)/);
+    // (there is no pin on an attached guide any more) and the overlay sits above the guide lines so handles beat a guide's grab strip
+    expect(css).not.toMatch(/\.guide-pin/);
     expect(rule('.overlay')).toMatch(/z-index:\s*2/);
     expect(rule('.guide-line')).toMatch(/z-index:\s*1/);
   });

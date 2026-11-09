@@ -293,6 +293,55 @@ describe('the shortcuts sheet', () => {
     expect(document.querySelector('.keys-clash')?.textContent).toContain('used twice');
   });
 
+  describe('the Guides group: modifiers held while dragging a guide', () => {
+    const up = (init: KeyboardEventInit & { key: string }) => act(() => void window.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, ...init })));
+
+    it('lists the three holds with their modifiers and where they apply', () => {
+      mount();
+      expect([...document.querySelectorAll('.keys-group h4')].map((h) => h.textContent)).toContain('Guides');
+      expect(rowFor('Round a guide to the nearest 5 px').querySelector('kbd')?.textContent).toBe('Ctrl');
+      expect(rowFor('Round a guide to the nearest 10 px').querySelector('kbd')?.textContent).toBe('Ctrl + Shift');
+      expect(rowFor('Make a new guide the other kind (universal or attached)').querySelector('kbd')?.textContent).toBe('Alt');
+      expect(rowFor('Round a guide to the nearest 5 px').querySelector('.keys-where')?.textContent).toBe('While dragging a guide');
+    });
+
+    it('records modifiers held together, and takes them when they are all let go', () => {
+      mount();
+      const name = 'Round a guide to the nearest 5 px';
+      act(() => btn(rowFor(name), /Add a key/).click());
+      expect(rowFor(name).textContent).toContain('Hold the keys you want, then let go');
+      press({ key: 'Control', ctrlKey: true });
+      press({ key: 'Alt', ctrlKey: true, altKey: true });
+      //one let go: nothing is taken yet
+      up({ key: 'Alt', ctrlKey: true });
+      expect(bindingsOf('guide-round-5')).toEqual(['Mod']);
+      up({ key: 'Control' });
+      expect(bindingsOf('guide-round-5')).toEqual(['Mod', 'Mod+Alt']);
+    });
+
+    it('a plain key press is no modifier, and Escape cancels the recording', () => {
+      mount();
+      const name = 'Round a guide to the nearest 5 px';
+      act(() => btn(rowFor(name), /Add a key/).click());
+      press({ key: 'x' }, 'KeyX');
+      expect(bindingsOf('guide-round-5')).toEqual(['Mod']);
+      press({ key: 'Escape' });
+      expect(rowFor(name).textContent).not.toContain('Hold the keys');
+      expect(shortcutsOpen()).toBe(true);
+    });
+
+    it('asks before taking modifiers another hold uses (Alt is the other-kind one)', () => {
+      mount();
+      act(() => btn(rowFor('Round a guide to the nearest 10 px'), /Add a key/).click());
+      press({ key: 'Alt', altKey: true });
+      up({ key: 'Alt' });
+      const alert = document.querySelector('.keys-pending')!;
+      expect(alert.textContent).toContain('Make a new guide the other kind');
+      expect(alert.textContent).toContain('Alt');
+      expect(bindingsOf('guide-round-10')).toEqual(['Mod+Shift']);
+    });
+  });
+
   it('does not offer a Change for a key that belongs to the browser', () => {
     mount();
     expect(rowFor('Copy').textContent).toContain('Fixed');

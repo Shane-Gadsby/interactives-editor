@@ -5,6 +5,7 @@ import { createProject } from 'interactives-player';
 import { EditorStore, setCurrentStore } from '../src/store/store';
 import { Rulers } from '../src/canvas/Rulers';
 import { setPrefs } from '../src/lib/prefs';
+import { GUIDE_REACH, guideDragging } from '../src/lib/guides';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -92,14 +93,18 @@ describe('a guide is one endless line', () => {
     expect(host.querySelector('.canvas-ruler.top')!.getAttribute('title')).toMatch(/Alt/);
   });
 
-  it('is drawn the whole way across (no length of its own, so the css stretches it over the canvas)', () => {
+  it('is drawn the length of its page and a little past it, not the whole way across', () => {
     act(() => s.update((d) => void (d.artboards[0].guides = { x: [220], y: [150] })));
     draw();
-    for (const el of host.querySelectorAll<HTMLElement>('.guide-line')) {
-      expect(el.style.height).toBe('');
-      expect(el.style.width).toBe('');
-      expect(el.style.top === '' || el.style.left === '').toBe(true);
-    }
+    const ab = s.get().project.artboards[0];
+    const v = host.querySelector<HTMLElement>('.guide-line.x')!;
+    expect(v.style.top).toBe(`${ab.canvasY - GUIDE_REACH}px`);
+    expect(v.style.height).toBe(`${ab.height + GUIDE_REACH * 2}px`);
+    const h = host.querySelector<HTMLElement>('.guide-line.y')!;
+    expect(h.style.left).toBe(`${ab.canvasX - GUIDE_REACH}px`);
+    expect(h.style.width).toBe(`${ab.width + GUIDE_REACH * 2}px`);
+    //(and the strip that takes the pointer is the whole of it)
+    expect(v.querySelector('.guide-grab')!.getAttribute('style')).toBeNull();
   });
 
   it('the corner menu has lock and the three clears, and nothing about every page', () => {
@@ -210,10 +215,11 @@ describe('a new guide goes on the page it is dragged over', () => {
     const x = second.canvasX + 50;
     mouse(top, 'pointerdown', x, 5);
     mouse(window as unknown as Element, 'pointermove', x, 140);
-    // the preview line is the endless kind, at the place on the second page
+    // the preview line is the attached kind: the length of the second page and a little past it, at the place on that page
     const pv = host.querySelector('.guide-line.y.preview') as HTMLElement;
     expect(pv.style.top).toBe(`${second.canvasY + 140 - 3}px`);
-    expect(pv.style.width).toBe('');
+    expect(pv.style.left).toBe(`${second.canvasX - GUIDE_REACH}px`);
+    expect(pv.style.width).toBe(`${second.width + GUIDE_REACH * 2}px`);
     mouse(window as unknown as Element, 'pointerup', x, 140);
     expect(s.get().project.artboards.find((a) => a.id === 'ab2')!.guides?.y).toEqual([140]);
     expect(first.guides?.y ?? []).toEqual([]);
@@ -348,5 +354,117 @@ describe('universal guides (the default)', () => {
     mouse(line, 'pointerdown', 300, 150);
     mouse(win, 'pointerup', 300, 5);
     expect(project().canvasGuides).toEqual({ x: [], y: [150] });
+  });
+});
+
+describe('rounding a guide while dragging (Ctrl: nearest 5, Ctrl+Shift: nearest 10)', () => {
+  const project = () => s.get().project;
+  //a pointer event with modifiers held, on the window like the drag listens
+  const at = (type: string, x: number, y: number, mods: { ctrlKey?: boolean; shiftKey?: boolean; altKey?: boolean; metaKey?: boolean } = {}) => {
+    act(() => void window.dispatchEvent(new MouseEvent(type, { clientX: x, clientY: y, ...mods })));
+    draw();
+  };
+  const label = () => host.querySelector('.guide-pos')?.textContent;
+  afterEach(() => setPrefs({ keymap: {} }));
+
+  it('an attached guide goes to the nearest 5 with Ctrl and the nearest 10 with Ctrl+Shift, and the label says so', () => {
+    const top = host.querySelector('.canvas-ruler.top')!;
+    mouse(top, 'pointerdown', 100, 5);
+    at('pointermove', 100, 143);
+    expect(label()).toBe('143 px · Home');
+    at('pointermove', 100, 143, { ctrlKey: true });
+    expect(label()).toContain('145 px');
+    expect(label()).toMatch(/nearest 5$/);
+    at('pointermove', 100, 143, { ctrlKey: true, shiftKey: true });
+    expect(label()).toContain('140 px');
+    expect(label()).toMatch(/nearest 10$/);
+    at('pointerup', 100, 143, { ctrlKey: true, shiftKey: true });
+    expect(guides().y).toEqual([140]);
+  });
+
+  it('Cmd does the same (Mod is Ctrl or Cmd), and with neither held the position is as dragged', () => {
+    const left = host.querySelector('.canvas-ruler.left')!;
+    mouse(left, 'pointerdown', 5, 100);
+    at('pointerup', 238, 100, { metaKey: true });
+    expect(guides().x).toEqual([240]);
+    mouse(left, 'pointerdown', 5, 100);
+    at('pointerup', 238, 100);
+    expect(guides().x).toEqual([240, 238]);
+  });
+
+  it('pressing Ctrl without moving the mouse rounds at once, and letting go puts it back', () => {
+    const top = host.querySelector('.canvas-ruler.top')!;
+    mouse(top, 'pointerdown', 100, 5);
+    at('pointermove', 100, 143);
+    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Control', ctrlKey: true })));
+    expect(label()).toContain('145 px');
+    act(() => void window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Control', ctrlKey: false })));
+    expect(label()).toBe('143 px · Home');
+    at('pointerup', 100, 143);
+  });
+
+  it('an existing guide rounds as it is moved, and what you drop is what the label showed', () => {
+    act(() => s.update((d) => void (d.artboards[0].guides = { x: [], y: [150] })));
+    draw();
+    mouse(host.querySelector('.guide-line.y')!, 'pointerdown', 300, 150);
+    at('pointermove', 300, 203, { ctrlKey: true });
+    expect(guides().y).toEqual([205]);
+    at('pointerup', 300, 203, { ctrlKey: true });
+    expect(guides().y).toEqual([205]);
+  });
+
+  it('a universal guide rounds on the open page, not on the canvas', () => {
+    setPrefs({ attachGuides: false });
+    //the open page starts 3 down the canvas, so canvas 146 is 143 on the page, 145 when rounded, canvas 148
+    act(() => s.update((d) => void (d.artboards[0].canvasY = 3)));
+    draw();
+    const top = host.querySelector('.canvas-ruler.top')!;
+    mouse(top, 'pointerdown', 100, 5);
+    at('pointermove', 100, 146, { ctrlKey: true });
+    expect(label()).toBe('145 px · Universal · nearest 5');
+    at('pointerup', 100, 146, { ctrlKey: true });
+    expect(project().canvasGuides).toEqual({ x: [], y: [148] });
+  });
+
+  it('both are rebindable: Shift for 5 and Ctrl for 10, swapped from the defaults', () => {
+    setPrefs({ keymap: { 'guide-round-5': ['Shift'], 'guide-round-10': ['Mod'] } });
+    draw();
+    const top = host.querySelector('.canvas-ruler.top')!;
+    mouse(top, 'pointerdown', 100, 5);
+    at('pointermove', 100, 143);
+    expect(label()).toBe('143 px · Home');
+    at('pointermove', 100, 143, { shiftKey: true });
+    expect(label()).toContain('145 px');
+    at('pointermove', 100, 143, { ctrlKey: true });
+    expect(label()).toContain('140 px');
+    at('pointerup', 100, 143, { ctrlKey: true });
+    expect(guides().y).toEqual([140]);
+  });
+
+  it('the other-kind hold is rebindable too, and Alt stops doing it', () => {
+    setPrefs({ keymap: { 'guide-other-kind': ['Shift'] } });
+    draw();
+    const top = host.querySelector('.canvas-ruler.top')!;
+    expect(top.getAttribute('title')).toMatch(/Attached to the page \(Shift: universal\)/);
+    mouse(top, 'pointerdown', 100, 5);
+    at('pointermove', 100, 143, { altKey: true });
+    expect(label()).toBe('143 px · Home');
+    at('pointermove', 100, 143, { shiftKey: true });
+    expect(label()).toBe('143 px · Universal');
+    at('pointerup', 100, 143, { shiftKey: true });
+    expect(project().canvasGuides).toEqual({ x: [], y: [143] });
+  });
+
+  it('the canvas is told a guide is being dragged, so Ctrl does not also change its hover pick, and told again when it is let go', () => {
+    expect(guideDragging()).toBe(false);
+    const top = host.querySelector('.canvas-ruler.top')!;
+    mouse(top, 'pointerdown', 100, 5);
+    expect(guideDragging()).toBe(true);
+    at('pointerup', 100, 143, { ctrlKey: true });
+    expect(guideDragging()).toBe(false);
+  });
+
+  it('the rulers say what the holds are', () => {
+    expect(host.querySelector('.canvas-ruler.top')!.getAttribute('title')).toMatch(/Hold Ctrl: nearest 5, Ctrl \+ Shift: nearest 10 while dragging/);
   });
 });

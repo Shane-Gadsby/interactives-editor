@@ -7,12 +7,17 @@ import {
   CONTEXT_ORDER,
   allConflicts,
   bindingsOf,
+  commandById,
   commandFor,
   conflictsFor,
   eventCombo,
   forceMac,
   formatCombo,
+  heldCombo,
+  holdActive,
+  holdSize,
   isCharacterKey,
+  isValidCombo,
   keyHint,
   keyHints,
   matches,
@@ -23,6 +28,7 @@ import {
   withKey,
   withoutBinding,
 } from '../src/lib/keymap';
+import { guideStep } from '../src/lib/guides';
 import { areaFor, contextsFor, setLastKeyArea } from '../src/lib/key-area';
 import { handleEditorKey, installEditorKeys } from '../src/lib/editor-keys';
 import { installTimelineKeys, keyNear, stepFrame } from '../src/lib/timeline-keys';
@@ -375,6 +381,79 @@ describe('every command that can run has something to run', () => {
     installTimelineKeys();
     //the graph, the pan hold, the inspector search, help and the palette have their own listeners
     const own = /^(graph-|hand-hold|inspector-search|palette|shortcuts|help-|save|paste|escape$)/;
-    for (const c of COMMANDS) if (!own.test(c.id) || c.id === 'escape') expect(runnerOf(c.id), c.id).toBeTypeOf('function');
+    //(a hold-while binding is modifiers kept down, read by whatever is dragging: it has no key press to run)
+    for (const c of COMMANDS) if (!c.hold && (!own.test(c.id) || c.id === 'escape')) expect(runnerOf(c.id), c.id).toBeTypeOf('function');
+  });
+});
+
+describe('hold-while bindings (modifiers kept down during a drag)', () => {
+  afterEach(() => setPrefs({ keymap: undefined, keymapPreset: 'default' }));
+  const down = (o: Partial<Record<'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey', boolean>>) => ({ ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...o });
+
+  it('a modifiers-only combo reads in the one order, and shows as Ctrl or the Mac symbols', () => {
+    expect(normalCombo('Shift+Ctrl')).toBe('Mod+Shift');
+    expect(normalCombo('Alt+Cmd+Shift')).toBe('Mod+Alt+Shift');
+    expect(normalCombo('Alt')).toBe('Alt');
+    expect(formatCombo('Mod+Shift', false)).toBe('Ctrl + Shift');
+    expect(formatCombo('Mod', false)).toBe('Ctrl');
+    expect(formatCombo('Mod+Shift', true)).toBe('⇧⌘');
+    expect(formatCombo('Alt', true)).toBe('⌥');
+    //a key combo is unchanged
+    expect(normalCombo('Shift+Mod+g')).toBe('Mod+Shift+G');
+  });
+
+  it('what is held, as a combo', () => {
+    expect(heldCombo(down({}))).toBe('');
+    expect(heldCombo(down({ ctrlKey: true }))).toBe('Mod');
+    expect(heldCombo(down({ metaKey: true, shiftKey: true }))).toBe('Mod+Shift');
+    expect(heldCombo(down({ altKey: true, ctrlKey: true, shiftKey: true }))).toBe('Mod+Alt+Shift');
+  });
+
+  it('the guide commands are holds, in the Guides group, and have no key press to run', () => {
+    for (const id of ['guide-round-5', 'guide-round-10', 'guide-other-kind']) {
+      const c = commandById(id)!;
+      expect(c.group).toBe('Guides');
+      expect(c.hold).toBeTruthy();
+      expect(runnerOf(id)).toBeUndefined();
+    }
+    expect(bindingsOf('guide-round-5')).toEqual(['Mod']);
+    expect(bindingsOf('guide-round-10')).toEqual(['Mod+Shift']);
+    expect(bindingsOf('guide-other-kind')).toEqual(['Alt']);
+  });
+
+  it('a binding is "at least these", and the one asking for more is the one that wins', () => {
+    expect(holdSize(down({ ctrlKey: true }), 'guide-round-5')).toBe(1);
+    expect(holdSize(down({ ctrlKey: true, shiftKey: true }), 'guide-round-5')).toBe(1);
+    expect(holdSize(down({ ctrlKey: true, shiftKey: true }), 'guide-round-10')).toBe(2);
+    expect(holdSize(down({ shiftKey: true }), 'guide-round-10')).toBe(0);
+    expect(holdActive(down({ altKey: true, ctrlKey: true }), 'guide-other-kind')).toBe(true);
+    expect(holdActive(down({}), 'guide-other-kind')).toBe(false);
+    expect(guideStep(down({}))).toBe(0);
+    expect(guideStep(down({ metaKey: true }))).toBe(5);
+    expect(guideStep(down({ ctrlKey: true, shiftKey: true }))).toBe(10);
+  });
+
+  it('can be rebound, and a hold never turns up as a key press', () => {
+    setPrefs({ keymap: { 'guide-round-5': ['Alt+Shift'] } });
+    expect(guideStep(down({ ctrlKey: true }))).toBe(0);
+    expect(guideStep(down({ altKey: true, shiftKey: true }))).toBe(5);
+    //a key event for Control alone is no combo, so it can't match a command
+    expect(commandFor({ key: 'Control', code: 'ControlLeft', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false }, ['canvas', 'everywhere'])).toBeNull();
+  });
+
+  it('the same modifiers on two holds are a clash, and holds never clash with key presses', () => {
+    expect(conflictsFor('guide-round-10', 'Mod').map((c) => c.id)).toEqual(['guide-round-5']);
+    expect(conflictsFor('guide-round-10', 'Alt').map((c) => c.id)).toEqual(['guide-other-kind']);
+    expect(conflictsFor('guide-round-10', 'Mod+Alt')).toEqual([]);
+  });
+
+  it('modifiers-only combos are valid for a hold and for nothing else', () => {
+    expect(isValidCombo('Mod+Shift', true)).toBe(true);
+    expect(isValidCombo('Alt', true)).toBe(true);
+    expect(isValidCombo('Mod+Mod', true)).toBe(false);
+    expect(isValidCombo('Mod+G', true)).toBe(false);
+    expect(isValidCombo('Mod+Shift')).toBe(false);
+    expect(isValidCombo('Shift')).toBe(false);
+    expect(isValidCombo('Mod+G')).toBe(true);
   });
 });

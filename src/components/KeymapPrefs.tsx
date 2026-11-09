@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { COMMANDS, GROUPS, allConflicts, bindingsOf, commandById, conflictsFor, eventCombo, formatCombo, isCharacterKey, normalCombo, withBinding, withoutBinding, type CommandDef, type Context } from '../lib/keymap';
+import { COMMANDS, GROUPS, allConflicts, bindingsOf, commandById, conflictsFor, eventCombo, formatCombo, heldCombo, isCharacterKey, normalCombo, withBinding, withoutBinding, type CommandDef, type Context } from '../lib/keymap';
 import { usePrefs } from '../lib/prefs';
 import { setKeymap } from '../lib/keymap-sets';
 import { ensureCommandKeys } from '../lib/command-keys';
@@ -42,6 +42,8 @@ export function KeymapList() {
   ensureCommandKeys();
 
   const recording = rec !== null || finding;
+  //The most modifiers held at once while a hold-while binding is being recorded: it is taken when they are all let go
+  const heldMost = useRef('');
   useEffect(() => {
     //Capture phase, ahead of everything: while a key is being recorded every press is the new key, and Escape only cancels that
     const onKey = (e: KeyboardEvent) => {
@@ -50,8 +52,15 @@ export function KeymapList() {
         e.stopPropagation();
         e.stopImmediatePropagation();
         if (e.key === 'Escape') {
+          heldMost.current = '';
           setRec(null);
           setFinding(false);
+          return;
+        }
+        //A hold-while binding (Round a guide...) is modifiers held down, not a key press: keep the most that were down together
+        if (rec && commandById(rec)?.hold) {
+          const now = heldCombo(e);
+          if (now.split('+').length > heldMost.current.split('+').filter(Boolean).length) heldMost.current = now;
           return;
         }
         const combo = eventCombo(e);
@@ -71,8 +80,22 @@ export function KeymapList() {
         setPending(null);
       }
     };
+    //Letting go of every modifier finishes a hold-while recording
+    const onUp = (e: KeyboardEvent) => {
+      if (!rec || !commandById(rec)?.hold) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (heldCombo(e) !== '') return;
+      const got = heldMost.current;
+      heldMost.current = '';
+      if (got) take(rec, got);
+    };
     window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
+    window.addEventListener('keyup', onUp, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('keyup', onUp, true);
+    };
   });
 
   const save = (id: string, keys: string[]) => setKeymap(withBinding(p.keymap, id, keys));
@@ -102,7 +125,7 @@ export function KeymapList() {
         if (byCombo) return bindingsOf(c.id).includes(byCombo);
         if (onlyKeyed && !bindingsOf(c.id).length) return false;
         if (!needle) return true;
-        const text = `${c.name} ${c.group} ${WHERE[c.context]} ${c.words ?? ''} ${bindingsOf(c.id).map((k) => formatCombo(k)).join(' ')}`.toLowerCase();
+        const text = `${c.name} ${c.group} ${c.hold ?? WHERE[c.context]} ${c.words ?? ''} ${bindingsOf(c.id).map((k) => formatCombo(k)).join(' ')}`.toLowerCase();
         return needle.split(/\s+/).every((w) => text.includes(w));
       }),
     // the keys are read from the person's preferences, so a change to them redoes the list
@@ -199,7 +222,7 @@ function KeyRow({ c, recording, onRecord, onChange, onReset }: { c: CommandDef; 
   return (
     <tr className={recording ? 'recording' : undefined}>
       <td className="keys-name">{c.name}</td>
-      <td className="keys-where">{WHERE[c.context]}</td>
+      <td className="keys-where">{c.hold ?? WHERE[c.context]}</td>
       <td className="keys-keys">
         {keys.map((k) => (
           <span key={k} className="keys-chip">
@@ -212,7 +235,7 @@ function KeyRow({ c, recording, onRecord, onChange, onReset }: { c: CommandDef; 
           </span>
         ))}
         {!keys.length && <span className="muted small">No key</span>}
-        {recording && <span className="keys-listen">Press the new keys (Esc cancels)</span>}
+        {recording && <span className="keys-listen">{c.hold ? 'Hold the keys you want, then let go (Esc cancels)' : 'Press the new keys (Esc cancels)'}</span>}
       </td>
       <td className="keys-act">
         {c.fixed ? (
@@ -221,7 +244,7 @@ function KeyRow({ c, recording, onRecord, onChange, onReset }: { c: CommandDef; 
           </span>
         ) : (
           <>
-            <button type="button" className={`btn small-btn${recording ? ' on' : ''}`} disabled={keys.length >= 4 && !recording} aria-label={`Add a key to ${c.name}`} title={keys.length >= 4 ? 'Four keys is the most; take one off first' : 'Press the keys you want to add'} onClick={onRecord}>
+            <button type="button" className={`btn small-btn${recording ? ' on' : ''}`} disabled={keys.length >= 4 && !recording} aria-label={`Add a key to ${c.name}`} title={keys.length >= 4 ? 'Four keys is the most; take one off first' : c.hold ? 'Hold the keys you want to add (Ctrl, Shift, Alt), then let go' : 'Press the keys you want to add'} onClick={onRecord}>
               {recording ? 'Listening…' : keys.length ? 'Add key' : 'Set key'}
             </button>
             {own && (

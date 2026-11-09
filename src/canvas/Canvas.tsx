@@ -57,7 +57,7 @@ import { artboardMenuItems, fitPageCommand, fitPageSelectionItems } from '../lib
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
-import { guidesAcross, guidesOf } from '../lib/guides';
+import { GUIDE_REACH, guideDragging, guidesAcross, guidesOf } from '../lib/guides';
 import { PAGE_DRAG, componentChoices, wouldLoop, getDraggedPage, insertComponent, openInsertComponentPicker } from '../lib/components';
 import { ALT_DRAG_HINT, ALT_DRAG_TIP, altHintDue, useAltHeld } from '../lib/alt-drag';
 import { artboardGridMenu, gridMenu } from '../components/grid-menu';
@@ -833,7 +833,7 @@ export function Canvas() {
     if (!d) {
       // Hover feedback. Hit-testing every layer is the costly part and pointers report far more often than the screen
       // draws, so it runs once per frame, for the latest position
-      if ((st.tool === 'select' || st.tool === 'bend') && !spaceDown.current) {
+      if ((st.tool === 'select' || st.tool === 'bend') && !spaceDown.current && !guideDragging()) {
         hoverAt.current = { x: e.clientX, y: e.clientY, deep: e.ctrlKey || e.metaKey };
         if (!hoverFrame.current) {
           hoverFrame.current = requestAnimationFrame(() => {
@@ -1676,28 +1676,22 @@ export function Canvas() {
       </g>,
     );
     // The attached guides of a page that is not the open one: the open page's are the Rulers' (they can be grabbed), these only show, so
-    // a guide doesn't vanish when another page takes the focus. A guide is one endless line across the canvas, so it runs through
-    // whatever pages it crosses, not just the one it belongs to. (Universal guides are all the Rulers'.)
-    // Every attached guide, on the open page or not, carries a small pin on the edge of its page where it meets it, which is what
-    // tells it from a universal one.
-    if (userPrefs.rulers && !s.previewPlaying) {
+    // a guide doesn't vanish when another page takes the focus. An attached guide is only drawn across its own page and a little past
+    // it (GUIDE_REACH), the same as the Rulers draw the open page's. (Universal guides are all the Rulers'.)
+    if (userPrefs.rulers && !s.previewPlaying && ab.id !== s.activeArtboardId) {
       for (const g of guidesOf(ab)) {
         const at = (g.axis === 'x' ? tl.x : tl.y) + g.at * zoom;
-        if (ab.id !== s.activeArtboardId) {
-          overlay.push(
-            <line
-              key={`gmark-${ab.id}-${g.axis}${g.index}`}
-              className="guide-mark"
-              x1={g.axis === 'x' ? at : -100000}
-              x2={g.axis === 'x' ? at : 100000}
-              y1={g.axis === 'x' ? -100000 : at}
-              y2={g.axis === 'x' ? 100000 : at}
-            />,
-          );
-        }
-        const px = g.axis === 'x' ? at : tl.x;
-        const py = g.axis === 'x' ? tl.y : at;
-        overlay.push(<rect key={`gpin-${ab.id}-${g.axis}${g.index}`} className="guide-pin" x={px - 3.5} y={py - 3.5} width={7} height={7} transform={`rotate(45 ${px} ${py})`} />);
+        const [a1, a2] = g.axis === 'x' ? [tl.y, tl.y + ab.height * zoom] : [tl.x, tl.x + ab.width * zoom];
+        overlay.push(
+          <line
+            key={`gmark-${ab.id}-${g.axis}${g.index}`}
+            className="guide-mark"
+            x1={g.axis === 'x' ? at : a1 - GUIDE_REACH}
+            x2={g.axis === 'x' ? at : a2 + GUIDE_REACH}
+            y1={g.axis === 'x' ? a1 - GUIDE_REACH : at}
+            y2={g.axis === 'x' ? a2 + GUIDE_REACH : at}
+          />,
+        );
       }
     }
     // a page being dragged in from the Layers list: this one is where it would be placed
