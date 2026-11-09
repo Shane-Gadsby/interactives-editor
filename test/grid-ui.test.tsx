@@ -29,10 +29,10 @@ const find = (items: MenuItem[], re: RegExp) => items.find((i) => re.test(labelO
 const sub = (m: MenuItem) => ('items' in m ? m.items : []);
 const click = (m: MenuItem) => ('onClick' in m ? m.onClick() : undefined);
 
-describe('Preferences, Canvas block', () => {
+describe('Preferences, Canvas page', () => {
   it('has Show grid and Snap to grid switches and the size presets, which change the preferences', () => {
-    act(() => root.render(<PrefsModal onClose={() => undefined} />));
-    const block = host.querySelector('[aria-label="Canvas"]')!;
+    act(() => root.render(<PrefsModal page="canvas" onClose={() => undefined} />));
+    const block = host.querySelector('[role="tabpanel"]')!;
     expect(block).toBeTruthy();
     const checks = [...block.querySelectorAll('label')].map((l) => l.textContent);
     expect(checks.join('|')).toMatch(/Show rulers.*Show grid.*Snap to grid/);

@@ -300,13 +300,18 @@ export const PRESETS: { id: Preset; label: string; tip: string; keys: Record<str
 const settings = () => prefs();
 export const singleKeysOn = (): boolean => settings().singleKeys !== false;
 
-/** The keys a command has now: the person's own when they set them, else the preset's, else the default. */
-export function bindingsOf(id: string): string[] {
-  const own = settings().keymap?.[id];
+/** The keys a command has in a set: its own overrides when it has them, else the base's, else the default. */
+export function bindingsIn(base: Preset | undefined, keys: Record<string, string[]> | undefined, id: string): string[] {
+  const own = keys?.[id];
   if (own) return own.map(normalCombo);
-  const preset = PRESETS.find((p) => p.id === settings().keymapPreset)?.keys[id];
+  const preset = PRESETS.find((p) => p.id === base)?.keys[id];
   if (preset) return preset.map(normalCombo);
   return (commandById(id)?.keys ?? []).map(normalCombo);
+}
+
+/** The keys a command has now: the person's own when they set them, else the preset's, else the default. */
+export function bindingsOf(id: string): string[] {
+  return bindingsIn(settings().keymapPreset, settings().keymap, id);
 }
 
 /** A tool or button's key for a tooltip: the first one set, as it reads on this machine, or '' when it has none. */
@@ -380,10 +385,10 @@ export function conflictsFor(id: string, combo: string): CommandDef[] {
   return COMMANDS.filter((c) => c.id !== id && overlap(c.context, me.context) && bindingsOf(c.id).includes(n));
 }
 
-/** Every pair of commands sharing a key in the same place, for the Preferences page's warning. */
-export function allConflicts(): { combo: string; commands: CommandDef[] }[] {
+/** Every pair of commands sharing a key in the same place, for the Preferences page's warning (or in a set that is not the one in use, to look before importing it). */
+export function allConflicts(keysOf: (id: string) => string[] = bindingsOf): { combo: string; commands: CommandDef[] }[] {
   const seen = new Map<string, CommandDef[]>();
-  for (const c of COMMANDS) for (const k of bindingsOf(c.id)) seen.set(k, [...(seen.get(k) ?? []), c]);
+  for (const c of COMMANDS) for (const k of keysOf(c.id)) seen.set(k, [...(seen.get(k) ?? []), c]);
   const out: { combo: string; commands: CommandDef[] }[] = [];
   for (const [combo, list] of seen) {
     const bad = list.filter((a) => list.some((b) => b !== a && overlap(a.context, b.context)));
@@ -407,4 +412,14 @@ export function withoutBinding(current: Record<string, string[]> | undefined, id
   const next = { ...(current ?? {}) };
   delete next[id];
   return next;
+}
+
+/** Whether a string is a combo the registry could have written: optional Mod, Alt, Shift, then one key (a character, or a name like Delete or F2). */
+export function isValidCombo(combo: string): boolean {
+  if (typeof combo !== 'string' || !combo || combo.length > 24) return false;
+  if (!/^[A-Za-z0-9+,./\\[\]';=`-]+$/.test(combo)) return false;
+  const parts = combo.split('+');
+  const key = parts.pop() ?? '';
+  if (!key || parts.some((m) => !['Mod', 'Alt', 'Shift', 'Ctrl', 'Cmd'].includes(m))) return false;
+  return key.length === 1 || /^[A-Z][A-Za-z0-9]*$/.test(key);
 }

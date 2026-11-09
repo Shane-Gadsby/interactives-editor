@@ -298,7 +298,7 @@ describe('the text layer font field', () => {
 
 describe('Preferences default font', () => {
   it('searches the Google fonts and saves the pick', () => {
-    act(() => root.render(<PrefsModal onClose={() => undefined} />));
+    act(() => root.render(<PrefsModal page="text" onClose={() => undefined} />));
     const c = [...host.querySelectorAll<HTMLInputElement>('[role=combobox]')].find((i) => i.getAttribute('aria-label') === 'Default font')!;
     expect(c.value).toBe('Open Sans');
     focus(c);
@@ -309,7 +309,7 @@ describe('Preferences default font', () => {
   });
   it('Escape closes the list first, the dialog second', () => {
     const onClose = vi.fn();
-    act(() => root.render(<PrefsModal onClose={onClose} />));
+    act(() => root.render(<PrefsModal page="text" onClose={onClose} />));
     const c = [...host.querySelectorAll<HTMLInputElement>('[role=combobox]')][0];
     focus(c);
     act(() => void c.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));

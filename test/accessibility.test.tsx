@@ -75,7 +75,7 @@ describe('screen reader preference', () => {
   it('is off by default and is its own preference next to Accessibility', async () => {
     localStorage.clear();
     expect(prefs().screenReader).toBe(false);
-    await mountModal(<PrefsModal onClose={() => undefined} />);
+    await mountModal(<PrefsModal page="accessibility" onClose={() => undefined} />);
     const boxes = [...host.querySelectorAll('label')].map((l) => l.textContent);
     const a = boxes.findIndex((t) => t?.includes('Accessibility features'));
     const sr = boxes.findIndex((t) => t?.includes('Screen reader strip'));

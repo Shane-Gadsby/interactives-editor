@@ -131,6 +131,28 @@ describe('preferences', () => {
     expect(kept.p0).toHaveLength(80);
   });
 
+  it('keeps saved keyboard sets (an id, a name, a base and keys), at most 16 and 10 KB each, and the one in use, and drops anything else', async () => {
+    const sets = { keymapSets: [{ id: 'ks-abc', name: 'Mine', base: 'illustration', keys: { 'tool.pen': ['Q'], undo: ['Mod+Z', 'Mod+U'] } }, { id: 'ks-two', name: 'Two', base: 'default', keys: {} }], keymapActive: 'ks-abc', keymap: { 'tool.pen': ['Q'] }, keymapPreset: 'illustration' };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: sets } })).json.prefs).toEqual(sets);
+    expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs).toEqual(sets);
+    const mixed = [
+      { id: 'a b', name: 'space in id', base: 'default', keys: {} },
+      { id: 'ok-1', name: '  Trimmed  ', base: 'default', keys: { 'bad id!': ['A'], five: ['A', 'B', 'C', 'D', 'E'], junk: ['<script>', 7] } },
+      { id: 'ok-1', name: 'same id twice', base: 'default', keys: {} },
+      { id: 'nobase', name: 'x', base: 'other', keys: {} },
+      { id: 'noname', name: '   ', base: 'default', keys: {} },
+      { id: 'longname', name: 'n'.repeat(61), base: 'default', keys: {} },
+      { id: 'array', name: 'keys as array', base: 'default', keys: ['A'] },
+      { id: 'big', name: 'Too big', base: 'default', keys: Object.fromEntries(Array.from({ length: 300 }, (_, i) => [`command.number-${i}`, ['Mod+Shift+Alt+K', 'Mod+Shift+Alt+L', 'Mod+Shift+Alt+M', 'Mod+Shift+Alt+N']])) },
+      'text',
+      null,
+    ];
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymapSets: mixed, keymapActive: 'not an id!' } } })).json.prefs).toEqual({ keymapSets: [{ id: 'ok-1', name: 'Trimmed', base: 'default', keys: { five: ['A', 'B', 'C', 'D'], junk: [] } }] });
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymapSets: 'x', keymapActive: 7 } } })).json.prefs).toEqual({});
+    const many = Array.from({ length: 30 }, (_, i) => ({ id: `s${i}`, name: `Set ${i}`, base: 'default', keys: {} }));
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { keymapSets: many } } })).json.prefs.keymapSets).toHaveLength(16);
+  });
+
   it('keeps each person\'s keyboard shortcuts as command ids to a few short key combos, and the one-key switch and preset', async () => {
     const keys = { keymap: { 'tool.pen': ['Shift+P'], undo: ['Mod+Z', 'Mod+U'], 'zoom-fit': ['Mod+0'] }, keymapPreset: 'illustration', singleKeys: false };
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: keys } })).json.prefs).toEqual(keys);
@@ -172,8 +194,8 @@ describe('preferences', () => {
     expect(guest).toEqual({ user: 'guest', prefs: { theme: 'auto' } });
   });
 
-  it('refuses a body over 128kb (room for saved workspaces) with the too-big message', async () => {
-    const r = await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { defaultFont: 'x'.repeat(140000) } } });
+  it('refuses a body over 512kb (room for saved workspaces and keyboard sets) with the too-big message', async () => {
+    const r = await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { defaultFont: 'x'.repeat(540000) } } });
     expect(r.status).toBe(413);
     expect(r.json.error).toBe('That is too big to save');
   });

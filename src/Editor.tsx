@@ -43,7 +43,7 @@ import { clearFlow, lastQuietHit, pushFlow, useFlowVersion } from './lib/run-flo
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ContextMenu } from './components/ContextMenu';
 import { DockDragLayer, DockFloats, DockZone, FloatingTools, ToolsHead, openHeaderHelp, useHeaderHelpTitle, toolsMenu, useDockSync, useZoneSizes } from './components/Dock';
-import { PrefsModal } from './components/PrefsModal';
+import { openPrefs, setEditorShown } from './lib/prefs-window';
 import { HistoryModal, InviteModal, ShareForReviewModal, ShareModal } from './components/ProjectModals';
 import { SaveTemplateModal } from './components/TemplateModals';
 import { CHECKLIST_FLAG, hasChecklist } from './lib/templates';
@@ -588,7 +588,8 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   const helpTitle = useHeaderHelpTitle();
   const s = useEditor((st) => ({ name: st.project.name, saveState: st.saveState, saveError: st.saveError, zoom: st.zoom, rev: st.project.updated, live: st.live, peers: st.peers }));
   const [menu, setMenu] = useState(false);
-  const [prefsOpen, setPrefsOpen] = useState(false);
+  //the Workspace page of Preferences is for here: panels to arrange
+  useEffect(() => (setEditorShown(true), () => setEditorShown(false)), []);
   const [historyOpen, setHistoryOpen] = useState(false);
   const st = store();
   const [shareOpen, setShareOpen] = useState(false);
@@ -662,7 +663,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
     else if (a === 'invite') setInviteOpen(true);
     else if (a === 'template') setTemplateOpen(true);
     else if (a === 'history') setHistoryOpen(true);
-    else if (a === 'prefs') setPrefsOpen(true);
+    else if (a === 'prefs') openPrefs();
     else if (a === 'motion') setMotionOpen(true);
     else if (a === 'reference') setReferenceOpen(true);
   };
@@ -726,10 +727,9 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
           +
         </button>
       </div>
-      <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)} />
+      <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => openPrefs()} />
       <IconButton icon={<Icons.search />} title={withKey('Find a command and do it: add a layer, go to a page, turn the grid on, share...', 'palette')} onClick={() => void openPalette(false)} />
       <IconButton icon={<Icons.help />} title={helpTitle} onClick={openHeaderHelp} />
-      {prefsOpen && <PrefsModal workspace onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
       {gate && <BeforeYouShareModal what={gate.what} onGo={gate.go} onClose={() => setGate(null)} />}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
