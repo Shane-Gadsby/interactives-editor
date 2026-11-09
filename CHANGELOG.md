@@ -2,6 +2,9 @@
 
 ## Unreleased: Symposium 3
 
+- **Text changes on the timeline**: Text, Button label, Visible, Disabled and more now have the key diamond, text keys are drawn as squares joined by a flat bar (they hold, then switch), and right-clicking a text key adds a **Swap text** dip that fades or blurs the words out and back in around the change (left out for people who ask for less motion). Text keys no longer get mixed like colours when the words look like a colour.
+- **Blends**: Blends sits above Joysticks in a page's Inspector, and a blend has a **Transition** time and easing: when the number jumps, the mix eases over that time instead of snapping.
+- **Change a value or counter over time**: a number can ease to its new value (**Over**, **Easing**, and whether the flow carries on straight away or when it arrives).
 - **Layers: Shift-click a range**: Shift-click selects every layer in between (Ctrl/Cmd-click toggles one, Ctrl+Shift adds a range, Shift+Up/Down extends).
 - **Alt-drag copies more**: Alt (Option on a Mac) -drag copies pages, page groups and Layers rows as well as layers. The pointer shows a copy cursor and the first few drags carry a hint.
 - **Components, from where you want them**: right-click **Insert component here…**, drag a page from Layers onto another page, **Place in…** on a page's menu, and a searchable picker. "Component" is now the word everywhere in the editor.
