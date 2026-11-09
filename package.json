@@ -9,7 +9,7 @@
     "predev": "npm run player:build",
     "dev": "vite",
     "prebuild": "npm run player:build",
-    "build": "tsc --noEmit && tsc -p tsconfig.mcp.json && vite build && vite build -c vite.mcp.config.ts && vite build -c vite.marking.config.ts && vite build -c vite.media.config.ts && node scripts/precompress.mjs",
+    "build": "tsc --noEmit && tsc -p tsconfig.mcp.json && vite build && vite build -c vite.mcp.config.ts && vite build -c vite.marking.config.ts && vite build -c vite.media.config.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.mcp.json",
