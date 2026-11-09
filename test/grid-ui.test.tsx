@@ -76,11 +76,11 @@ describe('the grid menus', () => {
     setCurrentStore(store);
     const ab = () => store.get().project.artboards[0];
     const menu = artboardGridMenu(ab());
-    expect(labelOf(menu)).toBe('Grid for this artboard');
+    expect(labelOf(menu)).toBe('Grid for this page');
     click(sub(menu).find((i) => labelOf(i).includes('12 px'))!);
     expect(ab().grid).toEqual({ size: 12, subdivisions: 4 });
     const again = artboardGridMenu(ab());
-    expect(labelOf(again)).toBe('Grid for this artboard (12 px (every 4))');
+    expect(labelOf(again)).toBe('Grid for this page (12 px (every 4))');
     click(sub(again).find((i) => labelOf(i).startsWith('✓') || labelOf(i).includes('12 px'))!);
     click(sub(again).find((i) => labelOf(i).includes('Every 8 cells'))!);
     expect(ab().grid).toEqual({ size: 12, subdivisions: 8 });

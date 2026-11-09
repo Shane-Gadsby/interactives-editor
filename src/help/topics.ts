@@ -1514,7 +1514,7 @@ The nearest target inside the snap distance wins. A line in the target's colour 
 **Grid size** is the width of one cell in pixels: pick 1, 2, 4, 5, 8, 10, 12, 16, 20, 24, 32, 48, 50 or 64, or choose **Custom…** for anything from 1 to 512. **Stronger line every** draws every Nth line heavier (4 by default; 1 draws them all alike). They are yours, kept with your account, and the size shows in the chip while snapping is on.
 
 ## A grid for one artboard
-A 1920 wide slide and a 375 wide phone page want different grids. Right-click an artboard (its empty area) and open **Grid for this artboard** to give it its own size and stronger line, or **My default** to go back to yours. It is saved in the project, so people editing with you see it, and it is never exported.
+A 1920 wide slide and a 375 wide phone page want different grids. Right-click a page (its empty area) and open **Grid for this page** to give it its own size and stronger line, or **My default** to go back to yours. It is saved in the project, so people editing with you see it, and it is never exported.
 
 ## What snaps
 Moving layers, resizing them, drawing new shapes (and artboards), moving artboards, placing pen points, dragging a path's points, and the arrow keys. A moved or resized layer's edges (a rotated layer's outer bounds) land on a grid line. The other targets work with it: if another layer's edge or centre or a ruler guide is as close as the grid line, or closer, that wins and shows its line. Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) while dragging to skip all snapping.

@@ -75,7 +75,7 @@ export function artboardGridMenu(ab: Artboard): MenuItem {
     });
   };
   return {
-    label: own ? `Grid for this artboard (${gridLabel(own)})` : 'Grid for this artboard',
+    label: own ? `Grid for this page (${gridLabel(own)})` : 'Grid for this page',
     items: [
       { label: tick(!own, `My default (${gridLabel(gridFor(null, prefs()))})`), onClick: () => store().update((d) => void delete d.artboards.find((x) => x.id === ab.id)!.grid) },
       { separator: true },
