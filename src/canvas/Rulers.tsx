@@ -16,7 +16,7 @@ function stepFor(zoom: number): number {
 /**
  * Rulers along the top and left of the canvas, measured from the active artboard's top-left.
  * Drag out of a ruler to make a guide; drag a guide to move it, or back onto the ruler to remove it. A guide is either for
- * every page (a project guide, dashed) or for this page only (solid): the corner button and a guide's right-click menu
+ * every page (a project guide, purple) or for this page only (pink), both dashed: the corner button and a guide's right-click menu
  * choose, and Alt while dragging out a new one gives the other kind. The guides of the other pages are drawn by the canvas.
  */
 export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard | undefined; zoom: number; panX: number; panY: number; width: number; height: number }) {
@@ -163,7 +163,7 @@ const step = stepFor(zoom);
         </div>
       )}
       {drag && !drag.out && (
-        <div className="guide-pos" style={drag.axis === 'x' ? { left: pox + drag.at * zoom + 6, top: SIZE + 4 } : { top: poy + drag.at * zoom + 6, left: SIZE + 4 }}>
+        <div className={`guide-pos ${drag.scope}`} style={drag.axis === 'x' ? { left: pox + drag.at * zoom + 6, top: SIZE + 4 } : { top: poy + drag.at * zoom + 6, left: SIZE + 4 }}>
           {drag.at}
         </div>
       )}

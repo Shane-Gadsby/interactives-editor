@@ -186,8 +186,8 @@ export function guidesMenuItems(abId: string): MenuItem[] {
   const now = getGuideScope();
   return [
     { heading: 'New guides go on' },
-    { label: tick(now === 'project', 'Every page'), title: 'A guide you drag out of a ruler shows on every page it fits (project guides, dashed)', onClick: () => setGuideScope('project') },
-    { label: tick(now === 'page', 'This page only'), title: 'A guide you drag out of a ruler stays on the page it was made on (page guides, solid). Hold Alt while you drag to get the other kind for that one guide', onClick: () => setGuideScope('page') },
+    { label: tick(now === 'project', 'Every page'), title: 'A guide you drag out of a ruler shows on every page it fits (project guides, purple)', onClick: () => setGuideScope('project') },
+    { label: tick(now === 'page', 'This page only'), title: 'A guide you drag out of a ruler stays on the page it was made on (page guides, pink). Hold Alt while you drag to get the other kind for that one guide', onClick: () => setGuideScope('page') },
     { separator: true },
     { label: 'Show this page’s guides on every page', title: 'Turn the guides that belong only to this page into project guides', disabled: !mine || !!p.guidesLocked, onClick: () => shareGuidesCommand(abId) },
     { label: p.guidesLocked ? 'Unlock guides' : 'Lock guides', title: p.guidesLocked ? 'Let guides be moved, removed and added again' : 'Stop guides being moved, removed or added by accident (they still snap)', onClick: () => setGuidesLocked(!p.guidesLocked) },

@@ -104,7 +104,7 @@ describe('project guides (for every page)', () => {
     expect(project().guides).toBeUndefined();
   });
 
-  it('draws project and page guides on the open page, dashed for the project ones', () => {
+  it('draws project and page guides on the open page, each marked with its kind', () => {
     act(() => s.update((d) => void ((d.guides = { x: [220], y: [] }), (d.artboards[0].guides = { x: [], y: [150] }))));
     draw();
     expect(host.querySelector('.guide-line.x.project')).toBeTruthy();

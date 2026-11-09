@@ -3,6 +3,9 @@
    (the old blue is gone: --accent and --accent-2 no longer exist, test/no-old-blue.test.ts keeps them that way). Each falls back to the same colour written out, for a
    server without the palette. Dark mixes the palette's darkest greys, since it has no dark panel colours of its own */
 :root {
+  /* ruler guides: one page, every page */
+  --guide-page: #ff4fa3;
+  --guide-project: #a855f7;
   --u-gold: var(--ilar-swatch-yellow, #ffb448);
   --u-gold-dark: var(--ilar-swatch-yellow-dark, #fb9400);
   --u-gold-darker: var(--ilar-swatch-yellow-darker, #b36b03);
@@ -2356,13 +2359,14 @@ body.col-resizing * {
 }
 /* the guides of a page that is not the open one (Canvas): dimmer, and they can't be grabbed until that page is open */
 .guide-mark {
-  stroke: #ff4fa3;
+  stroke: var(--guide-page);
   stroke-width: 1;
+  stroke-dasharray: 6 4;
   opacity: 0.55;
   pointer-events: none;
 }
 .guide-mark.project {
-  stroke-dasharray: 6 4;
+  stroke: var(--guide-project);
 }
 /* the page a page dragged from the Layers list would be placed in (Canvas dropHost) */
 .drop-host {
@@ -6151,8 +6155,8 @@ kbd {
   content: '';
   position: absolute;
   inset: 5px;
-  border-left: 1px dashed #ff4fa3;
-  border-top: 1px solid #ff4fa3;
+  border-left: 1px dashed var(--guide-project);
+  border-top: 1px dashed var(--guide-page);
 }
 .ruler-corner:hover,
 .ruler-corner:focus-visible {
@@ -6163,10 +6167,15 @@ kbd {
   pointer-events: auto;
   z-index: 1;
 }
+.guide-line {
+  --guide: var(--guide-page);
+}
+.guide-line.project {
+  --guide: var(--guide-project);
+}
 .guide-line::after {
   content: '';
   position: absolute;
-  background: #ff4fa3;
 }
 .guide-line.x {
   top: 0;
@@ -6174,11 +6183,13 @@ kbd {
   width: 7px;
   cursor: col-resize;
 }
+/* every guide is dashed: pink for one page, purple for every page (--guide, above) */
 .guide-line.x::after {
   left: 3px;
   top: 0;
   bottom: 0;
   width: 1px;
+  background: repeating-linear-gradient(to bottom, var(--guide) 0 6px, transparent 6px 10px);
 }
 .guide-line.y {
   left: 0;
@@ -6191,14 +6202,9 @@ kbd {
   left: 0;
   right: 0;
   height: 1px;
+  background: repeating-linear-gradient(to right, var(--guide) 0 6px, transparent 6px 10px);
 }
-/* a guide for every page is dashed, one for a single page is solid; locked ones can't be grabbed */
-.guide-line.project::after {
-  background: repeating-linear-gradient(to bottom, #ff4fa3 0 6px, transparent 6px 10px);
-}
-.guide-line.project.y::after {
-  background: repeating-linear-gradient(to right, #ff4fa3 0 6px, transparent 6px 10px);
-}
+/* locked guides can't be grabbed */
 .guide-line.locked {
   cursor: not-allowed;
 }
@@ -6206,11 +6212,14 @@ kbd {
   pointer-events: none;
   opacity: 0.7;
 }
+.guide-pos.project {
+  background: var(--guide-project);
+}
 .guide-pos {
   position: absolute;
   padding: 1px 4px;
   border-radius: 3px;
-  background: #ff4fa3;
+  background: var(--guide-page);
   color: #fff;
   font: 10px ui-monospace, monospace;
   z-index: 4;

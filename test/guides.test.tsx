@@ -172,3 +172,19 @@ describe('the guide right-click menu takes clicks', () => {
     expect(rule('.ctx-menu')).toMatch(/pointer-events:\s*auto/);
   });
 });
+
+describe('how the two kinds of guide look', () => {
+  it('both are dashed, page guides pink and every-page guides purple', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const css = readFileSync(join(__dirname, '../src/styles.css'), 'utf8');
+    const rule = (sel: string) => new RegExp(`(^|\\n)${sel.replace(/\./g, '\\.')} \\{([^}]*)\\}`).exec(css)?.[2] ?? '';
+    expect(css).toMatch(/--guide-page:\s*#ff4fa3/);
+    expect(css).toMatch(/--guide-project:\s*#a855f7/);
+    expect(rule('.guide-line.x::after')).toMatch(/repeating-linear-gradient\(to bottom, var\(--guide\) 0 6px, transparent/);
+    expect(rule('.guide-line.y::after')).toMatch(/repeating-linear-gradient\(to right, var\(--guide\) 0 6px, transparent/);
+    expect(rule('.guide-line.project')).toMatch(/--guide:\s*var\(--guide-project\)/);
+    expect(rule('.guide-mark')).toMatch(/stroke-dasharray/);
+    expect(rule('.guide-mark.project')).toMatch(/stroke:\s*var\(--guide-project\)/);
+  });
+});
