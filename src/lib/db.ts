@@ -9,6 +9,7 @@
 import type { LibraryContent, LibraryInfo } from './libraries';
 import type { TemplateInfo } from './templates';
 import { reportError, routePattern, track } from './analytics';
+import { fetchOrEarly } from './early-fetch';
 import { normalizeProject, readPackage, uid, writePackage, type Asset, type Project } from 'interactives-player';
 
 export interface ProjectMeta {
@@ -82,7 +83,8 @@ async function call<T>(path: string, init: RequestInit = {}, as?: 'blob'): Promi
   const method = (init.method ?? 'GET').toUpperCase();
   const route = routePattern(path).slice(0, 46);
   try {
-    res = await fetch(API + path, { credentials: 'same-origin', ...init });
+    //the first read of the open project was started by index.html before the bundle arrived (lib/early-fetch.ts)
+    res = await (method === 'GET' && !init.body ? fetchOrEarly(API + path, { credentials: 'same-origin', ...init }) : fetch(API + path, { credentials: 'same-origin', ...init }));
   } catch (err) {
     reportError({ kind: 'api', error: err, where: route, detail: { method, status: 0 } });
     throw new ApiError('Could not reach the Interactives server', 0);

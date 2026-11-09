@@ -1,5 +1,5 @@
 import { FUNCTION_HINTS, PLAYER_SCOPE_HINTS, SAFE_GLOBAL_NAMES, checkExpression, evaluate, exprNames, hasTemplate, template } from 'interactives-player';
-import { editDistance, typoBudget } from '../help/search';
+import { editDistance, typoBudget } from '../help/match';
 import { preview } from './suggest';
 
 /**

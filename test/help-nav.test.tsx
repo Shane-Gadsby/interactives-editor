@@ -1,9 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, beforeAll } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { closeHelp, helpBack, helpForward, helpHistory, helpHome, HelpHost, openHelp } from '../src/help/Help';
 import { HelpHistory } from '../src/help/history';
 import { setPreviewOpen } from '../src/lib/overlays';
+import { warmHelp } from './lazy-chunks';
+
+//the editor loads these in chunks of their own; the test starts with them in
+beforeAll(() => warmHelp());
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 

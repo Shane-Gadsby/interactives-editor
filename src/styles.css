@@ -2986,6 +2986,16 @@ button.twisty:hover {
   overflow: hidden;
   height: 100%;
 }
+/* what stands in for a code box for the moment CodeMirror's chunk comes in */
+.code-editor-loading pre {
+  margin: 0;
+  padding: 4px 8px;
+  height: 100%;
+  overflow: auto;
+  font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+  background: var(--panel);
+}
 
 /* ---------------------------------------------------------------- timeline */
 .panel-empty {

@@ -1,5 +1,5 @@
 //The Form view of a JSON data file in the Data tab: labelled fields, cards for lists, edits writing the right JSON, the outline, Tree for structure.
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, beforeAll } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { EditorView } from 'codemirror';
@@ -44,6 +44,10 @@ vi.mock('../src/lib/db', async (orig) => ({
 import { DataPanel } from '../src/panels/DataPanel';
 import { dataCache } from '../src/lib/data';
 import { assetUrls } from '../src/lib/assets';
+import { warmCode } from './lazy-chunks';
+
+//the editor loads these in chunks of their own; the test starts with them in
+beforeAll(() => warmCode());
 
 //CodeMirror measures text with ranges, which jsdom doesn't lay out
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { DEFAULT_GRID } from './grid';
 import { installSessionHeader, sessionUser } from './session';
+import { fetchOrEarly } from './early-fetch';
 
 /**
  * Per-person editor preferences. The server keeps them per user (GET/PUT api/prefs), so they follow you between
@@ -196,7 +197,8 @@ export async function loadUserPrefs(): Promise<void> {
     // and the session the server answers for "guest", and that copy replaced the person's own on every load
     installSessionHeader();
     await sessionUser();
-    const res = await fetch(API, { credentials: 'same-origin' });
+    //index.html started this request before the bundle arrived (lib/early-fetch.ts)
+    const res = await fetchOrEarly(API, { credentials: 'same-origin' });
     if (!res.ok) {
       early = null;
       loaded(false);

@@ -1,15 +1,21 @@
 import type { Project } from 'interactives-player';
-import { COLOURWAYS, brandedStarterByKey, projectFromBrandedStarter, type BrandedStarter, type Colourway } from './branded';
+import { projectFromBrandedStarter } from './branded/project';
+import { COLOURWAYS, type Colourway } from './branded/looks';
+import type { BrandedStarter } from './branded/kit';
+import { brandedStarters } from './branded-lazy';
 import { standaloneHtml } from './export';
 import { projectFromStarter, starterByKey, type Starter } from './template-starters';
 
 /** A built-in starter, as the picker holds it: one of the plain ones, or a branded one in a colourway. */
 export type StarterPick = { kind: 'builtin'; s: Starter } | { kind: 'branded'; s: BrandedStarter; way: Colourway };
 
-/** The pick for a starter's key (keys with a slash are branded: `assessment/multi-page-quiz`), in a colourway when it is branded. Null for a key that is not a starter. */
+/**
+ * The pick for a starter's key (keys with a slash are branded: `assessment/multi-page-quiz`), in a colourway when it is branded.
+ * Null for a key that is not a starter, and for a branded one until the starters have come in (`brandedStarters.use()` redraws then).
+ */
 export function pickForKey(key: string, way: Colourway = COLOURWAYS[0]): StarterPick | null {
   if (key.includes('/')) {
-    const s = brandedStarterByKey(key);
+    const s = brandedStarters.get()?.brandedStarterByKey(key);
     return s ? { kind: 'branded', s, way } : null;
   }
   const s = starterByKey(key);

@@ -1,5 +1,5 @@
 import { setPrefs, usePrefs } from '../lib/prefs';
-import { CODE_THEMES } from '../lib/code-theme';
+import { CODE_THEMES } from '../lib/code-theme-prefs';
 
 /** Code editor colours, as a small switch for the headers of the code boxes. The same preference as Preferences, so it reaches every code editor at once. */
 export function CodeThemeSwitch() {

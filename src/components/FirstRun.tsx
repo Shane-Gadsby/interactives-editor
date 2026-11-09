@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { track } from '../lib/analytics';
-import { COLOURWAYS } from '../lib/branded';
+import { COLOURWAYS } from '../lib/branded/looks';
+import { brandedStarters } from '../lib/branded-lazy';
 import { leaveWelcome, markWelcomed } from '../lib/onboarding';
 import { FIRST_RUN, goalInfo, type Goal } from '../lib/starter-goals';
 import { pickForKey, type StarterPick } from '../lib/starter-pick';
@@ -19,6 +20,8 @@ const Picture = ({ pick }: { pick: StarterPick }) => (pick.kind === 'branded' ? 
  * (Start from nothing, I'll look around, or making something) means the ordinary empty page from then on.
  */
 export function FirstRun({ folder, onBlank, onMade, onBrowse }: { folder: string | null; onBlank: () => Promise<void>; onMade: (id: string) => void; onBrowse: () => void }) {
+  //the branded starters are a chunk of their own: asked for now, so they are in by the time a goal is picked
+  const startersIn = brandedStarters.use();
   const [goal, setGoal] = useState<Goal | null>(null);
   // the suggestion on show: the goal's first starter, or one of its other two
   const [at, setAt] = useState(0);
@@ -30,7 +33,7 @@ export function FirstRun({ folder, onBlank, onMade, onBrowse }: { folder: string
   // a new stage starts at its heading, for a screen reader and for the keyboard
   useEffect(() => heading.current?.focus(), [goal]);
 
-  const picks = goal ? FIRST_RUN[goal].map((k) => pickForKey(k, COLOURWAYS[0])).filter((p): p is StarterPick => !!p) : [];
+  const picks = goal && startersIn ? FIRST_RUN[goal].map((k) => pickForKey(k, COLOURWAYS[0])).filter((p): p is StarterPick => !!p) : [];
   const pick = picks[at] ?? null;
 
   const guard = async (fn: () => Promise<void>) => {

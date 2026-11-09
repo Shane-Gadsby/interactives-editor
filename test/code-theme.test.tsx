@@ -1,5 +1,5 @@
 //Code editor colours: Follow the editor / Light / Dark, for every CodeMirror editor, switched live without a rebuild.
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, beforeAll } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { EditorView } from 'codemirror';
@@ -8,6 +8,10 @@ import { DataRawEditor } from '../src/panels/DataRawEditor';
 import { CodeThemeSwitch } from '../src/components/CodeThemeSwitch';
 import { codeIsDark, editorIsDark, LIGHT } from '../src/lib/code-theme';
 import { prefs, prefsUser, setPrefs } from '../src/lib/prefs';
+import { warmCode } from './lazy-chunks';
+
+//the editor loads these in chunks of their own; the test starts with them in
+beforeAll(() => warmCode());
 
 //CodeMirror measures text with ranges, which jsdom doesn't lay out
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;

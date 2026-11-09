@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { BRANDED_STARTERS, COLOURWAYS, SETS, SET_NAMES, type BrandedStarter, type Colourway } from '../lib/branded';
+import { COLOURWAYS, type Colourway } from '../lib/branded/looks';
+import { SET_NAMES, type BrandedStarter } from '../lib/branded/kit';
+import { SETS } from '../lib/branded/project';
 import { plainTags } from '../lib/starter-goals';
 import { ColourwaySwatches } from './ColourwaySwatches';
 
@@ -53,7 +55,7 @@ export function BrandedPicture({ starter, way }: { starter: BrandedStarter; way:
  * The branded starter packs on the Templates page: a colourway picker (kept in this browser), then the starters by set with a
  * picture of the first page in that colourway. Nothing at all while no starter is registered; sets with none are left out.
  */
-export function BrandedPacks({ starters = BRANDED_STARTERS, onPick, onPlay }: { starters?: BrandedStarter[]; onPick: (s: BrandedStarter, way: Colourway) => void; onPlay?: (s: BrandedStarter, way: Colourway) => void }) {
+export function BrandedPacks({ starters, onPick, onPlay }: { starters: BrandedStarter[]; onPick: (s: BrandedStarter, way: Colourway) => void; onPlay?: (s: BrandedStarter, way: Colourway) => void }) {
   const [wayId, setWayId] = useState(remembered);
   const way = COLOURWAYS.find((c) => c.id === wayId) ?? COLOURWAYS[0];
   if (!starters.length) return null;
