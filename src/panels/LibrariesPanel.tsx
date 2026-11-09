@@ -1,3 +1,4 @@
+import { SectionOrderScope } from '../lib/section-order';
 import { useCallback, useEffect, useState } from 'react';
 import { type ColorStyle, type Project, type SceneNode, type TextStyleDef } from 'interactives-player';
 import { store, useEditor } from '../store/store';
@@ -66,65 +67,67 @@ export function LibrariesPanel() {
   const available = (libs ?? []).filter((l) => !usedIds.has(l.id) && l.id !== project.id);
 
   return (
-    <div className="libraries-panel">
-      <div className="lib-head">
-        <span className="muted">Share components, styles and assets between projects.</span>
-        <button className="btn small-btn" onClick={() => void refresh()} title="Look for libraries and new versions again">
-          Refresh
-        </button>
-      </div>
-      {error && <p className="hint lib-error">{error}</p>}
-      {busy && <p className="hint">{busy}…</p>}
+    <SectionOrderScope.Provider value="libraries">
+      <div className="libraries-panel">
+        <div className="lib-head">
+          <span className="muted">Share components, styles and assets between projects.</span>
+          <button className="btn small-btn" onClick={() => void refresh()} title="Look for libraries and new versions again">
+            Refresh
+          </button>
+        </div>
+        {error && <p className="hint lib-error">{error}</p>}
+        {busy && <p className="hint">{busy}…</p>}
 
-      <PublishSection project={project} onChanged={() => void refresh()} />
+        <PublishSection project={project} onChanged={() => void refresh()} />
 
-      <Section id="libraries-used" help="libraries" title={`Libraries in this project${used.length ? ` (${used.length})` : ''}`}>
-        {!used.length && <p className="hint">None yet. Add one from the list below, then drag its components onto the canvas.</p>}
-        {used.map(({ id, info, use }) => (
-          <UsedLibrary key={id} id={id} name={info?.name ?? use?.name ?? 'Library'} info={info} project={project} activeArtboardId={s.activeArtboardId} run={run} onChanged={() => void refresh()} />
-        ))}
-      </Section>
+        <Section id="libraries-used" help="libraries" title={`Libraries in this project${used.length ? ` (${used.length})` : ''}`}>
+          {!used.length && <p className="hint">None yet. Add one from the list below, then drag its components onto the canvas.</p>}
+          {used.map(({ id, info, use }) => (
+            <UsedLibrary key={id} id={id} name={info?.name ?? use?.name ?? 'Library'} info={info} project={project} activeArtboardId={s.activeArtboardId} run={run} onChanged={() => void refresh()} />
+          ))}
+        </Section>
 
-      <Section id="libraries-available" help="libraries" title={`Available libraries${available.length ? ` (${available.length})` : ''}`}>
-        {libs && !available.length && <p className="hint">{libs.length ? 'You are using every library you can see.' : 'No libraries yet. Mark a project as a library and publish it, and it shows up here for you and anyone you share it with.'}</p>}
-        {available.map((l) => (
-          <div key={l.id} className="lib-row">
-            <div className="lib-row-text">
-              <strong>
-                {l.name} {l.brand && <span className="badge" title="A brand kit: what you take from it is locked, apart from the text it marks as yours to change">Brand kit</span>}
-              </strong>
-              <span className="muted">
-                v{l.version} · {l.components.length} component{l.components.length === 1 ? '' : 's'}
-                {l.owner?.name || l.owner?.username ? ` · ${l.owner.name || l.owner.username}` : ''}
-              </span>
-            </div>
-            {l.brand && (
-              <button
-                className="btn small-btn"
-                disabled={!!busy}
-                title="Add the kit and place its header, footer and logo (whatever the kit marks for new projects) in the artboard you have open"
-                onClick={() =>
-                  void run('Adding the brand kit', async () => {
-                    const open = project.artboards.find((a) => a.id === s.activeArtboardId);
-                    const n = await startWithKit(l, open && !open.library ? open.id : undefined);
-                    store().toast(n ? `Added the brand kit and placed ${n} item${n === 1 ? '' : 's'}` : 'Added the brand kit. It has nothing marked for new projects, so drag its components in');
-                  })
-                }
-              >
-                Add with starter items
+        <Section id="libraries-available" help="libraries" title={`Available libraries${available.length ? ` (${available.length})` : ''}`}>
+          {libs && !available.length && <p className="hint">{libs.length ? 'You are using every library you can see.' : 'No libraries yet. Mark a project as a library and publish it, and it shows up here for you and anyone you share it with.'}</p>}
+          {available.map((l) => (
+            <div key={l.id} className="lib-row">
+              <div className="lib-row-text">
+                <strong>
+                  {l.name} {l.brand && <span className="badge" title="A brand kit: what you take from it is locked, apart from the text it marks as yours to change">Brand kit</span>}
+                </strong>
+                <span className="muted">
+                  v{l.version} · {l.components.length} component{l.components.length === 1 ? '' : 's'}
+                  {l.owner?.name || l.owner?.username ? ` · ${l.owner.name || l.owner.username}` : ''}
+                </span>
+              </div>
+              {l.brand && (
+                <button
+                  className="btn small-btn"
+                  disabled={!!busy}
+                  title="Add the kit and place its header, footer and logo (whatever the kit marks for new projects) in the artboard you have open"
+                  onClick={() =>
+                    void run('Adding the brand kit', async () => {
+                      const open = project.artboards.find((a) => a.id === s.activeArtboardId);
+                      const n = await startWithKit(l, open && !open.library ? open.id : undefined);
+                      store().toast(n ? `Added the brand kit and placed ${n} item${n === 1 ? '' : 's'}` : 'Added the brand kit. It has nothing marked for new projects, so drag its components in');
+                    })
+                  }
+                >
+                  Add with starter items
+                </button>
+              )}
+              <button className="btn small-btn" disabled={!!busy} onClick={() => void run('Adding the library', () => addLibraryToProject(l))}>
+                Add
               </button>
-            )}
-            <button className="btn small-btn" disabled={!!busy} onClick={() => void run('Adding the library', () => addLibraryToProject(l))}>
-              Add
-            </button>
-          </div>
-        ))}
-      </Section>
+            </div>
+          ))}
+        </Section>
 
-      <BrandCheck project={project} />
+        <BrandCheck project={project} />
 
-      <StylesSection project={project} />
-    </div>
+        <StylesSection project={project} />
+      </div>
+    </SectionOrderScope.Provider>
   );
 }
 

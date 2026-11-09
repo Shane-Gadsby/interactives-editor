@@ -796,7 +796,7 @@ export function ToolsHead() {
 }
 
 /** The tool rail's right-click menu: which side it sits on, along the bottom, or floating. */
-export function toolsMenu(): MenuItem[] {
+export function toolsMenu(order: MenuItem[] = []): MenuItem[] {
   const place = getDock().tools.place;
   const to = (p: ToolsPlace) => () => setDock((l) => placeTools(l, p, p === 'float' ? { x: 90, y: 110 } : undefined));
   return [
@@ -807,6 +807,8 @@ export function toolsMenu(): MenuItem[] {
     { label: 'Dock at the top', disabled: place === 'top', onClick: to('top') },
     { label: 'Floating', disabled: place === 'float', onClick: to('float') },
     { separator: true },
+    ...order,
+    ...(order.length ? [{ separator: true as const }] : []),
     { label: 'Help for the tools', title: 'The tool bar and what each tool does', onClick: () => openHelp('interface', 'tool-bar-left-edge-unless-you-move-it') },
     { label: 'Reset panel layout', onClick: () => (resetDock(), store().set({ bottomTab: 'timeline' })) },
   ];

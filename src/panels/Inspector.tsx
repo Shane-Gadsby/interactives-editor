@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import { matches } from '../lib/keymap';
 import { PropRow, PropSearchProvider, PropSearchStore } from '../lib/prop-search';
 import { PropSearchBox } from './PropSearchBox';
+import { SectionOrderScope } from '../lib/section-order';
 import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
 import {
   LIGHT_LOOK,
@@ -155,6 +156,8 @@ export function Inspector() {
   if (!ab) return <aside className="inspector" />;
   const nodes = s.selection.map((id) => locate(ab, id)?.node).filter(Boolean) as SceneNode[];
   const pickedAbs = pickedArtboardIds(s);
+  // each kind of panel keeps its own section order: a layer's by its type (a rectangle, some text, ...), the page's, several pages'
+  const orderScope = nodes.length ? (nodes.every((x) => x.type === nodes[0].type) ? `layer:${nodes[0].type}` : 'layers') : pickedAbs.length > 1 ? 'pages' : 'page';
   // "/" or Ctrl+F anywhere in the panel (outside a field you're typing in) goes to the search; Esc clears it
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     const t = e.target as HTMLElement;
@@ -174,10 +177,12 @@ export function Inspector() {
       <PropSearchProvider value={store}>
         <PropSearchBox store={store} query={query} setQuery={setQuery} inputRef={box} />
         {s.recording && s.timelineShown && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
-        {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : (
-          // several artboards selected: what applies to all of them, instead of the active one's own settings
-          pickedAbs.length > 1 ? <ArtboardsSelection ids={pickedAbs} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />
-        )}
+        <SectionOrderScope.Provider value={orderScope}>
+          {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : (
+            // several artboards selected: what applies to all of them, instead of the active one's own settings
+            pickedAbs.length > 1 ? <ArtboardsSelection ids={pickedAbs} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />
+          )}
+        </SectionOrderScope.Provider>
       </PropSearchProvider>
     </aside>
   );
