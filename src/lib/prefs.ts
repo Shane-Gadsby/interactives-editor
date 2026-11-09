@@ -84,14 +84,28 @@ export interface Prefs {
   keymap?: Record<string, string[]>;
   /** The set of keys the defaults start from (lib/keymap.ts PRESETS). */
   keymapPreset?: 'default' | 'illustration';
+  /** Keyboard shortcut sets saved under a name (lib/keymap-sets.ts). Each is a base plus its own overrides, so a new default key still reaches everyone. */
+  keymapSets?: KeymapSet[];
+  /** The saved set `keymap` and `keymapPreset` belong to. Edits to the keys write through to it. Absent: a built-in set, with or without changes on top. */
+  keymapActive?: string;
   /** Single-letter shortcuts on or off (WCAG 2.1.4 Character Key Shortcuts). On by default. */
   singleKeys: boolean;
   /** Panel arrangements saved under a name (lib/workspaces.ts checks each one before using it). */
   workspaces?: unknown[];
 }
 
+/** A named keyboard shortcut set: one of the built-in bases and the keys changed on top of it. */
+export interface KeymapSet {
+  id: string;
+  name: string;
+  base: 'default' | 'illustration';
+  keys: Record<string, string[]>;
+}
+
 export const DEFAULT_FONT = 'Open Sans';
 const DEFAULTS: Prefs = { singleKeys: true, technicalWording: false, showNewInteractions: true, altDragHintAlways: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', codeTheme: 'follow', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
+/** What every preference starts as, for the Preferences window's Reset buttons. */
+export const PREF_DEFAULTS: Readonly<Prefs> = DEFAULTS;
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 
@@ -162,6 +176,13 @@ export function setPrefs(patch: Partial<Prefs>): void {
   write(keyFor(user), current);
   notify();
   save();
+}
+
+/** Put these preferences back to their defaults (the ones that have no default are taken away). */
+export function resetPrefs(keys: readonly (keyof Prefs)[]): void {
+  const patch: Record<string, unknown> = {};
+  for (const k of keys) patch[k] = k in DEFAULTS ? DEFAULTS[k] : undefined;
+  setPrefs(patch as Partial<Prefs>);
 }
 
 /** Load this person's preferences from the server (called once at start-up). */
