@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Fonts load from StudyDesk's own server again**: on the live site the fonts cache couldn't reach Google (the server has to go through the university's proxy), so every font request failed and pages fell back to fetching fonts from Google directly. It now goes through the proxy.
 - **Saved values show in Preview's Debug panel straight away**: variables kept as user data now show their saved values in **Variables (live)** as soon as Preview starts. Before, the panel showed the starting values until the first time one changed.
 - **Media Catalogue on the live StudyDesk site**: the Media Catalogue button now also works with the older Photography catalogue, which is what StudyDesk's live site still has until it moves over. Its photos used to be quietly refused, so pressing insert did nothing.
 - **Grid sizes, tick boxes and long dropdowns**: the grid's **Columns** and **Rows** boxes now keep what you type until you leave the box or press Enter (typing `120 1fr` used to rewrite itself key by key), and say which word is not a size instead of dropping it. Two tick boxes on a line, like **Hug width** and **Hug height**, sit side by side and no longer wrap. A blend's timeline dropdown takes the room the number and the remove button leave, and a dropdown that cuts a long choice short shows the whole choice when you hover over it.

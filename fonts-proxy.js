@@ -14,6 +14,7 @@
 const fs = require('fs')
 const path = require('path')
 const crypto = require('crypto')
+const outboundFetch = require('./outbound-fetch')
 
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
 const MAX_CSS = 400 * 1024
@@ -121,7 +122,7 @@ module.exports = ({express, storageDir, catalogFile = path.join(__dirname, 'src'
 		//A failure is remembered for a few minutes, so a family Google refuses is not asked about again for every page view
 		failed = new Map(),
 		fetchCapped = async (url, cap, asText) => {
-			let res = await fetch(url, {headers: {'User-Agent': UA, Accept: asText ? 'text/css,*/*;q=0.1' : '*/*'}, signal: AbortSignal.timeout(TIMEOUT)})
+			let res = await outboundFetch(url, {headers: {'User-Agent': UA, Accept: asText ? 'text/css,*/*;q=0.1' : '*/*'}, signal: AbortSignal.timeout(TIMEOUT)})
 
 			if (!res.ok) {
 				throw new Error(`Google answered ${res.status}`)
