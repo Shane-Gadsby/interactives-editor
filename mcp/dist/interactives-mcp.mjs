@@ -11090,7 +11090,7 @@ Clicking selects the layer afterwards, ready to edit.
 ## Moving layers to another artboard
 Select layers and drag them on the canvas. If you let go over a **different artboard**, a dialog asks **Move to artboard**: *Move “Card” to the artboard “Menu”?* Press **Move** to do it or **Cancel** to put them back.
 
-![The Move to artboard dialog.](help/move-to-artboard.png)
+![The Move to page dialog.](help/move-to-artboard.png)
 
 - The layers keep their place on the canvas, but now belong to the other artboard.
 - Their keys in the old artboard's timelines are removed.
@@ -11305,7 +11305,7 @@ Text doesn't pop from one font to another. The player waits up to 1.5 seconds fo
 ## Several styles in one text layer
 Double-click a text layer to edit it. A small **toolbar floats over the text** while you do, like the one in a word processor:
 
-![The toolbar over a text layer being edited, with "big" bold and a colour, size and link set on other words.](help/text-toolbar.png)
+![The toolbar over a text layer being edited: bold, italic, underline, strike-through, colour, size and font, with a word in bold on the layer.](help/text-toolbar.png)
 
 Select some of the text (or just put the caret in a word) and use:
 
@@ -13457,7 +13457,7 @@ A question keeps its settings on its frame, and each part layer is marked as par
     keywords: "command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share",
     body: `Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
 
-![The command palette searching for timeline: the Open Timeline command, then matching help pages.](help/command-palette.png)
+![The command palette searching for timeline: the New timeline and Open Timeline commands, then matching help pages.](help/command-palette.png)
 
 Each row shows its **shortcut** if it has one (your own keys, if you changed them), or the kind of command it is. A command that cannot run at the moment (nothing selected, nothing to undo) is greyed and says why. A switch shows **On** or **Off**, and running it flips it. Press <kbd>F1</kbd> inside it to search the help instead. Matching help pages are listed under the commands, labelled **Help**, and <kbd>Enter</kbd> on one opens it.
 
