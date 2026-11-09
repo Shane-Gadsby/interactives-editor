@@ -126,9 +126,10 @@ let scope: GuideScope | null = null;
 export function getGuideScope(): GuideScope {
   if (scope) return scope;
   try {
-    scope = localStorage.getItem(KEY) === 'page' ? 'page' : 'project';
+    //this page only unless you chose every page: a guide belongs to the page you drop it on
+    scope = localStorage.getItem(KEY) === 'project' ? 'project' : 'page';
   } catch {
-    scope = 'project';
+    scope = 'page';
   }
   return scope;
 }
