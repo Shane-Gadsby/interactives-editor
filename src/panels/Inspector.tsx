@@ -65,6 +65,7 @@ import { ColourwayRow } from './ColourwayRow';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, UnitField } from '../components/ui';
 import { ExprField } from '../components/ExprField';
 import { openBehaviours } from '../components/BehaviourDialog';
+import { revealAdded } from '../lib/graph-reveal';
 import { flowSentence, flowsForLayer } from '../lib/flow-describe';
 import { removeFlow, setFlowOff, showInGraph } from '../lib/flow-actions';
 
@@ -1761,7 +1762,7 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
       const a = d.artboards.find((x) => x.id === ab.id);
       a?.logic.nodes.push({ id, kind: 'event.pointer', x: 40, y: maxY + 140, params: { target: node.id, type } });
     });
-    store().set({ bottomTab: 'logic', logicSelection: id });
+    revealAdded({ abId: ab.id, ids: [id], focusId: id, say: `Added an empty ${type === 'click' ? 'When clicked' : 'When hovered'} event`, quiet: () => store().set({ bottomTab: 'logic', logicSelection: id }) });
   };
   return (
     <Section help="interactions" title="Interactions" defaultOpen>

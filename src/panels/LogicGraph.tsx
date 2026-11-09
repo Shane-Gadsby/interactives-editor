@@ -73,9 +73,11 @@ import { CONTEXT_ORDER, commandFor, keyHints, matches } from '../lib/keymap';
 import { GraphNoteForm, GraphNoteNode, resizing as noteResizing, type GraphNoteData } from './GraphNoteNode';
 import { flashOf, useFlowVersion, wireClass } from '../lib/run-flow';
 import { labelOfKind, nodeAka, nodeHeading, nodeLabel, nodeTip, plainParam, pw, optionLabel, useTechnicalWording } from '../lib/plain-words';
+import { finishReveal, frameRects, onReveal, pendingReveal, reducedMotion, type RevealRequest } from '../lib/graph-reveal';
+import { setLastKeyArea } from '../lib/key-area';
 import { addGraphNote, anchorOrigin, graphNotePlace, patchGraphNote, removeGraphNotes, attachGraphNote } from '../lib/graph-notes';
 
-type IxNodeData = { logic: LogicNode; summary: string };
+type IxNodeData = { logic: LogicNode; summary: string; revealed?: boolean };
 
 const CAT_COLOR: Record<string, string> = { event: 'var(--event)', action: 'var(--action)', logic: 'var(--logic)' };
 
@@ -88,7 +90,7 @@ function IxNode({ data, selected }: NodeProps<Node<IxNodeData>>) {
   if (!def) return <div className="ix-graph-node unknown">Unknown node {data.logic.kind}</div>;
   const flash = lit && lit.kind !== 'wire' ? lit : null;
   return (
-    <div className={`ix-graph-node${selected ? ' selected' : ''}${flash ? ` flash-${flash.kind} flash-${flash.n % 2}` : ''}`} style={{ ['--cat' as string]: CAT_COLOR[def.category] }}>
+    <div className={`ix-graph-node${selected ? ' selected' : ''}${data.revealed ? ' revealed' : ''}${flash ? ` flash-${flash.kind} flash-${flash.n % 2}` : ''}`} style={{ ['--cat' as string]: CAT_COLOR[def.category] }}>
       {def.hasInput && <Handle type="target" position={Position.Left} id="in" />}
       <div className="gn-head">
         <span className="gn-cat">{def.category}</span>
@@ -256,6 +258,8 @@ export function LogicGraph() {
   /** What a menu on `id` acts on: the whole selection when `id` is part of it, otherwise just `id`. */
   const targetIds = (id: string) => (chosenNow().includes(id) ? chosenNow() : [id]);
 
+  //The nodes just added glow for a moment (not at all with reduced motion)
+  const [glow, setGlow] = useState<string[]>([]);
   const nodes: Node<IxNodeData>[] = useMemo(
     () =>
       [
@@ -278,7 +282,7 @@ export function LogicGraph() {
           id: n.id,
           type: 'ix',
           position: { x: n.x, y: n.y },
-          data: { logic: n, summary: ab ? summarize(n, ab, s.project) : '' },
+          data: { logic: n, summary: ab ? summarize(n, ab, s.project) : '', ...(glow.includes(n.id) ? { revealed: true } : {}) },
           selected: chosen.includes(n.id),
         })),
         // Sticky notes for the people editing the graph (hidden with the canvas notes, and never in the player)
@@ -300,7 +304,7 @@ export function LogicGraph() {
             })
           : []),
       ],
-    [ab, s.project, chosen, showNotes],
+    [ab, s.project, chosen, showNotes, glow],
   );
   // Selected connections live here (the document only stores the graph), so Delete can remove them
   const [selEdges, setSelEdges] = useState<string[]>([]);
@@ -889,9 +893,91 @@ export function LogicGraph() {
   const count = ab?.logic.nodes.length ?? 0;
   const lastCount = useRef(count);
   useEffect(() => {
-    if (count && (lastCount.current === 0 || count - lastCount.current > 1)) requestAnimationFrame(() => rf.current?.fitView({ maxZoom: 1, padding: 0.2 }));
+    //(not when something was just added and is being framed on its own: lib/graph-reveal.ts)
+    if (count && (lastCount.current === 0 || count - lastCount.current > 1) && !pendingReveal()) requestAnimationFrame(() => rf.current?.fitView({ maxZoom: 1, padding: 0.2 }));
     lastCount.current = count;
   }, [count, s.abId]);
+
+  //Something was added from outside the graph (+ When clicked…, an empty event): wait for the nodes to be drawn and measured,
+  //take focus to the new event, frame everything that was added, and glow it. Anyone dragging or zooming in the meantime keeps their view
+  const reveal = useCallback((req: RevealRequest) => {
+    let tries = 0;
+    let stop = false;
+    let cleanup: (() => void) | null = null;
+    const frame = (instant: boolean) => {
+      const inst = rf.current;
+      const pane = canvasRef.current;
+      if (!inst || !pane) return;
+      const rects = req.ids.flatMap((id) => {
+        const n = inst.getInternalNode(id);
+        return n ? [{ x: n.internals.positionAbsolute.x, y: n.internals.positionAbsolute.y, width: n.measured?.width ?? 180, height: n.measured?.height ?? 70 }] : [];
+      });
+      const box = pane.getBoundingClientRect();
+      const vp = frameRects(rects, { width: box.width, height: box.height }, { maxZoom: 1, minZoom: 0.2 });
+      if (vp) void inst.setViewport(vp, { duration: instant || reducedMotion() ? 0 : 300 });
+    };
+    const attempt = () => {
+      if (stop) return;
+      const inst = rf.current;
+      const pane = canvasRef.current;
+      const drawn = !!inst && !!pane && req.ids.every((id) => !!inst.getInternalNode(id)?.measured?.width);
+      //(a graph that never measures its nodes, a test's, is framed on typical sizes after a while)
+      if (!drawn && !(tries > 40 && inst && pane && req.ids.every((id) => !!inst.getInternalNode(id)))) {
+        if (++tries < 90) requestAnimationFrame(attempt);
+        else finishReveal(req);
+        return;
+      }
+      //Focus first: React Flow pans to a node that takes focus, and the framing below then wins
+      setLastKeyArea('graph');
+      const el = Array.from(pane!.querySelectorAll<HTMLElement>('.react-flow__node')).find((n) => n.getAttribute('data-id') === req.focusId);
+      (el ?? pane!).focus({ preventScroll: true });
+      frame(false);
+      if (!reducedMotion()) {
+        setGlow(req.ids);
+        setTimeout(() => setGlow((g) => (g === req.ids ? [] : g)), 1800);
+      }
+      //The dock may still be growing to give the graph room (lib/interactions-room.ts), so frame again if the panel changes size
+      //in the next moment, unless the person has already taken the view into their own hands
+      let ro: ResizeObserver | null = null;
+      const touched = () => cleanup?.();
+      if (typeof ResizeObserver !== 'undefined') {
+        ro = new ResizeObserver(() => frame(true));
+        ro.observe(pane!);
+      }
+      pane!.addEventListener('pointerdown', touched, true);
+      pane!.addEventListener('wheel', touched, true);
+      const timer = setTimeout(() => cleanup?.(), 900);
+      cleanup = () => {
+        ro?.disconnect();
+        pane!.removeEventListener('pointerdown', touched, true);
+        pane!.removeEventListener('wheel', touched, true);
+        clearTimeout(timer);
+        cleanup = null;
+      };
+      finishReveal(req);
+    };
+    requestAnimationFrame(attempt);
+    return () => {
+      stop = true;
+      cleanup?.();
+    };
+  }, []);
+  useEffect(() => {
+    let undo: (() => void) | undefined;
+    const run = (r: RevealRequest) => {
+      if (r.abId !== store().get().activeArtboardId) return;
+      undo?.();
+      undo = reveal(r);
+    };
+    //(asked for before this mounted: the tab was on something else)
+    const waiting = pendingReveal();
+    if (waiting) run(waiting);
+    const off = onReveal(run);
+    return () => {
+      off();
+      undo?.();
+    };
+  }, [reveal]);
 
   if (!ab) return null;
   const selected = ab.logic.nodes.find((n) => n.id === s.sel);

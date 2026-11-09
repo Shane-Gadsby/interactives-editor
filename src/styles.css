@@ -3452,6 +3452,23 @@ button.twisty:hover {
     stroke-dashoffset: -10;
   }
 }
+/* Just added from the Inspector or the canvas menu: a gold ring that fades, so the eye finds the new nodes after the graph frames them */
+.ix-graph-node.revealed {
+  animation: ix-revealed 1.8s ease-out;
+}
+@keyframes ix-revealed {
+  from {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary-bg) 80%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ix-graph-node.revealed {
+    animation: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .ix-graph-node.flash-ran,
   .ix-graph-node.flash-blocked,

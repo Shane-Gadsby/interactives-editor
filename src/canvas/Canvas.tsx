@@ -89,6 +89,7 @@ import { liveSession } from '../lib/live';
 import { bendPaths, hasShapeKeys, nearestSegment, shapeToPaths, type SegmentHit } from '../lib/path-edit';
 import { confirmDialog } from '../components/dialogs';
 import { openBehaviours } from '../components/BehaviourDialog';
+import { revealAdded } from '../lib/graph-reveal';
 import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
 import { rangeLabel } from '../lib/variants-edit';
 import { ANIM_PRESETS, animOptions } from '../lib/animate-presets';
@@ -2282,7 +2283,7 @@ export function Canvas() {
       const a = d.artboards.find((x) => x.id === ab.id);
       a?.logic.nodes.push(ev);
     });
-    store().set({ bottomTab: 'logic', logicSelection: ev.id });
+    revealAdded({ abId: ab.id, ids: [ev.id], focusId: ev.id, say: `Added an empty ${type === 'click' ? 'When clicked' : 'When hovered'} event`, quiet: () => store().set({ bottomTab: 'logic', logicSelection: ev.id }) });
   }
 
   function zoomToBox(b: Rect) {
