@@ -2359,19 +2359,12 @@ body.col-resizing * {
   stroke-dasharray: 7 5;
   pointer-events: none;
 }
-/* the guides of a page that is not the open one (Canvas): endless like the rest, dimmer, and they can't be grabbed until that page is open */
+/* the attached guides of a page that is not the open one (Canvas): the length of their page and a little past it, dimmer, and they can't be grabbed until that page is open */
 .guide-mark {
   stroke: var(--guide);
   stroke-width: 1;
   stroke-dasharray: 6 4;
   opacity: 0.55;
-  pointer-events: none;
-}
-/* the small pin where an attached guide meets the edge of its page: the quiet sign that it moves with that page (a universal guide has none) */
-.guide-pin {
-  fill: var(--guide);
-  stroke: var(--panel);
-  stroke-width: 1;
   pointer-events: none;
 }
 /* the page a page dragged from the Layers list would be placed in (Canvas dropHost) */
@@ -6204,11 +6197,11 @@ kbd {
   width: 1px;
   background: repeating-linear-gradient(to bottom, var(--guide) 0 6px, transparent 6px 10px);
 }
-.guide-line.universal.x .guide-grab {
+.guide-line.x .guide-grab {
   top: 0;
   height: 100%;
 }
-.guide-line.universal.y .guide-grab {
+.guide-line.y .guide-grab {
   left: 0;
   width: 100%;
 }

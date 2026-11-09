@@ -237,7 +237,7 @@ export function reviewImport(text: string): ImportResult {
     }
     const clean: string[] = [];
     for (const k of list) {
-      if (typeof k !== 'string' || !isValidCombo(k)) {
+      if (typeof k !== 'string' || !isValidCombo(k, !!def.hold)) {
         badKeys++;
         continue;
       }

@@ -389,7 +389,7 @@ The editor draws its frames straight away and fills them in as your project arri
     title: 'Moving around the canvas',
     group: 'Getting started',
     summary: 'Zoom, pan, fit, the wheel preference, rulers and guides.',
-    keywords: 'zoom pan scroll wheel trackpad pinch fit hand space middle mouse ctrl rulers guides endless line across canvas universal attached page alt lock clear',
+    keywords: 'zoom pan scroll wheel trackpad pinch fit hand space middle mouse ctrl rulers guides endless line across canvas universal attached page alt lock clear round nearest 5 10 multiple',
     body: `You move around the canvas with the mouse wheel, the Hand tool or the keyboard.
 
 ## Zoom and pan
@@ -414,13 +414,14 @@ The editor draws its frames straight away and fills them in as your project arri
 ## Rulers and guides
 Turn the rulers on with <kbd>Shift</kbd>+<kbd>R</kbd> (or **Show rulers** in Preferences). Drag out of the top ruler for a horizontal guide and out of the left ruler for a vertical one. The number beside the pointer is the guide's position on the open page, in page pixels. Layers snap to guides when **Guides** is ticked in the Snap menu. Drag a guide to move it, drag it onto its ruler and let go to remove it (a note by the pointer says so), and right-click it for more.
 
-- **Two kinds, each one endless line.** A **universal** guide is fixed on the canvas itself, so it stays exactly where it is when you move pages. This is what a new guide is, unless you change that in Preferences. An **attached** guide belongs to one page (it is measured from that page's top left corner and moves when you move that page). Either one is a single dashed line across the whole canvas, drawn through every page it crosses and the gaps between them, all in one colour (pink).
-- **Telling them apart.** An attached guide has a small pin where it meets the edge of its page. A universal one has none. A guide's tooltip and the first line of its right-click menu say which it is.
+- **Two kinds.** A **universal** guide is fixed on the canvas itself, so it stays exactly where it is when you move pages. It is one endless dashed line across the whole canvas, drawn through every page it crosses and the gaps between them. This is what a new guide is, unless you change that in Preferences. An **attached** guide belongs to one page (it is measured from that page's top left corner and moves when you move that page). It is a short dashed line: it runs across its own page and only a little past the edges, so it never looks like it crosses the pages beside it. Both are the same pink.
+- **Telling them apart.** An endless line is universal and a short one is attached. A guide's tooltip and the first line of its right-click menu say which it is.
 - **Which kind a new guide is.** **Attach new guides to the page they're dropped on** in Preferences (Canvas and guides) is off by default, so a new guide is universal. Turn it on and a new guide attaches to the page under the pointer (that page becomes the open one). Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag to get the other kind for that one guide; a note by the pointer says which kind you are making and what Alt would do.
+- **Rounding while you drag.** Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) while dragging a guide, new or existing, and it goes to the nearest multiple of **5** px. Hold <kbd>Ctrl</kbd>+<kbd>Shift</kbd> and it goes to the nearest multiple of **10**. The number beside the pointer is the rounded one and ends in *nearest 5* or *nearest 10*, and it is measured where the ruler measures: from the open page for a universal guide, from its own page for an attached one. Let go and it stays on that number. These holds are in **Keyboard shortcuts** under **Guides**, where you can give each one other keys (see [Keyboard shortcuts](shortcuts#keys-you-hold-while-dragging)). Ctrl does not turn snapping off here: guides are not layers, so they never snap to anything but these multiples.
 - **Changing your mind.** Right-click a guide: **Make it universal** (for an attached one) fixes it on the canvas where it is, and **Attach to** the page (for a universal one) ties it to the page it crosses (the open page if it crosses that, otherwise the first page it crosses). The line does not move.
-- **Grabbing.** A universal guide can be grabbed anywhere along its length, over any page and the space between. An attached guide can only be grabbed over its own page (and a little past it), so it never gets in the way of clicking layers on the pages it crosses; the attached guides of other pages are drawn a little dimmer and can be grabbed once you open their page.
+- **Grabbing.** A universal guide can be grabbed anywhere along its length, over any page and the space between. An attached guide can only be grabbed over its own page (and a little past it), where its line is; the attached guides of other pages are drawn a little dimmer and can be grabbed once you open their page.
 - **Removing.** Drag a guide onto its ruler and let go to remove either kind. An attached guide is also removed by letting go off its page, and a universal one by letting go off the edge of the canvas. Nothing goes until you let go.
-- **Snapping.** A layer on any page snaps to every guide line that crosses its page, of either kind.
+- **Snapping.** A layer snaps to the universal guides that cross its page and to its own page's attached guides. An attached guide does not pull layers on other pages, because it is not drawn there.
 - **Old projects.** Guides already attached to a page stay attached. Very old projects had guides for every page; opening one moves them onto its start page (any with a negative position are dropped, since they never showed anywhere).
 - **Lock and clear.** The small button in the corner of the rulers opens the **guides menu**, which is also at the bottom of a guide's right-click menu. **Lock guides** stops guides being moved, removed or added by accident (they still snap). **Clear this page's guides**, **Clear universal guides** and **Clear all guides** are in the same menu, and **Lock the guides**, **Clear universal guides** and **Clear all guides** are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Undo brings cleared guides back.
 - Guides are for you while you edit: they never show in Preview, downloads, share links or embeds.
@@ -634,6 +635,11 @@ A few new commands do start with a key: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Shif
 
 Your sets, like your keys, are saved with you: they follow you between browsers and are never saved in a project.
 
+## Keys you hold while dragging
+A few commands are not a key you press but keys you **hold** while the mouse does something. They sit under **Guides** on the page, marked *While dragging a guide*: **Round a guide to the nearest 5 px** (<kbd>Ctrl</kbd>), **Round a guide to the nearest 10 px** (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>) and **Make a new guide the other kind** (<kbd>Alt</kbd>). See [Rulers and guides](canvas#rulers-and-guides).
+
+To change one, press **Add key** (or **Set key**) and then **hold** the keys you want, <kbd>Ctrl</kbd>, <kbd>Shift</kbd> and <kbd>Alt</kbd> in any mix, and let go. The most you held together is taken. They are at-least keys: with Ctrl held for 5 and Ctrl+Shift held for 10, holding both Ctrl and Shift gives 10, because it asks for more. If you give a hold keys that another hold already has, the page asks, as it does for any key.
+
 ## Where a key works
 The same letter can mean different things in different places, because a key looks first at the panel you last clicked in. Click in the Timeline and <kbd>P</kbd>, <kbd>S</kbd>, <kbd>R</kbd>, <kbd>T</kbd> and <kbd>A</kbd> take you to a property (see [Timeline](shortcuts#timeline)). Click the canvas, the Layers list or anywhere else and they are tools again.
 
@@ -756,6 +762,7 @@ Double-click a text layer to edit it. Select some of the text, then:
 | Menu key or <kbd>Shift</kbd>+<kbd>F10</kbd> on a key in the Timeline | Open its right-click menu (a text key has **Swap text**) |
 | Hold <kbd>Alt</kbd> while drawing or resizing | Work from the centre |
 | Hold <kbd>Ctrl</kbd> while dragging | Move, resize or draw without snapping to anything (grid, artboard, layers, guides, spacing, points) |
+| Hold <kbd>Ctrl</kbd> or <kbd>Ctrl</kbd>+<kbd>Shift</kbd> while dragging a guide | Round it to the nearest 5 px, or the nearest 10 px (rebindable under **Guides**, see [Rulers and guides](canvas#rulers-and-guides)) |
 | Click the Snap button on the tool bar | Open the snapping menu: the switch and a tick for each target |
 | Right-click the grid or snap button on the tool bar, or an empty part of the canvas | Snapping choices, the grid size and how often a stronger line shows |
 | Drag the **Tools** title over an edge of the canvas | Dock the tool bar there (left, right or a strip along the bottom or the top) |
@@ -1523,7 +1530,7 @@ The **Snap** button on the tool bar (the magnet) opens a menu that stays open wh
 - **Grid**: land on the grid lines (this is Snap to grid: <kbd>Ctrl</kbd>+<kbd>'</kbd> ticks and unticks it). Off to begin with.
 - **Artboard**: the artboard's edges and centre. Moving an artboard on the canvas, it goes to the other artboards' edges and centres.
 - **Layers**: the edges and centres of other layers. By default it means the layers beside the one you drag (the same parent); tick **Layers: all, not just siblings** to reach every layer on the artboard.
-- **Guides**: guides made from the rulers: each is one endless line across the canvas, so it snaps layers on every page it crosses. See [Rulers and guides](canvas#rulers-and-guides).
+- **Guides**: guides made from the rulers: a universal guide is an endless line and snaps layers on every page it crosses, an attached guide is a short line and snaps layers on its own page. See [Rulers and guides](canvas#rulers-and-guides).
 - **Spacing** (equal gaps): drag a layer beside two that have a gap between them and it snaps to the same gap (or centres between them), and the distances show as orange measures. It only works while moving layers.
 - **Pixels** (whole pixels): positions and sizes land on whole pixels. Untick it to let a layer sit between pixels.
 - **Points** (path points): the anchor points of paths and the joints of bones. The pen, and dragging a path point, snap to them: a ring shows the one it caught. Off to begin with.

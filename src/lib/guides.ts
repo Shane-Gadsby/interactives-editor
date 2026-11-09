@@ -1,15 +1,21 @@
 import type { Artboard, Project } from 'interactives-player';
 import { store } from '../store/store';
 import type { MenuItem } from '../components/ContextMenu';
+import { holdSize, type Held } from './keymap';
 
 /**
- * Ruler guides, two kinds, both one endless line across the canvas (drawn through every page they cross and everything in between,
- * and layers on those pages snap to them). A universal guide is fixed on the canvas (`Project.canvasGuides`, canvas coordinates), so
- * moving a page leaves it where it is. An attached guide belongs to the page it was dropped on (`Artboard.guides`, artboard pixels
- * from that page's own top left) and moves with it. Which kind a new guide is comes from the `attachGuides` preference (off: universal),
- * with Alt while dragging giving the other one. Editor only: the player ignores them, and the editor's exports leave them out.
+ * Ruler guides, two kinds. A universal guide is one endless line across the canvas, fixed there (`Project.canvasGuides`, canvas
+ * coordinates), so moving a page leaves it where it is. An attached guide belongs to the page it was dropped on (`Artboard.guides`,
+ * artboard pixels from that page's own top left), moves with it, and is only drawn across that page and a little past it
+ * (`GUIDE_REACH`), so it never looks like it crosses the pages beside it (and layers snap to it on its own page only). Which kind a
+ * new guide is comes from the `attachGuides` preference (off: universal), with the "other kind" hold (Alt) while dragging giving the
+ * other one. While dragging, the round-to-5 and round-to-10 holds (Ctrl, Ctrl+Shift) put the guide on a multiple of that.
+ * Editor only: the player ignores them, and the editor's exports leave them out.
  * Old files had a third kind (`Project.guides`, on every page); the player's `migrateProjectGuides` moves those onto the start page.
  */
+
+/** How far past its own page an attached guide is drawn, and can still be grabbed (screen pixels). */
+export const GUIDE_REACH = 32;
 
 export type Axis = 'x' | 'y';
 export type Guides = { x: number[]; y: number[] };
@@ -60,10 +66,10 @@ export function pageForUniversal(project: Pick<Project, 'artboards'>, ref: Pick<
 }
 
 /**
- * Every guide line that crosses `ab`, of both kinds and whichever page it is attached to, in `ab`'s own pixels (a guide on another
- * page sits at that page's canvas position, so it lands wherever the page is; a universal one is at its canvas position). A vertical
- * line crosses the page when it falls between its left and right edges, a horizontal one between its top and bottom. Pages left off
- * the canvas (library copies) have no attached guides on show.
+ * Every guide line that layers on `ab` snap to, in `ab`'s own pixels: the page's own attached guides, and the universal ones that
+ * cross it. An attached guide of another page is not here even when its line would run through this one, because it is only drawn
+ * across its own page. A vertical line crosses the page when it falls between its left and right edges, a horizontal one between its
+ * top and bottom.
  */
 export function guidesAcross(project: Pick<Project, 'artboards' | 'canvasGuides'>, ab: Pick<Artboard, 'id' | 'canvasX' | 'canvasY' | 'width' | 'height'>): Guides {
   const out: Guides = { x: [], y: [] };
@@ -75,19 +81,39 @@ export function guidesAcross(project: Pick<Project, 'artboards' | 'canvasGuides'
     const here = at - ab.canvasY;
     if (here >= 0 && here <= ab.height && !out.y.includes(here)) out.y.push(here);
   }
-  for (const from of project.artboards) {
-    if (from.canvasHidden || !from.guides) continue;
-    for (const at of from.guides.x) {
-      const here = from.canvasX + at - ab.canvasX;
-      if (here >= 0 && here <= ab.width && !out.x.includes(here)) out.x.push(here);
-    }
-    for (const at of from.guides.y) {
-      const here = from.canvasY + at - ab.canvasY;
-      if (here >= 0 && here <= ab.height && !out.y.includes(here)) out.y.push(here);
-    }
-  }
+  const own = project.artboards.find((a) => a.id === ab.id);
+  for (const at of own?.guides?.x ?? []) if (at >= 0 && at <= ab.width && !out.x.includes(at)) out.x.push(at);
+  for (const at of own?.guides?.y ?? []) if (at >= 0 && at <= ab.height && !out.y.includes(at)) out.y.push(at);
   return out;
 }
+
+// ---------------------------------------------------------------- rounding while dragging
+
+/** The hold-while commands that round a guide, each with its step. Keys are in the keymap (Guides), so they can be rebound. */
+export const GUIDE_ROUNDING: { id: string; step: number }[] = [
+  { id: 'guide-round-5', step: 5 },
+  { id: 'guide-round-10', step: 10 },
+];
+
+//A guide being dragged out of a ruler or moved: the canvas under the pointer leaves its hover highlight alone meanwhile (Ctrl
+//there means "pick the deepest layer", and now it is also the rounding hold)
+let guideDrag = false;
+export const setGuideDragging = (on: boolean): void => void (guideDrag = on);
+export const guideDragging = (): boolean => guideDrag;
+
+/** The step to round a dragged guide to (5 or 10) for the modifiers down now, or 0 for none. Both met: the one that asks for more wins. */
+export function guideStep(e: Held): number {
+  let step = 0;
+  let size = 0;
+  for (const r of GUIDE_ROUNDING) {
+    const n = holdSize(e, r.id);
+    if (n > size) (size = n), (step = r.step);
+  }
+  return step;
+}
+
+/** A position put on the nearest multiple of `step` (0: as it is). */
+export const roundTo = (at: number, step: number): number => (step > 0 ? Math.round(at / step) * step : at);
 
 // ---------------------------------------------------------------- the document edits (on a draft)
 
@@ -189,7 +215,7 @@ export function guidesMenuItems(abId: string): MenuItem[] {
   return [
     { label: p.guidesLocked ? 'Unlock guides' : 'Lock guides', title: p.guidesLocked ? 'Let guides be moved, removed and added again' : 'Stop guides being moved, removed or added by accident (they still snap)', onClick: () => setGuidesLocked(!p.guidesLocked) },
     { separator: true },
-    { label: 'Clear this page’s guides', title: 'The guides attached to this page. Their lines stop crossing the other pages too. Universal guides stay', disabled: !mine || !!p.guidesLocked, onClick: () => clearGuidesCommand('page', abId) },
+    { label: 'Clear this page’s guides', title: 'The guides attached to this page. Universal guides stay', disabled: !mine || !!p.guidesLocked, onClick: () => clearGuidesCommand('page', abId) },
     { label: 'Clear universal guides', title: 'The guides fixed on the canvas. Guides attached to pages stay', disabled: !loose || !!p.guidesLocked, onClick: () => clearGuidesCommand('universal', abId) },
     { label: 'Clear all guides', danger: true, disabled: !guideCount(p) || !!p.guidesLocked, title: 'Every guide in the project, universal and attached to any page. Undo (Ctrl+Z) brings them back', onClick: () => clearGuidesCommand('all', abId) },
   ];

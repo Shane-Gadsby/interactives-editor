@@ -21,9 +21,15 @@ export interface CommandDef {
   edits?: boolean;
   /** Extra words the key sheet's search matches. */
   words?: string;
+  /**
+   * A hold-while binding: not a key press but modifiers kept down while the mouse does something ("While dragging a guide"). Its
+   * combos are modifiers only ("Mod", "Mod+Shift", "Alt"), it has no runner, and whatever does the dragging asks `holdActive`
+   * or `holdSize` with the live event. The text is where it applies, as the key sheet shows it.
+   */
+  hold?: string;
 }
 
-export const GROUPS = ['Tools', 'Add', 'Edit', 'Arrange', 'Pages', 'View', 'Timeline', 'Properties', 'Animate', 'Behaviours', 'Questions', 'Interactions graph', 'Panels and help', 'Workspaces', 'Project'] as const;
+export const GROUPS = ['Tools', 'Add', 'Edit', 'Arrange', 'Pages', 'View', 'Guides', 'Timeline', 'Properties', 'Animate', 'Behaviours', 'Questions', 'Interactions graph', 'Panels and help', 'Workspaces', 'Project'] as const;
 
 const C = (id: string, name: string, group: (typeof GROUPS)[number], context: Context, keys: string[], more: Partial<CommandDef> = {}): CommandDef => ({ id, name, group, context, keys, ...more });
 
@@ -109,6 +115,11 @@ export const COMMANDS: CommandDef[] = [
   C('toggle-rulers', 'Show or hide the rulers', 'View', 'canvas', ['Shift+R'], { words: 'guides' }),
   C('toggle-bones', 'Show or hide the bones', 'View', 'canvas', ['Shift+J'], { words: 'rig' }),
   C('snap-grid', 'Snap to the grid on or off', 'View', 'canvas', ["Mod+'"]),
+
+  //Hold-while bindings (CommandDef.hold): modifiers kept down during a drag, rebindable to any other modifiers
+  C('guide-round-5', 'Round a guide to the nearest 5 px', 'Guides', 'canvas', ['Mod'], { hold: 'While dragging a guide', words: 'ruler snap step multiple' }),
+  C('guide-round-10', 'Round a guide to the nearest 10 px', 'Guides', 'canvas', ['Mod+Shift'], { hold: 'While dragging a guide', words: 'ruler snap step multiple' }),
+  C('guide-other-kind', 'Make a new guide the other kind (universal or attached)', 'Guides', 'canvas', ['Alt'], { hold: 'While dragging a new guide', words: 'ruler page canvas' }),
 
   C('timeline-play', 'Play or pause', 'Timeline', 'timeline', ['Space', 'K'], { words: 'preview run' }),
   C('timeline-forward', 'Play', 'Timeline', 'timeline', ['L']),
@@ -226,6 +237,9 @@ export const isMac = (): boolean => (macOverride !== null ? macOverride : typeof
 
 const CODE_KEYS: Record<string, string> = { Comma: ',', Period: '.', Slash: '/', BracketLeft: '[', BracketRight: ']', Quote: "'", Semicolon: ';', Backslash: '\\', Minus: '-', Equal: '=', Backquote: '`' };
 const NAMED: Record<string, string> = { ' ': 'Space', Esc: 'Escape', Del: 'Delete', Spacebar: 'Space', Left: 'ArrowLeft', Right: 'ArrowRight', Up: 'ArrowUp', Down: 'ArrowDown' };
+//The modifier names a combo is written with ("Ctrl" and "Cmd" are read as "Mod")
+const MODS = ['Mod', 'Ctrl', 'Cmd', 'Alt', 'Shift'];
+const heldOf = (parts: string[]): string => [(parts.includes('Mod') || parts.includes('Ctrl') || parts.includes('Cmd')) && 'Mod', parts.includes('Alt') && 'Alt', parts.includes('Shift') && 'Shift'].filter(Boolean).join('+');
 const MODIFIER_KEYS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'AltGraph', 'CapsLock', 'OS']);
 
 type KeyLike = Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>;
@@ -256,6 +270,8 @@ export function eventCombo(e: KeyLike): string {
 /** The order the parts are always written in, so "Shift+Mod+G" and "Mod+Shift+G" are one combo. */
 export function normalCombo(combo: string): string {
   const parts = combo.split('+');
+  //Modifiers only (a hold-while binding): the same order, no key
+  if (parts.every((x) => MODS.includes(x))) return heldOf(parts);
   let key = parts.pop()!;
   //A trailing "+" key would have split to an empty part; there is no such key in the registry (Equal is "=")
   if (key === '') key = '+';
@@ -270,6 +286,7 @@ export function formatCombo(combo: string, mac = isMac()): string {
   const n = normalCombo(combo);
   if (n === 'Shift+/') return '?';
   const parts = n.split('+');
+  if (parts.every((x) => MODS.includes(x))) return mac ? `${parts.includes('Alt') ? '⌥' : ''}${parts.includes('Shift') ? '⇧' : ''}${parts.includes('Mod') ? '⌘' : ''}` : parts.map((x) => (x === 'Mod' ? 'Ctrl' : x)).join(' + ');
   const key = parts.pop()!;
   const shown = SYMBOL[key] ?? key;
   if (mac) return `${parts.includes('Alt') ? '⌥' : ''}${parts.includes('Shift') ? '⇧' : ''}${parts.includes('Mod') ? '⌘' : ''}${key === 'Delete' ? '⌦' : key === 'Backspace' ? '⌫' : key === 'Enter' ? '↩' : shown}`;
@@ -283,6 +300,33 @@ export function isCharacterKey(combo: string): boolean {
   if (parts.includes('Mod') || parts.includes('Alt')) return false;
   return key.length === 1 || key === 'Space';
 }
+
+// ---------------------------------------------------------------- hold-while bindings
+
+export type Held = Pick<KeyboardEvent, 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>;
+
+/** The modifiers an event has down, in the registry's spelling ("Mod+Shift"), empty when there are none. */
+export const heldCombo = (e: Held): string => heldOf([(e.ctrlKey || e.metaKey) && 'Mod', e.altKey && 'Alt', e.shiftKey && 'Shift'].filter(Boolean) as string[]);
+
+/** Whether a combo is modifiers only, which is what a hold-while binding is made of. */
+export const isHoldCombo = (combo: string): boolean => !!combo && combo.split('+').every((x) => MODS.includes(x));
+
+/**
+ * How many modifiers the best of a hold command's bindings asks for, when the event has all of them down (0 when none is met).
+ * A binding means "at least these": Ctrl is met by Ctrl+Shift too. Two commands both met (5 and 10 px) is for the caller to settle,
+ * and it takes the one that asks for more.
+ */
+export function holdSize(e: Held, id: string): number {
+  const down = heldCombo(e).split('+').filter(Boolean);
+  let best = 0;
+  for (const b of bindingsOf(id)) {
+    const need = b.split('+').filter(Boolean);
+    if (need.length && need.every((m) => down.includes(m)) && need.length > best) best = need.length;
+  }
+  return best;
+}
+/** Whether the modifiers this event has down meet a hold command's binding. */
+export const holdActive = (e: Held, id: string): boolean => holdSize(e, id) > 0;
 
 // ---------------------------------------------------------------- the person's own keys
 
@@ -415,9 +459,11 @@ export function withoutBinding(current: Record<string, string[]> | undefined, id
 }
 
 /** Whether a string is a combo the registry could have written: optional Mod, Alt, Shift, then one key (a character, or a name like Delete or F2). */
-export function isValidCombo(combo: string): boolean {
+export function isValidCombo(combo: string, hold = false): boolean {
   if (typeof combo !== 'string' || !combo || combo.length > 24) return false;
   if (!/^[A-Za-z0-9+,./\\[\]';=`-]+$/.test(combo)) return false;
+  //A hold-while binding is modifiers and nothing else, and every other command needs a key
+  if (hold || isHoldCombo(combo)) return hold && isHoldCombo(combo) && new Set(combo.split('+')).size === combo.split('+').length;
   const parts = combo.split('+');
   const key = parts.pop() ?? '';
   if (!key || parts.some((m) => !['Mod', 'Alt', 'Shift', 'Ctrl', 'Cmd'].includes(m))) return false;
