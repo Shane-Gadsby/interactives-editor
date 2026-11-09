@@ -7,7 +7,7 @@ import { Canvas } from '../src/canvas/Canvas';
 import { withoutLinks } from '../src/lib/export';
 import { setPrefs } from '../src/lib/prefs';
 import { buildCommands } from '../src/lib/commands';
-import { addGuide, clearGuides, guideCount, guidesAcross, guidesMenuItems, guidesOf, moveGuide, removeGuide } from '../src/lib/guides';
+import { addGuide, addUniversalGuide, attachToPage, clearGuides, guideCount, guidesAcross, guidesMenuItems, guidesOf, makeUniversal, moveGuide, moveUniversalGuide, pageForUniversal, removeGuide, removeUniversalGuide, universalGuidesOf } from '../src/lib/guides';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class {
@@ -65,12 +65,107 @@ describe('guide edits', () => {
     const p = make();
     p.guidesLocked = true;
     p.artboards[0].guides = { x: [2], y: [] };
+    p.canvasGuides = { x: [5], y: [] };
     const out = withoutLinks(p);
     expect('guidesLocked' in out).toBe(false);
+    expect('canvasGuides' in out).toBe(false);
     expect(out.artboards.some((a) => 'guides' in a)).toBe(false);
     // and the project itself is not touched
     expect(p.artboards[0].guides).toBeTruthy();
+    expect(p.canvasGuides).toEqual({ x: [5], y: [] });
     expect(withoutLinks(make())).toBeTruthy();
+  });
+});
+
+describe('universal guides (canvas coordinates)', () => {
+  it('adds once, moves in place, and tidies an empty list away', () => {
+    const p = make();
+    addUniversalGuide(p, 'x', 100);
+    addUniversalGuide(p, 'x', 100);
+    addUniversalGuide(p, 'y', -40);
+    expect(p.canvasGuides).toEqual({ x: [100], y: [-40] });
+    moveUniversalGuide(p, { axis: 'y', index: 0 }, 60);
+    expect(universalGuidesOf(p).map((g) => `${g.kind}:${g.axis}${g.index}:${g.at}`)).toEqual(['universal:x0:100', 'universal:y0:60']);
+    removeUniversalGuide(p, { axis: 'x', index: 0 });
+    removeUniversalGuide(p, { axis: 'y', index: 0 });
+    expect(p.canvasGuides).toBeUndefined();
+    expect(guidesOf(p.artboards[0]).every((g) => g.kind === 'page')).toBe(true);
+  });
+
+  it('stays put when a page moves, where an attached one goes with it', () => {
+    const p = make();
+    addUniversalGuide(p, 'x', 1100);
+    addGuide(p, p.artboards[1].id, 'x', 100);
+    // both are at canvas 1100, which is 100 into B (it starts at 1000)
+    expect(guidesAcross(p, p.artboards[1]).x).toEqual([100]);
+    p.artboards[1].canvasX = 2000;
+    // B has left: the attached one went with it (still 100 in), the universal one is where it was and B is no longer under it
+    expect(guidesAcross(p, p.artboards[1]).x).toEqual([100]);
+    expect(guidesAcross(p, p.artboards[0]).x).toEqual([]);
+    p.artboards[1].canvasX = 1000;
+    p.artboards[1].guides = undefined;
+    expect(guidesAcross(p, p.artboards[1]).x).toEqual([100]);
+    p.artboards[1].canvasX = 2000;
+    expect(guidesAcross(p, p.artboards[1]).x).toEqual([]);
+    // moving A by 50 changes nothing for a universal guide at canvas 300
+    addUniversalGuide(p, 'x', 300);
+    expect(guidesAcross(p, p.artboards[0]).x).toEqual([300]);
+    p.artboards[0].canvasX = 50;
+    expect(guidesAcross(p, p.artboards[0]).x).toEqual([250]);
+  });
+
+  it('crosses every page it is over, level or not, in that page\'s pixels', () => {
+    const p = make();
+    p.artboards[1].canvasY = 100;
+    addUniversalGuide(p, 'y', 150);
+    expect(guidesAcross(p, p.artboards[0]).y).toEqual([150]);
+    expect(guidesAcross(p, p.artboards[1]).y).toEqual([50]);
+    addUniversalGuide(p, 'y', 700);
+    expect(guidesAcross(p, p.artboards[0]).y).toEqual([150]);
+  });
+
+  it('counts with the attached ones, and the clears are per kind', () => {
+    const p = make();
+    const [a] = p.artboards.map((x) => x.id);
+    addGuide(p, a, 'x', 10);
+    addUniversalGuide(p, 'x', 20);
+    addUniversalGuide(p, 'y', 30);
+    expect(guideCount(p)).toBe(3);
+    clearGuides(p, a, 'universal');
+    expect(p.canvasGuides).toBeUndefined();
+    expect(guideCount(p)).toBe(1);
+    addUniversalGuide(p, 'x', 20);
+    clearGuides(p, a, 'page');
+    expect(guideCount(p)).toBe(1);
+    clearGuides(p, a, 'all');
+    expect(guideCount(p)).toBe(0);
+    expect(p.canvasGuides).toBeUndefined();
+  });
+
+  it('converting keeps the line where it is on the canvas', () => {
+    const p = make();
+    const b = p.artboards[1];
+    addGuide(p, b.id, 'x', 120);
+    addGuide(p, b.id, 'y', 30);
+    makeUniversal(p, b.id, { axis: 'x', index: 0 });
+    expect(p.canvasGuides).toEqual({ x: [1120], y: [] });
+    expect(b.guides).toEqual({ x: [], y: [30] });
+    makeUniversal(p, b.id, { axis: 'y', index: 0 });
+    expect(b.guides).toBeUndefined();
+    attachToPage(p, b.id, { axis: 'x', index: 0 });
+    expect(b.guides).toEqual({ x: [120], y: [] });
+    expect(p.canvasGuides).toEqual({ x: [], y: [30] });
+  });
+
+  it('the page a universal guide attaches to: the open one if it crosses it, else the first it crosses, else none', () => {
+    const p = make();
+    const [a, b] = p.artboards;
+    expect(pageForUniversal(p, { axis: 'x', at: 1100 }, a.id)?.id).toBe(b.id);
+    expect(pageForUniversal(p, { axis: 'y', at: 100 }, b.id)?.id).toBe(b.id);
+    expect(pageForUniversal(p, { axis: 'y', at: 100 }, null)?.id).toBe(a.id);
+    expect(pageForUniversal(p, { axis: 'x', at: 900 }, a.id)).toBeUndefined();
+    b.canvasHidden = true;
+    expect(pageForUniversal(p, { axis: 'x', at: 1100 }, a.id)).toBeUndefined();
   });
 });
 
@@ -198,7 +293,7 @@ describe('guides in the editor', () => {
       expect(c.disabled).toBeFalsy();
       act(() => void c.run());
     };
-    expect(buildCommands().filter((x) => x.id.startsWith('view:guides')).map((x) => x.id)).toEqual(['view:guides-lock', 'view:guides-clear']);
+    expect(buildCommands().filter((x) => x.id.startsWith('view:guides')).map((x) => x.id)).toEqual(['view:guides-lock', 'view:guides-clear-universal', 'view:guides-clear']);
     run('Lock the guides');
     expect(s.get().project.guidesLocked).toBe(true);
     expect(buildCommands().find((x) => x.title === 'Clear all guides')!.disabled).toBeTruthy();
@@ -209,13 +304,36 @@ describe('guides in the editor', () => {
     expect(buildCommands().find((x) => x.title === 'Clear all guides')!.disabled).toBeTruthy();
   });
 
-  it('the guides menu is lock, clear this page and clear all, with the ones that do nothing greyed', () => {
+  it('Clear universal guides leaves the attached ones', () => {
+    s.update((d) => void ((d.artboards[0].guides = { x: [100], y: [] }), (d.canvasGuides = { x: [], y: [40] })));
+    const c = buildCommands().find((x) => x.title === 'Clear universal guides')!;
+    expect(c.disabled).toBeFalsy();
+    act(() => void c.run());
+    expect(s.get().project.canvasGuides).toBeUndefined();
+    expect(s.get().project.artboards[0].guides).toEqual({ x: [100], y: [] });
+    expect(buildCommands().find((x) => x.title === 'Clear universal guides')!.disabled).toBeTruthy();
+  });
+
+  it('the guides menu is lock, clear this page, clear universal and clear all, with the ones that do nothing greyed', () => {
     const items = guidesMenuItems(s.get().project.artboards[0].id);
     const labels = items.filter((i) => 'label' in i).map((i) => (i as { label: string }).label);
-    expect(labels).toEqual(['Lock guides', 'Clear this page’s guides', 'Clear all guides']);
+    expect(labels).toEqual(['Lock guides', 'Clear this page’s guides', 'Clear universal guides', 'Clear all guides']);
     expect(items.some((i) => 'heading' in i)).toBe(false);
     const clear = items.find((i) => 'label' in i && i.label === 'Clear all guides') as { disabled?: boolean };
     expect(clear.disabled).toBe(true);
+  });
+  it('every attached guide has a pin where it meets its page, the open page\'s included; universal ones have none', () => {
+    s.update((d) => void ((d.artboards[0].guides = { x: [100], y: [] }), (d.artboards[1].guides = { x: [], y: [50] }), (d.canvasGuides = { x: [300], y: [] })));
+    setPrefs({ rulers: true });
+    act(() => root.render(<Canvas />));
+    expect(host.querySelectorAll('.guide-pin')).toHaveLength(2);
+    // and only the other page's line is a dim mark; the open page's is the rulers'
+    expect(host.querySelectorAll('.guide-mark')).toHaveLength(1);
+  });
+
+  it('the preference default: new guides are universal', async () => {
+    const { PREF_DEFAULTS } = await import('../src/lib/prefs');
+    expect(PREF_DEFAULTS.attachGuides).toBe(false);
   });
 });
 
@@ -244,5 +362,9 @@ describe('how a guide looks', () => {
     expect(rule('.guide-mark')).toMatch(/stroke:\s*var\(--guide\)/);
     expect(rule('.guide-mark')).toMatch(/stroke-dasharray/);
     expect(css).not.toMatch(/\.guide-(line|mark|pos)\.project/);
+    // the pin on an attached guide is the same colour, and the overlay sits above the guide lines so handles beat a guide's grab strip
+    expect(rule('.guide-pin')).toMatch(/fill:\s*var\(--guide\)/);
+    expect(rule('.overlay')).toMatch(/z-index:\s*2/);
+    expect(rule('.guide-line')).toMatch(/z-index:\s*1/);
   });
 });

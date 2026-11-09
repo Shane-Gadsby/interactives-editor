@@ -148,6 +148,7 @@ export const SETTINGS: SettingDef[] = [
     ),
   },
   check('rulers', 'canvas', 'Rulers and grid', 'Show rulers', 'Rulers along the canvas edges; drag from them to make guides (Shift+R)', 'rulers', { words: 'guides' }),
+  check('attachGuides', 'canvas', 'Rulers and grid', 'Attach new guides to the page they’re dropped on', 'Off (the default): a guide dragged out of a ruler is universal, fixed on the canvas, and stays put when you move pages. On: it attaches to the page under the pointer and moves with that page. Hold Alt while dragging to get the other kind for that one guide', 'attachGuides', { words: 'guides universal page canvas ruler' }),
   check('showGrid', 'canvas', 'Rulers and grid', 'Show grid', 'Draws the grid on the artboards. Only the canvas shows it: Preview and exports never do (Shift+G)', 'showGrid'),
   {
     id: 'gridSize',

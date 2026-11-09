@@ -2321,6 +2321,9 @@ body.col-resizing * {
 }
 .overlay {
   position: absolute;
+  /* above the guide lines (z-index 1 in the rulers layer): the overlay lets the pointer through except on its handles, so a guide
+     lying along a layer's edge never hides that layer's resize handles, and is grabbed everywhere else */
+  z-index: 2;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -2362,6 +2365,13 @@ body.col-resizing * {
   stroke-width: 1;
   stroke-dasharray: 6 4;
   opacity: 0.55;
+  pointer-events: none;
+}
+/* the small pin where an attached guide meets the edge of its page: the quiet sign that it moves with that page (a universal guide has none) */
+.guide-pin {
+  fill: var(--guide);
+  stroke: var(--panel);
+  stroke-width: 1;
   pointer-events: none;
 }
 /* the page a page dragged from the Layers list would be placed in (Canvas dropHost) */
@@ -6194,6 +6204,14 @@ kbd {
   width: 1px;
   background: repeating-linear-gradient(to bottom, var(--guide) 0 6px, transparent 6px 10px);
 }
+.guide-line.universal.x .guide-grab {
+  top: 0;
+  height: 100%;
+}
+.guide-line.universal.y .guide-grab {
+  left: 0;
+  width: 100%;
+}
 .guide-line.y {
   left: 0;
   right: 0;
@@ -6227,6 +6245,18 @@ kbd {
 /* a guide dragged off its page, that letting go will remove: faded, with a note by the pointer saying so */
 .guide-line.removing {
   opacity: 0.35;
+}
+.guide-kind-hint {
+  position: absolute;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
 }
 .guide-remove-hint {
   position: absolute;
