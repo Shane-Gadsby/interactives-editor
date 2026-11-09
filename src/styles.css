@@ -6517,6 +6517,18 @@ code {
   text-transform: uppercase;
   color: var(--muted);
 }
+/* A recording waiting to be kept or thrown away */
+.voice-take {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.voice-take .row {
+  flex-wrap: wrap;
+}
 .q-vars summary {
   cursor: pointer;
   font-size: 12px;

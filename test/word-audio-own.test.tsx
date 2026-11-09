@@ -195,7 +195,7 @@ describe('the Word audio choice on the question', () => {
     expect(s.get().project.assets.map((a) => a.id).sort()).toEqual(['mine1', 'mine2']);
   });
 
-  it('records with the microphone and uses the take', async () => {
+  it('records with the microphone, holds the take, and uses it when asked', async () => {
     const stopped = vi.fn();
     const track = { stop: stopped };
     class FakeRecorder {
@@ -223,6 +223,11 @@ describe('the Word audio choice on the question', () => {
     await act(async () => void button('Stop recording')!.click());
     await act(async () => {});
     expect(stopped).toHaveBeenCalled();
+    //held until it is used, not saved by Stop
+    expect(nodeAsset(s.get().project)).toBe('');
+    expect(host.textContent).toMatch(/Recorded, /);
+    await act(async () => void button('Use this recording')!.click());
+    await act(async () => {});
     expect(nodeAsset(s.get().project)).toBe('recorded1');
     expect(s.get().project.assets.find((a) => a.id === 'recorded1')!.name).toMatch(/^Recorded word .*\.webm$/);
     vi.unstubAllGlobals();

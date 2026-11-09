@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Artboard, FrameNode, LogicNode, Project, QuestionVoice } from 'interactives-player';
+import type { Artboard, Asset, FrameNode, LogicNode, Project, QuestionVoice } from 'interactives-player';
 import { store } from '../store/store';
 import { locate } from '../store/doc';
 import { CheckField, NumberField, Row, SelectField, TextField } from '../components/ui';
-import { assetKind, storeFile } from '../lib/assets';
+import { assetKind, assetUrls, storeFile } from '../lib/assets';
+import { playAudio, stopAudio } from '../lib/audio-player';
+import { AudioPlayButton } from '../components/AudioPlayButton';
 import { addAssetOption, withQuickAdd } from '../lib/quick-add';
 import { recordingSupported, startRecording, type Recorder } from '../lib/record-audio';
 import {
@@ -31,6 +33,18 @@ import {
 
 type Note = { kind: 'info' | 'error'; text: string } | null;
 
+/** A recording that has been made and not yet kept: only here in the editor, not in Assets, the project or the undo history. */
+interface Take {
+  file: File;
+  url: string;
+  seconds: number;
+  /** Set once it has gone to the server, so a Use that stalls on something else does not send it twice. */
+  asset?: Asset;
+}
+
+//A take shorter than this is thrown away without a word when the author leaves it
+const TAKE_WORTH_KEEPING = 2;
+
 /** What a Play sound node is, in words: the layer that starts it, else its note, else its place in the list. */
 function nodeLabel(ab: Artboard, node: LogicNode, index: number): string {
   const from = ab.logic.edges.find((e) => e.to === node.id);
@@ -48,21 +62,55 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
   const q = frame.question!;
   const v: QuestionVoice = q.voice ?? {};
   const [status, setStatus] = useState<VoiceStatus | null>(null);
-  const [busy, setBusy] = useState<'' | 'preview' | 'make' | 'all' | 'install'>('');
+  const [busy, setBusy] = useState<'' | 'preview' | 'make' | 'all' | 'install' | 'use'>('');
   const [recording, setRecording] = useState(false);
   const recorder = useRef<Recorder | null>(null);
+  const startedAt = useRef(0);
+  const [take, setTakeState] = useState<Take | null>(null);
+  const takeRef = useRef<Take | null>(null);
   const [note, setNote] = useState<Note>(null);
-  const player = useRef<HTMLAudioElement | null>(null);
   const alive = useRef(true);
+  const owner = frame.id;
+
+  const setTake = (t: Take | null) => {
+    if (takeRef.current && takeRef.current !== t) URL.revokeObjectURL(takeRef.current.url);
+    takeRef.current = t;
+    setTakeState(t);
+  };
 
   useEffect(() => {
     alive.current = true;
     return () => {
       alive.current = false;
-      player.current?.pause();
-      recorder.current?.cancel();
     };
   }, []);
+
+  //Leaving the word (another word or page, or the section going away) lets go of what it was doing: nothing keeps playing or recording,
+  //and a take that was never kept is thrown away, saying so when it was long enough to matter
+  useEffect(() => {
+    return () => {
+      stopAudio(owner);
+      recorder.current?.cancel();
+      recorder.current = null;
+      setRecording(false);
+      setTakeState(null);
+      setNote(null);
+      const t = takeRef.current;
+      if (t) {
+        URL.revokeObjectURL(t.url);
+        takeRef.current = null;
+        if (t.seconds >= TAKE_WORTH_KEEPING) store().toast(`The recording of ${t.seconds.toFixed(1)} s was not used, so it was thrown away. Nothing was saved.`);
+      }
+    };
+  }, [owner]);
+
+  //Closing the editor with a take that is worth keeping asks first
+  useEffect(() => {
+    if (!take || take.seconds < TAKE_WORTH_KEEPING) return;
+    const ask = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', ask);
+    return () => window.removeEventListener('beforeunload', ask);
+  }, [take]);
 
   const refresh = useCallback(async () => {
     try {
@@ -100,12 +148,8 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
     setNote(null);
     try {
       const blob = await speak(partsFor(q), voiceId, speed);
-      player.current?.pause();
       const url = URL.createObjectURL(blob);
-      const a = new Audio(url);
-      a.onended = () => URL.revokeObjectURL(url);
-      player.current = a;
-      await a.play();
+      await playAudio(`${owner}|preview`, url, () => URL.revokeObjectURL(url));
     } catch (e) {
       fail(e);
     } finally {
@@ -117,6 +161,7 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
   const make = async (items: { ab: Artboard; frame: FrameNode }[], all: boolean) => {
     setBusy(all ? 'all' : 'make');
     setNote(null);
+    stopAudio(owner);
     const problems: string[] = [];
     let done = 0;
     let added = 0;
@@ -190,10 +235,8 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
   const ownAsset = project.assets.find((a) => a.id === v.ownAsset);
   const nameProblem = own && ownAsset ? ownAudioNameProblem(q, ownAsset.name) : null;
 
-  /** Use this asset as the word's own audio, adding a Play the word button when the page has no Play sound node. */
-  const chooseOwn = (assetId: string) => {
-    const asset = store().get().project.assets.find((a) => a.id === assetId);
-    if (!asset) return;
+  /** Use this asset as the word's own audio, adding a Play the word button when the page has no Play sound node. One undo step, whether or not the asset is in the project yet. */
+  const useOwn = (asset: Asset): boolean => {
     let outcome = '';
     store().update((d) => {
       const draft = d as Project;
@@ -210,10 +253,18 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
       }
       setOwnAudio(draft, ab.id, frame.id, asset, node.id);
     });
-    if (outcome) setNote({ kind: 'error', text: 'There is more than one Play sound node on this page. Pick which one this word\'s audio goes in first.' });
+    return !outcome;
+  };
+  const moreThanOne = 'There is more than one Play sound node on this page. Pick which one this word\'s audio goes in first.';
+
+  const chooseOwn = (assetId: string) => {
+    const asset = store().get().project.assets.find((a) => a.id === assetId);
+    if (!asset) return;
+    if (!useOwn(asset)) setNote({ kind: 'error', text: moreThanOne });
     else setNote({ kind: 'info', text: `${asset.name} is this word's audio. The made voice audio, if there is any, is kept in Assets and comes back when you switch to Made with a voice.` });
   };
 
+  /** Start recording, or stop it and hold the take. Nothing is saved until Use this recording. */
   const record = async () => {
     setNote(null);
     if (recorder.current) {
@@ -222,20 +273,49 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
       setRecording(false);
       try {
         const file = await r.stop();
-        const asset = await storeFile(project.id, file);
-        store().update((d) => void (d as Project).assets.push(asset));
-        chooseOwn(asset.id);
+        const seconds = Math.round(((Date.now() - startedAt.current) / 1000) * 10) / 10;
+        setTake({ file, url: URL.createObjectURL(file), seconds });
       } catch (e) {
         fail(e);
       }
       return;
     }
+    //Record again: the take in hand goes first
+    stopAudio(owner);
     try {
       recorder.current = await startRecording(`Recorded word ${q.prefix}`);
+      startedAt.current = Date.now();
+      setTake(null);
       setRecording(true);
     } catch (e) {
       fail(e);
     }
+  };
+
+  const keepTake = async () => {
+    const t = takeRef.current;
+    if (!t) return;
+    stopAudio(owner);
+    if (nodes.length > 1 && !target) return setNote({ kind: 'error', text: moreThanOne });
+    setBusy('use');
+    setNote(null);
+    try {
+      t.asset ??= await storeFile(project.id, t.file);
+      if (!alive.current || takeRef.current !== t) return;
+      if (!useOwn(t.asset)) return setNote({ kind: 'error', text: moreThanOne });
+      setTake(null);
+      setNote({ kind: 'info', text: `Using the recording as this word's audio (${t.asset.name}). One undo takes it back out.` });
+    } catch (e) {
+      fail(e);
+    } finally {
+      if (alive.current) setBusy('');
+    }
+  };
+
+  const discardTake = () => {
+    stopAudio(owner);
+    setTake(null);
+    setNote({ kind: 'info', text: 'Recording thrown away. Nothing was saved.' });
   };
 
   const nodePicker = nodes.length > 1 && (
@@ -250,6 +330,14 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
   const audioAssets = project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio');
   const mb = (n?: number) => Math.round((n ?? 0) / 1048576);
 
+  //What the word's Play sound node plays now: the sound it holds, else (a node still to be picked) the one the word remembers
+  const nodeSound = target && target.kind === 'action.sound' ? String(target.params.asset ?? '') : undefined;
+  const audioId = nodeSound ?? (own ? v.ownAsset : v.asset) ?? '';
+  const audioAsset = project.assets.find((a) => a.id === audioId);
+  const noAudio = !audioId ? (own ? 'No audio yet: choose or record a sound first' : 'No audio yet: make it with a voice first') : !audioAsset ? 'The sound is not in this project\'s Assets any more' : undefined;
+  //A new sound (made, chosen or recorded) or a different word is not the one that was playing
+  useEffect(() => stopAudio(owner), [audioId, owner]);
+
   return (
     <>
       <div className="q-sub">Voice for the word</div>
@@ -262,8 +350,32 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
             { value: 'voice', label: 'Made with a voice' },
             { value: 'own', label: 'My own audio' },
           ]}
-          onChange={(x) => store().update((d) => void setAudioSource(d as Project, ab.id, frame.id, x === 'own'))}
+          onChange={(x) => {
+            //A take not kept is not carried over to the other kind of audio
+            if (x !== 'own') {
+              setTake(null);
+              recorder.current?.cancel();
+              recorder.current = null;
+              setRecording(false);
+            }
+            store().update((d) => void setAudioSource(d as Project, ab.id, frame.id, x === 'own'));
+          }}
         />
+      )}
+      {!v.device && (
+        <Row>
+          <AudioPlayButton
+            playKey={`${owner}|word`}
+            label="Play"
+            title="Hear the audio this word's Play sound node plays now, without leaving the Inspector or opening Preview"
+            off={noAudio}
+            source={async () => {
+              await assetUrls.ensure(project.id, [audioId]);
+              return assetUrls.resolve(audioId);
+            }}
+            onProblem={(text) => setNote({ kind: 'error', text })}
+          />
+        </Row>
       )}
       {!v.device && own && (
         <>
@@ -278,8 +390,13 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
             onChange={withQuickAdd((id) => id && chooseOwn(id), { asset: 'audio' })}
           />
           <Row>
-            <button className="btn" disabled={!recording && !recordingSupported()} title={recordingSupported() ? 'Record the word with your microphone, then press Stop' : 'This browser cannot record sound: upload a file instead'} onClick={() => void record()}>
-              {recording ? 'Stop recording' : 'Record it now'}
+            <button
+              className="btn"
+              disabled={(!recording && !recordingSupported()) || busy === 'use'}
+              title={recordingSupported() ? (take ? 'Throw the take away and record the word again' : 'Record the word with your microphone, then press Stop. You listen to it before it is kept') : 'This browser cannot record sound: upload a file instead'}
+              onClick={() => void record()}
+            >
+              {recording ? 'Stop recording' : take ? 'Record again' : 'Record it now'}
             </button>
             {recording && (
               <span className="muted small" role="status">
@@ -287,6 +404,22 @@ export function VoiceSection({ frame, ab, project }: { frame: FrameNode; ab: Art
               </span>
             )}
           </Row>
+          {take && !recording && (
+            <div className="voice-take" role="group" aria-label="The recording you just made">
+              <div className="muted small" role="status">
+                Recorded, {take.seconds.toFixed(1)} s. Listen, use it or discard it.
+              </div>
+              <Row>
+                <AudioPlayButton playKey={`${owner}|take`} label="Listen" title="Hear the recording. It is not saved anywhere yet" source={async () => take.url} onProblem={(text) => setNote({ kind: 'error', text })} />
+                <button className="btn primary" disabled={busy === 'use'} title="Keep it: it is added to Assets and becomes this word's audio, in one step you can undo" onClick={() => void keepTake()}>
+                  {busy === 'use' ? 'Saving it...' : 'Use this recording'}
+                </button>
+                <button className="btn" disabled={busy === 'use'} title="Throw it away. Nothing is saved or added to the project" onClick={discardTake}>
+                  Discard
+                </button>
+              </Row>
+            </div>
+          )}
           {nodePicker}
           {nodes.length === 0 && <div className="muted small">This page has no Play sound node yet. Choosing or recording a sound adds a Play the word button with one.</div>}
           {nameProblem && (
