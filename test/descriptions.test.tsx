@@ -54,6 +54,9 @@ function mount(ui: () => React.ReactElement, build: (p: Project) => void = () =>
 }
 const tl = () => s.get().project.artboards[0].timelines[0];
 const pick = (label: string, value: string) => {
+  // a timeline with no sound or captions starts with that group folded: open it, like a person would
+  const fold = host!.querySelector<HTMLElement>('.media-fold[aria-expanded="false"]');
+  if (fold) act(() => fold.click());
   const sel = host!.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`)!;
   act(() => {
     sel.value = value;
