@@ -2313,20 +2313,30 @@ Everyone should be able to finish the activity, so every drag has two ways that 
             return [`### ${nodeHeading(d)}`, pw(d.summary, false), rest, gives, params].filter(Boolean).join('\n\n');
           })
           .join('\n\n');
-      return [section('Events', 'event'), section('Actions', 'action'), section('Logic', 'logic')].join('\n\n');
+      const intro = `This is every node you can use in the **Interactions** tab, with its settings. There are three kinds. **Events** start a flow: a click, a key, a timer. **Actions** do something: play a sound, go to a page, change a value. **Logic** chooses the way through: check a condition, do things in order. To build flows, see [Interactions](interactions).
+
+Nodes are named for what happens, for example *Go to a page*. The name in brackets after it is the technical name the node has in the file, which search also finds. Preferences has a **Technical wording** switch if you would rather see those names.
+
+Settings that take an expression are worked out as a formula: see [Expressions](expressions). In them, \`event\` holds what started the flow, and a node's **Gives** line lists what it adds.`;
+      const outro = `## Related
+
+Two actions have more detail elsewhere. **Play sound** (volume, speed, loop, **Stop other sounds first**, music that carries across pages) and **Stop sound** are described under [Sound](captions#sound). **Change a value or counter** (with **Over (ms)** and **Easing**) and **Put values back to the start** are described in [Variables](variables).`;
+      return [intro, section('Events', 'event'), section('Actions', 'action'), section('Logic', 'logic'), outro].join('\n\n');
     },
   },
   {
     id: 'question-kit',
     title: 'Questions and quizzes',
     group: 'Interactivity',
-    summary: 'Add multiple choice, true/false, fill in the blank (typed or dragged), ordering, matching and categorise (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file or paste them from Word or Excel.',
+    summary: 'Questions that mark themselves: choices, blanks, ordering, matching, hotspots, banks and spelling tests.',
     keywords: 'question quiz test assessment import gift moodle converter multiple choice true false fill blank ordering sequence matching match drag drop categorise sort groups word bank distractor extra pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning',
-    body: `Quizzes without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
+    body: `A question that checks itself, without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open page from ordinary layers, with the variables it keeps and a few interaction nodes. The **Question** section in the Inspector then changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
+
+Already have the questions in Word, Excel or Moodle? You can [paste them in](paste-questions) or import a GIFT file instead of typing them again.
 
 ## Add one
 
-Click **Add question**, pick a type, and a card appears with a prompt, the answers, a Check answer button, a Hint button, feedback text, a score and a Try again button. Edit the prompt and answers in the **Question** section, then press **Preview**.
+Click **Add question** and pick a type. A card appears with a prompt, the answers, a Check answer button, a Hint button, feedback text, a score and a Try again button. Edit the prompt and answers in the **Question** section, then press **Preview**.
 
 | Type | The learner | Right when |
 |---|---|---|
@@ -2341,54 +2351,140 @@ Click **Add question**, pick a type, and a card appears with a prompt, the answe
 
 ## What gets built
 
-Nothing is hidden. The question is a **frame** (named Question 1, Question 2, ...) holding:
+Nothing is hidden. A question is a **frame** (named Question 1, Question 2 and so on) made of ordinary layers:
 
-- a **Prompt** text, \`{q1_prompt}\`;
-- an **answer area**: for choices, one **Option** layer repeated once per option (a [repeater](repeaters) over \`q1_items\`, so you restyle the one template and every option follows); for blanks, a label and an input per blank; for ordering, an **Item** layer with Move up and Move down buttons;
-- for matching, a **Terms** pile of draggable layers (one per pair) and a **Matches** column with, per pair, a definition text and a dashed **Slot** (a [drop zone](drag-and-drop) that holds one term); for a hotspot, a **Picture** and, over it, one invisible **Area** layer per area;
+- a **Prompt** text;
+- an **answer area**. For choices it is one **Option** layer repeated once per option (a [repeater](repeaters), so you restyle the one template and every option follows). For blanks it is a label and an input per blank. For ordering it is an **Item** layer with Move up and Move down buttons;
+- for matching, a **Terms** pile of draggable layers (one per pair) and a **Matches** column with, per pair, a definition text and a dashed **Slot** (a [drop zone](drag-and-drop) that holds one term);
+- for a hotspot, a **Picture** and, over it, one invisible **Area** layer per area;
 - **Hint text**, **Feedback**, and a row of **Check answer**, **Hint**, **Try again** and **Score**.
 
-Every layer is yours: recolour it, change the font, move things around, swap a rectangle for an image, add animation. The layers are bound to the question's variables (for example the option fill follows \`item.selected\` and \`item.state\`), so they keep working. The **Restyle a part** buttons at the bottom of the Question section select a part for you; selecting any part shows a note saying it belongs to the question.
+Every layer is yours: recolour it, change the font, move things around, swap a rectangle for an image, add animation. The layers are bound to the question's variables, so they keep working.
 
-The behaviour is a handful of nodes in the **Interactions** tab, in rows of an event and what it runs: *When the page is shown* then **Reset question**; a click on the option then **Choose option**; a click on Check answer then **Check answer**; and so on. Add your own nodes after them. **Check answer** has three outputs: *right*, *wrong*, and *finished* (once the question is locked, because it is right or out of tries), so "when it is right, play the confetti timeline" is one wire.
+The **Restyle a part** buttons at the bottom of the Question section select a part for you. Selecting any part shows a note saying it belongs to the question.
+
+## How a question behaves
+
+The behaviour is a handful of nodes in the **Interactions** tab, each a row of an event and what it runs. *When the page is shown* runs **Reset question**. A click on an option runs **Choose option**. A click on Check answer runs **Check answer**. Add your own nodes after them.
+
+**Check answer** has three outputs: *right*, *wrong* and *finished* (once the question is locked, because it is right or out of tries). So "when it is right, play the confetti animation" is one wire.
+
+## The button row on a question card
+
+A question's own button leads the row, in the accent colour: **Play the word** on a spelling test, **Repeat**, or a clip's **Play**. **Submit answer** sits at the far right. The two are at opposite ends so they never look alike, in any theme.
 
 ## Listening and number keys
-Three settings in the Question section's **Listening and keys** group:
-- **Listen button** adds a Listen button beside Check. It reads the question and its numbered options aloud, and once the answer has been checked it reads the feedback and the spoken explanation instead. It uses a voice installed on the learner's own device, never starts by itself, and hides itself when the device has no voice. See [Read it to me](read-aloud).
-- **Say the prompt like** and **Spoken explanation** are text only a voice says. The first replaces the prompt when it is read (the options still follow it); the second is said after the feedback. For a data bank, the columns *spoken* and *explain* do the same per row.
-- **Number keys 1 to 9 choose** lets the learner press 1 to 9 to choose the option in that place (several choices toggle; other keys do nothing). A small line under the options says so. Choosing still needs **Check answer**. It listens on the whole page, so use it on one question at a time. It is offered for single choice, multiple choice and true or false.
+
+Three settings in the Question section's **Listening and keys** group let a learner hear a question, or answer it from the keyboard.
+
+- **Listen button** adds a Listen button beside Check. It reads the question and its numbered options aloud. Once the answer has been checked it reads the feedback and the spoken explanation instead. It uses a voice installed on the learner's own device, never starts by itself, and hides itself when the device has no voice. See [Read it to me](read-aloud).
+- **Say the prompt like** and **Spoken explanation** are words only a voice says. The first replaces the prompt when it is read (the options still follow it). The second is said after the feedback. For a data bank, the columns \`spoken\` and \`explain\` do the same for each row.
+- **Number keys 1 to 9 choose** lets the learner press 1 to 9 to choose the option in that place (several choices toggle; other keys do nothing). A small line under the options says so. Choosing still needs **Check answer**.
+
+Number keys listen on the whole page, so use them on one question at a time. They are offered for single choice, multiple choice and true or false.
 
 ## Variables
 
-Each question keeps its state in variables named from its **Name prefix** (\`q1\` by default): \`q1_answered\`, \`q1_correct\`, \`q1_attempts\`, \`q1_triesLeft\`, \`q1_score\`, \`q1_locked\`, \`q1_feedback\`, \`q1_hint\`, \`q1_hintsUsed\`, \`q1_hintsLeft\`, \`q1_prompt\` and \`q1_items\` (what is shown, with \`selected\` and \`state\` per row). Use them anywhere: \`q1_score + q2_score\`, a progress bar bound to \`q1_attempts\`, a Next button shown when \`q1_correct\`. Renaming the prefix renames the variables and everything that reads them.
+Each question keeps its progress in variables, named from its **Name prefix** (\`q1\` by default). Renaming the prefix renames the variables and everything that reads them. Use them anywhere: \`q1_score + q2_score\`, a progress bar bound to \`q1_attempts\`, or a Next button shown when \`q1_correct\`.
 
-**Score** is the question's points times the share that is right, less **Retry −%** for each check after the first and **Hint −%** for each hint taken. With **Part marks** on, a multiple response, ordering or fill in the blank question is worth the share it got right.
+| Variable | Holds |
+|---|---|
+| \`q1_prompt\`, \`q1_items\` | the question text, and the options shown (each has \`selected\` and \`state\`) |
+| \`q1_answered\`, \`q1_correct\`, \`q1_locked\` | whether it has been checked, whether it is right, and whether it is finished (right, or out of tries) |
+| \`q1_attempts\`, \`q1_triesLeft\` | checks so far, and how many are left |
+| \`q1_hint\`, \`q1_hintsUsed\`, \`q1_hintsLeft\` | the hint showing, hints taken, hints left |
+| \`q1_score\`, \`q1_feedback\` | the score, and the feedback showing |
+
+A question's score is its **Points** times the share that is right, less **Retry −%** for each check after the first and **Hint −%** for each hint taken. With **Part marks** on, a multiple response, ordering or fill in the blank question is worth the share it got right.
 
 ## Worked examples
 
-Two finished ones to play first: **Matching question** and **Hotspot question** on the **Templates** tab, under **Examples**. Press **Make my copy** and change the pairs, or the picture and the right area.
+Each type has its own settings in the **Question** section. Two finished ones are ready to play first: **Matching question** and **Hotspot question** on the **Templates** tab, under **Examples**. Press **Make my copy** and change the pairs, or the picture and the right area.
 
-**Multiple choice.** Add question, *Multiple choice*. Type the prompt, type each option, and tick the right one. Set **Tries** to 2 and write a hint. In Preview pick a wrong option and press **Check answer**: the feedback says *Not quite*, and with a try left you can pick again. The second miss locks the question and (if **Show the right answer** is on) marks the right option.
+### Multiple choice
 
-**Multiple response.** Tick every right option. Turn **Part marks** on to give a share of the points for a half-right answer, and write **Partly right** feedback.
+Add question, *Multiple choice (one answer)*. Type the prompt, type each option, and tick the right one.
 
-**True or false.** Write the statement as the prompt and set **Statement is** to True or False. Edit the two labels for other wording ("Agree" and "Disagree").
+Set **Tries** to 2 and write a hint. In Preview, pick a wrong option and press **Check answer**. The feedback says *Not quite*, and with a try left you can pick again. The second miss locks the question and, if **Show the right answer when finished wrong** is on, marks the right option.
 
-**Fill in the blank.** The accepted answers go one per line: \`Paris\`, \`city of light\`. Case and extra spaces are ignored unless you tick **Match case**. A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses. A line written \`/colou?r/i\` is a pattern. **Add blank** adds another input in the look of the last one. Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).
+### Multiple response
 
-**Put in order.** List the items in the **right** order; the learner sees them shuffled (the first deal is never already right). Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
+Tick every right option. Turn **Part marks** on to give a share of the points for a half-right answer, and write **Partly right** feedback.
 
-**Extra terms and extra words.** Matching has an **Extra terms** list in the Question section, and fill the blanks a list of **Extra words**. They are dragged like the others but belong nowhere, so the learner has to leave them alone. Left in the pile is right. One dropped into a matching slot is marked wrong and takes that pair's slot, and with part marks each extra in a slot takes one pair's share off.
+### True or false
 
-**Categorise.** Add question, *Categorise (drag into groups)*. The Question section lists the **groups** and the **items**, and each item says which group it belongs in. The learner drags every item into a group box (a box takes any number of items, and an item stays where it is let go), or uses the keyboard as for matching. Every box takes every item, so a wrong drop is allowed and **Check answer** says how it went: right when every item is in its own group, part marks give the share in the right group, and the feedback says how many (*3 of 4 in the right group*). An item can have **Feedback if put in the wrong group**, said with the result. Tick **Say right or wrong as each item is dropped** and each drop answers straight away (*Eagle goes in Birds. Right.*) without using a try, through an *Item dropped in a group* node the kit wires to each box. Categorise questions are marked in the page, not on the server, because which group an item belongs in is part of how the layers are set up. Finished, the items stop moving, and (with **Show the right answer**) the wrong ones are listed with their group.
+Write the statement as the prompt and set **Statement is** to True or False. Edit the two labels for other wording ("Agree" and "Disagree").
 
-**Fill the blanks by dragging.** On *Fill in the blank* set **Answer by** to *Dragging words from a word bank*. Each blank becomes a slot, and a bank of word chips appears: the first plain (not a /pattern/) accepted answer of each blank, plus any **Extra words**. Check reads the word in each slot as what was typed, so accepted answers, case, tolerance, part marks and retries all work as for typing. Because only the answer words are in the page (not which blank each fits), a drag the blanks question can still be marked on the server. **Shuffle the word bank** deals the chips again each time it starts.
+### Fill in the blank
 
-**Matching.** Add question, *Matching (drag and drop)*. Each pair in the Question section is a term and what it matches (a country and its capital, a word and its meaning, a label and a place on a diagram). The learner drags each term into the slot beside a definition, or uses the keyboard: Tab to a term, Space to pick it up, the arrow keys to choose a slot, Space to drop, Escape to put it back (see [Drag and drop](drag-and-drop)). A slot holds one term; dropping another on it swaps them. **Check answer** is right when every term is in its own slot. With **Part marks** the score is the share of terms in the right place, and the feedback says how many (*2 of 4 matched correctly*). When the question finishes, each slot is marked ✓ Right or ✗ Wrong and (with **Show the right answer**) says which term belongs there; the terms stop moving. **Try again** puts the terms back. **Shuffle** deals the terms to different places each time it starts. Add or remove a pair and the layers follow; a new one takes the look of the others. To match labels to a diagram, move the slots over the picture and restyle the terms: they are ordinary layers.
+The learner types into one or more inputs. Write the accepted answers one per line: \`Paris\`, \`city of light\`.
+
+- Case and extra spaces are ignored unless you tick **Match case**.
+- A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses.
+- A line written \`/colou?r/i\` is a pattern.
+- **Add blank** adds another input in the look of the last one.
+- Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).
+
+### Put in order
+
+List the items in the **right** order. The learner sees them shuffled (the first deal is never already right) and moves them up and down.
+
+Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
+
+### Extra terms and extra words
+
+Matching has an **Extra terms** list in the Question section. A fill the blanks question answered by dragging has **Extra words**. They are dragged like the others but belong nowhere, so the learner has to leave them alone.
+
+Left in the pile is right. One dropped into a matching slot is marked wrong and takes that pair's slot. With part marks, each extra in a slot takes one pair's share off.
+
+### Categorise
+
+Add question, *Categorise (drag into groups)*. The learner drags every item into a group box. In the Question section you list the **groups** and the **items**, and each item says which group it **Belongs in**.
+
+A box takes any number of items, and an item stays where it is let go. The keyboard works as for matching. Every box takes every item, so a wrong drop is allowed, and **Check answer** says how it went.
+
+- It is right when every item is in its own group. Part marks give the share in the right group, and the feedback says how many (*3 of 4 in the right group*).
+- An item can have **Feedback if put in the wrong group**, said with the result.
+- Tick **Say right or wrong as each item is dropped** and each drop answers straight away (*Eagle goes in Birds. Right.*) without using a try. The kit does this through an *Item dropped in a group* node on each box.
+- When it finishes, the items stop moving, and with **Show the right answer when finished wrong** the wrong ones are listed with their group.
+
+Categorise questions are marked in the page, not on the server, because which group an item belongs in is part of how the layers are set up.
+
+### Fill the blanks by dragging
+
+On *Fill in the blank*, set **Answer by** to *Dragging words from a word bank*. Each blank becomes a slot, and a bank of word chips appears: the first plain (not a /pattern/) accepted answer of each blank, plus any **Extra words**.
+
+Check reads the word in each slot as if it had been typed, so accepted answers, case, tolerance, part marks and retries all work as for typing. **Shuffle the word bank** deals the chips again each time it starts.
+
+This kind can still be marked on the server (see [Marking on the server](question-kit#marking-on-the-server)): only the answer words are in the page, not which blank each fits.
+
+### Matching
+
+Add question, *Matching (drag and drop)*. Each pair in the Question section is a term and what it matches: a country and its capital, a word and its meaning, a label and a place on a diagram. Add or remove a pair and the layers follow. A new pair takes the look of the others.
+
+The learner drags each term into the slot beside a definition. A slot holds one term, and dropping another on it swaps them. With the keyboard: Tab to a term, Space to pick it up, the arrow keys to choose a slot, Space to drop, Escape to put it back (see [Drag and drop](drag-and-drop)).
+
+**Check answer** is right when every term is in its own slot. With **Part marks** the score is the share of terms in the right place, and the feedback says how many (*2 of 4 matched correctly*). When the question finishes, each slot is marked ✓ Right or ✗ Wrong and, with **Show the right answer when finished wrong**, says which term belongs there. The terms stop moving.
+
+**Try again** puts the terms back. **Shuffle** deals the terms to different places each time it starts. To match labels to a diagram, move the slots over the picture and restyle the terms: they are ordinary layers.
 
 ![A matching question: four country names to drag onto their capitals, with dashed slots on the right.](help/question-matching.png)
 
-**Hotspot.** Add question, *Hotspot (click the right place)*. The sample picture is drawn with shapes so the question works straight away: put your own image in its place (delete the shapes in the **Picture** layer, add an image, or give the Picture frame an image fill). The areas sit together in one **Areas** group over the picture, and the question has one click flow for all of them (a *When clicked or hovered* on the group, *Only when a child is hit*, feeding *Choose option* the area's place with \`event.childIndex\`), so adding an area adds no flow. Each **Area** in the Question section is a name, a tick for right, and a shape (rectangle, ellipse or polygon); **Edit on canvas** selects its layer so you can move, resize or reshape it with the usual tools, and **Show all areas** selects every one, since they are invisible until a learner picks one. Tick more than one area as right and the learner has to mark all of them (the areas become checkboxes, and **Part marks** score the share). Clicking an area picks it with a ring and a tint; after the question finishes the right areas are marked and *Right answer: Roof* is written under the picture, so it is not shown by colour alone. If clicks near an area should count, **Grow areas 8 px** makes every area bigger on each side (and **Shrink** the reverse). Each area can have its own feedback, said when it is the one clicked.
+### Hotspot
+
+Add question, *Hotspot (click the right place)*. The learner clicks an area of a picture. The sample picture is drawn with shapes so the question works straight away. Put your own image in its place: delete the shapes in the **Picture** layer and add an image, or give the Picture frame an image fill.
+
+Each **Area** in the Question section has a name, a tick for right, and a shape (rectangle, ellipse or polygon). The areas are invisible until a learner picks one.
+
+- **Edit on canvas** selects the area's layer, so you can move, resize or reshape it with the usual tools.
+- **Show all areas** selects every one.
+- Tick more than one area as right and the learner has to mark all of them. The areas become checkboxes, and **Part marks** score the share.
+- If clicks near an area should count, **Grow areas 8 px** makes every area bigger on each side (**Shrink areas 8 px** does the reverse).
+- Each area can have its own feedback, said when it is the one clicked.
+
+Clicking an area picks it with a ring and a tint. After the question finishes the right areas are marked and *Right answer: Roof* is written under the picture, so it is not shown by colour alone.
+
+The areas sit together in one **Areas** group over the picture, and the question has one click flow for all of them. Adding an area adds no flow. If you want to extend it: that flow is a *When clicked or hovered* on the group, set to *Only when a child is hit*, feeding *Choose option* the area's place with \`event.childIndex\`.
 
 ![A hotspot question over a drawn house: the Roof area is selected and shown with its outline.](help/question-hotspot.png)
 
@@ -2400,7 +2496,7 @@ Choose **Paste questions from Word or Excel** in the Add question menu: see [Pas
 
 If you already have questions in Moodle, or made them with the GIFT converter from a Word document, you do not have to retype them. Open the **Add question** menu and press **Import questions from a GIFT file**, then pick the file (\`.gift\` or \`.txt\`).
 
-Each question gets an artboard of its own, named after its title if it has one and otherwise "Question 3" and so on, in rows below what is already on the canvas. An empty artboard that is open (a new project's first one) takes the first question. They are ordinary questions from then on: the **Question** section changes anything, and you restyle them like any other. The whole import is one undo. Up to 100 questions come in from one file; the report says how many were left over.
+Each question gets a page of its own, named after its title if it has one and otherwise "Question 3" and so on, in rows below what is already on the canvas. An empty page that is open (a new project's first one) takes the first question. They are ordinary questions from then on: the **Question** section changes anything, and you restyle them like any other. The whole import is one undo. Up to 100 questions come in from one file; the report says how many were left over.
 
 | In the GIFT file | Becomes |
 |---|---|
@@ -2411,7 +2507,13 @@ Each question gets an artboard of its own, named after its title if it has one a
 | \`{#3.14:0.01}\`, \`{#1..5}\` (numerical) | Fill in the blank with a margin of error |
 | \`=term -> definition\` lines | Matching (drag and drop) |
 
-The text after a \`#\` on an answer becomes that option's feedback. The text after \`####\` is added to the "Correct" message. On true or false, the two \`#\` parts are the feedback for the wrong choice and the right one. A question written as \`The capital is {=Paris ~Rome}.\` shows a gap (\`_____\`) where the answers were. Backslash escapes (\`\\~\`, \`\\=\`, \`\\#\`, \`\\{\`, \`\\}\`, \`\\:\`, \`\\n\`) work as in Moodle, comment lines starting with \`//\` are ignored, and options stay in the order of the file (turn on **Shuffle** to deal them).
+Feedback comes across like this:
+
+- The text after a \`#\` on an answer becomes that option's feedback.
+- The text after \`####\` is added to the "Correct" message.
+- On true or false, the two \`#\` parts are the feedback for the wrong choice and the right one.
+
+A question written as \`The capital is {=Paris ~Rome}.\` shows a gap (\`_____\`) where the answers were. Backslash escapes (\`\\~\`, \`\\=\`, \`\\#\`, \`\\{\`, \`\\}\`, \`\\:\`, \`\\n\`) work as in Moodle, and comment lines starting with \`//\` are ignored. Options stay in the order of the file (turn on **Shuffle** to deal them).
 
 When it finishes, a report lists everything that did not come across, or came across changed, with the line number in the file. Nothing is dropped quietly:
 
@@ -2426,16 +2528,20 @@ Moodle XML files are not read yet.
 
 ## The whole quiz
 
-Every project has a built-in \`quiz\` that adds up its questions, for a results page that needs no wiring per question:
+A project's questions can add themselves up, so a results page needs no wiring per question. Every project has a built-in \`quiz\` that does it:
 
 | Name | Holds |
 |---|---|
 | \`quiz.score\`, \`quiz.max\`, \`quiz.percent\` | points earned, the most all the questions can score, and the share (two places) |
 | \`quiz.passed\`, \`quiz.passMark\` | at or over the pass mark from [Results and progress](results) (false and empty when there is none) |
 | \`quiz.count\`, \`quiz.finished\`, \`quiz.right\`, \`quiz.done\` | how many questions, how many are finished, how many of those are right, and whether all are finished |
-| \`quiz.questions\` | one entry for each question: \`prefix\`, \`page\` (its artboard's name), \`score\`, \`points\`, \`correct\`, \`locked\` |
+| \`quiz.questions\` | one entry for each question: \`prefix\`, \`page\` (its page's name), \`score\`, \`points\`, \`correct\`, \`locked\` |
 
-Use \`quiz.questions\` as a repeater's items to show a row for each question: \`{item.page}: {item.score} of {item.points}\`. Adding a question to the quiz adds a row, and a question's own settings are all there is to wire. A bank gone through once counts as one question with the run's score and points. A variable or data source called \`quiz\` takes the name over, as for any built-in. In Results and progress, **Score from: Total of all questions** makes the project's reported score this total.
+Use \`quiz.questions\` as a [repeater's](repeaters) items to show a row for each question: \`{item.page}: {item.score} of {item.points}\`. Adding a question to the quiz adds a row, and a question's own settings are all there is to wire.
+
+A bank gone through once counts as one question, with the run's score and points. A variable or data source called \`quiz\` takes the name over, as for any built-in.
+
+In Results and progress, **Score from: Total of all questions** makes the project's reported score this total.
 
 Two settings in the Question section help a quiz of several pages: **Keep the answer when the page is revisited** (coming back to the page in the same visit finds the question as it was left, rather than set up again; a drag question puts its layers back where the last check found them) and **Hide Try again** (leaves out the button, for a test that is marked once).
 
@@ -2458,7 +2564,9 @@ By default a bank loops for ever. Set **When the rows run out** to *Finish after
 | \`q1_setDone\` | true once every question is finished |
 | \`q1_missed\` | the rows (counting from 0) that finished wrong, in this run |
 
-**Check answer** has a **set done** output that fires when the question just checked was the last of the run, and **Reset question** has one that fires when there is no next question, so a Next question button can go straight to a results page. Moving on from a question without finishing it counts it as missed. On Reset question, **Bank run** set to *Start a new run* draws a fresh run with clean totals, and *Review the missed ones* runs only the rows in \`q1_missed\` (with nothing missed it is done at once).
+**Check answer** has a **set done** output that fires when the question just checked was the last of the run. **Reset question** has one that fires when there is no next question. So a Next question button can go straight to a results page.
+
+Moving on from a question without finishing it counts it as missed. On Reset question, **Bank run** set to *Start a new run* draws a fresh run with clean totals. *Review the missed ones* runs only the rows in \`q1_missed\` (with nothing missed it is done at once).
 
 Columns a row can have:
 
@@ -2475,18 +2583,25 @@ A CSV works the same way: the header names are the columns, in any case. The que
 
 ## Results
 
-**Report result** in the Question section adds a *Report result* node after **Check answer**'s *finished* output, sending the question's score (\`q1_score\`) to the project's Results (see the Results settings for the top score, pass mark and completion). With several questions, leave it off and report once yourself, for example a *Report result* node with the score \`q1_score + q2_score\` after the last one.
+A question can send its score to the project's Results (see the Results settings for the top score, pass mark and completion). Set **Report result** in the Question section to **Score so far** or **Complete, with the score**. It adds a *Report result* node after **Check answer**'s *finished* output, sending the question's score (\`q1_score\`).
+
+With several questions, leave it on **No** and report once yourself, for example a *Report result* node with the score \`q1_score + q2_score\` after the last one. Or use **Score from: Total of all questions** (see [The whole quiz](question-kit#the-whole-quiz)).
 
 ## Marking on the server
 
-Everything above marks in the learner's browser, so the right answers are in the file the learner downloads and a score is only ever what their browser says. For marks that have to be trustworthy, tick **Mark answers on the server** in the Marking part of the Question section. Both the share link and the **Link for StudyDesk** then serve the project without its answers (press **Update to the latest version** in [Share link](export#share-link) after you change it), and the **Link for StudyDesk** is the one that can check an answer:
+Everything above marks in the learner's browser. The right answers are in the file the learner downloads, and a score is only ever what their browser says.
 
-- The page that is served has the right answers taken out: which options are right, accepted answers and their patterns and tolerances, the feedback, and the hints. The right order of an ordering question is hidden too. Anyone who looks at the page's code finds none of it.
+For marks that have to be trustworthy, tick **Mark answers on the server** in the Marking part of the Question section. Both the share link and the **Link for StudyDesk** then serve the project without its answers (press **Update to the latest version** in [Share link](export#share-link) after you change it). The **Link for StudyDesk** is the one that can check an answer.
+
+How it works:
+
+- The page that is served has the right answers taken out: which options are right, accepted answers and their patterns and tolerances, the feedback, the hints, and the right order of an ordering question. Anyone who looks at the page's code finds none of it.
 - **Check answer** sends the learner's answer to the server, which marks it with the same marking the player uses, and sends back right or wrong, the score and the feedback to show. The tries, hints and score are kept by the server, so a learner who reloads or starts again does not get a fresh set of tries.
-- The server records the result itself. The mark that counts for each question is how it finished the first time (unless the set has **Retakes**, below). **Try again** after that is practice and does not change the recorded mark. The project's score is the total of those marks out of the questions' total points, it counts as complete when every server-marked question has finished, and it passes at the pass mark set in the Results settings.
+- The server records the result itself. The mark that counts for each question is how it finished the first time (unless the set has **Retakes**, see [Tries and retakes](question-kit#tries-and-retakes)). **Try again** after that is practice and does not change the recorded mark.
+- The project's score is the total of those marks out of the questions' total points. It counts as complete when every server-marked question has finished, and it passes at the pass mark set in the Results settings.
 - A **Report result** node, or anything else the browser sends as a result, is ignored for a project with server-marked questions: the server's own record is the only one. Questions that are not set to be marked on the server still do their normal marking in the page, but they add nothing to that record.
 - Checks and hints are limited to 30 a minute for each learner, so an answer can't be found by guessing over and over. A learner who goes over is asked to wait.
-- A learner who came in from an LMS over LTI 1.3 has their score sent to the LMS gradebook by the server when the whole set is finished, and again if their kept score changes. See [Spelling tests](question-kit#spelling-tests) for how.
+- A learner who came in from an LMS over LTI 1.3 has their score sent to the LMS gradebook by the server when the whole set is finished, and again if their kept score changes. See [Grading in the LMS](question-kit#grading-in-the-lms).
 
 What it does not do:
 
@@ -2499,60 +2614,164 @@ What it does not do:
 
 ## Spelling tests
 
-A spelling test plays a word and the learner types it. Build one with one **Fill in the blank** question for each word, one to a page the way the **Spelling test** starter does, and for each:
+A spelling test plays a word and the learner types it. You build one from **Fill in the blank** questions, one for each word and one to a page, the way the **Spelling test** starter does. The word is marked on the server and exists only in the audio, so it is not in the page for anyone to read.
+
+### Setting up a word
+
+For each word:
 
 1. Tick **Mark answers on the server** and **Spelling: letters must match exactly** on its blank.
-2. List every accepted spelling, one per line (\`judgement\` and \`judgment\`). Tick **Also accept American spellings** to accept the American form of each as well: the editor shows the forms it adds, so nothing is accepted that you can't see. It knows the common differences (colour/color, organise/organize, centre/center, travelled/traveled, paediatric/pediatric and a few dozen words that just differ) and leaves a word alone when it is not sure, so add anything else as its own line.
-3. Give the word its audio (see **The spoken word** below): a **Play sound** node on a button plays it. Write nothing of the word anywhere else (not in a layer name, a label or the prompt).
+2. List every accepted spelling, one per line (\`judgement\` and \`judgment\`).
+3. Give the word its audio (see [Voice for the word](question-kit#voice-for-the-word)). A **Play sound** node on a button plays it. Write nothing of the word anywhere else (not in a layer name, a label or the prompt).
 
-**The spoken word.** With **Spelling** ticked, the question has a **Voice for the word** section. **Word audio** says where the sound comes from: **Made with a voice** or **My own audio**. With a made voice, press **Make the audio with a voice** and the server turns the first accepted spelling into speech and saves it as an ordinary sound in the project's Assets, picked in that word's **Play sound** node (a page with no Play sound node gets a **Play the word** button with one). **Make the audio for all words** does every word with the same voice and speed. The speech is made here, while you are editing, so the learner's page only ever has the sound.
+Tick **Also accept American spellings** to accept the American form of each spelling as well. The editor shows the forms it adds, so nothing is accepted that you can't see. It knows the common differences (colour/color, organise/organize, centre/center, travelled/traveled, paediatric/pediatric and a few dozen words that are spelled differently). It leaves a word alone when it is not sure, so add anything else as its own line.
 
+### What counts as right
+
+Every letter, in order. Case is ignored unless **Match case** is on, and spaces round the word are ignored. A curly apostrophe typed on a phone counts as a plain one, but a missing apostrophe or hyphen is wrong, and accents have to be there (cafe is not café). Numbers are not compared as numbers.
+
+The box has the browser's own spellcheck, autocorrect and automatic capitals switched off (**No browser help** in the input's settings), so it neither underlines nor fixes the word.
+
+### Voice for the word
+
+With **Spelling: letters must match exactly** ticked, the question has a **Voice for the word** section. **Word audio** says where the sound comes from: **Made with a voice** or **My own audio**. Switching between the two never deletes either file. Both stay in Assets, and each question remembers which one is in use.
+
+**Play** (under **Word audio**, for either kind of audio) plays the sound the word's **Play sound** node plays now, so you can check it without leaving the Inspector or opening Preview.
+
+- It reads **Stop** while it plays. It stops by itself at the end, when you move to another word or page, and when a new audio is made, chosen or recorded.
+- Only one sound plays at a time.
+- It is switched off, with the reason in its tooltip, until the word has audio.
+- It plays in the editor only. Nothing changes in the learner's page.
+
+If the page has more than one **Play sound** node, **Put the audio in** asks which one the word's button runs.
+
+#### Made with a voice
+
+Press **Make the audio with a voice**. The server turns the first accepted spelling into speech and saves it as an ordinary sound in the project's Assets, picked in that word's **Play sound** node. A page with no Play sound node gets a **Play the word** button with one. The speech is made while you are editing, so the learner's page only ever has the sound.
+
+- **Make the audio for all words** does every word with the same voice and speed. Each word keeps its own **Say it like** and **Sentence**, and words set to My own audio are skipped.
 - **Voice** and **Speed**: eight British voices (there is no Australian voice yet). A little under normal speed, the default, is clear for a spelling test.
-- **Play** (under **Word audio**, for either kind of audio) plays the sound the word's **Play sound** node plays now, so you can check it without leaving the Inspector or opening Preview. It reads **Stop** while it plays and stops by itself at the end, when you move to another word or page, and when a new audio is made, chosen or recorded. Only one sound plays at a time. It is switched off, with the reason in its tooltip, until the word has audio. It plays in the editor only: nothing changes in the learner's page.
 - **Preview** plays the made voice without saving anything, so you can hear a word before it goes in.
-- **Say it like**: when the voice says a word wrongly, or does not know it, type the word as it sounds in ordinary English words (\`cull er\` for colour). It is only used to make the audio and is never in the page. A word the voice does not know says so and nothing is made until you give it a **Say it like**.
-- **Sentence** is said after the word, as a teacher would (\`The colour of the sky is blue.\`), and **Say the word again at the end** gives word, sentence, word. Both are only in the audio.
-- The first time anyone uses it, the server has to download the voice once (about 130 MB), and the section offers **Set up the voice**. If the server has no speech engine it says so, and you can still record the words yourself, upload the files and pick them in the **Play sound** node.
-- With **My own audio** the word is only in your sound, so say it clearly and do not name the file after it. Marking on the server and keeping the word off the learner's page work as before.
-- **My own audio** hides the voice controls and shows a sound picker: choose a sound already in Assets, **Add a new sound** (upload), or **Record it now** with your microphone. When you press **Stop recording** the take is only held in the editor: it is not uploaded and not in the project yet. You can **Listen** to it, then **Use this recording** (it is added to Assets and becomes the word's audio, as one undo step) or **Discard** it (nothing is saved and there is nothing to undo). **Record again** throws the take away and starts over. Moving to another word or page, or switching to **Made with a voice**, discards a take you have not used (a take of a couple of seconds or more is mentioned in a message), and closing the editor with one asks first. Whatever you use goes in the same **Play sound** node the made voice uses, so the page's buttons and graph do not change. Switching between the two never deletes either file: the made audio and your own both stay in Assets and each question remembers which is in use. **Make the audio for all words** skips words set to My own audio. Marking on the server, and the word being kept off the learner's page, work exactly as before, because your audio is still the only place the word is. The editor warns when the audio file's name contains the word (Preview and exported files keep file names, and the share link renames them), so name it something else. Recordings are made in the browser (webm, ogg or m4a depending on the browser): use an uploaded mp3 or wav if you need a particular format.
-- Make a word again after you change it, and the new audio replaces the old. Play every word before you share: a voice can say an unusual word wrongly, and **Say it like** fixes that.
+- **Say it like**: when the voice says a word wrongly, or does not know it, type the word as it sounds in ordinary English words (\`cull er\` for colour). It is only used to make the audio and is never in the page. A word the voice does not know says so, and nothing is made until you give it a **Say it like**.
+- **Sentence** is said after the word, as a teacher would (\`The colour of the sky is blue.\`). **Say the word again at the end** gives word, sentence, word. Both are only in the audio.
 
-**Practice mode.** Tick **Practice mode** and the learner's own device reads the word aloud instead (the **Play sound** node becomes a **Read aloud** node holding the word). The device voice has to be given the word, so **the word is in the page, where anyone can read it in their browser's developer tools**. Use it for practice, never a graded test. The question is then marked in the page and sends no grade, **Mark answers on the server** is turned off, and the share link does not hide the word. The voice is whatever the learner's device has, and with none for the language nothing is said. Turning it off puts the audio back but does not turn server marking back on: do that yourself.
+Make a word again after you change it (the button then reads **Make the audio again**) and the new audio replaces the old. Play every word before you share: a voice can say an unusual word wrongly, and **Say it like** fixes that.
 
-**What counts as right.** Every letter, in order. Case is ignored unless **Match case** is on, and spaces round the word are ignored. A curly apostrophe typed on a phone counts as a plain one, but a missing apostrophe or hyphen is wrong, and accents have to be there (cafe is not café). Numbers are not compared as numbers. The box has the browser's own spellcheck, autocorrect and automatic capitals switched off (**No browser help** in the input's settings), so it neither underlines nor fixes the word.
+The first time anyone uses it, the server has to download the voice once (about 130 MB), and the section offers **Set up the voice**. If the server has no speech engine it says so. You can still record the words yourself, or upload the files and pick them in the **Play sound** node.
 
-**Spell checkers and writing tools.** With **Spelling** ticked, the question also has a **Spell checkers and writing tools** section. What the page can switch off, it does: the answer box asks for no spellcheck, autocorrect, automatic capitals or autofill, carries the opt-out attributes Grammarly and LanguageTool honour (\`data-gramm\`, \`data-enable-grammarly\`, \`data-lt-active\`), and with **Block paste and drop into the box** ticked the answer has to be typed. What it can't switch off, it looks for. The page watches for what writing tools put into it (Grammarly, LanguageTool, Microsoft Editor, ProWritingAid, QuillBot and Ginger) and for an answer that changes without anyone typing. **When a writing tool is found** chooses what happens:
+#### My own audio
 
-- **Block until it is turned off** puts up a panel that says what was found and how to turn that tool off for this site. Nothing behind it can be reached. The page checks again by itself and the panel goes as soon as nothing is found; **Check again** does it on the spot. If the answer changed by itself, the learner presses a button and the answer goes back to what they typed.
+**My own audio** hides the voice controls and shows a sound picker. Choose a sound already in Assets, **+ Add a new sound…** to upload one, or **Record it now** to use your microphone. Say the word clearly and do not name the file after it. The editor warns when the file's name contains the word, because Preview and exported files keep file names (the share link renames them).
+
+To record a word:
+
+1. Press **Record it now**, say the word, then press **Stop recording**. The take is only held in the editor. It is not uploaded and it is not in the project yet.
+2. Press **Listen** to hear it.
+3. Press **Use this recording** to keep it. It is added to Assets and becomes the word's audio, as one undo step. Or press **Discard**: nothing is saved and there is nothing to undo.
+
+**Record again** throws the take away and starts over. Moving to another word or page, or switching to **Made with a voice**, discards a take you have not used (a take of a couple of seconds or more is mentioned in a message). Closing the editor with one asks first.
+
+Whatever you use goes in the same **Play sound** node the made voice uses, so the page's buttons and graph do not change. Marking on the server, and keeping the word off the learner's page, work as before, because your audio is still the only place the word is.
+
+Recordings are made in the browser (webm, ogg or m4a depending on the browser). Use an uploaded mp3 or wav if you need a particular format.
+
+### Practice mode
+
+Tick **Practice mode** and the learner's own device reads the word aloud instead. The **Play sound** node becomes a **Read aloud** node holding the word.
+
+The device voice has to be given the word, so **the word is in the page, where anyone can read it in their browser's developer tools**. Use it for practice, never a graded test. The question is then marked in the page and sends no grade, **Mark answers on the server** is turned off, and the share link does not hide the word.
+
+The voice is whatever the learner's device has, and with none for the language nothing is said. Turning practice mode off puts the audio back but does not turn server marking back on: do that yourself.
+
+### Spell checkers and writing tools
+
+With **Spelling: letters must match exactly** ticked, the question also has a **Spell checkers and writing tools** section. It keeps spell check, Grammarly and similar tools from helping with the word. It switches off what the page can, and looks for what it can't.
+
+**What the page switches off.** Ticking **Switch off browser spell check and writing helpers in the box** makes the answer box ask for no spellcheck, autocorrect, automatic capitals or autofill, and asks the writing tools that honour an opt-out (Grammarly and LanguageTool) to stay out. With **Block paste and drop into the box** ticked, the answer has to be typed.
+
+**What it looks for.** The page watches for what writing tools put into it (Grammarly, LanguageTool, Microsoft Editor, ProWritingAid, QuillBot and Ginger) and for an answer that changes without anyone typing. **When a writing tool is found** chooses what happens:
+
+- **Block until it is turned off** puts up a panel that says what was found and how to turn that tool off for this site. Nothing behind it can be reached.
 - **Warn only** shows the same panel as a notice the learner can dismiss.
 - **Off** looks for nothing (the other ticks still apply).
 
-New spelling questions start on **Block** with paste refused. Existing ones are left as they were until you change them. Whatever was found is kept with the learner's result: **Results** shows the tools found and how often the panel came up, and the results spreadsheet has a **writing tools found** column. That works on the Link for StudyDesk, where there is a learner to keep it for. The settings, the watching and the panel are part of the player, so they work the same on the share link, in the StudyDesk embed and inside an exported single file (an exported file has no learner record to keep what was found in, so there the panel is all there is). In **Preview** the panel has a **Skip (Preview only)** button so you are not locked out of your own test.
+With Block, the page checks again by itself and the panel goes as soon as nothing is found. **Check again** does it on the spot. If the answer changed by itself, the learner presses a button and the answer goes back to what they typed.
 
-**Assistive technology.** Screen readers, magnifiers, switch devices and other assistive technology put nothing in the page and are never looked for. If a tool a learner relies on does look like a writing tool, set an **Exemption code**: the learner types it in the panel and is let through for the rest of their visit, and their result says an exemption was used. The page only holds a scrambled form of the code, so give the code itself to that learner only. The panel also tells learners to ask their teacher about an exemption.
+New spelling questions start on **Block until it is turned off** with paste refused. Existing ones are left as they were until you change them.
 
-**What the guard cannot do.** Be plain with yourself about this, and with learners if you like:
+**What is kept.** Whatever was found is kept with the learner's result. **Results** shows the tools found and how often the panel came up, and the results spreadsheet has a **writing tools found** column. That works on the Link for StudyDesk, where there is a learner to keep it for.
+
+The settings, the watching and the panel are part of the player, so they work the same on the share link, in the StudyDesk embed and inside an exported single file. An exported file has no learner record to keep what was found in, so there the panel is all there is. In **Preview** the panel has a **Skip (Preview only)** button so you are not locked out of your own test.
+
+#### Exemption code for assistive technology
+
+Screen readers, magnifiers, switch devices and other assistive technology put nothing in the page and are never looked for. If a tool a learner relies on does look like a writing tool, set an **Exemption code**.
+
+1. Type a code of at least 4 characters in **Exemption code** (it shows when the setting above is Block or Warn only) and press **Set code**.
+2. Give the code to that learner only. The page holds only a scrambled form of it, and it is not shown again here.
+3. The learner types it in the panel and is let through for the rest of their visit. Their result says an exemption was used.
+
+**Remove code** takes it away. The panel also tells learners to ask their teacher about an exemption.
+
+#### What the guard cannot do
+
+Be plain with yourself about this, and with learners if you like.
 
 - The keyboard on a phone or tablet, and a computer's own autocorrect and text suggestions, are outside the page. The page can't see them or turn them off. On an iPhone or iPad the autocorrect setting is only a hint the keyboard may ignore.
 - A second device, a desktop program, or a tool that puts nothing in the page can't be seen at all.
-- The list of markers is what each tool is known (or, for Microsoft Editor, ProWritingAid, QuillBot and Ginger, generally believed) to put in a page. A tool that changes its markers slips through until the list (\`src/guard-tools.ts\` in the player) is updated, which is why the page also watches for an answer changing without typing.
+- The list of tools is what each is known (or, for Microsoft Editor, ProWritingAid, QuillBot and Ginger, generally believed) to put in a page. A tool that changes its markers slips through until the player's list is updated, which is why the page also watches for an answer changing without typing.
 - A writing helper only shows it is on in the page if it is allowed to run on this site. A learner can turn one on after the panel has gone.
 
 So treat it as a strong nudge and a record, not a lock. It works best alongside what the test already does: the word is marked on the server and only in the audio.
 
-**Keeping the word out of the page.** The page learners get has no accepted spellings in it, because the question is marked on the server. The word is in the audio, so the audio is the only place it is. In a project with spelling questions, **Update to the latest version** on the share link also renames every audio asset to a plain name (\`colour.mp3\` becomes \`audio-1.mp3\`) and cuts the title and comment tags out of mp3 and wav files. Other kinds of audio keep their tags, and the share says so: use mp3 or wav. Speech made on the learner's own device (the browser reading text aloud) is not an option for a graded test: it would need the word as text in the page, which is why **Practice mode** is only for practice. Make the words with the **Voice for the word** section, or record them and upload the files. Audio the voice makes is a plain wav with no tags.
+### Keeping the word out of the page
 
-What this does not protect against: a learner who writes down what they hear (that is the test), who runs the audio through speech recognition, or who has your project open in the editor. **Preview** and any file you export still carry the answers.
+The page learners get has no accepted spellings in it, because the question is marked on the server. The word is in the audio, so the audio is the only place it is.
 
-**Submit, Try again and Hint.** **Play the word** leads the question card's button row, in the brand's accent colour, and **Submit answer** sits at the far right, so the word's own action and the final answer are at opposite ends and never look alike. A Play the word button that the **Voice for the word** section adds to a page goes in the same place. The starter's answer button says **Submit answer**, since the word is marked once and the mark is final, and **Play the word** switches itself off (reading "Playing...") while the word is going, so a second press can't play it over the first. It switches back on when the word ends, is stopped or cannot be loaded. **Try again** and **Hint** are off to begin with, each one project variable you change once for every word: \`allowTryAgain\` (a learner who got a word wrong may clear the box and have another go, for practice, so the first mark still stands) and \`offerHint\` (a small **Hint** pill at the top right of the card, opposite the prompt, which shows the hint typed for the word in **Hints** in the Question section; the hint stays on the server with the answers, and it never holds the word). Set them in the Variables tab: the starter's initial value is what the learner opens with. A word page you copy keeps all of it.
+In a project with spelling questions, **Update to the latest version** on the share link also renames every audio asset to a plain name (\`colour.mp3\` becomes \`audio-1.mp3\`) and cuts the title and comment tags out of mp3 and wav files. Other kinds of audio keep their tags, and the share says so, so use mp3 or wav. Audio the voice makes is a plain wav with no tags.
 
-**Tries and retakes.** **Tries** is how many goes at one word (1 for a test). **Retakes** (in the Marking part, set the same on every word) lets the learner go through the whole test again: a round is every word finished once, the server keeps each round, and the score that counts is the **Best round** or the **Latest round**. Choose a set number of retakes, or unlimited. A **Reset question** node with **Retake** on (the starter's **Retake** button) starts the next round for every word at once, and only when the round is finished and a retake is left, so opening a page again never uses one up. Until the last retake the right spelling is not shown after a wrong word, so a learner can't read the answers off one round to use in the next. The question's \`round\`, \`retakesLeft\`, \`kept\` and \`keptMax\` variables say where the learner is and what is on record, for a results page to show.
+Speech made on the learner's own device (the browser reading text aloud) is not an option for a graded test. It would need the word as text in the page, which is why **Practice mode** is only for practice. Make the words with the **Voice for the word** section, or record them and upload the files.
 
-**Grading in the LMS.** Add the project to a course with the LMS's **Select content** picker (or an external tool link) and, when the LMS has a grade for that link, the server sends the score to it. It sends the kept score with the test's total points once every word is finished in a round, and again only when the kept score changes. It needs the LMS to be registered for LTI 1.3 with grade passback allowed, and the link has to be set up for grades in the course. A learner signed in another way gets everything but the grade. If the LMS refuses a score, the server tries again a moment later and with the learner's next click, and the record shows what was sent.
+This does not protect against a learner who writes down what they hear (that is the test), who runs the audio through speech recognition, or who has your project open in the editor. **Preview** and any file you export still carry the answers.
+
+### Submit, Try again and Hint
+
+On a spelling card, **Play the word** leads the button row and **Submit answer** sits at the far right (see [The button row on a question card](question-kit#the-button-row-on-a-question-card)). The starter's answer button says **Submit answer**, since the word is marked once and the mark is final. A Play the word button that the **Voice for the word** section adds to a page goes in the same place.
+
+**Play the word** switches itself off (reading "Playing...") while the word is going, so a second press can't play it over the first. It switches back on when the word ends, is stopped or cannot be loaded.
+
+**Try again** and **Hint** are off to begin with. Each is one project variable you change once for every word, in the Variables tab. The starter's initial value is what the learner opens with, and a word page you copy keeps all of it.
+
+- \`allowTryAgain\`: a learner who got a word wrong may clear the box and have another go, for practice. The first mark still stands.
+- \`offerHint\`: a small **Hint** pill at the top right of the card, opposite the prompt, shows the hint typed for the word in **Hints** in the Question section. The hint stays on the server with the answers, and it never holds the word.
+
+### Tries and retakes
+
+**Tries** is how many goes at one word (1 for a test). **Retakes**, in the Marking part and set the same on every word, lets the learner go through the whole test again. A round is every word finished once, and the server keeps each round.
+
+- **Retakes** has three choices: **Off (first go counts, then practice)**, **A set number of retakes** (with **Retakes allowed**) and **Unlimited retakes**.
+- **Score kept** says which round counts: the **Best round** or the **Latest round**.
+- A **Reset question** node with **Retake** on (the starter's **Retake** button) starts the next round for every word at once. It works only when the round is finished and a retake is left, so opening a page again never uses one up.
+- Until the last retake the right spelling is not shown after a wrong word, so a learner can't read the answers off one round to use in the next.
+
+The question's \`round\`, \`retakesLeft\`, \`kept\` and \`keptMax\` variables say where the learner is and what is on record, for a results page to show.
+
+### Grading in the LMS
+
+Add the project to a course with the LMS's **Select content** picker (or an external tool link). When the LMS has a grade for that link, the server sends the score to it. It sends the kept score with the test's total points once every word is finished in a round, and again only when the kept score changes.
+
+It needs the LMS to be registered for LTI 1.3 with grade passback allowed, and the link has to be set up for grades in the course. A learner signed in another way gets everything but the grade. If the LMS refuses a score, the server tries again a moment later and with the learner's next click, and the record shows what was sent.
 
 ## Accessible by default
 
-The prompt is a heading, the options are a radio group (or checkboxes) with their text as the name and *Right* / *Wrong* / *This was the right answer* as the description once they are marked, every part is reachable with Tab and operated with Enter and Space, and **Check answer**, **Hint** and the ordering moves announce through the live region (see [Accessibility](accessibility)): the feedback, the hint, "Evaporation, position 2 of 4". Right and wrong are shown with words (✓ Right, ✗ Wrong) as well as colour. A matching question's terms are named buttons that screen readers announce as draggable, picked up and dropped with the keyboard, and told where they landed. A hotspot's areas are focusable radio buttons (checkboxes when several are right) named after the area, so the picture can be answered without a mouse; give every area a name, and the picture an accessible description. These need the Accessibility preference on, which is the default.
+Questions work with a keyboard and a screen reader without extra setup. These need the Accessibility preference on, which is the default.
+
+- The prompt is a heading. The options are a radio group (or checkboxes) with their text as the name, and *Right*, *Wrong* or *This was the right answer* as the description once they are marked.
+- Every part is reachable with Tab and operated with Enter and Space.
+- **Check answer**, **Hint** and the ordering moves announce through the live region (see [Accessibility](accessibility)): the feedback, the hint, "Evaporation, position 2 of 4".
+- Right and wrong are shown with words (✓ Right, ✗ Wrong) as well as colour.
+- A matching question's terms are named buttons that screen readers announce as draggable. They are picked up and dropped with the keyboard, and the learner is told where they landed.
+- A hotspot's areas are focusable radio buttons (checkboxes when several are right) named after the area, so the picture can be answered without a mouse. Give every area a name, and the picture an accessible description.
 
 ## Copies, deleting and changing type
 
@@ -2562,7 +2781,7 @@ The prompt is a heading, the options are a radio group (or checkboxes) with thei
 
 ## Reference
 
-The question frame holds its settings in \`question\`, and each part layer carries a \`questionPart\` marker so the settings can find it again after it is renamed or moved. Both are in the exported file; the player uses the settings and ignores the markers. The nodes are **Check answer**, **Reset question**, **Show hint**, **Choose option** and **Move item** in the [node reference](interaction-nodes). Not yet in the kit: matching (which would use [Drag and drop](drag-and-drop)) and hotspots.
+A question keeps its settings on its frame, and each part layer is marked as part of the question, so the settings can find it again after it is renamed or moved. Both are in the exported file. The player uses the settings and ignores the markers. The nodes are **Check answer**, **Reset question**, **Show hint**, **Choose option** and **Move item** in the [node reference](interaction-nodes).
 `,
   },
   {
@@ -2600,17 +2819,19 @@ While you are **typing in a text layer** <kbd>Ctrl</kbd>+<kbd>K</kbd> adds a lin
     group: 'Import and export',
     summary: 'One list of what is most likely wrong, shown when you press Share or Export, with a way to go and look at each and to fix some.',
     keywords: 'before share check publish export dead button does nothing unreachable page template sample text placeholder alt text description contrast broken link unused file size heavy checklist this is fine share anyway',
-    body: `When you press **Share → Share…**, or **Export → Single HTML file** or **Project package**, and there is something likely to be wrong, a short list opens first: **3 things to look at**. If there is nothing, you go straight through. The Share dialog also carries a line at the top saying the same (**Show me** opens the list).
+    body: `**Before you share** is a short list of what is most likely to be wrong with your project, so you can fix it before learners see it. It never stops you sharing.
+
+It opens by itself when you press **Share → Share…**, or **Export → Single HTML file** or **Project package**, and there is something to look at. The heading counts the problems, for example **3 things to look at**. If there is nothing, you go straight through. The Share dialog also carries a line at the top saying the same (**Show me** opens the list). For the Share dialog itself, see [Sharing](export#share-link).
 
 ![The Before you share list: a button that does nothing, template items still to do, sample words, a picture with no description.](help/before-you-share.png)
 
 ## What it looks for
 - **Buttons that do nothing when clicked.** A button layer with no click, press or hover on it (or on what holds it), that is not switched off. **Choose what it does** opens the [behaviour chooser](interactions#behaviours-when-this-is-clicked) on it.
-- **Pages nothing leads to.** Pages no button or link can reach from the start page, following **Go to artboard** (and Next and Previous). It stays quiet if a graph picks pages by expression, since that could lead anywhere, and pages another page draws as an [instance](instances) or as a master do not count.
+- **Pages nothing leads to.** Pages no button or link can reach from the start page, following **Go to a page** (and Next and Previous). It stays quiet if a graph picks pages by expression, since that could lead anywhere, and pages another page draws as an [instance](instances) or as a master do not count.
 - **Things from the template still to do.** The [checklist](templates#use-a-template): items not ticked, ticked but the layer is still the template's, or pointing at a layer that is gone. **Open the checklist** opens it.
 - **Sample words.** Text, button and link words that still say "Text" or "Button", "Lorem ipsum", "Your title here", "Replace this", "[Your name]", "TBC" and the like. **Go there** puts the cursor in the text.
 - **Pictures and videos with no description.** Type the description in the list and press **Add it**. See [Accessibility checker](accessibility-checker).
-- **Text that is hard to read.** The checker's colour contrast problems. **Fix them for me** applies the safe fixes in one step (undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>).
+- **Text that is hard to read.** The checker's colour contrast problems. **Fix them for me** applies the safe fixes in one step (undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>). When only some can be fixed safely it reads **Fix 2 of them for me**.
 - **Links and references that lead nowhere.** A link layer with no address, or things the [Usage](usage) panel finds pointing at something that is gone.
 - **Files that add up to a lot**, over 25 MB, with the biggest named, and **files nothing uses**. **Remove the files nothing uses…** asks first, like the Usage panel. See [Download size](download-size).
 
@@ -2619,7 +2840,9 @@ Layers that are locked (the brand's logo and footer) are left out: they are not 
 ## Going there, fixing, and "This is fine"
 Each kind of problem is one line, saying how many there are. Click it (or press <kbd>Enter</kbd> on it) to open it and see each one, why it matters and the fixes; click again to close it. When there is only one kind it starts open.
 
-**Go there** closes the list, takes you to the page, selects the layer and (for words) lets you type. Press Share again when you are ready. Each row has **This is fine** for the ones that are meant to be like that (a decorative button, a picture that is only decoration): it leaves it off the list from then on. The mark is kept in this browser for the project, like the accessibility checker's **reviewed** marks (and a picture's mark is the same one the checker uses), and **Forget what I marked as fine** at the bottom puts them all back.
+**Go there** closes the list, takes you to the page, selects the layer and (for words) lets you type. Press Share again when you are ready.
+
+Each row has **This is fine** for the ones that are meant to be like that (a decorative button, a picture that is only decoration). It leaves that one off the list from then on. The mark is kept in this browser for the project, like the accessibility checker's **reviewed** marks (a picture's mark is the same one the checker uses). **Forget what I marked as fine** at the bottom puts them all back.
 
 **Share anyway** (or **Export anyway**) carries on regardless: the list only ever advises.
 
@@ -2631,7 +2854,14 @@ The same checks are available piece by piece: the [Accessibility](accessibility-
     group: 'Interactivity',
     summary: 'Paste a list or table of questions from Word or a spreadsheet, or open a filled in template, see a preview, and add them as kit questions.',
     keywords: 'paste questions import word docx excel xlsx spreadsheet csv table template list quiz bank bulk multiple choice true false blank matching',
-    body: `If your questions are already in Word or a spreadsheet, you do not have to retype them. Open the **Add question** menu and choose **Paste questions from Word or Excel**, then paste them in (or press **Open a file** to read a filled in template). A preview shows the questions it understood and the lines it did not, and nothing is added until you press **Add**. Each question gets an artboard of its own and is an ordinary [kit question](question-kit) from then on. Press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type "paste questions" to open it from the command palette.
+    body: `If your questions are already in Word or a spreadsheet, you do not have to retype them. Paste them in, check what the editor understood, and add them as [questions](question-kit).
+
+1. Open the **Add question** menu and choose **Paste questions from Word or Excel**.
+2. Paste the questions into the box, or press **Open a file…** to read a filled in template.
+3. Check the preview. It shows the questions it understood, the lines it did not (**Not understood**) and anything it changed on the way in.
+4. Press **Add questions** (the button counts them, for example **Add 3 questions**). Nothing is added until you do.
+
+Each question gets a page of its own and is an ordinary [question](question-kit) from then on. You can also press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type "paste questions" to open it from the [command palette](command-palette).
 
 ![The Paste questions dialog: lines pasted on the left, what it understood and what it did not on the right.](help/paste-questions.png)
 
@@ -2642,7 +2872,9 @@ Each template has a worked example of every kind of question it reads: multiple 
 - [Excel template (.xlsx)](templates/question-template.xlsx): a row for each question, with a second sheet of instructions.
 - [CSV template (.csv)](templates/question-template.csv): the same rows, as a plain file for any spreadsheet.
 
-Delete the examples (or write under them), fill in your own, then copy what you wrote and paste it in, or open the saved file. Headings and grey notes in the Word file are ignored, so it does not matter if you leave the examples in. Only the first sheet of the Excel file is read.
+Delete the examples (or write under them) and fill in your own. Then copy what you wrote and paste it in, or open the saved file.
+
+Headings and grey notes in the Word file are ignored, so it does not matter if you leave the examples in. Only the first sheet of the Excel file is read.
 
 ## As lines (Word, email, a text file)
 One question in each block, with a blank line between questions. The first line is the question (a number in front of it, like \`1.\` or \`Q1:\`, is dropped) and every line after it is a choice:
@@ -2661,10 +2893,15 @@ Feedback: Mercury orbits closest.
 - **True/False**: the question, then \`Answer: True\` or \`Answer: False\`. Choices called True and False with one marked work too.
 - **Fill in the blank**: the question, then \`Answer: H2O | h2o\`, every accepted answer split by \`|\`.
 - **Matching**: a pair on each line, written \`France = Paris\` (or \`->\`), two to 8 pairs.
-- **Type** is optional: Multiple choice, Multiple answer, True/False, Fill in the blank or Matching. Without it the kind is worked out (a question with two or more right choices becomes Multiple answer). **Title** names the artboard. **Feedback** is shown once the question is finished.
+- **Type** is optional: Multiple choice, Multiple answer, True/False, Fill in the blank or Matching. Without it the kind is worked out (a question with two or more right choices becomes Multiple answer). **Title** names the page. **Feedback** is shown once the question is finished.
 
 ## As a table (Excel, Word table, CSV)
-Copy the cells (with the headings) and paste. The headings are matched by their words, in any order: **Type**, **Question**, **Option 1**, **Option 2** and so on (as many as you like), **Correct** and **Feedback**. **Correct** takes the letter or number of the right choice (\`B\` or \`2\`), several as \`A, C\`, or \`True\`/\`False\`. You can also mark the right option with a \`*\` instead. For fill in the blank the option cells are the accepted answers, and for matching each option cell is a pair, \`term = match\`. With no heading row, the first cell of a line is the question and the others are choices.
+Copy the cells (with the headings) and paste. The headings are matched by their words, in any order: **Type**, **Question**, **Option 1**, **Option 2** and so on (as many as you like), **Correct** and **Feedback**.
+
+- **Correct** takes the letter or number of the right choice (\`B\` or \`2\`), several as \`A, C\`, or \`True\`/\`False\`. You can also mark the right option with a \`*\` instead.
+- For fill in the blank the option cells are the accepted answers.
+- For matching each option cell is a pair, \`term = match\`.
+- With no heading row, the first cell of a line is the question and the others are choices.
 
 ## What it will not read
 Ordering, categorise and hotspot questions are not pasted (add them from the Add question menu), and nor are pictures, part marks or feedback on individual choices. Every line it cannot use is listed in the preview with its line (or row) number and why, so you can fix it in the box and see it change. At most 100 questions are added at once.`,
@@ -2675,7 +2912,7 @@ Ordering, categorise and hotspot questions are not pasted (add them from the Add
     group: 'Interactivity',
     summary: 'Named values (number, text, true/false, colour, choice) shared by the whole project.',
     keywords: 'variable state value number string boolean color enum choice options input',
-    body: `Variables hold the state of an interactive: a score, a name, whether a panel is open. They belong to the project, so every artboard sees the same values.
+    body: `A variable is a named value the activity remembers while it runs: a score, a name, whether a panel is open. Use variables when something on one page has to change something else, on the same page or another. They belong to the project, so every page sees the same values.
 
 Add them in the **Variables** tab. Each has a name, a type and a starting value.
 
@@ -2691,16 +2928,45 @@ Add them in the **Variables** tab. Each has a name, a type and a starting value.
 Choice variables show as a dropdown wherever you set them, so you can't type a value that isn't on the list. In expressions, \`enums.difficulty\` is the list of that choice's options, so \`enums.difficulty.indexOf(difficulty)\` is its position. A solo group's **active child** can be bound straight to a choice whose options are the children's names.
 
 ## Lists
-A list variable holds the items a [repeater](repeaters) draws: put its name in **Repeat → Items**, and \`item\`/\`index\` are the current one. The starting items are JSON text in the Variables tab. Change the list while it runs with **Change a value or counter**: *Append to list* adds an item (\`{name: "Cy"}\`), *Remove from list* takes out the item at a position (0 is the first), *Empty* clears it, and *Set to* replaces it. The other list ops are *Add to list, or take out if there* (a tick-list: adds the value, or removes it when it is already in), *Remove from list (value)* (every item equal to the value, objects compared by what they hold) and *Change one list item*: give the item's position (left empty it is \`event.index\`, the item the event came from), an optional **Field** to change only that field of an object item, and the new value, which can read \`item\` (what is there now) and \`index\` (\`item.count + 1\`). A position that is not in the list changes nothing. In scripts use \`ix.toggleItem('picked', 'b')\`, \`ix.removeValue('picked', 'b')\` and \`ix.setItem('cards', 2, 'down', 'state')\`, or assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`. Text that is not a JSON array makes an empty list.
+A list variable holds the items a [repeater](repeaters) draws. Put its name in **Repeat → Items**, and \`item\` and \`index\` are the current one. The starting items are JSON text in the Variables tab. Text that is not a JSON array makes an empty list.
+
+Change the list while it runs with **Change a value or counter**. Its **Do** box has these list choices:
+- *Add to the end of the list* adds an item (\`{name: "Cy"}\`).
+- *Remove from the list (by position)* takes out the item at a position (0 is the first).
+- *Empty (list, number or text)* clears it, and *Set to* replaces it.
+- *Add to the list, or take out if it is there* works as a tick-list: it adds the value, or removes it when it is already in.
+- *Remove from the list (by value)* takes out every item equal to the value. Objects are compared by what they hold.
+- *Change one list item* changes the item at a position you give. Left empty, the position is \`event.index\`, the item the event came from. An optional **Field** changes only that field of an object item. The new value can read \`item\` (what is there now) and \`index\`, for example \`item.count + 1\`. A position that is not in the list changes nothing.
+
+In scripts use \`ix.toggleItem('picked', 'b')\`, \`ix.removeValue('picked', 'b')\` and \`ix.setItem('cards', 2, 'down', 'state')\`, or assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`.
 
 ## Easing a number to a new value
-**Change a value or counter** with *Set to* or *Add* on a number has **Over (ms)** and **Easing**. Over 0 jumps, as always. Over 400 the number runs up (or down) to the new value in 0.4 s, and anything reading it moves with it: a bar, a text, a [blend](blends). **Continue** says whether the next node runs straight away, part-way, or once the number has arrived. A newer change to the same variable takes over from wherever it has got to, and so does any other write to it. With reduced motion it sets at once.
+**Change a value or counter** can make a number run up (or down) to its new value instead of jumping. Use it for a score that counts up, or a bar that fills. It has two settings when **Do** is *Set to* or *Add to it* on a number:
+
+- **Over (ms)** is how long the change takes. 0 jumps, as always. 400 runs the number to its new value in 0.4 seconds, and anything reading it moves with it: a bar, a text, a [blend](blends).
+- **Easing** is how the number speeds up and slows down on the way (see [Easing](easing)).
+
+**Continue** says whether the next node runs straight away, part-way, or once the number has arrived. A newer change to the same variable takes over from wherever it has got to, and so does any other write to it. With reduced motion it sets at once.
 
 ## Worked out from a formula
-Instead of typing a starting value, give a variable a **formula** (the line under its value in the Variables tab): an [expression](expressions) over the variables above it in the list. The player works it out each time the project starts (and after **Start over**), and the canvas preview works it out too, so what you see while editing follows the variables it depends on. The typed value is only what it falls back to if the formula fails. It is an ordinary variable once it plays, so Set variable can change it, unless you tick **Keep up to date** (see *Live variables* below): then it is read only and is worked out again whenever what it reads changes. The branded Crossword and Word search starters use this: you edit a plain list of words (and clues) and the grid is laid out from it, with \`crossword(words, 10)\` and \`wordSearch(words, 12)\` (see [Expressions](expressions)). Clear the formula to type or lay the value out yourself.
+Instead of typing a starting value, you can give a variable a **formula**: an [expression](expressions) over the variables above it in the list. Choose **Worked out** next to the type, and a box for the formula appears under the value.
+
+The player works the formula out each time the project starts (and after **Start over**). The canvas preview works it out too, so what you see while editing follows the variables it depends on. The typed value is only what it falls back to if the formula fails.
+
+Once it plays it is an ordinary variable, so **Change a value or counter** can change it. Tick **Keep up to date** (see *Live variables* below) and it is read only instead, and is worked out again whenever what it reads changes.
+
+The branded Crossword and Word search starters use this: you edit a plain list of words (and clues) and the grid is laid out from it, with \`crossword(words, 10)\` and \`wordSearch(words, 12)\`. Clear the formula to type or lay the value out yourself.
 
 ## Live variables
-Tick **Keep up to date** under a variable's formula and it becomes *live*: the formula is worked out again whenever a variable it reads changes (and, for a formula that reads layers, data or the microphone, whenever something moves), not just at the start. Use one for anything you would otherwise paste the same long expression for in several places: a word count (\`wordCount(essay)\`), whether the score passes (\`score / total >= 0.5\`), a band (\`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\`), a list filtered by another variable. Layers then just show \`{wordsLeft}\`.
+Tick **Keep up to date** under a variable's formula and it becomes *live*. The formula is worked out again whenever a variable it reads changes, not only at the start. (A formula that reads layers, data or the microphone is worked out again whenever something moves.)
+
+Use one for anything you would otherwise paste the same long expression for in several places. Layers then just show \`{wordsLeft}\`. Examples:
+- a word count: \`wordCount(essay)\`;
+- whether the score passes: \`score / total >= 0.5\`;
+- a band: \`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\`;
+- a list filtered by another variable.
+
+\`wordCount\`, \`band\`, \`clock\`, \`shuffle\`, \`randInt\`, \`includesAll\` and \`includesAny\` are formula helpers made for this: see [Expressions](expressions#helpers). To show seconds as \`1:35\`, use \`clock(seconds)\` in a formula, or the **Seconds to m:ss** [converter](bindings#converters) on a binding.
 
 - A live variable is **read only**. *Change a value or counter*, scripts, inputs and the page cannot change it (they are told so in the console), and the Usage tab lists a *Change a value or counter* or *Put values back to the start* node that names one under **Broken**. Untick it to set it by hand again.
 - Live variables can read each other, in any order in the list. If they read each other in a circle (or one reads itself) they stay at their starting value and the Variables tab and **Usage** say so.
@@ -2708,10 +2974,16 @@ Tick **Keep up to date** under a variable's formula and it becomes *live*: the f
 - The typed value is what it falls back to when the formula fails (data not loaded yet, say). The canvas preview shows live variables worked out too.
 
 ## Save as user data
-Tick **Save as user data** on a variable and the player looks after the rest. Its saved value is put back **before the project starts**, so the first thing a returning learner sees is their own work; it is saved a moment after it changes (a burst of typing is one save), and straight away when they move to another artboard or leave the page. It goes to the same place as the *Save progress* and *Load saved progress* nodes (see [Results and resume](results)), so you no longer need a *Save progress* node before every Next and Back. In expressions, \`userData.loaded\` is true once the saved values have been looked for (for a "Welcome back" panel that should not flash on a first visit) and \`userData.restored\` is how many variables came back. A live variable cannot be saved. Instances inside a page keep nothing: tick it in the main project.
+Tick **Save as user data** on a variable (under **Options**) and the player looks after the rest. Its saved value is put back **before the project starts**, so the first thing a returning learner sees is their own work.
+
+It is saved a moment after it changes (a burst of typing is one save), and straight away when the learner moves to another page or leaves. It goes to the same place as the *Save progress* and *Load saved progress* nodes (see [Results and resume](results)), so you no longer need a *Save progress* node before every Next and Back.
+
+In expressions, \`userData.loaded\` is true once the saved values have been looked for (for a "Welcome back" panel that should not flash on a first visit), and \`userData.restored\` is how many variables came back. A live variable cannot be saved. Embedded pages (instances) keep nothing: tick it in the main project.
 
 ## Putting variables back
-*Change a value or counter → Back to its starting value* puts one variable back, and the **Put values back to the start** node puts several back in one go (tick them in the node's list, or **All**). A starting value is the one for this course if there is one, else the typed value, else the formula worked out again (so a formula that shuffles gives a fresh order). Live variables are left alone. This is lighter than **Start over**, which also leaves the page. Scripts: \`ix.reset('score', 'answers')\`.
+**Change a value or counter** with **Do** set to *Back to its starting value* puts one variable back. The **Put values back to the start** node puts several back in one go (tick them in the node's list, or **All**).
+
+A starting value is the one for this course if there is one, else the typed value, else the formula worked out again (so a formula that shuffles gives a fresh order). Live variables are left alone. This is lighter than **Start over**, which also leaves the page. In scripts: \`ix.reset('score', 'answers')\`.
 
 ## Different values for different courses
 One project can start with different values in different courses (a due date, a unit name, a week count). In the **Data** tab, pick **context** and add a row under **Per-course values**: a course label such as \`MAT1000_*\`, and the variables it changes. See [Course and learner context](course-context).
@@ -2724,13 +2996,22 @@ One project can start with different values in different courses (a due date, a 
 - In scripts: \`ix.vars.score += 1\`.
 - From the host page: \`player.setVariable('score', 10)\`.
 
-Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field. Tick **Remember** to keep the value between visits (for a score, a saved choice or a name): in the learner's record when the project is played from the Link for StudyDesk, otherwise in their browser. See [Results and progress](results). Press **+ Add variable** and pick what it is for: a **Counter** (a number that goes up and down), a **Switch (on or off)**, **Text**, a **Score** (a running total, remembered between visits), a **List**, a **Choice** or a **Colour**. Each one is an ordinary variable of that type with a name you can change, so the table still shows the type and starting value. See [Tutorial 3](tutorial-state-machine) for a worked example.
+## Adding a variable
+Press **+ Add variable** and pick what it is for: a **Counter** (a number that goes up and down), a **Switch (on or off)**, **Text**, a **Score** (a running total, remembered between visits), a **List**, a **Choice** or a **Colour**. Each one is an ordinary variable of that type with a name you can change, so the table still shows the type and starting value. See [Tutorial 3](tutorial-state-machine) for a worked example.
 
-Under each name the table says **used in 3 places** (or **not used yet**). Click it to list the places (layers, expressions, interactions, scripts), and click one to go there. The bin asks first when the variable is used, naming the places, because they stop working once the name is gone; a variable nothing uses goes straight away, and the message at the bottom has an **Undo**.
+Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field.
 
 Next to the type, **Starts as a value** is the number, text or switch the project starts with. **Worked out** is for a variable that is calculated, such as a crossword grid: it shows a box for the formula (for example \`crossword(words, 10)\`), and the value stays as what it falls back to if the formula fails. **Keep up to date** (for a formula) works it out again whenever something it reads changes.
 
-**Options** (folded away until something in it is on) holds **Remember** (keep the value between visits) and **Save as user data** (keep it on the server for each person), each with a sentence saying what it does.
+## Options on a variable
+**Options** is folded away until something in it is on. It holds two switches, each with a sentence saying what it does:
+- **Remember** keeps the value between visits (for a score, a saved choice or a name). It is kept in the learner's record when the project is played from the Link for StudyDesk, otherwise in their browser. See [Results and progress](results).
+- **Save as user data** keeps it on the server for each person (see above).
+
+## Where a variable is used
+Under each name the table says **used in 3 places** (or **not used yet**). Click it to list the places (layers, expressions, interactions, scripts), and click one to go there.
+
+The bin asks first when the variable is used, naming the places, because they stop working once the name is gone. A variable nothing uses goes straight away, and the message at the bottom has an **Undo**.
 
 ![The Variables tab.](help/variables-panel.png)`,
   },
@@ -2740,7 +3021,7 @@ Next to the type, **Starts as a value** is the number, text or switch the projec
     group: 'Interactivity',
     summary: 'Short JavaScript formulas in text, bindings and node settings.',
     keywords: 'expression formula javascript template braces condition ternary math',
-    body: `An expression is a short formula that gives a value, written in a safe subset of JavaScript. Variables and data sources are in scope by name.
+    body: `An expression is a short formula that works out a value: a total, a piece of text, a yes or no. You write them in text, bindings and node settings, in a safe subset of JavaScript. Your variables and data sources are available by name.
 
 \`\`\`
 score + 1
@@ -2751,32 +3032,41 @@ products.filter(p => p.inStock).length
 \`\`\`
 
 ## Where they go
+You can write an expression in four places:
 - **Text**: anything in \`{braces}\`.
 - **Bindings**: a property's value. See [Bindings](bindings).
-- **Node settings** marked *expr*, such as Set variable's value or If's condition.
+- **Node settings** marked *expr*, such as the value of **Change a value or counter** or the condition of **Check a condition**.
 - **Repeat → Items**: the list to repeat over.
 
 In repeated copies, \`item\` and \`index\` are the current list item and its position. In interactions, \`event\` describes what fired.
 
 ## Suggestions as you type
-Every field that takes an expression suggests as you type: the Formula of a binding, a node's expression settings (If's condition, Set variable's value...), a variable's formula, Repeat's items, a joystick's X and Y, and the \`{braces}\` in a text layer's words, a button's label or a link's address (there it only suggests inside the braces).
+**Expression suggestions as you type** help you write a formula without remembering every name. They appear in every field that takes an expression: the Formula of a binding, a node's expression settings (a Check a condition node's condition, Change a value or counter's value...), a variable's formula, Repeat's items, a joystick's X and Y, and the \`{braces}\` in a text layer's words, a button's label or a link's address (there they only suggest inside the braces).
 
-Type the start of a name, or press the dot after one, and a short list appears with each choice's type and its value right now. It offers your variables, \`context\` (and its fields, such as \`context.firstName\`), your data sources, the names the player supplies (\`reducedMotion\`, \`voiceAvailable\`, \`micLevel\`, \`downloadSize\`...), the helpers below with their arguments, and what the setting itself has (\`event\` in a graph node, \`value\` in a converter, \`self\` in a binding). After a dot it lists what can follow: the fields of an object, \`self.width\`, or the methods of text and lists. Inside \`layer("\` it lists your layers' names.
+Type the start of a name, or press the dot after one, and a short list appears. Each choice shows its type and its value right now.
+
+The list offers:
+- your variables, \`context\` (and its fields, such as \`context.firstName\`) and your data sources;
+- the names the player supplies (\`reducedMotion\`, \`voiceAvailable\`, \`micLevel\`, \`downloadSize\`...);
+- the helpers below, with their arguments;
+- what the setting itself has: \`event\` in a graph node, \`value\` in a converter, \`self\` in a binding.
+
+After a dot it lists what can follow: the fields of an object, \`self.width\`, or the methods of text and lists. Inside \`layer("\` it lists your layers' names.
 
 **Up** and **Down** move through the list, **Enter** or **Tab** puts the choice in, and **Esc** closes it. With no list showing, Enter and Tab do what they always did.
 
 ## Checks as you type
-A line under every formula field says what the formula is doing, a moment after you stop typing:
-- **Green**: what it works out to right now, such as *currently true*, *currently 12* or *currently “Hello”*. A formula that depends on what has just happened (it uses \`event\`) says *depends on what happens when it runs*, and one that uses \`Math.random()\`, \`randInt\` or the date says *changes each time it runs*. It is not run to show you a value that would be different the next time.
+A line under every formula field tells you what the formula is doing, a moment after you stop typing:
+- **Green**: what it works out to right now, such as *currently true*, *currently 12* or *currently “Hello”*. A formula that depends on what has happened (it uses \`event\`) says *depends on what happens when it runs*, and one that uses \`Math.random()\`, \`randInt\` or the date says *changes each time it runs*. It is not run to show you a value that would be different the next time.
 - **Red**: what is wrong, in a sentence. *There is no value called scoer. Did you mean score?* comes with a **Use score** button that fixes every use of it in one click. A bracket or quote that is not closed, a symbol missing at the end, a single \`=\` where \`==\` was meant, and a formula that cannot be worked out with today's values are all said in words.
 
 The check uses the same scope as the suggestions, and the values are the project's starting values, as on the canvas.
 
 ## Conditions without typing
-A field that asks for a yes/no condition (see [Interactions](interactions)) offers pickers instead of a text box: **[value] [is at least] [5]**, with **+ and** and **+ or** for more rows, and **Edit as formula** for the text. The pickers write an ordinary formula, so anything you built with them can be edited by typing, and a formula they cannot show opens as text.
+You don't have to write a yes/no condition as a formula. A field that asks for one (see [Interactions](interactions)) offers pickers instead of a text box: **[value] [is at least] [5]**, with **+ and** and **+ or** for more rows, and **Edit as formula** for the text. The pickers write an ordinary formula, so anything you built with them can be edited by typing, and a formula they cannot show opens as text.
 
 ## Helpers
-These work in every expression:
+Helpers are ready-made functions for common jobs: showing a number as text, mapping one range onto another, counting words, laying out a puzzle or a diagram. These work in every expression:
 
 | Call | Gives |
 |---|---|
@@ -2803,12 +3093,12 @@ These work in every expression:
 | \`includesAll(list, items)\`, \`includesAny(list, items)\` | Whether the list (or text) has every one of the items, or at least one, ignoring capitals: \`includesAny(answer, ["cat", "kitten"])\` |
 | \`enums.name\` | The options of a choice variable |
 | \`instanceInput(layer, name)\` | The current value of a variable inside an [instance](instances) layer (by name or id) |
-| \`artboard.width\`, \`artboard.height\` | The artboard's size (and \`artboard.name\`), in the same units as a layer's X and Y, whatever size the player is shown at |
+| \`artboard.width\`, \`artboard.height\` | The page's size (and \`artboard.name\`), in the same units as a layer's X and Y, whatever size the player is shown at |
 | \`self\` | In a [binding](bindings) (and its converters): the layer it's on. \`self.width\`, \`self.opacity\`, \`self.text\`, any plain setting it has, and for a video \`self.time\`, \`self.duration\`, \`self.playing\`, \`self.ended\` and \`self.rate\` |
 | \`layer(name)\` | The same for any layer, by name or id: \`layer('Knob').width\`. X and Y are inside its parent, as in the Inspector |
 
 ## What you can write
-Expressions are read by a small interpreter, not run as JavaScript, so a project can't use them to reach the page. These work:
+This is exactly what an expression can contain. Expressions are read by a small interpreter, not run as JavaScript, so a project can't use them to reach the page. These work:
 
 - **Values**: numbers (\`12\`, \`.5\`, \`1e3\`, \`0xff\`), text in \`"…"\`, \`'…'\` or backticks with \`\${…}\` slots, \`true\`, \`false\`, \`null\`, \`undefined\`, lists \`[1, 2, ...more]\`, objects \`{a: 1, b}\`, and patterns \`/regex/flags\`.
 - **Operators**: \`+ - * / % **\`, \`== != === !==\`, \`< > <= >=\`, \`&& || ??\`, \`!\`, \`typeof\`, \`in\`, \`a ? b : c\`, bit operators, and \`,\` inside brackets.
@@ -2819,7 +3109,7 @@ Expressions are read by a small interpreter, not run as JavaScript, so a project
 These don't: assignment (\`=\`, \`++\`), statements, \`function\`, \`this\`, loops, \`window\`, \`document\`, \`fetch\`, \`eval\`, and list methods that change a list in place (\`push\`, \`splice\`; \`sort\` and \`reverse\` give a sorted copy and leave the list alone). A slot that can't be read or fails is left as written in text and gives nothing elsewhere. Very large lists or text, and expressions that run for very long, are cut off.
 
 ## Patterns (regular expressions)
-A \`/pattern/flags\` works with \`match\`, \`matchAll\`, \`search\`, \`replace\`, \`replaceAll\`, \`split\`, \`.test(text)\` and \`.exec(text)\`. Some patterns can make a browser freeze on the wrong text (a pattern like \`(a+)+$\` takes twice as long with every extra character), so patterns are checked before they run. A pattern is refused, with a message, when:
+A pattern describes text to look for, such as a postcode or a word that may be spelled two ways. A \`/pattern/flags\` works with \`match\`, \`matchAll\`, \`search\`, \`replace\`, \`replaceAll\`, \`split\`, \`.test(text)\` and \`.exec(text)\`. Some patterns can make a browser freeze on the wrong text (a pattern like \`(a+)+$\` takes twice as long with every extra character), so patterns are checked before they run. A pattern is refused, with a message, when:
 
 - it has a **backreference** (\`\\1\`, \`\\k<name>\`);
 - a **repeated group contains another repetition**: \`(a+)+\`, \`(\\w+\\s?)*\`, \`(.*x){5}\`. Write it flat instead, for example \`[a-z]+\`;
@@ -2844,7 +3134,10 @@ In a text layer, a slot whose pattern is refused (or whose text is too long for 
     group: 'Interactivity',
     summary: 'Tie a layer property to a variable: in (the variable sets it), out (it sets the variable) or both ways.',
     keywords: 'bind binding data binding property drive reactive two-way both ways out in video position playing length drag x y attribute scrub artboard size width layer',
-    body: `A binding sets a layer's property from an [expression](expressions), and keeps it up to date as variables and data change. In the **Data bindings** section of the Inspector, press **+ Add binding** (or the **+** in the section's header) and pick the property; type in the search box at the top to find it quickly (*opa* finds Opacity).
+    body: `A binding connects a layer's setting to a variable, so the layer changes by itself when the variable does: a bar that grows with the score, a name that shows in a text layer, a layer that appears at step 3. It sets the property from an [expression](expressions) and keeps it up to date as variables and data change.
+
+## Adding a binding
+In the **Data bindings** section of the Inspector, press **+ Add binding** (or the **+** in the section's header) and pick the property; type in the search box at the top to find it quickly (*opa* finds Opacity).
 
 Each binding then says where its value comes from:
 - **Variable**: pick a variable from the list (search it by name), or **+ New variable…** at the bottom of the list to make one. The property takes that variable's value as it is.
@@ -2869,13 +3162,15 @@ A bound property shows a link icon and can't be changed by hand or keyframed unt
 
 ## Which way: in, out or both
 Each binding has **← In**, **Out →** and **⇄ Both** at the top.
-- **In** (the usual): the variable or formula sets the property, as above. The formula can read the layer it's on as \`self\`: \`self.width / 2\` for a height, \`self.time / self.duration\` on a video for how far through it is. \`self\` is the layer before its own bindings apply, so a binding never reads its own result. On the editing canvas a video has no time or length yet. On a video's **Playback position** and **Playing** it seeks, plays or pauses the video whenever the formula's value changes, and leaves the video alone while it doesn't, so it still plays on by itself.
+- **In** (the usual): the variable or formula sets the property, as above. The formula can read the layer it's on as \`self\`: \`self.width / 2\` for a height, \`self.time / self.duration\` on a video for how far through it is. \`self\` is the layer before its own bindings apply, so a binding never reads its own result.
 - **Out**: the property's value is written into a variable whenever it changes, and nothing sets the property from it. Use it to *read* something: a draggable layer's **X** as it is dragged, a video's **Playback position**, a timeline-animated **Opacity**. Read-only attributes (a video's **Length**, **Ended**) can only go out.
 - **Both**: the property and the variable are kept equal. At the start the property takes the variable's value; after that, change either one and the other follows. A slider bound to the same variable as a video's **Playback position** both shows the position and scrubs the video; setting a video's **Playing** to false pauses it.
 - An **Input field**'s **Value** is the common case for Both: typing writes the variable and the variable fills the box (the **Bind to a variable…** button in the Input section adds exactly this). Out leaves the box showing its own text.
 - A **draggable** layer with its X or Y bound **In** never tells the variable it moved, so a Save user data or a remembered variable keeps the old value. Bind it **⇄ Both** to save where the learner left it; the Bindings section says so and has a button for it.
 
 Out and Both name a variable (no formula, no converters), and the grey line says what will happen in words.
+
+**Videos.** On the editing canvas a video has no time or length yet. On a video's **Playback position** and **Playing** an *In* binding seeks, plays or pauses the video whenever the formula's value changes, and leaves the video alone while it doesn't, so it still plays on by itself.
 
 The value is made to fit the property (settings that can't be animated, like a video's **Loop**, go by the type they already have): a number property takes a number (\`true\`/\`false\` become 1/0, numeric text is read) and is left as it was if the expression gives something that is not a number; a true/false property takes a boolean; text and colour properties take text.
 
@@ -2903,9 +3198,7 @@ Choices and lists work with bindings like any other value: bind a fill colour to
     group: 'Interactivity',
     summary: 'JavaScript with the ix API, run safely in a sandbox.',
     keywords: 'script javascript code ix api sandbox quickjs wasm onframe animate await',
-    body: `Scripts are JavaScript for what the nodes can't do. Add them in the **Scripts** tab. A script runs on start (tick **Run on start**) or from a **Run script** node; short code can go straight into a **Run code** node.
-
-The **Code colours** buttons at the top right of the script (**Follow**, **Light**, **Dark**) set the colours of the code box. **Follow** goes light or dark with the editor's theme; the other two stay as they are. It is a [preference](preferences) that applies to every code box, and it is yours, not the project's.
+    body: `Scripts are short programs, written in JavaScript, for the things the interaction nodes can't do. If you do not write code, the nodes cover most needs: see [Interactions](interactions). Add scripts in the **Scripts** tab. A script runs on start (tick **Run on start**) or from a **Run script** node; short code can go straight into a **Run code** node.
 
 \`\`\`
 const ball = ix.node('Ball');
@@ -2913,6 +3206,14 @@ ix.onFrame((dt) => ball.set('x', (ball.get('x') + dt * 0.1) % ix.artboard.width)
 ix.on('reset', () => { ix.vars.score = 0; });
 await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' });
 \`\`\`
+
+## Code colours
+
+The **Code colours** buttons above the code (**Follow**, **Light**, **Dark**) set the colours of the code box.
+- **Follow** goes light or dark with the editor's theme. It is the default.
+- **Light** is dark code on a light page, and **Dark** is light code on a dark page, whatever the editor looks like.
+
+The same buttons are above the raw text in the Data tab, and the setting reaches every code box at once. It is also in [Preferences](preferences) as **Code editor colours** (General page, Appearance). It is your own setting, not saved in the project.
 
 ## The ix API
 | Call | Does |
@@ -2942,9 +3243,11 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 To paint a layer from a script every frame (generative art, particles, charts), use a [Script layer](script-layers).
 
 ## The sandbox
-Scripts run in a sandbox or, with **Run scripts in the sandbox** off in Project settings, in the page itself with full access (\`node.element\`, \`fetch\`, the DOM), so keep it on for code you do not trust.
+The sandbox is a locked room for scripts, so a script can't harm the page or the learner's browser. New projects run scripts in it. It is a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped.
 
-New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches the URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. It follows the project's [data rules](data-sources#what-may-be-loaded): http(s) only, no cookies to other sites, and, if you list **Allowed data hosts** in Project settings, only those hosts. A refused URL makes \`loadData\` throw, so use \`try\`/\`catch\`. Without an allowed-hosts list, only run projects whose scripts you trust. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`,
+**Run scripts in the sandbox** in Project settings turns it off, so scripts run in the page itself with full access (\`node.element\`, \`fetch\`, the DOM). Keep it on for code you do not trust, and turn it off only for code you trust that needs the page.
+
+One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches the URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. It follows the project's [data rules](data-sources#what-may-be-loaded): http(s) only, no cookies to other sites, and, if you list **Allowed data hosts** in Project settings, only those hosts. A refused URL makes \`loadData\` throw, so use \`try\`/\`catch\`. Without an allowed-hosts list, only run projects whose scripts you trust.`,
   },
   {
     id: 'script-layers',
@@ -2990,8 +3293,8 @@ ${DRAW_API.map(([sig, what]) => `| \`${sig.replace(/\|/g, '\\|')}\` | ${what.rep
 ## Settings
 
 - **FPS**: a frame rate cap. 0 draws on every frame; 30 is plenty for most charts.
-- **Pixel ratio**: canvas pixels per layer pixel. **Auto** follows the screen's density and the artboard's scale, up to 3. A fixed number is sharper but slower; very large layers are held to what the browser can allocate.
-- **Paint while editing**: draws a single still frame on the canvas, at the timeline's time (0 when no timeline is showing), so you can lay out the artboard. Turn it off for a heavy script; the layer then shows as a placeholder. **Preview** always runs it.
+- **Pixel ratio**: canvas pixels per layer pixel. **Auto** follows the screen's density and the page's scale, up to 3. A fixed number is sharper but slower; very large layers are held to what the browser can allocate.
+- **Paint while editing**: draws a single still frame on the canvas, at the timeline's time (0 when no timeline is showing), so you can lay out the page. Turn it off for a heavy script; the layer then shows as a placeholder. **Preview** always runs it.
 
 The layer is an ordinary layer otherwise: move, rotate, fade, blend, mask and animate it, and click it with a **When clicked or hovered** event. Inside the script, \`g.pointer\` gives the pointer in the layer's own pixels (\`x\`, \`y\`, \`down\`, \`inside\`), correct even if the layer is rotated or inside a group.
 
@@ -3051,7 +3354,7 @@ The **Uniforms** list gives the shader values you can change. Press **Add a unif
 ## Settings
 
 - **FPS**: a frame rate cap while it animates. 0 draws on every frame.
-- **Pixel ratio**: canvas pixels per layer pixel. **Auto** follows the screen's density and the artboard's scale, up to 2. Shaders cost time for every pixel, so a layer is held to about 4 million pixels however large it is: past that it is drawn smaller and stretched.
+- **Pixel ratio**: canvas pixels per layer pixel. **Auto** follows the screen's density and the page's scale, up to 2. Shaders cost time for every pixel, so a layer is held to about 4 million pixels however large it is: past that it is drawn smaller and stretched.
 - **Animate while editing**: runs the shader live on the editor canvas. Off (the default) paints one still frame at the timeline's time (0 when none is showing), which keeps editing smooth. **Preview** always runs it.
 
 ## Errors
@@ -3064,7 +3367,7 @@ If the shader doesn't compile, the layer shows a placeholder and the inspector l
 - A shader is **paused while it is off screen** or the browser tab is hidden. A shader that reads neither \`u_time\` nor \`u_mouse\` (it only uses its uniforms) is drawn only when something changes.
 - Without WebGL (some remote desktops and very old devices) the layer shows a placeholder and says so.
 - **Pictures** you use as image uniforms must come from your project's assets (or a site that allows it); a picture the browser won't hand to WebGL is skipped with a warning.
-- **Export**: shader layers work in the single-file export, **.ixp** packages and the embeddable player. A **PNG or SVG picture** of an artboard shows the layer's current frame (at the timeline's time, or 0), not a running animation.
+- **Export**: shader layers work in the single-file export, **.ixp** packages and the embeddable player. A **PNG or SVG picture** of a page shows the layer's current frame (at the timeline's time, or 0), not a running animation.
 
 ## Shader filter on an image
 
@@ -3101,7 +3404,7 @@ Pick the **Progress bar** tool (in the **Data** group of the tool bar, which sta
 
 ## Where it works
 
-Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard. They are **not** part of a Lottie export (the export lists them as left out).`,
+Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page. They are **not** part of a Lottie export (the export lists them as left out).`,
   },
   {
     id: 'charts',
@@ -3124,13 +3427,15 @@ Pick the **Chart** tool (in the **Data** group of the tool bar, which starts fol
 
 Anything that is not a number counts as 0. A chart draws up to 200 items.
 
+Under the expression, a **preview** shows the first few items as the chart reads them (and what is wrong when it can't), using the project's variables at their starting values and the loaded data. The chart redraws when a variable or data source it reads changes.
+
 ## Hiding a value
 
-An object item with \`hidden: true\` is a placeholder, for a guessing page where one bar is the answer: \`[{label: "Mon", value: 4}, {label: "Tue", hidden: true}, ...]\`. It is drawn as a dashed, empty mark with a **?** (even with **Value labels** off), and the hover readout, the screen reader and the table say *hidden* instead of a number. Put \`hidden\` on from a variable and the real bar can be revealed later by changing the data (\`hidden: !answered\`). **Hidden key** names another field to use instead of \`hidden\`.
+A chart can **hide a value**: one bar, point or slice shows as a guess instead of its number. Use it for a guessing page where one bar is the answer. The item is drawn as a dashed, empty mark with a **?** (even with **Value labels** off). The hover readout, the screen reader and the table say *hidden* instead of a number.
 
-A hidden item without a number of its own is left out when the axis is worked out, and shows as a slot the full length of the axis (a column or bar), a hollow point halfway up with a gap in the line (a line chart), and nothing in a pie or donut (it has no share). Give it a \`value\` as well and the dashed mark is drawn at that size and counts for the axis, which is how to show an outline of where the bar will land.
+To hide an item, give it \`hidden: true\` in the data: \`[{label: "Mon", value: 4}, {label: "Tue", hidden: true}, ...]\`. To reveal the real bar later, set \`hidden\` from a variable (\`hidden: !answered\`) and change the variable. **Hidden key** names another field to use instead of \`hidden\`.
 
- Under the expression, a **preview** shows the first few items as the chart reads them (and what is wrong when it can't), using the project's variables at their starting values and the loaded data. The chart redraws when a variable or data source it reads changes.
+A hidden item without a number of its own is left out when the axis is worked out. It shows as a slot the full length of the axis (a column or bar), a hollow point halfway up with a gap in the line (a line chart), and nothing in a pie or donut (it has no share). Give it a \`value\` as well and the dashed mark is drawn at that size and counts for the axis, which is how to show an outline of where the bar will land.
 
 ## Kinds and look
 
@@ -3144,11 +3449,11 @@ A hidden item without a number of its own is left out when the axis is worked ou
 - **Hover** a bar, slice or point to see a readout with its name and value. **Tab** moves into the chart and the **arrow keys**, **Home** and **End** move between items, with the same readout. **Enter** or **Space** clicks the item.
 - Clicks, presses and hovers on a mark run **When clicked or hovered** nodes on the chart layer with \`event.index\`: the item's place in the list, from 0 (\`event.index\` is null away from the marks). **Pointer moves over it** gives it for each item you cross; **Hover start** only for the item you first entered. Arrowing between items fires **When a layer is focused** nodes with \`event.index\` too. So \`scores[event.index].name\` is the item that was clicked.
 - A **Table for screen readers** (on by default) puts the same numbers in a table that only a screen reader finds, with a share column for pie and donut charts. Give the chart a **text alternative** in *Accessibility* that says what it shows ("Sales by month, 2026"): the [checker](accessibility-checker) asks for one. A chart marked **Decorative** is hidden from screen readers.
-- **Grow in** makes columns and bars rise, slices and points pop, and a line draw itself, the first time the chart appears. Viewers whose device asks for less motion just get the chart (the project's *reduced motion* setting turns it on for you, as it does for animations).
+- **Grow in** makes columns and bars rise, slices and points pop, and a line draw itself, the first time the chart appears. Viewers whose device asks for less motion get the chart as it is (the project's *reduced motion* setting turns it on for you, as it does for animations).
 
 ## Where it works
 
-Charts draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard (as they look when fully grown, without the readout). They are **not** part of a Lottie export. There is no 3D, stacking or mixing of kinds. For anything else, a [Script layer](script-layers) can draw whatever you like.`,
+Charts draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page (as they look when fully grown, without the readout). They are **not** part of a Lottie export. There is no 3D, stacking or mixing of kinds. For anything else, a [Script layer](script-layers) can draw whatever you like.`,
   },
   {
     id: 'connectors',
@@ -3160,7 +3465,9 @@ Charts draw in the editor, Preview, the single-file export, **.ixp** packages an
 
 ## Drawing one
 
-Pick the **Connector** tool (<kbd>K</kbd>, in the **Draw** group) and drag from one layer to another. The layer under the pointer lights up with a dot on each side: let go near a dot and the end attaches to that **side**; let go anywhere else on the layer and it is **auto**, the side that faces the other end. Let go on empty canvas and that end is a **loose point** that stays where it was dropped. Hold <kbd>Shift</kbd> to keep the tool. The new connector is selected, with a gold handle on each end: drag a handle onto another layer to re-attach it.
+Pick the **Connector** tool (<kbd>K</kbd>, in the **Draw** group) and drag from one layer to another. The layer under the pointer lights up with a dot on each side: let go near a dot and the end attaches to that **side**; let go anywhere else on the layer and it is **auto**, the side that faces the other end. Let go on empty canvas and that end is a **loose point** that stays where it was dropped. Hold <kbd>Shift</kbd> to keep the tool.
+
+The new connector is selected, with a gold handle on each end. Drag a handle onto another layer to re-attach it.
 
 You can also add one in the **Connector** section of the Inspector, which lists the layers on the artboard for each end.
 
@@ -3181,7 +3488,7 @@ A layer inside a [repeater](repeaters) has one copy per item, and a copy's numbe
 - the boxes: a group repeating \`nodes\`, with a box as its template (its first child);
 - the lines: a group repeating \`links\` (\`[{from: 0, to: 2}, ...]\`) with one connector as its template. Its **Start** is the box, **Which copy** \`item.from\`; its **End** the same box, **Which copy** \`item.to\`.
 
-Add a link to the list and a line appears; change a link and it moves. A link that names a copy that isn't there (an index past the end, or text) simply isn't drawn. When you drag the Connector tool onto a layer that is in a repeater, the end is made for you as copy 0.
+Add a link to the list and a line appears; change a link and it moves. A link that names a copy that isn't there (an index past the end, or text) isn't drawn. When you drag the Connector tool onto a layer that is in a repeater, the end is made for you as copy 0.
 
 ## Reading it
 
@@ -3189,7 +3496,7 @@ A connector is **decorative**: screen readers skip it, and so does the keyboard.
 
 ## Where it works
 
-Connectors draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard. They are left out of Lottie files (the export says so). A connector takes no clicks or hovers; put the events on the layers it joins. An artboard with connectors is redrawn whole on each edit in the editor, which is still fast at diagram sizes.
+Connectors draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page. They are left out of Lottie files (the export says so). A connector takes no clicks or hovers; put the events on the layers it joins. A page with connectors is redrawn whole on each edit in the editor, which is still fast at diagram sizes.
 
 ## Starters that use them
 
