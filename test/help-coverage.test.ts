@@ -123,11 +123,12 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Gold instead of blue': [['preferences', 'the same gold with a thin dark edge']],
   'Faster on big projects': [['interface', 'Big projects']],
   'Opens faster': [['interface', 'Opening the editor']],
+  'Grid sizes, tick boxes and long dropdowns': [['auto-layout', 'until you leave the box or press Enter'], ['properties-panel', 'Hug height']],
   'Share for review needs a sign in': [['comments', 'There is no guest option'], ['comments', 'Sign in with StudyDesk']],
 };
 
 //Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone
-const UPCOMING = new Set<string>([]);
+const UPCOMING = new Set<string>(['Grid sizes, tick boxes and long dropdowns']);
 
 const section = (): string[] => {
   const text = readFileSync(join(__dirname, '..', 'CHANGELOG.md'), 'utf8');

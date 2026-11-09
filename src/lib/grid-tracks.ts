@@ -21,3 +21,10 @@ export function parseTracks(text: string): GridTrack[] {
   }
   return out;
 }
+
+/** The words of a track list that are not a size, so the box can say what it did not understand. `ignoreLast` leaves out a last word that is still being typed ("1f" on its way to "1fr"). */
+export function trackProblems(text: string, ignoreLast = false): string[] {
+  const words = text.trim().split(/[\s,]+/).filter(Boolean);
+  if (ignoreLast && words.length && !/[\s,]$/.test(text)) words.pop();
+  return words.filter((w) => parseTracks(w).length === 0);
+}
