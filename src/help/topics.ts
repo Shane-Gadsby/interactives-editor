@@ -1272,11 +1272,14 @@ Use the arrows to reorder entries and the bin to delete one. **Copy as text** pu
 Link each entry to the files it covers. Once the list has entries, the [Assets](assets) panel marks every file that no entry covers (**no attribution** in the details view, a **No attribution** tag on a thumbnail) and says how many there are. **Add for files without one** in this tab makes one entry for each of them, named after the file, for you to fill in. Deleting a file takes it off the entries that listed it.
 
 ## Showing it to learners
-- **Show a Credits button to learners** adds a small **Credits** button in the bottom left corner of the player. It opens a dialog with the list as readable citations, under the heading you choose (the default is *Credits and references*). Links open in a new tab. It works from the keyboard: the dialog takes focus, <kbd>Tab</kbd> stays inside it, <kbd>Esc</kbd> or **Close** shuts it and focus goes back to the button. It also works on a shared link, where the page runs in its sandbox.
+- **Show a Credits button to learners** adds a small, quiet **Credits** button in the bottom left corner of the page. It sits inside the page, so when the page does not fill the player (a wide page in a tall frame) it stays on the page and never out in the empty space round it. It opens a dialog with the list as readable citations, under the heading you choose (the default is *Credits and references*). Links open in a new tab. It works from the keyboard: the dialog takes focus, <kbd>Tab</kbd> stays inside it, <kbd>Esc</kbd> or **Close** shuts it and focus goes back to the button. It also works on a shared link, where the page runs in its sandbox.
 - **Keep the list in exported and shared pages** puts the list (without your notes) into pages you download or share even when there is no button, for anyone who reads the page's data. While the button is on this is always the case, since the button needs the list.
 - With both off, the list is your own record. It stays in the editor, in the project file (**Export** as \`.ixp\` or JSON) and in templates made from the project, notes included, and the pages you export and share carry none of it.
 
 The same two settings are in the **Credits** section of the project settings (see [Project settings](project-settings)). Preview shows the button when it is on.
+
+## A Credits button of your own
+The automatic button has one fixed place. To put Credits where it suits the page, draw a small button or link, give it an **On pointer** click and wire that to **Open credits** (Navigation, in the Interactions tab). It opens the same list, with the same keyboard behaviour, and focus goes back to your button when the list closes. A page that has an **Open credits** node does not also get the automatic button, so there are never two. Pages without one still get it while the setting is on, and the list is kept in exported pages whenever a page opens it. With no entries yet, the list says no credits have been added. Every starter on the Templates tab comes with one of these on its first page: see [Branded starter packs](branded-starters).
 
 ## Working together
 The list is part of the project, so people editing it live see each other's changes like any other edit, and undo covers it.
@@ -5376,6 +5379,7 @@ You get a checklist of everything to change, like any other [template](templates
 
 ## On every starter page
 - Back and Next sit in a bar along the bottom of every page: Back on the left, Next on the right.
+- The first page has a small **Credits** button in a corner (bottom right, level with the footer line, unless something of the starter's is in the way). It opens the project's list of credits, which you fill in under [Attributions](attributions); delete the button if you have nothing to credit. Each page of a phone version has its own.
 - Checklist items are short, one job each, with **Why and how** folded underneath.
 - Every starter's graphs and pages carry [notes](notes#notes-in-starters-and-examples) that say what each part does, why it is built that way and what to change.
 - Every page is checked in every colourway, so a button never lands on text and nothing crowds the logo.

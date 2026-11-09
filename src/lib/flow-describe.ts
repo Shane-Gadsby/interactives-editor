@@ -268,6 +268,7 @@ const ACTION: Record<string, (p: P, c: Names) => string> = {
   },
   'action.moveView': (p, c) => (p.to === 'page' ? 'show the whole page again' : `move the view to ${c.layer(p.target)}`),
   'action.url': (p) => `open the link ${val(p.url)}`,
+  'action.credits': () => 'open the credits',
   'action.startOver': () => 'start over',
   'action.reportResult': (p) => (p.completed === 'progress' ? `report the score so far${p.score ? ` (${val(p.score)})` : ''}` : `report the result${p.score ? ` (score ${val(p.score)})` : ''}`),
   'action.record': (p) => `record ${quoted(String(p.name ?? 'milestone'))}`,
