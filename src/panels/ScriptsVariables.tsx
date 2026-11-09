@@ -76,7 +76,7 @@ export function ScriptsPanel() {
         </div>
       ) : (
         <div className="panel-empty">
-          <SectionBlurb text="Scripts are custom JavaScript with the ix API: read and set variables, move layers and react to messages." name="scripts" help={['scripts']} />
+          <SectionBlurb text="Scripts are custom JavaScript with the ix API: read and set variables, move layers and react to messages." name="Scripts" help={['scripts']} />
           <button className="btn primary" onClick={add}>
             + New script
           </button>
@@ -236,7 +236,7 @@ export function VariablesPanel() {
           </div>
         )}
       </div>
-      <SectionBlurb text="A variable is something the activity remembers while it runs: a count, a score, whether something is on." name="variables" help={['variables', 'using-variables']} />
+      <SectionBlurb text="A variable is something the activity remembers while it runs: a count, a score, whether something is on." name="Variables" help={['variables', 'using-variables']} />
     </div>
   );
 }

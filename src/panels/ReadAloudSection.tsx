@@ -63,10 +63,10 @@ export function ReadAloudSection({ project }: { project: Project }) {
             />
             <SelectField<'top' | 'bottom'> label="Button at" value={r.at ?? 'bottom'} options={[{ value: 'bottom', label: 'Bottom left' }, { value: 'top', label: 'Top left' }]} onChange={(v) => set({ at: v })} />
           </Row>
-          <SectionBlurb text="It reads the text layers that show, in layer order. “Say it like” text fixes a word a voice gets wrong." name="read aloud" help={['read-aloud', 'words-a-voice-gets-wrong']} />
+          <SectionBlurb text="It reads the text layers that show, in layer order. “Say it like” text fixes a word a voice gets wrong." name="Read aloud" help={['read-aloud', 'words-a-voice-gets-wrong']} />
         </>
       )}
-      <SectionBlurb text="Prefer your own button? Add a Listen button layer, or use the Read aloud node." name="read aloud" help={['read-aloud', 'three-ways-to-use-it']} />
+      <SectionBlurb text="Prefer your own button? Add a Listen button layer, or use the Read aloud node." name="Read aloud" help={['read-aloud', 'three-ways-to-use-it']} />
       <PropRow k="Add a Listen button" words={['read aloud', 'speech', 'text to speech', 'audio']}>
       <button className="btn" onClick={addLayer} title="Adds a Listen button layer to the open artboard, wired to read the artboard aloud">
         Add a Listen button to this artboard

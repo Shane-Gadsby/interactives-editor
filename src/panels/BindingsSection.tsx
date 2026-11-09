@@ -123,7 +123,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
   return (
     <Section help="bindings" title="Data bindings" defaultOpen={entries.length > 0} actions={addPicker(true)}>
       {entries.length === 0 && (
-        <SectionBlurb text="Nothing is bound yet. A binding ties a property to a variable: in, out or both ways." name="data bindings" help={['bindings', 'which-way-in-out-or-both']} />
+        <SectionBlurb text="Nothing is bound yet. A binding ties a property to a variable: in, out or both ways." name="Data bindings" help={['bindings', 'which-way-in-out-or-both']} />
       )}
       <ExprLocals.Provider value={{ self: node }}>
       {entries.map(([p, expr], i) => (

@@ -21,7 +21,7 @@ export function MasterSection({ ab, project }: { ab: Artboard; project: Project 
     const choices = project.artboards.filter((a) => a.id !== ab.id && !a.master && !a.library && a.isMaster);
     return (
       <Section help="page-master" title="Page master" defaultOpen={false}>
-        <SectionBlurb text="Put a logo, bar or footer on one artboard (the master) and every page draws it under its own layers." name="page masters" help={['page-master', 'quick-start']} />
+        <SectionBlurb text="Put a logo, bar or footer on one artboard (the master) and every page draws it under its own layers." name="Page master" help={['page-master', 'quick-start']} />
         <SelectField
           label="Master"
           title="The artboard whose layers are drawn under this page"
@@ -88,7 +88,7 @@ function MasterOfPages({ ab, project, used }: { ab: Artboard; project: Project; 
   const candidates = project.artboards.filter((a) => a.id !== ab.id && !a.isMaster && !a.library && !a.master && !pagesOfMaster(project.artboards, a).length);
   return (
     <Section help="page-master" title="Page master">
-      <SectionBlurb text={`This artboard is a page master, drawn on ${used.length || 'no'} page${used.length === 1 ? '' : 's'}.`} name="page masters" help={['page-master', 'on-the-master']} />
+      <SectionBlurb text={`This artboard is a page master, drawn on ${used.length || 'no'} page${used.length === 1 ? '' : 's'}.`} name="Page master" help={['page-master', 'on-the-master']} />
       {used.length > 0 && (
         <ul className="master-list" aria-label="Pages that use this master">
           {used.map((p) => (

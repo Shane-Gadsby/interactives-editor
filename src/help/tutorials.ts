@@ -11,33 +11,33 @@ export const TUTORIALS: HelpTopic[] = [
     group: 'Getting started',
     summary: 'Draw a box and make it slide across the artboard with two keyframes. About five minutes.',
     keywords: 'tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to',
-    body: `In this tutorial you draw a box and make it slide from the left of the artboard to the right. You will meet the **Layers** panel, the **Inspector**, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+    body: `In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
-![The finished animation in the Timeline tab: Play slides the box from the left to the right in one second, and the Record button turns the Inspector's top bar red so every change becomes a keyframe.](help/first-animation.mp4)
+![The finished animation in the Timeline tab: Play slides the box from the left to the right in one second, and the Record button turns the Properties panel's top bar red so every change becomes a keyframe.](help/first-animation.mp4)
 
 ## 1. Make a project
 
-1. Open the Interactives page and press **New project**. A window called **Start a new project** asks how to begin: keep **Blank project**, leave the name as it is (or type your own) and press **Create project**. The editor opens with one artboard called **Home**, 800 by 600.
+1. Open the Interactives page and press **New project**. A window called **Start a new project** asks how to begin: keep **Blank project**, leave the name as it is (or type your own) and press **Create project**. The editor opens with one page called **Home**, 800 by 600.
 2. Click the project name at the top left (it says *Untitled project*), type **My first animation** and press <kbd>Enter</kbd>. Everything saves by itself. The label next to the name says **Saved** when it has.
 
 ## 2. Draw the box
 
 1. Press <kbd>R</kbd> to pick the **Rectangle** tool (or click the rectangle in the tool bar down the left edge).
-2. Drag on the artboard, from about a quarter of the way down the left side, to make a square. Hold <kbd>Shift</kbd> while you drag to keep it square.
-3. The new layer is selected. In the **Layers** panel on the left it shows under **Home**. In the **Inspector** on the right, change **Name** to **Box**.
-4. In the Inspector's **Fill** section, click the colour swatch and pick a colour you like. Set **Radius** (under **Rectangle**) to 16 for rounded corners.
+2. Drag on the page, from about a quarter of the way down the left side, to make a square. Hold <kbd>Shift</kbd> while you drag to keep it square.
+3. The new layer is selected. In the **Layers** panel on the left it shows under **Home**. In the **Properties** panel on the right, change **Name** to **Box**.
+4. In the Properties panel's **Fill** section, click the colour swatch and pick a colour you like. Set **Radius** (under **Rectangle**) to 16 for rounded corners.
 
-![The editor with the Box selected: Layers on the left, the artboard in the middle, the Inspector on the right and the Timeline underneath.](help/editor-overview.png)
+![The editor with the Box selected: Layers on the left, the page in the middle, the Properties panel on the right and the Timeline underneath.](help/editor-overview.png)
 
 ## 3. Make a timeline
 
-A **timeline** holds the animation. Each artboard can have as many as you like.
+A **timeline** holds the animation. Each page can have as many as you like.
 
 1. Click the **Timeline** tab at the bottom of the window. It opens a panel.
 2. Press **+ New timeline**. You get a timeline called **Timeline**, 1000 ms (one second) long, set to **Play once**.
-3. Look at the Inspector. Small diamonds now sit beside the number fields. These are **key buttons**, and they only show while the Timeline tab is open.
+3. Look at the Properties panel. Small diamonds now sit beside the number fields. These are **key buttons**, and they only show while the Timeline tab is open.
 
 ## 4. Set the start and the end
 
@@ -45,9 +45,9 @@ A **keyframe** says "at this moment, this property has this value". With two key
 
 1. Make sure the playhead (the red line) is at **0 ms**. The time shows next to the red record dot.
 2. With **Box** selected, click the diamond next to **X**. It turns gold: the box's starting X is now keyed at 0 ms.
-3. Press the red **Record** button in the Timeline bar. A red bar across the top of the Inspector says **Recording keyframes at 0 ms**. While Record is on, any animatable property you change becomes a keyframe at the playhead.
+3. Press the red **Record** button in the Timeline bar. A red bar across the top of the Properties panel says **Recording keyframes at 0 ms**. While Record is on, any animatable property you change becomes a keyframe at the playhead.
 4. Move the playhead to the end: click the ruler at the far right, at **1s**. The readout shows **1000 ms**.
-5. Drag the box to the right edge of the artboard. Or type a new **X** value, such as 560. A second keyframe appears on the box's **X** track.
+5. Drag the box to the right edge of the page. Or type a new **X** value, such as 560. A second keyframe appears on the box's **X** track.
 6. Press **Record** again to switch it off. Otherwise your next edit would become a keyframe too.
 
 ![The timeline: one track for the Box's X, with a keyframe at 0 and one at 1s. The Length, loop and Autoplay settings are in the bar above.](help/timeline-panel.png)
@@ -61,14 +61,14 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 ## 6. Make it nicer
 
 - **Easing.** The line between two keys is a *tween*. Click it, and in the **Tween** box on the right choose **easeOut** or **bounceOut** from **Ease**. You can also drag the two round handles on the little graph to draw your own curve. See [Easing](easing).
-- **Loop.** Change **Play once** to **Loop** or **Ping-pong**, and tick **Autoplay** so it starts as soon as the artboard shows.
+- **Loop.** Change **Play once** to **Loop** or **Ping-pong**, and tick **Autoplay** so it starts as soon as the page shows.
 - **More properties.** Select the box, press **+ Key** with **Opacity**, **Rotation** or **Fill colour** chosen in the dropdown at the top left of the Timeline, or use Record and change them at different times.
 - **Preview.** Press **Preview** at the top right to see it exactly as the exported file will play it. Press <kbd>Esc</kbd> to close.
 
 ## What you learned
 
 - Projects save as you work.
-- The **Layers** panel lists everything; the **Inspector** edits the selection.
+- The **Layers** panel lists everything; the **Properties** panel edits the selection.
 - A timeline has tracks, and a track has keyframes.
 - **Record** turns every change into a keyframe at the playhead.
 
@@ -84,18 +84,18 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 
 ## 1. Stop the timeline starting by itself
 
-1. Open the **Timeline** tab and check that **Autoplay** is **off**. If it is on, the box would slide as soon as the artboard shows.
+1. Open the **Timeline** tab and check that **Autoplay** is **off**. If it is on, the box would slide as soon as the page shows.
 
 ## 2. Add a button
 
 1. Press <kbd>B</kbd> for the **Button** tool and drag a button below the box.
-2. In the Inspector, change **Label** to **Slide the box**. The label is the text on the button. Change **Name** to **Slide button** so it is easy to find later.
+2. In the Properties panel, change **Label** to **Slide the box**. The label is the text on the button. Change **Name** to **Slide button** so you can find it later.
 
 ## 3. Say what should happen
 
-1. With the button selected, scroll the Inspector to its **Interactions** section and press **+ When clicked…**.
+1. With the button selected, scroll the Properties panel to its **Interactions** section and press **+ When clicked…**.
 2. A short list of things that can happen opens. Choose **Play an animation**, then pick your timeline under **Which animation**. The line at the bottom reads back what it will do: *When clicked: play “Timeline”*.
-3. Press **Add**. The **Interactions** graph opens at the bottom, zoomed in on the two new nodes (more on them in step 4), and the section now says it in a sentence: **When clicked: play “Timeline”.**
+3. Press **Add**. The **Interactions** graph opens at the bottom, zoomed in on the two new nodes (more on them in step 4), and the section now says it in a sentence: **When clicked: play “Timeline”.** (If you would rather the view stayed put, untick **Show new interactions in the graph** in [Preferences](preferences#interactions).)
 
 That is the whole interaction. The same list can go to another page, show or hide a layer, play a sound, open a link, add 1 to a counter or switch something on or off. Every one is added to the **Interactions** graph as ordinary nodes, so you can always take it further.
 
@@ -104,7 +104,7 @@ That is the whole interaction. The same list can go to another page, show or hid
 ## 4. See what it made
 
 1. The bottom panel has switched to **Interactions** and picked the new nodes. (If you look away, **Show in graph** under the sentence brings you back to them.)
-2. There are two nodes, joined: a **When clicked or hovered** event (its settings say **Layer: Slide button** and **Event: Click / tap**) and a **Play or stop an animation** action. The Inspector's sentence is made from exactly these.
+2. There are two nodes, joined: a **When clicked or hovered** event (its settings say **Layer: Slide button** and **Event: Click / tap**) and a **Play or stop an animation** action. The sentence in the Properties panel is made from exactly these.
 3. The **Read as sentences** button above the graph shows the whole page this way. Use it to read a graph somebody else built.
 
 ![The Interactions tab: the node palette on the left, the graph in the middle and the selected node's settings on the right.](help/interactions-panel.png)
@@ -130,7 +130,7 @@ The graph can do much more than the list, and it helps to have drawn one flow yo
 ## Go further
 
 - **Toggle.** Add an **Alternate between two paths** node after the event. Join its **a** output to **Control timeline: Play** and its **b** output to **Control timeline: Play in reverse**. Each click now alternates.
-- **Hover.** Use **+ When hovered…** in the Inspector for a hover effect, such as **Show a layer**. For more control, **+ On hover (empty)** and the **Show or hide a layer** or **Animate a layer's setting** actions.
+- **Hover.** Use **+ When hovered…** in the Properties panel for a hover effect, such as **Show a layer**. For more control, **+ On hover (empty)** and the **Show or hide a layer** or **Animate a layer's setting** actions.
 - **Wait.** A **Wait** node pauses a flow for some milliseconds before the next node.
 - **Log.** A **Log** node writes to your browser's console, which is handy when you're not sure a flow ran. The Preview's event list also shows every event as it fires.
 
@@ -165,8 +165,8 @@ Names can only use letters, digits and \`_\`, and can't start with a digit. That
 
 ## 2. Draw the lamp
 
-1. Press <kbd>O</kbd> for the **Ellipse** tool. Drag on the artboard holding <kbd>Shift</kbd> to make a circle. Name it **Bulb**.
-2. In the Inspector's **Fill**, set the colour to a pale grey, \`#c9ced6\`.
+1. Press <kbd>O</kbd> for the **Ellipse** tool. Drag on the page holding <kbd>Shift</kbd> to make a circle. Name it **Bulb**.
+2. In the Properties panel's **Fill**, set the colour to a pale grey, \`#c9ced6\`.
 3. Press <kbd>T</kbd> for the **Text** tool and click under the bulb. Type \`Taps: {taps}\` and press <kbd>Escape</kbd> to finish. Anything in braces is an *expression*, so the text will show the number. Name the layer **Counter**.
 4. Press <kbd>B</kbd>, drag a button under the text and set its **Label** to **Switch**.
 
@@ -174,7 +174,7 @@ Names can only use letters, digits and \`_\`, and can't start with a digit. That
 
 A *binding* keeps a property up to date with an expression.
 
-1. Select **Bulb** and scroll the Inspector to **Data bindings**.
+1. Select **Bulb** and scroll the Properties panel to **Data bindings**.
 2. Choose **Fill colour** in the dropdown and press **Bind**.
 3. In the expression box that appears, type:
 
@@ -211,7 +211,7 @@ The section now reads: **When clicked: switch lit on or off** and **When clicked
 
 ## What you learned
 
-- **Variables** hold state. They are shared by every artboard.
+- **Variables** hold state. They are shared by every page.
 - **Change a value or counter** changes them. **When a value changes** reacts to a change.
 - **Bindings** and \`{braces}\` in text show the state.
 
@@ -221,8 +221,8 @@ The section now reads: **When clicked: switch lit on or off** and **When clicked
     id: 'tutorial-import-design',
     title: 'Tutorial 4: Importing a design file',
     group: 'Getting started',
-    summary: 'Bring a Photoshop, Illustrator, PDF, AutoCAD, Rive or Lottie file into a project, read the report and keep it linked.',
-    keywords: 'tutorial import psd photoshop illustrator ai pdf dxf autocad rive riv lottie svg link embed reconnect watch report design file',
+    summary: 'Bring in a design or animation file, read the import report and update it later.',
+    keywords: 'tutorial import psd photoshop illustrator ai pdf dxf autocad rive riv lottie svg link embed reconnect watch report design file update from file source file artboard',
     body: `You don't have to draw everything in Interactives. You can bring in a design from another app, then add the motion and the behaviour here. This tutorial uses a Photoshop file; the others work the same way.
 
 ## 1. Pick a file
@@ -231,13 +231,13 @@ Any of these will do:
 
 | Format | File | Becomes |
 |---|---|---|
-| Photoshop | \`.psd\` | One artboard, with real layers and editable text |
-| Illustrator | \`.ai\` (saved with **Create PDF Compatible File**) | One artboard per artboard in the file |
-| PDF | \`.pdf\` | One artboard per page |
-| AutoCAD | \`.dxf\` (not \`.dwg\`) | One artboard with a group per CAD layer |
-| Rive | \`.riv\` | An artboard for each Rive artboard, with timelines and state machines |
+| Photoshop | \`.psd\` | One page, with real layers and editable text |
+| Illustrator | \`.ai\` (saved with **Create PDF Compatible File**) | One page per artboard in the file |
+| PDF | \`.pdf\` | One page per PDF page |
+| AutoCAD | \`.dxf\` (not \`.dwg\`) | One page with a group per CAD layer |
+| Rive | \`.riv\` | A page for each Rive artboard, with timelines and state machines |
 | Rive editor | \`.rev\` | The same, with the layer names the export strips |
-| Lottie | \`.json\` or \`.lottie\` | An artboard and a timeline |
+| Lottie | \`.json\` or \`.lottie\` | A page and a timeline |
 | SVG | \`.svg\` | A group of editable shapes |
 
 If you don't have one handy, any Photoshop file with a few layers and a text layer is a good test.
@@ -246,20 +246,13 @@ If you don't have one handy, any Photoshop file with a few layers and a text lay
 
 There are three ways:
 
-- **Drop it** on the canvas of an open project. \`.psd\`, \`.ai\`, \`.pdf\` and \`.dxf\` files become new artboards.
-- Press **+ Import file as artboard** at the bottom of the **Layers** panel. This adds artboards to the open project.
+- **Drop it** on the canvas of an open project. \`.psd\`, \`.ai\`, \`.pdf\` and \`.dxf\` files become new pages.
+- Press **+ Import file as page** at the bottom of the **Layers** panel. This adds pages to the open project.
 - Press **Import** on the projects page. This makes a **new project** from the file.
 
-## 3. Choose: Link or Embed
+## 3. The file is copied in
 
-For Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and PowerPoint files, a dialog called **Import design file** asks what to do with each file.
-
-- **Embed** copies the file in once. This is the simplest choice and works in every browser.
-- **Link** keeps a connection to the file on your computer. When you save the file in the design app, the changes come into the artboard, and your own edits stay. Linking needs Chrome or Edge.
-
-Pick one for the file, or press **Embed all** or **Link all**. Then press **Import**.
-
-![The Import design file dialog: one row per file with a Link / Embed choice, and Embed all, Link all and Import buttons.](help/link-or-embed-dialog.png)
+For Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and PowerPoint files, the editor copies the file into the project and remembers which file it came from. There is nothing to choose. The imported pages say **From Poster.psd** in their **Source file** section, and that is how you bring in a newer version later (step 7).
 
 ## 4. Read the report
 
@@ -273,22 +266,22 @@ When the import finishes, a box lists anything that couldn't be carried over exa
 
 - Pixel layers became image layers. Folders became groups. Hidden layers stay hidden and show as faint ghosts on the canvas.
 - Click a text layer. It is real text: change the words in the **Text** box. If it has several styles, a **Text runs** button lists them.
-- If a font isn't a Google font, check the **Font** field in the Inspector. A font that isn't installed on the viewer's computer won't show.
+- If a font isn't a Google font, check the **Font** field in the Properties panel. A font that isn't installed on the viewer's computer won't show.
 
 ## 6. Make it move
 
 1. Select a layer and follow [Tutorial 1](tutorial-first-animation) to animate it, or add a button and follow [Tutorial 2](tutorial-first-interaction).
-2. Your timelines, interactions and bindings are never touched by a re-import.
+2. Your timelines, interactions and bindings are never touched when you update from a file.
 
-## 7. Keep a linked file up to date
+## 7. Bring in a newer version of the file
 
-If you chose **Link**:
+When the designer saves a new version of the file:
 
-1. Select the imported artboard. The Inspector shows **Linked to Poster.psd** with the time it was last updated.
-2. Change the file in the design app and save it.
-3. Within a couple of seconds a message says something like **Poster.psd updated: 3 layers changed, 1 added**. The change is one undo step.
-4. Next time you open the project, a bar at the top may say **Reconnect**. Click it once so the browser may read the file again.
-5. The Inspector also has **Re-import now**, **Unlink (keep as embedded)** and a **Watch for changes** switch.
+1. Select one of the imported pages. The Properties panel's **Source file** section says **From Poster.psd** and when it was last brought in.
+2. Press **Update from file…** and pick the new version of the file. It can have a new name.
+3. A message says something like **Poster.psd updated: 3 layers changed, 1 added**. The whole update is one undo step.
+
+What you changed here is kept. **Forget source file** drops the connection and leaves the layers as they are.
 
 Full details, including what each format does and doesn't carry over, are in [Importing](import).
 
@@ -305,16 +298,16 @@ Full details, including what each format does and doesn't carry over, are in [Im
 ## 1. Check it in Preview
 
 1. Press **Preview** at the top right. It plays the project exactly as the exported file will.
-2. The dropdown at the top says **From the start artboard** or **From this artboard**. Use the second to test just the artboard you're working on.
+2. The dropdown at the top says **From the start artboard** or **From this artboard**. Use the second to test just the page you're working on.
 3. Press **Restart** to start from scratch. Press <kbd>Esc</kbd> to close.
 
 ## 2. Set the page options
 
-1. Click an empty part of the canvas, or the artboard's name, so nothing is selected. The Inspector shows **Artboard** and **Project**.
-2. Under **Project**, set **Page title** (the title of the browser tab), **Fit** (how the artboard scales to its space) and **Page background** (the colour around the artboard).
-3. Under **Artboard**, make sure the artboard people should see first is the start artboard. The button says **Start artboard** (greyed out) when it already is. If not, press **Make start page**.
+1. Click an empty part of the canvas, or the page's name, so nothing is selected. The Properties panel shows **Page** and **Project**.
+2. Under **Project**, set **Page title** (the title of the browser tab), **Fit** (how the page scales to its space) and **Page background** (the colour around the page).
+3. Under **Page**, make sure the page people should see first is the start page. The button says **Start page** (greyed out) when it already is. If not, press **Make start page**.
 
-![The Project section of the Inspector: name, page title, description, fit, page background, sandbox and reduced motion.](help/project-settings.png)
+![The Project section of the Properties panel: name, page title, description, fit, page background, sandbox and reduced motion.](help/project-settings.png)
 
 ## 3. Export a single file
 

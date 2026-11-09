@@ -31,7 +31,7 @@ export function ThemesPanel() {
                 <strong>Themes</strong> let one interactive look right in light, dark and high contrast, using named colour tokens.
               </>
             }
-            name="themes"
+            name="Themes"
             help={['themes', 'the-themes-panel']}
           />
           <button className="btn primary" title="Add Light, Dark and High contrast themes with starter tokens in the toolbox look: greys, gold buttons with black text, outlines, the focus ring and the right, wrong and missed colours" onClick={() => edit((d) => void ensureThemes(d))}>

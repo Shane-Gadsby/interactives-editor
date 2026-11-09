@@ -65,7 +65,7 @@ export function ProgressSection({ nodes, project }: { nodes: ProgressNode[]; pro
           onChange={(v) => set({ valueText: v || undefined }, `valuetext-${n.id}`)}
         />
       )}
-      <SectionBlurb text="The track is the layer's Fill and Stroke below." name="progress bars" help={['progress-bars', 'look']} />
+      <SectionBlurb text="The track is the layer's Fill and Stroke below." name="Progress bar" help={['progress-bars', 'look']} />
     </Section>
   );
 }
@@ -219,7 +219,7 @@ export function ChartSection({ nodes, project, ab }: { nodes: ChartNode[]; proje
       </Row>
       <CheckField label="Grow in" title="The marks grow in when the chart first appears. Not for viewers who ask their device for less motion" value={n.animate} onChange={(v) => set({ animate: v })} />
       <CheckField label="Table for screen readers" title="The same numbers as a table that only a screen reader finds. Leave it on unless a text alternative says it all" value={n.table} onChange={(v) => set({ table: v })} />
-      <SectionBlurb text="Hover or Tab to a bar, slice or point to read it. Give the chart a text alternative in Accessibility." name="charts" help={['charts', 'reading-it']} />
+      <SectionBlurb text="Hover or Tab to a bar, slice or point to read it. Give the chart a text alternative in Accessibility." name="Chart" help={['charts', 'reading-it']} />
     </Section>
   );
 }

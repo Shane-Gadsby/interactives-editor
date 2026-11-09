@@ -292,7 +292,7 @@ function BrandCheck({ project }: { project: Project }) {
   const clean = report && !report.colors.length && !report.fonts.length;
   return (
     <Section help="brand-kits" title="Brand check">
-      <SectionBlurb text={`Lists the colours and fonts you use that ${kits.map((k) => k.name).join(', ')} ${kits.length === 1 ? "doesn't" : "don't"} have; nothing is blocked.`} name="the brand check" help={['brand-kits', 'off-brand-check']} />
+      <SectionBlurb text={`Lists the colours and fonts you use that ${kits.map((k) => k.name).join(', ')} ${kits.length === 1 ? "doesn't" : "don't"} have; nothing is blocked.`} name="Brand check" help={['brand-kits', 'off-brand-check']} />
       <Row>
         <button className="btn small-btn" onClick={() => setReport(offBrand(project))}>
           {report ? 'Check again' : 'Check against the brand kit'}
@@ -605,7 +605,7 @@ function StylesSection({ project }: { project: Project }) {
 
   return (
     <Section help="libraries" title="Styles" actions={<StyleAdd onColor={() => void newColor()} onText={() => void newText()} />}>
-      {!colors.length && !texts.length && <SectionBlurb text="Named colours and text styles. Layers that follow a style change with it." name="styles" help={['libraries', 'styles']} />}
+      {!colors.length && !texts.length && <SectionBlurb text="Named colours and text styles. Layers that follow a style change with it." name="Styles" help={['libraries', 'styles']} />}
       {colors.map((c: ColorStyle) => (
         <div key={c.id} className="style-row">
           {c.library ? (

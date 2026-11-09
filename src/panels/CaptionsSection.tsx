@@ -54,7 +54,7 @@ export function CaptionsSection({ project }: { project: Project }) {
   };
   return (
     <Section help="captions" title="Captions and narration" defaultOpen={hasMedia}>
-      <SectionBlurb text="Sound and captions go on a timeline (the Sound and Captions rows). These settings are for how they show." name="captions and narration" help={['captions']} />
+      <SectionBlurb text="Sound and captions go on a timeline (the Sound and Captions rows). These settings are for how they show." name="Captions and narration" help={['captions']} />
       <CheckField label="Captions on to start" title="Captions show until the viewer turns them off. Their choice is remembered in their browser" value={c.defaultOn !== false} onChange={(v) => set({ defaultOn: v })} />
       <CheckField
         label="Descriptions on to start"

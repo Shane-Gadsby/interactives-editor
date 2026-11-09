@@ -41,7 +41,7 @@ export function RecordsSection({ project }: { project: Project }) {
         ))}
       <SectionBlurb
         text={on ? 'Records reach Insights only from the Link for StudyDesk. It shows counts, never a learner by name.' : 'Nothing is recorded about what learners do. Results and progress still work.'}
-        name="learner records"
+        name="Learner records"
         help={['insights', 'what-is-and-is-not-recorded']}
       />
       <Row k="Open Insights" words={['records', 'learner records', 'responses', 'results']}>

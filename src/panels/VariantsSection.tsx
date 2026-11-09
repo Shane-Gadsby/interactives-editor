@@ -19,7 +19,7 @@ export function VariantsSection({ ab, project }: { ab: Artboard; project: Projec
   if (!inSet) {
     return (
       <Section help="responsive" title="Responsive" defaultOpen={false}>
-        <SectionBlurb text="Show a different arrangement of this artboard when the page is narrower or wider." name="responsive sets" help={['responsive', 'how-a-set-works']} />
+        <SectionBlurb text="Show a different arrangement of this artboard when the page is narrower or wider." name="Responsive" help={['responsive', 'how-a-set-works']} />
         <Row k="Add variants" words={['responsive', 'narrow variant', 'wide variant', 'phone', 'mobile', 'breakpoint']}>
           <button className="btn" title="Copy this artboard as a phone-sized variant (360 px). It is shown when the page is narrower than this artboard's breakpoint" onClick={() => store().addVariant(ab.id, 'narrower')}>
             Add narrow variant
@@ -44,7 +44,7 @@ export function VariantsSection({ ab, project }: { ab: Artboard; project: Projec
   const others = members.filter((m) => m !== ab);
   return (
     <Section help="responsive" title="Responsive">
-      <SectionBlurb text={`${base.name} and its variants. The page shows the one whose width range fits the box it is in.`} name="responsive sets" help={['responsive', 'what-carries-when-it-switches']} />
+      <SectionBlurb text={`${base.name} and its variants. The page shows the one whose width range fits the box it is in.`} name="Responsive" help={['responsive', 'what-carries-when-it-switches']} />
       <ul className="variant-list" aria-label="Artboards in this set">
         {members.map((m) => (
           <li key={m.id} className={m === ab ? 'current' : undefined}>
