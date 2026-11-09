@@ -205,3 +205,28 @@ describe('dragging a guide off its page', () => {
     expect(guides().y).toEqual([]);
   });
 });
+
+describe('a new guide goes on the page it is dragged over', () => {
+  it('lands on the second page, measured from that page, and that page becomes the open one', () => {
+    act(() => {
+      s.update((d) => {
+        const first = d.artboards[0];
+        d.artboards.push({ ...JSON.parse(JSON.stringify(first)), id: 'ab2', name: 'Second', canvasX: first.canvasX + first.width + 100, canvasY: 0, children: [], guides: undefined });
+      });
+    });
+    draw();
+    const first = s.get().project.artboards[0];
+    const second = s.get().project.artboards[1];
+    const top = host.querySelector('.canvas-ruler.top')!;
+    const x = second.canvasX + 50;
+    mouse(top, 'pointerdown', x, 5);
+    mouse(window as unknown as Element, 'pointermove', x, 140);
+    // the preview line is drawn across the second page, not the open one
+    const pv = host.querySelector('.guide-line.preview') as HTMLElement;
+    expect(pv.style.left).toBe(`${second.canvasX - 32}px`);
+    mouse(window as unknown as Element, 'pointerup', x, 140);
+    expect(s.get().project.artboards.find((a) => a.id === 'ab2')!.guides?.y).toEqual([140]);
+    expect(first.guides?.y ?? []).toEqual([]);
+    expect(s.get().activeArtboardId).toBe('ab2');
+  });
+});

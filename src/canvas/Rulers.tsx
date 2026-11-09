@@ -20,7 +20,7 @@ function stepFor(zoom: number): number {
  * choose, and Alt while dragging out a new one gives the other kind. The guides of the other pages are drawn by the canvas.
  */
 export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard | undefined; zoom: number; panX: number; panY: number; width: number; height: number }) {
-  const [drag, setDrag] = useState<{ axis: Axis; index: number | null; at: number; scope: GuideScope; out: boolean; cx: number; cy: number } | null>(null);
+  const [drag, setDrag] = useState<{ axis: Axis; index: number | null; at: number; scope: GuideScope; out: boolean; cx: number; cy: number; abId: string } | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const project = useEditor((st) => st.project);
   const root = useRef<HTMLDivElement>(null);
@@ -28,9 +28,16 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
   const locked = !!project.guidesLocked;
   const ox = panX + ab.canvasX * zoom;
   const oy = panY + ab.canvasY * zoom;
-  const toLocal = (axis: Axis, clientX: number, clientY: number) => {
+  const toLocal = (axis: Axis, clientX: number, clientY: number, on: Artboard = ab) => {
     const r = root.current!.getBoundingClientRect();
-    return axis === 'x' ? Math.round((clientX - r.left - ox) / zoom) : Math.round((clientY - r.top - oy) / zoom);
+    return axis === 'x' ? Math.round((clientX - r.left - panX - on.canvasX * zoom) / zoom) : Math.round((clientY - r.top - panY - on.canvasY * zoom) / zoom);
+  };
+  //The page under the pointer, so a new guide goes on whichever page it is dragged over, not only the open one
+  const pageAt = (clientX: number, clientY: number): Artboard | undefined => {
+    const r = root.current!.getBoundingClientRect();
+    const x = (clientX - r.left - panX) / zoom;
+    const y = (clientY - r.top - panY) / zoom;
+    return project.artboards.find((a) => !a.canvasHidden && x >= a.canvasX && x <= a.canvasX + a.width && y >= a.canvasY && y <= a.canvasY + a.height);
   };
   const overRuler = (axis: Axis, clientX: number, clientY: number) => {
     const r = root.current!.getBoundingClientRect();
@@ -39,7 +46,7 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
 
   //Past the page (or over the ruler) is where letting go removes a guide, or drops a new one. It is only decided on
   //release: while the pointer is out there the guide stays where it last was on the page, so nothing goes mid-drag
-  const outside = (axis: Axis, clientX: number, clientY: number, at: number) => overRuler(axis, clientX, clientY) || at < 0 || at > (axis === 'x' ? ab.width : ab.height);
+  const outside = (axis: Axis, clientX: number, clientY: number, at: number, on: Artboard = ab) => overRuler(axis, clientX, clientY) || at < 0 || at > (axis === 'x' ? on.width : on.height);
 
   const start = (e: React.PointerEvent, axis: Axis, ref: GuideRef | null) => {
     e.stopPropagation();
@@ -55,10 +62,14 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
     const scope: GuideScope = ref ? ref.scope : e.altKey ? (base === 'project' ? 'page' : 'project') : base;
     //on the window, not the guide's own element: a guide can stop being drawn while it is dragged, and the drag must not
     //go with it
+    //A new guide follows the page under the pointer (and stays with the last one while it is between pages);
+    //a guide that already exists stays on its own page
+    let on: Artboard = ab;
     const move = (ev: PointerEvent) => {
-      const at = toLocal(axis, ev.clientX, ev.clientY);
-      const out = outside(axis, ev.clientX, ev.clientY, at);
-      setDrag({ axis, index: ref ? ref.index : null, at, scope, out, cx: ev.clientX, cy: ev.clientY });
+      if (!ref) on = pageAt(ev.clientX, ev.clientY) ?? on;
+      const at = toLocal(axis, ev.clientX, ev.clientY, on);
+      const out = outside(axis, ev.clientX, ev.clientY, at, on);
+      setDrag({ axis, index: ref ? ref.index : null, at, scope, out, cx: ev.clientX, cy: ev.clientY, abId: on.id });
       if (ref && !out) store().update((d) => moveGuide(d, ab.id, ref, at), { coalesce: key });
     };
     const up = (ev: PointerEvent) => {
@@ -66,10 +77,15 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', cancel);
       setDrag(null);
-      const at = toLocal(axis, ev.clientX, ev.clientY);
-      const out = outside(axis, ev.clientX, ev.clientY, at);
+      if (!ref) on = pageAt(ev.clientX, ev.clientY) ?? on;
+      const at = toLocal(axis, ev.clientX, ev.clientY, on);
+      const out = outside(axis, ev.clientX, ev.clientY, at, on);
       if (ref && out) store().update((d) => removeGuide(d, ab.id, ref));
-      else if (!ref && !out) store().update((d) => addGuide(d, ab.id, scope, axis, at));
+      else if (!ref && !out) {
+        store().update((d) => addGuide(d, on.id, scope, axis, at));
+        //the rulers measure from the page the guide went on
+        if (on.id !== ab.id) store().set({ activeArtboardId: on.id });
+      }
       store().commit();
     };
     const cancel = () => {
@@ -127,10 +143,14 @@ const step = stepFor(zoom);
       />
     );
   });
+  //the new guide is drawn on the page it is over
+  const pv = drag ? project.artboards.find((a) => a.id === drag.abId) ?? ab : ab;
+  const pox = panX + pv.canvasX * zoom;
+  const poy = panY + pv.canvasY * zoom;
   const preview = drag && drag.index === null && !drag.out && (
     <div
       className={`guide-line ${drag.axis} ${drag.scope} preview`}
-      style={{ ...(drag.axis === 'x' ? { left: ox + drag.at * zoom - 3, top: oy - reach, height: ab.height * zoom + reach * 2, bottom: 'auto' } : { top: oy + drag.at * zoom - 3, left: ox - reach, width: ab.width * zoom + reach * 2, right: 'auto' }) }}
+      style={{ ...(drag.axis === 'x' ? { left: pox + drag.at * zoom - 3, top: poy - reach, height: pv.height * zoom + reach * 2, bottom: 'auto' } : { top: poy + drag.at * zoom - 3, left: pox - reach, width: pv.width * zoom + reach * 2, right: 'auto' }) }}
     />
   );
   return (
@@ -143,7 +163,7 @@ const step = stepFor(zoom);
         </div>
       )}
       {drag && !drag.out && (
-        <div className="guide-pos" style={drag.axis === 'x' ? { left: ox + drag.at * zoom + 6, top: SIZE + 4 } : { top: oy + drag.at * zoom + 6, left: SIZE + 4 }}>
+        <div className="guide-pos" style={drag.axis === 'x' ? { left: pox + drag.at * zoom + 6, top: SIZE + 4 } : { top: poy + drag.at * zoom + 6, left: SIZE + 4 }}>
           {drag.at}
         </div>
       )}
