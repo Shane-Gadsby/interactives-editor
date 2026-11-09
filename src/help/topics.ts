@@ -357,7 +357,7 @@ The layout is remembered in this browser. Whatever opens a panel for you (choosi
 
 - **Now showing**: the page on screen and how many instances it contains.
 - **Timelines**: the ones running, with a progress bar (green dot = playing).
-- **Variables (live)**: every value as it changes. Type a new value and press <kbd>Enter</kbd> (or tick, or choose) to set it while it runs; filter by name when there are many.
+- **Variables (live)**: every value as it changes, starting with any saved user data or remembered progress the preview put back. Type a new value and press <kbd>Enter</kbd> (or tick, or choose) to set it while it runs; filter by name when there are many.
 - **Events** (underneath): each interaction event as it fires, which layer it came from, and what it set off, including events inside instances. Messages sent to the host page are listed too, and so are errors from script layers. With **Auto-scroll** ticked (the default) the list keeps the newest event in view; untick it to read back through earlier ones while the preview keeps running.
 
 ![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)
@@ -3432,10 +3432,19 @@ Ordering, categorise and hotspot questions are not pasted (add them from the Add
     title: 'Variables',
     group: 'Interactivity',
     summary: 'Named values (number, text, true/false, colour, choice) shared by the whole project.',
-    keywords: 'variable state value number string boolean color enum choice options input',
+    keywords: 'variable state value number string boolean color enum choice options input rename',
     body: `A variable is a named value the activity remembers while it runs: a score, a name, whether a panel is open. Use variables when something on one page has to change something else, on the same page or another. They belong to the project, so every page sees the same values.
 
 Add them in the **Variables** tab. Each has a name, a type and a starting value.
+
+## Renaming a variable
+Type a new name in its name box. Everything that reads it follows: bindings, \`{templates}\` in text and labels, expressions in the Interactions graph, other variables' formulas, repeaters, charts and instance inputs. A name after a dot (\`item.score\`) or inside quotes in an expression is left alone, because it isn't this variable. The editor says how many places changed, and **Undo** puts it all back in one step.
+
+You're asked first in two cases:
+- **Scripts or code snippets mention it.** They're listed with the lines that would change. Choose **Rename, scripts too**, or **Rename, leave scripts** when a script uses the same word for something of its own.
+- **It keeps learners' values** (Remember progress or Save as user data) **and it's used somewhere.** Saved values are kept under the name, so the variable remembers its old names, and the player reads a learner's saved value from the old name when it finds nothing under the new one. Nobody loses their progress.
+
+A name that another variable or a data source already has is refused. A question's own variables (\`q1_score\` and so on) are renamed with the question's **Name prefix**, not one by one.
 
 | Type | Holds |
 |---|---|

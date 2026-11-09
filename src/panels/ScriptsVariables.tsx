@@ -1,8 +1,10 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { isLive, liveWriters, LIGHT_LOOK, planLive, uid, type Script, type Variable, type VariableType } from 'interactives-player';
+import { isLive, liveWriters, LIGHT_LOOK, planLive, uid, type Project, type Script, type Variable, type VariableType } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { isIdentifier, uniqueName } from '../store/doc';
-import { confirmDialog } from '../components/dialogs';
+import { choiceDialog, confirmDialog } from '../components/dialogs';
+import { renameVariable } from '../lib/rename-variable';
+import { planRename } from '../lib/rename-plan';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
 import { ExprField } from '../components/ExprField';
 import { CodeEditor } from '../components/CodeEditor';
@@ -145,6 +147,50 @@ function validList(text: string): boolean {
  * A variable's name. Only a valid name is saved into the project: an empty or invalid one stays in the field as a draft,
  * with the warning, until it is fixed (or the field is reverted by undo or someone else's edit).
  */
+/**
+ * Rename a variable and everything that names it. Goes straight through with an undo message, unless scripts name it (they are
+ * guesswork, so they get a look first) or learners have saved values under the old name (they are carried over, and it says so).
+ */
+async function renameFromPanel(id: string, to: string): Promise<void> {
+  const plan = planRename(store().get().project as Project, id, to);
+  if (plan.error) {
+    store().toast(plan.error, 'error');
+    return;
+  }
+  if (plan.from === to) return;
+  const { from } = plan;
+  if (plan.kitPrefix) {
+    const ok = await confirmDialog({
+      title: `Rename ${from}?`,
+      message: `${from} belongs to the question whose name prefix is ${plan.kitPrefix}. The question finds its variables by that prefix, so renaming one of them by hand stops the question using it. To rename them all, change the question's Name prefix instead.`,
+      confirmLabel: 'Rename it anyway',
+      danger: true,
+    });
+    if (!ok) return;
+  }
+  let scripts = true;
+  if (plan.scripts.length || (plan.saved && plan.used.length)) {
+    const parts = [`It is used in ${plan.used.length} ${plan.used.length === 1 ? 'place' : 'places'}, and they will all read ${to} from now on.`];
+    if (plan.saved) parts.push(`Learners' saved values for ${from} are kept: the player looks under the old name when it finds nothing under the new one.`);
+    if (plan.scripts.length) {
+      const lines = plan.scripts.slice(0, 6).flatMap((sc) => [`${sc.where}:`, ...sc.lines.slice(0, 4).map((l) => `    ${l}`)]);
+      if (plan.scripts.length > 6) lines.push(`and ${plan.scripts.length - 6} more`);
+      parts.push(`These scripts mention ${from}. Check they mean this variable, not a name of their own:\n${lines.join('\n')}`);
+    }
+    if (plan.scripts.length) {
+      const r = await choiceDialog({ title: `Rename ${from} to ${to}?`, message: parts.join('\n\n'), confirmLabel: 'Rename, scripts too', altLabel: 'Rename, leave scripts' });
+      if (r === null) return;
+      scripts = r === 'confirm';
+    } else if (!(await confirmDialog({ title: `Rename ${from} to ${to}?`, message: parts.join('\n\n'), confirmLabel: 'Rename' }))) return;
+  }
+  const mark = store().historyMark();
+  let changed = 0;
+  store().update((d) => {
+    changed = renameVariable(d as Project, id, to, { scripts });
+  });
+  store().toastUndo(changed ? `Renamed ${from} to ${to}, and ${changed} ${changed === 1 ? 'place' : 'places'} that named it.` : `Renamed ${from} to ${to}.`, mark);
+}
+
 function VariableNameField({ name, onValid }: { name: string; onValid: (name: string) => void }) {
   const [draft, setDraft] = useState(name);
   useEffect(() => setDraft(name), [name]);
@@ -276,7 +322,7 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
   return (
     <tr>
       <td>
-        <VariableNameField name={v.name} onValid={(name) => setVar(v.id, { name })} />
+        <VariableNameField name={v.name} onValid={(name) => void renameFromPanel(v.id, name)} />
         <div className="var-used">
           {used.length ? (
             <button type="button" className="link-btn" aria-expanded={places} onClick={() => setPlaces(!places)} title="Where this variable is read or changed. Click to list the places">
