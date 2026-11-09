@@ -29,7 +29,7 @@ function containers(v: Json, path: Path = [], out: string[] = []): string[] {
  * in), Left closes (or goes out), Enter edits the row, Delete removes it, Alt+Up and Alt+Down move it among its
  * neighbours. The value of every row is edited in place, and each change writes the whole file back.
  */
-export function DataTree({ value, onChange, readOnly, label, onProblem }: { value: Json | undefined; onChange: (v: Json) => void; readOnly?: boolean; label: string; onProblem?: (m: string | null) => void }) {
+export function DataTree({ value, onChange, readOnly, label, onProblem, reveal }: { value: Json | undefined; onChange: (v: Json) => void; readOnly?: boolean; label: string; onProblem?: (m: string | null) => void; reveal?: { path: Path; n: number } }) {
   const [cur, setCur] = useState<Path>([]);
   const [opened, setOpened] = useState<Map<string, boolean>>(new Map());
   const [asList, setAsList] = useState<Set<string>>(new Set());
@@ -37,12 +37,45 @@ export function DataTree({ value, onChange, readOnly, label, onProblem }: { valu
   const root = useRef<HTMLDivElement>(null);
   const focusRow = useRef<string | null>(null);
 
+  // A row asked for focus is looked for once it is drawn; one that isn't there yet (a spot just opened) gets a second draw before it is given up on
+  const tries = useRef({ want: '', left: 0 });
   useEffect(() => {
     const want = focusRow.current;
     if (want === null) return;
-    focusRow.current = null;
-    [...(root.current?.querySelectorAll<HTMLElement>('[role="treeitem"]') ?? [])].find((el) => el.dataset.row === want)?.focus();
+    if (tries.current.want !== want) tries.current = { want, left: 2 };
+    const el = [...(root.current?.querySelectorAll<HTMLElement>('[role="treeitem"]') ?? [])].find((e) => e.dataset.row === want);
+    if (el) {
+      focusRow.current = null;
+      el.focus();
+    } else if (--tries.current.left <= 0) focusRow.current = null;
   });
+
+  // Coming from the Form view to a spot: open what leads to it, show its table as rows, and put the cursor on it
+  const seen = useRef(0);
+  useEffect(() => {
+    if (!reveal || reveal.n === seen.current || value === undefined) return;
+    seen.current = reveal.n;
+    const open = new Map<string, boolean>();
+    const rows = new Set<string>();
+    const more = new Map<string, number>();
+    for (let i = 0; i <= reveal.path.length; i++) {
+      const at = reveal.path.slice(0, i);
+      const v = getAt(value, at);
+      if (!isContainer(v as Json)) break;
+      open.set(pathKey(at), true);
+      const next = reveal.path[i];
+      if (Array.isArray(v) && isFlatTable(v) && i < reveal.path.length) rows.add(pathKey(at));
+      if (Array.isArray(v) && typeof next === 'number' && next >= MORE) more.set(pathKey(at), (Math.floor(next / MORE) + 1) * MORE);
+    }
+    const target = getAt(value, reveal.path);
+    const at = target === undefined ? [] : reveal.path;
+    setOpened((m) => new Map([...m, ...open]));
+    setAsList((s) => new Set([...s, ...rows]));
+    setShown((m) => new Map([...m, ...more]));
+    setCur(at);
+    focusRow.current = pathKey(at);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reveal?.n, value === undefined]);
 
   if (value === undefined) {
     return (

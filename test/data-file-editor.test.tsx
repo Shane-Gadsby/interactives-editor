@@ -107,7 +107,8 @@ function project(files: { name: string; mime: string; text: string; kind: 'json'
   });
   return p;
 }
-async function mount(p: Project) {
+//JSON opens as a form; the tests of the tree and table go to them first, and the form's own tests ask for it
+async function mount(p: Project, view: 'gui' | 'form' = 'gui') {
   s = new EditorStore(p);
   setCurrentStore(s);
   host = document.createElement('div');
@@ -115,6 +116,11 @@ async function mount(p: Project) {
   root = createRoot(host);
   await act(async () => root.render(<DataPanel />));
   await settle();
+  if (view === 'gui') {
+    const go = button('Tree') ?? button('Table');
+    if (go && go.getAttribute('aria-pressed') === 'false') await click(go);
+    await settle();
+  }
 }
 
 beforeEach(() => {

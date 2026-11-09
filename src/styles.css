@@ -4354,6 +4354,295 @@ textarea.data-cell {
   padding-left: 4px;
   border-left: 2px solid var(--line);
 }
+/* The Form view of a JSON data file: cards of labelled fields, with an outline at the side */
+.data-file-body.form {
+  min-height: 260px;
+}
+.data-formview {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.data-formview-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.data-formview-note > span:first-child {
+  flex: 1 1 240px;
+}
+.data-formview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+.data-formview-layout.has-outline {
+  grid-template-columns: minmax(150px, 210px) minmax(0, 1fr);
+}
+.data-formview-outline {
+  position: sticky;
+  top: 0;
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 4px 6px 6px 0;
+  border-right: 1px solid var(--line);
+  font-size: 11.5px;
+}
+.data-formview-outline ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.data-formview-outline .link-btn {
+  display: block;
+  width: 100%;
+  padding: 2px 4px;
+  border-radius: 3px;
+  text-align: left;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.data-formview-outline .link-btn.list {
+  font-weight: 600;
+  margin-top: 4px;
+}
+.data-formview-outline .link-btn:hover {
+  background: var(--panel-2);
+}
+.data-formview-outline .link-btn:focus-visible,
+.form-card-toggle:focus-visible,
+.form-switch:focus-visible {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: 1px;
+}
+@container (max-width: 520px) {
+  .data-formview-layout.has-outline {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .data-formview-outline {
+    position: static;
+    max-height: 96px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 0 0 6px;
+  }
+}
+.data-formview-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.form-root,
+.form-card-body,
+.form-list,
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.form-root-title,
+.form-list-title,
+.form-card-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.form-list-title:focus-visible {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: 2px;
+}
+.form-count {
+  font-weight: 400;
+}
+.form-list-head,
+.form-card-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.form-list-head .seg-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+.form-card {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  min-width: 0;
+}
+.form-card-head {
+  padding: 4px 6px;
+  background: var(--panel-2);
+  border-radius: 5px 5px 0 0;
+}
+.form-card:not(.open) .form-card-head {
+  border-radius: 5px;
+}
+.form-card-title {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.form-card-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.form-twist {
+  flex: none;
+  width: 12px;
+  color: var(--muted);
+}
+.form-card-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.data-formview .btn.small {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.form-card-body {
+  padding: 8px 10px 10px;
+}
+.form-card-body[hidden] {
+  display: none;
+}
+.form-card .form-card,
+.form-card .form-list {
+  margin-top: 2px;
+}
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.form-field {
+  display: grid;
+  grid-template-columns: minmax(80px, 150px) minmax(0, 1fr);
+  align-items: start;
+  gap: 2px 10px;
+}
+.form-field.has-actions {
+  grid-template-columns: minmax(80px, 150px) minmax(0, 1fr) auto;
+}
+.form-label {
+  padding-top: 4px;
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.form-control {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.form-text:focus {
+  border-color: var(--primary-bg);
+  outline: 2px solid var(--primary-bg);
+  outline-offset: -1px;
+}
+.form-text {
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+}
+textarea.form-text {
+  resize: vertical;
+  overflow: hidden;
+  min-height: 3.4em;
+}
+.form-text.number {
+  max-width: 140px;
+}
+.form-bad {
+  font-size: 11px;
+  color: var(--danger);
+}
+.form-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+  font-size: 11.5px;
+}
+.form-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 2px 8px 2px 2px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.form-switch-knob {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.12s;
+}
+.form-switch.on {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.form-switch.on .form-switch-knob {
+  background: var(--primary-fg);
+  transform: translateX(0);
+}
+.form-switch[disabled] {
+  cursor: default;
+  opacity: 0.7;
+}
+.form-list-add,
+.form-more {
+  align-self: flex-start;
+}
+@container (max-width: 420px) {
+  .form-field,
+  .form-field.has-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .form-label {
+    padding-top: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .form-switch-knob {
+    transition: none;
+  }
+}
 .dot {
   width: 7px;
   height: 7px;
