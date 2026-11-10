@@ -16,7 +16,7 @@ export const concept: Concept = {
 
 The first line of the Export menu, **Want a link instead of a file?**, opens **Share…** for you, so if a link or a StudyDesk embed code is what you were after you land in the right place.
 
-![The Export menu: Single HTML file, Project package, Project JSON, the public interface reference and TypeScript definitions, Lottie, dotLottie, PNG and SVG pictures, and Video, GIF or frames.](help/concept-share-export-export.png)
+![The Export menu: Want a link instead of a file? first, with a line saying Share… asks where people will use it, then Single HTML file, Project package, Project JSON, the public interface reference and TypeScript definitions, Lottie, dotLottie, PNG and SVG pictures, and Video, GIF or frames.](help/concept-share-export-export.png)
 
 Share has four entries:
 

@@ -95,7 +95,7 @@ planner >= explorer && planner >= collaborator ? "You are a Planner" : explorer 
 
 3. Tick **Keep up to date**.
 
-![The Variables tab: planner, explorer and collaborator as Number (counter, score) starting at 0, and result as Text, Worked out, with its formula, currently You are a Planner, and Keep up to date ticked.](help/tutorial-personality-variables.png)
+![The Variables tab: planner, explorer and collaborator as Number (counter, score) starting at 0, and result as Text, Worked out, with its formula, a Pick a calculation link under it, currently You are a Planner, and Keep up to date ticked.](help/tutorial-personality-variables.png)
 
 \`result\` is now the name of the result page with the highest tally. Ties go to the one asked about first: Planner, then Explorer.
 

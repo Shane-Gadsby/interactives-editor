@@ -33,7 +33,7 @@ A **Checklist** tab opens in the bottom panel. You will do its main job in the n
 ### 2. Type your words
 
 1. Open the **Variables** tab. The first row is \`words\`: a **List** of eight words.
-2. Replace its value with your own list and click away:
+2. The list shows as a table. Press **JSON text** above it, replace the value with your own list and click away:
 
 \`\`\`
 ["EVAPORATE", "CONDENSE", "CLOUD", "RAINFALL", "RIVER", "OCEAN", "VAPOUR", "RUNOFF"]

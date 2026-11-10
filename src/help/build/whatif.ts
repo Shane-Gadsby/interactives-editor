@@ -40,7 +40,7 @@ On the projects page press **New project**. Keep **Blank project**, type **Weekl
    - \`spending\`, worked out as \`rent + food\`;
    - \`leftover\`, worked out as \`income - spending\`.
 
-![The Variables tab: income is Worked out with the formula hours * pay, currently 420, and Keep up to date ticked; spending below it is Worked out as rent + food.](help/tutorial-whatif-worked-out.png)
+![The Variables tab: income is Worked out with the formula hours * pay, a Pick a calculation link under it, currently 420, and Keep up to date ticked; spending below it is Worked out as rent + food.](help/tutorial-whatif-worked-out.png)
 
 A worked out value can read other worked out values, so \`leftover\` follows both of the others.
 

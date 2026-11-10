@@ -38,7 +38,7 @@ Ask: **does it change while it runs?**
 - A field a binding sets has a small link mark after its label (**Set by a data binding**) and a dashed box. A typed value in it is replaced whenever the variable changes.
 - Under each binding, a grey line works it through with the starting values: *the formula is 1, Look up: no line for 1, so it stays 1*. If the layer looks wrong on the canvas, that line usually says why.
 
-![A Play button's Data bindings: Button label set by the formula playing ? "Pause" : "Play", currently Play, and Pressed (button, toggle) set straight from the variable playing; under each, a line saying what it is set to at the start.](help/concept-variables-data-bindings-bindings.png)
+![A Play button's Data bindings: Button label set by the formula playing ? "Pause" : "Play", with a Pick a calculation link under it and currently Play, and Pressed (button, toggle) set straight from the variable playing; under each, a line saying what it is set to at the start.](help/concept-variables-data-bindings-bindings.png)
 
 - Under each variable's name, the Variables tab says **used in 3 places** or **not used yet**. Click it to go to each place.
 - In Preview, **Variables (live)** shows every variable as it changes, and you can set one by hand to see what the bindings do with it.

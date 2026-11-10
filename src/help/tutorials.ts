@@ -162,7 +162,7 @@ You will build a lamp. A button switches it on and off, and a counter shows how 
 
 You can type a name in plain words too, such as **Lamp on**. Formulas need a name made of letters, digits and \`_\`, so the editor offers \`lampOn\` in a small **Name in formulas** box, and keeps your words as the label you see in lists. The names in this tutorial are already plain, so they are used as typed.
 
-![The Variables tab: lit is true/false and starts false, taps is a number and starts at 0.](help/variables-panel.png)
+![The Variables tab: lit is true/false and starts false, taps is a number and starts at 0, each with a small T button at the left of its name.](help/variables-panel.png)
 
 ## 2. Draw the lamp
 
@@ -185,7 +185,7 @@ lit ? "#ffd23f" : "#c9ced6"
 
 That says: if \`lit\` is true the colour is yellow, otherwise it is grey. While it is bound, the binding decides the fill: a colour picked by hand is replaced by the binding's.
 
-![The Data bindings section with a binding on fill.color. The + Convert… menu below changes the value before it is set.](help/bindings-section.png)
+![The Data bindings section with a binding on fill.color set to a formula, with a Pick a calculation link under it. The + Convert… menu below changes the value before it is set.](help/bindings-section.png)
 
 ## 4. Add the interaction
 

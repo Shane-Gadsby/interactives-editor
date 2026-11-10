@@ -54,7 +54,7 @@ The two texts are empty for now. \`item\` is the card the copy is drawing, and t
 
 Six cards appear in two rows, each with its own term. That is the same **Card** layer drawn six times, so restyling it restyles them all. Inside a copy, \`item\` is that card's line from the list and \`index\` is its place, counting from 0.
 
-![The Cards group selected, with Repeat (list) ticked, Repeat for each set to List: cards, Layout Grid, Gap 20 and Cols 3, and the six cards on the canvas.](help/tutorial-flipcards-repeat.png)
+![The Cards group's Repeat (list) section: ticked, Repeat for each set to List: cards, currently 6 items, Layout Grid, Gap 20, Cols 3 and Selection None.](help/tutorial-flipcards-repeat.png)
 
 ## 4. Let a click turn a card over
 
@@ -64,6 +64,8 @@ Turn the repeater's own **Selection** on, and a card turns over when you click i
 2. A box asks for a name for the variable that remembers the pick. Type \`flipped\` and press **Create variable**. It is an ordinary list variable, and it will hold the places of the cards that are turned over: \`[0, 3]\` means the first and the fourth.
 
 Each card is now a checkbox that a screen reader says is checked or not, the arrow keys move between the cards, and \`flipped\` fills with the places of the cards turned over. Inside a copy, \`isSelected\` is true for a card that is turned.
+
+![The Repeat (list) section with Selection set to Several and Remember the pick in set to flipped, and the line saying that in the copies isSelected is true for a picked one.](help/tutorial-flipcards-selection.png)
 
 ## 5. Show one face at a time
 

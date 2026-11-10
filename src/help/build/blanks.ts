@@ -53,9 +53,9 @@ carbon dioxide
 /^(carbon\\s+dioxide|co2)$/i
 \`\`\`
 
-A line written between slashes is a pattern. This one accepts *carbon dioxide* or *CO2*: \`^\` and \`$\` mean the whole answer, \`|\` means or, \`\\s+\` is any number of spaces, and the \`i\` at the end ignores capitals. Keep the plain line first: it is what the learner is shown if the gap is revealed, and a pattern has nothing to show.
+A line written between slashes is a pattern. This one accepts *carbon dioxide* or *CO2*: \`^\` and \`$\` mean the whole answer, \`|\` means or, \`\\s+\` is any number of spaces, and the \`i\` at the end ignores capitals. Keep the plain line first: it is what the learner is shown if the gap is revealed, and a pattern has nothing to show. A **Shown as** box appears under any gap that has a pattern. Left empty it uses that plain line; if every line is a pattern, type the word to show there. Each gap also has a **Feedback if wrong (optional)** box for a line to add when that gap is wrong.
 
-![The canvas and the Question section: the prompt, then Blank 1 with three accepted answers, Blank 2 with 8.3 and a tolerance of 0.5, and Blank 3 with a plain line and a pattern.](help/tutorial-blanks-gaps.png)
+![The canvas and the Question section: the prompt, then Blank 1 with three accepted answers, Blank 2 with 8.3 and a tolerance of 0.5, and Blank 3 with a plain line, a pattern and a Shown as box.](help/tutorial-blanks-gaps.png)
 
 **Gap 4: capitals count.** Press **+ Add blank**. In **Blank 4** type \`The chemical symbol for sodium is\` and accept \`Na\`. Tick **Match case**, so *NA* and *na* are wrong.
 

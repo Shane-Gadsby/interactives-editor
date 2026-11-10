@@ -26,7 +26,7 @@ The **Random** node, a question's **Shuffle** and \`randInt\` take no seed. They
 
 - The line under a formula field says *changes each time it runs* for \`shuffle(list)\` with no seed and for \`randInt\`. With a seed it says what it works out to, which for a list is how many items (*currently 12 items*); **Variables (live)** in Preview shows the order itself.
 
-![The memory game's variables: seed, a Number starting at 0, and cards, a List worked out from shuffle(pairs.flatMap(...), seed), currently 12 items.](help/concept-seeds-random-seed.png)
+![The memory game's variables: seed, a Number starting at 0, and cards, a List worked out from shuffle(pairs.flatMap(...), seed), with a Pick a calculation link under the formula and currently 12 items.](help/concept-seeds-random-seed.png)
 
 - In Preview, **Variables (live)** shows \`seed\` and the shuffled list. Type a learner's seed into \`seed\` and press <kbd>Enter</kbd> to see their order.
 - **Restart** in Preview starts a new run: a new random seed, a new shuffle.
