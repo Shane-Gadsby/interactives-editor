@@ -53,7 +53,7 @@ const IDENT_PART = /[\w$]/;
 const CHAIN_BEFORE_DOT = /([A-Za-z_$][\w$]*(?:\??\.[A-Za-z_$][\w$]*|\[[^[\]]*\]|\([^()]*\))*)\??\.$/;
 
 /** The text of the `{...}` the caret is inside (not a `{{` escape), or null. */
-function braceSpan(text: string, caret: number): { start: number } | null {
+export function braceSpan(text: string, caret: number): { start: number } | null {
   let open = -1;
   for (let i = 0; i < caret; i++) {
     const c = text[i];
