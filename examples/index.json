@@ -385,6 +385,25 @@
 		}
 	},
 	{
+		"key": "tut-branching",
+		"title": "Branching scenario",
+		"description": "A group work dilemma with three choices, consequence pages that branch again and three endings picked by the score, with a path so far line and Start again: the Branching scenario tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"scenario",
+			"story",
+			"choices",
+			"score"
+		],
+		"artboards": 7,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
 		"key": "tut-brand",
 		"title": "Use the UniSQ look and colour themes",
 		"description": "A welcome page in the UniSQ Purple colourway where every colour is a theme token, so it also works in Light, Dark and High contrast: the Use the UniSQ look and colour themes tutorial's project.",
@@ -594,6 +613,25 @@
 		}
 	},
 	{
+		"key": "tut-memory",
+		"title": "Memory card game",
+		"description": "Twelve cards dealt face down from six pairs: turn two, keep a match, watch a miss turn back, with a moves count and a Well done page: the Memory card game tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"game",
+			"memory",
+			"shuffle",
+			"variables"
+		],
+		"artboards": 2,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
 		"key": "tut-microphone",
 		"title": "Speaking practice with the microphone",
 		"description": "A one minute talk the learner records with one button, a countdown that ends the take, a button to play it back and a slider to rate it: the Speaking practice tutorial's project.",
@@ -632,6 +670,26 @@
 		}
 	},
 	{
+		"key": "tut-personality",
+		"title": "Which one are you? quiz",
+		"description": "Three questions whose answers each add to two of three tallies, ending on the result page with the highest score: the \"Which one are you?\" tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"quiz",
+			"game",
+			"personality",
+			"variables",
+			"score"
+		],
+		"artboards": 6,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
 		"key": "tut-presentation",
 		"title": "Course presentation",
 		"description": "Four slides on one page master with a title slot, a check your understanding question, and Back, Next and the page number added by Page navigation with a slide transition: the presentation tutorial's project.",
@@ -644,6 +702,25 @@
 			"question"
 		],
 		"artboards": 5,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-progress",
+		"title": "Progress, badges and a page master",
+		"description": "A five-page tour where every page draws the same page master: a panel with a progress bar and three badges that light up as the learner marks each task done: the Progress and badges tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"progress",
+			"badges",
+			"page master",
+			"variables"
+		],
+		"artboards": 6,
 		"preview": {
 			"width": 800,
 			"height": 600,
@@ -705,6 +782,25 @@
 			"width": 800,
 			"height": 600,
 			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "tut-scene",
+		"title": "Animated scene with speech bubbles",
+		"description": "Sam runs in from the left, then a speech bubble pops up for each speaker, with a Skip button, lines announced to screen readers and a still version for less motion: the Animated scene tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"animation",
+			"story",
+			"timelines",
+			"accessibility"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
 		}
 	},
 	{
@@ -820,6 +916,26 @@
 			"width": 800,
 			"height": 600,
 			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-wordgames",
+		"title": "Word search and crossword",
+		"description": "The Word search and Crossword starters with their word lists changed to the water cycle: both grids are made from the lists, so changing the words changes the puzzles. The Word games tutorial's projects, side by side.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"game",
+			"puzzle",
+			"word search",
+			"crossword",
+			"variables"
+		],
+		"artboards": 8,
+		"preview": {
+			"width": 1024,
+			"height": 640,
+			"background": "#ffffff"
 		}
 	}
 ]
