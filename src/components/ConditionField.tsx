@@ -39,6 +39,7 @@ export function ConditionField({
   onChange,
   locals,
   placeholder,
+  noneText = 'No condition: it always runs.',
 }: {
   label: string;
   title?: string;
@@ -47,6 +48,8 @@ export function ConditionField({
   /** Names this field sees besides the project's (event...). */
   locals?: string[];
   placeholder?: string;
+  /** What to say while there are no rows. */
+  noneText?: string;
 }) {
   const ctx = useContext(ExprLocals);
   const ps = useRowSearch(label, tipFor(label, title));
@@ -115,7 +118,7 @@ export function ConditionField({
   return (
     <div className={`cond${ps.hide ? ' ps-hide' : ''}`} role="group" aria-label={label} data-prop={ps.prop} title={tipFor(label, title)}>
       <div className="field-label block">{unbroken(label)}</div>
-      {draft.rows.length === 0 && <p className="hint cond-none">No condition: it always runs.</p>}
+      {draft.rows.length === 0 && <p className="hint cond-none">{noneText}</p>}
       {draft.rows.map((r, i) => (
         <div key={i} className="cond-block">
           {i > 0 && (

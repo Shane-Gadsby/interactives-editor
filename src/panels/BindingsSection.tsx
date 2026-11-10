@@ -262,7 +262,7 @@ function BindingItem({
           // a yes/no property (visible, disabled...) is set by a condition, so it gets the pickers
           <ConditionField label="Condition" value={expr} title="A condition: when it is true the property is on" placeholder="e.g. lives > 0" onChange={onExpr} />
         ) : formula ? (
-          <ExprField value={expr} commitOnBlur placeholder="e.g. lives > 0" title="A formula of variables; its result sets the property" onChange={onExpr} />
+          <ExprField value={expr} commitOnBlur calc placeholder="e.g. lives > 0" title="A formula of variables; its result sets the property" onChange={onExpr} />
         ) : (
           <SearchPicker
             value={expr.trim()}

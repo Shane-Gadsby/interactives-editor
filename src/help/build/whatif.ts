@@ -33,7 +33,7 @@ On the projects page press **New project**. Keep **Blank project**, type **Weekl
 ## 3. The worked out values
 
 1. Add one more **Counter** and call it \`income\`.
-2. In its **Value** column, change **Starts as a value** to **Worked out**. A formula box appears. Type \`hours * pay\` and press <kbd>Enter</kbd>.
+2. In its **Value** column, change **Starts as a value** to **Worked out**. A formula box appears. Type \`hours * pay\` and press <kbd>Enter</kbd>. (Prefer pickers? Press **Pick a calculation** under the box, choose **Multiply two values**, pick \`hours\` and \`pay\` and press **Use this calculation**. It writes the same formula.)
 3. Tick **Keep up to date**. Now \`income\` is worked out again every time \`hours\` or \`pay\` changes, not only at the start. It is read only: nothing can set it by hand.
 4. Add two more the same way:
    - \`spending\`, worked out as \`rent + food\`;

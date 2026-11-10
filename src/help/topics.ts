@@ -1182,6 +1182,16 @@ Things to know:
 ## Live values in text
 Anything in braces is an [expression](expressions): \`Score: {score}\`, \`{name.toUpperCase()}\`, \`{items.length} items\`. Write \`{{\` for a literal brace.
 
+You do not have to type the braces. Put the cursor where the value should go and press **Insert value** under the **Text** box. A list opens with a box to search it, and each choice says what it is right now (\`score\`, number, 7). The choices are:
+- **Your variables**, and how many items each list has.
+- **Data**: how many rows a data source has, and the fields of its first row.
+- **The learner and course**: their first name, the course title and code, the study period and year. They show a sample name in the editor and the real one when it plays.
+- **The page**: which page this is and how many there are.
+- **Questions**: the quiz score, total and percent, when the project has questions.
+- **This item of the repeat**, for a layer inside a [repeater](repeaters): the fields of the item (a list of people with \`name\` and \`age\` offers both) and its number.
+
+Pick one with the arrow keys and **Enter**, or click it. It goes in as \`{name}\` at the cursor, over any words you had selected, and the line under the box shows what the whole text says now. The same button is on a button's **Label** and on a connector's label.
+
 To animate a text layer one letter, word or line at a time (typewriter, wave), see [Text modifiers](text-modifiers).`,
   },
   {
@@ -3508,6 +3518,8 @@ Use one for anything you would otherwise paste the same long expression for in s
 - a band: \`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\`;
 - a list filtered by another variable.
 
+Press **Pick a calculation** under the formula box to build a sum, a percentage, a count or a total from pickers (see [Expressions](expressions#calculations-without-typing)).
+
 \`wordCount\`, \`band\`, \`clock\`, \`shuffle\`, \`randInt\`, \`includesAll\`, \`includesAny\`, \`count\`, \`where\`, \`positions\`, \`sum\` and \`pluck\` are formula helpers made for this: see [Expressions](expressions#helpers). To show seconds as \`1:35\`, use \`clock(seconds)\` in a formula, or the **Seconds to m:ss** [converter](bindings#converters) on a binding.
 
 - A live variable is **read only**. *Change a value or counter*, scripts, inputs and the page cannot change it (they are told so in the console), and the Usage tab lists a *Change a value or counter* or *Put values back to the start* node that names one under **Broken**. Untick it to set it by hand again.
@@ -3563,7 +3575,7 @@ The bin asks first when the variable is used, naming the places, because they st
     title: 'Expressions',
     group: 'Interactivity',
     summary: 'Short JavaScript formulas in text, bindings and node settings.',
-    keywords: 'expression formula javascript template braces condition ternary math',
+    keywords: 'expression formula javascript template braces condition ternary math pick calculation picker percentage total count round join sum add',
     body: `An expression is a short formula that works out a value: a total, a piece of text, a yes or no. You write them in text, bindings and node settings, in a safe subset of JavaScript. Your variables and data sources are available by name.
 
 \`\`\`
@@ -3607,6 +3619,19 @@ The check uses the same scope as the suggestions, and the values are the project
 
 ## Conditions without typing
 You don't have to write a yes/no condition as a formula. A field that asks for one (see [Interactions](interactions)) offers pickers instead of a text box: **[value] [is at least] [5]**, with **+ and** and **+ or** for more rows, and **Edit as formula** for the text. The pickers write an ordinary formula, so anything you built with them can be edited by typing, and a formula they cannot show opens as text.
+
+## Calculations without typing
+A formula that works out a number or some text can be picked instead of typed. Under a **Worked out** variable's formula, a **Data bindings** formula and the **Value** of **Change a value or counter**, press **Pick a calculation**. A menu offers plain templates, and each one is filled in with pickers:
+- **Add two values**, **Take one value from another**, **Multiply two values**, **Divide one value by another**: \`score + 1\`.
+- **What percentage one value is of another**: \`total > 0 ? Math.round(score / total * 100) : 0\`. A whole of 0 gives 0 instead of a broken number.
+- **How many items in a list match**: pick the list, then *Every item*, or *Only the items that match* with the field to look at, how to compare and the value, for example \`count(cards, "state", "matched")\`. The field box offers the fields the list's first item has.
+- **The total of a number in each list item**: \`sum(prices, "amount")\`.
+- **The larger of two values**, **The smaller of two values**: \`Math.max(score, 0)\`.
+- **Round a number** to a number of decimal places: \`Math.round(price * 100) / 100\`.
+- **One thing if a condition holds, otherwise another**: choose the condition with the same pickers as an **Only if**, then what it is when true and when not: \`score >= 5 ? "Pass" : "Try again"\`.
+- **Join text and values together**: pieces of text and values, in the order you give them, made into one piece of text. A text piece "Score: " and the value \`score\` give *Score: 7*. Numbers joined this way stay text, so two scores do not add up.
+
+The box under the picker shows the formula it will write and what it works out to now. Nothing changes until you press **Use this calculation**, and **Cancel** leaves the formula as it was. The formula is ordinary text, so you can keep editing it by hand. When the formula already in the box is one of these, the picker opens filled in. When it is anything else (a formula with \`.filter\` in it, say) the picker says so and leaves it alone until you choose a calculation to replace it.
 
 ## Helpers
 Helpers are ready-made functions for common jobs: showing a number as text, mapping one range onto another, counting words, laying out a puzzle or a diagram. These work in every expression:
@@ -4526,7 +4551,7 @@ Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the
 
 **Items** can be a [data source](data-sources) or a *List* [variable](variables). The repeater redraws when the list changes, so a *Change a value or counter* node that adds to the list adds a row.
 
-Inside the copies, \`item\` is the current item and \`index\` is its position, counting from 0: \`{index + 1}. {item.name} - {item.price}\`.
+Inside the copies, \`item\` is the current item and \`index\` is its position, counting from 0: \`{index + 1}. {item.name} - {item.price}\`. In a text or button label inside the copies, **Insert value** lists the item's fields (read from the first item) so you can pick one instead of typing it.
 
 ## Layout
 **Layout** places the copies: vertical, horizontal, grid (with columns), or none (when the frame uses [auto layout](auto-layout), which is usually best).

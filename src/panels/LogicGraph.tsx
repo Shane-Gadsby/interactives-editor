@@ -1338,7 +1338,7 @@ export function ParamForm({ node, ab, project, onChange, onNote }: { node: Logic
             {isCondition ? (
               <ConditionField label={p.label} title={p.help} value={String(v ?? '')} locals={GRAPH_LOCALS} placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
             ) : (
-              <ExprField label={p.label} title={p.help} value={String(v ?? '')} locals={GRAPH_LOCALS} commitOnBlur placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
+              <ExprField label={p.label} title={p.help} value={String(v ?? '')} locals={GRAPH_LOCALS} commitOnBlur calc={node.kind === 'action.setVariable' && p.key === 'value'} placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
             )}
             <div className="hint">{p.help ?? 'JavaScript expression; variables by name, plus event.'}</div>
           </div>
