@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { STARTER_TOKEN_DEFS, createNode, createProject, type Project, type RectNode, type TextNode } from 'interactives-player';
 import { EditorStore } from '../src/store/store';
 import { addColorStyle, applyColorStyle, editStyle, syncLibraryStyles } from '../src/lib/libraries';
+import { nothingFollowsTheme } from '../src/lib/link-colours';
 import { addTheme, addToken, bakedForExport, canvasResolver, checkThemePairs, convertStylesToTokens, ensureThemes, removeTheme, removeToken, setTokenValue, shownTheme, starterThemes, themeCounts } from '../src/lib/themes';
 import { checkAccessibility } from '../src/lib/a11y/checks';
 
@@ -65,8 +66,22 @@ describe('themes: starter, editing', () => {
     });
     const c = themeCounts(s.get().project);
     expect(c.used.get(token.id)).toBe(1);
-    expect(c.raw).toBe(3);
+    //the fill, the stroke and the text, and the page's own plain white background
+    expect(c.raw).toBe(4);
     expect(p.artboards[0].children).toHaveLength(0);
+  });
+
+  it('counts plain page backgrounds, so the count agrees with "Nothing here follows the theme"', () => {
+    const p = themed();
+    const id = tokenId(p, 'color/background');
+    p.artboards[0].background = solid(`token:${id}`);
+    const s = new EditorStore(p);
+    expect(themeCounts(s.get().project).raw).toBe(0);
+    expect(nothingFollowsTheme(s.get().project)).toBe(false);
+    //detach the only token colour, the page background
+    s.update((d) => void (d.artboards[0].background = solid('#f4f4f4')));
+    expect(themeCounts(s.get().project).raw).toBe(1);
+    expect(nothingFollowsTheme(s.get().project)).toBe(true);
   });
 
   it('draws the theme being shown, and bakes it for exports', () => {
