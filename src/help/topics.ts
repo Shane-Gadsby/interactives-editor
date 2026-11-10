@@ -916,7 +916,7 @@ Type in **Filter layers** above the list to show only the layers whose name has 
 ## Hide and lock
 Hover a row and two small buttons appear at its right: a padlock (**Lock** / **Unlock**) and an eye (**Hide** / **Show**). They stay visible for any layer that is locked or hidden. The **Visible** and **Locked** ticks in the Inspector do the same.
 
-- **Hidden** layers are not drawn by the player or in Preview. In the editor they show as a faint **ghost** on the canvas, so you can still see where they are and pick them. Their names are faded in the Layers panel. Hide a mask layer and its clipping stops.
+- **Hidden** layers are not drawn by the player or in Preview. In the editor they show as a faint **ghost** on the canvas, so you can still see where they are and pick them. The exception is a hidden layer that an auto layout frame places: it takes no room in Preview, so it is not drawn on the canvas either (the others close up, as in Preview). Pick it in the Layers panel and its outline shows where it sat. Their names are faded in the Layers panel. Hide a mask layer and its clipping stops.
 - **Outside a clipping artboard**: when an artboard has **Clip content to artboard** on, the part of a layer that hangs past its edge is also drawn as a faint, diagonally striped ghost on the canvas, and clicking it selects the layer. Preview and exports still cut it off. You can switch this off in [Preferences](preferences).
 - **Locked** layers can't be selected or moved by clicking on the canvas, so a backdrop never gets in your way. You can still select one in the Layers panel and edit it in the Inspector.
 - **Brand-locked layers** are the brand layers of a [branded project](branded-starters) (the logo, the sweeps, the footer line). They are really locked: you can't select or drag them on the canvas or in the Layers panel, and the selection box and Select all skip them. Their padlock in the list can't be turned off. Projects made before this was added are locked when you open them. That leaves nothing on them to change by accident.
@@ -1483,7 +1483,7 @@ Select a child of an auto-layout frame and its **Layout item** section says how 
 
 ![Ticking Auto margin: Left on the button pushes it to the end of the toolbar. Then changing Grow on a card changes how much of the free room it takes.](help/layout-item.mp4)
 
-- **Position**: *In flow* (laid out with its siblings), *Absolute* (placed by **Inset** from the frame's edges, e.g. pinned to the bottom right; leave a side empty (*auto*) to leave that edge free, and set left and right, or top and bottom, to stretch a layer that isn't fixed size) or *Ignore* (keeps its own x/y and takes no room, and has no sizing fields).
+- **Position**: *In flow* (laid out with its siblings), *Absolute* (placed by **Inset** from the frame's edges, e.g. pinned to the bottom right; leave a side empty (*auto*) to leave that edge free, and set left and right, or top and bottom, to stretch a layer that isn't fixed size) or *Ignore* (keeps its own x/y and takes no room, and has no sizing fields). While a layer is *In flow* or *Absolute*, its **X** and **Y** in the Inspector are greyed out and a line says which frame places it: set *Ignore* to place it yourself.
 - **W** and **H** (width and height):
   - *Fixed*: its own size.
   - *Hug*: fits its own contents (frames and text).

@@ -58,6 +58,8 @@ export function NumberField({
   title,
   mixed,
   scale = 1,
+  disabled,
+  syncKey,
 }: {
   label?: ReactNode;
   value: number;
@@ -69,6 +71,10 @@ export function NumberField({
   suffix?: string;
   title?: string;
   mixed?: boolean;
+  /** Shows the value but can't be typed in (something else decides it). */
+  disabled?: boolean;
+  /** When this changes the box shows the value again, even half way through typing (the view it was typed in is gone). */
+  syncKey?: string;
   /** What the stored value is multiplied by to show it (100 for an opacity kept as 0 to 1, shown as a percent). `step`, `min` and `max` are in the shown units, and `onChange` still gets the stored value. */
   scale?: number;
 }) {
@@ -81,9 +87,23 @@ export function NumberField({
   }
   const [text, setText] = useState(fmt(value));
   const focused = useRef(false);
+  //Whether the box has been typed in since it last showed the value: a box nobody typed in follows the layer even while it has focus
+  const typed = useRef(false);
+  //Counts blurs, so the box reads the value again after a commit even when the commit left the value where it was (a layer an
+  //auto layout or a fitting group put back, or a sum that came to the same number)
+  const [settled, setSettled] = useState(0);
   useEffect(() => {
-    if (!focused.current) setText(mixed ? '' : fmt(value));
-  }, [value, mixed]);
+    if (focused.current && typed.current) return;
+    typed.current = false;
+    setText(mixed ? '' : fmt(value));
+  }, [value, mixed, settled]);
+  const seen = useRef(syncKey);
+  useEffect(() => {
+    if (seen.current === syncKey) return;
+    seen.current = syncKey;
+    typed.current = false;
+    setText(mixed ? '' : fmt(value));
+  }, [syncKey, value, mixed]);
   const clamp = (v: number) => Math.min(max ?? Infinity, Math.max(min ?? -Infinity, v));
   const commitText = () => {
     const v = evalNumber(text);
@@ -111,13 +131,14 @@ export function NumberField({
   return (
     <label className={fieldClass('number-field', label, ps)} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && (
-        <span className="field-label scrub" onPointerDown={scrub}>
+        <span className={disabled ? 'field-label' : 'field-label scrub'} onPointerDown={disabled ? undefined : scrub}>
           {unbroken(label)}
           {ps.bound && <BoundMark />}
         </span>
       )}
       <input
         value={text}
+        disabled={disabled}
         placeholder={mixed ? 'Mixed' : undefined}
         onFocus={(e) => {
           focused.current = true;
@@ -126,8 +147,13 @@ export function NumberField({
         onBlur={() => {
           focused.current = false;
           commitText();
+          typed.current = false;
+          setSettled((n) => n + 1);
         }}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          typed.current = true;
+          setText(e.target.value);
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
           if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -135,6 +161,7 @@ export function NumberField({
             const dir = e.key === 'ArrowUp' ? 1 : -1;
             const v = clamp(round(value + dir * step * (e.shiftKey ? 10 : 1), step));
             onChange(v);
+            typed.current = false;
             setText(fmt(v));
           }
           e.stopPropagation();

@@ -235,14 +235,17 @@ export function KeyButton({ node, prop, ids }: { node: SceneNode; prop: string; 
   );
 }
 
-export function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title, scale }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string; scale?: number }) {
+export function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title, scale, disabled }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string; scale?: number; disabled?: boolean }) {
   const shown = useShown(node);
   const set = useSetter(ids);
   const v = Number(shown(prop) ?? fallback);
+  //The view the number is read in (a timeline or the design view): a box half typed in under another view gives way to the new one
+  const st = store().get();
+  const view = st.timelineShown && st.activeTimelineId ? st.activeTimelineId : 'design';
   return (
     <div className="keyed">
-      <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} scale={scale} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
-      <KeyButton node={node} prop={prop} ids={ids} />
+      <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} scale={scale} disabled={disabled} syncKey={`${node.id}|${view}`} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
+      {!disabled && <KeyButton node={node} prop={prop} ids={ids} />}
     </div>
   );
 }
@@ -828,6 +831,23 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
 
 // ---------------------------------------------------------------- nodes
 
+/**
+ * Why the X and Y of these layers can't be typed: an auto layout frame works them out (so a typed number would be shown and
+ * then ignored). Null when at least one of them is free to place (not in an auto layout, or set to Ignore).
+ */
+export function placedBy(ab: Artboard, nodes: SceneNode[]): string | null {
+  const parents = nodes.map((x) => {
+    const parent = locate(ab, x.id)?.parent;
+    const pos = x.layoutItem?.position ?? 'flow';
+    return parent && parent.type === 'frame' && parent.layout && pos !== 'ignore' ? { parent, pos } : null;
+  });
+  if (parents.some((p) => !p)) return null;
+  const names = new Set(parents.map((p) => p!.parent.id));
+  const who = names.size === 1 ? `the auto layout of ${parents[0]!.parent.name}` : 'an auto layout';
+  if (parents.every((p) => p!.pos === 'absolute')) return `Placed by its inset in ${who}. Change the Inset in Layout item, or set Position to Ignore to place it yourself.`;
+  return `Placed by ${who}. Set Position to Ignore in Layout item to place it yourself.`;
+}
+
 export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboard; project: Project }) {
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
@@ -837,6 +857,7 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
   const sameType = nodes.every((x) => x.type === n.type);
   //A connector's box is the route between the two layers it joins, so there is nothing to place, size, turn or lay out
   const isConn = sameType && n.type === 'connector';
+  const placed = placedBy(ab, nodes);
   return (
     <>
       {single && (n.type === 'image' || n.type === 'video') && <AltPromptCard node={n} projectId={project.id} />}
@@ -845,11 +866,14 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
       <Section id="layer-selection" help="fill-stroke" title={single ? 'Layer' : `${nodes.length} layers`}>
         {single && <TextField label="Name" value={n.name} onChange={(v) => set({ name: v }, `name-${n.id}`)} />}
         {!isConn && (
-          <Row className="aligned-pair">
-            <Num node={n} ids={ids} prop="x" label="X" />
-            <span className="link-toggle link-gap" aria-hidden="true" />
-            <Num node={n} ids={ids} prop="y" label="Y" />
-          </Row>
+          <>
+            <Row className="aligned-pair">
+              <Num node={n} ids={ids} prop="x" label="X" disabled={!!placed} title={placed ? 'Worked out by the auto layout' : undefined} />
+              <span className="link-toggle link-gap" aria-hidden="true" />
+              <Num node={n} ids={ids} prop="y" label="Y" disabled={!!placed} title={placed ? 'Worked out by the auto layout' : undefined} />
+            </Row>
+            {placed && <p className="hint">{placed}</p>}
+          </>
         )}
         {isConn ? (
           <Row className="aligned-pair">

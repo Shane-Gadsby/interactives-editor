@@ -26,10 +26,10 @@ A frame can hug too: **Hug width** and **Hug height** make it grow and shrink wi
 
 ## Where people get caught out
 
-- **"I drag a child and it jumps back."** Its x and y belong to the layout, so the frame puts it back. Typing a new X or Y in the Inspector does the same: the number stays in the field, but the layout still places the child. To change the order, move it up or down in the **Layers** panel. To place one child freely, set its **Position** to *Absolute* (pinned by insets from the frame's edges) or *Ignore* (keeps its own x and y and takes no room).
+- **"I drag a child and it jumps back."** Its x and y belong to the layout, so the frame puts it back. The X and Y boxes in the Inspector are greyed out for a child the layout places, with a line saying which frame places it, so there is nothing to type that would be ignored. To change the order, move it up or down in the **Layers** panel. To place one child freely, set its **Position** to *Absolute* (pinned by insets from the frame's edges) or *Ignore* (keeps its own x and y and takes no room).
 - **"My text box won't grow."** A text grows only if its **Sizing** lets it: *Auto width* or *Auto height*, not *Fixed*. The frame around it has to grow too: a frame with a fixed height stays that height, so turn on **Hug height** on it.
 - **"Gap or padding?"** **Gap** is the space between children. **Padding** is the space between the frame's edges and the children. **Margin** (in Layout item) is extra space around one child.
-- **"I hid a layer and everything moved."** In Preview a hidden layer takes no room, so the others close up. That is on purpose. On the canvas a hidden layer stays as a faint ghost in its place, so the layout there doesn't move.
+- **"I hid a layer and everything moved."** A hidden layer takes no room, so the others close up. That is on purpose, and the canvas and Preview now agree on it. The hidden layer is not drawn on the canvas either, but it is still in the **Layers** panel: pick it there and its outline shows where it sat. A hidden layer set to *Absolute* or *Ignore* is different: it keeps its own place, and shows as a faint ghost on the canvas.
 - **"My layout settings aren't on the timeline."** They aren't keyframed. Animate a layer's size or position with a timeline, or turn on **Animate changes** on the frame so children glide when the layout changes while it plays.
 
 ## How to tell what is going on
