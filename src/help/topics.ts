@@ -2703,6 +2703,12 @@ A **group** is a labelled frame around nodes that belong together ("Score", "Int
 - Double-click the title to rename it (or **Rename…** in its right-click menu). **Colour** gives it one of a few tints.
 - <kbd>Del</kbd> on a group with nodes inside asks: **Just the group** (the frame goes, the nodes stay where they are) or **Group and N nodes** (everything goes, in one undo step). An empty group just goes. Its right-click menu has **Ungroup (keep the nodes)** and **Delete group and N nodes** too, and **Copy** and **Duplicate** for the group with its nodes.
 
+## Question blocks
+Each question you add with the question kit makes a handful of nodes in the graph (reset when the page starts, choose an option, check, hint and so on). So your own flows are easy to find, the graph shows them as **one block per question**, named after the question, with how many nodes it holds. Click the block (or press <kbd>Enter</kbd> on it) to open it and see the nodes; the small **Fold** tab above them folds them back. A connection from one of the question's nodes to something of yours is drawn to the block, so it is still clear where your flow starts.
+- The nodes are ordinary ones. Opening shows them exactly as they were, and a node you pick from somewhere else (an error, the sentences) opens its question for you.
+- The button under the zoom buttons opens every block, or folds them all again.
+- Folded nodes are not selected by *Select all*, so a Delete never reaches nodes you can't see. Which blocks are open is only how the graph is drawn: it is not saved with the project, and everything starts folded.
+
 ## Behaviours: "When this is clicked…"
 The quick way to make a layer do something, with no graph to draw. Select a layer and, in the Inspector's **Interactions** section, press **+ When clicked…** (or **+ When hovered…**), or right-click it and choose **Add interaction**, then **When clicked…**.
 
@@ -2901,7 +2907,7 @@ Under the surface each coloured layer has an ordinary [binding](bindings) on its
 
 ## How a question behaves
 
-The behaviour is a handful of nodes in the **Interactions** tab, each a row of an event and what it runs. *When the page is shown* runs **Reset question**. A click on an option runs **Choose option**. A click on Check answer runs **Check answer**. Add your own nodes after them.
+The behaviour is a handful of nodes in the **Interactions** tab, each a row of an event and what it runs. *When the page is shown* runs **Reset question**. A click on an option runs **Choose option**. A click on Check answer runs **Check answer**. Add your own nodes after them. The graph folds these into one block per question so your own nodes stand out: click the block to open it (see [Question blocks](interactions#question-blocks)).
 
 **Check answer** has three outputs: *right*, *wrong* and *finished* (once the question is locked, because it is right or out of tries). So "when it is right, play the confetti animation" is one wire.
 
