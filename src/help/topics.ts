@@ -1658,7 +1658,7 @@ A page that embeds the player can listen for the switch: \`player.on('variantcha
 1. Build an artboard with the shared layers: the logo, the bar, the footer. It does not need a background; the page keeps its own.
 2. Right-click it in the Layers panel and choose **Make this a master** (or **Make this a master** in its **Page master** section).
 3. Select a page, open **Page master** in the Inspector and pick the master. Or select the master and choose **Use as master for…**, or **Use for all other pages**.
-4. To change the shared layers, click **Edit master** on any page. The master's own layers are read-only on a page: clicking where one is selects the page, not the master's layer.
+4. To change the shared layers, click **Edit master** on any page. The master's own layers are read-only on a page: clicking where one is selects the page, not the master's layer. With the page selected, the layers it gets from the master are outlined with a dashed line on the canvas, under a tag saying **From page master** and the master's name, so you can see which ones to change in the master.
 
 ## On a page
 - **Master**: the artboard drawn under this page, or **None**. A page set to None keeps its slot text and hidden layers, so they are back if it gets a master again.
@@ -2078,6 +2078,9 @@ These work after you click in the Timeline. The full list is on the [Keyboard sh
 - <kbd>,</kbd> and <kbd>.</kbd> step back and forward one frame. Add <kbd>Shift</kbd> to jump between keys instead.
 - <kbd>P</kbd>, <kbd>S</kbd>, <kbd>R</kbd>, <kbd>T</kbd> and <kbd>A</kbd> take you to the selected layer's **P**osition, **S**cale, **R**otation, opacity (**T**ransparency) and **A**nchor point. The Properties panel opens that field and focuses it, and the Timeline marks that property's track if the layer has one.
 - <kbd>Shift</kbd>+<kbd>L</kbd> shows or hides [the list of timelines](timelines#the-list-of-timelines).
+
+## When two timelines animate the same thing
+If two timelines on a page both animate the same property of the same layer (both move Box's X, say), the list of timelines warns on each of them: **⚠ Also animated by** and the other timeline's name, with the layer and property. Nothing is wrong while only one of them plays. If both play at once, the one further down the list is applied last and wins; the warning's tooltip says which. Move the timelines in the list, animate different properties, stop one before the other starts, or use a **Blend in** to hand over.
 
 ## Timeline settings
 The Timeline bar shows a short summary (length, loop, speed, autoplay, frame rate). Click the **gear** beside it to change them, and to rename the timeline; Esc or a click outside closes it.
@@ -3700,7 +3703,7 @@ Examples:
 | Rotation | \`speed * 3\` |
 | Solo: active child | \`mode\` (a choice whose options are the children's names) |
 
-A bound property takes its value from the binding, on the canvas and in Preview, so a value typed into its field or keyed on a timeline is replaced by the binding's. The field itself has no lock or marker: **Data bindings** lists everything that is bound. Remove the binding to set the property by hand. Every animatable property can be bound (see [Animatable properties](animatable-properties)), and so can every other plain setting the layer has, such as a video's **Autoplay** or **Src**, or a polygon's sides. A video layer also lists **Playback position (s)**, **Playing**, **Length (s)** and **Ended**, which come from the video itself.
+A bound property takes its value from the binding, on the canvas and in Preview, so a value typed into its field or keyed on a timeline is replaced by the binding's. A field set by a binding (in, or both ways) has a small link mark after its label, with a dashed box, so you can see why a typed value won't stick; hover or focus the mark for the reason. **Data bindings** lists everything that is bound. A binding that only writes out to a variable (**Out**) doesn't mark its field, because what you type still sticks. Remove the binding to set the property by hand. Every animatable property can be bound (see [Animatable properties](animatable-properties)), and so can every other plain setting the layer has, such as a video's **Autoplay** or **Src**, or a polygon's sides. A video layer also lists **Playback position (s)**, **Playing**, **Length (s)** and **Ended**, which come from the video itself.
 
 ## Which way: in, out or both
 Each binding has **← In**, **Out →** and **⇄ Both** at the top.
@@ -5100,7 +5103,7 @@ After an import, a report lists anything that couldn't be carried over exactly. 
 | SVG image (this artboard) | The open page as an SVG file that scales cleanly. It uses HTML inside the SVG for text and web elements, so it opens in browsers but not in every drawing program |
 | Video, GIF or frames… | One timeline of the open page as an MP4 or WebM video, an animated GIF, or a ZIP of PNG pictures, one per frame (below) |
 
-Sharing is on its own button, **Share**, next to Export (below).
+Sharing is on its own button, **Share**, next to Export (below). Export only makes files, so the first line of the Export menu, **Want a link instead of a file?**, opens **Share…**, which asks **Where will people use it?** and gives you the link or code to copy.
 
 The files are named after the project (and the page, for pictures, Lottie and video).
 

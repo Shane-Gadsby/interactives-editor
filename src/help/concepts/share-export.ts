@@ -14,6 +14,8 @@ export const concept: Concept = {
 - **Export** makes **files**: a single HTML file, a project package, pictures, video and so on. A file is a copy of the project at the moment you downloaded it. Nothing you change afterwards reaches it.
 - **Share** holds **links and people**. Nothing under it downloads anything.
 
+The first line of the Export menu, **Want a link instead of a file?**, opens **Share…** for you, so if a link or a StudyDesk embed code is what you were after you land in the right place.
+
 ![The Export menu: Single HTML file, Project package, Project JSON, the public interface reference and TypeScript definitions, Lottie, dotLottie, PNG and SVG pictures, and Video, GIF or frames.](help/concept-share-export-export.png)
 
 Share has four entries:
