@@ -309,6 +309,63 @@
 		}
 	},
 	{
+		"key": "tut-context",
+		"title": "Personalised for the course and learner",
+		"description": "Greets the learner by first name, names their course, and gives a different assignment and due week in each course, with a line only staff see: the Course and learner context tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"context",
+			"personalise",
+			"course",
+			"per-course values"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-data-source",
+		"title": "Content from a data file",
+		"description": "A page of study tips where every word, and each card's colour, comes from one JSON file, so rewriting it is a file swap: the Data file tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"data",
+			"json",
+			"repeater",
+			"bindings"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-journal",
+		"title": "Reflection journal",
+		"description": "Two reflection prompts with text boxes and word counts that are still there when the learner comes back, and a page that puts it all together and downloads it: the Reflection journal tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"writing",
+			"reflection",
+			"user data",
+			"word count"
+		],
+		"artboards": 2,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
 		"key": "tut-mcq",
 		"title": "Multiple choice question",
 		"description": "One multiple choice question with two tries, a hint, feedback for each wrong answer and a result reported when it finishes: the Multiple choice tutorial's project.",
@@ -318,6 +375,103 @@
 			"question",
 			"quiz",
 			"score"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-microphone",
+		"title": "Speaking practice with the microphone",
+		"description": "A one minute talk the learner records with one button, a countdown that ends the take, a button to play it back and a slider to rate it: the Speaking practice tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"microphone",
+			"recording",
+			"timer",
+			"speaking"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-sound",
+		"title": "Sound effects and music",
+		"description": "Music that starts on the first page and carries on to the next, a sound effect on a button, a sound on or off button and a way to stop the music: the Sound tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"sound",
+			"music",
+			"audio",
+			"soundtrack"
+		],
+		"artboards": 2,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-survey-chart",
+		"title": "Poll with a live chart",
+		"description": "One question with a Vote button, and a bar chart of how the whole class answered, counted and anonymous: the Poll with a live chart tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"poll",
+			"survey",
+			"chart",
+			"shared responses",
+			"data"
+		],
+		"artboards": 3,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-video-chapters",
+		"title": "Video with chapters and questions",
+		"description": "A video with chapter buttons that jump to each part, and two questions that pause it at set times until they are answered: the Interactive video tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"video",
+			"chapters",
+			"question",
+			"cue points"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-whatif",
+		"title": "What-if budget explorer",
+		"description": "Three sliders for hours, pay and rent, with the income, spending, what is left over and a chart worked out again as you drag: the What-if explorer tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"slider",
+			"formula",
+			"chart",
+			"variables",
+			"model"
 		],
 		"artboards": 1,
 		"preview": {

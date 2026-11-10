@@ -1,0 +1,27 @@
+{
+  "title": "Five study tips",
+  "intro": "Small habits that make studying easier. Pick one to try this week.",
+  "cards": [
+    {
+      "title": "Plan your week",
+      "text": "Block out classes, study and rest before the week begins.",
+      "colour": "#FFF4D6"
+    },
+    {
+      "title": "Skim first",
+      "text": "Read the headings and summary before the whole text.",
+      "colour": "#E3F1FB"
+    },
+    {
+      "title": "Use your own words",
+      "text": "Notes in your own words show what you understand.",
+      "colour": "#E6F4EA"
+    },
+    {
+      "title": "Take breaks",
+      "text": "A short break every hour keeps your focus.",
+      "colour": "#F6E7F3"
+    }
+  ],
+  "footer": "Study skills, week 1"
+}
