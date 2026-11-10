@@ -3478,6 +3478,7 @@ Change the list while it runs with **Change a value or counter**. Its **Do** box
 - *Add to the list, or take out if it is there* works as a tick-list: it adds the value, or removes it when it is already in.
 - *Remove from the list (by value)* takes out every item equal to the value. Objects are compared by what they hold.
 - *Change one list item* changes the item at a position you give. Left empty, the position is \`event.index\`, the item the event came from. An optional **Field** changes only that field of an object item. The new value can read \`item\` (what is there now) and \`index\`, for example \`item.count + 1\`. A position that is not in the list changes nothing.
+- *Change list items where a field is a value* changes every item that matches, in one step. Type the field to look at (**Items where this field**, like \`state\`) and the value it has to be (**Is**, like \`"up"\`), then the **Field** to change and its new **Value**. A memory game turns every face-up card to matched with *Items where this field* \`state\`, *Is* \`"up"\`, *Field* \`state\`, *Value* \`"matched"\`. Leave both *where* boxes empty to change every item.
 
 In scripts use \`ix.toggleItem('picked', 'b')\`, \`ix.removeValue('picked', 'b')\` and \`ix.setItem('cards', 2, 'down', 'state')\`, or assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`.
 
@@ -3507,7 +3508,7 @@ Use one for anything you would otherwise paste the same long expression for in s
 - a band: \`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\`;
 - a list filtered by another variable.
 
-\`wordCount\`, \`band\`, \`clock\`, \`shuffle\`, \`randInt\`, \`includesAll\` and \`includesAny\` are formula helpers made for this: see [Expressions](expressions#helpers). To show seconds as \`1:35\`, use \`clock(seconds)\` in a formula, or the **Seconds to m:ss** [converter](bindings#converters) on a binding.
+\`wordCount\`, \`band\`, \`clock\`, \`shuffle\`, \`randInt\`, \`includesAll\`, \`includesAny\`, \`count\`, \`where\`, \`positions\`, \`sum\` and \`pluck\` are formula helpers made for this: see [Expressions](expressions#helpers). To show seconds as \`1:35\`, use \`clock(seconds)\` in a formula, or the **Seconds to m:ss** [converter](bindings#converters) on a binding.
 
 - A live variable is **read only**. *Change a value or counter*, scripts, inputs and the page cannot change it (they are told so in the console), and the Usage tab lists a *Change a value or counter* or *Put values back to the start* node that names one under **Broken**. Untick it to set it by hand again.
 - Live variables can read each other, in any order in the list. If they read each other in a circle (or one reads itself) they stay at their starting value and the Variables tab and **Usage** say so.
@@ -3570,7 +3571,7 @@ score + 1
 name.toUpperCase()
 lives > 0 ? "Play again" : "Game over"
 Math.round(progress * 100) + "%"
-products.filter(p => p.inStock).length
+count(products, "inStock", true)
 \`\`\`
 
 ## Where they go
@@ -3632,6 +3633,12 @@ Helpers are ready-made functions for common jobs: showing a number as text, mapp
 | \`clock(seconds)\` | Seconds as \`m:ss\` (\`h:mm:ss\` from an hour): \`clock(95)\` is \`1:35\` |
 | \`shuffle(list, seed)\` | The list in a new order. Give a seed (a number) to get the same order every time |
 | \`randInt(a, b)\` | A whole number from \`a\` to \`b\`, both included. \`randInt(6)\` is 0 to 6 |
+| \`count(list)\`, \`count(list, field, value)\` | How many items a list has, or how many match: \`count(tasks)\`, \`count(tasks, "state", "done")\`. For a list of plain words or numbers leave the field out: \`count(answers, "yes")\` |
+| \`count(list, field, ">", value)\` | The same with a comparison instead of an exact match. The comparisons are \`"=="\`, \`"!="\`, \`">"\`, \`">="\`, \`"<"\`, \`"<="\` and \`"contains"\`: \`count(products, "price", ">", 5)\` |
+| \`where(list, field, value)\` | The items that match, as a list. It takes the same arguments as \`count\`: \`where(products, "inStock", true)\` |
+| \`positions(list, field, value)\` | The positions of the items that match (0 is the first): \`positions(cards, "state", "up")\` |
+| \`sum(list, field)\` | The numbers added up, from one field of each item or (\`sum(scores)\`) a plain list of numbers. Anything that is not a number counts as 0 |
+| \`pluck(list, field)\` | One field of every item as a list: \`pluck(people, "name")\`. A field can reach inside with dots: \`"owner.name"\` |
 | \`includesAll(list, items)\`, \`includesAny(list, items)\` | Whether the list (or text) has every one of the items, or at least one, ignoring capitals: \`includesAny(answer, ["cat", "kitten"])\` |
 | \`enums.name\` | The options of a choice variable |
 | \`instanceInput(layer, name)\` | The current value of a variable inside an [instance](instances) layer (by name or id) |
@@ -3646,7 +3653,7 @@ This is exactly what an expression can contain. Expressions are read by a small 
 - **Operators**: \`+ - * / % **\`, \`== != === !==\`, \`< > <= >=\`, \`&& || ??\`, \`!\`, \`typeof\`, \`in\`, \`a ? b : c\`, bit operators, and \`,\` inside brackets.
 - **Looking inside**: \`a.b\`, \`a[b]\` and \`a?.b\`. Only the values you put there are readable: your variables, data, \`artboard\`, \`self\`, what \`layer()\` gives and \`item\`, \`event\`, \`value\`; \`__proto__\`, \`constructor\` and \`prototype\` never are.
 - **Calls**: the helpers above, \`Math.*\`, \`Number\`, \`String\`, \`Boolean\`, \`parseInt\`, \`parseFloat\`, \`isNaN\`, \`JSON.parse/stringify\`, \`Object.keys/values/entries\`, \`Array.isArray/from\`, \`Date.now()\` and \`new Date(…)\`, and the usual methods of text (\`slice\`, \`split\`, \`replace\`, \`padStart\`, \`toUpperCase\`…), numbers (\`toFixed\`, \`toLocaleString\`…), lists (\`map\`, \`filter\`, \`find\`, \`some\`, \`every\`, \`reduce\`, \`join\`, \`includes\`, \`slice\`, \`sort\`…) and dates.
-- **Arrow functions** for those list methods: \`x => x * 2\`, \`(a, b) => a + b\`. They take plain names and an expression, not a block.
+- **Arrow functions** for those list methods: \`x => x * 2\`, \`(a, b) => a + b\`. They take plain names and an expression, not a block. Most of the time you do not need one: \`count\`, \`where\`, \`sum\` and \`pluck\` cover counting, picking and adding up a list without it.
 
 These don't: assignment (\`=\`, \`++\`), statements, \`function\`, \`this\`, loops, \`window\`, \`document\`, \`fetch\`, \`eval\`, and list methods that change a list in place (\`push\`, \`splice\`; \`sort\` and \`reverse\` give a sorted copy and leave the list alone). A slot that can't be read or fails is left as written in text and gives nothing elsewhere. Very large lists or text, and expressions that run for very long, are cut off.
 

@@ -124,7 +124,7 @@ The **Variables (live)** list on the left shows \`seen1\`, \`seen2\` and \`seen3
 ## Make it yours
 
 - **More points.** Copy a point and a dialog, add a \`seen4\` switch, and wire them the same way.
-- **A progress line.** A text that says \`{[seen1, seen2, seen3].filter(s => s).length} of 3 explored\` counts as the learner goes.
+- **A progress line.** A text that says \`{count([seen1, seen2, seen3], true)} of 3 explored\` counts as the learner goes.
 - **Ready-made.** The **Image hotspots** starter (Templates, **Explore and reveal**) does all of this with one dialog for every point, reading its words from a list. Its points are one frame, so adding a point is copying a layer.
 
 ## What you learned

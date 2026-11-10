@@ -25,8 +25,8 @@ function build(colourway: Colourway) {
   const cards = addVar(project, 'cards', 'list', []);
   const moves = addVar(project, 'moves', 'number', 0);
   //Live, worked out from the cards: the two that are face up, pairs found, and whether a turn is still being looked at (two up, so clicks wait)
-  addVar(project, 'ups', 'list', [], { formula: 'cards.map((c, i) => c.state == "up" ? i : -1).filter(i => i >= 0)', live: true });
-  addVar(project, 'matched', 'number', 0, { formula: 'cards.filter(c => c.state == "matched").length / 2', live: true });
+  addVar(project, 'ups', 'list', [], { formula: 'positions(cards, "state", "up")', live: true });
+  addVar(project, 'matched', 'number', 0, { formula: 'count(cards, "state", "matched") / 2', live: true });
   addVar(project, 'busy', 'boolean', false, { formula: 'ups.length >= 2', live: true });
 
   const hero = brandedPage(ctx, 'Match the terms', { kind: 'hero', subtitle: 'Turn over two cards at a time and pair each term with what it means.' });
@@ -93,14 +93,14 @@ function build(colourway: Colourway) {
   const same = g.add('logic.if', { condition: 'cards[ups[0]].pair == cards[ups[1]].pair' }, count);
   graphNote(play, { anchor: pick, colour: 'sky', text: '**One flow serves every card.** *Only if* `!busy` ignores clicks while two cards are up (`busy` is live, from `ups`), and Set item turns just the card clicked. Only the second card up counts as a move.' });
   //A match: both stay up
-  const keep = g.add('action.setVariable', { variable: cards.id, op: 'set', value: 'cards.map(c => c.state == "up" ? {...c, state: "matched"} : c)' }, same, 'true');
+  const keep = g.add('action.setVariable', { variable: cards.id, op: 'changeWhere', whereField: 'state', whereValue: '"up"', field: 'state', value: '"matched"' }, same, 'true');
   const sayYes = g.add('action.announce', { text: '"Card " + (event.index + 1) + ": " + cards[event.index].text + ". Matched."' }, keep);
   const over = g.add('logic.if', { condition: 'matched >= pairs.length' }, sayYes);
   g.runFrom(over, 'true', ['action.delay', { ms: 700 }], goNext());
   graphNote(play, { anchor: same, colour: 'sky', text: '**Match** locks both as `matched` and moves on once the live `matched` reaches the pair count. **No match** has its own row below: it waits a second while `busy` blocks clicks, then turns both back down.' });
   //No match: a moment to look (clicks wait, because two are still up), then both flip back
   const sayNo = g.add('action.announce', { text: '"Card " + (event.index + 1) + ": " + cards[event.index].text + ". Not a match."' }, same, 'false', { dy: 220 });
-  g.run(sayNo, ['action.delay', { ms: 1000 }], ['action.setVariable', { variable: cards.id, op: 'set', value: 'cards.map(c => c.state == "up" ? {...c, state: "down"} : c)' }]);
+  g.run(sayNo, ['action.delay', { ms: 1000 }], ['action.setVariable', { variable: cards.id, op: 'changeWhere', whereField: 'state', whereValue: '"up"', field: 'state', value: '"down"' }]);
 
   checklist.push(
     todo('Write your own six pairs', 'Write your own six pairs: Project > Variables > "pairs", a list of terms and what each one matches (the cards, the count and the finished check all follow it)', grid, play),

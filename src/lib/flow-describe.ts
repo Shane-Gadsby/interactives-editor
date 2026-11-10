@@ -226,6 +226,11 @@ function setVariable(p: P, c: Names): string {
       return `remove ${val(p.value)} from the list ${v}`;
     case 'setItem':
       return `change an item of the list ${v}`;
+    case 'changeWhere': {
+      const f = String(p.whereField ?? '').trim();
+      const w = String(p.whereValue ?? '').trim();
+      return f || w ? `change the items of the list ${v} where ${f ? `${f} is ` : 'the item is '}${val(p.whereValue)}` : `change every item of the list ${v}`;
+    }
     default:
       return `set ${v} to ${val(p.value)}${over}`;
   }

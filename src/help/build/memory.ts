@@ -42,8 +42,8 @@ shuffle(pairs.flatMap((p, i) => [{text: p.a, pair: i, state: "down"}, {text: p.b
 It makes two face-down cards from every pair, both with the pair's number, and shuffles all twelve. \`shuffle(list, seed)\` gives the same order for the same seed, so changing \`seed\` deals a new order and you can always get a deal back to test it.
 
 4. **Counter**, named \`moves\`.
-5. **List**, named \`ups\`. **Worked out**, with \`cards.map((c, i) => c.state == "up" ? i : -1).filter(i => i >= 0)\`, and tick **Keep up to date**. It is the positions of the cards that are face up right now.
-6. **Counter**, named \`matched\`. **Worked out**, with \`cards.filter(c => c.state == "matched").length / 2\`, and tick **Keep up to date**. It is how many pairs are found.
+5. **List**, named \`ups\`. **Worked out**, with \`positions(cards, "state", "up")\`, and tick **Keep up to date**. \`positions(list, field, value)\` gives the places of the items that match, so this is the positions of the cards that are face up right now.
+6. **Counter**, named \`matched\`. **Worked out**, with \`count(cards, "state", "matched") / 2\`, and tick **Keep up to date**. \`count(list, field, value)\` says how many items match, and each pair is two cards, so this is how many pairs are found.
 
 \`ups\` and \`matched\` are never set by hand. They follow \`cards\`, so the game state is all in one list.
 
@@ -97,17 +97,8 @@ Clicks are ignored while two cards are already up, and on a card that is not fac
 1. Drag from that node, find **Check a condition** and set **Condition** to \`ups.length == 2\`. Its **true** output runs when this was the second card up.
 2. Drag from **true**, find **Change a value or counter**: **Variable** **moves**, **Do** **Add to it**, **Value** \`1\`. Two cards turned is one move.
 3. Drag from that node, find **Check a condition** and set **Condition** to \`cards[ups[0]].pair == cards[ups[1]].pair\`: the two cards up belong to the same pair.
-4. From its **true** output, add **Change a value or counter**: **Variable** **cards**, **Do** **Set to**, **Value**:
-
-\`\`\`
-cards.map(c => c.state == "up" ? {...c, state: "matched"} : c)
-\`\`\`
-
-5. From its **false** output, add **Wait** with **Milliseconds** \`1000\`. Then, after the **Wait**, add **Change a value or counter**: **Variable** **cards**, **Do** **Set to**, **Value**:
-
-\`\`\`
-cards.map(c => c.state == "up" ? {...c, state: "down"} : c)
-\`\`\`
+4. From its **true** output, add **Change a value or counter**: **Variable** **cards**, **Do** **Change list items where a field is a value**, **Items where this field** \`state\`, **Is** \`"up"\`, **Field** \`state\`, **Value** \`"matched"\`. Every card that is face up becomes matched in one step.
+5. From its **false** output, add **Wait** with **Milliseconds** \`1000\`. Then, after the **Wait**, add **Change a value or counter** with the same settings, but **Value** \`"down"\`: every card that is face up turns back.
 
 Press **Read as sentences** above the graph to check the whole flow in words.
 
@@ -143,7 +134,8 @@ The **Wait** is the timer that turns cards back. For that second both cards are 
 - One **List** variable can hold a whole game's state, with **Worked out** variables that follow it.
 - \`shuffle(list, seed)\` deals the same order for the same seed, and **Put values back to the start** deals again.
 - A repeater shows a list with one layer, and one click flow serves every copy through \`event.index\`.
-- **Change one list item** turns one card; **Only if** and **Wait** make the two-card turn.
+- **Change one list item** turns one card, and **Change list items where a field is a value** changes every card that matches; **Only if** and **Wait** make the two-card turn.
+- \`count\` and \`positions\` read a list without an arrow function: \`count(cards, "state", "matched")\`.
 
 **Next:** [Word search and crossword from a word list](tutorial-wordgames) builds bigger grids from a list. More in [Repeated lists](repeaters), [Variables](variables#lists) and [Expressions](expressions#helpers).`,
   },
