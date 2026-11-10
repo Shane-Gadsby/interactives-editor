@@ -2058,7 +2058,9 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
           {choice !== FORMULA_ITEMS && <FormulaStatusLine status={itemsStatus} />}
           {choice === OWN_ITEMS && (
             <>
-              <ListTable label="Items" value={rep.items} onChange={(text) => update({ items: text })} jsonTitle="The items as JSON: an array of text or numbers, or of objects" />
+              <PropRow k="Items table" words={['items', 'table', 'rows', 'columns', 'type my own items', 'json']}>
+                <ListTable label="Items" value={rep.items} onChange={(text) => update({ items: text })} jsonTitle="The items as JSON: an array of text or numbers, or of objects" />
+              </PropRow>
               <div className="muted small">
                 In the layers inside, use <code>{itemExample(rep.items)}</code> for what each row holds.
               </div>
@@ -2127,7 +2129,7 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
                 />
               )}
               <div className="muted small">
-                In the layers inside, <code>isSelected</code> is true for a picked copy (and <code>item.selected</code> when the items are records). Bind a look to it, or use it in a By value table.
+                In the copies, <code>isSelected</code> is true for a picked one. Bind a look to it.
               </div>
             </>
           )}
