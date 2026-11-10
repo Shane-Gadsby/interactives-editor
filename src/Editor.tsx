@@ -1023,6 +1023,7 @@ export function Toolbar() {
     <IconButton
       key="image"
       reorderKey="image"
+      tour="tool-image"
       icon={<Icons.image />}
       title="Image"
       onClick={async () => {

@@ -35,9 +35,21 @@ const guided: { id: string; guide: Guide; finished: () => Project }[] = [
 ];
 
 describe('guided tutorials', () => {
-  it('covers the five Getting started tutorials and at least six Build it ones', () => {
+  it('covers the five Getting started tutorials and every Build it one', () => {
     for (const t of TUTORIALS.filter((x) => x.group === 'Getting started')) expect(Object.keys(TUTORIAL_GUIDES[t.id] ?? {}).length, t.id).toBeGreaterThan(0);
+    expect(BUILD_TUTORIALS.filter((b) => !b.guide).map((b) => b.topic.id)).toEqual([]);
     expect(BUILD_TUTORIALS.filter((b) => b.guide).map((b) => b.topic.id)).toEqual(expect.arrayContaining(['tutorial-mcq', 'tutorial-flipcards', 'tutorial-carousel', 'tutorial-branching', 'tutorial-progress', 'tutorial-sound']));
+  });
+
+  it('every Build it tutorial ticks a good share of its steps by itself, and every step it names has a check or a place to point at', () => {
+    for (const b of BUILD_TUTORIALS) {
+      const g = b.guide!;
+      const steps = stepsOf(topicBody(b.topic)).map((s) => s.n);
+      const checked = Object.keys(g).map(Number).filter((n) => g[n].check);
+      expect(checked.length, `${b.topic.id}: steps with a check`).toBeGreaterThanOrEqual(Math.ceil(steps.length / 3));
+      //a step with no check at least says where to look
+      for (const n of Object.keys(g).map(Number)) expect(g[n].check || targetsOf(g[n]).length, `${b.topic.id} step ${n}`).toBeTruthy();
+    }
   });
 
   it('only talks about steps the tutorial has, and about targets that exist', () => {
