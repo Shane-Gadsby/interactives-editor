@@ -124,6 +124,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Opens faster': [['interface', 'Opening the editor']],
   'Grid sizes, tick boxes and long dropdowns': [['auto-layout', 'until you leave the box or press Enter'], ['properties-panel', 'Hug height']],
   'Rename a variable everywhere': [['variables', 'Renaming a variable'], ['variables', 'Rename, leave scripts']],
+  'Build it tutorials and Concepts in the help': [['build-it', 'Just want to look?'], ['concepts', 'If something "does nothing"'], ['tutorial-mcq', 'Report result']],
   "Fonts load from StudyDesk's own server again": [['text', 'served from the same place as the editor']],
   "Saved values show in Preview's Debug panel straight away": [['interface', 'starting with any saved user data']],
   'Media Catalogue on the live StudyDesk site': [['media-catalogue', 'older **Photography catalogue**']],

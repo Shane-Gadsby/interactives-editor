@@ -307,5 +307,23 @@
 			"height": 600,
 			"background": "#ffffff"
 		}
+	},
+	{
+		"key": "tut-mcq",
+		"title": "Multiple choice question",
+		"description": "One multiple choice question with two tries, a hint, feedback for each wrong answer and a result reported when it finishes: the Multiple choice tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"question",
+			"quiz",
+			"score"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
 	}
 ]

@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Build it tutorials and Concepts in the help**: two new help sections. **Build it** has a step-by-step tutorial for each kind of activity people make, starting with a multiple choice question with scoring and feedback, and each one's finished project is on the Templates tab under Examples, Build it, to play or copy without doing the steps. **Concepts** explains the ideas that catch people out, starting with why nothing happens when you click a button on the canvas. More of both are on the way.
 - **Rename a variable everywhere**: renaming a variable in the Variables panel now renames it everywhere it's read: bindings, `{templates}`, expressions, formulas, repeaters, charts and instance inputs. Before, they all kept the old name and quietly stopped working. One Undo puts it all back. Scripts that mention it are listed first so you can choose whether they change too. Learners keep their saved values: a variable that remembers progress or saves user data still finds them under its old name.
 - **Fonts load from StudyDesk's own server again**: on the live site the fonts cache couldn't reach Google (the server has to go through the university's proxy), so every font request failed and pages fell back to fetching fonts from Google directly. It now goes through the proxy.
 - **Saved values show in Preview's Debug panel straight away**: variables kept as user data now show their saved values in **Variables (live)** as soon as Preview starts. Before, the panel showed the starting values until the first time one changed.

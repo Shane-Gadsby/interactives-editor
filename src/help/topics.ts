@@ -1,6 +1,8 @@
 import { nodeHeading, plainParam, pw } from '../lib/plain-words';
 import { ANIMATABLE_PROPS, CATALOG, DRAW_API, DRAW_TEMPLATES, PACKAGE_EXTENSION, SHADER_PRESETS, type NodeDef } from 'interactives-player';
 import { TUTORIALS } from './tutorials';
+import { BUILD_TOPICS } from './build';
+import { CONCEPT_TOPICS } from './concepts';
 
 export interface HelpTopic {
   id: string;
@@ -28,7 +30,7 @@ export const provideBrandedHelp = (fn: () => BrandedHelpSource): void => {
   brandedHelp = fn;
 };
 
-export const GROUPS = ['Getting started', 'Design', 'Web elements', 'Motion', 'Interactivity', 'Data', 'Import and export', 'Working together', 'Reference'];
+export const GROUPS = ['Getting started', 'Build it', 'Concepts', 'Design', 'Web elements', 'Motion', 'Interactivity', 'Data', 'Import and export', 'Working together', 'Reference'];
 
 export const TOPICS: HelpTopic[] = [
   // ---------------------------------------------------------------- getting started
@@ -115,6 +117,8 @@ Five short, hands-on tutorials, in order. Each has numbered steps you can follow
 4. [Importing a design file](tutorial-import-design): bring in a Photoshop, Illustrator, PDF, AutoCAD, Rive or Lottie file.
 5. [Publishing and sharing](tutorial-publish): export a single HTML file or make a share link.
 
+Then [Build it](build-it) has a tutorial for each kind of activity people make (a quiz question, flip cards, a branching story, a journal...), each with its finished project to open. When something behaves in a way you didn't expect, [Concepts](concepts) explains the ideas behind it.
+
 Prefer to start from something finished? The **Templates** tab on the projects page has built-in starters and example projects you can play and copy: see [Templates, examples and remix](templates). If you like to look around first, read [The editor at a glance](interface). If something isn't working as you expect, try [Troubleshooting and common questions](troubleshooting).
 
 ## How a project fits together
@@ -165,6 +169,8 @@ See [Using this help](help) for the detail.
 > Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`,
   },
   ...TUTORIALS,
+  ...BUILD_TOPICS,
+  ...CONCEPT_TOPICS,
   {
     id: 'projects',
     title: 'Projects page',

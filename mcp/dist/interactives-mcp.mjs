@@ -10367,6 +10367,177 @@ See [Embedding and the player API](embedding) for the iframe snippet, how the pa
 You've built, animated, wired up, imported and published. Keep going with the topics on the left. Good places to go next: [Timelines and keyframes](timelines), [Groups and frames](groups-frames), [Auto layout](auto-layout), [Data sources](data-sources) and [Troubleshooting and common questions](troubleshooting).`
   }
 ];
+const tutorial = {
+  order: 10,
+  level: "beginner",
+  minutes: 10,
+  example: "tut-mcq",
+  topic: {
+    id: "tutorial-mcq",
+    title: "A multiple choice question with scoring and feedback",
+    group: "Build it",
+    summary: "One question with four options, two tries, a hint, feedback for each wrong answer, and a result sent when it finishes.",
+    keywords: "tutorial multiple choice question quiz mcq options right answer feedback hint tries attempts score points result report pass mark check answer",
+    body: `You will make one multiple choice question: which planet is closest to the Sun? The learner gets two tries and a hint. Each wrong answer says why it is wrong, and when the question finishes its score is reported. It takes about ten minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Multiple choice question**. **Play** runs it and **Make my copy** gives you your own copy.
+
+You don't draw anything or wire anything by hand. **Add question** builds the whole card from ordinary layers, and the **Question** section of the Properties panel changes it.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Planet quiz** as the name and press **Create project**. The editor opens with one page called **Home**.
+
+## 2. Add the question
+
+1. In the tool bar down the left, find the **Web** group. It starts folded: click **Web** to open it.
+2. Click **Add question** and pick **Multiple choice (one answer)**.
+
+A card called **Question 1** appears on the page, already working: a prompt, four options, **Check answer**, **Hint**, **Try again**, a feedback line and a score. It is selected, and the **Question** section is open at the top of the Properties panel.
+
+## 3. Write the question
+
+In the **Question** section:
+
+1. Replace the **Prompt** with \`Which planet is closest to the Sun?\`
+2. Type the four options in the boxes under it, one per box: \`Venus\`, \`Mercury\`, \`Earth\`, \`Mars\`.
+3. Click the round button beside **Mercury**. It marks the one right answer (the help line above the options says **Mark the one right option**).
+4. Under each wrong option is a box saying **Feedback if chosen (optional)**. Type why it is wrong:
+   - Venus: \`Venus is second. It is the hottest, though, because of its thick air.\`
+   - Earth: \`Earth is third from the Sun.\`
+   - Mars: \`Mars is fourth, past Earth.\`
+5. Tick **Shuffle**, so the options come in a different order each time. The right answer is still Mercury wherever it lands.
+
+Need more options? **+ Add option** adds one, the arrows move one up or down, and **×** removes one.
+
+## 4. Tries, the hint and the feedback
+
+Still in the **Question** section:
+
+1. Under **Marking**, set **Tries** to **2**. After two wrong checks the question locks.
+2. Leave **Show the right answer when finished wrong** ticked, so a learner who runs out of tries sees Mercury marked.
+3. Under **Hints and feedback**, type a hint in **Hints**: \`It is also the smallest planet.\` Each press of **Hint** shows the next line, so you can give more than one.
+4. Change the feedback lines:
+   - **Right**: \`Right! Mercury goes round the Sun in just 88 days.\`
+   - **Wrong**: \`Not quite. You have one more try.\`
+   - **Out of tries**: \`The answer is Mercury, the smallest planet.\`
+
+An option's own feedback, from step 3, shows instead of **Wrong** when that option was picked.
+
+## 5. Report the result
+
+1. Near the bottom of the **Question** section, set **Report result** to **Complete, with the score**. When the question finishes (right, or out of tries) its score goes to the project's results.
+2. Click an empty part of the canvas, away from the page, so the Properties panel shows the project. Open **Results and progress**.
+3. Set **Score from** to **Total of all questions**. Tick **Pass mark** and set **Pass at** to **50**.
+
+With one question worth one point, getting it right is 100% and a pass.
+
+## 6. Try it
+
+1. Press **Preview** at the top right.
+2. Pick **Venus** and press **Check answer**. The Venus feedback shows and you have one try left.
+3. Press **Hint** to see the hint, then pick **Mercury** and check again. It says *Right!* and the score shows.
+4. Press **Try again** and get it wrong twice to see the question lock with Mercury marked.
+
+The **Variables (live)** list on the left of the Preview shows the question's own variables changing: \`q1_attempts\`, \`q1_correct\`, \`q1_score\` and the rest. Press <kbd>Esc</kbd> to close the Preview.
+
+> Preview remembers results and saved progress for this project in your browser. **Forget saved data** in Preview's bar starts you again as a new learner.
+
+## Make it yours
+
+The card is made of ordinary layers, so restyle it like anything else. The **Restyle a part** buttons at the bottom of the **Question** section select a part for you, such as the options or the buttons. Every option is one **Option** layer repeated, so restyling one restyles them all.
+
+## What you learned
+
+- **Add question** builds a working question; the **Question** section changes it without touching how it looks.
+- Each option can have its own feedback, and **Tries**, **Hints** and **Show the right answer** shape what a learner sees.
+- **Report result** and the project's **Results and progress** send the score.
+
+**Next:** more question types are in [Questions and quizzes](question-kit). To turn a list of questions into a quiz in one go, see [Pasting questions in](paste-questions). How results reach StudyDesk is in [Results and progress](results).`
+  }
+};
+const __vite_glob_0_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial
+}, Symbol.toStringTag, { value: "Module" }));
+const mods$1 = /* @__PURE__ */ Object.assign({ "./mcq.ts": __vite_glob_0_0$1 });
+const BUILD_TUTORIALS = Object.entries(mods$1).filter(([file]) => !/\/index\.ts$/.test(file)).map(([, m]) => m.tutorial).filter(Boolean).sort((a, b) => a.order - b.order || a.topic.title.localeCompare(b.topic.title));
+const LEVELS = ["beginner", "intermediate", "advanced"];
+const levelName = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" };
+const BUILD_IT_OVERVIEW = {
+  id: "build-it",
+  title: "Build it: tutorials by kind of activity",
+  group: "Build it",
+  summary: "Step-by-step tutorials for the things people make most: questions, cards, sliders, stories, games, journals and more, each with its finished project to open.",
+  keywords: "tutorial tutorials build how to make walkthrough step by step example finished project quiz question cards story game journal",
+  body: () => {
+    const lines = [
+      `Each tutorial builds one kind of activity from a blank project, one step at a time. Do [Tutorial 1](tutorial-first-animation) and [Tutorial 2](tutorial-first-interaction) first if you haven't used the editor before.`,
+      "",
+      `**Just want to look?** Every tutorial's finished project is on the projects page: open **Templates**, and under **Examples** find **Build it**. **Play** runs it, and **Make my copy** gives you your own copy to pull apart.`
+    ];
+    for (const level of LEVELS) {
+      const list = BUILD_TUTORIALS.filter((t2) => t2.level === level);
+      if (!list.length) continue;
+      lines.push("", `## ${levelName[level]}`, "");
+      for (const t2 of list) lines.push(`- [${t2.topic.title}](${t2.topic.id}), about ${t2.minutes} minutes. ${t2.topic.summary}`);
+    }
+    return lines.join("\n");
+  }
+};
+const BUILD_TOPICS = [BUILD_IT_OVERVIEW, ...BUILD_TUTORIALS.map((t2) => t2.topic)];
+const concept = {
+  order: 10,
+  area: "interface",
+  topic: {
+    id: "concept-canvas-vs-preview",
+    title: "The canvas shows the start; Preview runs it",
+    group: "Concepts",
+    summary: "Nothing happens on the canvas when you click a button: it shows every page as it starts. Events, timers, scripts and changing variables only run in Preview.",
+    keywords: "concept canvas preview edit play run does nothing not working click button nothing happens hidden ghost starting value initial binding changes run mode",
+    body: `The canvas is where you build. It draws every page **as it is when it starts**: each variable at its starting value, each timeline at its first frame, each data source as first loaded. Nothing on it runs. Clicking a button on the canvas selects the button; it doesn't press it.
+
+**Preview** (top right) is the project running, exactly as a learner gets it. Events fire, timers tick, scripts run and variables change.
+
+## Where people get caught out
+
+- **"My button does nothing."** On the canvas it never will. Press **Preview** and click it there.
+- **"I can't find the layer I hid."** A layer that starts hidden shows on the canvas as a faint ghost, so you can still see and select it. In Preview it is gone until something shows it.
+- **"My binding isn't working."** A binding on the canvas uses the starting values. If \`score\` starts at 0, the canvas shows what 0 looks like. To see other values, change the variable while Preview is running.
+- **"I changed the starting value and Preview didn't change."** Preview starts from the starting values once. Press **Restart** in Preview's bar to start it again with the new ones.
+- **"It worked in Preview but the canvas looks wrong."** The canvas shows the start, before any event has run. A layer an event moves on load, for example, is still where you drew it.
+
+## How to see what is going on
+
+- In Preview, the **Variables (live)** list on the left shows every variable as it changes, and you can set them by hand there.
+- The **Events** list under it records each event and the nodes it ran, and says why a click did nothing.
+- **Beside editor** in Preview's bar moves Preview up to the right, so the canvas and the **Interactions** graph stay in view. Nodes that ran light up green and the wires they followed pulse.
+
+**More:** [Preview](interface#preview), [Variables](variables), [Bindings](bindings).`
+  }
+};
+const __vite_glob_0_0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  concept
+}, Symbol.toStringTag, { value: "Module" }));
+const mods = /* @__PURE__ */ Object.assign({ "./edit-vs-play.ts": __vite_glob_0_0 });
+const CONCEPTS = Object.entries(mods).filter(([file]) => !/\/index\.ts$/.test(file)).map(([, m]) => m.concept).filter(Boolean).sort((a, b) => a.order - b.order || a.topic.title.localeCompare(b.topic.title));
+const CONCEPTS_OVERVIEW = {
+  id: "concepts",
+  title: "Concepts: the ideas behind the editor",
+  group: "Concepts",
+  summary: "Short explanations of the ideas that catch people out: what the canvas shows, variables and bindings, repeaters, auto layout, what gets clicked and more.",
+  keywords: "concepts ideas explain why confused does nothing not working understand how it works basics",
+  body: () => {
+    const lines = [
+      `Each of these is a few minutes' read: the idea, the ways people get caught out, and how to tell what is going on. If something "does nothing", start with the first one.`,
+      ""
+    ];
+    for (const c2 of CONCEPTS) lines.push(`- [${c2.topic.title}](${c2.topic.id}). ${c2.topic.summary}`);
+    return lines.join("\n");
+  }
+};
+const CONCEPT_TOPICS = [CONCEPTS_OVERVIEW, ...CONCEPTS.map((c2) => c2.topic)];
 const TOPICS = [
   // ---------------------------------------------------------------- getting started
   {
@@ -10452,6 +10623,8 @@ Five short, hands-on tutorials, in order. Each has numbered steps you can follow
 4. [Importing a design file](tutorial-import-design): bring in a Photoshop, Illustrator, PDF, AutoCAD, Rive or Lottie file.
 5. [Publishing and sharing](tutorial-publish): export a single HTML file or make a share link.
 
+Then [Build it](build-it) has a tutorial for each kind of activity people make (a quiz question, flip cards, a branching story, a journal...), each with its finished project to open. When something behaves in a way you didn't expect, [Concepts](concepts) explains the ideas behind it.
+
 Prefer to start from something finished? The **Templates** tab on the projects page has built-in starters and example projects you can play and copy: see [Templates, examples and remix](templates). If you like to look around first, read [The editor at a glance](interface). If something isn't working as you expect, try [Troubleshooting and common questions](troubleshooting).
 
 ## How a project fits together
@@ -10502,6 +10675,8 @@ See [Using this help](help) for the detail.
 > Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`
   },
   ...TUTORIALS,
+  ...BUILD_TOPICS,
+  ...CONCEPT_TOPICS,
   {
     id: "projects",
     title: "Projects page",
