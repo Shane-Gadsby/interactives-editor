@@ -46,7 +46,7 @@ function mindMapPage(p: Project, ab: Artboard) {
   ab.children.push(text('Title', 'Healthy study: select an idea to fold or open it', 40, 28, 720, { fontSize: 24, fontWeight: 700 }));
   variable(p, 'ideas', 'list', IDEAS);
   const folded = variable(p, 'folded', 'list', []);
-  variable(p, 'map', 'list', [], { formula: 'mindMap(ideas, {width: 720, height: 440, nodeW: 104, gapX: 40, collapsed: folded})', live: true });
+  variable(p, 'map', 'list', [], { formula: 'mindMap(ideas, {width: 720, height: 440, nodeW: 112, gapX: 32, collapsed: folded})', live: true });
 
   const idea = box('Idea', { fill: solid(C.pale) }, {
     'fill.color': `item.depth == 0 ? "${C.yellow}" : "${C.pale}"`,

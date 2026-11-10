@@ -43,7 +43,7 @@ Each idea has an \`id\`, its words in \`label\`, and the \`id\` of the idea it h
 4. Add a third **List** called \`map\`. Next to its type, change **Starts as a value** to **Worked out**, and type this formula in the box that appears:
 
 \`\`\`
-mindMap(ideas, {width: 720, height: 440, nodeW: 104, gapX: 40, collapsed: folded})
+mindMap(ideas, {width: 720, height: 440, nodeW: 112, gapX: 32, collapsed: folded})
 \`\`\`
 
 5. Tick **Keep up to date**, so \`map\` is worked out again whenever \`ideas\` or \`folded\` changes.
