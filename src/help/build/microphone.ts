@@ -25,7 +25,9 @@ Recordings stay on the learner's device, in the page, and are gone when they lea
 4. In **What it is used for**, type \`record your one minute talk so you can play it back and rate it\`. It finishes the sentence learners read before they are asked.
 5. Set **Longest recording (seconds)** to **90**, a little over the minute.
 
-The box under it, **What learners are asked**, shows the consent screen exactly as learners will see it, with its three buttons: **Continue**, **Not now** and **Do not use my microphone or camera**.
+Further down, the box headed **What learners are asked** shows the consent screen exactly as learners will see it, with its three buttons: **Continue**, **Not now** and **Do not use my microphone or camera**. Leave **No equal way to finish** empty: this activity still works without a microphone.
+
+![The Microphone and camera section: Microphone ticked, What it is used for filled in, Longest recording 90, and the consent screen learners will see.](help/tutorial-microphone-settings.png)
 
 ## 2. Two variables
 
@@ -57,6 +59,8 @@ recordings.talk.state == "recording" ? "Stop" : recordings.talk.hasRecording ? "
 
 **Start recording** has three outputs: **Recording** (it started), **Recorded** (it was pressed while recording, so it stopped) and **Could not start**.
 
+![Talk button's Properties: the Button label binding with its formula, and the Interactions section describing the whole chain in a sentence.](help/tutorial-microphone-talk-button.png)
+
 ## 5. The countdown
 
 1. Drag from **Recording** into empty space and choose **Countdown / clock**. Set **Variable** to **left**, **Do** to **Start**, **Counts** to **Down (seconds left)** and **Seconds** to \`60\`.
@@ -65,6 +69,8 @@ recordings.talk.state == "recording" ? "Stop" : recordings.talk.hasRecording ? "
 4. From the first countdown's **Time up** output, add **Stop recording** with **Recording name** \`talk\`. When the minute is up the take ends.
 
 The page around the project also shows a recording bar with its own **Stop**, which always works. To put the clock back when that is used too, add **When the microphone or camera is used** from **Search nodes** on the left, set **When** to **A recording is ready** and **Recording name** to \`talk\`, and join it to another **Countdown / clock** set to **Reset**.
+
+![The Interactions graph: the Talk button's click starts the recording, Recording and Could not start both start the countdown, Time up stops the recording, and a recording that is ready resets the clock. The Play button plays it back.](help/tutorial-microphone-graph.png)
 
 ## 6. Play it back
 
@@ -86,8 +92,13 @@ Select the slider and fill in **Text alternative** in its **Accessibility** sect
 
 1. Press **Preview**. Preview has a pretend microphone, since a real one needs the page the project is shared in.
 2. Press **Start my talk**. The clock counts down and the button says **Stop**. A small *Simulated microphone (Preview)* note shows while it records.
-3. Press **Stop**, then **Play it back** to hear the pretend take.
-4. Change the list above the preview from **Microphone and camera: Works** to **Microphone and camera: Denied by the learner**. Press **Start my talk** again: the clock still runs, and the status line says why nothing is recorded.
+3. Press **Stop**. The clock goes back to 60, the button says **Record again** and **Play it back** appears. Press it to hear the pretend take.
+
+![Preview while recording: the Simulated microphone (Preview) note at the top, the clock at 45 seconds left and the button saying Stop, with the Microphone and camera list in Preview's bar.](help/tutorial-microphone-preview.png)
+
+4. Change the **Microphone and camera** list in Preview's bar from **Microphone and camera: Works** to **Microphone and camera: Denied by the learner**. Press **Restart**, then **Start my talk**: the clock still runs, and the status line under the button says why nothing is recorded.
+
+![Preview with the microphone denied: the clock counting down anyway, and the status line explaining that the browser is not letting the page use the microphone.](help/tutorial-microphone-denied.png)
 
 To try your real microphone, share the project with **In a StudyDesk page, and keep learners' results** (see [Publishing and sharing](tutorial-publish)) and open it in the course. The plain share link can't use a microphone at all, and the StudyDesk page's iframe must have \`allow="microphone; camera"\`, which StudyDesk pages keep.
 

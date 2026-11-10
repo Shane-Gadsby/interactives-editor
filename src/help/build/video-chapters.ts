@@ -32,7 +32,7 @@ The video doesn't play on the editing canvas. It plays in **Preview**.
 
 ## 3. Captions
 
-Further down the **Video** section, under **Captions**, press **Import…** and pick your \`.vtt\` or \`.srt\` file. A message says how many captions came in. Type the language in **Language**, such as \`en\`.
+Further down the **Video** section, under **Captions** (below **Cue points** and **Chapters**), press **Import…** and pick your \`.vtt\` or \`.srt\` file. A message says how many captions came in. Type the language in **Language**, such as \`en\`.
 
 Captions are what is said, for learners who can't hear it or would rather read. If you don't have a file yet, come back to this step before you share it. See [Captions](captions).
 
@@ -47,6 +47,8 @@ Still in the **Video** section, under **Chapters**:
    - **75**, \`Read closely\`
 
 The video's own controls list the chapters in browsers that show them. The buttons you make next read the same list.
+
+![Clip selected, with its Video section: Cue points at 30 (q1) and 70 (q2), both ticked Pause the video here, then Chapters at 0, 35 and 75 with their titles, and Captions with Import… under them.](help/tutorial-video-chapters-cues.png)
 
 ## 5. Chapter buttons
 
@@ -92,7 +94,9 @@ Both cards fade to faint ghosts on the canvas, since \`question\` starts at 0. T
 1. Select **Clip**. In the **Video** section, under **Cue points**, press **Add a cue** twice.
 2. Set the first cue's **At** to **30** and **Name** to \`q1\`, and tick **Pause the video here**.
 3. Set the second to **70**, \`q2\`, and tick **Pause the video here**.
-4. In **Data bindings** on **Clip**, press **+ Add binding** and pick **Hold paused (it will not play while true)**. Press **Formula**, then **Edit as formula**, and type \`question > 0\`. While a question is open, nothing starts the video, not even its own play button.
+4. In **Data bindings** on **Clip**, press **+ Add binding** and pick **Hold paused (it will not play while true)**. Press **Formula**, then **Edit as formula**, and type \`question > 0\`. While a question is open, nothing starts the video, not even its own play button. (The formula pickers write the same thing: **Condition** **question**, **is more than**, **a number**, **0**.)
+
+![The Clip's Hold paused (it will not play while true) binding: Formula, with the Condition question is more than 0, currently false.](help/tutorial-video-chapters-hold-paused.png)
 
 Now show the question when a cue is reached:
 
@@ -119,6 +123,10 @@ Now show the question when a cue is reached:
 
 Setting \`question\` back to 0 hides the card and lets go of **Hold paused**. That happens on the next frame, which is what the short **Wait** is for: a **Play** any sooner is ignored.
 
+Press **Read as sentences** at the top right of the graph to check the flows in words.
+
+![The Interactions tab's Read as sentences view: when Clip reaches a cue point, set question to event.index + 1; when Continue is clicked, set question to 0, wait 0.04 s, then play Clip; and each chapter button going to its chapter's time, then playing.](help/tutorial-video-chapters-sentences.png)
+
 ## 10. Try it
 
 1. Press **Preview**. Press play on the video.
@@ -126,7 +134,7 @@ Setting \`question\` back to 0 hides the card and lets go of **Hold paused**. Th
 3. Answer it. **Continue the video** appears. Press it and the video carries on.
 4. Press a chapter button and the video jumps there. Drag the time bar past 70 seconds and no question shows: only playing across a cue counts. Drag back before it and it is ready again.
 
-The **Variables (live)** list on the left of the Preview shows \`question\` changing. Press <kbd>Esc</kbd> to close.
+The **Variables (live)** list on the left of the Preview shows \`question\` changing (press **Debug** in Preview's bar if you don't see it). Press <kbd>Esc</kbd> to close.
 
 ## Go further
 

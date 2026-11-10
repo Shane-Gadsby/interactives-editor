@@ -54,7 +54,9 @@ Click the **Forearm** glyph and look at the **Bone** section of the Properties p
 Every point gets weights from how close it is to each bone, and the pose the bones are in now becomes the **bind pose**. That is why you bind with the arm straight.
 
 3. Select **Forearm** again and set **Rotation** to 40. This time the outline bends at the elbow. Set it back to 0.
-4. Select **Arm** and look at **Weights of** in the **Skin** section. Pick a point near the elbow: it lists two bones with a weight each. Pick a point near the shoulder: only **Upper arm** pulls on it. You can change a weight here, or press **Auto** to work it out again.
+4. Select **Arm** and look at **Weights of** in the **Skin** section. Pick a point near the elbow: it lists two bones with a weight each. Pick a point near the shoulder: only **Upper arm** pulls on it. You can change a weight here, or press **Auto** to work it out again. Once the arm is bound, the section says what it is bound to and offers **Re-bind** and **Remove skin** instead of the bind button.
+
+![The Layers panel with Hand inside Forearm inside Upper arm, the bound arm on the canvas, and Arm's Skin section: Bound to 3 bones, Re-bind, Remove skin, and Weights of Point 1 pulled by Upper arm.](help/tutorial-bones-skin.png)
 
 > Move the rig, not the arm. A bound outline follows its bones, not its own position, so to move the whole arm drag **Upper arm** by its round base.
 
@@ -76,6 +78,8 @@ An **IK** (inverse kinematics) constraint turns a chain of bones so the tip of t
 
 The arm bends on the canvas straight away, reaching for the dot. If the elbow points the wrong way, tick **Bend the other way**. Drag the dot somewhere out of reach and the arm straightens towards it.
 
+![Hand selected in Layers, the arm bent towards the orange dot, and Hand's Constraints section: Type IK (reach a target), Target Target, Chain bones 3, Bend the other way, and Strength 1.](help/tutorial-bones-ik.png)
+
 **Strength** (at the bottom of the constraint) mixes the IK with the bones' own rotations: 1 is all IK, 0 is all the rotations you set. You'll animate it next.
 
 ## 7. Key a wave
@@ -91,6 +95,10 @@ A timeline can pose bones like any other layer. While the IK is at full strength
 7. At the end, **2000 ms**, set **Hand**'s **Strength** to **1**, and **Rotation** to **0** on **Upper arm** and **Forearm**.
 8. Press **Record** again to switch it off, then press the **Play preview** triangle. The arm lifts, waves twice, and swings back to the dot.
 
+![The Wave timeline: keys on Hand's Constraint strength and Upper arm's Rotation at 0, 300, 1700 and 2000 ms, and on Forearm's Rotation at each swing of the wave.](help/tutorial-bones-wave.png)
+
+In the timeline the Hand's track is called **Constraint strength**.
+
 ## 8. Add the Wave button and the words
 
 1. Press <kbd>B</kbd> for the **Button** tool and draw a button under the arm. Change **Label** to **Wave** and **Name** to **Wave button**.
@@ -102,7 +110,9 @@ A timeline can pose bones like any other layer. While the IK is at full strength
 1. Press **Preview** at the top right. The bones are gone; only the arm, the dot, the button and the words show.
 2. Drag the orange dot round the page. The arm follows it, bending at the elbow and the wrist.
 3. Press **Wave**. The arm waves, then reaches for the dot again wherever you left it.
-4. Press <kbd>Tab</kbd> until the dot is focused and move it with the arrow keys. The arm follows the keyboard too.
+4. Press <kbd>Tab</kbd> until the dot is focused, press <kbd>Space</kbd> to pick it up, move it with the arrow keys and press <kbd>Space</kbd> to drop it. The arm follows the keyboard too.
+
+![Preview with the orange dot dragged up to the words at the top: the arm stretches straight towards it, and the Screen reader strip says Orange dot, the arm reaches for it dropped.](help/tutorial-bones-preview.png)
 
 Press <kbd>Esc</kbd> to close the Preview.
 

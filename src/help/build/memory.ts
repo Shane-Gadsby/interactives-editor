@@ -33,7 +33,7 @@ Open the **Variables** tab and add these, in this order, with **+ Add variable**
 \`\`\`
 
 2. **Counter**, named \`seed\`. It stays at 0.
-3. **List**, named \`cards\`. Change **Starts as a value** to **Worked out** and type this formula:
+3. **List**, named \`cards\`. In its **Value** column change **Starts as a value** to **Worked out**, and type this formula in the new box under the \`[]\`:
 
 \`\`\`
 shuffle(pairs.flatMap((p, i) => [{text: p.a, pair: i, state: "down"}, {text: p.b, pair: i, state: "down"}]), seed)
@@ -60,8 +60,13 @@ It makes two face-down cards from every pair, both with the pair's number, and s
 
 \`item\` is the card each copy shows. Face down it says **?**; face up it shows its word.
 
+![Cards selected: on the canvas twelve gold cards in three rows of four, and its Repeat (list) section with Items cards, currently 12 items, Layout Grid, Gap 12 and Cols 4.](help/tutorial-memory-grid.png)
+
 5. Still on **Card**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **Formula** and type \`item.state == "down" ? "#f6c344" : item.state == "matched" ? "#bfe5c4" : "#ffffff"\`. Down cards are gold, matched ones green, turned ones white.
 6. Add one more binding: **Text alternative**, **Formula**, \`"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text)\`, so a screen reader hears more than a question mark.
+
+The line under these bindings warns *There is no value called item* (or *index*). Take no notice: the editor doesn't yet know a repeated layer has \`item\` and \`index\`, and the cards work in Preview.
+
 7. Above the frame, add two text layers: \`Moves: {moves}\` and \`Pairs found: {matched} of {pairs.length}\`.
 
 ## 4. Deal when the page opens
@@ -104,6 +109,10 @@ cards.map(c => c.state == "up" ? {...c, state: "matched"} : c)
 cards.map(c => c.state == "up" ? {...c, state: "down"} : c)
 \`\`\`
 
+Press **Read as sentences** above the graph to check the whole flow in words.
+
+![Read as sentences: When Card is clicked, only if ups.length < 2 and the card is down, then change an item of the list cards, then check whether ups.length is 2, and the match and miss branches under it; below it the deal when the page is shown and the win when matched changes.](help/tutorial-memory-sentences.png)
+
 The **Wait** is the timer that turns cards back. For that second both cards are up, so \`ups.length\` is 2 and the **Only if** from step 5 holds every other click.
 
 ## 7. Win, and play again
@@ -118,7 +127,10 @@ The **Wait** is the timer that turns cards back. For that second both cards are 
 1. Click an empty part of **Memory** and press **Preview**.
 2. Turn two cards that don't match. They stay up for a second and turn back; **Moves** says 1. Try clicking a third card while two are up: nothing happens.
 3. Find a pair. Both turn green and stay.
-4. In **Variables (live)**, open \`cards\` to watch the states change as you play. Find every pair to reach **Well done**, then press **Play again** for a new deal.
+
+![Preview mid-game: Puppy and Dog matched in green, Kitten and Foal turned up in white, Moves 3, Pairs found 1 of 6, and ups holding 4 and 9 in Variables (live).](help/tutorial-memory-preview.png)
+
+4. In **Variables (live)** (press **Debug** in Preview's bar if it isn't showing), watch \`cards\`, \`ups\` and \`matched\` change as you play. Find every pair to reach **Well done**, then press **Play again** for a new deal.
 
 ## Make it yours
 

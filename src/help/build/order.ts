@@ -24,17 +24,21 @@ On the projects page press **New project**. Keep **Blank project**, type **Make 
 1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
 2. Click **Add question** and pick **Put in order**.
 
-A card called **Question 1** appears with four steps of the water cycle, each with **↑** and **↓** buttons. It is selected and the **Question** section is open in the Properties panel.
+A card called **Question 1** appears with a sample prompt and four steps of the water cycle (Evaporation, Condensation, Precipitation, Collection), each with **↑** and **↓** buttons. It is selected and the **Question** section is open in the Properties panel.
 
 ## 3. Write the steps in the right order
 
 The list in the **Question** section is always the **right** order. The learner never sees it that way: **Shuffle** is ticked, so the steps are dealt in a different order each time, and never already right.
 
 1. Replace the **Prompt** with \`Put the steps for making a cup of tea in order.\`
-2. Change the four items to the first four steps, in order: \`Boil the water\`, \`Put a tea bag in the cup\`, \`Pour the hot water in\`, \`Let it brew for three minutes\`.
-3. Press **+ Add item** and type \`Take the tea bag out\`. Press it again and type \`Add milk if you like\`.
+2. Type over the four sample items with the first four steps, in order: \`Boil the water\`, \`Put a tea bag in the cup\`, \`Pour the hot water in\`, \`Let it brew for three minutes\`.
+3. Press **+ Add item** and type \`Take the tea bag out\` in the new, empty box. Press it again and type \`Add milk if you like\`.
 
-The arrows beside an item move it earlier or later in the list, which changes the right order. **×** removes an item.
+The arrows beside an item move it earlier or later in the list, which changes the right order. **×** removes an item. The canvas already shows the steps shuffled.
+
+![The canvas and the Question section: the six tea steps in the right order in the panel, and shuffled on the card.](help/tutorial-order-items.png)
+
+Six steps make the card taller than the 800 × 600 page, so the buttons would be cut off in Preview. Click **Home** at the top of the **Layers** panel to select the page, and make **H** bigger in the **Page** section, such as \`700\`.
 
 ## 4. Marking, hints and feedback
 
@@ -51,18 +55,22 @@ The arrows beside an item move it earlier or later in the list, which changes th
 
 The steps are one **Item** layer repeated once for each step, so changing that one layer changes all six.
 
-1. At the bottom of the **Question** section, under **Restyle a part**, press **Option**. It selects the Item layer.
-2. In the **Frame** section set **Radius** to **26**. Every step becomes a pill.
-3. Press **Question 1** in the **Layers** panel to go back, and under **Restyle a part** press **Option text**. Set its **Weight** to **600**. Every step's words become bolder.
+1. At the bottom of the **Question** section, under **Restyle a part**, press **Option**. It selects the layer called **Item**.
+2. In the **Frame** section, type **26** in one of the four corners under **Radius**. They are locked together, so all four change and every step becomes a pill.
+3. Press **Question 1** in the **Layers** panel to go back, and under **Restyle a part** press **Option text**. It selects the layer called **Label**. Set its **Weight** to **600**. Every step's words become bolder.
+
+![The Item layer selected in the Layers panel, every step on the card turned into a pill, and the four Radius corners set to 26 in the Frame section.](help/tutorial-order-restyle.png)
 
 Leave the fill colour alone: it is set by the question, so a step can turn green or red when it is marked. Change the font, size, radius, padding and shadow as much as you like.
 
 ## 6. Try it
 
 1. Press **Preview** at the top right. The steps are shuffled.
-2. Move them with **↑** and **↓** until you think they are right, and press **Check answer**. If some are out of place the **Partly right** feedback shows.
+2. Move them with **↑** and **↓** until you think they are right, and press **Check answer**. If some are out of place the **Partly right** feedback shows (or **Wrong**, if none are in their place).
 3. Now use the keyboard: press <kbd>Tab</kbd> until a **↑** or **↓** button is outlined (a screen reader hears *Move Boil the water up*), and press <kbd>Enter</kbd> or <kbd>Space</kbd> to move that step.
-4. Check again with a step still out of place. That was the last try: the steps jump into the right order, the ones you had in the wrong place are marked, and the score shows how many you had right.
+4. Check again with a step still out of place. That was the last try: the steps jump into the right order, the ones you had in the right place say *✓ Right*, the ones you had wrong say *← Right answer*, and the score shows how many you had right.
+
+![Out of tries: the steps in the right order, the first four marked Right in green, the last two marked Right answer in orange, the Out of tries line, Try again and Score: 4.](help/tutorial-order-finished.png)
 
 **Try again** deals the steps again. Press <kbd>Esc</kbd> to close the Preview.
 

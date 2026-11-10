@@ -46,7 +46,9 @@ This is JSON. \`title\`, \`intro\` and \`footer\` are single values; \`cards\` i
 2. Open the **Data** tab at the bottom. If it isn't there, press **More panels** at the right of the bottom tabs and choose **Data**.
 3. Press **+ From file** and pick \`tips.json\`.
 
-The file is uploaded, and a data source called **tips** (from the file's name) appears in the list with a **json** badge. Pick it. On the left, **Name** says \`tips\` and **From** says **Uploaded file**. On the right, the file opens in its **Form** view: **Title**, **Intro**, a card for each of the four tips, and **Footer**.
+The file is uploaded, and a data source called **tips** (from the file's name) appears in the list with a **json** badge. Pick it. On the left, **Name** says \`tips\`, **Format** says **JSON** and **From** says **Uploaded file**. On the right, the file opens in its **Form** view: **Title**, **Intro**, a card for each of the four tips, and **Footer**.
+
+![The Data tab with tips picked: Name tips, Format JSON, From Uploaded file and File tips.json on the left, and the Form view on the right with Title, Intro and the four cards, the first one open.](help/tutorial-data-source-form.png)
 
 ## 3. Words from the file
 
@@ -71,6 +73,8 @@ The cards are a **repeater**: you design one card, and it is copied once for eac
 
 Four cards appear, two by two, each with its own tip. Inside a repeated layer, \`item\` is the item it was copied for, so \`{item.title}\` is that card's title. Change the card you drew (its size, its font) and every copy follows.
 
+![The Cards frame selected, with four cards two by two on the canvas, and its Repeat (list) section: Items tips.cards, currently 4 items, Layout Grid, Gap 16 and Cols 2.](help/tutorial-data-source-repeat.png)
+
 ## 5. A colour from the file
 
 The words aren't the only thing a file can hold. Each card has a \`colour\` too.
@@ -79,7 +83,9 @@ The words aren't the only thing a file can hold. Each card has a \`colour\` too.
 2. In the Properties panel find **Data bindings** and press **+ Add binding**. Type \`fill\` and choose **Fill colour**.
 3. Press **Formula** and type \`item.colour\`, then press <kbd>Enter</kbd>.
 
-Each card now takes its colour from its own line in the file. A **binding** ties any property to an expression in the same way: the position, the size, whether it shows.
+Each card now takes its colour from its own line in the file. The binding may say *There is no value called item* and *item is not defined* under the formula. Inside a repeated layer that warning is wrong: the cards on the canvas still show their colours.
+
+![Card background selected, with a Fill colour binding set to the Formula item.colour, and the wrong warning that there is no value called item under it.](help/tutorial-data-source-binding.png) A **binding** ties any property to an expression in the same way: the position, the size, whether it shows.
 
 ## 6. Change the words in the editor
 
@@ -98,6 +104,8 @@ This is the point of it: a new version is a new file, not an edit of every layer
 1. In your text editor, change \`tips.json\`: a new title, new tips, other colours. Keep the same field names (\`title\`, \`intro\`, \`cards\` with \`title\`, \`text\` and \`colour\`, and \`footer\`). Save it as \`tips-term2.json\`.
 2. Open the **Assets** tab on the left and find **tips.json**.
 3. Press the arrow on it (its tooltip says **Replace with a new version of the file**) and pick \`tips-term2.json\`.
+
+![The Assets tab with tips.json, and the tooltip of its arrow button: Replace with a new version of the file.](help/tutorial-data-source-replace.png)
 
 The page shows the new words at once. Everything that used the old file now uses the new one, and one **Undo** puts the old one back.
 

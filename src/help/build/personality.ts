@@ -57,9 +57,16 @@ An answer that fits Planner best might also fit Collaborator a little. So each a
 
 Press **Read as sentences** above the graph: each answer should read as two counters and a page change.
 
+![Read as sentences on Question 3: When Answer 1 is clicked, then add 2 to planner, then add 1 to collaborator, then go to the page a formula names, and the same pattern for Answer 2 and Answer 3.](help/tutorial-personality-sentences.png)
+
+This picture is of **Question 3** once step 8 is done, so its last line says *the page a formula names*; on **Question 1** it says *go to the next page*.
+
 ## 5. Copy the page for the other questions
 
-1. Right-click the name **Question 1** above the page and choose **Duplicate**. The copy, **Question 2**, has the same layers and the same interactions, already joined to its own buttons.
+1. Right-click the name **Question 1** above the page on the canvas and choose **Duplicate**. The copy, **Question 2**, has the same layers and the same interactions, already joined to its own buttons.
+
+![The menu for the page Question 1, opened by right-clicking its name: Group pages…, Tidy up pages, Make this a master, Link colours to tokens…, Place in…, Duplicate and Delete page.](help/tutorial-personality-duplicate.png)
+
 2. Duplicate **Question 1** once more for **Question 3**.
 3. Change the words on the copies. Keep the order: Planner first, Explorer second, Collaborator third.
 
@@ -86,13 +93,15 @@ Ideas for the words: a Planner likes a clear schedule; an Explorer follows their
 ## 7. Pick the highest
 
 1. In the **Variables** tab press **+ Add variable**, pick **Text** and name it \`result\`.
-2. Change **Starts as a value** to **Worked out** and type:
+2. In its **Value** column change **Starts as a value** to **Worked out**, and type this in the formula box that appears:
 
 \`\`\`
 planner >= explorer && planner >= collaborator ? "You are a Planner" : explorer >= collaborator ? "You are an Explorer" : "You are a Collaborator"
 \`\`\`
 
 3. Tick **Keep up to date**.
+
+![The Variables tab: planner, explorer and collaborator as Number (counter, score) starting at 0, and result as Text, Worked out, with its formula, currently You are a Planner, and Keep up to date ticked.](help/tutorial-personality-variables.png)
 
 \`result\` is now the name of the result page with the highest tally. Ties go to the one asked about first: Planner, then Explorer.
 
@@ -104,7 +113,9 @@ On **Question 3**, open the **Interactions** tab. Each answer's last node is a *
 
 1. Select **Question 1** and press **Preview**.
 2. Pick the first answer every time. You land on **You are a Planner**, with 6 Planner points and 3 Collaborator points.
-3. Press **Take it again** and try a mix. Watch the tallies and \`result\` in **Variables (live)** as you go. Press <kbd>Esc</kbd> to close.
+3. Press **Take it again** and try a mix. Watch the tallies and \`result\` in **Variables (live)** as you go (press **Debug** in Preview's bar if it isn't showing). Press <kbd>Esc</kbd> to close.
+
+![Preview on You are an Explorer after a mix of answers: Your points: Planner 1, Explorer 4, Collaborator 4, and Take it again. Explorer and Collaborator tie, so the one asked about first wins.](help/tutorial-personality-preview.png)
 
 ## Make it yours
 

@@ -48,7 +48,7 @@ The script reads one variable and writes another.
 
 ## 3. Write the script
 
-1. Open the **Scripts** tab at the bottom of the window and press **+ New script**. It starts with a short example.
+1. Open the **Scripts** tab at the bottom of the window and press **+ New script**, under the list of scripts on the left. It starts with a short example.
 2. In the box at the top of the code, rename it **Close enough**.
 3. Untick **Run on start**. A script that runs on start runs once, when the player starts, which suits code that sets up \`ix.on\` handlers. This one should run each time **Check** is pressed, so the graph will run it.
 4. Select all of the example code and replace it with this:
@@ -74,6 +74,8 @@ ix.vars.distance = row[target.length];
 
 \`ix\` is the player: \`ix.vars.answer\` reads a variable and \`ix.vars.distance = ...\` sets one. The column on the right of the Scripts tab lists the rest of the **ix API**. Everything saves as you type.
 
+![The Scripts tab: Close enough in the list on the left, its name and Run on start unticked above the code, and the sandbox note and ix API on the right.](help/tutorial-script-scripts-tab.png)
+
 ## 4. Turn the number into words
 
 The script doesn't write any feedback. The words live on the page, where anyone can change them without reading code.
@@ -85,13 +87,17 @@ The script doesn't write any feedback. The words live on the page, where anyone 
 distance < 0 ? "" : distance == 0 ? "Right! Ganymede is the largest moon in the solar system." : distance <= 2 ? "Right, nearly. It is spelt Ganymede." : "Not quite. Try again."
 \`\`\`
 
-The grey line under it works the formula through with \`distance\` at -1, so the text is empty for now.
+The lines under it work the formula through with \`distance\` at -1: *currently empty text*.
+
+![Feedback's Data bindings section: a Text binding set to Formula, the start of the formula, and currently empty text under it.](help/tutorial-script-binding.png)
 
 ## 5. Run the script from the graph
 
 1. Select **Check**. In its **Interactions** section press **+ On click (empty)**, then open the **Interactions** tab at the bottom. A **When clicked or hovered** node is there, with **Layer: Check** and **Event: Click / tap**.
 2. Drag from the dot on its right edge into empty space and let go. In the **Add and connect** menu type \`script\` in **Find a node…** and pick **Run script**.
 3. Click the new **Run script** node and set **Script** to **Close enough**.
+
+![The Interactions graph: Check's When clicked or hovered node joined to a Run script node, with Script set to Close enough in its settings on the right.](help/tutorial-script-run-script.png)
 
 **Read as sentences** now says the Check button runs the script \`Close enough\`. For a line or two of code you don't need a whole script: a **Run code** node holds the code in the node itself. A named script is easier to find, and several flows can run the same one.
 
@@ -107,6 +113,8 @@ Leave it ticked. Untick it only for code you trust that needs the page itself (\
 2. Type \`Ganymede\` and press **Check**. It says *Right!*
 3. Type \`ganimede\` and check again: *Right, nearly.* Then try \`Callisto\`: *Not quite.*
 4. Watch \`distance\` in the **Variables (live)** list on the left of the Preview as you check. Press <kbd>Esc</kbd> to close the Preview.
+
+![Preview after checking ganimede: Right, nearly. It is spelt Ganymede, with answer and distance 1 in Variables (live) and Run script in the events list.](help/tutorial-script-preview.png)
 
 > If nothing happens when you check, look in Preview's event list: an error in a script is shown there, with the line it was on. A typing slip in the code is the usual cause.
 

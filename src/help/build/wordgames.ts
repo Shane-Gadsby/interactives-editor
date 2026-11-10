@@ -25,6 +25,8 @@ Building a word search from a blank page means a few dozen nodes and formulas, s
 2. Pick a colourway, find **Word search** under **Games and puzzles** and press **Use template**.
 3. Type **Water cycle word search** in **Name of your new project** and press **Create project**.
 
+![The Games and puzzles row of the branded starters: Crossword, Word search, Arithmetic quiz and Guess the answer, each with Play and Use template.](help/tutorial-wordgames-starters.png)
+
 A checklist opens beside the project. You will do its main job in the next step, and can tick items off as you go.
 
 ### 2. Type your words
@@ -49,6 +51,8 @@ Find \`rows\` in the **Variables** tab. It says **Worked out**, its formula is \
 - The same words and seed always make the same grid. Leave the seed out and it is 7. Change the formula to \`wordSearch(words, 12, 3)\` for the same words in another arrangement, and try a few numbers until you like one.
 - A word longer than 12 letters can't fit and is left out. Keep to about eight words: the **Words to find** list has room for eight.
 
+![The Variables tab: words is a List that starts as a value, and rows is Worked out with the formula wordSearch(words, 12) and Keep up to date ticked.](help/tutorial-wordgames-variables.png)
+
 ### 4. A repeater in a grid
 
 1. On **Find the words**, select **Grid** in the **Layers** panel.
@@ -62,6 +66,8 @@ That joins the twelve rows into one run of 144 letters and makes an item for eac
 
 3. Select **Letter square**, the one layer inside **Grid**. It is copied 144 times. Its text layer, **Letter**, says \`{item.l}\`. Its **Data bindings** colour it: \`line.includes(index)\` for the squares being chosen, \`foundCells.includes(index)\` for words already found.
 4. **Grid** also has **Keyboard navigation** on: the whole grid is one stop for <kbd>Tab</kbd>, the arrow keys move between squares, and <kbd>Enter</kbd> chooses one.
+
+![Grid selected on Find the words: its Repeat (list) section with the Items formula, 144 items, Layout Grid and Cols 12, and Keyboard navigation in Grid mode.](help/tutorial-wordgames-grid-repeat.png)
 
 To restyle the squares, restyle **Letter square** once: every copy follows.
 
@@ -88,7 +94,9 @@ Find the **When a message arrives** node for \`try\` (its **Note** says *Is it o
 
 ### 7. Try it
 
-Press **Preview**, then **Start**. Drag across a word: it turns green and is struck off the list. Click the first and last letters of another. With the keyboard, use the arrows and <kbd>Enter</kbd> on the first and last letter. Watch \`start\`, \`end\`, \`line\` and \`hit\` in **Variables (live)** as you choose. Press <kbd>Esc</kbd> to close.
+Press **Preview**, then **Start**. Drag across a word: it turns green and is struck off the list. Click the first and last letters of another. With the keyboard, use the arrows and <kbd>Enter</kbd> on the first and last letter. Watch \`start\`, \`end\`, \`line\` and \`hit\` in **Variables (live)** as you choose (press **Debug** in Preview's bar if you don't see it). Press <kbd>Esc</kbd> to close.
+
+![Preview after dragging across EVAPORATE: its squares are ringed in green, it is struck off the Words to find list, Found 1 of 8, and the Debug panel shows found, foundCells, start and end.](help/tutorial-wordgames-found.png)
 
 ## Part 2: the crossword
 
@@ -128,6 +136,8 @@ Press **Preview**, then **Start**. Drag across a word: it turns green and is str
 ### 11. Try it
 
 Press **Preview** and **Start**. Click a clue, type the answer, and press **Check letters**. Click a square twice to switch between across and down.
+
+![The crossword in Preview after Check letters: EVAPORATE across is green, SLOW typed for 1 down has its wrong L marked red, and the line under the clue says 1 letter is wrong.](help/tutorial-wordgames-crossword.png)
 
 ## Make it yours
 

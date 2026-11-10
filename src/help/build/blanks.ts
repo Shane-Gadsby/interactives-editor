@@ -26,7 +26,7 @@ On the projects page press **New project**. Keep **Blank project**, type **Scien
 1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
 2. Click **Add question** and pick **Fill in the blank**.
 
-A card called **Question 1** appears with one gap, *The capital of France is*, that accepts *Paris*. It is selected and the **Question** section is open in the Properties panel. Leave **Answer by** on **Typing**.
+A card called **Question 1** appears with a sample prompt, *Complete the sentence.*, and one gap, *The capital of France is*, that accepts *Paris*. It is selected and the **Question** section is open in the Properties panel. Leave **Answer by** on **Typing**.
 
 ## 3. Write the gaps
 
@@ -43,7 +43,7 @@ the Pacific
 
 Any one line is right. Capital letters and extra spaces are ignored, so *pacific  ocean* counts too.
 
-**Gap 2: a near number.** Press **+ Add blank**. In **Blank 2** type \`Light from the Sun reaches Earth in about this many minutes:\` and in **Accepted answers** type \`8.3\`. Set **± Tolerance** to **0.5**. A number is compared as a number, so *8*, *8.5* and *8.30* all count, and *9* does not.
+**Gap 2: a near number.** Press **+ Add blank** (under the last gap). The new gap says *Answer 2*: type over it. In **Blank 2** type \`Light from the Sun reaches Earth in about this many minutes:\` and in **Accepted answers** type \`8.3\`. Set **± Tolerance** to **0.5**. A number is compared as a number, so *8*, *8.5* and *8.30* all count, and *9* does not.
 
 **Gap 3: a pattern.** Press **+ Add blank**. In **Blank 3** type \`Plants take in this gas from the air:\` and give it two lines of accepted answers:
 
@@ -53,6 +53,8 @@ carbon dioxide
 \`\`\`
 
 A line written between slashes is a pattern. This one accepts *carbon dioxide* or *CO2*: \`^\` and \`$\` mean the whole answer, \`|\` means or, \`\\s+\` is any number of spaces, and the \`i\` at the end ignores capitals. Keep the plain line first: it is what the learner is shown if the gap is revealed, and a pattern has nothing to show.
+
+![The canvas and the Question section: the prompt, then Blank 1 with three accepted answers, Blank 2 with 8.3 and a tolerance of 0.5, and Blank 3 with a plain line and a pattern.](help/tutorial-blanks-gaps.png)
 
 **Gap 4: capitals count.** Press **+ Add blank**. In **Blank 4** type \`The chemical symbol for sodium is\` and accept \`Na\`. Tick **Match case**, so *NA* and *na* are wrong.
 
@@ -69,23 +71,33 @@ The **×** beside a blank removes it.
    - **Out of tries**: \`Out of tries. Each gap you missed shows its answer.\`
 4. Leave **Show the right answer when finished wrong** ticked. When the tries run out, each wrong gap shows *Accepted answer:* and the first plain line of its answers.
 
+![Marking with Points 4, Tries 2 and Part marks ticked, and Hints and feedback filled in: two hints and the Right, Wrong, Partly right and Out of tries lines.](help/tutorial-blanks-marking.png)
+
 While the learner still has a try left, the feedback only says how it went overall. Which gaps are right is not shown until the question finishes, so a learner can't find the answers by changing one gap at a time.
 
 ## 5. A tip for one gap
 
 When the question finishes, it marks each gap on its own: the box of a right gap turns green and a wrong one red. You can use that to show a tip under one gap only.
 
-1. Press <kbd>T</kbd> for the **Text** tool and click on the page below the card. Type \`Tip: it is the gas you breathe out. CO2 is accepted too.\` and press <kbd>Escape</kbd>. Name the layer **Gap 3 tip**.
-2. In the **Layers** panel, open **Question 1** and then **Blanks** with their arrows. Drag **Gap 3 tip** onto the middle of the **Blank 3** row, so it goes inside it. It now sits under the third gap.
-3. With **Gap 3 tip** selected, find **Data bindings** in the Properties panel and press **+ Add binding**. Pick **Visible**, choose **Formula** and type \`q1_items[2]?.state == "wrong"\`.
+1. Press <kbd>T</kbd> for the **Text** tool and click on the page below the card. Type \`Tip: it is the gas you breathe out. CO2 is accepted too.\` and press <kbd>Escape</kbd>. The layer is called **Text**: change its **Name**, at the top of the **Layer** section, to **Gap 3 tip**.
+2. In the **Layers** panel, open **Question 1** and then **Blanks** with their arrows. Drag **Gap 3 tip** onto the middle of the **Blank 3** row, so it goes inside it. It now sits inside **Blank 3**, at the top of its rows, and shows under the third gap.
+3. With **Gap 3 tip** selected, open **Data bindings** in the Properties panel and press **+ Add binding**. Pick **Visible** from the list (typing *vis* finds it), then choose **Formula**. Visible offers pickers for a condition first: press **Edit as formula** and type \`q1_items[2]?.state == "wrong"\` in **Condition**.
 
-\`q1_items\` is the question's list of gaps, counted from 0, so \`[2]\` is the third. Its \`state\` is *correct* or *wrong* once the question has finished. The tip disappears from the canvas, because nothing has been marked yet.
+\`q1_items\` is the question's list of gaps, counted from 0, so \`[2]\` is the third. Its \`state\` is *correct* or *wrong* once the question has finished. The tip disappears from the canvas, because nothing has been marked yet. The binding says *currently false*.
+
+![Gap 3 tip inside Blank 3 in the Layers panel, and its Visible binding set to a formula on the third gap's state being wrong, currently false.](help/tutorial-blanks-tip.png)
 
 ## 6. Try it
 
 1. Press **Preview** at the top right.
 2. Type \`pacific ocean\`, \`8\`, \`Carbon dioxide\` and \`NA\`, then press **Check answer** (or <kbd>Enter</kbd> in any gap). The **Partly right** feedback shows: three are right, and *NA* is wrong because **Match case** is on.
+
+![Preview after the first check: the four answers typed, the Partly right line in red, and the Debug panel's live variables showing one try left and a score of 3.](help/tutorial-blanks-preview-partly.png)
+
 3. Change the last gap to \`Na\` and the third to \`oxygen\`, and check again. That was the last try, so the question finishes: three boxes turn green and gap 3 red, the tip and *Accepted answer: carbon dioxide* show under it, and the score is 3.
+
+![The finished question: three green boxes, oxygen in a red box with Accepted answer: carbon dioxide and the tip under it, the Out of tries line, Try again and Score: 3.](help/tutorial-blanks-preview-finished.png)
+
 4. Press **Try again** to start over. Press <kbd>Esc</kbd> to close the Preview.
 
 ## Go further

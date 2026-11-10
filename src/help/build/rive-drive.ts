@@ -42,6 +42,8 @@ Now nothing moves until the learner says so. (A Rive state machine may start ani
 2. In its **Interactions** section press **+ When clicked…**, choose **Play an animation**, pick your timeline under **Which animation** and press **Add**.
 3. The **Interactions** graph opens on the two new nodes. Click the **Play or stop an animation** node and change **Do** from **Play** to **Toggle play/pause**.
 
+![The Interactions graph: Play button's When clicked or hovered node joined to a Play or stop an animation node, with Do set to Toggle play/pause in its settings on the right.](help/tutorial-rive-drive-toggle.png)
+
 The sentence under the button's **Interactions** section now says what it does. **Do** has more choices: **Restart**, **Stop (reset)**, **Play in reverse** and **Jump to time** each make a good button too.
 
 ## 5. A knob that scrubs it
@@ -55,6 +57,10 @@ A **joystick** sets a timeline's position from a number between 0 and 1 instead 
 5. Change **Name** to **Scrub**. Set **X timeline** to your timeline and type \`handle.x\` in **X value**.
 6. Set **Handle** to **Knob**. An **Area** appears. It is where the knob's centre can go, so make it the track less half a knob at each end: **Area X** is the track's X plus 18, **Area W** is the track's width less 36, and **Y** and **H** are the track's.
 
+A warning under **X value** may say *There is no value called handle*. Ignore it: \`handle\` only exists once a **Handle** is set, and the joystick works.
+
+![The page with the Track and the Knob, and its Joysticks section: Name Scrub, X timeline Bouncing ball, X value handle.x, Handle Knob and the Area boxes.](help/tutorial-rive-drive-joystick.png)
+
 \`handle.x\` is 0 when the knob's centre is at the left of the area and 1 at the right, so dragging along the track runs the timeline from start to end. A joystick only acts when its number changes: dragging the knob pauses the timeline where it is, and **Play or pause** carries on from there.
 
 ## 6. Say what to do
@@ -66,7 +72,9 @@ Press <kbd>T</kbd> for the **Text** tool, click above the animation and type \`P
 1. Press **Preview** at the top right. Nothing moves.
 2. Press **Play or pause**. It plays; press it again and it stops where it is.
 3. Drag the knob slowly along the track. The animation follows your hand, forwards and backwards.
-4. Press <kbd>Tab</kbd> until the knob is focused and use the arrow keys: the keyboard scrubs it too.
+4. Press <kbd>Tab</kbd> until the knob is focused, press <kbd>Space</kbd> to pick it up, move it with the arrow keys and press <kbd>Space</kbd> again to drop it: the keyboard scrubs it too. With **Screen reader** on in Preview's bar, the strip under the preview says what is happening, using the **Name read out** you typed.
+
+![Preview after scrubbing with the keyboard: the knob part way along the track, the ball part way down, and the Screen reader strip saying Scrub the bounce dropped.](help/tutorial-rive-drive-preview.png)
 
 Press <kbd>Esc</kbd> to close the Preview.
 

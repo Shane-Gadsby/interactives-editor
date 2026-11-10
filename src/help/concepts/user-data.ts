@@ -14,6 +14,8 @@ export const concept: Concept = {
 - **Remember** keeps the value as part of the learner's progress. A **Score** variable (from **+ Add variable**) has it ticked already. **Start over** puts remembered values back to the start.
 - **Save as user data** keeps the value for that person on its own: it is put back before the project starts, and saved a moment after it changes. Use it for the learner's own work, like journal answers. **Start over** and **Clear results** leave it alone.
 
+![A variable's Options opened in the Variables tab: Remember (Keeps the value when the learner comes back) and Save as user data (Saves the value for each person on the server, so it follows them to another device).](help/concept-user-data-options.png)
+
 Kept values belong to **one person, in one course, in one project**. The same learner in another course starts fresh, and so does the same course in a copy of the project.
 
 ## Where it is kept

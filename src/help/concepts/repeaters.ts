@@ -13,6 +13,8 @@ export const concept: Concept = {
 
 There is only one layer. The copies you see on the canvas and in Preview are drawn from it, so anything you change on the template, every copy gets. What makes the copies different is the item: inside the template, \`item\` is this copy's item and \`index\` is its position, counting from 0. A text layer reading \`{item.title}\` shows each item's own title.
 
+![One Card inside the Cards repeater in the Layers panel, and four cards on the canvas, each with its own title: the Card title layer is selected on the first copy.](help/concept-repeaters-one-template.png)
+
 ## Where people get caught out
 
 - **"I changed one card and they all changed."** There is one card. To make one look different, make the difference come from its item: a binding on Fill colour like \`item.done ? "#2e7d32" : "#ffffff"\`, or a Visible binding on \`index == 0\`.
@@ -24,6 +26,10 @@ There is only one layer. The copies you see on the canvas and in Preview are dra
 ## How to tell what is going on
 
 - The line under **Items** says what the list is right now, with the starting values (*currently 6 items*), or what is wrong with it.
+
+![The Repeat (list) section of a repeater: Repeat the first child for each item ticked, Items tips.cards, and the line under it saying currently 4 items.](help/concept-repeaters-items.png)
+
+- A text or binding in the template that reads \`item\` may show *There is no value called item* in the Properties panel. Inside a repeater that warning is wrong: the copies on the canvas show whether it works.
 - In Preview, the **Events** list shows each click with the nodes it ran, and **Variables (live)** shows the list variable change as you click.
 - For keyboard users, **Keyboard navigation** on the repeater makes one copy the Tab stop and the arrow keys move between the rest.
 

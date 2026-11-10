@@ -10394,7 +10394,7 @@ Build this quickly. Each problem is on purpose, and the checker will find it.
 4. Press <kbd>T</kbd> again and drag a text box to the right of the picture. Type \`Mars has the tallest volcano we know of: Olympus Mons, about 22 km high.\` and name it **Fact**.
 5. Press <kbd>B</kbd> and drag a button in the bottom right corner. Set its **Label** and **Name** to **Next**.
 6. **Problem 3, a tiny dot only a mouse can use.** Press <kbd>O</kbd> for the **Ellipse** tool and draw a small circle between the picture and the fact. Set **W** and **H** to 20 and name it **Info**. In its **Interactions** section press **+ When clicked…**, choose **Show a layer**, pick **Fact** under **Which layer**, and press **Add**. **Fact** is hidden now, until the dot is clicked.
-7. **Problem 4, motion that never stops.** Select **Mars photo**. Open the **Timeline** tab and press **+ New timeline**. With the playhead at 0 ms, set **Opacity** to 0 and click the diamond beside it. Move the playhead to **1000 ms**, set **Opacity** to 100 and click the diamond again. Change **Play once** to **Loop** and tick **Autoplay**. The picture now fades in over and over.
+7. **Problem 4, motion that never stops.** Select **Mars photo**. Open the **Timeline** tab and press **+ New timeline**. With the playhead at 0 ms, set **Opacity** to 0 and click the diamond beside it. Move the playhead to **1000 ms**, set **Opacity** to 100 and click the diamond again. Press the gear beside the timeline's summary (**Timeline settings**), change **Play once** to **Loop** and tick **Autoplay**. The picture now fades in over and over.
 8. **Problem 5, the wrong Tab order** is already there: you drew **Next** before **Info**, and Tab follows the order layers were added, so a keyboard reaches **Next** first.
 
 Press **Preview** and try it with the mouse: it works. Now press <kbd>Tab</kbd> a few times. Focus goes to **Next**, then to the dot, and the picture keeps flashing in. Press <kbd>Esc</kbd>.
@@ -10413,6 +10413,8 @@ Open the **Accessibility** tab at the bottom of the window. It checks the whole 
 | **Animation starts by itself** | (the page) |
 | **No way to pause moving content** | (the page) |
 
+![The Accessibility tab with seven findings under Home: Low text contrast on Title, three on Info, Picture has no description, and the two about the animation, with the first one explained on the right.](help/tutorial-accessible-findings.png)
+
 The coloured dots at the top count them: red **Problem**s, amber **Probable** ones and blue ones **to look at**. Click a finding and the right side says what was found, **Why it matters** to the person using the page, and **What to do**. Clicking it also selects the layer, so you can fix it straight away.
 
 The bar says **Checks found, not a compliance result**, and it means it. A clean list is a good start, not proof. The checker can't hear a video's captions or tell whether a description is any good.
@@ -10429,7 +10431,9 @@ While **Title** is selected, open its **Accessibility** section and set **Role**
 ## 4. Describe the picture
 
 1. Click **Picture has no description**.
-2. Its box under **What to do** takes the words. Type \`Mars from space: a red, dusty planet with a white ice cap at the top\` and press **Apply**.
+2. Under **What to do** is a **Description** box, which starts with the layer's name. Type over it: \`Mars from space: a red, dusty planet with a white ice cap at the top\`, and press **Apply**.
+
+![Picture has no description selected: why it matters, what to do, and the Description box filled in, with Apply beside it.](help/tutorial-accessible-describe.png)
 
 That fills in the picture's **Text alternative**, the words a screen reader says instead of the picture. Say what it shows and why it is there, in a sentence. If a picture were only decoration, **Decorative / reviewed** would say so instead.
 
@@ -10445,12 +10449,16 @@ Three findings are about **Info**. A plain shape can be clicked with a mouse, bu
 
 All three findings go.
 
+![Info's Accessibility section: Role Button, Text alternative Show a fact about Mars, and Tab stop Always, with the line Reachable with Tab (set to always) under it.](help/tutorial-accessible-info-button.png)
+
 > When you can, use a real **Button** layer instead. It is a control already, so the keyboard, the name and the role all come for free.
 
 ## 6. Calm the motion
 
 1. Click **Animation starts by itself** and press its button, **Respect reduced motion**. Viewers who ask their device for less motion now see the last frame straight away.
-2. Click **No way to pause moving content**. There is no button for this one, because it needs a decision: give people a way to pause it, or stop it repeating. A fade-in only needs to happen once, so in the **Timeline** tab change **Loop** back to **Play once**.
+2. Click **No way to pause moving content**. There is no button for this one, because it needs a decision: give people a way to pause it, or stop it repeating. A fade-in only needs to happen once, so in the **Timeline** tab click the timeline in the list on the left, press the gear (**Timeline settings**) and change **Loop** back to **Play once**.
+
+![The Timeline tab with the Timeline settings box open: Length 1000 ms, the Loop list, Autoplay ticked and Skip for less motion.](help/tutorial-accessible-timeline-settings.png)
 
 Moving content that runs on for more than five seconds needs a pause. Something that plays once and stops does not.
 
@@ -10458,10 +10466,12 @@ Moving content that runs on for more than five seconds needs a pause. Something 
 
 The checker can't see focus order, so this one is yours to check.
 
-1. Click the page's name, **Home**, above it on the canvas. The **Tab order** section in the Properties panel lists every tab stop in the order Tab visits them: **Next**, then **Info**.
+1. Click the page's name, **Home**, above it on the canvas. The **Tab order** section in the Properties panel (open it if it is folded) lists every tab stop in the order Tab visits them: **Next**, then **Info**.
 2. Press the **↑** beside **Info** (**Earlier in the Tab order**). Now Tab reaches the dot first, then **Next**, the order a sighted reader would take.
 
-**Reset to layer order** goes back to the order the layers were added.
+**Reset to layer order**, which appears once you have changed the order, goes back to the order the layers were added.
+
+![The Tab order section after the change: 1. Info, 2. Next, with Reset to layer order under them.](help/tutorial-accessible-tab-order.png)
 
 ## 8. Look at it in every theme
 
@@ -10475,7 +10485,10 @@ The checker looks at every theme for text that uses tokens, so a title that pass
 ## 9. Try it
 
 1. Press **Preview**. Press <kbd>Tab</kbd>: a ring shows on the dot. Press <kbd>Enter</kbd> and the fact appears. <kbd>Tab</kbd> again reaches **Next**.
-2. Press **Screen reader** in the Preview's bar. A strip under the preview shows what would be said as you move around.
+2. Press **Screen reader off** in the Preview's bar to turn it on. A **Screen reader** strip under the preview shows what the project announces (from **Announce** nodes and messages). This page announces nothing, so it says *Nothing announced yet*. The layer names a screen reader reads as you Tab come from the roles and text alternatives you set.
+
+![Preview with the ring on the dot after Tab and Enter, the fact showing beside the picture, and the Screen reader strip under the preview.](help/tutorial-accessible-preview.png)
+
 3. Press <kbd>Esc</kbd>. Back in the **Accessibility** tab, the list says **The checks found nothing to look at**.
 
 ## Go further
@@ -10556,6 +10569,8 @@ Auto layout puts the text under the header for you. Both are empty until the sec
 
 Four sections appear, one under the other, each with its own title. The first is open: its text shows and its sign is a minus.
 
+![The Accordion frame selected, with Section and its two texts inside it in the Layers panel, and its Auto layout section: Row or column, Column, Gap 10, Align Stretch, Padding 0 and Hug height unticked.](help/tutorial-accordion-layout.png)
+
 ## 5. Open and close
 
 \`open.includes(index)\` is true for an open section. Use it to show the text:
@@ -10588,7 +10603,10 @@ The header is a text layer, so tell the keyboard and screen readers it is a butt
 
 1. Press **Preview**.
 2. Open **Test yourself**. The first section closes, Test yourself opens, and the last section moves down to make room.
-3. Open it again and it closes. Watch \`open\` in **Variables (live)**.
+3. Open it again and it closes. Watch \`open\` in **Variables (live)** (part of **Debug** in Preview's bar).
+
+![Preview with Test yourself open under a minus sign, the other three closed under plus signs, and open reading [2] in the live variables.](help/tutorial-accordion-preview.png)
+
 4. Use <kbd>Tab</kbd> and <kbd>Enter</kbd> to do the same with the keyboard.
 
 ## Go further: let several stay open
@@ -10650,7 +10668,7 @@ On the projects page press **New project**. Keep **Blank project**, type **Scien
 1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
 2. Click **Add question** and pick **Fill in the blank**.
 
-A card called **Question 1** appears with one gap, *The capital of France is*, that accepts *Paris*. It is selected and the **Question** section is open in the Properties panel. Leave **Answer by** on **Typing**.
+A card called **Question 1** appears with a sample prompt, *Complete the sentence.*, and one gap, *The capital of France is*, that accepts *Paris*. It is selected and the **Question** section is open in the Properties panel. Leave **Answer by** on **Typing**.
 
 ## 3. Write the gaps
 
@@ -10667,7 +10685,7 @@ the Pacific
 
 Any one line is right. Capital letters and extra spaces are ignored, so *pacific  ocean* counts too.
 
-**Gap 2: a near number.** Press **+ Add blank**. In **Blank 2** type \`Light from the Sun reaches Earth in about this many minutes:\` and in **Accepted answers** type \`8.3\`. Set **± Tolerance** to **0.5**. A number is compared as a number, so *8*, *8.5* and *8.30* all count, and *9* does not.
+**Gap 2: a near number.** Press **+ Add blank** (under the last gap). The new gap says *Answer 2*: type over it. In **Blank 2** type \`Light from the Sun reaches Earth in about this many minutes:\` and in **Accepted answers** type \`8.3\`. Set **± Tolerance** to **0.5**. A number is compared as a number, so *8*, *8.5* and *8.30* all count, and *9* does not.
 
 **Gap 3: a pattern.** Press **+ Add blank**. In **Blank 3** type \`Plants take in this gas from the air:\` and give it two lines of accepted answers:
 
@@ -10677,6 +10695,8 @@ carbon dioxide
 \`\`\`
 
 A line written between slashes is a pattern. This one accepts *carbon dioxide* or *CO2*: \`^\` and \`$\` mean the whole answer, \`|\` means or, \`\\s+\` is any number of spaces, and the \`i\` at the end ignores capitals. Keep the plain line first: it is what the learner is shown if the gap is revealed, and a pattern has nothing to show.
+
+![The canvas and the Question section: the prompt, then Blank 1 with three accepted answers, Blank 2 with 8.3 and a tolerance of 0.5, and Blank 3 with a plain line and a pattern.](help/tutorial-blanks-gaps.png)
 
 **Gap 4: capitals count.** Press **+ Add blank**. In **Blank 4** type \`The chemical symbol for sodium is\` and accept \`Na\`. Tick **Match case**, so *NA* and *na* are wrong.
 
@@ -10693,23 +10713,33 @@ The **×** beside a blank removes it.
    - **Out of tries**: \`Out of tries. Each gap you missed shows its answer.\`
 4. Leave **Show the right answer when finished wrong** ticked. When the tries run out, each wrong gap shows *Accepted answer:* and the first plain line of its answers.
 
+![Marking with Points 4, Tries 2 and Part marks ticked, and Hints and feedback filled in: two hints and the Right, Wrong, Partly right and Out of tries lines.](help/tutorial-blanks-marking.png)
+
 While the learner still has a try left, the feedback only says how it went overall. Which gaps are right is not shown until the question finishes, so a learner can't find the answers by changing one gap at a time.
 
 ## 5. A tip for one gap
 
 When the question finishes, it marks each gap on its own: the box of a right gap turns green and a wrong one red. You can use that to show a tip under one gap only.
 
-1. Press <kbd>T</kbd> for the **Text** tool and click on the page below the card. Type \`Tip: it is the gas you breathe out. CO2 is accepted too.\` and press <kbd>Escape</kbd>. Name the layer **Gap 3 tip**.
-2. In the **Layers** panel, open **Question 1** and then **Blanks** with their arrows. Drag **Gap 3 tip** onto the middle of the **Blank 3** row, so it goes inside it. It now sits under the third gap.
-3. With **Gap 3 tip** selected, find **Data bindings** in the Properties panel and press **+ Add binding**. Pick **Visible**, choose **Formula** and type \`q1_items[2]?.state == "wrong"\`.
+1. Press <kbd>T</kbd> for the **Text** tool and click on the page below the card. Type \`Tip: it is the gas you breathe out. CO2 is accepted too.\` and press <kbd>Escape</kbd>. The layer is called **Text**: change its **Name**, at the top of the **Layer** section, to **Gap 3 tip**.
+2. In the **Layers** panel, open **Question 1** and then **Blanks** with their arrows. Drag **Gap 3 tip** onto the middle of the **Blank 3** row, so it goes inside it. It now sits inside **Blank 3**, at the top of its rows, and shows under the third gap.
+3. With **Gap 3 tip** selected, open **Data bindings** in the Properties panel and press **+ Add binding**. Pick **Visible** from the list (typing *vis* finds it), then choose **Formula**. Visible offers pickers for a condition first: press **Edit as formula** and type \`q1_items[2]?.state == "wrong"\` in **Condition**.
 
-\`q1_items\` is the question's list of gaps, counted from 0, so \`[2]\` is the third. Its \`state\` is *correct* or *wrong* once the question has finished. The tip disappears from the canvas, because nothing has been marked yet.
+\`q1_items\` is the question's list of gaps, counted from 0, so \`[2]\` is the third. Its \`state\` is *correct* or *wrong* once the question has finished. The tip disappears from the canvas, because nothing has been marked yet. The binding says *currently false*.
+
+![Gap 3 tip inside Blank 3 in the Layers panel, and its Visible binding set to a formula on the third gap's state being wrong, currently false.](help/tutorial-blanks-tip.png)
 
 ## 6. Try it
 
 1. Press **Preview** at the top right.
 2. Type \`pacific ocean\`, \`8\`, \`Carbon dioxide\` and \`NA\`, then press **Check answer** (or <kbd>Enter</kbd> in any gap). The **Partly right** feedback shows: three are right, and *NA* is wrong because **Match case** is on.
+
+![Preview after the first check: the four answers typed, the Partly right line in red, and the Debug panel's live variables showing one try left and a score of 3.](help/tutorial-blanks-preview-partly.png)
+
 3. Change the last gap to \`Na\` and the third to \`oxygen\`, and check again. That was the last try, so the question finishes: three boxes turn green and gap 3 red, the tip and *Accepted answer: carbon dioxide* show under it, and the score is 3.
+
+![The finished question: three green boxes, oxygen in a red box with Accepted answer: carbon dioxide and the tip under it, the Out of tries line, Try again and Score: 3.](help/tutorial-blanks-preview-finished.png)
+
 4. Press **Try again** to start over. Press <kbd>Esc</kbd> to close the Preview.
 
 ## Go further
@@ -10785,7 +10815,9 @@ Click the **Forearm** glyph and look at the **Bone** section of the Properties p
 Every point gets weights from how close it is to each bone, and the pose the bones are in now becomes the **bind pose**. That is why you bind with the arm straight.
 
 3. Select **Forearm** again and set **Rotation** to 40. This time the outline bends at the elbow. Set it back to 0.
-4. Select **Arm** and look at **Weights of** in the **Skin** section. Pick a point near the elbow: it lists two bones with a weight each. Pick a point near the shoulder: only **Upper arm** pulls on it. You can change a weight here, or press **Auto** to work it out again.
+4. Select **Arm** and look at **Weights of** in the **Skin** section. Pick a point near the elbow: it lists two bones with a weight each. Pick a point near the shoulder: only **Upper arm** pulls on it. You can change a weight here, or press **Auto** to work it out again. Once the arm is bound, the section says what it is bound to and offers **Re-bind** and **Remove skin** instead of the bind button.
+
+![The Layers panel with Hand inside Forearm inside Upper arm, the bound arm on the canvas, and Arm's Skin section: Bound to 3 bones, Re-bind, Remove skin, and Weights of Point 1 pulled by Upper arm.](help/tutorial-bones-skin.png)
 
 > Move the rig, not the arm. A bound outline follows its bones, not its own position, so to move the whole arm drag **Upper arm** by its round base.
 
@@ -10807,6 +10839,8 @@ An **IK** (inverse kinematics) constraint turns a chain of bones so the tip of t
 
 The arm bends on the canvas straight away, reaching for the dot. If the elbow points the wrong way, tick **Bend the other way**. Drag the dot somewhere out of reach and the arm straightens towards it.
 
+![Hand selected in Layers, the arm bent towards the orange dot, and Hand's Constraints section: Type IK (reach a target), Target Target, Chain bones 3, Bend the other way, and Strength 1.](help/tutorial-bones-ik.png)
+
 **Strength** (at the bottom of the constraint) mixes the IK with the bones' own rotations: 1 is all IK, 0 is all the rotations you set. You'll animate it next.
 
 ## 7. Key a wave
@@ -10822,6 +10856,10 @@ A timeline can pose bones like any other layer. While the IK is at full strength
 7. At the end, **2000 ms**, set **Hand**'s **Strength** to **1**, and **Rotation** to **0** on **Upper arm** and **Forearm**.
 8. Press **Record** again to switch it off, then press the **Play preview** triangle. The arm lifts, waves twice, and swings back to the dot.
 
+![The Wave timeline: keys on Hand's Constraint strength and Upper arm's Rotation at 0, 300, 1700 and 2000 ms, and on Forearm's Rotation at each swing of the wave.](help/tutorial-bones-wave.png)
+
+In the timeline the Hand's track is called **Constraint strength**.
+
 ## 8. Add the Wave button and the words
 
 1. Press <kbd>B</kbd> for the **Button** tool and draw a button under the arm. Change **Label** to **Wave** and **Name** to **Wave button**.
@@ -10833,7 +10871,9 @@ A timeline can pose bones like any other layer. While the IK is at full strength
 1. Press **Preview** at the top right. The bones are gone; only the arm, the dot, the button and the words show.
 2. Drag the orange dot round the page. The arm follows it, bending at the elbow and the wrist.
 3. Press **Wave**. The arm waves, then reaches for the dot again wherever you left it.
-4. Press <kbd>Tab</kbd> until the dot is focused and move it with the arrow keys. The arm follows the keyboard too.
+4. Press <kbd>Tab</kbd> until the dot is focused, press <kbd>Space</kbd> to pick it up, move it with the arrow keys and press <kbd>Space</kbd> to drop it. The arm follows the keyboard too.
+
+![Preview with the orange dot dragged up to the words at the top: the arm stretches straight towards it, and the Screen reader strip says Orange dot, the arm reaches for it dropped.](help/tutorial-bones-preview.png)
 
 Press <kbd>Esc</kbd> to close the Preview.
 
@@ -10918,7 +10958,10 @@ The part in braces is an expression. While \`taken\` is empty it says *just star
 
 1. Select **Choice 1**. In its **Interactions** section press **+ When clicked…** and choose **Add 1 to a counter**.
 2. Under **Which counter** pick **A new counter…**, and in **Name the counter** type \`score\`. Press **Add**. This makes the \`score\` variable for you.
-3. Press **Show in graph** under the sentence. The **Interactions** tab opens on two nodes: **When clicked or hovered** and **Change a value or counter**.
+
+![The When Choice 1 is clicked dialog: Pages, Layers, Motion and sound, Counting and switches and Other, with Add 1 to a counter picked and Which counter below it.](help/tutorial-branching-when-clicked.png)
+
+3. The **Interactions** tab opens by itself on two nodes: **When clicked or hovered** and **Change a value or counter**. (If it doesn't, press **Show in graph** under the sentence in the Properties panel.)
 4. Click the **Change a value or counter** node and change **Value** from \`1\` to \`3\`. This choice is worth three points.
 5. Drag from the small dot on the right edge of that node into empty space and let go. In the menu, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set it up:
    - **Variable**: **taken**
@@ -10927,6 +10970,8 @@ The part in braces is an expression. While \`taken\` is empty it says *just star
 6. Drag from the new node's dot into empty space again, find **Go to a page** and pick it. Leave **Go to** on **A chosen page** and set **Page** to **Sam replies**.
 
 That is one choice: click, add 3 to \`score\`, add *Asked Sam* to \`taken\`, go to **Sam replies**.
+
+![The graph for Choice 1: When clicked or hovered, then Change a value or counter adding 3 to score, then another adding Asked Sam to the end of the list taken, then Go to a page, Sam replies.](help/tutorial-branching-graph.png)
 
 ## 5. Wire the other two choices
 
@@ -10938,6 +10983,8 @@ Do the same for **Choice 2** and **Choice 3**. From now on **Which counter** alr
 | Choice 3 | \`2\` | \`"Emailed the lecturer"\` | The lecturer replies |
 
 Press **Read as sentences** above the graph to check all three rows read the way you expect.
+
+![Read as sentences for the first page: When Choice 1 is clicked, then add 3 to score, then add Asked Sam to the list taken, then go to the page Sam replies, and the same for Choice 2 and Choice 3.](help/tutorial-branching-sentences.png)
 
 ## 6. The ending the score earns
 
@@ -10957,6 +11004,8 @@ score >= 5 ? "A strong outcome" : score >= 3 ? "A mixed outcome" : "A learning m
 Each of the three middle pages is built like the first, with two choices instead of three: a **Situation**, a **Prompt**, **Choice 1** and **Choice 2**, and a **Path so far** text (copy it from the first page with <kbd>Ctrl</kbd>+<kbd>C</kbd> and <kbd>Ctrl</kbd>+<kbd>V</kbd>).
 
 Wire each choice as in step 4, with one change at the end: on the **Go to a page** node, set **Go to** to **One named by an expression** and type \`ending\` in **Page name or id**.
+
+![The Go to a page node's settings: Go to set to One named by an expression, Page name or id ending, currently A learning moment.](help/tutorial-branching-goto-expression.png)
 
 | Page | Situation | Choice 1 (points, path) | Choice 2 (points, path) |
 |---|---|---|---|
@@ -10981,7 +11030,9 @@ On each of the three ending pages:
 3. Choose *Agree a draft*. You land on **A strong outcome** with a score of 6.
 4. Press **Start again** and take the quiet route instead (*Quietly write Sam's section*, then *Say nothing*). That scores 0 and ends on **A learning moment**.
 
-Watch \`score\`, \`taken\` and \`ending\` change in **Variables (live)** on the left of the Preview. Press <kbd>Esc</kbd> to close it.
+Watch \`score\`, \`taken\` and \`ending\` change in **Variables (live)** on the left of the Preview (press **Debug** in Preview's bar if it isn't showing). Press <kbd>Esc</kbd> to close it.
+
+![Preview on Sam replies after Message Sam: How do you respond? with two choices, Path so far: Asked Sam, and Variables (live) showing taken Asked Sam, score 3 and ending A mixed outcome.](help/tutorial-branching-preview.png)
 
 ## Make it yours
 
@@ -11037,12 +11088,16 @@ The UniSQ colourways are the colours of the branded starter packs: Gold, Purple,
 3. Under **Purple**, tick **Default**. That is the theme the project opens in.
 4. Set **Showing**, at the left of the tab's bar, to **Purple**, so the canvas draws it.
 
+![The Themes tab: Showing set to Purple, the + Colourway list beside it, and a column for each of Light, Dark, High contrast and Purple, with Default ticked under Purple and the contrast checks on the right.](help/tutorial-brand-themes.png)
+
 ## 3. A purple header
 
 1. Press <kbd>R</kbd> and drag a rectangle across the top of the page. Set **X** and **Y** to 0, **W** to 800 and **H** to 170, and name it **Header**.
 2. In its **Fill**, press the small arrow beside the colour, open the **Tokens** tab and pick **brand/deep**. The colour box turns into a chip with the token's name on it.
 3. Draw a thin rectangle under it (**Y** 170, **W** 800, **H** 8), name it **Accent bar**, and give it the token **brand/accent**, the gold.
 4. Press <kbd>T</kbd> and drag a text box on the header. Type \`Space week\`, press <kbd>Esc</kbd> and name it **Title**. In its **Text** section set **Size** to 44, and for **Colour** pick the token **brand/on-deep**: the colour that reads on deep purple.
+
+![Header's Fill with the token chip brand/deep, and the colour picker's Tokens list open with brand/deep picked, each token showing its colour in every theme.](help/tutorial-brand-token.png)
 
 Pick tokens in pairs like this: **brand/on-deep** goes on **brand/deep**, **color/on-button** on **color/button**. Each pair is chosen to be readable in every theme.
 
@@ -11062,8 +11117,11 @@ You didn't pick a colour for the text or the button. They follow **color/text**,
 
 1. Select the **Due** text. Its **Colour** is a chip saying **color/text**. Press the **×** on the chip (**Detach from the token**). It looks the same, but it is a plain colour now: a hex box is back where the chip was, and the **Themes** tab says **1 colour not following a theme**.
 2. Switch the theme box in the top bar to **High contrast**. The page goes black, the header and card change, and the **Due** text stays dark grey on black, nearly invisible.
-3. Open the **Accessibility** tab: it lists **Low text contrast** for **Due**, starting **In High contrast:**.
-4. Put it right: press the small arrow beside **Colour**, open **Tokens** and pick **color/text**. The text turns white in High contrast and the finding goes.
+3. Open the **Accessibility** tab: it lists **Low text contrast** for **Due** twice, once starting **In Dark:** and once **In High contrast:**, since the plain grey fails in both.
+
+![High contrast on the canvas with Due's colour detached to a plain grey, and the Accessibility tab listing Low text contrast for Due twice.](help/tutorial-brand-high-contrast.png)
+
+4. Put it right: press the small arrow beside **Colour**, open **Tokens** and pick **color/text**. The text turns white in High contrast and both findings go.
 
 So detach a colour only when it really must stay the same in every theme.
 
@@ -11072,6 +11130,8 @@ So detach a colour only when it really must stay the same in every theme.
 1. Press **Preview**. The page opens in **Purple**, the default.
 2. Change **Theme: follow the viewer** to **Theme: High contrast**, then **Theme: Dark**. Every colour follows.
 3. Back on **Theme: follow the viewer**, the box beside it pretends the viewer has changed their own settings. Pick **Viewer: more contrast** and the player switches to **High contrast** by itself, as it would for a real viewer. Press <kbd>Esc</kbd>.
+
+![Preview with Theme: follow the viewer and Viewer: more contrast: the page in High contrast, white text on near black, with the purple header and gold bar.](help/tutorial-brand-preview.png)
 
 ## The ready-made way: branded starter packs
 
@@ -11123,7 +11183,7 @@ The idea that makes it simple: one number, \`slide\`, says which slide is showin
 ## 1. Make a project and the variables
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Research steps** as the name and press **Create project**.
-2. Open the **Variables** tab. Press **+ Add variable**, pick **List** and name it \`slides\`. Replace its \`[]\` with:
+2. Open the **Variables** tab (down the bottom, beside **Interactions**). Press **+ Add variable** and pick **List**. It arrives called \`items\`: change its **Name** to \`slides\`, and replace the \`[]\` in its value box with:
 
 \`\`\`
 [
@@ -11134,8 +11194,10 @@ The idea that makes it simple: one number, \`slide\`, says which slide is showin
 ]
 \`\`\`
 
-3. Press **+ Add variable**, pick **Counter**, name it \`slide\` and set its starting value to **1**.
-4. Press **+ Add variable**, pick **Switch (on or off)** and name it \`playing\`. Leave it unticked.
+3. Press **+ Add variable**, pick **Counter**, rename it \`slide\` and set its starting value to **1**. Its **Type** then reads **Number (counter, score)**.
+4. Press **+ Add variable**, pick **Switch (on or off)** and rename it \`playing\`. Leave it unticked.
+
+![The Variables tab with slides (a List), slide (a Number starting at 1) and playing (a True/false switch), and the + Add variable menu open on Counter, Switch (on or off), Text, Score, List, Choice and Colour.](help/tutorial-carousel-variables.png)
 
 Each slide has a colour so you can see the slides change before you have pictures. Swapping in real pictures comes at the end.
 
@@ -11147,12 +11209,14 @@ Each slide has a colour so you can see the slides change before you have picture
 4. Under that, add a text \`{slides[slide - 1].body}\` and name it **Slide caption**.
 5. Add a small text in the top left corner of the box: \`Slide {slide} of {slides.length}\`.
 
+![Slide picture selected on the canvas, and its Data bindings: Fill colour, In, Formula with the slide's colour from the list, currently #cfe8f7.](help/tutorial-carousel-binding.png)
+
 \`slides[0]\` is the first item of a list, so \`slides[slide - 1]\` is the slide whose number is in \`slide\`. Change **slide** to 3 in the Variables tab and the page shows Take notes. Put it back to 1.
 
 ## 3. Previous and Next
 
 1. Press <kbd>B</kbd> and draw a button at the bottom right. Set its **Label** to \`Next\` and its **Name** to **Next**.
-2. Press **+ On click (empty)**, then **Show in graph**.
+2. Press **+ On click (empty)**. The **Interactions** tab opens with the new **When clicked or hovered** node framed. (If you switched that off in Preferences, press **Show in graph**.)
 3. Drag from the dot on the right of the **When clicked or hovered** node into empty space. Type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **playing**, **Do** to **Set to** and **Value** to \`false\`. Moving by hand stops the autoplay.
 4. Drag from that node's dot and add another **Change a value or counter**: **Variable** **slide**, **Do** **Set to**, **Value**:
 
@@ -11161,6 +11225,8 @@ slide >= slides.length ? 1 : slide + 1
 \`\`\`
 
 That is: on the last slide go back to 1, otherwise add 1.
+
+![The Interactions graph: Next's When clicked or hovered node wired to Change a value or counter (playing, Set to, false), then to a second one setting slide; Previous and the Dot have the same pair below it.](help/tutorial-carousel-next-graph.png)
 
 5. Draw another button at the bottom left called **Previous**, and build the same two nodes, with this **Value** for the second one:
 
@@ -11184,6 +11250,9 @@ A shortcut presses the button from anywhere on the page, so the arrow keys run t
    - **Current (true, or page, step, location)**: \`slide == index + 1\`. A screen reader says which dot is current.
    - **Text alternative**: \`"Go to slide " + (index + 1)\`.
 4. In **Accessibility**, set **Role** to **Button**, so each dot is a tab stop.
+
+The line under each of those bindings warns *There is no value called index*. Take no notice: the editor doesn't yet know a repeated layer has \`index\`, and the dots work in Preview.
+
 5. Press **+ On click (empty)** and add the same two **Change a value or counter** nodes as for Next, with \`event.index + 1\` as the second **Value**. \`event.index\` is the dot that was clicked, counting from 0.
 
 ## 6. Autoplay that pauses
@@ -11191,13 +11260,17 @@ A shortcut presses the button from anywhere on the page, so the arrow keys run t
 1. Draw a button between the dots and Next. Name it **Play**.
 2. Press **+ When clicked…**, choose **Switch something on or off**, pick **playing** and press **Add**.
 3. In **Data bindings** add **Button label** with the formula \`playing ? "Pause" : "Play"\`, and **Pressed (button, toggle)** with \`playing\`.
-4. Open the **Interactions** tab. In the node list on its left, type \`timer\` in **Search nodes** and click **When a timer goes off**. Set **Every (ms)** to \`4000\`, leave **Repeat** ticked, and set **Only while** to:
+4. Open the **Interactions** tab. In the node list on its left, type \`timer\` in **Search nodes** and click **When a timer goes off**. Set **Every (ms)** to \`4000\` and leave **Repeat** ticked. Under **Only while**, press **Edit as formula** and type:
 
 \`\`\`
 playing && !reducedMotion
 \`\`\`
 
 5. Drag from its dot and add **Change a value or counter**: **Variable** **slide**, **Do** **Set to**, and the same **Value** as Next.
+
+Once you leave the formula box, **Only while** shows it as two rows you could also have built with **+ Add a condition**: **playing** **is on (true)** and **reducedMotion** **is off (false)**.
+
+![The timer flow selected in the graph, with When a timer goes off's settings: Every (ms) 4000, Repeat ticked, and Only while playing is on and reducedMotion is off.](help/tutorial-carousel-timer.png)
 
 \`reducedMotion\` is true when the learner's device asks for less movement. For them the timer never fires, even after Play, so nothing moves on its own.
 
@@ -11207,6 +11280,8 @@ playing && !reducedMotion
 2. Press **Next** four times. The fourth press wraps back to slide 1. Press a dot to jump.
 3. Click an empty part of the page and use the left and right arrow keys.
 4. Press **Play**. The slides move every four seconds and the button says **Pause**. Press **Next**: the autoplay stops.
+
+![Preview on slide 3, Take notes, with the third dot dark. The Debug panel shows slide 3 and playing unticked, and its events list On pointer (Play), On timer, then On pointer (Next).](help/tutorial-carousel-preview.png)
 
 ## Make it yours
 
@@ -11248,7 +11323,7 @@ How it works: the handle's **X** is tied to a number variable both ways. Draggin
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Before and after** as the name and press **Create project**.
 2. Add a title at the top with the **Text** tool: \`Then and now\`.
-3. Open the **Variables** tab, press **+ Add variable**, pick **Counter** and name it \`handleX\`. Set its starting value to **380**.
+3. Open the **Variables** tab, press **+ Add variable** and pick **Counter**. It arrives called \`count\`: rename it \`handleX\` and set its starting value to **380**.
 
 ## 2. The After picture
 
@@ -11267,6 +11342,8 @@ Both pictures must be the same size and in the same place, so they line up exact
 
 Positions inside a frame count from the frame's own corner, which is why the picture's X and Y are 0.
 
+![Before reveal selected: in the Layers panel Before label and Before picture sit inside it, on the canvas the frame covers the left half of the pictures, and its Data bindings show Width, In, Formula, handleX + 20 - 60, currently 340.](help/tutorial-compare-frame-width.png)
+
 ## 4. The handle and the line
 
 Anything you draw over a frame goes inside it, and these two must not, so draw them on an empty part of the page (under the pictures) and then type where they go.
@@ -11280,12 +11357,17 @@ Anything you draw over a frame goes inside it, and these two must not, so draw t
 2. Set **Moves** to **Left and right only**.
 3. Set **Stays inside** to **Layer: After picture**. The handle can't be dragged past the pictures.
 4. Set **Key step** to **34**. That is how far each arrow key moves it.
-5. In **Accessibility**, type \`Divider\` in **Text alternative**.
+5. In **Accessibility**, type \`Divider\` in **Text alternative**. The **Name read out** box in **Draggable** picks it up too.
+
+![The Draggable section of Divider handle: Can be dragged ticked, Moves Left and right only, Stays inside Layer: After picture, Key step 34, and Name read out showing Divider.](help/tutorial-compare-draggable.png)
 
 ## 6. Tie everything to handleX
 
 1. Still on **Divider handle**, open **Data bindings**, press **+ Add binding** and pick **X**.
 2. At the top of the binding press **⇄ Both**, and pick the variable **handleX**. Now the handle starts where \`handleX\` says, and dragging it writes its new X into \`handleX\`.
+
+![The X binding of Divider handle set to Both and handleX, with the line: At the start X takes handleX (380). After that, change either and the other follows.](help/tutorial-compare-both.png)
+
 3. Select **Before reveal**. Add a binding on **Width**, choose **Formula**, and type:
 
 \`\`\`
@@ -11303,7 +11385,9 @@ The grey line under each binding works it out with \`handleX\` at 380: the width
 1. Press **Preview**.
 2. Drag the handle right: more of Before shows. Drag it left: more of After.
 3. Now the keyboard. Press <kbd>Tab</kbd> until the handle has the focus ring, press <kbd>Space</kbd> to pick it up, use the left and right arrow keys to move it, and <kbd>Space</kbd> to put it down. <kbd>Esc</kbd> puts it back where it was.
-4. Watch \`handleX\` change in **Variables (live)**.
+4. Watch \`handleX\` change in **Variables (live)**, on the left of the Preview. It is part of **Debug** in Preview's bar; press **Debug** if you don't see it. After a drag it can be a hair off a whole number, such as 379.99999999999994; the picture doesn't mind.
+
+![Preview with the handle picked up from the keyboard: a dashed ring round it, more of Before showing, and handleX at 486 in Variables (live).](help/tutorial-compare-preview.png)
 
 Add a line of instructions under the pictures saying how to use the keyboard, since not everyone knows a handle can be picked up with Space.
 
@@ -11363,9 +11447,11 @@ On the projects page press **New project**. Keep **Blank project**, type **Cours
 
 ## 3. See the sample values
 
-1. Open the **Data** tab at the bottom of the window. **context** is first in the list, marked **built in**. Click it.
+1. Open the **Data** tab at the bottom of the window. If it isn't there, press **More panels** at the right of the bottom tabs and choose **Data**: a new project keeps it put away. **context** is first in the list, marked **built in**. Click it.
 2. The table lists every field with its **Sample value**. Change the one beside **context.firstName** to your own name: the greeting on the canvas follows.
 3. Clear it to see the page as someone nobody knows would.
+
+![The context data source in the Data tab: each field with its Sample value and what it is, from context.courseLabel MAT1000_26S1_ONC down to context.isStaff false.](help/tutorial-context-sample-values.png)
 
 Sample values are only for designing. They are never in an export or a share link, and learners never see them.
 
@@ -11381,19 +11467,26 @@ The assignment and the week it is due are two ordinary variables. Each course ca
 6. From **Set a variable…** pick **assignment** and type \`problem set\`. Pick **dueWeek** too and make it **4**.
 7. Press **+ Add a course** again for \`MAT1001_*\`: **assignment** \`project proposal\`, **dueWeek** **6**. This one says **no match**.
 
+![Per-course values: the MAT1000_* row sets assignment to problem set and dueWeek to 4 and says matches the sample course; the MAT1001_* row sets project proposal and 6 and says no match; + Add a course is under them.](help/tutorial-context-per-course.png)
+
 Any course with no row gets the starting values from the Variables tab: *first assignment*, week 5.
 
 ## 5. A line only staff see
 
 1. Add a text at the bottom: \`Staff only: students never see this line.\`
 2. With it selected, open **Data bindings** in the Properties panel and press **+ Add binding**. Pick **Visible**.
-3. Choose **Formula**, then **Edit as formula**, and type \`context.isStaff\`.
+3. Choose **Formula**. Under **Condition**, pick **context.isStaff** and leave it on **is on (true)**, or press **Edit as formula** and type \`context.isStaff\`.
+
+![The staff line selected, hidden on the canvas, with its Visible binding: Formula, Condition context.isStaff is on (true), currently false.](help/tutorial-context-staff-only.png)
 
 The line disappears, because the sample person is a student. In the Data tab's sample values, untick the one beside **context.isStudent** and it shows. \`context.isStaff\` is true for anyone signed in who is not a student.
 
 ## 6. Try it
 
 1. Press **Preview**. With the sample course it says *Your problem set is due in week 4.*
+
+![Preview with the sample values: Welcome, Alex!, You are in MAT1000, Introduction to Mathematics, and Your problem set is due in week 4, with assignment and dueWeek in the Debug panel.](help/tutorial-context-preview.png)
+
 2. Close the Preview. In the Data tab, change the sample value of **context.courseLabel** to \`MAT1001_26S2_ONC\`. The MAT1001 row now says **matches the sample course**. Preview again: *Your project proposal is due in week 6.*
 3. Try \`ENG1000_26S1_ONC\` to see a course with no row.
 
@@ -11464,7 +11557,9 @@ This is JSON. \`title\`, \`intro\` and \`footer\` are single values; \`cards\` i
 2. Open the **Data** tab at the bottom. If it isn't there, press **More panels** at the right of the bottom tabs and choose **Data**.
 3. Press **+ From file** and pick \`tips.json\`.
 
-The file is uploaded, and a data source called **tips** (from the file's name) appears in the list with a **json** badge. Pick it. On the left, **Name** says \`tips\` and **From** says **Uploaded file**. On the right, the file opens in its **Form** view: **Title**, **Intro**, a card for each of the four tips, and **Footer**.
+The file is uploaded, and a data source called **tips** (from the file's name) appears in the list with a **json** badge. Pick it. On the left, **Name** says \`tips\`, **Format** says **JSON** and **From** says **Uploaded file**. On the right, the file opens in its **Form** view: **Title**, **Intro**, a card for each of the four tips, and **Footer**.
+
+![The Data tab with tips picked: Name tips, Format JSON, From Uploaded file and File tips.json on the left, and the Form view on the right with Title, Intro and the four cards, the first one open.](help/tutorial-data-source-form.png)
 
 ## 3. Words from the file
 
@@ -11489,6 +11584,8 @@ The cards are a **repeater**: you design one card, and it is copied once for eac
 
 Four cards appear, two by two, each with its own tip. Inside a repeated layer, \`item\` is the item it was copied for, so \`{item.title}\` is that card's title. Change the card you drew (its size, its font) and every copy follows.
 
+![The Cards frame selected, with four cards two by two on the canvas, and its Repeat (list) section: Items tips.cards, currently 4 items, Layout Grid, Gap 16 and Cols 2.](help/tutorial-data-source-repeat.png)
+
 ## 5. A colour from the file
 
 The words aren't the only thing a file can hold. Each card has a \`colour\` too.
@@ -11497,7 +11594,9 @@ The words aren't the only thing a file can hold. Each card has a \`colour\` too.
 2. In the Properties panel find **Data bindings** and press **+ Add binding**. Type \`fill\` and choose **Fill colour**.
 3. Press **Formula** and type \`item.colour\`, then press <kbd>Enter</kbd>.
 
-Each card now takes its colour from its own line in the file. A **binding** ties any property to an expression in the same way: the position, the size, whether it shows.
+Each card now takes its colour from its own line in the file. The binding may say *There is no value called item* and *item is not defined* under the formula. Inside a repeated layer that warning is wrong: the cards on the canvas still show their colours.
+
+![Card background selected, with a Fill colour binding set to the Formula item.colour, and the wrong warning that there is no value called item under it.](help/tutorial-data-source-binding.png) A **binding** ties any property to an expression in the same way: the position, the size, whether it shows.
 
 ## 6. Change the words in the editor
 
@@ -11516,6 +11615,8 @@ This is the point of it: a new version is a new file, not an edit of every layer
 1. In your text editor, change \`tips.json\`: a new title, new tips, other colours. Keep the same field names (\`title\`, \`intro\`, \`cards\` with \`title\`, \`text\` and \`colour\`, and \`footer\`). Save it as \`tips-term2.json\`.
 2. Open the **Assets** tab on the left and find **tips.json**.
 3. Press the arrow on it (its tooltip says **Replace with a new version of the file**) and pick \`tips-term2.json\`.
+
+![The Assets tab with tips.json, and the tooltip of its arrow button: Replace with a new version of the file.](help/tutorial-data-source-replace.png)
 
 The page shows the new words at once. Everything that used the old file now uses the new one, and one **Undo** puts the old one back.
 
@@ -11564,7 +11665,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 ## 1. Make a project and the list of ideas
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Diagrams** as the name and press **Create project**. Rename the page **Mind map**.
-2. Open the **Variables** tab. Press **+ Add variable**, pick **List** and name it \`ideas\`. Replace its \`[]\` with:
+2. Open the **Variables** tab. Press **+ Add variable** and pick **List**. It arrives called \`items\`: rename it \`ideas\`, and replace the \`[]\` in its value box with:
 
 \`\`\`
 [
@@ -11584,13 +11685,15 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 Each idea has an \`id\`, its words in \`label\`, and the \`id\` of the idea it hangs off in \`parent\`. The one with no parent is the middle of the map.
 
 3. Add another **List** called \`folded\` and leave it as \`[]\`. It will hold the ids of the branches that are folded away.
-4. Add a third **List** called \`map\`. Next to its type, change **Starts as a value** to **Worked out**, and type this formula in the box that appears:
+4. Add a third **List** called \`map\`. In its **Value** column, change **Starts as a value** to **Worked out**. The \`[]\` stays (it is what \`map\` falls back to if the formula fails); type this formula in the new box under it:
 
 \`\`\`
 mindMap(ideas, {width: 720, height: 440, nodeW: 112, gapX: 32, collapsed: folded})
 \`\`\`
 
-5. Tick **Keep up to date**, so \`map\` is worked out again whenever \`ideas\` or \`folded\` changes.
+5. Tick **Keep up to date** (it appears under the formula once there is one), so \`map\` is worked out again whenever \`ideas\` or \`folded\` changes.
+
+![The map variable: a List, Worked out, the empty list it falls back to, the mindMap formula under it, currently 10 items, and Keep up to date ticked.](help/tutorial-diagram-worked-out.png)
 
 \`map\` is the same ideas with a place worked out for each: \`x\`, \`y\`, \`w\` and \`h\`, its \`depth\`, whether it is \`visible\`, and \`parentIndex\`, the place in the list of the idea it hangs off. The branches are spread either side of the middle, in a 720 by 440 area.
 
@@ -11605,6 +11708,8 @@ All ten boxes are on top of each other for now. Tell each copy where it goes:
 4. Select **Idea** (inside **Ideas**). In **Data bindings** add four bindings, each a **Formula**: **X** \`item.x\`, **Y** \`item.y\`, **Width** \`item.w\`, **Height** \`item.h\`.
 5. Select the text inside it and bind its **Width** to \`item.w\` and **Height** to \`item.h\`, so the words stay centred in a box of any size.
 
+The line under these bindings warns *There is no value called item*. Take no notice: the editor doesn't yet know a repeated layer has \`item\`, and the canvas shows the boxes in place.
+
 The map spreads out: the middle idea with four branches round it. The positions count from the corner where you drew the box.
 
 6. Back on **Idea**, add **Fill colour** with \`item.depth == 0 ? "#ffd54f" : "#e8eefc"\`, so the middle stands out.
@@ -11613,7 +11718,10 @@ The map spreads out: the middle idea with four branches round it. The positions 
 
 1. Open the **Draw** group in the tool bar and pick **Connector** (or press <kbd>K</kbd>). Drag from the middle box to any other box and let go. A curved line joins them. Both ends are on **Idea**, copy 0 for now.
 2. In the **Connector** section, under **Start**, set **Which copy** to \`item.parentIndex\`. Under **End**, set **Which copy** to \`index\`. That is: from this idea's parent, to this idea.
-3. Set the **End** cap to **Plain**: mind map lines have no arrow.
+3. Under **Ends**, set **End** to **Plain**: mind map lines have no arrow.
+
+![The Connector section of Line: Route Curved, Start on layer Idea with Which copy item.parentIndex, End on layer Idea with Which copy index, and both Ends Plain.](help/tutorial-diagram-connector.png)
+
 4. With the connector selected, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and name the group **Lines**. In **Repeat (list)**, tick it, set **Items** to \`map\` and **Layout** to **Free (bind x/y)**.
 5. In the **Layers** panel, drag **Lines** below **Ideas**, so the lines go under the boxes.
 
@@ -11623,9 +11731,13 @@ There is now one line for each idea, from its parent to it. The middle idea has 
 
 1. Select **Idea**. Add a binding on **Visible**: **Formula**, **Edit as formula**, \`item.visible\`. An idea inside a folded branch hides, and so does its line: a connector hides when the layer at either end is hidden.
 2. In **Accessibility**, set **Role** to **Button**, and bind **Text alternative** to \`item.label + (item.folded ? ", " + item.kids + " ideas folded away" : "")\`.
-3. Press **+ On click (empty)** and **Show in graph**. Drag from the event's dot and add **Change a value or counter**: **Variable** **folded**, **Do** **Add to the list, or take out if it is there**, **Value** \`map[event.index].id\`.
+3. Press **+ On click (empty)**; the **Interactions** tab opens on the new event. Drag from the event's dot and add **Change a value or counter**: **Variable** **folded**, **Do** **Add to the list, or take out if it is there**, **Value** \`map[event.index].id\`.
 
-Press **Preview** and select **Sleep**: its two ideas fold into it, and selecting it again opens them. Then try the real point of it: close the Preview, add a line to \`ideas\` such as \`{"id": "food2", "parent": "food", "label": "Fruit for snacks"}\`, and the map makes room for it.
+Press **Preview** and select **Sleep**: its two ideas fold into it, and selecting it again opens them.
+
+![Preview of the mind map with Sleep folded: its two ideas and their lines are gone, and folded holds sleep in Variables (live).](help/tutorial-diagram-mindmap-folded.png)
+
+Then try the real point of it: close the Preview, add a line to \`ideas\` such as \`{"id": "food2", "parent": "food", "label": "Fruit for snacks"}\`, and the map makes room for it.
 
 ## 5. A flowchart to follow
 
@@ -11663,7 +11775,7 @@ and \`links\`, where \`label\` is the answer that takes you along it:
    - \`outs\`: \`arrows.filter(l => l.from == current && l.b >= 0)\`, the links out of the step the learner is on.
 5. Go back to **Mind map**, select **Ideas** and **Lines** together, press <kbd>Ctrl</kbd>+<kbd>C</kbd>, select the **Flowchart** page and press <kbd>Ctrl</kbd>+<kbd>V</kbd>. Rename them **Steps** and **Arrows**.
 6. Change the **Items** of **Steps** to \`chart\` and of **Arrows** to \`arrows\`.
-7. Select the connector inside **Arrows**. Set **Which copy** to \`item.a\` for **Start** and \`item.b\` for **End**, **Route** to **Elbow (right angles)**, the **End** cap to **Arrow**, and its label **Text** to \`{item.label ?? ""}\`, so the decision's arrows say Yes and No.
+7. Select the connector inside **Arrows**. Set **Which copy** to \`item.a\` for **Start** and \`item.b\` for **End**, **Route** to **Elbow (right angles)**, and under **Ends** set **End** to **Arrow**. For the Yes and No on the decision's arrows, leave the label's **Text** empty and add a binding in **Data bindings** instead: **Button label** (it is a connector's label too), **Formula**, \`item.label ?? ""\`. Typing \`{item.label}\` into **Text** doesn't work yet: a connector's own text can't see \`item\`, so the editor says *There is no value called item* and the words show as typed.
 8. Select the box inside **Steps**. Remove the **Visible** binding and change **Fill colour** to \`item.id == current ? "#ffd54f" : "#ffffff"\`: the step you are on is yellow. Set its **Role** back to **None (plain shape)**, and bind **Current (true, or page, step, location)** to \`item.id == current ? "step" : false\`.
 
 Now the panel that walks the learner through it, to the right of the chart:
@@ -11677,8 +11789,11 @@ The copy of the mind map's click came with nothing joined to it on this page: in
 
 ## 6. Try it
 
-1. Select the **Flowchart** page and press **Preview**.
+1. Select the **Flowchart** page and press **Preview**. Preview starts from the start page, the mind map, so pick **From this artboard** in the list at the left of Preview's bar.
 2. Press **Continue**. *Is a room free?* lights up and the buttons say **Yes** and **No**.
+
+![Preview of the flowchart after Continue: Is a room free? is yellow, its arrows say Yes and No, and the panel on the right has You are here, Is a room free?, Yes, No and Start again.](help/tutorial-diagram-flowchart.png)
+
 3. Press **No**: you are at *Pick another time*, and **Continue** takes you back to the question. Press **Yes** this time and carry on to *Go and study*.
 
 ## Make it yours
@@ -11726,26 +11841,30 @@ On the projects page press **New project**. Keep **Blank project**, type **Capit
 1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
 2. Click **Add question** and pick **Matching (drag and drop)**.
 
-A card called **Question 1** appears, already working. On the left is a pile of **terms** to drag (four countries). On the right each capital has a dashed **slot** beside it. The card is selected and the **Question** section is open in the Properties panel.
+A card called **Question 1** appears, already working, with four sample pairs (France and Paris, Japan and Tokyo, and so on). On the left is a pile of **terms** to drag. Next to it are the capitals, and each capital has a dashed **slot** on its right. The card is selected and the **Question** section is open in the Properties panel.
 
 ## 3. Write the pairs
 
 Each pair in the **Question** section is a term (what the learner drags) and what it matches (the words beside its slot).
 
 1. Replace the **Prompt** with \`Drag each country onto its capital city. One country has no capital here.\`
-2. Change the four pairs, the term in the top box and what it matches in the box under it:
+2. Type over the four sample pairs, the term in the numbered box and what it matches in the box under it:
    - \`Australia\` and \`Canberra\`
    - \`Canada\` and \`Ottawa\`
    - \`Brazil\` and \`Brasília\`
    - \`Kenya\` and \`Nairobi\`
 
+![The canvas and the Question section: the country pile, the capitals and their dashed slots, the four pairs filled in, and Spain under Extra terms.](help/tutorial-drag-match-pairs.png)
+
 The terms and the words beside the slots change on the canvas as you type. **+ Add pair** adds another (up to eight), the arrows move a pair, and **×** removes one.
 
 ## 4. Add a country that fits nowhere
 
-Under the pairs is **Extra terms**. Press **+ Add extra term** and type \`Spain\`.
+Under the pairs is **Extra terms**. Press **+ Add extra term** and type \`Spain\` in the box it adds.
 
 Spain joins the pile and is dragged like the others, but it has no slot of its own. Left in the pile is right. Dropped into a slot it is wrong, and it takes that slot from the country that belongs there.
+
+The card grows to fit the longer pile, and it now runs a little past the bottom of the 800 × 600 page, so the buttons would be cut off in Preview. Click **Home** at the top of the **Layers** panel to select the page, and make **H** bigger in the **Page** section, such as \`700\`.
 
 ## 5. Tries, marks and feedback
 
@@ -11763,9 +11882,15 @@ The question adds how many are right to the feedback by itself, such as *2 of 4 
 ## 6. Try it
 
 1. Press **Preview** at the top right.
-2. Drag **Spain** onto the Canberra slot and the other three onto their own capitals, then press **Check answer**. The **Partly right** feedback shows, with *3 of 4 matched correctly*. Spain in a slot also costs a share of the points.
+2. Drag **Spain** onto the Canberra slot and the other three onto their own capitals, then press **Check answer**. The **Partly right** feedback shows, with *3 of 4 matched correctly*. Spain in a slot also costs a share of the points, so the score is 2.
+
+![Preview after the first check: Spain in the Canberra slot, the other three on their capitals, and the Partly right line with 3 of 4 matched correctly.](help/tutorial-drag-match-partly.png)
+
 3. Drag a country onto a slot that is already full: the two swap, and the one that was there goes back to where the new one came from.
-4. Use your tries up with a wrong answer. The question finishes: the countries stop moving, every slot is marked ✓ Right or ✗ Wrong, each wrong one says which country belongs there, the score shows, and **Try again** appears. Press it and the countries go back to the pile.
+4. Use your tries up with a wrong answer. The question finishes: the countries stop moving, every slot is marked ✓ Right or ✗ Wrong, each wrong one says *✗ Wrong. The answer is* and the country that belongs there (the line is only as wide as the slot, so the name may be cut off), the score shows, and **Try again** appears. Press it and the countries go back to the pile.
+
+![Out of tries: Australia and Kenya marked Right in green, Brazil and Canada swapped and marked Wrong in red, the Out of tries line, Try again and the score.](help/tutorial-drag-match-finished.png)
+
 5. Try it with the keyboard: <kbd>Tab</kbd> to a country, <kbd>Space</kbd> to pick it up, the arrow keys to choose a slot and <kbd>Space</kbd> to drop it. <kbd>Esc</kbd> puts it back.
 
 Press <kbd>Esc</kbd> to close the Preview.
@@ -11843,6 +11968,8 @@ The two texts are empty for now. \`item\` is the card the copy is drawing, and t
 
 Six cards appear in two rows, each with its own term. That is the same **Card** layer drawn six times, so restyling it restyles them all. Inside a copy, \`item\` is that card's line from the list and \`index\` is its place, counting from 0.
 
+![The Cards group selected, with Repeat (list) ticked, Items set to cards (currently 6 items), Layout Grid, Gap 20 and Cols 3, and the six cards on the canvas.](help/tutorial-flipcards-repeat.png)
+
 ## 4. Show one face at a time
 
 A card is turned over when its place is in \`flipped\`. The formula for that is \`flipped.includes(index)\`.
@@ -11875,7 +12002,10 @@ A click on any copy runs this one flow, and \`event.index\` is the place of the 
 1. Press **Preview**.
 2. Click a few cards. Each turns over on its own, and turns back on a second click.
 3. Press <kbd>Tab</kbd> to reach a card and <kbd>Enter</kbd> to turn it.
-4. Watch \`flipped\` in **Variables (live)** on the left: it lists the places of the cards that are turned.
+4. Watch \`flipped\` in **Variables (live)** on the left: it lists the places of the cards that are turned. It is part of **Debug** in Preview's bar; press **Debug** if you don't see it.
+
+![Preview with the first and fifth cards turned over to their meanings, and flipped reading [0,4] in the live variables.](help/tutorial-flipcards-preview.png)
+
 5. Press **Turn all back**.
 
 ## Make it yours
@@ -11928,6 +12058,8 @@ Each text box needs a variable to keep what is typed in it.
 3. Open **Options** under it and tick **Save as user data**. That is the whole of the saving: the value is put back before the project starts, and saved a moment after it changes.
 4. Do it again for a second **Text** variable called **learnt**, also ticked **Save as user data**.
 
+![The Variables tab: happened and learnt are Text variables, each with Options open and Save as user data ticked.](help/tutorial-journal-variables.png)
+
 ## 3. Lay out the page
 
 1. Pick the **Text** tool in the tool bar down the left, click near the top of the page and type \`My learning journal\`. Make it bigger in the Properties panel.
@@ -11935,8 +12067,10 @@ Each text box needs a variable to keep what is typed in it.
 3. In the tool bar, click **Web** to open that group and pick **Input field**. Drag a wide box under the prompt, about 110 high.
 4. In the Properties panel's **Input** section, set **Type** to **textarea** so it takes several lines, and write a **Placeholder** such as \`Describe what happened...\`
 5. Still in the **Input** section, press **Bind to a variable…** and pick **happened**. The row now says the value is bound **⇄ Both**: typing writes the variable, and the variable fills the box.
-6. In the **Accessibility** section, type \`What happened\` in **Text alternative**, so a screen reader says what the box is for.
+6. In the **Accessibility** section, type \`What happened\` in **Text alternative**, so a screen reader says what the box is for. (Right now the player puts an input field's text alternative on the box around it rather than on the text box itself, so a screen reader reads the placeholder instead.)
 7. Add a second prompt, \`What did you learn from it?\`, and a second text box bound to **learnt** the same way.
+
+![The first text box selected on the Write page, with its Input section: Type textarea, the placeholder, and Value is bound ⇄ Both happened.](help/tutorial-journal-input.png)
 
 ## 4. Count the words
 
@@ -11972,6 +12106,8 @@ A text layer can show a formula: anything between curly brackets is worked out a
 3. Drag from the dot on its right edge into empty space. In the **Add and connect** menu, type \`download\` in **Find a node…** and pick **Download a file**.
 4. In the node's settings set **File name** to \`"my-reflection"\` (with the quotes: it is a formula), **Contents** to \`reflection\` and **Type** to **Text (.txt)**.
 
+![The My reflection page's graph: Download button's When clicked or hovered joined to Download a file, with File name "my-reflection", Contents reflection and Type Text (.txt) in its settings.](help/tutorial-journal-download.png)
+
 ## 8. Count it as done
 
 Click an empty part of the canvas, open **Results and progress**, and set **Complete when** to **Reaching an artboard**, then pick **My reflection**. A learner who gets to the end has completed it.
@@ -11981,7 +12117,9 @@ Click an empty part of the canvas, open **Results and progress**, and set **Comp
 1. Press **Preview**. Type a few sentences in each box and watch the counts go up.
 2. Press **See my reflection**: both answers are there under their headings. Press **Download as a file** to get **my-reflection.txt**.
 3. Close the Preview with <kbd>Esc</kbd> and open it again. That is like a learner coming back: your writing is still in the boxes and the welcome line says so.
-4. **Forget saved data** in Preview's bar makes you a new learner again.
+4. **Forget saved data** in Preview's bar makes you a new learner again. It shows once something has been saved.
+
+![Preview opened again after typing: the welcome line says Welcome back, both answers are still in their boxes with 29 and 13 words, and the Debug panel shows happened, learnt, totalWords and reflection.](help/tutorial-journal-welcome-back.png)
 
 On the **Link for StudyDesk** the writing is kept for each learner in each course, under their StudyDesk session, so it follows them to another computer. Anywhere else it stays in their browser.
 
@@ -12041,7 +12179,7 @@ Do [Drag and drop matching](tutorial-drag-match) first: this tutorial starts fro
 Each pair is a label (the term the learner drags) and a spot (what it matches).
 
 1. Replace the **Prompt** with \`Drag each label onto its part of the plant.\`
-2. Change the four pairs:
+2. Type over the four sample pairs (France and Paris, and so on), the label in the numbered box and the spot in the box under it:
    - \`Flower\` and \`Spot 1, top left\`
    - \`Leaf\` and \`Spot 2, middle right\`
    - \`Stem\` and \`Spot 3, middle left\`
@@ -12057,11 +12195,13 @@ The spot's words won't show on the page by the end, but a screen reader says the
 3. In its **Auto layout** section, press **Remove auto layout**. The slots stay where they are, but now each **Match** row can be moved anywhere.
 4. Set the height of **Matches**, **H**, to **300**.
 
+![Matches selected in the Layers panel and on the card, with the Auto layout section and its Remove auto layout button in the Properties panel.](help/tutorial-label-matches.png)
+
 ## 4. Put the picture in
 
-1. Drop your picture file on the canvas (or use the **Image** tool).
+1. Drop your picture file on the canvas (or use the **Image** tool in the **Media** group of the tool bar).
 2. In the **Layers** panel, drag the picture's row onto the middle of the **Matches** row, so it goes inside it.
-3. Right-click the picture and choose **Order**, then **Send to back**. It goes behind the slots.
+3. Right-click the picture on the canvas and choose **Order**, then **Send to back** (<kbd>Ctrl</kbd> with the left square bracket key does the same). It goes behind the slots.
 4. Set its **X** and **Y** to **0**, **W** to **482** and **H** to **300**, so it fills **Matches**. If changing **W** changes **H** as well, click the link between them first.
 5. In its **Accessibility** section, type a **Text alternative** that says where each part is: \`A flowering plant. The flower is at the top, the leaf grows to the right halfway down, the stem runs down the middle, and the roots spread under the ground at the bottom.\`
 
@@ -12071,7 +12211,7 @@ With that and the spot names, someone who can't see the picture can still do the
 
 Each **Match** row is the spot's words (**Definition**), the dashed **Slot**, and a **Match result** line that says ✓ or ✗ after the question finishes. On a picture you only want the slot.
 
-1. In the **Layers** panel, open **Match 1** to **Match 4** and their **Match line** rows. Click the first **Definition**, <kbd>Ctrl</kbd>+click the other three, and press <kbd>Delete</kbd>.
+1. In the **Layers** panel, open **Match 1** to **Match 4**, their **Match line** rows and the **Slot** inside each: the **Definition** sits inside the slot. Click the first **Definition**, <kbd>Ctrl</kbd>+click the other three, and press <kbd>Delete</kbd>.
 2. Click **Match 1** and <kbd>Ctrl</kbd>+click **Match 2**, **Match 3** and **Match 4**. Set **W** to **170**, the width of a slot.
 3. Click the first **Match result** and <kbd>Ctrl</kbd>+click the other three. In the **Layout item** section, set the first box of **Inset from the frame** (left) to **0**, so each result sits under its slot.
 
@@ -12104,7 +12244,13 @@ Leave room under each slot for its result line, and keep the slots inside the pi
 
 1. Press **Preview** at the top right.
 2. Drag the labels onto the spots, leaving one wrong, and press **Check answer**. The feedback says how many are right, such as *3 of 4 matched correctly*.
-3. Use your tries up. The question finishes: each spot is marked ✓ Right or ✗ Wrong, and a wrong one says which label belongs there.
+
+![Preview of the finished example: Flower, Leaf and Stem on their spots, Bark on the roots spot, Roots left in the pile, and the Partly right line with 3 of 4 matched correctly.](help/tutorial-label-partly.png)
+
+3. Use your tries up. The question finishes: each spot is marked ✓ Right or ✗ Wrong in the result line under it, and a wrong one says which label belongs there.
+
+![Out of tries: Flower, Leaf and Stem marked Right in green, Bark marked Wrong in red with The answer is Roots under it, the Out of tries line, Try again and Score: 2.](help/tutorial-label-finished.png)
+
 4. Try it with the keyboard: <kbd>Tab</kbd> to a label, <kbd>Space</kbd> to pick it up, the arrow keys to move between the spots and <kbd>Space</kbd> to drop it.
 
 Press <kbd>Esc</kbd> to close the Preview.
@@ -12118,7 +12264,7 @@ Press <kbd>Esc</kbd> to close the Preview.
 
 - A labelled diagram is a matching question whose slots are moved onto a picture. **Check answer** reads which slot each label is in, wherever the slot sits.
 - **Remove auto layout** frees a frame's layers to go anywhere, and **Send to back** puts the picture behind them.
-- The picture's **Text alternative** and the spot names in **What it matches** make the activity usable without seeing the picture.
+- The picture's **Text alternative** and the spot names (the box under each label in the **Question** section) make the activity usable without seeing the picture.
 
 **Next:** see [Accessibility](accessibility) for text alternatives and the keyboard, and [Drag and drop](drag-and-drop) for drop zones on any layer. Every question type is in [Questions and quizzes](question-kit).`
   }
@@ -12265,7 +12411,7 @@ Open the **Variables** tab and add these, in this order, with **+ Add variable**
 \`\`\`
 
 2. **Counter**, named \`seed\`. It stays at 0.
-3. **List**, named \`cards\`. Change **Starts as a value** to **Worked out** and type this formula:
+3. **List**, named \`cards\`. In its **Value** column change **Starts as a value** to **Worked out**, and type this formula in the new box under the \`[]\`:
 
 \`\`\`
 shuffle(pairs.flatMap((p, i) => [{text: p.a, pair: i, state: "down"}, {text: p.b, pair: i, state: "down"}]), seed)
@@ -12292,8 +12438,13 @@ It makes two face-down cards from every pair, both with the pair's number, and s
 
 \`item\` is the card each copy shows. Face down it says **?**; face up it shows its word.
 
+![Cards selected: on the canvas twelve gold cards in three rows of four, and its Repeat (list) section with Items cards, currently 12 items, Layout Grid, Gap 12 and Cols 4.](help/tutorial-memory-grid.png)
+
 5. Still on **Card**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **Formula** and type \`item.state == "down" ? "#f6c344" : item.state == "matched" ? "#bfe5c4" : "#ffffff"\`. Down cards are gold, matched ones green, turned ones white.
 6. Add one more binding: **Text alternative**, **Formula**, \`"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text)\`, so a screen reader hears more than a question mark.
+
+The line under these bindings warns *There is no value called item* (or *index*). Take no notice: the editor doesn't yet know a repeated layer has \`item\` and \`index\`, and the cards work in Preview.
+
 7. Above the frame, add two text layers: \`Moves: {moves}\` and \`Pairs found: {matched} of {pairs.length}\`.
 
 ## 4. Deal when the page opens
@@ -12336,6 +12487,10 @@ cards.map(c => c.state == "up" ? {...c, state: "matched"} : c)
 cards.map(c => c.state == "up" ? {...c, state: "down"} : c)
 \`\`\`
 
+Press **Read as sentences** above the graph to check the whole flow in words.
+
+![Read as sentences: When Card is clicked, only if ups.length < 2 and the card is down, then change an item of the list cards, then check whether ups.length is 2, and the match and miss branches under it; below it the deal when the page is shown and the win when matched changes.](help/tutorial-memory-sentences.png)
+
 The **Wait** is the timer that turns cards back. For that second both cards are up, so \`ups.length\` is 2 and the **Only if** from step 5 holds every other click.
 
 ## 7. Win, and play again
@@ -12350,7 +12505,10 @@ The **Wait** is the timer that turns cards back. For that second both cards are 
 1. Click an empty part of **Memory** and press **Preview**.
 2. Turn two cards that don't match. They stay up for a second and turn back; **Moves** says 1. Try clicking a third card while two are up: nothing happens.
 3. Find a pair. Both turn green and stay.
-4. In **Variables (live)**, open \`cards\` to watch the states change as you play. Find every pair to reach **Well done**, then press **Play again** for a new deal.
+
+![Preview mid-game: Puppy and Dog matched in green, Kitten and Foal turned up in white, Moves 3, Pairs found 1 of 6, and ups holding 4 and 9 in Variables (live).](help/tutorial-memory-preview.png)
+
+4. In **Variables (live)** (press **Debug** in Preview's bar if it isn't showing), watch \`cards\`, \`ups\` and \`matched\` change as you play. Find every pair to reach **Well done**, then press **Play again** for a new deal.
 
 ## Make it yours
 
@@ -12397,7 +12555,9 @@ Recordings stay on the learner's device, in the page, and are gone when they lea
 4. In **What it is used for**, type \`record your one minute talk so you can play it back and rate it\`. It finishes the sentence learners read before they are asked.
 5. Set **Longest recording (seconds)** to **90**, a little over the minute.
 
-The box under it, **What learners are asked**, shows the consent screen exactly as learners will see it, with its three buttons: **Continue**, **Not now** and **Do not use my microphone or camera**.
+Further down, the box headed **What learners are asked** shows the consent screen exactly as learners will see it, with its three buttons: **Continue**, **Not now** and **Do not use my microphone or camera**. Leave **No equal way to finish** empty: this activity still works without a microphone.
+
+![The Microphone and camera section: Microphone ticked, What it is used for filled in, Longest recording 90, and the consent screen learners will see.](help/tutorial-microphone-settings.png)
 
 ## 2. Two variables
 
@@ -12429,6 +12589,8 @@ recordings.talk.state == "recording" ? "Stop" : recordings.talk.hasRecording ? "
 
 **Start recording** has three outputs: **Recording** (it started), **Recorded** (it was pressed while recording, so it stopped) and **Could not start**.
 
+![Talk button's Properties: the Button label binding with its formula, and the Interactions section describing the whole chain in a sentence.](help/tutorial-microphone-talk-button.png)
+
 ## 5. The countdown
 
 1. Drag from **Recording** into empty space and choose **Countdown / clock**. Set **Variable** to **left**, **Do** to **Start**, **Counts** to **Down (seconds left)** and **Seconds** to \`60\`.
@@ -12437,6 +12599,8 @@ recordings.talk.state == "recording" ? "Stop" : recordings.talk.hasRecording ? "
 4. From the first countdown's **Time up** output, add **Stop recording** with **Recording name** \`talk\`. When the minute is up the take ends.
 
 The page around the project also shows a recording bar with its own **Stop**, which always works. To put the clock back when that is used too, add **When the microphone or camera is used** from **Search nodes** on the left, set **When** to **A recording is ready** and **Recording name** to \`talk\`, and join it to another **Countdown / clock** set to **Reset**.
+
+![The Interactions graph: the Talk button's click starts the recording, Recording and Could not start both start the countdown, Time up stops the recording, and a recording that is ready resets the clock. The Play button plays it back.](help/tutorial-microphone-graph.png)
 
 ## 6. Play it back
 
@@ -12458,8 +12622,13 @@ Select the slider and fill in **Text alternative** in its **Accessibility** sect
 
 1. Press **Preview**. Preview has a pretend microphone, since a real one needs the page the project is shared in.
 2. Press **Start my talk**. The clock counts down and the button says **Stop**. A small *Simulated microphone (Preview)* note shows while it records.
-3. Press **Stop**, then **Play it back** to hear the pretend take.
-4. Change the list above the preview from **Microphone and camera: Works** to **Microphone and camera: Denied by the learner**. Press **Start my talk** again: the clock still runs, and the status line says why nothing is recorded.
+3. Press **Stop**. The clock goes back to 60, the button says **Record again** and **Play it back** appears. Press it to hear the pretend take.
+
+![Preview while recording: the Simulated microphone (Preview) note at the top, the clock at 45 seconds left and the button saying Stop, with the Microphone and camera list in Preview's bar.](help/tutorial-microphone-preview.png)
+
+4. Change the **Microphone and camera** list in Preview's bar from **Microphone and camera: Works** to **Microphone and camera: Denied by the learner**. Press **Restart**, then **Start my talk**: the clock still runs, and the status line under the button says why nothing is recorded.
+
+![Preview with the microphone denied: the clock counting down anyway, and the status line explaining that the browser is not letting the page use the microphone.](help/tutorial-microphone-denied.png)
 
 To try your real microphone, share the project with **In a StudyDesk page, and keep learners' results** (see [Publishing and sharing](tutorial-publish)) and open it in the course. The plain share link can't use a microphone at all, and the StudyDesk page's iframe must have \`allow="microphone; camera"\`, which StudyDesk pages keep.
 
@@ -12507,17 +12676,21 @@ On the projects page press **New project**. Keep **Blank project**, type **Make 
 1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
 2. Click **Add question** and pick **Put in order**.
 
-A card called **Question 1** appears with four steps of the water cycle, each with **↑** and **↓** buttons. It is selected and the **Question** section is open in the Properties panel.
+A card called **Question 1** appears with a sample prompt and four steps of the water cycle (Evaporation, Condensation, Precipitation, Collection), each with **↑** and **↓** buttons. It is selected and the **Question** section is open in the Properties panel.
 
 ## 3. Write the steps in the right order
 
 The list in the **Question** section is always the **right** order. The learner never sees it that way: **Shuffle** is ticked, so the steps are dealt in a different order each time, and never already right.
 
 1. Replace the **Prompt** with \`Put the steps for making a cup of tea in order.\`
-2. Change the four items to the first four steps, in order: \`Boil the water\`, \`Put a tea bag in the cup\`, \`Pour the hot water in\`, \`Let it brew for three minutes\`.
-3. Press **+ Add item** and type \`Take the tea bag out\`. Press it again and type \`Add milk if you like\`.
+2. Type over the four sample items with the first four steps, in order: \`Boil the water\`, \`Put a tea bag in the cup\`, \`Pour the hot water in\`, \`Let it brew for three minutes\`.
+3. Press **+ Add item** and type \`Take the tea bag out\` in the new, empty box. Press it again and type \`Add milk if you like\`.
 
-The arrows beside an item move it earlier or later in the list, which changes the right order. **×** removes an item.
+The arrows beside an item move it earlier or later in the list, which changes the right order. **×** removes an item. The canvas already shows the steps shuffled.
+
+![The canvas and the Question section: the six tea steps in the right order in the panel, and shuffled on the card.](help/tutorial-order-items.png)
+
+Six steps make the card taller than the 800 × 600 page, so the buttons would be cut off in Preview. Click **Home** at the top of the **Layers** panel to select the page, and make **H** bigger in the **Page** section, such as \`700\`.
 
 ## 4. Marking, hints and feedback
 
@@ -12534,18 +12707,22 @@ The arrows beside an item move it earlier or later in the list, which changes th
 
 The steps are one **Item** layer repeated once for each step, so changing that one layer changes all six.
 
-1. At the bottom of the **Question** section, under **Restyle a part**, press **Option**. It selects the Item layer.
-2. In the **Frame** section set **Radius** to **26**. Every step becomes a pill.
-3. Press **Question 1** in the **Layers** panel to go back, and under **Restyle a part** press **Option text**. Set its **Weight** to **600**. Every step's words become bolder.
+1. At the bottom of the **Question** section, under **Restyle a part**, press **Option**. It selects the layer called **Item**.
+2. In the **Frame** section, type **26** in one of the four corners under **Radius**. They are locked together, so all four change and every step becomes a pill.
+3. Press **Question 1** in the **Layers** panel to go back, and under **Restyle a part** press **Option text**. It selects the layer called **Label**. Set its **Weight** to **600**. Every step's words become bolder.
+
+![The Item layer selected in the Layers panel, every step on the card turned into a pill, and the four Radius corners set to 26 in the Frame section.](help/tutorial-order-restyle.png)
 
 Leave the fill colour alone: it is set by the question, so a step can turn green or red when it is marked. Change the font, size, radius, padding and shadow as much as you like.
 
 ## 6. Try it
 
 1. Press **Preview** at the top right. The steps are shuffled.
-2. Move them with **↑** and **↓** until you think they are right, and press **Check answer**. If some are out of place the **Partly right** feedback shows.
+2. Move them with **↑** and **↓** until you think they are right, and press **Check answer**. If some are out of place the **Partly right** feedback shows (or **Wrong**, if none are in their place).
 3. Now use the keyboard: press <kbd>Tab</kbd> until a **↑** or **↓** button is outlined (a screen reader hears *Move Boil the water up*), and press <kbd>Enter</kbd> or <kbd>Space</kbd> to move that step.
-4. Check again with a step still out of place. That was the last try: the steps jump into the right order, the ones you had in the wrong place are marked, and the score shows how many you had right.
+4. Check again with a step still out of place. That was the last try: the steps jump into the right order, the ones you had in the right place say *✓ Right*, the ones you had wrong say *← Right answer*, and the score shows how many you had right.
+
+![Out of tries: the steps in the right order, the first four marked Right in green, the last two marked Right answer in orange, the Out of tries line, Try again and Score: 4.](help/tutorial-order-finished.png)
 
 **Try again** deals the steps again. Press <kbd>Esc</kbd> to close the Preview.
 
@@ -12624,9 +12801,16 @@ An answer that fits Planner best might also fit Collaborator a little. So each a
 
 Press **Read as sentences** above the graph: each answer should read as two counters and a page change.
 
+![Read as sentences on Question 3: When Answer 1 is clicked, then add 2 to planner, then add 1 to collaborator, then go to the page a formula names, and the same pattern for Answer 2 and Answer 3.](help/tutorial-personality-sentences.png)
+
+This picture is of **Question 3** once step 8 is done, so its last line says *the page a formula names*; on **Question 1** it says *go to the next page*.
+
 ## 5. Copy the page for the other questions
 
-1. Right-click the name **Question 1** above the page and choose **Duplicate**. The copy, **Question 2**, has the same layers and the same interactions, already joined to its own buttons.
+1. Right-click the name **Question 1** above the page on the canvas and choose **Duplicate**. The copy, **Question 2**, has the same layers and the same interactions, already joined to its own buttons.
+
+![The menu for the page Question 1, opened by right-clicking its name: Group pages…, Tidy up pages, Make this a master, Link colours to tokens…, Place in…, Duplicate and Delete page.](help/tutorial-personality-duplicate.png)
+
 2. Duplicate **Question 1** once more for **Question 3**.
 3. Change the words on the copies. Keep the order: Planner first, Explorer second, Collaborator third.
 
@@ -12653,13 +12837,15 @@ Ideas for the words: a Planner likes a clear schedule; an Explorer follows their
 ## 7. Pick the highest
 
 1. In the **Variables** tab press **+ Add variable**, pick **Text** and name it \`result\`.
-2. Change **Starts as a value** to **Worked out** and type:
+2. In its **Value** column change **Starts as a value** to **Worked out**, and type this in the formula box that appears:
 
 \`\`\`
 planner >= explorer && planner >= collaborator ? "You are a Planner" : explorer >= collaborator ? "You are an Explorer" : "You are a Collaborator"
 \`\`\`
 
 3. Tick **Keep up to date**.
+
+![The Variables tab: planner, explorer and collaborator as Number (counter, score) starting at 0, and result as Text, Worked out, with its formula, currently You are a Planner, and Keep up to date ticked.](help/tutorial-personality-variables.png)
 
 \`result\` is now the name of the result page with the highest tally. Ties go to the one asked about first: Planner, then Explorer.
 
@@ -12671,7 +12857,9 @@ On **Question 3**, open the **Interactions** tab. Each answer's last node is a *
 
 1. Select **Question 1** and press **Preview**.
 2. Pick the first answer every time. You land on **You are a Planner**, with 6 Planner points and 3 Collaborator points.
-3. Press **Take it again** and try a mix. Watch the tallies and \`result\` in **Variables (live)** as you go. Press <kbd>Esc</kbd> to close.
+3. Press **Take it again** and try a mix. Watch the tallies and \`result\` in **Variables (live)** as you go (press **Debug** in Preview's bar if it isn't showing). Press <kbd>Esc</kbd> to close.
+
+![Preview on You are an Explorer after a mix of answers: Your points: Planner 1, Explorer 4, Collaborator 4, and Take it again. Explorer and Collaborator tie, so the one asked about first wins.](help/tutorial-personality-preview.png)
 
 ## Make it yours
 
@@ -12721,16 +12909,21 @@ Each slide is a page of the project. The order of the pages in the **Layers** pa
 On **Slide master**:
 
 1. Press <kbd>R</kbd> and draw a thin bar across the very top: **X** 0, **Y** 0, **W** 800, **H** 12. Give it a dark blue fill. Name it **Accent bar**.
-2. Press <kbd>T</kbd> and click near the top left, under the bar. Type \`{slideTitle}\` and press <kbd>Escape</kbd>. Make it **Size** 30, **Weight** 700, and name it **Slide title**. The braces make it a *text slot*: each slide fills in its own words.
+2. Press <kbd>T</kbd> and click near the top left, under the bar. Type \`{slideTitle}\` and press <kbd>Escape</kbd>. Make it **Size** 30, **Weight** 700, and name it **Slide title**. The braces make it a *text slot*: each slide fills in its own words. In its **Accessibility** section set **Role** to **Heading**: a master's layers are hidden from screen readers unless they have a role or a name of their own, and this one is each slide's title.
 3. Add a small text at the very bottom left, \`Study skills\`, **Size** 13. Name it **Footer**. Keep it below about **Y** 570, clear of the buttons that go along the bottom later.
 4. Select the page itself (click its name above it) and open the **Page master** section. Press **Make this a master**.
-5. The section now lists who uses it. Press **Use for all other pages**.
+5. The section now says how many pages draw it and lists them. Press **Use for all other pages**.
 
-Every slide now shows the bar and the footer, drawn underneath its own layers. The title is empty because no slide has filled in its slot yet.
+![The Page master section of Slide master: This artboard is a page master, the pages that draw it, Use for with Use as master for…, the Use for all other pages button, and the three layers under Draw over the pages.](help/tutorial-presentation-master.png)
+
+Every slide now shows the bar and the footer, drawn underneath its own layers. The title still reads \`{slideTitle}\` because no slide has filled in its slot yet.
 
 ## 3. Fill in each slide
 
-1. Select the **Welcome** page and open its **Page master** section. Under **Text slots** there is a box called **slideTitle**. Type \`Welcome\`. The title appears on the slide.
+1. Select the **Welcome** page and open its **Page master** section. Under the line that starts **Text slots** there is a box called **slideTitle**. Type \`Welcome\`. The title appears on the slide.
+
+![Welcome's Page master section: Master set to Slide master, Edit master and Detach, the slideTitle box holding Welcome, and ticks for Accent bar, Slide title and Footer.](help/tutorial-presentation-slot.png)
+
 2. Add a text under the title: \`Four short slides about planning your study week. Press Next, or use the arrow keys, to move on.\`
 3. On **Plan your week**, type \`Plan your week\` in **slideTitle** and add a text with a few lines:
    - \`Block out study time in your calendar.\`
@@ -12738,7 +12931,7 @@ Every slide now shows the bar and the footer, drawn underneath its own layers. T
    - \`Leave a gap each week for catching up.\`
 4. On **Thank you**, type \`Thank you\` and add a closing line.
 
-To change the bar or the footer later, change it once on **Slide master** (or press **Edit master** on any slide) and every slide follows.
+To change the bar or the footer later, change it once on **Slide master** (or press **Edit master** on any slide) and every slide follows. Leave a slide's **Master** alone once its slot is filled: setting it to **None** forgets what you typed in its slots.
 
 ## 4. The question slide
 
@@ -12754,7 +12947,9 @@ To change the bar or the footer later, change it once on **Slide master** (or pr
 1. Select the **Welcome** page and open **Page navigation** in the Properties panel.
 2. Choose the style **Back and Next**.
 3. Set **How the page changes** to **Slide left**, and **Speed** to **Medium**.
-4. Press **Add to all 4 pages**.
+4. Press **Add to all 4 pages**. (**Add to this page** does just the one, and **Remove** takes them off again.)
+
+![Page navigation with Back and Next picked, How the page changes set to Slide left, Speed Medium, and the buttons Add to this page, Add to all 4 pages and Remove.](help/tutorial-presentation-navigation.png)
 
 Every slide now has **Back** on the left, **Next** on the right and *Page 1 of 4* between them. Back is hidden on the first slide and Next on the last. The master isn't counted: it is not a slide.
 
@@ -12765,6 +12960,8 @@ Nothing here is hidden. Each button is an ordinary button with a **Go to a page*
 1. Select **Welcome** and press **Preview**.
 2. Press **Next**. The next slide slides in from the right. The page number counts up.
 3. Answer the question, then carry on to the end. **Back** goes the other way.
+
+![Preview on Check your understanding: the master's bar and footer, the slide's title, the question, and Back, Page 3 of 4 and Next along the bottom.](help/tutorial-presentation-preview.png)
 
 Learners whose device asks for less motion get an instant change instead of the slide.
 
@@ -12831,6 +13028,8 @@ Work on **Progress panel**. Keep everything in the top 85 pixels of the page, be
 
 With nothing done the bar is 0 wide; with all three it covers the track.
 
+![Bar fill selected on Progress panel, with Read actively above it already drawing the panel, and its Data bindings: Width, In, Formula, 260 * done.length / 3, currently 0.](help/tutorial-progress-bar-binding.png)
+
 5. Make the first badge on the right of the panel: a circle (<kbd>O</kbd>, hold <kbd>Shift</kbd>) about 44 across, a text layer with the letter \`P\` on top of it, and the word \`Planner\` in small text underneath. Select all three and press <kbd>Ctrl</kbd>+<kbd>G</kbd> to group them. Name the group **Planner badge**.
 6. On the group, press **+ Add binding** in **Data bindings**, pick **Opacity**, choose **Formula** and type:
 
@@ -12839,6 +13038,8 @@ done.includes("Planning") ? 1 : 0.25
 \`\`\`
 
 A binding's opacity runs from 0 to 1, so the badge shows faintly until *Planning* is in the list, then fully.
+
+![The Planner badge group's Opacity binding: In, Formula, done.includes("Planning") ? 1 : 0.25, currently 0.25.](help/tutorial-progress-badge-opacity.png)
 
 7. Copy the group twice (<kbd>Ctrl</kbd>+<kbd>D</kbd>) and move the copies along. Make them **Reader badge** (\`R\`, \`Reader\`, \`"Reading"\` in its binding) and **Writer badge** (\`W\`, \`Writer\`, \`"Writing"\`).
 
@@ -12862,8 +13063,10 @@ On **Plan your week**:
 {done.includes("Planning") ? "Done ✓" : "Mark as done"}
 \`\`\`
 
-3. In its **Interactions** section press **+ On click (empty)**, then press **Show in graph**.
+3. In its **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens on the new **When clicked or hovered** node.
 4. Drag from the **When clicked or hovered** node's dot into empty space, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **done**, **Do** to **Add to the list, or take out if it is there** and **Value** to \`"Planning"\` (with the quotes).
+
+![The graph for Plan your week: Mark as done's When clicked or hovered joined to Change a value or counter, with its settings: Variable done, Do Add to the list, or take out if it is there, Value "Planning". Back and Next have their own Go to a page rows.](help/tutorial-progress-toggle-node.png)
 
 One press adds *Planning* to the list, so the bar grows and the Planner badge lights up. A second press takes it out again, so the button works as a tick box.
 
@@ -12888,6 +13091,8 @@ Build **Read actively** and **Write a draft** the same way. Copy the heading, ti
 2. Press **Next**, then **Mark as done** on **Plan your week**. The bar fills a third and the Planner badge lights up.
 3. Press **Next**. The panel on **Read actively** shows the same progress: it is the same list, read again on a new page.
 4. Go back and press **Done ✓** to take it out again. Press <kbd>Esc</kbd> to close.
+
+![Preview on Plan your week after Mark as done: Your progress: 1 of 3 done, the bar a third full, the Planner badge lit and the other two faint, the button reading Done ✓, and done holding Planning in Variables (live).](help/tutorial-progress-preview.png)
 
 ## Go further
 
@@ -12944,7 +13149,7 @@ On the projects page press **New project**. Keep **Blank project**, type **Rocky
 
 1. Press <kbd>T</kbd> for the **Text** tool and drag a text box inside **Content**. A layer you draw inside a frame goes into it, and the frame places it.
 2. Type \`The rocky planets\`, then press <kbd>Esc</kbd>. Name it **Title**, and in its **Text** section set **Size** to 32.
-3. A **Layout item** section has appeared near the top of the Properties panel. It says how this layer sits in its frame. Set **W** to **Fill**. The title now runs the whole width of **Content**, inside the padding, however wide **Content** is.
+3. A **Layout item** section has appeared in the Properties panel, just under **Layer**. It says how this layer sits in its frame. Set **W** to **Fill** (W and H there are lists: **Fixed**, **Hug** and **Fill**). The title now runs the whole width of **Content**, inside the padding, however wide **Content** is.
 
 ## 4. A grid for the cards
 
@@ -12954,6 +13159,8 @@ On the projects page press **New project**. Keep **Blank project**, type **Rocky
 4. Press **+** on its **Auto layout** section, then change **Layout** to **Grid**.
 5. Type \`1fr 1fr 1fr\` in **Columns** and press <kbd>Enter</kbd>: three columns, each an equal share. Leave **Rows** empty, and set **Column gap** and **Row gap** to 16.
 6. Set the four **Padding** boxes to 0, so the cards line up with the title.
+
+![The Auto layout section for Cards: Layout set to Grid, Columns 1fr 1fr 1fr, Rows empty, Column gap and Row gap 16, the four Padding boxes at 0 and Hug height ticked.](help/tutorial-responsive-grid.png)
 
 ## 5. The first card
 
@@ -12989,6 +13196,10 @@ A copy called **Home narrow**, 360 px wide, appears to the right of **Home**, an
 
 3. The usual breakpoint is 600. In the list in the **Responsive** section, set **Home**'s **from** to **600**.
 
+Once a page is in a set, the section's buttons read **Add narrower** and **Add wider**, and the Layers panel shows each member's range beside its name.
+
+![The Layers panel with Home (600+ px) and Home narrow (0 to 599 px), the two pages side by side on the canvas, and the Responsive section listing Home narrow from 0 and Home from 600, with the pairing line under them.](help/tutorial-responsive-set.png)
+
 ## 8. Rearrange the phone version
 
 The copy is still laid out for 800 px, so it runs off its page. Fix it on **Home narrow** only:
@@ -13010,6 +13221,9 @@ When a viewer's page changes width while they are using it, the player swaps pag
 1. Press **Preview** at the top right.
 2. A **Page width** slider shows under the top bar, with **600** marked on it. Next to it, **Showing** says which page is on screen.
 3. Drag the slider slowly to the left. As it crosses 600 the three cards in a row become one column: **Showing Home narrow**. Drag back to the right and **Home** returns.
+
+![Preview with the Page width slider at 480 px, below the 600 mark: Showing Home narrow, with the three cards stacked in one column.](help/tutorial-responsive-preview.png)
+
 4. **Full width** puts the preview back to its whole width. Press <kbd>Esc</kbd> to close the Preview.
 
 ## Go further
@@ -13084,10 +13298,12 @@ A **dialog** is a panel that sits over everything else. While it is open, <kbd>T
 Now tell the editor it is a dialog. Select **Dialog 1** again (click its row in the **Layers** panel):
 
 1. Open the **Dialog** section and tick **This frame is a dialog**. **Modal**, **Close on Escape** and **Return focus** come ticked. Leave them on.
-2. Tick **Scrim** too. It dims the page behind the dialog while it is open.
+2. Tick **Scrim** too. It dims the page behind the dialog while it is open. Leave **Close on click outside** unticked, so a stray click doesn't shut it.
 3. In the **Accessibility** section, type \`Evaporation\` in **Text alternative**. A screen reader announces the dialog by that name.
 
 **Initial focus** says which layer the keyboard lands on when the dialog opens. **Automatic (first tab stop)** is the **Close** button here, which is what you want.
+
+![Dialog 1 selected, with the Dialog section ticked: This frame is a dialog, Modal, Close on Escape, Return focus and Scrim, and Initial focus on Automatic (first tab stop).](help/tutorial-reveal-dialog.png)
 
 ## 4. Copy the dialog for the other points
 
@@ -13104,7 +13320,7 @@ The points have to sit **below** the dialogs in the **Layers** panel, or they wo
 
 1. In the **Layers** panel, open **Dialog 1** and select its **Close** button.
 2. In its **Interactions** section press **+ When clicked…**.
-3. Choose **Hide a layer**, and under **Which layer** pick **Dialog 1**. Press **Add**. The section reads *When clicked: hide Dialog 1*.
+3. Choose **Hide a layer** (under **Layers**), and under **Which layer** pick **Dialog 1**. Press **Add**. The section reads *When clicked: hide Dialog 1*.
 4. Do the same for the **Close** buttons in **Dialog 2** and **Dialog 3**, each hiding its own dialog.
 
 <kbd>Esc</kbd> needs nothing more. A dialog with no **Open variable** hides itself when <kbd>Esc</kbd> is pressed.
@@ -13114,6 +13330,8 @@ The points have to sit **below** the dialogs in the **Layers** panel, or they wo
 1. Select **Point 1** and press **+ When clicked…**.
 2. Choose **Show a layer**, and under **Which layer** pick **Dialog 1**. Press **Add**.
 3. Do the same for **Point 2** (showing **Dialog 2**) and **Point 3** (showing **Dialog 3**).
+
+![The When Point 1 is clicked dialog: Show a layer picked under Layers, Which layer set to Dialog 1 (hidden), and the line It will do this: When clicked: show Dialog 1.](help/tutorial-reveal-when-clicked.png)
 
 **Show a layer** hides the dialog for you when you add it, because a layer that is already showing can't be shown. The dialogs now look faint on the canvas: hidden layers show as ghosts while you edit, so you can still find them.
 
@@ -13139,7 +13357,12 @@ The point is yellow until \`seen1\` is true, then green.
 ## 8. Try it
 
 1. Press **Preview** at the top right.
-2. Click **1**. The page dims and the Evaporation dialog opens. Press **Close**. The point is green now.
+2. Click **1**. The page dims and the Evaporation dialog opens, and \`seen1\` is ticked in the **Variables (live)** list. Press **Close**. The point is green now.
+
+![Preview with the Evaporation dialog open over the dimmed picture, its text, picture and Close button, and seen1 ticked in the live variables.](help/tutorial-reveal-open.png)
+
+![After closing: point 1 is green, points 2 and 3 are still yellow.](help/tutorial-reveal-visited.png)
+
 3. Now use only the keyboard. Press <kbd>Tab</kbd> until point **2** has the focus ring, then <kbd>Enter</kbd>. The dialog opens with the focus on **Close**. Press <kbd>Tab</kbd>: the focus stays inside the dialog.
 4. Press <kbd>Esc</kbd>. The dialog closes and the focus goes back to point **2**, so a keyboard user carries on from where they were.
 
@@ -13206,6 +13429,8 @@ Now nothing moves until the learner says so. (A Rive state machine may start ani
 2. In its **Interactions** section press **+ When clicked…**, choose **Play an animation**, pick your timeline under **Which animation** and press **Add**.
 3. The **Interactions** graph opens on the two new nodes. Click the **Play or stop an animation** node and change **Do** from **Play** to **Toggle play/pause**.
 
+![The Interactions graph: Play button's When clicked or hovered node joined to a Play or stop an animation node, with Do set to Toggle play/pause in its settings on the right.](help/tutorial-rive-drive-toggle.png)
+
 The sentence under the button's **Interactions** section now says what it does. **Do** has more choices: **Restart**, **Stop (reset)**, **Play in reverse** and **Jump to time** each make a good button too.
 
 ## 5. A knob that scrubs it
@@ -13219,6 +13444,10 @@ A **joystick** sets a timeline's position from a number between 0 and 1 instead 
 5. Change **Name** to **Scrub**. Set **X timeline** to your timeline and type \`handle.x\` in **X value**.
 6. Set **Handle** to **Knob**. An **Area** appears. It is where the knob's centre can go, so make it the track less half a knob at each end: **Area X** is the track's X plus 18, **Area W** is the track's width less 36, and **Y** and **H** are the track's.
 
+A warning under **X value** may say *There is no value called handle*. Ignore it: \`handle\` only exists once a **Handle** is set, and the joystick works.
+
+![The page with the Track and the Knob, and its Joysticks section: Name Scrub, X timeline Bouncing ball, X value handle.x, Handle Knob and the Area boxes.](help/tutorial-rive-drive-joystick.png)
+
 \`handle.x\` is 0 when the knob's centre is at the left of the area and 1 at the right, so dragging along the track runs the timeline from start to end. A joystick only acts when its number changes: dragging the knob pauses the timeline where it is, and **Play or pause** carries on from there.
 
 ## 6. Say what to do
@@ -13230,7 +13459,9 @@ Press <kbd>T</kbd> for the **Text** tool, click above the animation and type \`P
 1. Press **Preview** at the top right. Nothing moves.
 2. Press **Play or pause**. It plays; press it again and it stops where it is.
 3. Drag the knob slowly along the track. The animation follows your hand, forwards and backwards.
-4. Press <kbd>Tab</kbd> until the knob is focused and use the arrow keys: the keyboard scrubs it too.
+4. Press <kbd>Tab</kbd> until the knob is focused, press <kbd>Space</kbd> to pick it up, move it with the arrow keys and press <kbd>Space</kbd> again to drop it: the keyboard scrubs it too. With **Screen reader** on in Preview's bar, the strip under the preview says what is happening, using the **Name read out** you typed.
+
+![Preview after scrubbing with the keyboard: the knob part way along the track, the ball part way down, and the Screen reader strip saying Scrub the bounce dropped.](help/tutorial-rive-drive-preview.png)
 
 Press <kbd>Esc</kbd> to close the Preview.
 
@@ -13325,10 +13556,12 @@ Press the **Play preview** triangle: Sam runs in.
 
 A second timeline plays at the same time as the first. Each timeline only moves what it has keys for, so they never fight.
 
-1. In the dropdown at the top left of the Timeline, choose **+ New timeline**. In its settings set **Name** to \`Talk\`, **Length** to \`3500\`, and tick **Autoplay**.
+1. In the dropdown at the left of the Timeline bar, choose **+ New timeline** (the **+** at the top of the **Timelines** list beside it does the same). In its settings set **Name** to \`Talk\`, **Length** to \`3500\`, and tick **Autoplay**.
 2. Playhead at **0 ms**: select **Alex bubble**, click the diamond next to **Opacity** and set **Opacity** to 0. Do the same for **Sam bubble**.
 3. Put the playhead at **1300 ms**, select **Alex bubble** and click its **Opacity** diamond (it keys 0, the value there). Move to **1500 ms** and set **Opacity** to 100. Alex's bubble now pops up just after Sam arrives.
 4. Do the same for **Sam bubble**: a key at **2800 ms** (still 0) and **100** at **3000 ms**.
+
+![The Talk timeline open, with Opacity keys for Alex bubble and Sam bubble, and the gear's Timeline settings showing Name Talk, Length 3500, Autoplay and Skip for less motion ticked.](help/tutorial-scene-timeline-settings.png)
 
 > The canvas shows the timeline that is open. Choose **Design view (no timeline)** in the same dropdown to see the layers as they really are: both bubbles fully visible.
 
@@ -13341,12 +13574,16 @@ The bubbles are ordinary text, so a screen reader can find them. Saying each one
 3. Click the **Change a value or counter** node and press <kbd>Delete</kbd>. Drag from the marker node's dot into empty space, type \`announce\` in **Find a node…** and pick **Announce**. Set **Text** to \`"Alex says: Morning! Have you seen the new study rooms in the library?"\` (with the quotes).
 4. Do the same with a marker called \`Sam speaks\` at **3000 ms**, announcing Sam's line.
 
+![The Alex speaks marker selected on the Talk ruler, with the Marker panel showing its Name, At 1500 ms and the + When the playhead reaches this… button.](help/tutorial-scene-marker.png)
+
 ## 8. Skip to the end
 
-1. Select **Skip**. In its **Interactions** section press **+ When clicked…**, choose **Play an animation**, pick **Run in** and press **Add**. Then press **Show in graph**.
+1. Select **Skip**. In its **Interactions** section press **+ When clicked…**, choose **Play an animation**, pick **Run in** and press **Add**. The **Interactions** tab opens on the new nodes (if it doesn't, press **Show in graph** under the new line in the **Interactions** section).
 2. Click the **Play or stop an animation** node. Set **Do** to **Jump to time** and **Time (ms)** to \`1200\`, the end of **Run in**.
 3. Drag from its dot into empty space and add another **Play or stop an animation**: **Timeline** **Talk**, **Do** **Jump to time**, **Time (ms)** \`3500\`.
 4. Drag from that one and add an **Announce** saying \`"Skipped. Alex says: Morning! Have you seen the new study rooms in the library? Sam says: Not yet. Show me? I have an essay due on Friday."\`
+
+![The Interactions graph: each marker event runs an Announce, and Skip's click runs two Play or stop an animation nodes set to Jump to time, then the Skipped announcement.](help/tutorial-scene-graph.png)
 
 Jumping never passes the markers, so the announcement in step 4 is what tells a screen reader both lines after a Skip.
 
@@ -13365,6 +13602,8 @@ For those viewers both timelines now jump straight to their last pose: Sam is al
 2. Press **Screen reader off** in the Preview's bar so it says **Screen reader on**, then press **Restart**: a strip under the scene shows each line as its bubble appears.
 3. Press **Restart** again and press **Skip** straight away. Everything lands at once and the strip shows the Skip announcement.
 4. To see the still version, turn on your computer's reduce motion setting (in Windows: **Settings**, **Accessibility**, **Visual effects**, **Animation effects** off) and press **Restart**. Turn it back afterwards.
+
+![Preview with Screen reader on: Alex's bubble is up, and the Screen reader strip under the scene shows Alex says: Morning! Have you seen the new study rooms in the library?](help/tutorial-scene-preview.png)
 
 ## Go further
 
@@ -13435,7 +13674,7 @@ The script reads one variable and writes another.
 
 ## 3. Write the script
 
-1. Open the **Scripts** tab at the bottom of the window and press **+ New script**. It starts with a short example.
+1. Open the **Scripts** tab at the bottom of the window and press **+ New script**, under the list of scripts on the left. It starts with a short example.
 2. In the box at the top of the code, rename it **Close enough**.
 3. Untick **Run on start**. A script that runs on start runs once, when the player starts, which suits code that sets up \`ix.on\` handlers. This one should run each time **Check** is pressed, so the graph will run it.
 4. Select all of the example code and replace it with this:
@@ -13461,6 +13700,8 @@ ix.vars.distance = row[target.length];
 
 \`ix\` is the player: \`ix.vars.answer\` reads a variable and \`ix.vars.distance = ...\` sets one. The column on the right of the Scripts tab lists the rest of the **ix API**. Everything saves as you type.
 
+![The Scripts tab: Close enough in the list on the left, its name and Run on start unticked above the code, and the sandbox note and ix API on the right.](help/tutorial-script-scripts-tab.png)
+
 ## 4. Turn the number into words
 
 The script doesn't write any feedback. The words live on the page, where anyone can change them without reading code.
@@ -13472,13 +13713,17 @@ The script doesn't write any feedback. The words live on the page, where anyone 
 distance < 0 ? "" : distance == 0 ? "Right! Ganymede is the largest moon in the solar system." : distance <= 2 ? "Right, nearly. It is spelt Ganymede." : "Not quite. Try again."
 \`\`\`
 
-The grey line under it works the formula through with \`distance\` at -1, so the text is empty for now.
+The lines under it work the formula through with \`distance\` at -1: *currently empty text*.
+
+![Feedback's Data bindings section: a Text binding set to Formula, the start of the formula, and currently empty text under it.](help/tutorial-script-binding.png)
 
 ## 5. Run the script from the graph
 
 1. Select **Check**. In its **Interactions** section press **+ On click (empty)**, then open the **Interactions** tab at the bottom. A **When clicked or hovered** node is there, with **Layer: Check** and **Event: Click / tap**.
 2. Drag from the dot on its right edge into empty space and let go. In the **Add and connect** menu type \`script\` in **Find a node…** and pick **Run script**.
 3. Click the new **Run script** node and set **Script** to **Close enough**.
+
+![The Interactions graph: Check's When clicked or hovered node joined to a Run script node, with Script set to Close enough in its settings on the right.](help/tutorial-script-run-script.png)
 
 **Read as sentences** now says the Check button runs the script \`Close enough\`. For a line or two of code you don't need a whole script: a **Run code** node holds the code in the node itself. A named script is easier to find, and several flows can run the same one.
 
@@ -13494,6 +13739,8 @@ Leave it ticked. Untick it only for code you trust that needs the page itself (\
 2. Type \`Ganymede\` and press **Check**. It says *Right!*
 3. Type \`ganimede\` and check again: *Right, nearly.* Then try \`Callisto\`: *Not quite.*
 4. Watch \`distance\` in the **Variables (live)** list on the left of the Preview as you check. Press <kbd>Esc</kbd> to close the Preview.
+
+![Preview after checking ganimede: Right, nearly. It is spelt Ganymede, with answer and distance 1 in Variables (live) and Run script in the events list.](help/tutorial-script-preview.png)
 
 > If nothing happens when you check, look in Preview's event list: an error in a script is shown there, with the line it was on. A typing slip in the code is the usual cause.
 
@@ -13544,12 +13791,12 @@ On the projects page press **New project**. Keep **Blank project**, type **Energ
 1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
 2. Click **Add question** and pick **Categorise (drag into groups)**.
 
-A card called **Question 1** appears with two group boxes, **Mammals** and **Birds**, and four animals under them to drag. It is selected and the **Question** section is open in the Properties panel.
+A card called **Question 1** appears with a sample prompt, two group boxes, **Mammals** and **Birds**, and four animals under them to drag (Dog, Whale, Eagle and Penguin). It is selected and the **Question** section is open in the Properties panel.
 
 ## 3. Name the groups
 
 1. Replace the **Prompt** with \`Drag each energy source into the group it belongs to.\`
-2. The groups are listed first, one box each. Change **Mammals** to \`Renewable\` and **Birds** to \`Non-renewable\`. The headings in the boxes change as you type.
+2. The groups are listed first, one box each. Change **Mammals** to \`Renewable\` and **Birds** to \`Non-renewable\`. The headings in the boxes change as you type. The box layers in the **Layers** panel keep their sample names, **Mammals** and **Birds**, and so do the drop events in Preview's **Debug** list; rename the layers if that bothers you.
 
 **+ Add group** adds another box (up to six). With three groups the boxes share the width of the card.
 
@@ -13557,14 +13804,16 @@ A card called **Question 1** appears with two group boxes, **Mammals** and **Bir
 
 Under the groups is one entry for each card: its words, and **Belongs in**, the group it is right in.
 
-1. Change the four cards to \`Solar\`, \`Wind\`, \`Coal\` and \`Oil\`. The first two already belong in **Renewable** and the last two in **Non-renewable**, because the animals they replace did.
-2. Press **+ Add item** and type \`Hydro\`. A new card belongs in the first group, which is right for Hydro.
+1. Type over the four sample cards with \`Solar\`, \`Wind\`, \`Coal\` and \`Oil\`. The first two already belong in **Renewable** and the last two in **Non-renewable**, because the animals they replace did.
+2. Press **+ Add item** and type \`Hydro\` in the new, empty box. A new card belongs in the first group, which is right for Hydro.
 3. Press **+ Add item** again and type \`Natural gas\`. Set its **Belongs in** to **Non-renewable**.
 4. Under each card is **Feedback if put in the wrong group (optional)**. Give the two that are easiest to get wrong a reason:
    - Hydro: \`Hydro runs on flowing water, which rain keeps topping up.\`
    - Natural gas: \`Natural gas took millions of years to form, so once it is burnt it is gone.\`
 
 The new cards appear under the boxes as you add them.
+
+![The canvas and the Question section: the Renewable and Non-renewable boxes with six cards under them, and the six items with their Belongs in groups and Hydro's feedback.](help/tutorial-sort-items.png)
 
 ## 5. Answer each drop as it lands
 
@@ -13584,14 +13833,22 @@ Leave it unticked when the sort is a test and the learner should find out only a
    - **Partly right**: \`Some are right, but not all. Move a few and check again.\`
    - **Out of tries**: \`Out of tries. Where each one goes is listed below.\`
 
+![Say right or wrong as each item is dropped ticked, Marking with Points 6 and Tries 2, and the hint and four feedback lines filled in.](help/tutorial-sort-marking.png)
+
 The question adds the count to the feedback by itself, such as *4 of 6 in the right group*, and the reason of a card that ended up in the wrong group.
 
 ## 7. Try it
 
 1. Press **Preview** at the top right.
-2. Drag **Solar** into **Renewable**: the feedback says it is right. Drag **Natural gas** into **Renewable**: its own reason shows.
+2. Drag **Solar** into **Renewable**: the feedback says it is right. Drag **Natural gas** into **Renewable**: its own reason shows. A card lands where you let go of it, and the box doesn't arrange them, so drop each one in a different spot. Two dropped in the same place sit on top of each other and the one underneath is hidden.
+
+![Preview: Natural gas dropped in the Renewable box, and its reason in the feedback line under the cards still to sort.](help/tutorial-sort-drop.png)
+
 3. Put the rest where they belong, leave Natural gas where it is, and press **Check answer**. It says *Some are right* with *5 of 6 in the right group*.
 4. Check once more without moving it. That was the last try: the question finishes, the cards are marked ✓ or ✗ and stop moving, and a line under the cards says where Natural gas goes.
+
+![Out of tries: Natural gas marked with a cross in Renewable, Oil ticked in Non-renewable, the line Natural gas goes in Non-renewable, the Out of tries feedback with 5 of 6 in the right group, Try again and Score: 5. The other cards were dropped in the same spots, so they are hidden underneath.](help/tutorial-sort-finished.png)
+
 5. Try it with the keyboard: <kbd>Tab</kbd> to a card, <kbd>Space</kbd> to pick it up, the arrow keys to choose a group and <kbd>Space</kbd> to drop it.
 
 **Try again** puts the cards back. Press <kbd>Esc</kbd> to close the Preview.
@@ -13647,6 +13904,8 @@ On the projects page press **New project**. Keep **Blank project**, type **Sound
 3. Under it, **Which music** says *none in this project yet*. Press **+ Add a new sound…** and pick your music file. It is added to the project and chosen.
 4. Press **Add**.
 
+![The When Start button is clicked dialog: Play music that carries on across pages picked under Motion and sound, Which music set to the music file, and the sentence it will add.](help/tutorial-sound-when-clicked.png)
+
 That one choice made a **Play sound** node with **Soundtrack: keep playing on the next pages** and **Loop** both on. A soundtrack is the project's music: it carries on when the page changes, goes quiet while any narration plays over it, and goes round until something stops it.
 
 ## 4. Move on to the next page
@@ -13655,6 +13914,8 @@ That one choice made a **Play sound** node with **Soundtrack: keep playing on th
 2. Choose **Go to the next page** and press **Add**. Leave **How the page changes** and **Speed** as they are.
 
 The **Interactions** section now has two sentences, one for the music and one for the page. There is no next page yet, so make it.
+
+![Start button's Interactions section with two sentences: play Music.wav on a loop as the soundtrack, and go to the next page.](help/tutorial-sound-two-sentences.png)
 
 ## 5. Add the second page
 
@@ -13688,11 +13949,16 @@ The list under **+ When clicked…** has no mute, so this one is built in the gr
 4. Type \`sound\` in **Find a node…** and choose **Captions and sound**. It appears where you let go, already joined.
 5. Click the new node. In its settings on the right, set **Do** to **Sound: flip**.
 
+![The Interactions graph for the Sounds page: Sound button's click joined to a Captions and sound node set to Sound: flip, with its settings on the right, and the Ding and Stop buttons' nodes below.](help/tutorial-sound-flip.png)
+
 **Sound: flip** turns every sound in the project off for this learner, the music, the effects and any narration, and turns them back on the next time. The learner's browser remembers their choice, so a learner who wants silence gets it next time too.
 
 ## 9. Try it
 
 1. Press **Preview** at the top right. With **From the start artboard** chosen in its bar it starts on **Home**. Press **Start**: the music starts and the **Sounds** page shows.
+
+![Preview on the Sounds page after pressing Start, with Ding, Sound on or off, Stop the music and Back, and the Debug events list showing Play sound and Go to artboard.](help/tutorial-sound-preview.png)
+
 2. Press **Ding**. The sound plays over the music.
 3. Press **Sound on or off**. Everything goes quiet. Press it again and the music is back.
 4. Press **Back**, then **Start**. The music carries on without starting again.
@@ -13748,12 +14014,17 @@ The class's answers live in a **Shared responses** data source. The Vote button 
 
 ## 2. Make the shared responses
 
-1. Open the **Data** tab at the bottom of the window.
+1. A new project keeps the **Data** tab put away. Press **More panels** at the right of the bottom tabs and choose **Data**.
+
+![The More panels menu open over the editor, listing the panels put away for now: Icons, Libraries, Comments, Scripts, Data and the rest, with Show all panels and tools at the bottom.](help/tutorial-survey-chart-more-panels.png)
+
 2. Press **+ Shared responses**. A data source called \`responses\` appears in the list with a **shared** badge, and its settings open beside it.
 3. Leave **Who sees it** on **Everyone in this class**.
 4. Set **Answers each** to **1**, so one person has one vote.
 5. Set **Look again** to **5**. While the results page is open it asks for the class's answers every five seconds.
 6. In **Sample answers**, type a few votes, one a line: \`Bus\`, \`Bus\`, \`Car\`, \`Walk\`, \`Train\`. Each line counts as one person. Only the canvas and Preview see them, so you can lay out the chart before anyone has voted.
+
+![The Data tab: responses is selected with a shared badge, Who sees it is Everyone in this class, Answers each 1, Look again 5, and the counted answers show on the right.](help/tutorial-survey-chart-responses.png)
 
 ## 3. The start page
 
@@ -13770,7 +14041,7 @@ The class's answers live in a **Shared responses** data source. The Vote button 
 2. In the tool bar down the left, click **Web** to open that group and pick **Input field**. Drag a box under the question.
 3. In the **Input** section of the Properties panel, set **Type** to **select**. In **Options** type the answers, one per line: \`Bus\`, \`Train\`, \`Car\`, \`Bike\`, \`Walk\`.
 4. Beside **Variable**, press **Bind to a variable…** and choose **+ New variable…**. Call it \`choice\` and press **Create variable**. Whatever the learner picks is now in \`choice\`.
-5. Open the **Accessibility** section and type a **Text alternative**: \`How you usually get to campus\`.
+5. Open the **Accessibility** section and type a **Text alternative**: \`How you usually get to campus\`. (Right now the player puts an input field's text alternative on the box around it rather than on the dropdown itself, so a screen reader may not say it yet.)
 6. Add a button under the dropdown with the **Label** **Vote** and the **Name** **Vote button**.
 
 ## 5. Send the vote
@@ -13783,12 +14054,14 @@ The Vote button needs four things in a row, so build it in the **Interactions** 
 4. Drag from its output and add **Add to shared responses**. Set **Shared responses** to \`responses\` and **Answer** to \`choice\`.
 5. Drag from its **Added** dot and add **Go to a page**. Set **Go to** to **A chosen page** and **Page** to **Results**.
 
+![The Vote button's graph: When clicked or hovered, Check a condition, Take back shared responses, Add to shared responses and Go to a page, with Add to shared responses selected and its Answer set to choice.](help/tutorial-survey-chart-vote-graph.png)
+
 > **Add to shared responses** goes on from **Not added** when the answer was refused: empty, a blocked word, or over the **Answers each** limit. Leave that dot unjoined here.
 
 ## 6. The chart
 
 1. Open the **Results** page and add a heading text: \`How the class gets to campus\`.
-2. In the tool bar, click **Data** to open that group and pick **Chart**. Drag a wide box under the heading. It starts as a column chart of four made-up items.
+2. A new project keeps the **Data** tools put away too. Under the tool groups on the left, click **More tools** so the **Draw**, **Data** and **Rig** groups show. Then click **Data** to open it and pick **Chart**. Drag a wide box under the heading. It starts as a column chart of four made-up items.
 3. In the **Chart** section of the Properties panel:
    - Set **Kind** to **Bar (sideways)**, so long answers have room.
    - Set **Data** to \`responses.answers\`. That is the counted list, most votes first.
@@ -13799,11 +14072,15 @@ The Vote button needs four things in a row, so build it in the **Interactions** 
 4. Under the chart, add a text that counts the voters: \`{responses.people} people have voted so far.\` Anything in curly brackets is worked out as the page plays.
 5. Add a button with the **Label** **Change my vote**. Give it **+ When clicked…**, **Go to the previous page**.
 
+![The Results page with the chart selected: Kind Bar (sideways), Data responses.answers, Label key text and Value key count, and the five counted answers listed under Data.](help/tutorial-survey-chart-chart.png)
+
 ## 7. Try it
 
 1. Go back to **Home** and press **Preview** at the top right.
 2. Press **Start**, pick **Bike** and press **Vote**. The results page shows your sample answers as the class, plus your vote for Bike.
 3. Press **Change my vote**, pick **Bus** and vote again. Bike drops out and Bus goes up by one: **Take back shared responses** did its job.
+
+![Preview on the Results page after voting Bike: a sideways bar chart of the class's answers with a count on each bar, 12 people have voted so far, and Change my vote.](help/tutorial-survey-chart-results.png)
 
 Press <kbd>Esc</kbd> to close the Preview.
 
@@ -13866,7 +14143,7 @@ The video doesn't play on the editing canvas. It plays in **Preview**.
 
 ## 3. Captions
 
-Further down the **Video** section, under **Captions**, press **Import…** and pick your \`.vtt\` or \`.srt\` file. A message says how many captions came in. Type the language in **Language**, such as \`en\`.
+Further down the **Video** section, under **Captions** (below **Cue points** and **Chapters**), press **Import…** and pick your \`.vtt\` or \`.srt\` file. A message says how many captions came in. Type the language in **Language**, such as \`en\`.
 
 Captions are what is said, for learners who can't hear it or would rather read. If you don't have a file yet, come back to this step before you share it. See [Captions](captions).
 
@@ -13881,6 +14158,8 @@ Still in the **Video** section, under **Chapters**:
    - **75**, \`Read closely\`
 
 The video's own controls list the chapters in browsers that show them. The buttons you make next read the same list.
+
+![Clip selected, with its Video section: Cue points at 30 (q1) and 70 (q2), both ticked Pause the video here, then Chapters at 0, 35 and 75 with their titles, and Captions with Import… under them.](help/tutorial-video-chapters-cues.png)
 
 ## 5. Chapter buttons
 
@@ -13926,7 +14205,9 @@ Both cards fade to faint ghosts on the canvas, since \`question\` starts at 0. T
 1. Select **Clip**. In the **Video** section, under **Cue points**, press **Add a cue** twice.
 2. Set the first cue's **At** to **30** and **Name** to \`q1\`, and tick **Pause the video here**.
 3. Set the second to **70**, \`q2\`, and tick **Pause the video here**.
-4. In **Data bindings** on **Clip**, press **+ Add binding** and pick **Hold paused (it will not play while true)**. Press **Formula**, then **Edit as formula**, and type \`question > 0\`. While a question is open, nothing starts the video, not even its own play button.
+4. In **Data bindings** on **Clip**, press **+ Add binding** and pick **Hold paused (it will not play while true)**. Press **Formula**, then **Edit as formula**, and type \`question > 0\`. While a question is open, nothing starts the video, not even its own play button. (The formula pickers write the same thing: **Condition** **question**, **is more than**, **a number**, **0**.)
+
+![The Clip's Hold paused (it will not play while true) binding: Formula, with the Condition question is more than 0, currently false.](help/tutorial-video-chapters-hold-paused.png)
 
 Now show the question when a cue is reached:
 
@@ -13953,6 +14234,10 @@ Now show the question when a cue is reached:
 
 Setting \`question\` back to 0 hides the card and lets go of **Hold paused**. That happens on the next frame, which is what the short **Wait** is for: a **Play** any sooner is ignored.
 
+Press **Read as sentences** at the top right of the graph to check the flows in words.
+
+![The Interactions tab's Read as sentences view: when Clip reaches a cue point, set question to event.index + 1; when Continue is clicked, set question to 0, wait 0.04 s, then play Clip; and each chapter button going to its chapter's time, then playing.](help/tutorial-video-chapters-sentences.png)
+
 ## 10. Try it
 
 1. Press **Preview**. Press play on the video.
@@ -13960,7 +14245,7 @@ Setting \`question\` back to 0 hides the card and lets go of **Hold paused**. Th
 3. Answer it. **Continue the video** appears. Press it and the video carries on.
 4. Press a chapter button and the video jumps there. Drag the time bar past 70 seconds and no question shows: only playing across a cue counts. Drag back before it and it is ready again.
 
-The **Variables (live)** list on the left of the Preview shows \`question\` changing. Press <kbd>Esc</kbd> to close.
+The **Variables (live)** list on the left of the Preview shows \`question\` changing (press **Debug** in Preview's bar if you don't see it). Press <kbd>Esc</kbd> to close.
 
 ## Go further
 
@@ -14021,6 +14306,8 @@ On the projects page press **New project**. Keep **Blank project**, type **Weekl
    - \`spending\`, worked out as \`rent + food\`;
    - \`leftover\`, worked out as \`income - spending\`.
 
+![The Variables tab: income is Worked out with the formula hours * pay, currently 420, and Keep up to date ticked; spending below it is Worked out as rent + food.](help/tutorial-whatif-worked-out.png)
+
 A worked out value can read other worked out values, so \`leftover\` follows both of the others.
 
 ## 4. The sliders
@@ -14029,10 +14316,12 @@ A worked out value can read other worked out values, so \`leftover\` follows bot
 2. In the **Input** section of the Properties panel, set **Type** to **range**. The box becomes a slider.
 3. Set **Min** to **0**, **Max** to **40** and **Step** to **1**.
 4. Beside **Variable**, press **Bind to a variable…** and choose \`hours\`. The slider jumps to 15. Dragging it now sets \`hours\`, and changing \`hours\` moves it: it is a two-way (**⇄ Both**) binding.
-5. Change its **Name** to **Hours slider**, and in the **Accessibility** section type a **Text alternative**: \`Hours of paid work a week\`. A slider has no words on it, so this is what a screen reader says.
+5. Change its **Name** to **Hours slider**, and in the **Accessibility** section type a **Text alternative**: \`Hours of paid work a week\`. A slider has no words on it, so this is what a screen reader should say. (Right now the player puts an input field's text alternative on the box around it rather than on the slider itself, so a screen reader may not say it yet.)
 6. Make two more sliders under it the same way:
    - **Pay slider**: **Min** 20, **Max** 40, **Step** 0.5, bound to \`pay\`;
    - **Rent slider**: **Min** 100, **Max** 500, **Step** 10, bound to \`rent\`.
+
+![The hours slider selected on the page, with its Input section: Type range, Value is bound ⇄ Both hours, Min 0, Max 40 and Step 1.](help/tutorial-whatif-slider.png)
 
 ## 5. Formulas in text
 
@@ -14050,7 +14339,7 @@ The third argument of **fmt**, \`true\`, puts a comma in every three digits. The
 
 ## 6. The chart
 
-1. In the tool bar, click **Data** to open that group and pick **Chart**. Drag a box on the right half of the page.
+1. A new project keeps the **Data** tools put away. Under the tool groups on the left, click **More tools** so the **Draw**, **Data** and **Rig** groups show. Then click **Data** to open it and pick **Chart**. Drag a box on the right half of the page.
 2. In the **Chart** section, set **Data** to:
 
    \`[{label: "Income", value: income}, {label: "Rent", value: rent}, {label: "Food and bills", value: food}, {label: "Left over", value: leftover}]\`
@@ -14060,6 +14349,8 @@ The third argument of **fmt**, \`true\`, puts a comma in every three digits. The
 4. Set **Prefix** to \`$\` and **Decimals** to **0**, so each column says *$420* rather than *420*.
 5. In the **Accessibility** section, give the chart a **Text alternative**: \`Column chart of a week of income, rent, food and bills, and what is left over\`.
 
+![The Chart section for the budget chart: Kind Column, the list written out in Data with its four items listed under it, A colour for each item and Value labels ticked, Decimals 0 and Prefix $.](help/tutorial-whatif-chart.png)
+
 ## 7. Try it
 
 1. Press **Preview** at the top right.
@@ -14067,7 +14358,9 @@ The third argument of **fmt**, \`true\`, puts a comma in every three digits. The
 3. Drag the rent up past 300. The last line says *Short by* and the Left over column drops below zero.
 4. Tab to a slider and use the arrow keys: it moves one **Step** at a time.
 
-The **Variables (live)** list on the left of the Preview shows all seven values changing. Press <kbd>Esc</kbd> to close the Preview.
+![Preview with the rent dragged to 350: Spending is $500.00, the last line says Short by $80.00, the Left over column drops below zero, and the Debug panel shows leftover at -80.](help/tutorial-whatif-short.png)
+
+The **Variables (live)** list on the left of the Preview shows all seven values changing (press **Debug** in Preview's bar if you don't see it). Press <kbd>Esc</kbd> to close the Preview.
 
 ## Make it yours
 
@@ -14114,6 +14407,8 @@ Building a word search from a blank page means a few dozen nodes and formulas, s
 2. Pick a colourway, find **Word search** under **Games and puzzles** and press **Use template**.
 3. Type **Water cycle word search** in **Name of your new project** and press **Create project**.
 
+![The Games and puzzles row of the branded starters: Crossword, Word search, Arithmetic quiz and Guess the answer, each with Play and Use template.](help/tutorial-wordgames-starters.png)
+
 A checklist opens beside the project. You will do its main job in the next step, and can tick items off as you go.
 
 ### 2. Type your words
@@ -14138,6 +14433,8 @@ Find \`rows\` in the **Variables** tab. It says **Worked out**, its formula is \
 - The same words and seed always make the same grid. Leave the seed out and it is 7. Change the formula to \`wordSearch(words, 12, 3)\` for the same words in another arrangement, and try a few numbers until you like one.
 - A word longer than 12 letters can't fit and is left out. Keep to about eight words: the **Words to find** list has room for eight.
 
+![The Variables tab: words is a List that starts as a value, and rows is Worked out with the formula wordSearch(words, 12) and Keep up to date ticked.](help/tutorial-wordgames-variables.png)
+
 ### 4. A repeater in a grid
 
 1. On **Find the words**, select **Grid** in the **Layers** panel.
@@ -14151,6 +14448,8 @@ That joins the twelve rows into one run of 144 letters and makes an item for eac
 
 3. Select **Letter square**, the one layer inside **Grid**. It is copied 144 times. Its text layer, **Letter**, says \`{item.l}\`. Its **Data bindings** colour it: \`line.includes(index)\` for the squares being chosen, \`foundCells.includes(index)\` for words already found.
 4. **Grid** also has **Keyboard navigation** on: the whole grid is one stop for <kbd>Tab</kbd>, the arrow keys move between squares, and <kbd>Enter</kbd> chooses one.
+
+![Grid selected on Find the words: its Repeat (list) section with the Items formula, 144 items, Layout Grid and Cols 12, and Keyboard navigation in Grid mode.](help/tutorial-wordgames-grid-repeat.png)
 
 To restyle the squares, restyle **Letter square** once: every copy follows.
 
@@ -14177,7 +14476,9 @@ Find the **When a message arrives** node for \`try\` (its **Note** says *Is it o
 
 ### 7. Try it
 
-Press **Preview**, then **Start**. Drag across a word: it turns green and is struck off the list. Click the first and last letters of another. With the keyboard, use the arrows and <kbd>Enter</kbd> on the first and last letter. Watch \`start\`, \`end\`, \`line\` and \`hit\` in **Variables (live)** as you choose. Press <kbd>Esc</kbd> to close.
+Press **Preview**, then **Start**. Drag across a word: it turns green and is struck off the list. Click the first and last letters of another. With the keyboard, use the arrows and <kbd>Enter</kbd> on the first and last letter. Watch \`start\`, \`end\`, \`line\` and \`hit\` in **Variables (live)** as you choose (press **Debug** in Preview's bar if you don't see it). Press <kbd>Esc</kbd> to close.
+
+![Preview after dragging across EVAPORATE: its squares are ringed in green, it is struck off the Words to find list, Found 1 of 8, and the Debug panel shows found, foundCells, start and end.](help/tutorial-wordgames-found.png)
 
 ## Part 2: the crossword
 
@@ -14217,6 +14518,8 @@ Press **Preview**, then **Start**. Drag across a word: it turns green and is str
 ### 11. Try it
 
 Press **Preview** and **Start**. Click a clue, type the answer, and press **Check letters**. Click a square twice to switch between across and down.
+
+![The crossword in Preview after Check letters: EVAPORATE across is green, SLOW typed for 1 down has its wrong L marked red, and the line under the clue says 1 letter is wrong.](help/tutorial-wordgames-crossword.png)
 
 ## Make it yours
 
@@ -14501,6 +14804,8 @@ Each page has its own graph in the **Interactions** tab, and that graph is the w
 - Press **Beside editor** in Preview's bar to keep the graph in view. Nodes light up green with *ran* as they run, and the wires they follow pulse.
 - **Read as sentences** lists steps that nothing starts under **Not joined to anything, so these never run**.
 
+![Preview beside the editor after a click on Next: the Events list shows On pointer (Next) then Set variable, and in the Interactions graph below, Next's event and its two Change a value or counter nodes are green, marked as having run.](help/concept-events-actions-beside-editor.png)
+
 **More:** [Interactions](interactions), [See what ran](interactions#see-what-ran), [Interaction node reference](interaction-nodes), [Tutorial 2: Your first interaction](tutorial-first-interaction).`
   }
 };
@@ -14543,7 +14848,10 @@ In a text layer, \`Score: {score} of {total}\` puts the values in among the word
 
 ## How to tell what is going on
 
-- **The line under every formula field.** Green says what it works out to right now (*currently 12*), with the starting values. Red says what is wrong in a sentence, and for a mistyped name it offers a fix: *There is no value called scoer. Did you mean score?* with a **Use score** button.
+- **The line under every formula field.** Green says what it works out to right now (*currently 12*), with the starting values. A warning says what is wrong in a sentence, and for a mistyped name it offers a fix: *There is no value called scoer. Did you mean score?* with a **Use score** link that puts it right.
+
+![A Button label binding with the formula playng ? "Pause" : "Play" and, under it, There is no value called playng. Did you mean playing? Use playing.](help/concept-expressions-did-you-mean.png)
+
 - **Suggestions as you type.** Start a name, or type a dot after one, and the list shows what is there, with each value.
 - **Conditions without typing.** A field that wants a yes or no offers pickers (**[score] [is at least] [5]**), which write the formula for you.
 - A formula that uses \`event\` can only say *depends on what happens when it runs*. Try it in Preview and watch **Variables (live)**.
@@ -14691,6 +14999,8 @@ Both take a formula, or the pickers (**[score] [is at least] [5]**). A formula t
 - When a click starts nothing because of an **Only if**, the Events list says so under **Why did nothing happen?**.
 - **Variables (live)** in Preview shows the values the condition reads, and you can change them to try the other way.
 
+![Preview beside the editor in the memory game, after a click on a card that is already matched: the Events list says Why did nothing happen? The click reached that layer and its event ran, but its Only if said no. Check the condition on the event.](help/concept-only-if-why-nothing.png)
+
 **More:** [Only if](interactions#only-if), [Conditions with pickers](interactions#conditions-with-pickers), [See what ran](interactions#see-what-ran), [Checks as you type](expressions#checks-as-you-type), [Tutorial 3: A state machine with variables](tutorial-state-machine).`
   }
 };
@@ -14725,7 +15035,13 @@ A **page master** is a page that holds what other pages share, such as a logo, a
 ## How to tell what is going on
 
 - In the **Layers** panel a page that uses a master has an **on …** badge naming it, and a master has a **master · 3** badge saying how many pages use it.
+
+![The Layers panel with every page folded: Word search has start and on Hero master badges, the other pages say which master they draw, and Hero master, Content master and End master say master · 2, master · 2 and master · 1.](help/concept-pages-masters-layers.png)
+
 - With a page selected, its **Page master** section says which master it draws and lists the master's layers, so you can leave one off this page.
+
+![The Page master section of a page: Master set to Content master, Edit master and Detach, and a ticked box for each master layer to show on this page.](help/concept-pages-masters-section.png)
+
 - In Preview, the **Now showing** line in the **Debug** panel names the page on screen.
 
 **More:** [Pages (artboards)](artboards), [Page masters](page-master), [Go to a page](interactions#go-to-a-page), [Page groups](artboards#page-groups).`
@@ -14784,6 +15100,8 @@ const concept$8 = {
 
 There is only one layer. The copies you see on the canvas and in Preview are drawn from it, so anything you change on the template, every copy gets. What makes the copies different is the item: inside the template, \`item\` is this copy's item and \`index\` is its position, counting from 0. A text layer reading \`{item.title}\` shows each item's own title.
 
+![One Card inside the Cards repeater in the Layers panel, and four cards on the canvas, each with its own title: the Card title layer is selected on the first copy.](help/concept-repeaters-one-template.png)
+
 ## Where people get caught out
 
 - **"I changed one card and they all changed."** There is one card. To make one look different, make the difference come from its item: a binding on Fill colour like \`item.done ? "#2e7d32" : "#ffffff"\`, or a Visible binding on \`index == 0\`.
@@ -14795,6 +15113,10 @@ There is only one layer. The copies you see on the canvas and in Preview are dra
 ## How to tell what is going on
 
 - The line under **Items** says what the list is right now, with the starting values (*currently 6 items*), or what is wrong with it.
+
+![The Repeat (list) section of a repeater: Repeat the first child for each item ticked, Items tips.cards, and the line under it saying currently 4 items.](help/concept-repeaters-items.png)
+
+- A text or binding in the template that reads \`item\` may show *There is no value called item* in the Properties panel. Inside a repeater that warning is wrong: the copies on the canvas show whether it works.
 - In Preview, the **Events** list shows each click with the nodes it ran, and **Variables (live)** shows the list variable change as you click.
 - For keyboard users, **Keyboard navigation** on the repeater makes one copy the Tab stop and the arrow keys move between the rest.
 
@@ -14848,7 +15170,9 @@ const concept$6 = {
     group: "Concepts",
     summary: "Report result sends a score and completion to the Toolbox's results for the project. Only the Link for StudyDesk keeps them; Preview and the plain share link keep none.",
     keywords: "concept report result score grade completion complete pass fail studydesk results view results no grade preview share link more than once attempts best last record learner staff",
-    body: `A project says how a learner did with **Report result**: a node in the Interactions graph, or the **Report result** setting on a question. It sends a score (and, with *Complete*, that this attempt is finished). What the score is out of, the pass mark and when the project counts as complete without a node are set in **Results and progress**, in the Project section of the Inspector (click an empty part of the canvas).
+    body: `A project says how a learner did with **Report result**: a node in the Interactions graph, or the **Report result** setting on a question. It sends a score (and, with *Complete*, that this attempt is finished). What the score is out of, the pass mark and when the project counts as complete without a node are set in **Results and progress**, a section of the Properties panel below **Project** (click an empty part of the canvas to see it).
+
+![The Results and progress section: Score variable, Complete when set to Report result node only, Resume on the same artboard, and the View results… button.](help/concept-results-section.png)
 
 Where the result goes depends on how the project was opened:
 
@@ -14902,7 +15226,10 @@ The **Random** node, a question's **Shuffle** and \`randInt\` take no seed. They
 
 ## How to tell what is going on
 
-- The line under a formula field says *changes each time it runs* for \`shuffle(list)\` with no seed and for \`randInt\`. With a seed it shows the order you will get.
+- The line under a formula field says *changes each time it runs* for \`shuffle(list)\` with no seed and for \`randInt\`. With a seed it says what it works out to, which for a list is how many items (*currently 12 items*); **Variables (live)** in Preview shows the order itself.
+
+![The memory game's variables: seed, a Number starting at 0, and cards, a List worked out from shuffle(pairs.flatMap(...), seed), currently 12 items.](help/concept-seeds-random-seed.png)
+
 - In Preview, **Variables (live)** shows \`seed\` and the shuffled list. Type a learner's seed into \`seed\` and press <kbd>Enter</kbd> to see their order.
 - **Restart** in Preview starts a new run: a new random seed, a new shuffle.
 
@@ -14971,6 +15298,8 @@ const concept$3 = {
 
 The finished interactive picks a theme for each viewer. By default it follows their settings: a viewer who asks for more contrast gets **High contrast**, one in dark mode gets **Dark**, everyone else gets the default theme. So the same page can be drawn three ways, and only the token colours change between them.
 
+![The colour picker opened from the arrow beside a swatch, on its Tokens tab: color/background, color/surface, color/text, color/primary and the rest, each with its Light, Dark and High contrast values.](help/concept-themes-tokens-picker.png)
+
 ## Where people get caught out
 
 - **"I picked a hex colour and High contrast broke."** A fixed colour stays put while the theme changes everything around it. Pick from the **Tokens** tab of the colour picker instead (the arrow beside the swatch), or add a token with that colour in the **Themes** tab and use it.
@@ -14982,6 +15311,8 @@ The finished interactive picks a theme for each viewer. By default it follows th
 ## How to tell what is going on
 
 - A colour that follows a token shows a named chip instead of a hex box. Hover it for its value in each theme.
+![The Themes tab: Showing set to the Gold theme, a column for each theme with its scheme, High contrast and Default boxes, and a row for each token with its colour in every theme.](help/concept-themes-tokens-themes-tab.png)
+
 - **Showing** in the **Themes** tab, and the theme box in the top bar, switch what the canvas draws, so you can look at Dark without leaving the editor. Preview has a theme box and a **Viewer** box that pretends dark mode or more contrast is on.
 - The [Accessibility checker](accessibility-checker) checks text contrast in every theme (a finding that starts "In Dark:" is about Dark), and warns **Theme colour on a fixed colour** for text that follows a token on a fixed background.
 
@@ -15042,6 +15373,8 @@ const concept$1 = {
 
 - **Remember** keeps the value as part of the learner's progress. A **Score** variable (from **+ Add variable**) has it ticked already. **Start over** puts remembered values back to the start.
 - **Save as user data** keeps the value for that person on its own: it is put back before the project starts, and saved a moment after it changes. Use it for the learner's own work, like journal answers. **Start over** and **Clear results** leave it alone.
+
+![A variable's Options opened in the Variables tab: Remember (Keeps the value when the learner comes back) and Save as user data (Saves the value for each person on the server, so it follows them to another device).](help/concept-user-data-options.png)
 
 Kept values belong to **one person, in one course, in one project**. The same learner in another course starts fresh, and so does the same course in a copy of the project.
 
@@ -15107,6 +15440,9 @@ Ask: **does it change while it runs?**
 ## How to tell what is going on
 
 - Under each binding, a grey line works it through with the starting values: *the formula is 1, Look up: no line for 1, so it stays 1*. If the layer looks wrong on the canvas, that line usually says why.
+
+![A Play button's Data bindings: Button label set by the formula playing ? "Pause" : "Play", currently Play, and Pressed (button, toggle) set straight from the variable playing; under each, a line saying what it is set to at the start.](help/concept-variables-data-bindings-bindings.png)
+
 - Under each variable's name, the Variables tab says **used in 3 places** or **not used yet**. Click it to go to each place.
 - In Preview, **Variables (live)** shows every variable as it changes, and you can set one by hand to see what the bindings do with it.
 

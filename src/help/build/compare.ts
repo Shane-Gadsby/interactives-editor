@@ -21,7 +21,7 @@ How it works: the handle's **X** is tied to a number variable both ways. Draggin
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Before and after** as the name and press **Create project**.
 2. Add a title at the top with the **Text** tool: \`Then and now\`.
-3. Open the **Variables** tab, press **+ Add variable**, pick **Counter** and name it \`handleX\`. Set its starting value to **380**.
+3. Open the **Variables** tab, press **+ Add variable** and pick **Counter**. It arrives called \`count\`: rename it \`handleX\` and set its starting value to **380**.
 
 ## 2. The After picture
 
@@ -40,6 +40,8 @@ Both pictures must be the same size and in the same place, so they line up exact
 
 Positions inside a frame count from the frame's own corner, which is why the picture's X and Y are 0.
 
+![Before reveal selected: in the Layers panel Before label and Before picture sit inside it, on the canvas the frame covers the left half of the pictures, and its Data bindings show Width, In, Formula, handleX + 20 - 60, currently 340.](help/tutorial-compare-frame-width.png)
+
 ## 4. The handle and the line
 
 Anything you draw over a frame goes inside it, and these two must not, so draw them on an empty part of the page (under the pictures) and then type where they go.
@@ -53,12 +55,17 @@ Anything you draw over a frame goes inside it, and these two must not, so draw t
 2. Set **Moves** to **Left and right only**.
 3. Set **Stays inside** to **Layer: After picture**. The handle can't be dragged past the pictures.
 4. Set **Key step** to **34**. That is how far each arrow key moves it.
-5. In **Accessibility**, type \`Divider\` in **Text alternative**.
+5. In **Accessibility**, type \`Divider\` in **Text alternative**. The **Name read out** box in **Draggable** picks it up too.
+
+![The Draggable section of Divider handle: Can be dragged ticked, Moves Left and right only, Stays inside Layer: After picture, Key step 34, and Name read out showing Divider.](help/tutorial-compare-draggable.png)
 
 ## 6. Tie everything to handleX
 
 1. Still on **Divider handle**, open **Data bindings**, press **+ Add binding** and pick **X**.
 2. At the top of the binding press **⇄ Both**, and pick the variable **handleX**. Now the handle starts where \`handleX\` says, and dragging it writes its new X into \`handleX\`.
+
+![The X binding of Divider handle set to Both and handleX, with the line: At the start X takes handleX (380). After that, change either and the other follows.](help/tutorial-compare-both.png)
+
 3. Select **Before reveal**. Add a binding on **Width**, choose **Formula**, and type:
 
 \`\`\`
@@ -76,7 +83,9 @@ The grey line under each binding works it out with \`handleX\` at 380: the width
 1. Press **Preview**.
 2. Drag the handle right: more of Before shows. Drag it left: more of After.
 3. Now the keyboard. Press <kbd>Tab</kbd> until the handle has the focus ring, press <kbd>Space</kbd> to pick it up, use the left and right arrow keys to move it, and <kbd>Space</kbd> to put it down. <kbd>Esc</kbd> puts it back where it was.
-4. Watch \`handleX\` change in **Variables (live)**.
+4. Watch \`handleX\` change in **Variables (live)**, on the left of the Preview. It is part of **Debug** in Preview's bar; press **Debug** if you don't see it. After a drag it can be a hair off a whole number, such as 379.99999999999994; the picture doesn't mind.
+
+![Preview with the handle picked up from the keyboard: a dashed ring round it, more of Before showing, and handleX at 486 in Variables (live).](help/tutorial-compare-preview.png)
 
 Add a line of instructions under the pictures saying how to use the keyboard, since not everyone knows a handle can be picked up with Space.
 

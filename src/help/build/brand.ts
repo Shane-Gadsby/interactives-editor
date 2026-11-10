@@ -34,12 +34,16 @@ The UniSQ colourways are the colours of the branded starter packs: Gold, Purple,
 3. Under **Purple**, tick **Default**. That is the theme the project opens in.
 4. Set **Showing**, at the left of the tab's bar, to **Purple**, so the canvas draws it.
 
+![The Themes tab: Showing set to Purple, the + Colourway list beside it, and a column for each of Light, Dark, High contrast and Purple, with Default ticked under Purple and the contrast checks on the right.](help/tutorial-brand-themes.png)
+
 ## 3. A purple header
 
 1. Press <kbd>R</kbd> and drag a rectangle across the top of the page. Set **X** and **Y** to 0, **W** to 800 and **H** to 170, and name it **Header**.
 2. In its **Fill**, press the small arrow beside the colour, open the **Tokens** tab and pick **brand/deep**. The colour box turns into a chip with the token's name on it.
 3. Draw a thin rectangle under it (**Y** 170, **W** 800, **H** 8), name it **Accent bar**, and give it the token **brand/accent**, the gold.
 4. Press <kbd>T</kbd> and drag a text box on the header. Type \`Space week\`, press <kbd>Esc</kbd> and name it **Title**. In its **Text** section set **Size** to 44, and for **Colour** pick the token **brand/on-deep**: the colour that reads on deep purple.
+
+![Header's Fill with the token chip brand/deep, and the colour picker's Tokens list open with brand/deep picked, each token showing its colour in every theme.](help/tutorial-brand-token.png)
 
 Pick tokens in pairs like this: **brand/on-deep** goes on **brand/deep**, **color/on-button** on **color/button**. Each pair is chosen to be readable in every theme.
 
@@ -59,8 +63,11 @@ You didn't pick a colour for the text or the button. They follow **color/text**,
 
 1. Select the **Due** text. Its **Colour** is a chip saying **color/text**. Press the **×** on the chip (**Detach from the token**). It looks the same, but it is a plain colour now: a hex box is back where the chip was, and the **Themes** tab says **1 colour not following a theme**.
 2. Switch the theme box in the top bar to **High contrast**. The page goes black, the header and card change, and the **Due** text stays dark grey on black, nearly invisible.
-3. Open the **Accessibility** tab: it lists **Low text contrast** for **Due**, starting **In High contrast:**.
-4. Put it right: press the small arrow beside **Colour**, open **Tokens** and pick **color/text**. The text turns white in High contrast and the finding goes.
+3. Open the **Accessibility** tab: it lists **Low text contrast** for **Due** twice, once starting **In Dark:** and once **In High contrast:**, since the plain grey fails in both.
+
+![High contrast on the canvas with Due's colour detached to a plain grey, and the Accessibility tab listing Low text contrast for Due twice.](help/tutorial-brand-high-contrast.png)
+
+4. Put it right: press the small arrow beside **Colour**, open **Tokens** and pick **color/text**. The text turns white in High contrast and both findings go.
 
 So detach a colour only when it really must stay the same in every theme.
 
@@ -69,6 +76,8 @@ So detach a colour only when it really must stay the same in every theme.
 1. Press **Preview**. The page opens in **Purple**, the default.
 2. Change **Theme: follow the viewer** to **Theme: High contrast**, then **Theme: Dark**. Every colour follows.
 3. Back on **Theme: follow the viewer**, the box beside it pretends the viewer has changed their own settings. Pick **Viewer: more contrast** and the player switches to **High contrast** by itself, as it would for a real viewer. Press <kbd>Esc</kbd>.
+
+![Preview with Theme: follow the viewer and Viewer: more contrast: the page in High contrast, white text on near black, with the purple header and gold bar.](help/tutorial-brand-preview.png)
 
 ## The ready-made way: branded starter packs
 

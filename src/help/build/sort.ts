@@ -26,12 +26,12 @@ On the projects page press **New project**. Keep **Blank project**, type **Energ
 1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
 2. Click **Add question** and pick **Categorise (drag into groups)**.
 
-A card called **Question 1** appears with two group boxes, **Mammals** and **Birds**, and four animals under them to drag. It is selected and the **Question** section is open in the Properties panel.
+A card called **Question 1** appears with a sample prompt, two group boxes, **Mammals** and **Birds**, and four animals under them to drag (Dog, Whale, Eagle and Penguin). It is selected and the **Question** section is open in the Properties panel.
 
 ## 3. Name the groups
 
 1. Replace the **Prompt** with \`Drag each energy source into the group it belongs to.\`
-2. The groups are listed first, one box each. Change **Mammals** to \`Renewable\` and **Birds** to \`Non-renewable\`. The headings in the boxes change as you type.
+2. The groups are listed first, one box each. Change **Mammals** to \`Renewable\` and **Birds** to \`Non-renewable\`. The headings in the boxes change as you type. The box layers in the **Layers** panel keep their sample names, **Mammals** and **Birds**, and so do the drop events in Preview's **Debug** list; rename the layers if that bothers you.
 
 **+ Add group** adds another box (up to six). With three groups the boxes share the width of the card.
 
@@ -39,14 +39,16 @@ A card called **Question 1** appears with two group boxes, **Mammals** and **Bir
 
 Under the groups is one entry for each card: its words, and **Belongs in**, the group it is right in.
 
-1. Change the four cards to \`Solar\`, \`Wind\`, \`Coal\` and \`Oil\`. The first two already belong in **Renewable** and the last two in **Non-renewable**, because the animals they replace did.
-2. Press **+ Add item** and type \`Hydro\`. A new card belongs in the first group, which is right for Hydro.
+1. Type over the four sample cards with \`Solar\`, \`Wind\`, \`Coal\` and \`Oil\`. The first two already belong in **Renewable** and the last two in **Non-renewable**, because the animals they replace did.
+2. Press **+ Add item** and type \`Hydro\` in the new, empty box. A new card belongs in the first group, which is right for Hydro.
 3. Press **+ Add item** again and type \`Natural gas\`. Set its **Belongs in** to **Non-renewable**.
 4. Under each card is **Feedback if put in the wrong group (optional)**. Give the two that are easiest to get wrong a reason:
    - Hydro: \`Hydro runs on flowing water, which rain keeps topping up.\`
    - Natural gas: \`Natural gas took millions of years to form, so once it is burnt it is gone.\`
 
 The new cards appear under the boxes as you add them.
+
+![The canvas and the Question section: the Renewable and Non-renewable boxes with six cards under them, and the six items with their Belongs in groups and Hydro's feedback.](help/tutorial-sort-items.png)
 
 ## 5. Answer each drop as it lands
 
@@ -66,14 +68,22 @@ Leave it unticked when the sort is a test and the learner should find out only a
    - **Partly right**: \`Some are right, but not all. Move a few and check again.\`
    - **Out of tries**: \`Out of tries. Where each one goes is listed below.\`
 
+![Say right or wrong as each item is dropped ticked, Marking with Points 6 and Tries 2, and the hint and four feedback lines filled in.](help/tutorial-sort-marking.png)
+
 The question adds the count to the feedback by itself, such as *4 of 6 in the right group*, and the reason of a card that ended up in the wrong group.
 
 ## 7. Try it
 
 1. Press **Preview** at the top right.
-2. Drag **Solar** into **Renewable**: the feedback says it is right. Drag **Natural gas** into **Renewable**: its own reason shows.
+2. Drag **Solar** into **Renewable**: the feedback says it is right. Drag **Natural gas** into **Renewable**: its own reason shows. A card lands where you let go of it, and the box doesn't arrange them, so drop each one in a different spot. Two dropped in the same place sit on top of each other and the one underneath is hidden.
+
+![Preview: Natural gas dropped in the Renewable box, and its reason in the feedback line under the cards still to sort.](help/tutorial-sort-drop.png)
+
 3. Put the rest where they belong, leave Natural gas where it is, and press **Check answer**. It says *Some are right* with *5 of 6 in the right group*.
 4. Check once more without moving it. That was the last try: the question finishes, the cards are marked ✓ or ✗ and stop moving, and a line under the cards says where Natural gas goes.
+
+![Out of tries: Natural gas marked with a cross in Renewable, Oil ticked in Non-renewable, the line Natural gas goes in Non-renewable, the Out of tries feedback with 5 of 6 in the right group, Try again and Score: 5. The other cards were dropped in the same spots, so they are hidden underneath.](help/tutorial-sort-finished.png)
+
 5. Try it with the keyboard: <kbd>Tab</kbd> to a card, <kbd>Space</kbd> to pick it up, the arrow keys to choose a group and <kbd>Space</kbd> to drop it.
 
 **Try again** puts the cards back. Press <kbd>Esc</kbd> to close the Preview.

@@ -20,7 +20,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 ## 1. Make a project and the list of ideas
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Diagrams** as the name and press **Create project**. Rename the page **Mind map**.
-2. Open the **Variables** tab. Press **+ Add variable**, pick **List** and name it \`ideas\`. Replace its \`[]\` with:
+2. Open the **Variables** tab. Press **+ Add variable** and pick **List**. It arrives called \`items\`: rename it \`ideas\`, and replace the \`[]\` in its value box with:
 
 \`\`\`
 [
@@ -40,13 +40,15 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 Each idea has an \`id\`, its words in \`label\`, and the \`id\` of the idea it hangs off in \`parent\`. The one with no parent is the middle of the map.
 
 3. Add another **List** called \`folded\` and leave it as \`[]\`. It will hold the ids of the branches that are folded away.
-4. Add a third **List** called \`map\`. Next to its type, change **Starts as a value** to **Worked out**, and type this formula in the box that appears:
+4. Add a third **List** called \`map\`. In its **Value** column, change **Starts as a value** to **Worked out**. The \`[]\` stays (it is what \`map\` falls back to if the formula fails); type this formula in the new box under it:
 
 \`\`\`
 mindMap(ideas, {width: 720, height: 440, nodeW: 112, gapX: 32, collapsed: folded})
 \`\`\`
 
-5. Tick **Keep up to date**, so \`map\` is worked out again whenever \`ideas\` or \`folded\` changes.
+5. Tick **Keep up to date** (it appears under the formula once there is one), so \`map\` is worked out again whenever \`ideas\` or \`folded\` changes.
+
+![The map variable: a List, Worked out, the empty list it falls back to, the mindMap formula under it, currently 10 items, and Keep up to date ticked.](help/tutorial-diagram-worked-out.png)
 
 \`map\` is the same ideas with a place worked out for each: \`x\`, \`y\`, \`w\` and \`h\`, its \`depth\`, whether it is \`visible\`, and \`parentIndex\`, the place in the list of the idea it hangs off. The branches are spread either side of the middle, in a 720 by 440 area.
 
@@ -61,6 +63,8 @@ All ten boxes are on top of each other for now. Tell each copy where it goes:
 4. Select **Idea** (inside **Ideas**). In **Data bindings** add four bindings, each a **Formula**: **X** \`item.x\`, **Y** \`item.y\`, **Width** \`item.w\`, **Height** \`item.h\`.
 5. Select the text inside it and bind its **Width** to \`item.w\` and **Height** to \`item.h\`, so the words stay centred in a box of any size.
 
+The line under these bindings warns *There is no value called item*. Take no notice: the editor doesn't yet know a repeated layer has \`item\`, and the canvas shows the boxes in place.
+
 The map spreads out: the middle idea with four branches round it. The positions count from the corner where you drew the box.
 
 6. Back on **Idea**, add **Fill colour** with \`item.depth == 0 ? "#ffd54f" : "#e8eefc"\`, so the middle stands out.
@@ -69,7 +73,10 @@ The map spreads out: the middle idea with four branches round it. The positions 
 
 1. Open the **Draw** group in the tool bar and pick **Connector** (or press <kbd>K</kbd>). Drag from the middle box to any other box and let go. A curved line joins them. Both ends are on **Idea**, copy 0 for now.
 2. In the **Connector** section, under **Start**, set **Which copy** to \`item.parentIndex\`. Under **End**, set **Which copy** to \`index\`. That is: from this idea's parent, to this idea.
-3. Set the **End** cap to **Plain**: mind map lines have no arrow.
+3. Under **Ends**, set **End** to **Plain**: mind map lines have no arrow.
+
+![The Connector section of Line: Route Curved, Start on layer Idea with Which copy item.parentIndex, End on layer Idea with Which copy index, and both Ends Plain.](help/tutorial-diagram-connector.png)
+
 4. With the connector selected, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and name the group **Lines**. In **Repeat (list)**, tick it, set **Items** to \`map\` and **Layout** to **Free (bind x/y)**.
 5. In the **Layers** panel, drag **Lines** below **Ideas**, so the lines go under the boxes.
 
@@ -79,9 +86,13 @@ There is now one line for each idea, from its parent to it. The middle idea has 
 
 1. Select **Idea**. Add a binding on **Visible**: **Formula**, **Edit as formula**, \`item.visible\`. An idea inside a folded branch hides, and so does its line: a connector hides when the layer at either end is hidden.
 2. In **Accessibility**, set **Role** to **Button**, and bind **Text alternative** to \`item.label + (item.folded ? ", " + item.kids + " ideas folded away" : "")\`.
-3. Press **+ On click (empty)** and **Show in graph**. Drag from the event's dot and add **Change a value or counter**: **Variable** **folded**, **Do** **Add to the list, or take out if it is there**, **Value** \`map[event.index].id\`.
+3. Press **+ On click (empty)**; the **Interactions** tab opens on the new event. Drag from the event's dot and add **Change a value or counter**: **Variable** **folded**, **Do** **Add to the list, or take out if it is there**, **Value** \`map[event.index].id\`.
 
-Press **Preview** and select **Sleep**: its two ideas fold into it, and selecting it again opens them. Then try the real point of it: close the Preview, add a line to \`ideas\` such as \`{"id": "food2", "parent": "food", "label": "Fruit for snacks"}\`, and the map makes room for it.
+Press **Preview** and select **Sleep**: its two ideas fold into it, and selecting it again opens them.
+
+![Preview of the mind map with Sleep folded: its two ideas and their lines are gone, and folded holds sleep in Variables (live).](help/tutorial-diagram-mindmap-folded.png)
+
+Then try the real point of it: close the Preview, add a line to \`ideas\` such as \`{"id": "food2", "parent": "food", "label": "Fruit for snacks"}\`, and the map makes room for it.
 
 ## 5. A flowchart to follow
 
@@ -119,7 +130,7 @@ and \`links\`, where \`label\` is the answer that takes you along it:
    - \`outs\`: \`arrows.filter(l => l.from == current && l.b >= 0)\`, the links out of the step the learner is on.
 5. Go back to **Mind map**, select **Ideas** and **Lines** together, press <kbd>Ctrl</kbd>+<kbd>C</kbd>, select the **Flowchart** page and press <kbd>Ctrl</kbd>+<kbd>V</kbd>. Rename them **Steps** and **Arrows**.
 6. Change the **Items** of **Steps** to \`chart\` and of **Arrows** to \`arrows\`.
-7. Select the connector inside **Arrows**. Set **Which copy** to \`item.a\` for **Start** and \`item.b\` for **End**, **Route** to **Elbow (right angles)**, the **End** cap to **Arrow**, and its label **Text** to \`{item.label ?? ""}\`, so the decision's arrows say Yes and No.
+7. Select the connector inside **Arrows**. Set **Which copy** to \`item.a\` for **Start** and \`item.b\` for **End**, **Route** to **Elbow (right angles)**, and under **Ends** set **End** to **Arrow**. For the Yes and No on the decision's arrows, leave the label's **Text** empty and add a binding in **Data bindings** instead: **Button label** (it is a connector's label too), **Formula**, \`item.label ?? ""\`. Typing \`{item.label}\` into **Text** doesn't work yet: a connector's own text can't see \`item\`, so the editor says *There is no value called item* and the words show as typed.
 8. Select the box inside **Steps**. Remove the **Visible** binding and change **Fill colour** to \`item.id == current ? "#ffd54f" : "#ffffff"\`: the step you are on is yellow. Set its **Role** back to **None (plain shape)**, and bind **Current (true, or page, step, location)** to \`item.id == current ? "step" : false\`.
 
 Now the panel that walks the learner through it, to the right of the chart:
@@ -133,8 +144,11 @@ The copy of the mind map's click came with nothing joined to it on this page: in
 
 ## 6. Try it
 
-1. Select the **Flowchart** page and press **Preview**.
+1. Select the **Flowchart** page and press **Preview**. Preview starts from the start page, the mind map, so pick **From this artboard** in the list at the left of Preview's bar.
 2. Press **Continue**. *Is a room free?* lights up and the buttons say **Yes** and **No**.
+
+![Preview of the flowchart after Continue: Is a room free? is yellow, its arrows say Yes and No, and the panel on the right has You are here, Is a room free?, Yes, No and Start again.](help/tutorial-diagram-flowchart.png)
+
 3. Press **No**: you are at *Pick another time*, and **Continue** takes you back to the question. Press **Yes** this time and carry on to *Go and study*.
 
 ## Make it yours

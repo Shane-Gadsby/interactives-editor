@@ -16,6 +16,8 @@ export const concept: Concept = {
 
 The finished interactive picks a theme for each viewer. By default it follows their settings: a viewer who asks for more contrast gets **High contrast**, one in dark mode gets **Dark**, everyone else gets the default theme. So the same page can be drawn three ways, and only the token colours change between them.
 
+![The colour picker opened from the arrow beside a swatch, on its Tokens tab: color/background, color/surface, color/text, color/primary and the rest, each with its Light, Dark and High contrast values.](help/concept-themes-tokens-picker.png)
+
 ## Where people get caught out
 
 - **"I picked a hex colour and High contrast broke."** A fixed colour stays put while the theme changes everything around it. Pick from the **Tokens** tab of the colour picker instead (the arrow beside the swatch), or add a token with that colour in the **Themes** tab and use it.
@@ -27,6 +29,8 @@ The finished interactive picks a theme for each viewer. By default it follows th
 ## How to tell what is going on
 
 - A colour that follows a token shows a named chip instead of a hex box. Hover it for its value in each theme.
+![The Themes tab: Showing set to the Gold theme, a column for each theme with its scheme, High contrast and Default boxes, and a row for each token with its colour in every theme.](help/concept-themes-tokens-themes-tab.png)
+
 - **Showing** in the **Themes** tab, and the theme box in the top bar, switch what the canvas draws, so you can look at Dark without leaving the editor. Preview has a theme box and a **Viewer** box that pretends dark mode or more contrast is on.
 - The [Accessibility checker](accessibility-checker) checks text contrast in every theme (a finding that starts "In Dark:" is about Dark), and warns **Theme colour on a fixed colour** for text that follows a token on a fixed background.
 

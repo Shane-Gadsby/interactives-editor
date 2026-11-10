@@ -56,6 +56,8 @@ The two texts are empty for now. \`item\` is the card the copy is drawing, and t
 
 Six cards appear in two rows, each with its own term. That is the same **Card** layer drawn six times, so restyling it restyles them all. Inside a copy, \`item\` is that card's line from the list and \`index\` is its place, counting from 0.
 
+![The Cards group selected, with Repeat (list) ticked, Items set to cards (currently 6 items), Layout Grid, Gap 20 and Cols 3, and the six cards on the canvas.](help/tutorial-flipcards-repeat.png)
+
 ## 4. Show one face at a time
 
 A card is turned over when its place is in \`flipped\`. The formula for that is \`flipped.includes(index)\`.
@@ -88,7 +90,10 @@ A click on any copy runs this one flow, and \`event.index\` is the place of the 
 1. Press **Preview**.
 2. Click a few cards. Each turns over on its own, and turns back on a second click.
 3. Press <kbd>Tab</kbd> to reach a card and <kbd>Enter</kbd> to turn it.
-4. Watch \`flipped\` in **Variables (live)** on the left: it lists the places of the cards that are turned.
+4. Watch \`flipped\` in **Variables (live)** on the left: it lists the places of the cards that are turned. It is part of **Debug** in Preview's bar; press **Debug** if you don't see it.
+
+![Preview with the first and fifth cards turned over to their meanings, and flipped reading [0,4] in the live variables.](help/tutorial-flipcards-preview.png)
+
 5. Press **Turn all back**.
 
 ## Make it yours

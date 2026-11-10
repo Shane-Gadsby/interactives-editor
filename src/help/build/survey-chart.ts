@@ -25,12 +25,17 @@ The class's answers live in a **Shared responses** data source. The Vote button 
 
 ## 2. Make the shared responses
 
-1. Open the **Data** tab at the bottom of the window.
+1. A new project keeps the **Data** tab put away. Press **More panels** at the right of the bottom tabs and choose **Data**.
+
+![The More panels menu open over the editor, listing the panels put away for now: Icons, Libraries, Comments, Scripts, Data and the rest, with Show all panels and tools at the bottom.](help/tutorial-survey-chart-more-panels.png)
+
 2. Press **+ Shared responses**. A data source called \`responses\` appears in the list with a **shared** badge, and its settings open beside it.
 3. Leave **Who sees it** on **Everyone in this class**.
 4. Set **Answers each** to **1**, so one person has one vote.
 5. Set **Look again** to **5**. While the results page is open it asks for the class's answers every five seconds.
 6. In **Sample answers**, type a few votes, one a line: \`Bus\`, \`Bus\`, \`Car\`, \`Walk\`, \`Train\`. Each line counts as one person. Only the canvas and Preview see them, so you can lay out the chart before anyone has voted.
+
+![The Data tab: responses is selected with a shared badge, Who sees it is Everyone in this class, Answers each 1, Look again 5, and the counted answers show on the right.](help/tutorial-survey-chart-responses.png)
 
 ## 3. The start page
 
@@ -47,7 +52,7 @@ The class's answers live in a **Shared responses** data source. The Vote button 
 2. In the tool bar down the left, click **Web** to open that group and pick **Input field**. Drag a box under the question.
 3. In the **Input** section of the Properties panel, set **Type** to **select**. In **Options** type the answers, one per line: \`Bus\`, \`Train\`, \`Car\`, \`Bike\`, \`Walk\`.
 4. Beside **Variable**, press **Bind to a variable…** and choose **+ New variable…**. Call it \`choice\` and press **Create variable**. Whatever the learner picks is now in \`choice\`.
-5. Open the **Accessibility** section and type a **Text alternative**: \`How you usually get to campus\`.
+5. Open the **Accessibility** section and type a **Text alternative**: \`How you usually get to campus\`. (Right now the player puts an input field's text alternative on the box around it rather than on the dropdown itself, so a screen reader may not say it yet.)
 6. Add a button under the dropdown with the **Label** **Vote** and the **Name** **Vote button**.
 
 ## 5. Send the vote
@@ -60,12 +65,14 @@ The Vote button needs four things in a row, so build it in the **Interactions** 
 4. Drag from its output and add **Add to shared responses**. Set **Shared responses** to \`responses\` and **Answer** to \`choice\`.
 5. Drag from its **Added** dot and add **Go to a page**. Set **Go to** to **A chosen page** and **Page** to **Results**.
 
+![The Vote button's graph: When clicked or hovered, Check a condition, Take back shared responses, Add to shared responses and Go to a page, with Add to shared responses selected and its Answer set to choice.](help/tutorial-survey-chart-vote-graph.png)
+
 > **Add to shared responses** goes on from **Not added** when the answer was refused: empty, a blocked word, or over the **Answers each** limit. Leave that dot unjoined here.
 
 ## 6. The chart
 
 1. Open the **Results** page and add a heading text: \`How the class gets to campus\`.
-2. In the tool bar, click **Data** to open that group and pick **Chart**. Drag a wide box under the heading. It starts as a column chart of four made-up items.
+2. A new project keeps the **Data** tools put away too. Under the tool groups on the left, click **More tools** so the **Draw**, **Data** and **Rig** groups show. Then click **Data** to open it and pick **Chart**. Drag a wide box under the heading. It starts as a column chart of four made-up items.
 3. In the **Chart** section of the Properties panel:
    - Set **Kind** to **Bar (sideways)**, so long answers have room.
    - Set **Data** to \`responses.answers\`. That is the counted list, most votes first.
@@ -76,11 +83,15 @@ The Vote button needs four things in a row, so build it in the **Interactions** 
 4. Under the chart, add a text that counts the voters: \`{responses.people} people have voted so far.\` Anything in curly brackets is worked out as the page plays.
 5. Add a button with the **Label** **Change my vote**. Give it **+ When clicked…**, **Go to the previous page**.
 
+![The Results page with the chart selected: Kind Bar (sideways), Data responses.answers, Label key text and Value key count, and the five counted answers listed under Data.](help/tutorial-survey-chart-chart.png)
+
 ## 7. Try it
 
 1. Go back to **Home** and press **Preview** at the top right.
 2. Press **Start**, pick **Bike** and press **Vote**. The results page shows your sample answers as the class, plus your vote for Bike.
 3. Press **Change my vote**, pick **Bus** and vote again. Bike drops out and Bus goes up by one: **Take back shared responses** did its job.
+
+![Preview on the Results page after voting Bike: a sideways bar chart of the class's answers with a count on each bar, 12 people have voted so far, and Change my vote.](help/tutorial-survey-chart-results.png)
 
 Press <kbd>Esc</kbd> to close the Preview.
 

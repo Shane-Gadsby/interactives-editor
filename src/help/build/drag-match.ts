@@ -26,26 +26,30 @@ On the projects page press **New project**. Keep **Blank project**, type **Capit
 1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
 2. Click **Add question** and pick **Matching (drag and drop)**.
 
-A card called **Question 1** appears, already working. On the left is a pile of **terms** to drag (four countries). On the right each capital has a dashed **slot** beside it. The card is selected and the **Question** section is open in the Properties panel.
+A card called **Question 1** appears, already working, with four sample pairs (France and Paris, Japan and Tokyo, and so on). On the left is a pile of **terms** to drag. Next to it are the capitals, and each capital has a dashed **slot** on its right. The card is selected and the **Question** section is open in the Properties panel.
 
 ## 3. Write the pairs
 
 Each pair in the **Question** section is a term (what the learner drags) and what it matches (the words beside its slot).
 
 1. Replace the **Prompt** with \`Drag each country onto its capital city. One country has no capital here.\`
-2. Change the four pairs, the term in the top box and what it matches in the box under it:
+2. Type over the four sample pairs, the term in the numbered box and what it matches in the box under it:
    - \`Australia\` and \`Canberra\`
    - \`Canada\` and \`Ottawa\`
    - \`Brazil\` and \`Brasília\`
    - \`Kenya\` and \`Nairobi\`
 
+![The canvas and the Question section: the country pile, the capitals and their dashed slots, the four pairs filled in, and Spain under Extra terms.](help/tutorial-drag-match-pairs.png)
+
 The terms and the words beside the slots change on the canvas as you type. **+ Add pair** adds another (up to eight), the arrows move a pair, and **×** removes one.
 
 ## 4. Add a country that fits nowhere
 
-Under the pairs is **Extra terms**. Press **+ Add extra term** and type \`Spain\`.
+Under the pairs is **Extra terms**. Press **+ Add extra term** and type \`Spain\` in the box it adds.
 
 Spain joins the pile and is dragged like the others, but it has no slot of its own. Left in the pile is right. Dropped into a slot it is wrong, and it takes that slot from the country that belongs there.
+
+The card grows to fit the longer pile, and it now runs a little past the bottom of the 800 × 600 page, so the buttons would be cut off in Preview. Click **Home** at the top of the **Layers** panel to select the page, and make **H** bigger in the **Page** section, such as \`700\`.
 
 ## 5. Tries, marks and feedback
 
@@ -63,9 +67,15 @@ The question adds how many are right to the feedback by itself, such as *2 of 4 
 ## 6. Try it
 
 1. Press **Preview** at the top right.
-2. Drag **Spain** onto the Canberra slot and the other three onto their own capitals, then press **Check answer**. The **Partly right** feedback shows, with *3 of 4 matched correctly*. Spain in a slot also costs a share of the points.
+2. Drag **Spain** onto the Canberra slot and the other three onto their own capitals, then press **Check answer**. The **Partly right** feedback shows, with *3 of 4 matched correctly*. Spain in a slot also costs a share of the points, so the score is 2.
+
+![Preview after the first check: Spain in the Canberra slot, the other three on their capitals, and the Partly right line with 3 of 4 matched correctly.](help/tutorial-drag-match-partly.png)
+
 3. Drag a country onto a slot that is already full: the two swap, and the one that was there goes back to where the new one came from.
-4. Use your tries up with a wrong answer. The question finishes: the countries stop moving, every slot is marked ✓ Right or ✗ Wrong, each wrong one says which country belongs there, the score shows, and **Try again** appears. Press it and the countries go back to the pile.
+4. Use your tries up with a wrong answer. The question finishes: the countries stop moving, every slot is marked ✓ Right or ✗ Wrong, each wrong one says *✗ Wrong. The answer is* and the country that belongs there (the line is only as wide as the slot, so the name may be cut off), the score shows, and **Try again** appears. Press it and the countries go back to the pile.
+
+![Out of tries: Australia and Kenya marked Right in green, Brazil and Canada swapped and marked Wrong in red, the Out of tries line, Try again and the score.](help/tutorial-drag-match-finished.png)
+
 5. Try it with the keyboard: <kbd>Tab</kbd> to a country, <kbd>Space</kbd> to pick it up, the arrow keys to choose a slot and <kbd>Space</kbd> to drop it. <kbd>Esc</kbd> puts it back.
 
 Press <kbd>Esc</kbd> to close the Preview.

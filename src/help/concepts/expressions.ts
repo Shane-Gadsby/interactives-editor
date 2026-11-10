@@ -35,7 +35,10 @@ In a text layer, \`Score: {score} of {total}\` puts the values in among the word
 
 ## How to tell what is going on
 
-- **The line under every formula field.** Green says what it works out to right now (*currently 12*), with the starting values. Red says what is wrong in a sentence, and for a mistyped name it offers a fix: *There is no value called scoer. Did you mean score?* with a **Use score** button.
+- **The line under every formula field.** Green says what it works out to right now (*currently 12*), with the starting values. A warning says what is wrong in a sentence, and for a mistyped name it offers a fix: *There is no value called scoer. Did you mean score?* with a **Use score** link that puts it right.
+
+![A Button label binding with the formula playng ? "Pause" : "Play" and, under it, There is no value called playng. Did you mean playing? Use playing.](help/concept-expressions-did-you-mean.png)
+
 - **Suggestions as you type.** Start a name, or type a dot after one, and the list shows what is there, with each value.
 - **Conditions without typing.** A field that wants a yes or no offers pickers (**[score] [is at least] [5]**), which write the formula for you.
 - A formula that uses \`event\` can only say *depends on what happens when it runs*. Try it in Preview and watch **Variables (live)**.

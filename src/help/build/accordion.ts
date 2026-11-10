@@ -56,6 +56,8 @@ Auto layout puts the text under the header for you. Both are empty until the sec
 
 Four sections appear, one under the other, each with its own title. The first is open: its text shows and its sign is a minus.
 
+![The Accordion frame selected, with Section and its two texts inside it in the Layers panel, and its Auto layout section: Row or column, Column, Gap 10, Align Stretch, Padding 0 and Hug height unticked.](help/tutorial-accordion-layout.png)
+
 ## 5. Open and close
 
 \`open.includes(index)\` is true for an open section. Use it to show the text:
@@ -88,7 +90,10 @@ The header is a text layer, so tell the keyboard and screen readers it is a butt
 
 1. Press **Preview**.
 2. Open **Test yourself**. The first section closes, Test yourself opens, and the last section moves down to make room.
-3. Open it again and it closes. Watch \`open\` in **Variables (live)**.
+3. Open it again and it closes. Watch \`open\` in **Variables (live)** (part of **Debug** in Preview's bar).
+
+![Preview with Test yourself open under a minus sign, the other three closed under plus signs, and open reading [2] in the live variables.](help/tutorial-accordion-preview.png)
+
 4. Use <kbd>Tab</kbd> and <kbd>Enter</kbd> to do the same with the keyboard.
 
 ## Go further: let several stay open

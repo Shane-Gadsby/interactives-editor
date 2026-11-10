@@ -30,6 +30,8 @@ Both take a formula, or the pickers (**[score] [is at least] [5]**). A formula t
 - When a click starts nothing because of an **Only if**, the Events list says so under **Why did nothing happen?**.
 - **Variables (live)** in Preview shows the values the condition reads, and you can change them to try the other way.
 
+![Preview beside the editor in the memory game, after a click on a card that is already matched: the Events list says Why did nothing happen? The click reached that layer and its event ran, but its Only if said no. Check the condition on the event.](help/concept-only-if-why-nothing.png)
+
 **More:** [Only if](interactions#only-if), [Conditions with pickers](interactions#conditions-with-pickers), [See what ran](interactions#see-what-ran), [Checks as you type](expressions#checks-as-you-type), [Tutorial 3: A state machine with variables](tutorial-state-machine).`,
   },
 };

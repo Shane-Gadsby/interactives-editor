@@ -51,10 +51,12 @@ A **dialog** is a panel that sits over everything else. While it is open, <kbd>T
 Now tell the editor it is a dialog. Select **Dialog 1** again (click its row in the **Layers** panel):
 
 1. Open the **Dialog** section and tick **This frame is a dialog**. **Modal**, **Close on Escape** and **Return focus** come ticked. Leave them on.
-2. Tick **Scrim** too. It dims the page behind the dialog while it is open.
+2. Tick **Scrim** too. It dims the page behind the dialog while it is open. Leave **Close on click outside** unticked, so a stray click doesn't shut it.
 3. In the **Accessibility** section, type \`Evaporation\` in **Text alternative**. A screen reader announces the dialog by that name.
 
 **Initial focus** says which layer the keyboard lands on when the dialog opens. **Automatic (first tab stop)** is the **Close** button here, which is what you want.
+
+![Dialog 1 selected, with the Dialog section ticked: This frame is a dialog, Modal, Close on Escape, Return focus and Scrim, and Initial focus on Automatic (first tab stop).](help/tutorial-reveal-dialog.png)
 
 ## 4. Copy the dialog for the other points
 
@@ -71,7 +73,7 @@ The points have to sit **below** the dialogs in the **Layers** panel, or they wo
 
 1. In the **Layers** panel, open **Dialog 1** and select its **Close** button.
 2. In its **Interactions** section press **+ When clicked…**.
-3. Choose **Hide a layer**, and under **Which layer** pick **Dialog 1**. Press **Add**. The section reads *When clicked: hide Dialog 1*.
+3. Choose **Hide a layer** (under **Layers**), and under **Which layer** pick **Dialog 1**. Press **Add**. The section reads *When clicked: hide Dialog 1*.
 4. Do the same for the **Close** buttons in **Dialog 2** and **Dialog 3**, each hiding its own dialog.
 
 <kbd>Esc</kbd> needs nothing more. A dialog with no **Open variable** hides itself when <kbd>Esc</kbd> is pressed.
@@ -81,6 +83,8 @@ The points have to sit **below** the dialogs in the **Layers** panel, or they wo
 1. Select **Point 1** and press **+ When clicked…**.
 2. Choose **Show a layer**, and under **Which layer** pick **Dialog 1**. Press **Add**.
 3. Do the same for **Point 2** (showing **Dialog 2**) and **Point 3** (showing **Dialog 3**).
+
+![The When Point 1 is clicked dialog: Show a layer picked under Layers, Which layer set to Dialog 1 (hidden), and the line It will do this: When clicked: show Dialog 1.](help/tutorial-reveal-when-clicked.png)
 
 **Show a layer** hides the dialog for you when you add it, because a layer that is already showing can't be shown. The dialogs now look faint on the canvas: hidden layers show as ghosts while you edit, so you can still find them.
 
@@ -106,7 +110,12 @@ The point is yellow until \`seen1\` is true, then green.
 ## 8. Try it
 
 1. Press **Preview** at the top right.
-2. Click **1**. The page dims and the Evaporation dialog opens. Press **Close**. The point is green now.
+2. Click **1**. The page dims and the Evaporation dialog opens, and \`seen1\` is ticked in the **Variables (live)** list. Press **Close**. The point is green now.
+
+![Preview with the Evaporation dialog open over the dimmed picture, its text, picture and Close button, and seen1 ticked in the live variables.](help/tutorial-reveal-open.png)
+
+![After closing: point 1 is green, points 2 and 3 are still yellow.](help/tutorial-reveal-visited.png)
+
 3. Now use only the keyboard. Press <kbd>Tab</kbd> until point **2** has the focus ring, then <kbd>Enter</kbd>. The dialog opens with the focus on **Close**. Press <kbd>Tab</kbd>: the focus stays inside the dialog.
 4. Press <kbd>Esc</kbd>. The dialog closes and the focus goes back to point **2**, so a keyboard user carries on from where they were.
 

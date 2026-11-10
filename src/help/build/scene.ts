@@ -60,10 +60,12 @@ Press the **Play preview** triangle: Sam runs in.
 
 A second timeline plays at the same time as the first. Each timeline only moves what it has keys for, so they never fight.
 
-1. In the dropdown at the top left of the Timeline, choose **+ New timeline**. In its settings set **Name** to \`Talk\`, **Length** to \`3500\`, and tick **Autoplay**.
+1. In the dropdown at the left of the Timeline bar, choose **+ New timeline** (the **+** at the top of the **Timelines** list beside it does the same). In its settings set **Name** to \`Talk\`, **Length** to \`3500\`, and tick **Autoplay**.
 2. Playhead at **0 ms**: select **Alex bubble**, click the diamond next to **Opacity** and set **Opacity** to 0. Do the same for **Sam bubble**.
 3. Put the playhead at **1300 ms**, select **Alex bubble** and click its **Opacity** diamond (it keys 0, the value there). Move to **1500 ms** and set **Opacity** to 100. Alex's bubble now pops up just after Sam arrives.
 4. Do the same for **Sam bubble**: a key at **2800 ms** (still 0) and **100** at **3000 ms**.
+
+![The Talk timeline open, with Opacity keys for Alex bubble and Sam bubble, and the gear's Timeline settings showing Name Talk, Length 3500, Autoplay and Skip for less motion ticked.](help/tutorial-scene-timeline-settings.png)
 
 > The canvas shows the timeline that is open. Choose **Design view (no timeline)** in the same dropdown to see the layers as they really are: both bubbles fully visible.
 
@@ -76,12 +78,16 @@ The bubbles are ordinary text, so a screen reader can find them. Saying each one
 3. Click the **Change a value or counter** node and press <kbd>Delete</kbd>. Drag from the marker node's dot into empty space, type \`announce\` in **Find a node…** and pick **Announce**. Set **Text** to \`"Alex says: Morning! Have you seen the new study rooms in the library?"\` (with the quotes).
 4. Do the same with a marker called \`Sam speaks\` at **3000 ms**, announcing Sam's line.
 
+![The Alex speaks marker selected on the Talk ruler, with the Marker panel showing its Name, At 1500 ms and the + When the playhead reaches this… button.](help/tutorial-scene-marker.png)
+
 ## 8. Skip to the end
 
-1. Select **Skip**. In its **Interactions** section press **+ When clicked…**, choose **Play an animation**, pick **Run in** and press **Add**. Then press **Show in graph**.
+1. Select **Skip**. In its **Interactions** section press **+ When clicked…**, choose **Play an animation**, pick **Run in** and press **Add**. The **Interactions** tab opens on the new nodes (if it doesn't, press **Show in graph** under the new line in the **Interactions** section).
 2. Click the **Play or stop an animation** node. Set **Do** to **Jump to time** and **Time (ms)** to \`1200\`, the end of **Run in**.
 3. Drag from its dot into empty space and add another **Play or stop an animation**: **Timeline** **Talk**, **Do** **Jump to time**, **Time (ms)** \`3500\`.
 4. Drag from that one and add an **Announce** saying \`"Skipped. Alex says: Morning! Have you seen the new study rooms in the library? Sam says: Not yet. Show me? I have an essay due on Friday."\`
+
+![The Interactions graph: each marker event runs an Announce, and Skip's click runs two Play or stop an animation nodes set to Jump to time, then the Skipped announcement.](help/tutorial-scene-graph.png)
 
 Jumping never passes the markers, so the announcement in step 4 is what tells a screen reader both lines after a Skip.
 
@@ -100,6 +106,8 @@ For those viewers both timelines now jump straight to their last pose: Sam is al
 2. Press **Screen reader off** in the Preview's bar so it says **Screen reader on**, then press **Restart**: a strip under the scene shows each line as its bubble appears.
 3. Press **Restart** again and press **Skip** straight away. Everything lands at once and the strip shows the Skip announcement.
 4. To see the still version, turn on your computer's reduce motion setting (in Windows: **Settings**, **Accessibility**, **Visual effects**, **Animation effects** off) and press **Restart**. Turn it back afterwards.
+
+![Preview with Screen reader on: Alex's bubble is up, and the Screen reader strip under the scene shows Alex says: Morning! Have you seen the new study rooms in the library?](help/tutorial-scene-preview.png)
 
 ## Go further
 

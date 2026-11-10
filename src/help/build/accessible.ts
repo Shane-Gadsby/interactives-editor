@@ -27,7 +27,7 @@ Build this quickly. Each problem is on purpose, and the checker will find it.
 4. Press <kbd>T</kbd> again and drag a text box to the right of the picture. Type \`Mars has the tallest volcano we know of: Olympus Mons, about 22 km high.\` and name it **Fact**.
 5. Press <kbd>B</kbd> and drag a button in the bottom right corner. Set its **Label** and **Name** to **Next**.
 6. **Problem 3, a tiny dot only a mouse can use.** Press <kbd>O</kbd> for the **Ellipse** tool and draw a small circle between the picture and the fact. Set **W** and **H** to 20 and name it **Info**. In its **Interactions** section press **+ When clicked…**, choose **Show a layer**, pick **Fact** under **Which layer**, and press **Add**. **Fact** is hidden now, until the dot is clicked.
-7. **Problem 4, motion that never stops.** Select **Mars photo**. Open the **Timeline** tab and press **+ New timeline**. With the playhead at 0 ms, set **Opacity** to 0 and click the diamond beside it. Move the playhead to **1000 ms**, set **Opacity** to 100 and click the diamond again. Change **Play once** to **Loop** and tick **Autoplay**. The picture now fades in over and over.
+7. **Problem 4, motion that never stops.** Select **Mars photo**. Open the **Timeline** tab and press **+ New timeline**. With the playhead at 0 ms, set **Opacity** to 0 and click the diamond beside it. Move the playhead to **1000 ms**, set **Opacity** to 100 and click the diamond again. Press the gear beside the timeline's summary (**Timeline settings**), change **Play once** to **Loop** and tick **Autoplay**. The picture now fades in over and over.
 8. **Problem 5, the wrong Tab order** is already there: you drew **Next** before **Info**, and Tab follows the order layers were added, so a keyboard reaches **Next** first.
 
 Press **Preview** and try it with the mouse: it works. Now press <kbd>Tab</kbd> a few times. Focus goes to **Next**, then to the dot, and the picture keeps flashing in. Press <kbd>Esc</kbd>.
@@ -46,6 +46,8 @@ Open the **Accessibility** tab at the bottom of the window. It checks the whole 
 | **Animation starts by itself** | (the page) |
 | **No way to pause moving content** | (the page) |
 
+![The Accessibility tab with seven findings under Home: Low text contrast on Title, three on Info, Picture has no description, and the two about the animation, with the first one explained on the right.](help/tutorial-accessible-findings.png)
+
 The coloured dots at the top count them: red **Problem**s, amber **Probable** ones and blue ones **to look at**. Click a finding and the right side says what was found, **Why it matters** to the person using the page, and **What to do**. Clicking it also selects the layer, so you can fix it straight away.
 
 The bar says **Checks found, not a compliance result**, and it means it. A clean list is a good start, not proof. The checker can't hear a video's captions or tell whether a description is any good.
@@ -62,7 +64,9 @@ While **Title** is selected, open its **Accessibility** section and set **Role**
 ## 4. Describe the picture
 
 1. Click **Picture has no description**.
-2. Its box under **What to do** takes the words. Type \`Mars from space: a red, dusty planet with a white ice cap at the top\` and press **Apply**.
+2. Under **What to do** is a **Description** box, which starts with the layer's name. Type over it: \`Mars from space: a red, dusty planet with a white ice cap at the top\`, and press **Apply**.
+
+![Picture has no description selected: why it matters, what to do, and the Description box filled in, with Apply beside it.](help/tutorial-accessible-describe.png)
 
 That fills in the picture's **Text alternative**, the words a screen reader says instead of the picture. Say what it shows and why it is there, in a sentence. If a picture were only decoration, **Decorative / reviewed** would say so instead.
 
@@ -78,12 +82,16 @@ Three findings are about **Info**. A plain shape can be clicked with a mouse, bu
 
 All three findings go.
 
+![Info's Accessibility section: Role Button, Text alternative Show a fact about Mars, and Tab stop Always, with the line Reachable with Tab (set to always) under it.](help/tutorial-accessible-info-button.png)
+
 > When you can, use a real **Button** layer instead. It is a control already, so the keyboard, the name and the role all come for free.
 
 ## 6. Calm the motion
 
 1. Click **Animation starts by itself** and press its button, **Respect reduced motion**. Viewers who ask their device for less motion now see the last frame straight away.
-2. Click **No way to pause moving content**. There is no button for this one, because it needs a decision: give people a way to pause it, or stop it repeating. A fade-in only needs to happen once, so in the **Timeline** tab change **Loop** back to **Play once**.
+2. Click **No way to pause moving content**. There is no button for this one, because it needs a decision: give people a way to pause it, or stop it repeating. A fade-in only needs to happen once, so in the **Timeline** tab click the timeline in the list on the left, press the gear (**Timeline settings**) and change **Loop** back to **Play once**.
+
+![The Timeline tab with the Timeline settings box open: Length 1000 ms, the Loop list, Autoplay ticked and Skip for less motion.](help/tutorial-accessible-timeline-settings.png)
 
 Moving content that runs on for more than five seconds needs a pause. Something that plays once and stops does not.
 
@@ -91,10 +99,12 @@ Moving content that runs on for more than five seconds needs a pause. Something 
 
 The checker can't see focus order, so this one is yours to check.
 
-1. Click the page's name, **Home**, above it on the canvas. The **Tab order** section in the Properties panel lists every tab stop in the order Tab visits them: **Next**, then **Info**.
+1. Click the page's name, **Home**, above it on the canvas. The **Tab order** section in the Properties panel (open it if it is folded) lists every tab stop in the order Tab visits them: **Next**, then **Info**.
 2. Press the **↑** beside **Info** (**Earlier in the Tab order**). Now Tab reaches the dot first, then **Next**, the order a sighted reader would take.
 
-**Reset to layer order** goes back to the order the layers were added.
+**Reset to layer order**, which appears once you have changed the order, goes back to the order the layers were added.
+
+![The Tab order section after the change: 1. Info, 2. Next, with Reset to layer order under them.](help/tutorial-accessible-tab-order.png)
 
 ## 8. Look at it in every theme
 
@@ -108,7 +118,10 @@ The checker looks at every theme for text that uses tokens, so a title that pass
 ## 9. Try it
 
 1. Press **Preview**. Press <kbd>Tab</kbd>: a ring shows on the dot. Press <kbd>Enter</kbd> and the fact appears. <kbd>Tab</kbd> again reaches **Next**.
-2. Press **Screen reader** in the Preview's bar. A strip under the preview shows what would be said as you move around.
+2. Press **Screen reader off** in the Preview's bar to turn it on. A **Screen reader** strip under the preview shows what the project announces (from **Announce** nodes and messages). This page announces nothing, so it says *Nothing announced yet*. The layer names a screen reader reads as you Tab come from the roles and text alternatives you set.
+
+![Preview with the ring on the dot after Tab and Enter, the fact showing beside the picture, and the Screen reader strip under the preview.](help/tutorial-accessible-preview.png)
+
 3. Press <kbd>Esc</kbd>. Back in the **Accessibility** tab, the list says **The checks found nothing to look at**.
 
 ## Go further

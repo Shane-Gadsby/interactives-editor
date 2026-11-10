@@ -39,6 +39,8 @@ On the projects page press **New project**. Keep **Blank project**, type **Weekl
    - \`spending\`, worked out as \`rent + food\`;
    - \`leftover\`, worked out as \`income - spending\`.
 
+![The Variables tab: income is Worked out with the formula hours * pay, currently 420, and Keep up to date ticked; spending below it is Worked out as rent + food.](help/tutorial-whatif-worked-out.png)
+
 A worked out value can read other worked out values, so \`leftover\` follows both of the others.
 
 ## 4. The sliders
@@ -47,10 +49,12 @@ A worked out value can read other worked out values, so \`leftover\` follows bot
 2. In the **Input** section of the Properties panel, set **Type** to **range**. The box becomes a slider.
 3. Set **Min** to **0**, **Max** to **40** and **Step** to **1**.
 4. Beside **Variable**, press **Bind to a variable…** and choose \`hours\`. The slider jumps to 15. Dragging it now sets \`hours\`, and changing \`hours\` moves it: it is a two-way (**⇄ Both**) binding.
-5. Change its **Name** to **Hours slider**, and in the **Accessibility** section type a **Text alternative**: \`Hours of paid work a week\`. A slider has no words on it, so this is what a screen reader says.
+5. Change its **Name** to **Hours slider**, and in the **Accessibility** section type a **Text alternative**: \`Hours of paid work a week\`. A slider has no words on it, so this is what a screen reader should say. (Right now the player puts an input field's text alternative on the box around it rather than on the slider itself, so a screen reader may not say it yet.)
 6. Make two more sliders under it the same way:
    - **Pay slider**: **Min** 20, **Max** 40, **Step** 0.5, bound to \`pay\`;
    - **Rent slider**: **Min** 100, **Max** 500, **Step** 10, bound to \`rent\`.
+
+![The hours slider selected on the page, with its Input section: Type range, Value is bound ⇄ Both hours, Min 0, Max 40 and Step 1.](help/tutorial-whatif-slider.png)
 
 ## 5. Formulas in text
 
@@ -68,7 +72,7 @@ The third argument of **fmt**, \`true\`, puts a comma in every three digits. The
 
 ## 6. The chart
 
-1. In the tool bar, click **Data** to open that group and pick **Chart**. Drag a box on the right half of the page.
+1. A new project keeps the **Data** tools put away. Under the tool groups on the left, click **More tools** so the **Draw**, **Data** and **Rig** groups show. Then click **Data** to open it and pick **Chart**. Drag a box on the right half of the page.
 2. In the **Chart** section, set **Data** to:
 
    \`[{label: "Income", value: income}, {label: "Rent", value: rent}, {label: "Food and bills", value: food}, {label: "Left over", value: leftover}]\`
@@ -78,6 +82,8 @@ The third argument of **fmt**, \`true\`, puts a comma in every three digits. The
 4. Set **Prefix** to \`$\` and **Decimals** to **0**, so each column says *$420* rather than *420*.
 5. In the **Accessibility** section, give the chart a **Text alternative**: \`Column chart of a week of income, rent, food and bills, and what is left over\`.
 
+![The Chart section for the budget chart: Kind Column, the list written out in Data with its four items listed under it, A colour for each item and Value labels ticked, Decimals 0 and Prefix $.](help/tutorial-whatif-chart.png)
+
 ## 7. Try it
 
 1. Press **Preview** at the top right.
@@ -85,7 +91,9 @@ The third argument of **fmt**, \`true\`, puts a comma in every three digits. The
 3. Drag the rent up past 300. The last line says *Short by* and the Left over column drops below zero.
 4. Tab to a slider and use the arrow keys: it moves one **Step** at a time.
 
-The **Variables (live)** list on the left of the Preview shows all seven values changing. Press <kbd>Esc</kbd> to close the Preview.
+![Preview with the rent dragged to 350: Spending is $500.00, the last line says Short by $80.00, the Left over column drops below zero, and the Debug panel shows leftover at -80.](help/tutorial-whatif-short.png)
+
+The **Variables (live)** list on the left of the Preview shows all seven values changing (press **Debug** in Preview's bar if you don't see it). Press <kbd>Esc</kbd> to close the Preview.
 
 ## Make it yours
 

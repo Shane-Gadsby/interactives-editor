@@ -28,6 +28,8 @@ Each page has its own graph in the **Interactions** tab, and that graph is the w
 - Press **Beside editor** in Preview's bar to keep the graph in view. Nodes light up green with *ran* as they run, and the wires they follow pulse.
 - **Read as sentences** lists steps that nothing starts under **Not joined to anything, so these never run**.
 
+![Preview beside the editor after a click on Next: the Events list shows On pointer (Next) then Set variable, and in the Interactions graph below, Next's event and its two Change a value or counter nodes are green, marked as having run.](help/concept-events-actions-beside-editor.png)
+
 **More:** [Interactions](interactions), [See what ran](interactions#see-what-ran), [Interaction node reference](interaction-nodes), [Tutorial 2: Your first interaction](tutorial-first-interaction).`,
   },
 };

@@ -9,7 +9,9 @@ export const concept: Concept = {
     group: 'Concepts',
     summary: 'Report result sends a score and completion to the Toolbox\'s results for the project. Only the Link for StudyDesk keeps them; Preview and the plain share link keep none.',
     keywords: 'concept report result score grade completion complete pass fail studydesk results view results no grade preview share link more than once attempts best last record learner staff',
-    body: `A project says how a learner did with **Report result**: a node in the Interactions graph, or the **Report result** setting on a question. It sends a score (and, with *Complete*, that this attempt is finished). What the score is out of, the pass mark and when the project counts as complete without a node are set in **Results and progress**, in the Project section of the Inspector (click an empty part of the canvas).
+    body: `A project says how a learner did with **Report result**: a node in the Interactions graph, or the **Report result** setting on a question. It sends a score (and, with *Complete*, that this attempt is finished). What the score is out of, the pass mark and when the project counts as complete without a node are set in **Results and progress**, a section of the Properties panel below **Project** (click an empty part of the canvas to see it).
+
+![The Results and progress section: Score variable, Complete when set to Report result node only, Resume on the same artboard, and the View results… button.](help/concept-results-section.png)
 
 Where the result goes depends on how the project was opened:
 

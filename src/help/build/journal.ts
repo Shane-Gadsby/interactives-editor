@@ -30,6 +30,8 @@ Each text box needs a variable to keep what is typed in it.
 3. Open **Options** under it and tick **Save as user data**. That is the whole of the saving: the value is put back before the project starts, and saved a moment after it changes.
 4. Do it again for a second **Text** variable called **learnt**, also ticked **Save as user data**.
 
+![The Variables tab: happened and learnt are Text variables, each with Options open and Save as user data ticked.](help/tutorial-journal-variables.png)
+
 ## 3. Lay out the page
 
 1. Pick the **Text** tool in the tool bar down the left, click near the top of the page and type \`My learning journal\`. Make it bigger in the Properties panel.
@@ -37,8 +39,10 @@ Each text box needs a variable to keep what is typed in it.
 3. In the tool bar, click **Web** to open that group and pick **Input field**. Drag a wide box under the prompt, about 110 high.
 4. In the Properties panel's **Input** section, set **Type** to **textarea** so it takes several lines, and write a **Placeholder** such as \`Describe what happened...\`
 5. Still in the **Input** section, press **Bind to a variable…** and pick **happened**. The row now says the value is bound **⇄ Both**: typing writes the variable, and the variable fills the box.
-6. In the **Accessibility** section, type \`What happened\` in **Text alternative**, so a screen reader says what the box is for.
+6. In the **Accessibility** section, type \`What happened\` in **Text alternative**, so a screen reader says what the box is for. (Right now the player puts an input field's text alternative on the box around it rather than on the text box itself, so a screen reader reads the placeholder instead.)
 7. Add a second prompt, \`What did you learn from it?\`, and a second text box bound to **learnt** the same way.
+
+![The first text box selected on the Write page, with its Input section: Type textarea, the placeholder, and Value is bound ⇄ Both happened.](help/tutorial-journal-input.png)
 
 ## 4. Count the words
 
@@ -74,6 +78,8 @@ A text layer can show a formula: anything between curly brackets is worked out a
 3. Drag from the dot on its right edge into empty space. In the **Add and connect** menu, type \`download\` in **Find a node…** and pick **Download a file**.
 4. In the node's settings set **File name** to \`"my-reflection"\` (with the quotes: it is a formula), **Contents** to \`reflection\` and **Type** to **Text (.txt)**.
 
+![The My reflection page's graph: Download button's When clicked or hovered joined to Download a file, with File name "my-reflection", Contents reflection and Type Text (.txt) in its settings.](help/tutorial-journal-download.png)
+
 ## 8. Count it as done
 
 Click an empty part of the canvas, open **Results and progress**, and set **Complete when** to **Reaching an artboard**, then pick **My reflection**. A learner who gets to the end has completed it.
@@ -83,7 +89,9 @@ Click an empty part of the canvas, open **Results and progress**, and set **Comp
 1. Press **Preview**. Type a few sentences in each box and watch the counts go up.
 2. Press **See my reflection**: both answers are there under their headings. Press **Download as a file** to get **my-reflection.txt**.
 3. Close the Preview with <kbd>Esc</kbd> and open it again. That is like a learner coming back: your writing is still in the boxes and the welcome line says so.
-4. **Forget saved data** in Preview's bar makes you a new learner again.
+4. **Forget saved data** in Preview's bar makes you a new learner again. It shows once something has been saved.
+
+![Preview opened again after typing: the welcome line says Welcome back, both answers are still in their boxes with 29 and 13 words, and the Debug panel shows happened, learnt, totalWords and reflection.](help/tutorial-journal-welcome-back.png)
 
 On the **Link for StudyDesk** the writing is kept for each learner in each course, under their StudyDesk session, so it follows them to another computer. Anywhere else it stays in their browser.
 

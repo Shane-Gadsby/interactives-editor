@@ -34,7 +34,7 @@ On the projects page press **New project**. Keep **Blank project**, type **Rocky
 
 1. Press <kbd>T</kbd> for the **Text** tool and drag a text box inside **Content**. A layer you draw inside a frame goes into it, and the frame places it.
 2. Type \`The rocky planets\`, then press <kbd>Esc</kbd>. Name it **Title**, and in its **Text** section set **Size** to 32.
-3. A **Layout item** section has appeared near the top of the Properties panel. It says how this layer sits in its frame. Set **W** to **Fill**. The title now runs the whole width of **Content**, inside the padding, however wide **Content** is.
+3. A **Layout item** section has appeared in the Properties panel, just under **Layer**. It says how this layer sits in its frame. Set **W** to **Fill** (W and H there are lists: **Fixed**, **Hug** and **Fill**). The title now runs the whole width of **Content**, inside the padding, however wide **Content** is.
 
 ## 4. A grid for the cards
 
@@ -44,6 +44,8 @@ On the projects page press **New project**. Keep **Blank project**, type **Rocky
 4. Press **+** on its **Auto layout** section, then change **Layout** to **Grid**.
 5. Type \`1fr 1fr 1fr\` in **Columns** and press <kbd>Enter</kbd>: three columns, each an equal share. Leave **Rows** empty, and set **Column gap** and **Row gap** to 16.
 6. Set the four **Padding** boxes to 0, so the cards line up with the title.
+
+![The Auto layout section for Cards: Layout set to Grid, Columns 1fr 1fr 1fr, Rows empty, Column gap and Row gap 16, the four Padding boxes at 0 and Hug height ticked.](help/tutorial-responsive-grid.png)
 
 ## 5. The first card
 
@@ -79,6 +81,10 @@ A copy called **Home narrow**, 360 px wide, appears to the right of **Home**, an
 
 3. The usual breakpoint is 600. In the list in the **Responsive** section, set **Home**'s **from** to **600**.
 
+Once a page is in a set, the section's buttons read **Add narrower** and **Add wider**, and the Layers panel shows each member's range beside its name.
+
+![The Layers panel with Home (600+ px) and Home narrow (0 to 599 px), the two pages side by side on the canvas, and the Responsive section listing Home narrow from 0 and Home from 600, with the pairing line under them.](help/tutorial-responsive-set.png)
+
 ## 8. Rearrange the phone version
 
 The copy is still laid out for 800 px, so it runs off its page. Fix it on **Home narrow** only:
@@ -100,6 +106,9 @@ When a viewer's page changes width while they are using it, the player swaps pag
 1. Press **Preview** at the top right.
 2. A **Page width** slider shows under the top bar, with **600** marked on it. Next to it, **Showing** says which page is on screen.
 3. Drag the slider slowly to the left. As it crosses 600 the three cards in a row become one column: **Showing Home narrow**. Drag back to the right and **Home** returns.
+
+![Preview with the Page width slider at 480 px, below the 600 mark: Showing Home narrow, with the three cards stacked in one column.](help/tutorial-responsive-preview.png)
+
 4. **Full width** puts the preview back to its whole width. Press <kbd>Esc</kbd> to close the Preview.
 
 ## Go further

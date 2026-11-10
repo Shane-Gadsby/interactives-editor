@@ -60,7 +60,10 @@ The part in braces is an expression. While \`taken\` is empty it says *just star
 
 1. Select **Choice 1**. In its **Interactions** section press **+ When clicked…** and choose **Add 1 to a counter**.
 2. Under **Which counter** pick **A new counter…**, and in **Name the counter** type \`score\`. Press **Add**. This makes the \`score\` variable for you.
-3. Press **Show in graph** under the sentence. The **Interactions** tab opens on two nodes: **When clicked or hovered** and **Change a value or counter**.
+
+![The When Choice 1 is clicked dialog: Pages, Layers, Motion and sound, Counting and switches and Other, with Add 1 to a counter picked and Which counter below it.](help/tutorial-branching-when-clicked.png)
+
+3. The **Interactions** tab opens by itself on two nodes: **When clicked or hovered** and **Change a value or counter**. (If it doesn't, press **Show in graph** under the sentence in the Properties panel.)
 4. Click the **Change a value or counter** node and change **Value** from \`1\` to \`3\`. This choice is worth three points.
 5. Drag from the small dot on the right edge of that node into empty space and let go. In the menu, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set it up:
    - **Variable**: **taken**
@@ -69,6 +72,8 @@ The part in braces is an expression. While \`taken\` is empty it says *just star
 6. Drag from the new node's dot into empty space again, find **Go to a page** and pick it. Leave **Go to** on **A chosen page** and set **Page** to **Sam replies**.
 
 That is one choice: click, add 3 to \`score\`, add *Asked Sam* to \`taken\`, go to **Sam replies**.
+
+![The graph for Choice 1: When clicked or hovered, then Change a value or counter adding 3 to score, then another adding Asked Sam to the end of the list taken, then Go to a page, Sam replies.](help/tutorial-branching-graph.png)
 
 ## 5. Wire the other two choices
 
@@ -80,6 +85,8 @@ Do the same for **Choice 2** and **Choice 3**. From now on **Which counter** alr
 | Choice 3 | \`2\` | \`"Emailed the lecturer"\` | The lecturer replies |
 
 Press **Read as sentences** above the graph to check all three rows read the way you expect.
+
+![Read as sentences for the first page: When Choice 1 is clicked, then add 3 to score, then add Asked Sam to the list taken, then go to the page Sam replies, and the same for Choice 2 and Choice 3.](help/tutorial-branching-sentences.png)
 
 ## 6. The ending the score earns
 
@@ -99,6 +106,8 @@ score >= 5 ? "A strong outcome" : score >= 3 ? "A mixed outcome" : "A learning m
 Each of the three middle pages is built like the first, with two choices instead of three: a **Situation**, a **Prompt**, **Choice 1** and **Choice 2**, and a **Path so far** text (copy it from the first page with <kbd>Ctrl</kbd>+<kbd>C</kbd> and <kbd>Ctrl</kbd>+<kbd>V</kbd>).
 
 Wire each choice as in step 4, with one change at the end: on the **Go to a page** node, set **Go to** to **One named by an expression** and type \`ending\` in **Page name or id**.
+
+![The Go to a page node's settings: Go to set to One named by an expression, Page name or id ending, currently A learning moment.](help/tutorial-branching-goto-expression.png)
 
 | Page | Situation | Choice 1 (points, path) | Choice 2 (points, path) |
 |---|---|---|---|
@@ -123,7 +132,9 @@ On each of the three ending pages:
 3. Choose *Agree a draft*. You land on **A strong outcome** with a score of 6.
 4. Press **Start again** and take the quiet route instead (*Quietly write Sam's section*, then *Say nothing*). That scores 0 and ends on **A learning moment**.
 
-Watch \`score\`, \`taken\` and \`ending\` change in **Variables (live)** on the left of the Preview. Press <kbd>Esc</kbd> to close it.
+Watch \`score\`, \`taken\` and \`ending\` change in **Variables (live)** on the left of the Preview (press **Debug** in Preview's bar if it isn't showing). Press <kbd>Esc</kbd> to close it.
+
+![Preview on Sam replies after Message Sam: How do you respond? with two choices, Path so far: Asked Sam, and Variables (live) showing taken Asked Sam, score 3 and ending A mixed outcome.](help/tutorial-branching-preview.png)
 
 ## Make it yours
 

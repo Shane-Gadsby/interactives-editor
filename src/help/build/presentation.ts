@@ -29,16 +29,21 @@ Each slide is a page of the project. The order of the pages in the **Layers** pa
 On **Slide master**:
 
 1. Press <kbd>R</kbd> and draw a thin bar across the very top: **X** 0, **Y** 0, **W** 800, **H** 12. Give it a dark blue fill. Name it **Accent bar**.
-2. Press <kbd>T</kbd> and click near the top left, under the bar. Type \`{slideTitle}\` and press <kbd>Escape</kbd>. Make it **Size** 30, **Weight** 700, and name it **Slide title**. The braces make it a *text slot*: each slide fills in its own words.
+2. Press <kbd>T</kbd> and click near the top left, under the bar. Type \`{slideTitle}\` and press <kbd>Escape</kbd>. Make it **Size** 30, **Weight** 700, and name it **Slide title**. The braces make it a *text slot*: each slide fills in its own words. In its **Accessibility** section set **Role** to **Heading**: a master's layers are hidden from screen readers unless they have a role or a name of their own, and this one is each slide's title.
 3. Add a small text at the very bottom left, \`Study skills\`, **Size** 13. Name it **Footer**. Keep it below about **Y** 570, clear of the buttons that go along the bottom later.
 4. Select the page itself (click its name above it) and open the **Page master** section. Press **Make this a master**.
-5. The section now lists who uses it. Press **Use for all other pages**.
+5. The section now says how many pages draw it and lists them. Press **Use for all other pages**.
 
-Every slide now shows the bar and the footer, drawn underneath its own layers. The title is empty because no slide has filled in its slot yet.
+![The Page master section of Slide master: This artboard is a page master, the pages that draw it, Use for with Use as master for…, the Use for all other pages button, and the three layers under Draw over the pages.](help/tutorial-presentation-master.png)
+
+Every slide now shows the bar and the footer, drawn underneath its own layers. The title still reads \`{slideTitle}\` because no slide has filled in its slot yet.
 
 ## 3. Fill in each slide
 
-1. Select the **Welcome** page and open its **Page master** section. Under **Text slots** there is a box called **slideTitle**. Type \`Welcome\`. The title appears on the slide.
+1. Select the **Welcome** page and open its **Page master** section. Under the line that starts **Text slots** there is a box called **slideTitle**. Type \`Welcome\`. The title appears on the slide.
+
+![Welcome's Page master section: Master set to Slide master, Edit master and Detach, the slideTitle box holding Welcome, and ticks for Accent bar, Slide title and Footer.](help/tutorial-presentation-slot.png)
+
 2. Add a text under the title: \`Four short slides about planning your study week. Press Next, or use the arrow keys, to move on.\`
 3. On **Plan your week**, type \`Plan your week\` in **slideTitle** and add a text with a few lines:
    - \`Block out study time in your calendar.\`
@@ -46,7 +51,7 @@ Every slide now shows the bar and the footer, drawn underneath its own layers. T
    - \`Leave a gap each week for catching up.\`
 4. On **Thank you**, type \`Thank you\` and add a closing line.
 
-To change the bar or the footer later, change it once on **Slide master** (or press **Edit master** on any slide) and every slide follows.
+To change the bar or the footer later, change it once on **Slide master** (or press **Edit master** on any slide) and every slide follows. Leave a slide's **Master** alone once its slot is filled: setting it to **None** forgets what you typed in its slots.
 
 ## 4. The question slide
 
@@ -62,7 +67,9 @@ To change the bar or the footer later, change it once on **Slide master** (or pr
 1. Select the **Welcome** page and open **Page navigation** in the Properties panel.
 2. Choose the style **Back and Next**.
 3. Set **How the page changes** to **Slide left**, and **Speed** to **Medium**.
-4. Press **Add to all 4 pages**.
+4. Press **Add to all 4 pages**. (**Add to this page** does just the one, and **Remove** takes them off again.)
+
+![Page navigation with Back and Next picked, How the page changes set to Slide left, Speed Medium, and the buttons Add to this page, Add to all 4 pages and Remove.](help/tutorial-presentation-navigation.png)
 
 Every slide now has **Back** on the left, **Next** on the right and *Page 1 of 4* between them. Back is hidden on the first slide and Next on the last. The master isn't counted: it is not a slide.
 
@@ -73,6 +80,8 @@ Nothing here is hidden. Each button is an ordinary button with a **Go to a page*
 1. Select **Welcome** and press **Preview**.
 2. Press **Next**. The next slide slides in from the right. The page number counts up.
 3. Answer the question, then carry on to the end. **Back** goes the other way.
+
+![Preview on Check your understanding: the master's bar and footer, the slide's title, the question, and Back, Page 3 of 4 and Next along the bottom.](help/tutorial-presentation-preview.png)
 
 Learners whose device asks for less motion get an instant change instead of the slide.
 

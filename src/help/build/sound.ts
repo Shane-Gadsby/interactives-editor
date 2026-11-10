@@ -34,6 +34,8 @@ On the projects page press **New project**. Keep **Blank project**, type **Sound
 3. Under it, **Which music** says *none in this project yet*. Press **+ Add a new sound…** and pick your music file. It is added to the project and chosen.
 4. Press **Add**.
 
+![The When Start button is clicked dialog: Play music that carries on across pages picked under Motion and sound, Which music set to the music file, and the sentence it will add.](help/tutorial-sound-when-clicked.png)
+
 That one choice made a **Play sound** node with **Soundtrack: keep playing on the next pages** and **Loop** both on. A soundtrack is the project's music: it carries on when the page changes, goes quiet while any narration plays over it, and goes round until something stops it.
 
 ## 4. Move on to the next page
@@ -42,6 +44,8 @@ That one choice made a **Play sound** node with **Soundtrack: keep playing on th
 2. Choose **Go to the next page** and press **Add**. Leave **How the page changes** and **Speed** as they are.
 
 The **Interactions** section now has two sentences, one for the music and one for the page. There is no next page yet, so make it.
+
+![Start button's Interactions section with two sentences: play Music.wav on a loop as the soundtrack, and go to the next page.](help/tutorial-sound-two-sentences.png)
 
 ## 5. Add the second page
 
@@ -75,11 +79,16 @@ The list under **+ When clicked…** has no mute, so this one is built in the gr
 4. Type \`sound\` in **Find a node…** and choose **Captions and sound**. It appears where you let go, already joined.
 5. Click the new node. In its settings on the right, set **Do** to **Sound: flip**.
 
+![The Interactions graph for the Sounds page: Sound button's click joined to a Captions and sound node set to Sound: flip, with its settings on the right, and the Ding and Stop buttons' nodes below.](help/tutorial-sound-flip.png)
+
 **Sound: flip** turns every sound in the project off for this learner, the music, the effects and any narration, and turns them back on the next time. The learner's browser remembers their choice, so a learner who wants silence gets it next time too.
 
 ## 9. Try it
 
 1. Press **Preview** at the top right. With **From the start artboard** chosen in its bar it starts on **Home**. Press **Start**: the music starts and the **Sounds** page shows.
+
+![Preview on the Sounds page after pressing Start, with Ding, Sound on or off, Stop the music and Back, and the Debug events list showing Play sound and Go to artboard.](help/tutorial-sound-preview.png)
+
 2. Press **Ding**. The sound plays over the music.
 3. Press **Sound on or off**. Everything goes quiet. Press it again and the music is back.
 4. Press **Back**, then **Start**. The music carries on without starting again.

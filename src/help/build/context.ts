@@ -37,9 +37,11 @@ On the projects page press **New project**. Keep **Blank project**, type **Cours
 
 ## 3. See the sample values
 
-1. Open the **Data** tab at the bottom of the window. **context** is first in the list, marked **built in**. Click it.
+1. Open the **Data** tab at the bottom of the window. If it isn't there, press **More panels** at the right of the bottom tabs and choose **Data**: a new project keeps it put away. **context** is first in the list, marked **built in**. Click it.
 2. The table lists every field with its **Sample value**. Change the one beside **context.firstName** to your own name: the greeting on the canvas follows.
 3. Clear it to see the page as someone nobody knows would.
+
+![The context data source in the Data tab: each field with its Sample value and what it is, from context.courseLabel MAT1000_26S1_ONC down to context.isStaff false.](help/tutorial-context-sample-values.png)
 
 Sample values are only for designing. They are never in an export or a share link, and learners never see them.
 
@@ -55,19 +57,26 @@ The assignment and the week it is due are two ordinary variables. Each course ca
 6. From **Set a variable…** pick **assignment** and type \`problem set\`. Pick **dueWeek** too and make it **4**.
 7. Press **+ Add a course** again for \`MAT1001_*\`: **assignment** \`project proposal\`, **dueWeek** **6**. This one says **no match**.
 
+![Per-course values: the MAT1000_* row sets assignment to problem set and dueWeek to 4 and says matches the sample course; the MAT1001_* row sets project proposal and 6 and says no match; + Add a course is under them.](help/tutorial-context-per-course.png)
+
 Any course with no row gets the starting values from the Variables tab: *first assignment*, week 5.
 
 ## 5. A line only staff see
 
 1. Add a text at the bottom: \`Staff only: students never see this line.\`
 2. With it selected, open **Data bindings** in the Properties panel and press **+ Add binding**. Pick **Visible**.
-3. Choose **Formula**, then **Edit as formula**, and type \`context.isStaff\`.
+3. Choose **Formula**. Under **Condition**, pick **context.isStaff** and leave it on **is on (true)**, or press **Edit as formula** and type \`context.isStaff\`.
+
+![The staff line selected, hidden on the canvas, with its Visible binding: Formula, Condition context.isStaff is on (true), currently false.](help/tutorial-context-staff-only.png)
 
 The line disappears, because the sample person is a student. In the Data tab's sample values, untick the one beside **context.isStudent** and it shows. \`context.isStaff\` is true for anyone signed in who is not a student.
 
 ## 6. Try it
 
 1. Press **Preview**. With the sample course it says *Your problem set is due in week 4.*
+
+![Preview with the sample values: Welcome, Alex!, You are in MAT1000, Introduction to Mathematics, and Your problem set is due in week 4, with assignment and dueWeek in the Debug panel.](help/tutorial-context-preview.png)
+
 2. Close the Preview. In the Data tab, change the sample value of **context.courseLabel** to \`MAT1001_26S2_ONC\`. The MAT1001 row now says **matches the sample course**. Preview again: *Your project proposal is due in week 6.*
 3. Try \`ENG1000_26S1_ONC\` to see a course with no row.
 
