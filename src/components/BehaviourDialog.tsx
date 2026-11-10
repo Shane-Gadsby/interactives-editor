@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { DEFAULT_TRANSITION_MS, PAGE_TRANSITIONS, speedOf, TRANSITION_SPEEDS } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { pickNewAsset } from '../lib/quick-add';
+import { DONE_HOWS, doneHowOf, doneLayers } from '../lib/all-done';
 import { RECIPES, RECIPE_BY_ID, KEY_CHOICES, NEW_PREFIX, THIS_LAYER, TRIGGERS, TRIGGER_BY_ID, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, defaultTriggerAnswers, findLayer, incomplete, joinSet, layerChoices, listChoices, lookColour, otherPages, reachOps, resettable, seedCondition, splitSet, switchChoices, textChoices, triggerIncomplete, triggerLabel, triggerUnavailable, unavailable, videoChoices, zoneChoices, type Answers, type Need, type Recipe, type RecipeCtx, type Step, type Trigger } from '../lib/recipes';
 import { OP_LABELS } from '../lib/condition';
 import { ColorField, TextField } from './ui';
@@ -74,13 +75,15 @@ function BehaviourDialog({ req }: { req: BehaviourRequest }) {
   const titleId = 'behaviour-title';
 
   const recipe = RECIPE_BY_ID[recipeId];
+  //Count what has been done has no trigger of its own: each layer you tick starts its own small flow
+  const counting = recipeId === 'count-done';
   const blocked = ctx ? unavailable(recipe, ctx) : 'This page is gone.';
   const triggerBlocked = ctx ? triggerUnavailable(trigger, ctx) : null;
   const gap =
-    incomplete(recipe, answers, project) ??
-    triggerIncomplete(trigger, when, project) ??
-    then.map((st) => incomplete(RECIPE_BY_ID[st.recipe], st.answers, project)).find(Boolean) ??
-    (only !== null && otherwise ? incomplete(RECIPE_BY_ID[otherwise.recipe], otherwise.answers, project) : null) ??
+    incomplete(recipe, answers, project, ab) ??
+    (counting ? null : triggerIncomplete(trigger, when, project, ab)) ??
+    then.map((st) => incomplete(RECIPE_BY_ID[st.recipe], st.answers, project, ab)).find(Boolean) ??
+    (only !== null && otherwise ? incomplete(RECIPE_BY_ID[otherwise.recipe], otherwise.answers, project, ab) : null) ??
     (only !== null && !only.trim() ? 'Add a condition to the Only if, or remove it.' : null);
   const extras = { when, then, only: only ?? '', otherwise: only !== null ? otherwise : null };
   const preview = useMemo(() => {
@@ -183,7 +186,7 @@ function BehaviourDialog({ req }: { req: BehaviourRequest }) {
     <div className="modal-backdrop dialog-backdrop" onPointerDown={(e) => e.target === e.currentTarget && closeBehaviours()}>
       <div className="modal dialog behaviour-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={box}>
         <header>
-          <strong id={titleId}>When {triggerLabel(trigger, who)}…</strong>
+          <strong id={titleId}>{counting ? 'Count what has been done…' : <>When {triggerLabel(trigger, who)}…</>}</strong>
         </header>
         <div className="dialog-body">
           <p className="dialog-message">What should happen? It is added to the Interactions graph, where you can take it further.</p>
@@ -211,7 +214,7 @@ function BehaviourDialog({ req }: { req: BehaviourRequest }) {
           <p className="recipe-detail">{recipe.hint}</p>
           {ctx && !blocked && <NeedFields needs={recipe.needs} ctx={ctx} answers={answers} onAnswers={(patch) => setAnswers((a) => ({ ...a, ...patch }))} recipeId={recipeId} />}
           <div className="behaviour-extras">
-            {ctx && (
+            {ctx && !counting && (
               <>
                 <label className="dialog-field behaviour-when">
                   <span>It starts when</span>
@@ -302,7 +305,7 @@ function StepRow({ label, step, ctx, onChange, onRemove }: { label: string; step
           >
             {GROUPS.map((g) => (
               <optgroup key={g} label={g}>
-                {RECIPES.filter((x) => x.group === g && (x.id === step.recipe || !unavailable(x, ctx))).map((x) => (
+                {RECIPES.filter((x) => x.group === g && x.id !== 'count-done' && (x.id === step.recipe || !unavailable(x, ctx))).map((x) => (
                   <option key={x.id} value={x.id}>
                     {x.label}
                   </option>
@@ -487,6 +490,7 @@ function NeedField({ need, ctx, answers, onAnswer, onAnswers, recipeId }: { need
       return <TextField label={need.label} value={v} placeholder="Some text" onChange={onAnswer} />;
     }
     case 'words':
+      if (need.key === 'say') return <TextField label={need.label} value={v} placeholder="e.g. Slide {slide} of 5" title="Words a screen reader says once it has changed. Put a value in curly brackets to say it: Score {score}. Leave empty to say nothing" onChange={onAnswer} />;
       return <TextField label={need.label} value={v} onChange={onAnswer} />;
     case 'lookwhat':
       return sel(v || 'colour', [{ value: 'colour', label: 'Colour' }, { value: 'text', label: 'Text' }, { value: 'opacity', label: 'Opacity (how see-through)' }, { value: 'size', label: 'Size' }], onAnswer);
@@ -496,6 +500,34 @@ function NeedField({ need, ctx, answers, onAnswer, onAnswers, recipeId }: { need
       return <TextField label={need.label} value={v} placeholder="50" title="100 is solid, 0 is invisible" onChange={(x) => onAnswer(digits(x))} />;
     case 'size':
       return <TextField label={need.label} value={v} placeholder="leave as it is" title="Leave empty to keep it as it is" onChange={(x) => onAnswer(digits(x))} />;
+    case 'donehow': {
+      const how = doneHowOf(v);
+      const pick = (x: string) => {
+        //the ticked layers that cannot be done this way are unticked, so a switch never leaves one behind
+        const can = doneLayers(ctx.ab, ctx.project, doneHowOf(x)).map((l) => l.id);
+        onAnswers({ [need.key]: x, doneset: joinSet(splitSet(answers.doneset).filter((id) => can.includes(id))) });
+      };
+      return sel(how, DONE_HOWS, pick);
+    }
+    case 'doneset': {
+      const ticked = splitSet(v);
+      const how = doneHowOf(answers.donehow);
+      const choices = doneLayers(ctx.ab, ctx.project, how);
+      return (
+        <fieldset className="dialog-field check-list">
+          <legend>{need.label}</legend>
+          {choices.length === 0 && <p className="recipe-detail">{how === 'answered' ? 'No layer on this page has a question yet. Add one in the Question tab of the Inspector first.' : 'No layer on this page is a dialog with an open value yet. Give a frame the Dialog setting and an open value first.'}</p>}
+          {choices.map((l) => (
+            <label key={l.id} className="check-row">
+              <input type="checkbox" checked={ticked.includes(l.id)} onChange={(e) => onAnswer(joinSet(e.target.checked ? [...ticked, l.id] : ticked.filter((x) => x !== l.id)))} />
+              <span>{l.name}</span>
+            </label>
+          ))}
+        </fieldset>
+      );
+    }
+    case 'donename':
+      return <TextField label={need.label} value={v} placeholder="explored" title="Letters, digits and _ . Three values are made from it: a list of what is done, a number for how many (name plus Count) and a number for how many there are (name plus Total). Show them in text, like {exploredCount} of {exploredTotal} explored" onChange={onAnswer} />;
     case 'layerset': {
       const ticked = splitSet(v);
       const others = layerChoices(ctx.ab).filter((l) => l.id !== ctx.layerId);

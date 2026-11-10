@@ -1859,6 +1859,7 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - **Text alternative**: the name a screen reader says. For a picture, describe what it shows; for a clickable shape, say what it does ("Next question"). It can be bound or animated like other properties.
 - **Description**: a longer explanation read after the name.
 - **Say it like**: what [read aloud](read-aloud) says for the layer instead of its text, for an abbreviation, a formula or a name a voice gets wrong. It is not shown and screen readers ignore it.
+- **Read changes aloud** (text layers): a screen reader says the layer's words whenever they change while the project plays. See [Read changes aloud](accessibility#read-changes-aloud).
 - **Tab stop**: *Automatic* (a layer is reachable when it has a *When clicked or hovered → Click*, a *When a layer is focused*, or a button or checkbox role), *Always*, or *Never*. The line underneath says what you get.
 - A **Checkbox** role needs its state told: bind **Checked (checkbox role)** in Data bindings to the variable that holds it (see [Bindings](bindings)).
 - **Pressed state** and **Current**: see [Pressed and current](accessibility#pressed-and-current).
@@ -1927,6 +1928,14 @@ The number also arrives as \`event.index\` in *When a layer is focused*, *When c
 
 ## Tab order
 With nothing selected, the **Tab order** section in the inspector lists every tab stop on the artboard in the order Tab visits them. Use the arrows to move a layer earlier or later, or click its name to select it. **Reset to layer order** goes back to the default. The order only applies within the player; stops you haven't placed follow the others in layer order.
+
+## Read changes aloud
+A status line, a score or a “Slide 2 of 5” caption can say itself. Select the text layer and, in its **Accessibility** section, set **Read changes aloud** to *Yes, politely* or *Yes, urgently (interrupts)*. From then on a screen reader says the layer's words every time they change while the project plays, so you do not need an **Announce** node after the change. *Politely* waits for what is being read; *urgently* interrupts, which is for errors and not much else.
+
+Words that are there when the page first shows are not said, only changes. The layer must stay on screen: a hidden layer says nothing, and neither does one marked **Decorative**. It reads the whole text each time, so keep it short. The **Screen reader** strip in Preview only shows what Announce nodes and **Say it** boxes say, not these.
+
+## Say it
+**Change a value or counter** has a **Say it** box. Put the words a screen reader should say once the change has happened, with any value in curly brackets: \`Slide {slide} of {slides.length}\`. It is said politely, after the new value is in, so \`{slide}\` is the new number. Left empty, nothing is said. The **+ When clicked…** list's **Change a number…**, **Go to the next item…**, **Go to the previous item…** and **Switch something on or off** ask for it too (optional). It is the same thing as an **Announce** node straight after the change, which is why the ready-made templates use it. Use an **Announce** node where the words depend on more than one change, or need to be urgent.
 
 ## Announce
 The **Announce** action says something to screen readers without showing anything: write the text as an expression, such as \`"Correct, " + score + " of 5"\`. *Polite* waits for the current speech to finish; *Assertive* interrupts, for errors and urgent feedback. Scripts do the same with \`ix.announce(text, 'polite' | 'assertive')\`. In **Preview**, a strip under the preview shows what would be said, once you switch **Screen reader** on (a button in the Preview header, or Preferences; it is off by default).
@@ -2737,10 +2746,11 @@ A short list asks what should happen:
 - **Play an animation** (a timeline of this page) and **Play a sound**.
 - **Turn the sound off or on**: mutes every sound and video, or brings the sound back. The viewer's browser remembers it.
 - **Play or pause a video** and **Jump a video to a time…** (seconds from the start, so 75 is 1:15): this video, or another on the page.
-- **Change a number…**: pick a number you already have, or name a new one in plain words and it is made for you, then **Add to it**, **Take away from it** or **Set it to** an **Amount**. The amount can be a formula (\`score * 2\`). It is what **Add 1 to a counter** used to be, so \`1\` is the start.
+- **Change a number…**: pick a number you already have, or name a new one in plain words and it is made for you, then **Add to it**, **Take away from it** or **Set it to** an **Amount**. The amount can be a formula (\`score * 2\`). It is what **Add 1 to a counter** used to be, so \`1\` is the start. Like the next two and **Switch something on or off**, it has an optional **Say it (optional)** box: words a screen reader says after the change, such as \`Score is {score}\` (see [Say it](accessibility#say-it)).
 - **Go to the next item…** and **Go to the previous item…**: for a slideshow or carousel. They move a number on by one, and after the last go back to the first (or stop there, as you choose). **The first one is** says whether you count from 1 or 0, and **How many items** is as many as one of your lists has, or a number you type.
 - **Set a text or choice…**: puts a piece of text in a text variable, or picks one of a choice variable's choices.
 - **Switch something on or off**: **Flip it each time**, or **Turn it on**, or **Turn it off**, for a yes/no variable you have or a new one.
+- **Count what has been done…**: keeps count of which layers have been clicked, opened or answered, so you can show “3 of 5 explored” or use it in a condition. See [Counting what is done](interactions#counting-what-is-done) below.
 - **Put values back to the start…**: tick the numbers, text and switches to put back to where they began. Nothing else changes (**Start over** is the one that does everything).
 - **Say something to screen readers**: a short message a screen reader reads out. Nothing shows on screen.
 - **Open a link** and **Start over**.
@@ -2749,11 +2759,25 @@ A short list asks what should happen:
 Pick one, answer the question it asks (the line at the bottom reads back what it will do), and press **Add**. It is added in one step, so one undo takes it all back, including a new variable or the layer set to start hidden. A behaviour is just a **When clicked or hovered** event joined to an action (and the variable it needs), the same nodes you would have drawn: select the new node in the graph to change anything about it. Nothing special marks them, and nothing hidden runs.
 
 Under the list there are three more things, all optional, and a plain click does what it always did if you leave them alone:
-- **It starts when** says what sets it off. It starts on **clicked** (or **hovered over**, from **+ When hovered…**). The others are **the page is shown**, **some seconds have passed** (it asks how many, and it runs once), **a value reaches something** (pick the value and how it is compared, such as **score is at least 10**: it runs each time the value changes while that is true), **dropped on something** (pick the drop zone, or any; the layer has to be draggable), **a key is pressed** (pick it from the list, or type another) and **a video reaches a time** (pick the video and the second; it adds a cue point to the video and uses it). Each one writes the event node the graph already has.
+- **It starts when** says what sets it off. It starts on **clicked** (or **hovered over**, from **+ When hovered…**). The others are **the page is shown**, **some seconds have passed** (it asks how many, and it runs once), **a value reaches something** (pick the value and how it is compared, such as **score is at least 10**: it runs each time the value changes while that is true), **all of these are done** (tick the layers and say what makes each one done: see [Counting what is done](interactions#counting-what-is-done) below), **dropped on something** (pick the drop zone, or any; the layer has to be draggable), **a key is pressed** (pick it from the list, or type another) and **a video reaches a time** (pick the video and the second; it adds a cue point to the video and uses it). Each one writes the event node the graph already has.
 - **+ then also…** adds another thing to do straight after, as many as you like. Each row has the same list of things and asks its own questions, and **Remove** takes it out again. They run one after another, joined in the graph the way you would have joined them.
 - **+ only if…** makes it happen only when something is true, with the same condition pickers as the graph (a value, **is at least**, a number...). It is written as the event's own **Only if**. Once it is on, **+ otherwise…** says what to do when it is not true; that one is written as a **Check a condition** with a **true** way and a **false** way. **Remove Only if** takes both out.
 
 The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the event, for building the flow by hand in the graph.
+
+### Counting what is done
+Choose **all of these are done** under **It starts when** and the thing you picked to happen runs once every layer you tick has been done. Or choose **Count what has been done…** from the list to get only the counting, with nothing to run at the end. Either way you answer three questions:
+- **Each counts as done when it is**: *clicked*, *opened (a pop-up or dialog layer)* or *answered (a question)*. Opened works for a frame with the **Dialog** setting and an **open value**. Answered works for a layer made into a question. Only layers that can be done that way are listed.
+- **These layers**: tick them. The layer you opened the box from is ticked to start with.
+- **Call the count**: a name such as \`explored\`. Three values are made from it.
+
+What it writes is all ordinary, so you can read it in the **Interactions** graph and the **Variables** tab and change any of it:
+- A list named \`explored\`, empty to begin with. Each layer adds its own name to it the first time it is clicked, opened or answered (an **Only if** stops it being added twice).
+- A number \`exploredCount\`, worked out from the list, that says how many are done. Show it in a text layer: \`{exploredCount} of {exploredTotal} explored\`.
+- A number \`exploredTotal\` that says how many layers you ticked. If you add a layer later, give it a click flow that adds its name to the list, and change this number in the Variables tab.
+- For **all of these are done**, a **When a value changes** event on the list with an **Only if** \`includesAll(explored, ["Point A", "Point B"])\`, which starts what you chose. The counting nodes sit under it.
+
+A project's **Start over** puts the list back to empty, so the count starts again. It is one undo to take it all out.
 
 ### See what you just added
 **See what you just added.** The moment you press **Add** (or add an empty event, or a **When the playhead reaches this…** from a marker), the bottom panel opens on **Interactions** (unfolded if it was put away, and switched over if another tab was showing), the graph pans and zooms so the new nodes fit with a little room round them (never closer than 100%), they are picked together, and they glow for a moment (no glow, and no animated pan, if your computer is set to reduce motion).

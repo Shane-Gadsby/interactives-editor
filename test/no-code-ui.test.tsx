@@ -182,10 +182,47 @@ describe('BehaviourDialog', () => {
   it('lists what can happen in plain words, grouped, with the first one ready', () => {
     open();
     expect(q('#behaviour-title')!.textContent).toBe('When “Next button” is clicked…');
-    expect(radios().map((r) => r.querySelector('.recipe-name')!.textContent)).toEqual(['Go to the next page', 'Go to the previous page', 'Go to a page…', 'Show a layer', 'Hide a layer', 'Show or hide a layer', 'Show only one of a set…', 'Change a layer’s look…', 'Move the view to a layer…', 'Show the whole page again', 'Play an animation', 'Play a sound', 'Play music that carries on across pages', 'Stop the music', 'Turn the sound off or on', 'Play or pause a video', 'Jump a video to a time…', 'Change a number…', 'Go to the next item…', 'Go to the previous item…', 'Set a text or choice…', 'Switch something on or off', 'Put values back to the start…', 'Say something to screen readers', 'Open a link', 'Run a script', 'Start over']);
+    expect(radios().map((r) => r.querySelector('.recipe-name')!.textContent)).toEqual(['Go to the next page', 'Go to the previous page', 'Go to a page…', 'Show a layer', 'Hide a layer', 'Show or hide a layer', 'Show only one of a set…', 'Change a layer’s look…', 'Move the view to a layer…', 'Show the whole page again', 'Play an animation', 'Play a sound', 'Play music that carries on across pages', 'Stop the music', 'Turn the sound off or on', 'Play or pause a video', 'Jump a video to a time…', 'Change a number…', 'Go to the next item…', 'Go to the previous item…', 'Set a text or choice…', 'Switch something on or off', 'Count what has been done…', 'Put values back to the start…', 'Say something to screen readers', 'Open a link', 'Run a script', 'Start over']);
     expect(radios()[0].getAttribute('aria-checked')).toBe('true');
     expect(q('.behaviour-preview')!.textContent).toBe('It will do this: When clicked: go to the next page.');
     expect(q('[role=dialog]')!.getAttribute('aria-modal')).toBe('true');
+  });
+
+  it('When all of these are done asks for the layers (the one it was opened from ticked), how they are done and a name, and writes the lot', () => {
+    const sc = open();
+    const when = qa('.behaviour-dialog select').find((x) => [...(x as HTMLSelectElement).options].some((o) => o.value === 'all')) as HTMLSelectElement;
+    set(when, 'all');
+    expect(q('#behaviour-title')!.textContent).toBe('When all of these are done…');
+    const boxes = () => qa('.behaviour-dialog .check-list input[type=checkbox]') as HTMLInputElement[];
+    const ticked = () => boxes().filter((b) => b.checked).map((b) => b.closest('label')!.textContent);
+    expect(ticked()).toEqual(['Next button']);
+    click(boxes().find((b) => b.closest('label')!.textContent === 'Hint text'));
+    expect(ticked()).toEqual(['Next button', 'Hint text']);
+    expect(q('.behaviour-preview')!.textContent).toContain('When explored changes');
+    //answered: no layer here is a question, so the ticked ones go and it says so
+    const how = qa('.behaviour-dialog select').find((x) => [...(x as HTMLSelectElement).options].some((o) => o.value === 'answered')) as HTMLSelectElement;
+    set(how, 'answered');
+    expect(ticked()).toEqual([]);
+    expect(q('.behaviour-dialog .check-list')!.textContent).toContain('No layer on this page has a question yet');
+    set(how, 'click');
+    click(boxes()[0]);
+    click(byText('Add'));
+    const logic = sc.s.get().project.artboards[0].logic;
+    expect(logic.nodes.filter((n) => n.kind === 'event.pointer')).toHaveLength(1);
+    expect(logic.nodes.find((n) => n.kind === 'event.variable')!.params.onlyIf).toBe('includesAll(explored, ["Next button"])');
+    expect(sc.s.get().project.variables.map((v) => v.name)).toEqual(expect.arrayContaining(['explored', 'exploredCount', 'exploredTotal']));
+  });
+
+  it('Count what has been done is in the list, has no trigger to choose, and writes only the counting', () => {
+    const sc = open();
+    choose('Count what has been done…');
+    expect(q('#behaviour-title')!.textContent).toBe('Count what has been done…');
+    expect(qa('.behaviour-dialog select').some((x) => [...(x as HTMLSelectElement).options].some((o) => o.value === 'all'))).toBe(false);
+    expect(byText('+ then also…')).toBeUndefined();
+    expect(q('.behaviour-preview')!.textContent).toContain('count each of 1 layers once it is clicked');
+    click(byText('Add'));
+    const logic = sc.s.get().project.artboards[0].logic;
+    expect(logic.nodes.map((n) => n.kind)).toEqual(['event.pointer', 'action.setVariable']);
   });
 
   it('Go to the next page also asks the speed: Medium, Slow, Fast or Custom, hidden for Instant, written as the number', () => {
@@ -326,7 +363,7 @@ describe('BehaviourDialog: more steps, other triggers, Only if and Otherwise', (
     open();
     const when = selectWith('timer');
     expect(when.value).toBe('click');
-    expect([...when.options].map((o) => o.textContent)).toEqual(['“Next button” is clicked', '“Next button” is hovered over', 'the page is shown', 'some seconds have passed', 'a value reaches something', '“Next button” is dropped on something', 'a key is pressed', 'a video reaches a time (not yet)']);
+    expect([...when.options].map((o) => o.textContent)).toEqual(['“Next button” is clicked', '“Next button” is hovered over', 'the page is shown', 'some seconds have passed', 'a value reaches something', 'all of these are done', '“Next button” is dropped on something', 'a key is pressed', 'a video reaches a time (not yet)']);
     expect([...when.options].find((o) => o.value === 'video')!.disabled).toBe(true);
     expect(preview()).toBe('It will do this: When clicked: go to the next page.');
   });

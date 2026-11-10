@@ -37,7 +37,8 @@ describe('buildBehaviour', () => {
       expect(b.edges, r.id).toEqual([{ id: expect.any(String), from: b.eventId, fromPort: 'out', to: b.actionId, toPort: 'in' }]);
       // only kinds the catalog has: no hidden node types
       for (const n of b.nodes) expect(CATALOG_BY_KIND[n.kind], n.kind).toBeTruthy();
-      expect(b.sentence, r.id).toMatch(/^When clicked: /);
+      //(Count what has been done has no trigger of its own, and its own tests in all-done.test.ts)
+      if (r.id !== 'count-done') expect(b.sentence, r.id).toMatch(/^When clicked: /);
     }
   });
 

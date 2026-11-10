@@ -4,6 +4,7 @@ import { buildFlow, flowSentence } from './flow-describe';
 import { writeBranchFlow, writeFlow, type FlowStep } from './click-flow';
 import { conditionToExpr, opTakesValue, rowToExpr, type CondOp } from './condition';
 import { uniqueIdentifier } from '../store/doc';
+import { buildDone, doneHowOf, doneLayers, type DoneKit } from './all-done';
 
 /**
  * Behaviour recipes: "When this is clicked, go to the next page / show a layer / play a sound / change a number". Each one
@@ -13,9 +14,9 @@ import { uniqueIdentifier } from '../store/doc';
  */
 
 /** What starts it. Clicked and hovered over are the layer's own; the rest are the events the graph already has. */
-export type Trigger = 'click' | 'pointerenter' | 'start' | 'timer' | 'value' | 'drop' | 'key' | 'video';
+export type Trigger = 'click' | 'pointerenter' | 'start' | 'timer' | 'value' | 'drop' | 'key' | 'video' | 'all';
 
-export const TRIGGER_WORDS: Record<Trigger, string> = { click: 'clicked', pointerenter: 'hovered over', start: 'shown', timer: 'timed', value: 'reached', drop: 'dropped', key: 'pressed', video: 'reached' };
+export const TRIGGER_WORDS: Record<Trigger, string> = { click: 'clicked', pointerenter: 'hovered over', start: 'shown', timer: 'timed', value: 'reached', drop: 'dropped', key: 'pressed', video: 'reached', all: 'done' };
 
 export type NeedKind =
   | 'layer'
@@ -57,7 +58,11 @@ export type NeedKind =
   | 'reachto'
   | 'zone'
   | 'key'
-  | 'cuetime';
+  | 'cuetime'
+  // counting what is done
+  | 'doneset'
+  | 'donehow'
+  | 'donename';
 
 export interface Need {
   key: string;
@@ -98,6 +103,17 @@ export interface Recipe {
 export const THIS_LAYER = '__self__';
 
 const first = <T,>(xs: T[]): T | undefined => xs[0];
+
+/** What "all of these are done" and "Count what is done" ask: which layers, what counts as done, and what to call the count. */
+const DONE_NEEDS: Need[] = [
+  { key: 'donehow', kind: 'donehow', label: 'Each counts as done when it is' },
+  { key: 'doneset', kind: 'doneset', label: 'These layers' },
+  { key: 'donename', kind: 'donename', label: 'Call the count' },
+];
+
+/** The optional Say it box on the recipes that change a value: words a screen reader says once it has changed, with {slots} for values. */
+const SAY: Need = { key: 'say', kind: 'words', label: 'Say it (optional)', optional: true };
+const sayParam = (a: Answers): Record<string, unknown> => ((a.say ?? '').trim() ? { say: a.say.trim() } : {});
 
 /** How the page changes: asked for by the page recipes, and always optional (the usual fade when left alone). */
 const HOW: Need = { key: 'transition', kind: 'transition', label: 'How the page changes' };
@@ -285,12 +301,13 @@ export const RECIPES: Recipe[] = [
       { key: 'counter', kind: 'counter', label: 'Which number' },
       { key: 'numhow', kind: 'numhow', label: 'What to do' },
       { key: 'amount', kind: 'amount', label: 'Amount' },
+      SAY,
     ],
     action: (a) => {
       const how = a.numhow ?? 'add';
       const amount = (a.amount ?? '1').trim() || '1';
       const value = how === 'subtract' ? (/^\d+(\.\d+)?$/.test(amount) ? `-${amount}` : `-(${amount})`) : amount;
-      return { kind: 'action.setVariable', params: { ...defaultParams('action.setVariable'), variable: a.counter ?? '', op: how === 'set' ? 'set' : 'add', value } };
+      return { kind: 'action.setVariable', params: { ...defaultParams('action.setVariable'), variable: a.counter ?? '', op: how === 'set' ? 'set' : 'add', value, ...sayParam(a) } };
     },
   },
   {
@@ -303,6 +320,7 @@ export const RECIPES: Recipe[] = [
       { key: 'startat', kind: 'startat', label: 'The first one is' },
       { key: 'last', kind: 'last', label: 'How many items' },
       { key: 'ends', kind: 'ends', label: 'After the last' },
+      SAY,
     ],
     action: (a, ctx) => ({ kind: 'action.setVariable', params: roundParams(a, ctx, 'next') }),
   },
@@ -316,6 +334,7 @@ export const RECIPES: Recipe[] = [
       { key: 'startat', kind: 'startat', label: 'The first one is' },
       { key: 'last', kind: 'last', label: 'How many items' },
       { key: 'ends', kind: 'ends', label: 'Before the first' },
+      SAY,
     ],
     action: (a, ctx) => ({ kind: 'action.setVariable', params: roundParams(a, ctx, 'previous') }),
   },
@@ -338,11 +357,21 @@ export const RECIPES: Recipe[] = [
     needs: [
       { key: 'switch', kind: 'switch', label: 'Which switch' },
       { key: 'how', kind: 'switchhow', label: 'What to do' },
+      SAY,
     ],
     action: (a) => {
       const how = a.how ?? 'flip';
-      return { kind: 'action.setVariable', params: { ...defaultParams('action.setVariable'), variable: a.switch ?? '', ...(how === 'on' || how === 'off' ? { op: 'set', value: how === 'on' ? 'true' : 'false' } : { op: 'toggle', value: '' }) } };
+      return { kind: 'action.setVariable', params: { ...defaultParams('action.setVariable'), variable: a.switch ?? '', ...(how === 'on' || how === 'off' ? { op: 'set', value: how === 'on' ? 'true' : 'false' } : { op: 'toggle', value: '' }), ...sayParam(a) } };
     },
+  },
+  {
+    id: 'count-done',
+    label: 'Count what has been done…',
+    hint: 'Keeps count of which layers have been clicked, opened or answered, so you can show “3 of 5 explored” or use it in a condition. It writes a list the layers add themselves to, and numbers made from it.',
+    group: 'Counting and switches',
+    needs: DONE_NEEDS,
+    //it is not something that happens when this layer is clicked: each layer you tick gets its own small flow, so there is no step to write here
+    steps: () => [],
   },
   {
     id: 'reset',
@@ -475,7 +504,7 @@ function roundParams(a: Answers, ctx: RecipeCtx, op: 'next' | 'previous'): Recor
     last = from === '0' ? `${name}.length - 1` : `${name}.length`;
   } else if (/^\d+$/.test(raw)) last = String(from === '0' ? Math.max(0, Number(raw) - 1) : Number(raw));
   else last = from === '0' ? `(${raw || '1'}) - 1` : raw;
-  return { ...defaultParams('action.setVariable'), variable: a.counter ?? '', op, first: from, last, ends: a.ends === 'stop' ? 'stop' : 'round' };
+  return { ...defaultParams('action.setVariable'), variable: a.counter ?? '', op, first: from, last, ends: a.ends === 'stop' ? 'stop' : 'round', ...sayParam(a) };
 }
 
 // ---------------------------------------------------------------- triggers
@@ -501,6 +530,7 @@ export const TRIGGERS: TriggerDef[] = [
       { key: 'reachto', kind: 'reachto', label: 'This', when: (a) => opTakesValue((a.reachop ?? 'atleast') as CondOp) },
     ],
   },
+  { id: 'all', label: () => 'all of these are done', needs: DONE_NEEDS },
   { id: 'drop', label: (who) => `“${who}” is dropped on something`, needs: [{ key: 'zone', kind: 'zone', label: 'Dropped on' }] },
   { id: 'key', label: () => 'a key is pressed', needs: [{ key: 'key', kind: 'key', label: 'Which key' }] },
   {
@@ -598,6 +628,10 @@ function defaultsFor(needs: Need[], ctx: RecipeCtx, id: string): Answers {
     else if (n.kind === 'reachto') out[n.key] = '1';
     else if (n.kind === 'key') out[n.key] = 'ArrowRight';
     else if (n.kind === 'cuetime') out[n.key] = '10';
+    //the layer it was opened from is the likeliest first one to count
+    else if (n.kind === 'doneset') out[n.key] = ctx.layerId;
+    else if (n.kind === 'donehow') out[n.key] = 'click';
+    else if (n.kind === 'donename') out[n.key] = 'explored';
     else out[n.key] = '';
   }
   return out;
@@ -608,11 +642,23 @@ export const defaultTriggerAnswers = (t: Trigger, ctx: RecipeCtx): Answers => de
 
 const isNumber = (v: string): boolean => v.trim() !== '' && Number.isFinite(Number(v));
 
-function gapsIn(needs: Need[], a: Answers, project?: Project): string | null {
+function gapsIn(needs: Need[], a: Answers, project?: Project, ab?: Artboard): string | null {
   for (const n of needs) {
     if (n.when && !n.when(a)) continue;
     const v = (a[n.key] ?? '').trim();
     if (n.kind === 'transition' || n.kind === 'speed' || n.optional) continue;
+    if (n.kind === 'donehow') continue;
+    if (n.kind === 'donename') {
+      if (!v) return 'Name what you are counting, such as explored.';
+      continue;
+    }
+    if (n.kind === 'doneset') {
+      if (!splitSet(v).length) return 'Tick the layers that count.';
+      //only the layers that can be done in the chosen way count: a question to be answered, a dialog to be opened
+      const can = ab && project ? doneLayers(ab, project, doneHowOf(a.donehow)).map((l) => l.id) : null;
+      if (can && !splitSet(v).some((id) => can.includes(id))) return a.donehow === 'answered' ? 'None of the ticked layers is a question.' : 'None of the ticked layers is a dialog with an open value.';
+      continue;
+    }
     if (n.kind === 'size' || n.kind === 'cuetime') continue;
     if (n.kind === 'amount') {
       if (!v) return 'Say how much.';
@@ -666,8 +712,8 @@ function gapsIn(needs: Need[], a: Answers, project?: Project): string | null {
 }
 
 /** Why the answers are not enough yet (the Add button says so), or null. */
-export function incomplete(recipe: Recipe, a: Answers, project?: Project): string | null {
-  const gap = gapsIn(recipe.needs, a, project);
+export function incomplete(recipe: Recipe, a: Answers, project?: Project, ab?: Artboard): string | null {
+  const gap = gapsIn(recipe.needs, a, project, ab);
   if (gap) return gap;
   //a size with neither number says nothing
   if (recipe.id === 'look' && a.what === 'size') {
@@ -680,8 +726,8 @@ export function incomplete(recipe: Recipe, a: Answers, project?: Project): strin
 }
 
 /** Why the trigger's answers are not enough yet, or null. */
-export const triggerIncomplete = (t: Trigger, w: Answers, project?: Project): string | null => {
-  const gap = gapsIn(TRIGGER_BY_ID[t].needs, w, project);
+export const triggerIncomplete = (t: Trigger, w: Answers, project?: Project, ab?: Artboard): string | null => {
+  const gap = gapsIn(TRIGGER_BY_ID[t].needs, w, project, ab);
   if (gap) return gap;
   if (t === 'video' && !(isNumber(w.cuetime ?? '') && Number(w.cuetime) >= 0)) return 'Say how many seconds in, as a number.';
   return null;
@@ -787,8 +833,10 @@ interface EventSpec {
 const clock = (secs: number): string => `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
 
 /** The event a trigger writes, and the layer setting it needs (a video cue to fire on). */
-function eventFor(trigger: Trigger, w: Answers, ctx: RecipeCtx, acc: Acc): EventSpec {
+function eventFor(trigger: Trigger, w: Answers, ctx: RecipeCtx, acc: Acc, done?: DoneKit | null): EventSpec {
   switch (trigger) {
+    case 'all':
+      return done ? { kind: done.all.kind, params: done.all.params, onlyIf: done.all.onlyIf } : { kind: 'event.start', params: {} };
     case 'start':
       return { kind: 'event.start', params: {} };
     case 'timer':
@@ -828,32 +876,56 @@ const both = (a: string, b: string): string => (a && b ? `(${a}) && (${b})` : a 
 export function buildBehaviour(ctx: RecipeCtx, recipeId: string, trigger: Trigger, answers: Answers, makeId: (prefix: string) => string = uid, extras: Extras = {}): Behaviour {
   if (!RECIPE_BY_ID[recipeId]) throw new Error(`No behaviour called ${recipeId}`);
   const acc: Acc = { variables: [], scripts: [], patches: [], taken: ctx.project.variables.map((v) => v.name) };
-  const steps = [{ recipe: recipeId, answers }, ...(extras.then ?? [])].flatMap((st) => stepsFor(ctx, st.recipe, st.answers, makeId, acc));
+  //counting what is done (the trigger All of these are done, or Count what has been done on its own) makes its variables first
+  const doneIn = recipeId === 'count-done' ? answers : trigger === 'all' ? (extras.when ?? {}) : null;
+  const done = doneIn ? buildDone(ctx.ab, ctx.project, doneHowOf(doneIn.donehow), splitSet(doneIn.doneset), doneIn.donename ?? '', makeId, acc.taken) : null;
+  if (done) acc.variables.push(...done.variables);
+  const counting = recipeId === 'count-done';
+  const steps = counting ? [] : [{ recipe: recipeId, answers }, ...(extras.then ?? [])].flatMap((st) => stepsFor(ctx, st.recipe, st.answers, makeId, acc));
   const only = (extras.only ?? '').trim();
-  const otherwise = only && extras.otherwise ? stepsFor(ctx, extras.otherwise.recipe, extras.otherwise.answers, makeId, acc) : [];
-  const ev = eventFor(trigger, extras.when ?? {}, ctx, acc);
+  const otherwise = !counting && only && extras.otherwise ? stepsFor(ctx, extras.otherwise.recipe, extras.otherwise.answers, makeId, acc) : [];
   // written onto a scratch copy of the graph by the shared click-flow writer, so the nodes land where a real write would put them
   const scratch = { logic: { nodes: [...ctx.ab.logic.nodes], edges: [] as LogicEdge[] } };
   let nodes: LogicNode[];
   let event: LogicNode;
   let firstStep: LogicNode | undefined;
-  if (otherwise.length) {
-    //an Otherwise needs a fork, so the condition is a Check a condition node (the event keeps only what its own trigger asks)
-    const w = writeBranchFlow(scratch, { kind: ev.kind, params: { ...ev.params, ...(ev.onlyIf ? { onlyIf: ev.onlyIf } : {}) } }, only, steps, otherwise);
-    event = w.event;
-    nodes = [w.event, w.check, ...w.yes, ...w.no];
-    firstStep = w.yes[0];
-  } else {
-    const onlyIf = both(ev.onlyIf ?? '', only);
-    const w = writeFlow(scratch, { kind: ev.kind, params: { ...ev.params, ...(onlyIf ? { onlyIf } : {}) } }, steps);
+  if (counting) {
+    //no trigger of its own: the first layer's flow stands in for it
+    const [head, ...rest] = done!.trackers;
+    const w = writeFlow(scratch, head.event, head.steps);
     event = w.event;
     nodes = [w.event, ...w.steps];
     firstStep = w.steps[0];
+    for (const t of rest) {
+      const x = writeFlow(scratch, t.event, t.steps);
+      nodes.push(x.event, ...x.steps);
+    }
+  } else {
+    const ev = eventFor(trigger, extras.when ?? {}, ctx, acc, done);
+    if (otherwise.length) {
+      //an Otherwise needs a fork, so the condition is a Check a condition node (the event keeps only what its own trigger asks)
+      const w = writeBranchFlow(scratch, { kind: ev.kind, params: { ...ev.params, ...(ev.onlyIf ? { onlyIf: ev.onlyIf } : {}) } }, only, steps, otherwise);
+      event = w.event;
+      nodes = [w.event, w.check, ...w.yes, ...w.no];
+      firstStep = w.yes[0];
+    } else {
+      const onlyIf = both(ev.onlyIf ?? '', only);
+      const w = writeFlow(scratch, { kind: ev.kind, params: { ...ev.params, ...(onlyIf ? { onlyIf } : {}) } }, steps);
+      event = w.event;
+      nodes = [w.event, ...w.steps];
+      firstStep = w.steps[0];
+    }
+    //the trigger All of these are done also writes what counts them, under the flow it starts
+    for (const t of done?.trackers ?? []) {
+      const x = writeFlow(scratch, t.event, t.steps);
+      nodes.push(x.event, ...x.steps);
+    }
   }
   const edges = scratch.logic.edges;
   const shown: Artboard = { ...ctx.ab, logic: { ...ctx.ab.logic, nodes, edges } };
   const project: Project = { ...ctx.project, variables: [...ctx.project.variables, ...acc.variables], scripts: [...ctx.project.scripts, ...acc.scripts] };
-  const sentence = flowSentence(buildFlow(event, { ab: shown, project, self: ctx.layerId }, { limit: 40 }));
+  const flow = flowSentence(buildFlow(event, { ab: shown, project, self: ctx.layerId }, { limit: 40 }));
+  const sentence = counting ? done!.sentence : flow;
   return { nodes, edges, variables: acc.variables, scripts: acc.scripts, patches: acc.patches, eventId: event.id, actionId: (firstStep ?? event).id, sentence };
 }
 

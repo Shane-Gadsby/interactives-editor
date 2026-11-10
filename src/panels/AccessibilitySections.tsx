@@ -23,6 +23,7 @@ import { usePrefs } from '../lib/prefs';
 type RoleChoice = '' | LayerRole | 'decorative';
 type TabChoice = 'auto' | 'yes' | 'no';
 type PressedChoice = 'none' | 'off' | 'on';
+type LiveChoice = 'off' | 'polite' | 'assertive';
 type CurrentChoice = 'none' | 'true' | 'page' | 'step' | 'location';
 
 const roleOf = (n: SceneNode): RoleChoice => (n.decorative ? 'decorative' : n.role ?? '');
@@ -58,7 +59,7 @@ export function AccessibilitySection({ nodes, ab }: { nodes: SceneNode[]; ab: Ar
   const role = roleOf(n);
   const stop = single && isTabStop(n, cx);
   const tab: TabChoice = n.focusable === true ? 'yes' : n.focusable === false ? 'no' : 'auto';
-  const open = !!(n.role || n.decorative || n.ariaDescription || n.ariaLabel || n.sayAs || n.ariaPressed !== undefined || n.ariaCurrent || n.shortcut || n.focusable !== undefined || (single && stop));
+  const open = !!(n.role || n.decorative || n.ariaDescription || n.ariaLabel || n.sayAs || n.ariaPressed !== undefined || n.ariaCurrent || n.liveRegion || n.shortcut || n.focusable !== undefined || (single && stop));
   const nameHint = n.type === 'image' || n.type === 'video' || n.type === 'draw' || n.type === 'shader' || n.type === 'chart' ? 'Describe what it shows' : n.type === 'progress' ? 'What it measures, e.g. "Course progress"' : 'What it is or does, e.g. "Next question"';
   return (
     <Section help="accessibility" title="Accessibility" defaultOpen={open}>
@@ -108,6 +109,19 @@ export function AccessibilitySection({ nodes, ab }: { nodes: SceneNode[]; ab: Ar
           rows={2}
           commitOnBlur
           onChange={(v) => set({ sayAs: v || undefined })}
+        />
+      )}
+      {role !== 'decorative' && nodes.every((x) => x.type === 'text') && (
+        <SelectField<LiveChoice>
+          label="Read changes aloud"
+          title="A status line or score: a screen reader says these words whenever they change while playing, without an Announce node. Politely waits for what it is reading, Urgently interrupts. Not said when the page first shows it"
+          value={n.liveRegion ?? 'off'}
+          options={[
+            { value: 'off', label: 'No' },
+            { value: 'polite', label: 'Yes, politely' },
+            { value: 'assertive', label: 'Yes, urgently (interrupts)' },
+          ]}
+          onChange={(v) => set({ liveRegion: v === 'off' ? undefined : v })}
         />
       )}
       {role === 'heading' && (
