@@ -319,8 +319,9 @@ describe('Other triggers', () => {
   const build = (trigger: Trigger, when: Answers, f = fixture(), recipe = 'announce') => ({ f, b: buildBehaviour(ctxOf(f), recipe, trigger, { words: 'Hi' }, mk, { when }) });
 
   it('is clicked unless said otherwise, and the list covers the ones the graph already has', () => {
-    expect(TRIGGERS.map((t) => t.id)).toEqual(['click', 'pointerenter', 'start', 'timer', 'value', 'drop', 'key', 'video']);
-    for (const t of TRIGGERS) expect(CATALOG_BY_KIND[buildBehaviour(ctxOf(fixture()), 'start-over', t.id, {}, mk, { when: defaultTriggerAnswers(t.id, ctxOf(videoFixture())) }).nodes[0].kind]).toBeTruthy();
+    expect(TRIGGERS.map((t) => t.id)).toEqual(['click', 'pointerenter', 'start', 'timer', 'value', 'all', 'drop', 'key', 'video']);
+    //(All of these are done needs layers ticked, and has its own tests in all-done.test.ts)
+    for (const t of TRIGGERS.filter((x) => x.id !== 'all')) expect(CATALOG_BY_KIND[buildBehaviour(ctxOf(fixture()), 'start-over', t.id, {}, mk, { when: defaultTriggerAnswers(t.id, ctxOf(videoFixture())) }).nodes[0].kind]).toBeTruthy();
     const f = fixture();
     expect(buildBehaviour(ctxOf(f), 'announce', 'click', { words: 'x' }, mk).nodes[0]).toMatchObject({ kind: 'event.pointer', params: { target: f.btn.id, type: 'click' } });
   });
@@ -506,7 +507,8 @@ describe('every recipe still works from the list', () => {
       const d = { ...defaultAnswers(r, ctx), link: 'https://example.com', page: f.p.artboards[1].id, set: f.panel2.id, words: 'Hello' };
       const b = buildBehaviour(ctx, r.id, 'click', d, mk);
       for (const n of b.nodes) expect(CATALOG_BY_KIND[n.kind], `${r.id}: ${n.kind}`).toBeTruthy();
-      expect(b.sentence, r.id).toMatch(/^When clicked: /);
+      //(Count what has been done has no trigger of its own, and its own tests in all-done.test.ts)
+      if (r.id !== 'count-done') expect(b.sentence, r.id).toMatch(/^When clicked: /);
     }
   });
 });

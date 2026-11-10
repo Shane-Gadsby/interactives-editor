@@ -254,7 +254,7 @@ export function buildCommands(): Command[] {
   for (const r of RECIPES) {
     add({
       id: `behaviour:${r.id}`,
-      title: `When clicked: ${r.label}`,
+      title: r.id === 'count-done' ? r.label : `When clicked: ${r.label}`,
       group: 'Behaviours',
       words: `interaction recipe behaviour ${r.group} ${r.hint}`,
       disabled: noOne,
@@ -262,6 +262,7 @@ export function buildCommands(): Command[] {
     });
   }
 
+  add({ id: 'behaviour:all-done', title: 'Add an interaction: when all of these are done…', group: 'Behaviours', words: 'interaction recipe behaviour explored finished every each count trigger', disabled: noOne, run: () => openBehaviours({ abId: ab!.id, layerId: one!.id, trigger: 'all' }) });
   for (const [id, title, trigger] of [['click', 'When clicked…', 'click'], ['hover', 'When hovered…', 'pointerenter']] as const) {
     add({ id: `behaviour:${id}`, title: `Add an interaction: ${title.toLowerCase()}`, group: 'Behaviours', words: 'interaction recipe behaviour choose', disabled: noOne, run: () => openBehaviours({ abId: ab!.id, layerId: one!.id, trigger }) });
   }
