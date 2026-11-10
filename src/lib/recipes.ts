@@ -265,7 +265,7 @@ const NEW_NAME: Record<'counter' | 'switch', string> = { counter: 'count', switc
 export function unavailable(recipe: Recipe, ctx: RecipeCtx): string | null {
   if (recipe.id === 'page-pick' && !otherPages(ctx).length) return 'There is no other page to go to yet.';
   if (recipe.id === 'animation' && !ctx.ab.timelines.length) return 'This page has no timelines yet. Make one in the Timeline tab first.';
-  if (recipe.needs.some((n) => n.kind === 'video') && !videoChoices(ctx.ab).length) return 'This page has no video layer yet. Add one from Insert > Video first.';
+  if (recipe.needs.some((n) => n.kind === 'video') && !videoChoices(ctx.ab).length) return 'This page has no video layer yet. Add one with the Video tool (Web, in the tool bar) first.';
   return null;
 }
 
