@@ -9,9 +9,9 @@ export const tutorial: BuildTutorial = {
     id: 'tutorial-presentation',
     title: 'A course presentation',
     group: 'Build it',
-    summary: 'Four slides that share a page master, a check your understanding question, and Back, Next and the page number added in one go, with a slide transition.',
-    keywords: 'tutorial presentation slides slide deck powerpoint lecture page master text slot back next page number navigation transition slide left question check your understanding branded look',
-    body: `You will make a short slide deck: a welcome slide, a content slide, a check your understanding question and a thank you slide. A **page master** gives every slide the same bar, title position and footer, and **Page navigation** adds Back, Next and *Page 2 of 4* to all of them at once, with a slide transition. It takes about fifteen minutes.
+    summary: 'Four slides that share a page master, a check your understanding question, and Back, Next and the page number added once, on the master, with a slide transition.',
+    keywords: 'tutorial presentation slides slide deck powerpoint lecture page master master buttons text slot back next page number navigation transition slide left question check your understanding branded look',
+    body: `You will make a short slide deck: a welcome slide, a content slide, a check your understanding question and a thank you slide. A **page master** gives every slide the same bar, title position and footer, and **Page navigation** puts Back, Next and *Page 2 of 4* on that master once, so every slide has them, with a slide transition. It takes about fifteen minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Course presentation**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -29,7 +29,7 @@ Each slide is a page of the project. The order of the pages in the **Layers** pa
 On **Slide master**:
 
 1. Press <kbd>R</kbd> and draw a thin bar across the very top: **X** 0, **Y** 0, **W** 800, **H** 12. Give it a dark blue fill. Name it **Accent bar**.
-2. Press <kbd>T</kbd> and click near the top left, under the bar. Type \`{slideTitle}\` and press <kbd>Escape</kbd>. Make it **Size** 30, **Weight** 700, and name it **Slide title**. The braces make it a *text slot*: each slide fills in its own words. In its **Accessibility** section set **Role** to **Heading**: a master's layers are hidden from screen readers unless they have a role or a name of their own, and this one is each slide's title.
+2. Press <kbd>T</kbd> and click near the top left, under the bar. Type \`{slideTitle}\` and press <kbd>Escape</kbd>. Make it **Size** 30, **Weight** 700, and name it **Slide title**. The braces make it a *text slot*: each slide fills in its own words. In its **Accessibility** section set **Role** to **Heading**: a master's pictures and shapes are hidden from screen readers unless they have a role or a name of their own, and this one is each slide's title. (Buttons and links on a master are not hidden: they work on every slide.)
 3. Add a small text at the very bottom left, \`Study skills\`, **Size** 13. Name it **Footer**. Keep it below about **Y** 570, clear of the buttons that go along the bottom later.
 4. Select the page itself (click its name above it) and open the **Page master** section. Press **Make this a master**.
 5. The section now says how many pages draw it and lists them. Press **Use for all other pages**.
@@ -64,16 +64,20 @@ To change the bar or the footer later, change it once on **Slide master** (or pr
 
 ## 5. Back, Next and the page number
 
-1. Select the **Welcome** page and open **Page navigation** in the Properties panel.
+Back and Next go on the master, once. Every slide that draws the master gets them.
+
+1. Select **Slide master** (click its name above it on the canvas) and open **Page navigation** in the Properties panel.
 2. Choose the style **Back and Next**.
 3. Set **How the page changes** to **Slide left**, and **Speed** to **Medium**.
-4. Press **Add to all 4 pages**. (**Add to this page** does just the one, and **Remove** takes them off again.)
+4. Press **Add to this master**.
 
-![Page navigation with Back and Next picked, How the page changes set to Slide left, Speed Medium, and the buttons Add to this page, Add to all 4 pages and Remove.](help/tutorial-presentation-navigation.png)
+![Page navigation on Slide master with Back and Next picked, How the page changes set to Slide left, Speed Medium, and the buttons Add to this master and Remove.](help/tutorial-presentation-navigation.png)
 
-Every slide now has **Back** on the left, **Next** on the right and *Page 1 of 4* between them. Back is hidden on the first slide and Next on the last. The master isn't counted: it is not a slide.
+Every slide now has **Back** on the left, **Next** on the right and *Page 1 of 4* between them, drawn over its own layers. Back is hidden on the first slide and Next on the last. The master isn't counted: it is not a slide.
 
-Nothing here is hidden. Each button is an ordinary button with a **Go to a page** node in the **Interactions** tab, set to the next or previous page with the transition you chose. They follow the page order, so a slide you add or move later needs no rewiring (press **Add to all** again to give a new slide its buttons).
+Nothing here is hidden. Each button is an ordinary button on the master, with a **Go to a page** node in the master's **Interactions** tab, set to the next or previous page with the transition you chose. They follow the page order, so a slide you add or move later needs no rewiring, and no slide needs a button of its own. Open a slide's **Interactions** tab and you will see the master's flows listed there, read only, with **Edit the master** to change them.
+
+Because the buttons are drawn over the slide, a keyboard user reaches them last: Tab goes through the slide's own controls, then Back, then Next.
 
 ## 6. Try it
 
@@ -87,15 +91,16 @@ Learners whose device asks for less motion get an instant change instead of the 
 
 ## Make it yours
 
-- **The arrow keys.** Select a **Next button** and type \`ArrowRight\` in **Shortcut** (in **Accessibility**), and \`ArrowLeft\` on the **Back button**. Do it on each slide. The welcome text already promises it.
-- **Another transition.** Pick another look in **How the page changes** and press **Add to all** again: the buttons are replaced in the new style.
+- **The arrow keys.** On **Slide master**, select the **Next button** and type \`ArrowRight\` in **Shortcut** (in **Accessibility**), and \`ArrowLeft\` on the **Back button**. Once is enough: every slide follows. The welcome text already promises it.
+- **Another transition.** On **Slide master**, pick another look in **How the page changes** and press **Add to this master** again: the buttons are replaced in the new style.
+- **A slide without the buttons.** On that slide, untick **Next button** and **Back button** under **Show these master layers on this page** in the **Page master** section.
 - **More slides.** Add a page, pick **Slide master** as its **Master**, fill in its slot, and drag its row into place in the **Layers** panel.
 - **The branded look.** The **Course presentation** starter (Templates, **Stories and presentations**) is eight slides with the university's look, an Acknowledgement of Country slide and a question slide, ready to fill in.
 
 ## What you learned
 
 - A **page master** holds what every slide shares, drawn under each page. A \`{name}\` in its text is a slot each page fills in.
-- **Page navigation** adds Back, Next and the page number to every page in one go, following the page order.
+- A **button on a master** works on every slide that draws it, and its **Go to a page** flow runs on whichever slide is showing. **Page navigation** adds Back, Next and the page number to the master once, following the page order.
 - **How the page changes** sets the transition, and people who ask for less motion get none.
 
 **Next:** [Mind maps and flowcharts from data](tutorial-diagram). More on [Page masters](page-master), [Page navigation](page-navigation) and [How the page changes](links-cursors#how-the-page-changes).`,

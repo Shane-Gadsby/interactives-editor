@@ -1,4 +1,4 @@
-//Course presentation: eight slides like the PowerPoint template, with a slide bar (Back, Next, slide n of N, arrow keys) done with page navigation.
+//Course presentation: eight slides like the PowerPoint template, with a slide bar (Back, Next, slide n of N, arrow keys) built once on each page master.
 import type { Artboard, SceneNode, TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, setQuestionSettings } from '../../../question-kit';
 import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, picture, text, todo, type BrandedCtx, type BrandedStarter } from '\.\./\.\./kit';
@@ -10,11 +10,14 @@ type Tone = 'light' | 'gradient' | 'deep';
 
 const BAR_Y = 592;
 
-/** Back, "Slide n of N" and Next along the bottom of a slide. They go to the previous and next page in the project's order, with the left and right arrow keys as shortcuts on the buttons, so a slide can be added or moved with no rewiring. */
-function slideBar(ctx: BrandedCtx, pages: Artboard[], i: number, tone: Tone): SceneNode[] {
+/**
+ * Back, "Slide n of N" and Next along the bottom of a slide, built once on the slide's page master (every slide of that look draws it,
+ * over its own layers, so they are the last stops in the tab order). They go to the previous and next page in the project's order, with
+ * the left and right arrow keys as shortcuts on the buttons, so a slide can be added or moved with no rewiring. The title slide's master
+ * has Start and no Back, and the end slide's has Back and Start again.
+ */
+function slideBar(ctx: BrandedCtx, master: Artboard, role: 'first' | 'middle' | 'last', tone: Tone): SceneNode[] {
   const { L } = ctx;
-  const page = pages[i];
-  const total = pages.length;
   const made: SceneNode[] = [];
   const style = (b: ReturnType<typeof button>, primary: boolean) => {
     b.height = 38;
@@ -27,10 +30,8 @@ function slideBar(ctx: BrandedCtx, pages: Artboard[], i: number, tone: Tone): Sc
     }
     return b;
   };
-  const g = new Graph(page);
-  const hasBack = i > 0;
-  const last = i === total - 1;
-  if (hasBack) {
+  const g = new Graph(master);
+  if (role !== 'first') {
     const back = style(button(ctx, 'Back', 'Back', 330, BAR_Y, 110, false), false);
     back.ariaLabel = 'Previous slide';
     back.shortcut = 'Left';
@@ -39,9 +40,9 @@ function slideBar(ctx: BrandedCtx, pages: Artboard[], i: number, tone: Tone): Sc
   }
   const counter = text(ctx, 'Slide counter', 'Slide {pageNumber} of {pageCount}', 450, BAR_Y + 10, 124, { fontSize: 14, align: 'center', color: tone === 'light' ? L.muted : tone === 'deep' ? L.onDeep : L.onGradient });
   made.push(counter);
-  if (!last) {
-    const next = style(button(ctx, 'Next', i === 0 ? 'Start' : 'Next', 584, BAR_Y, 110, true), true);
-    next.ariaLabel = i === 0 ? 'Start the presentation' : 'Next slide';
+  if (role !== 'last') {
+    const next = style(button(ctx, 'Next', role === 'first' ? 'Start' : 'Next', 584, BAR_Y, 110, true), true);
+    next.ariaLabel = role === 'first' ? 'Start the presentation' : 'Next slide';
     next.shortcut = 'Right';
     made.push(next);
     g.run(g.click(next, 'Slide bar'), goNext('slideLeft'));
@@ -50,6 +51,8 @@ function slideBar(ctx: BrandedCtx, pages: Artboard[], i: number, tone: Tone): Sc
     made.push(again);
     g.run(g.click(again, 'Slide bar'), ['action.startOver']);
   }
+  master.children.push(...made);
+  master.masterOver = [...(master.masterOver ?? []), ...made.map((n) => n.id)];
   return made;
 }
 
@@ -133,24 +136,28 @@ function build(colourway: Colourway) {
   //8 End
   checklist.push(item('Change the closing message on the end slide', end.children.find((n) => n.name === 'Page title'), end));
 
-  //The slide bar on every slide
+  //The slide bar, once on each master (the title slide, the end slide and the section slide have a master of their own; the rest share one)
+  const masterOf = (page: Artboard) => project.artboards.find((m) => m.id === page.master)!;
+  const bars = new Map<string, SceneNode[]>();
   pages.forEach((page, i) => {
+    const m = masterOf(page);
+    if (bars.has(m.id)) return;
     const tone: Tone = page === title || page === end ? 'gradient' : page === section ? 'deep' : 'light';
-    const bar = slideBar(ctx, pages, i, tone);
-    page.children.push(...bar);
-    //One note on the slide bar, on the first slide that has both buttons
-    const nextBtn = bar.find((n) => n.name === 'Next');
-    const onNext = nextBtn && page.logic.nodes.find((n) => n.kind === 'event.pointer' && n.params.target === nextBtn.id);
-    if (i === 1 && onNext) graphNote(page, { anchor: onNext, colour: 'sky', text: '**Back and Next follow the page order**, with the arrow keys as their shortcuts, and `pageNumber` and `pageCount` fill the counter. A new slide needs no rewiring. The first and last slides are the only different ones.' });
+    bars.set(m.id, slideBar(ctx, m, i === 0 ? 'first' : i === pages.length - 1 ? 'last' : 'middle', tone));
   });
+  //One note on the slide bar, on the master the middle slides share
+  const middle = masterOf(slideA);
+  const middleNext = bars.get(middle.id)!.find((n) => n.name === 'Next')!;
+  const onNext = middle.logic.nodes.find((n) => n.kind === 'event.pointer' && n.params.target === middleNext.id);
+  if (onNext) graphNote(middle, { anchor: onNext, colour: 'sky', text: '**Back and Next are wired once, here on the master**, and follow the page order, with the arrow keys as their shortcuts. `pageNumber` and `pageCount` fill the counter. A new slide needs no rewiring. The first and last slides have a master of their own with Start and Start again.' });
   //The kit wired the question, so this slide's graph is its flows plus the slide bar
   const kitStart = quiz.logic.nodes.find((n) => n.kit);
   if (kitStart) graphNote(quiz, { anchor: kitStart, colour: 'sky', text: '**The question kit made every flow here**: choose, check, hint and Try again, and the extras ticked in its settings. Edit the question in the inspector\'s Question section, not in this graph.' });
-  checklist.push(todo('To add a slide, copy one and drag it into place', 'To add a slide, duplicate one from the middle of the deck and drag it into place in the page list. Back, Next and "Slide n of N" follow the page order, so nothing needs rewiring. Only the first and last slides are different: Start on the first and Start again on the last', title.children.find((n) => n.name === 'Next'), title));
+  checklist.push(todo('To add a slide, copy one and drag it into place', 'To add a slide, duplicate one from the middle of the deck and drag it into place in the page list. Back, Next and "Slide n of N" follow the page order, so nothing needs rewiring. Only the first and last slides are different: Start on the first and Start again on the last', bars.get(masterOf(title).id)!.find((n) => n.name === 'Next'), masterOf(title)));
 
   //Notes for whoever edits the template, below the slides
   const below = (p: Artboard, x: number, w: number) => ({ x, y: p.height + 14, w, h: 84 });
-  addNote(slideA, { ...below(slideA, 0, 440), text: '**Page navigation** Back and Next are Go to artboard (previous and next), and **Slide {pageNumber} of {pageCount}** counts the pages. The arrow keys are the shortcuts Left and Right on the two buttons.', colour: 'sky' });
+  addNote(slideA, { ...below(slideA, 0, 440), text: '**Page navigation** Back and Next live once on the slide master (select it from the Page master section): they are Go to artboard (previous and next), and **Slide {pageNumber} of {pageCount}** counts the pages. The arrow keys are the shortcuts Left and Right on the two buttons.', colour: 'sky' });
   addNote(slideA, { ...below(slideA, 456, 440), text: '[ ] Write your own points, and swap the grey picture box for yours.', colour: 'gold' });
   addNote(quiz, { ...below(quiz, 0, 440), text: '**Question kit** The question is the kit\'s own frame, so its prompt, options, hint and feedback are all in the Question section of the inspector. Next is always there, so a learner can move on.', colour: 'sky' });
 

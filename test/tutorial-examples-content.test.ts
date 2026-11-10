@@ -125,14 +125,22 @@ describe('Content and explore tutorial examples', () => {
     expect(el(before.id).style.width).toBe('60px');
   });
 
-  it('presentation: Next goes to the next slide, and the master is not counted as one', () => {
+  it('presentation: Back and Next are wired once on the master and move the slides, and the master is not counted as one', () => {
     const { p, ab, player } = play('tut-presentation');
-    expect(p.artboards.find((a) => a.name === 'Slide master')?.isMaster).toBe(true);
-    expect(el(find(ab.children, 'Page counter').id).textContent).toContain('Page 1 of 4');
-    click(find(ab.children, 'Next button').id);
+    const master = p.artboards.find((a) => a.name === 'Slide master')!;
+    expect(master.isMaster).toBe(true);
+    //nothing of the bar is on the slides themselves
+    expect(find(ab.children, 'Next button')).toBeUndefined();
+    expect(master.logic.nodes.filter((n) => n.kind === 'action.artboard')).toHaveLength(2);
+    expect(el(`ixm~${find(master.children, 'Page counter').id}`).textContent).toContain('Page 1 of 4');
+    click(`ixm~${find(master.children, 'Next button').id}`);
     player.step(400);
     player.step(400);
     expect(player.artboard.name).toBe('Plan your week');
+    click(`ixm~${find(master.children, 'Back button').id}`);
+    player.step(400);
+    player.step(400);
+    expect(player.artboard.name).toBe('Welcome');
   });
 
   it('diagram: a click folds a branch of the mind map, and the flowchart follows the answers', () => {

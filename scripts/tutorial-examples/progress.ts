@@ -52,8 +52,8 @@ function build(): Project {
   });
   for (const ab of [welcome, ...pages, end]) ab.master = panel.id;
 
-  //Page navigation: Back and Next, on every page
-  addPageNavigation(p, [welcome, ...pages, end].map((a) => a.id), 'back-next');
+  //Page navigation: Back and Next, once on the panel master. They sit along the bottom of every page, over its own layers
+  addPageNavigation(p, [panel.id], 'back-next');
   return p;
 }
 
@@ -71,6 +71,6 @@ export const example: TutorialExample = {
   graphNotes: [1, 2, 3].map((page) => ({
     page,
     at: 0,
-    text: '**Mark as done is one node.** Change a value or counter adds the task name to done, or takes it out when it is there already. The other two rows are Back and Next.',
+    text: '**Mark as done is one node.** Change a value or counter adds the task name to done, or takes it out when it is there already. Back and Next are not here: they are wired once, on the Progress panel master.',
   })),
 };

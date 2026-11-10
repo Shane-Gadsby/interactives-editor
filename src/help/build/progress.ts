@@ -65,7 +65,7 @@ A binding's opacity runs from 0 to 1, so the badge shows faintly until *Planning
 1. Right-click **Progress panel** (its name above the page, or its row in the **Layers** panel) and choose **Make this a master**.
 2. With it selected, open the **Page master** section of the Properties panel and press **Use for all other pages**.
 
-Every page now shows the panel under its own layers. The panel's layers can't be clicked or changed on a page: **Edit master** in a page's **Page master** section takes you back to **Progress panel** to change them.
+Every page now shows the panel under its own layers. The panel's layers can't be moved or changed on a page: **Edit master** in a page's **Page master** section takes you back to **Progress panel** to change them. Buttons on a master do work on every page, as you will see in step 7.
 
 ## 5. A task page
 
@@ -81,7 +81,7 @@ On **Plan your week**:
 3. In its **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens on the new **When clicked or hovered** node.
 4. Drag from the **When clicked or hovered** node's dot into empty space, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **done**, **Do** to **Add to the list, or take out if it is there** and **Value** to \`"Planning"\` (with the quotes).
 
-![The graph for Plan your week: Mark as done's When clicked or hovered joined to Change a value or counter, with its settings: Variable done, Do Add to the list, or take out if it is there, Value "Planning". Back and Next have their own Go to a page rows.](help/tutorial-progress-toggle-node.png)
+![The graph for Plan your week: Mark as done's When clicked or hovered joined to Change a value or counter, with its settings: Variable done, Do Add to the list, or take out if it is there, Value "Planning". The master's Back and Next flows are not on this page.](help/tutorial-progress-toggle-node.png)
 
 One press adds *Planning* to the list, so the bar grows and the Planner badge lights up. A second press takes it out again, so the button works as a tick box.
 
@@ -98,7 +98,7 @@ Build **Read actively** and **Write a draft** the same way. Copy the heading, ti
 
 1. On **Welcome**, add a title and a line such as \`Three short tips. Try each one, press Mark as done, and earn its badge in the panel at the top.\`
 2. On **All done**, add a title and \`You earned {done.length} of 3 badges.\`
-3. Select **Welcome**, open **Page navigation** in the Properties panel, choose **Back and Next** and press **Add to all 5 pages**. The master is left out, so it never becomes a stop on the way.
+3. Select **Progress panel** (the master), open **Page navigation** in the Properties panel, choose **Back and Next** and press **Add to this master**. Back and Next go on the master once, so all five pages have them and none needs its own. The master is not a page, so it never becomes a stop on the way.
 
 ## 8. Try it
 
@@ -114,11 +114,11 @@ Build **Read actively** and **Write a draft** the same way. Copy the heading, ti
 - **Remember it.** In the Variables tab, open **Options** under \`done\` and tick **Remember**. A learner who comes back finds their badges still lit.
 - **Different badges.** A badge can read anything: \`done.length == 3\` for a gold star at the end, or a score from a quiz.
 - **Leave it off a page.** On **Welcome**, untick a layer under **Show these master layers on this page** in the **Page master** section.
-- **Screen readers.** Master layers are decorative, so a screen reader doesn't read the panel. The **Mark as done** label says the state on each page, and **All done** says the count.
+- **Screen readers.** The panel's shapes and text are decorative on a page, so a screen reader doesn't read them (Back and Next are real buttons, so it does). The **Mark as done** label says the state on each page, and **All done** says the count.
 
 ## What you learned
 
-- A **page master** holds what every page shares, and its bindings still follow the variables.
+- A **page master** holds what every page shares, and its bindings still follow the variables. Its buttons work on every page too: Back and Next are wired once, on the master.
 - A **List** variable and **Add to the list, or take out if it is there** make a tick list.
 - Variables belong to the project, so state set on one page shows on every page.
 - **Width** and **Opacity** bindings turn a list into a bar and badges.
