@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, clickThen, layerWhere, layersWhere, nodesOfKind, renamed, saw, variable } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 55,
@@ -153,5 +154,17 @@ The **Variables (live)** list on the left of the Preview shows \`question\` chan
 - A cue ticked **Pause the video here** fires **When a video reaches a cue point**, and **Hold paused** keeps it paused until the question is done.
 
 **Next:** everything a video layer can do is in [Images, video and audio](images-media#cue-points-and-chapters). More on the question cards: [Questions and quizzes](question-kit). More on bindings: [Bindings](bindings).`,
+  },
+  guide: {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: layerWhere('video', (n) => /clip/i.test(n.name) && n.controls === true && !n.autoplay && !n.loop && !n.muted), show: ['tool-video', 'panel-inspector'] },
+    3: { show: 'panel-inspector' },
+    4: { check: layerWhere('video', (n) => (n.chapters ?? []).length >= 3 && (n.chapters ?? []).every((ch) => ch.title.trim() !== '')), show: 'panel-inspector' },
+    5: { check: all(layersWhere('button', (n) => /^chapter \d/i.test(n.name), 3), clickThen('button', 'action.video', (n) => n.params.op === 'seek' && /chapters\[/.test(String(n.params.seconds)), 3)), show: ['tool-button', 'add-empty-click'] },
+    6: { check: variable('question', 'number'), show: ['add-variable', 'panel-variables'] },
+    7: { check: all(layersWhere('frame', (n) => !!n.question, 2), bound('frame', 'visible', 'question ==')), show: ['add-question', 'panel-inspector'] },
+    8: { check: all(layerWhere('video', (n) => (n.cues ?? []).filter((q) => q.pause).length >= 2), bound('video', 'media', 'question'), nodesOfKind('event.videoCue')), show: ['panel-inspector', 'panel-logic'] },
+    9: { check: all(layerWhere('button', (n) => /^continue/i.test(n.name)), bound('button', 'visible', 'q1_locked'), nodesOfKind('action.delay')), show: ['tool-button', 'add-empty-click'] },
+    10: { check: saw('previewed'), show: 'preview' },
   },
 };

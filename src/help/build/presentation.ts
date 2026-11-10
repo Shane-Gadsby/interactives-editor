@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, clickThen, hasMaster, pages, question, renamed, saw, textHas } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 35,
@@ -104,5 +105,13 @@ Learners whose device asks for less motion get an instant change instead of the 
 - **How the page changes** sets the transition, and people who ask for less motion get none.
 
 **Next:** [Mind maps and flowcharts from data](tutorial-diagram). More on [Page masters](page-master), [Page navigation](page-navigation) and [How the page changes](links-cursors#how-the-page-changes).`,
+  },
+  guide: {
+    1: { check: all(renamed, pages(5)), show: ['project-name', 'add-page'] },
+    2: { check: all(hasMaster, textHas('{slideTitle}'), (c) => c.project.artboards.some((a) => a.isMaster === true)), show: ['panel-layers', 'panel-inspector'] },
+    3: { check: (c) => c.project.artboards.filter((a) => (a.masterSlots?.slideTitle ?? '').trim() !== '').length >= 3, show: 'panel-inspector' },
+    4: { check: question('single', (q) => !/prime number/i.test(q.prompt) && q.options.some((o) => o.correct)), show: ['add-question', 'panel-inspector'] },
+    5: { check: all(clickThen('button', 'action.artboard', (n) => n.params.to === 'next', 3), clickThen('button', 'action.artboard', (n) => n.params.to === 'previous', 3)), show: 'panel-inspector' },
+    6: { check: saw('previewed'), show: 'preview' },
   },
 };

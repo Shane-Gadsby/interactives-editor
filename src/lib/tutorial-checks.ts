@@ -1,4 +1,4 @@
-import type { Artboard, LogicNode, Project, Question, SceneNode, Variable, VariableType } from 'interactives-player';
+import type { Artboard, DataSource, LogicNode, Project, Question, SceneNode, Variable, VariableType } from 'interactives-player';
 import type { EditorState } from '../store/store';
 import type { TourId } from './tour-targets';
 
@@ -61,6 +61,11 @@ export const targetsOf = (s: GuideStep | undefined): TourId[] => (!s?.show ? [] 
 
 /** Every layer on every page, containers' children included. */
 export function allNodes(p: Project): SceneNode[] {
+  return (p.artboards ?? []).flatMap(artboardNodes);
+}
+
+/** Every layer on one page, containers' children included. */
+export function artboardNodes(ab: Artboard): SceneNode[] {
   const out: SceneNode[] = [];
   const go = (list: SceneNode[] | undefined) => {
     for (const n of list ?? []) {
@@ -68,7 +73,7 @@ export function allNodes(p: Project): SceneNode[] {
       go((n as { children?: SceneNode[] }).children);
     }
   };
-  for (const ab of p.artboards ?? []) go(ab.children);
+  go(ab.children);
   return out;
 }
 
@@ -114,6 +119,12 @@ export const layerNamed =
   (c) =>
     allNodes(c.project).some((n) => n.type === type && name.test(n.name));
 
+/** At least `min` layers of any type whose name matches. */
+export const named =
+  (name: RegExp, min = 1): Check =>
+  (c) =>
+    allNodes(c.project).filter((n) => name.test(n.name)).length >= min;
+
 /** A text layer that says this (a variable in braces, say). */
 export const textHas =
   (part: string): Check =>
@@ -128,9 +139,21 @@ export const bound =
 
 /** A layer of this type that passes your own question (its shortcut, its repeat). */
 export const layerWhere =
-  (type: SceneNode['type'], ok: (n: SceneNode) => boolean): Check =>
+  <T extends SceneNode['type']>(type: T, ok: (n: Extract<SceneNode, { type: T }>) => boolean): Check =>
   (c) =>
-    allNodes(c.project).some((n) => n.type === type && ok(n));
+    allNodes(c.project).some((n) => n.type === type && ok(n as Extract<SceneNode, { type: T }>));
+
+/** At least `min` layers of this type that pass your own question. */
+export const layersWhere =
+  <T extends SceneNode['type']>(type: T, ok: (n: Extract<SceneNode, { type: T }>) => boolean, min: number): Check =>
+  (c) =>
+    allNodes(c.project).filter((n) => n.type === type && ok(n as Extract<SceneNode, { type: T }>)).length >= min;
+
+/** A data source (a file, a link, shared responses) that passes your own question. */
+export const dataSourceWhere =
+  (ok: (d: DataSource) => boolean): Check =>
+  (c) =>
+    !!c.project.dataSources?.some(ok);
 
 /** A group or frame that repeats over a list, named by what it repeats (`slides`, `cards`). */
 export const repeats =
@@ -146,6 +169,12 @@ export const timelines =
   (min = 1): Check =>
   (c) =>
     c.project.artboards.reduce((n, ab) => n + ab.timelines.length, 0) >= min;
+
+/** At least `min` timelines (on any page) that pass your own question (its name, its length, what it animates). */
+export const timelineWhere =
+  (ok: (t: Artboard['timelines'][number]) => boolean, min = 1): Check =>
+  (c) =>
+    c.project.artboards.reduce((n, ab) => n + ab.timelines.filter(ok).length, 0) >= min;
 
 /** There is a timeline and none of them starts by itself. */
 export const noAutoplay: Check = (c) => {

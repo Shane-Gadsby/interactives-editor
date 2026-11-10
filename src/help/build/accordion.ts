@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, clickThen, layerWhere, renamed, repeats, saw, setsVariable, textHas, variables } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 32,
@@ -125,5 +126,14 @@ Tabs show one section's text at a time under a row of titles. They read the same
 - **Expanded (button role)** and a **Text alternative** binding make a text header a proper button for screen readers.
 
 **Next:** [An image slider (carousel)](tutorial-carousel). More on [Auto layout](auto-layout), [Repeated lists](repeaters) and [Accessibility](accessibility#pressed-and-current).`,
+  },
+  guide: {
+    1: { check: all(renamed, variables(['sections', 'list'], ['open', 'list'])), show: ['project-name', 'add-variable', 'panel-variables'] },
+    2: { check: layerWhere('frame', (n) => /accordion/i.test(n.name) && n.layout?.direction === 'column'), show: ['tool-frame', 'panel-inspector'] },
+    3: { check: all(textHas('{item.title}'), textHas('{item.body}')), show: ['tool-text', 'panel-layers'] },
+    4: { check: repeats('sections'), show: 'panel-inspector' },
+    5: { check: all(bound('text', 'visible', 'open.includes'), clickThen('text', 'action.setVariable', setsVariable('open'))), show: ['add-empty-click', 'panel-inspector'] },
+    6: { check: all(layerWhere('text', (n) => n.role === 'button'), bound('text', 'ariaExpanded', 'open')), show: 'panel-inspector' },
+    7: { check: saw('previewed'), show: 'preview' },
   },
 };

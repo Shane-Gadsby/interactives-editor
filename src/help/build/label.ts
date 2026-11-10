@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, layerWhere, question, renamed, saw, allNodes } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 24,
@@ -115,5 +116,15 @@ Press <kbd>Esc</kbd> to close the Preview.
 - The picture's **Text alternative** and the spot names (the box under each label in the **Question** section) make the activity usable without seeing the picture.
 
 **Next:** see [Accessibility](accessibility) for text alternatives and the keyboard, and [Drag and drop](drag-and-drop) for drop zones on any layer. Every question type is in [Questions and quizzes](question-kit).`,
+  },
+  guide: {
+    1: { check: all(renamed, question('matching')), show: ['project-name', 'add-question'] },
+    2: { check: question('matching', (q) => q.pairs.length >= 4 && !q.pairs.some((p) => /^(France|Japan|Egypt|Peru)$/.test(p.term)) && (q.extras ?? []).some((x) => x.text.trim() !== '')), show: 'panel-inspector' },
+    3: { check: layerWhere('frame', (n) => /^matches$/i.test(n.name) && !n.layout), show: 'panel-layers' },
+    4: { check: (c) => allNodes(c.project).some((n) => (n.type === 'image' || n.role === 'image') && (n.ariaLabel ?? '').trim().length > 20), show: ['tool-image', 'panel-inspector'] },
+    5: { check: all(question('matching'), (c) => !allNodes(c.project).some((n) => /^definition/i.test(n.name))), show: 'panel-layers' },
+    6: { check: (c) => new Set(allNodes(c.project).filter((n) => /^match \d/i.test(n.name)).map((n) => Math.round(n.x))).size >= 2, show: 'panel-layers' },
+    7: { check: question('matching', (q) => q.attempts > 0 && q.points > 1 && q.feedbackPartial.trim() !== ''), show: 'panel-inspector' },
+    8: { check: saw('previewed'), show: 'preview' },
   },
 };

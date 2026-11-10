@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, clickThen, nodesOfKind, pageNamed, renamed, repeats, saw, setsVariable, textHas, variableWhere, variables } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 41,
@@ -138,5 +139,15 @@ The **Wait** is the timer that turns cards back. For that second both cards are 
 - \`count\` and \`positions\` read a list without an arrow function: \`count(cards, "state", "matched")\`.
 
 **Next:** [Word search and crossword from a word list](tutorial-wordgames) builds bigger grids from a list. More in [Repeated lists](repeaters), [Variables](variables#lists) and [Expressions](expressions#helpers).`,
+  },
+  guide: {
+    1: { check: all(renamed, pageNamed(/well done/i)), show: ['project-name', 'add-page'] },
+    2: { check: all(variables(['pairs', 'list'], ['seed', 'number'], ['cards', 'list'], ['moves', 'number'], ['ups', 'list'], ['matched', 'number']), variableWhere('cards', (v) => !!v.formula), variableWhere('ups', (v) => !!v.formula && !!v.live), variableWhere('matched', (v) => !!v.formula && !!v.live)), show: ['add-variable', 'panel-variables'] },
+    3: { check: all(repeats('cards'), bound('button', 'fill', 'item.state'), textHas('{moves}')), show: ['tool-button', 'panel-inspector'] },
+    4: { check: all(nodesOfKind('event.start'), nodesOfKind('action.resetVariables'), nodesOfKind('action.setVariable')), show: 'panel-logic' },
+    5: { check: clickThen('button', 'action.setVariable', setsVariable('cards')), show: ['add-empty-click', 'panel-logic'] },
+    6: { check: all(nodesOfKind('logic.if', 2), nodesOfKind('action.delay')), show: 'panel-logic' },
+    7: { check: all(nodesOfKind('event.variable'), clickThen('button', 'action.artboard')), show: ['panel-logic', 'add-when-clicked'] },
+    8: { check: saw('previewed'), show: 'preview' },
   },
 };

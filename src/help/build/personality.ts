@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, clickThen, layers, nodesOfKind, pageNamed, pages, renamed, saw, setsVariable, textHas, variableWhere, variables } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 42,
@@ -123,5 +124,15 @@ On **Question 3**, open the **Interactions** tab. Each answer's last node is a *
 - A **Worked out** variable with **Keep up to date** picks the highest, and **One named by an expression** goes to the page it names.
 
 **Next:** [Progress, badges and a page master](tutorial-progress) keeps state across every page. More on formulas in [Variables](variables#worked-out-from-a-formula) and [Expressions](expressions), and the branching version of this idea in [A branching scenario](tutorial-branching).`,
+  },
+  guide: {
+    1: { check: all(renamed, pageNamed(/question 1/i)), show: ['project-name', 'panel-inspector'] },
+    2: { check: all(layers('button', 3), layers('text', 2)), show: ['tool-text', 'tool-button'] },
+    3: { check: all(variables(['planner', 'number'], ['explorer', 'number'], ['collaborator', 'number']), clickThen('button', 'action.setVariable', setsVariable('planner')), clickThen('button', 'action.setVariable', setsVariable('explorer')), clickThen('button', 'action.setVariable', setsVariable('collaborator')), clickThen('button', 'action.artboard')), show: 'add-when-clicked' },
+    4: { check: all(pages(3), nodesOfKind('action.setVariable', 18), nodesOfKind('action.artboard', 9)), show: 'panel-layers' },
+    5: { check: all(pages(6), textHas('{planner}'), clickThen('button', 'action.startOver', undefined, 3)), show: ['add-page', 'add-when-clicked'] },
+    6: { check: variableWhere('result', (v) => !!v.formula && !!v.live), show: ['add-variable', 'panel-variables'] },
+    7: { check: clickThen('button', 'action.artboard', (n) => n.params.to === 'expression' && String(n.params.expr).trim() === 'result', 3), show: 'panel-logic' },
+    8: { check: saw('previewed'), show: 'preview' },
   },
 };

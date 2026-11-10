@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, clickThen, layerWhere, nodesOfKind, pageNamed, renamed, saw, textHas, variableWhere } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 50,
@@ -118,5 +119,16 @@ Both ways save to the same place. See [Save user data and Load user data](result
 - **Download a file** gives the learner their work as a file.
 
 **Next:** more on saving in [Save as user data](variables#save-as-user-data) and [Results and progress](results). The formula helpers, \`wordCount\` among them, are in [Expressions](expressions#helpers). Saving reports and pictures is in [Download a file](sensors#download-a-file).`,
+  },
+  guide: {
+    1: { check: all(renamed, pageNamed(/^write$/i)), show: ['project-name', 'panel-inspector'] },
+    2: { check: all(variableWhere('happened', (v) => v.type === 'string' && v.userData === true), variableWhere('learnt', (v) => v.type === 'string' && v.userData === true)), show: ['add-variable', 'panel-variables'] },
+    3: { check: all(layerWhere('input', (n) => n.inputType === 'textarea'), bound('input', 'value', 'happened'), bound('input', 'value', 'learnt')), show: ['tool-input', 'panel-inspector'] },
+    4: { check: all(textHas('wordCount(happened)'), textHas('wordCount(learnt)'), variableWhere('totalWords', (v) => !!v.formula && !!v.live), textHas('{totalWords}')), show: ['tool-text', 'panel-variables'] },
+    5: { check: textHas('userData.restored'), show: 'tool-text' },
+    6: { check: all(variableWhere('reflection', (v) => !!v.formula && !!v.live), pageNamed(/my reflection/i), textHas('{reflection}'), clickThen('button', 'action.artboard', undefined, 2)), show: ['add-page', 'add-when-clicked'] },
+    7: { check: all(nodesOfKind('action.saveFile'), clickThen('button', 'action.saveFile')), show: ['add-empty-click', 'panel-logic'] },
+    8: { check: (c) => c.project.settings?.reporting?.completion === 'artboard' && !!c.project.settings.reporting.completionArtboard, show: 'panel-inspector' },
+    9: { check: saw('previewed'), show: 'preview' },
   },
 };

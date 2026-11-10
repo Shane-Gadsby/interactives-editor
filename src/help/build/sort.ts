@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { nodesOfKind, question, renamed, saw } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 22,
@@ -99,5 +100,14 @@ Open the **Interactions** tab. There is one **Item dropped in a group** node for
 - **Say right or wrong as each item is dropped** answers each drop without using a try, through an **Item dropped in a group** node per group.
 
 **Next:** put the steps of a process in order in [Put the steps in order](tutorial-order). More about categorise questions is in [Questions and quizzes](question-kit), and about drop zones in [Drag and drop](drag-and-drop).`,
+  },
+  guide: {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: question('categorise'), show: 'add-question' },
+    3: { check: question('categorise', (q) => (q.groups ?? []).length >= 2 && !(q.groups ?? []).some((g) => /^(Mammals|Birds)$/.test(g.name))), show: 'panel-inspector' },
+    4: { check: question('categorise', (q) => (q.cards ?? []).length >= 6 && !(q.cards ?? []).some((c) => /^(Dog|Whale|Eagle|Penguin)$/.test(c.text)) && (q.cards ?? []).some((c) => !!c.feedback?.trim())), show: 'panel-inspector' },
+    5: { check: nodesOfKind('action.questionDrop'), show: 'panel-inspector' },
+    6: { check: question('categorise', (q) => q.attempts > 0 && q.points > 1 && q.feedbackPartial.trim() !== ''), show: 'panel-inspector' },
+    7: { check: saw('previewed'), show: 'preview' },
   },
 };

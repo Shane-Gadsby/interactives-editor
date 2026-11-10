@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { layerWhere, question, renamed, saw } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 23,
@@ -86,5 +87,13 @@ Leave the fill colour alone: it is set by the question, so a step can turn green
 - The steps are a repeated layer: restyle the one **Item** and they all follow.
 
 **Next:** put labels on a picture in [Label the diagram](tutorial-label). How repeated layers work is in [Repeaters](repeaters), and every question type is in [Questions and quizzes](question-kit).`,
+  },
+  guide: {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: question('ordering'), show: 'add-question' },
+    3: { check: question('ordering', (q) => q.options.length >= 6 && !q.options.some((o) => /^(Evaporation|Condensation)$/.test(o.text))), show: 'panel-inspector' },
+    4: { check: question('ordering', (q) => q.attempts > 0 && q.points > 1 && q.hints.length > 0 && q.feedbackPartial.trim() !== ''), show: 'panel-inspector' },
+    5: { check: layerWhere('frame', (n) => n.name === 'Item' && n.type === 'frame' && n.cornerRadius >= 20), show: ['panel-layers', 'panel-inspector'] },
+    6: { check: saw('previewed'), show: 'preview' },
   },
 };

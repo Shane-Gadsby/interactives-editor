@@ -15,13 +15,23 @@ export interface TourTarget {
 const TOOLS = 'It is in the tool bar down the left edge of the editor.';
 const WEB = 'It is in the Web group of the tool bar down the left edge. Click Web to open the group.';
 const MEDIA = 'It is in the Media group of the tool bar down the left edge. Click Media to open the group.';
+const DRAW = 'It is in the Draw group of the tool bar down the left edge. Click Draw to open the group.';
+const DATA = 'It is in the Data group of the tool bar down the left edge. Click Data to open the group.';
 const BOTTOM = 'It is a tab in the panel along the bottom of the window. If you do not see it, More panels brings it back.';
+const RIG = 'It is in the Rig group of the tool bar down the left edge. The Rig group is folded away: click More tools, then Rig.';
 
 export const TOUR = {
   'project-name': { label: 'The project name', where: 'The project name is in the bar at the top left of the editor.' },
   'tool-rect': { label: 'Rectangle tool (R)', where: TOOLS },
   'tool-ellipse': { label: 'Ellipse tool (O)', where: TOOLS },
   'tool-frame': { label: 'Frame tool (F)', where: TOOLS },
+  'tool-image': { label: 'Image', where: MEDIA },
+  'tool-connector': { label: 'Connector tool (K)', where: DRAW },
+  'tool-input': { label: 'Input field', where: WEB },
+  'tool-video': { label: 'Video', where: MEDIA },
+  'tool-chart': { label: 'Chart', where: DATA + ' A new project keeps it put away: click More tools first.' },
+  'tool-pen': { label: 'Pen tool (P)', where: DRAW },
+  'tool-bone': { label: 'Bone tool (J)', where: RIG },
   'tool-text': { label: 'Text tool (T)', where: MEDIA },
   'tool-button': { label: 'Button tool (B)', where: WEB },
   'add-question': { label: 'Add question', where: WEB },
@@ -29,6 +39,11 @@ export const TOUR = {
   'panel-inspector': { label: 'The Properties panel', where: 'The Properties panel is on the right of the editor.', sel: '[data-panel="inspector"]' },
   'panel-timeline': { label: 'The Timeline tab', where: BOTTOM },
   'panel-logic': { label: 'The Interactions tab', where: BOTTOM },
+  'panel-data': { label: 'The Data tab', where: BOTTOM + ' A new project keeps it put away: More panels, then Data.' },
+  'panel-assets': { label: 'The Assets panel', where: 'The Assets panel is a tab on the left of the editor, beside Layers.' },
+  'panel-scripts': { label: 'The Scripts tab', where: BOTTOM },
+  'panel-a11y': { label: 'The Accessibility tab', where: BOTTOM },
+  'panel-themes': { label: 'The Themes tab', where: BOTTOM },
   'panel-variables': { label: 'The Variables tab', where: BOTTOM },
   'timeline-new': { label: '+ New timeline', where: 'Open the Timeline tab (along the bottom) and press + New timeline.' },
   'timeline-play': { label: 'Play preview', where: 'Open the Timeline tab (along the bottom) and make a timeline. Play is in the bar above the tracks.' },

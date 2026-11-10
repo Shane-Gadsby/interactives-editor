@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, dataSourceWhere, renamed, repeats, saw, textHas } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 53,
@@ -130,5 +131,15 @@ Press **Preview** at the top right. The page plays with the words from the file,
 - The **Form** view edits the file in place, and the arrow in **Assets** swaps it for a new one.
 
 **Next:** every way to read and edit a data file is in [Data sources](data-sources). Repeaters, grids and clicking a copy are in [Repeated lists](repeaters), and bindings in [Bindings](bindings).`,
+  },
+  guide: {
+    1: { show: 'panel-assets' },
+    2: { check: all(renamed, dataSourceWhere((d) => d.name === 'tips' && d.source === 'asset')), show: ['project-name', 'panel-data'] },
+    3: { check: all(textHas('{tips.title}'), textHas('{tips.intro}'), textHas('{tips.footer}')), show: 'tool-text' },
+    4: { check: all(repeats('tips.cards'), textHas('{item.title}'), textHas('{item.text}')), show: ['tool-frame', 'panel-inspector'] },
+    5: { check: bound('rect', 'fill', 'item.colour'), show: 'panel-inspector' },
+    6: { show: 'panel-data' },
+    7: { show: 'panel-assets' },
+    8: { check: saw('previewed'), show: 'preview' },
   },
 };

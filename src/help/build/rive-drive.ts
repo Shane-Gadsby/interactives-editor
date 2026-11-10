@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { clickThen, layerWhere, noAutoplay, saw, textHas, all } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 66,
@@ -105,5 +106,14 @@ Preview, then watch the **Variables (live)** list on the left of the Preview as 
 - A Rive state machine is driven by its inputs: true/false and number inputs are variables, triggers are messages, and view model values are shared variables.
 
 **Next:** what each format brings in is in [Importing](import). More on the pieces: [Joysticks](joysticks), [Blends](blends) and [Variables](variables). To make your own poses rather than import them, see [Rig a character with bones](tutorial-bones).`,
+  },
+  guide: {
+    2: { show: 'panel-timeline' },
+    3: { check: noAutoplay, show: ['panel-timeline', 'timeline-play'] },
+    4: { check: clickThen('button', 'action.timeline', (n) => n.params.op === 'toggle'), show: ['tool-button', 'add-when-clicked'] },
+    5: { check: all(layerWhere('ellipse', (n) => /knob/i.test(n.name) && n.draggable?.axis === 'x'), (c) => c.project.artboards.some((a) => (a.joysticks ?? []).some((j) => !!j.handle && !!j.xTimeline))), show: ['tool-ellipse', 'panel-inspector'] },
+    6: { check: textHas('Play or pause'), show: 'tool-text' },
+    7: { check: saw('previewed'), show: 'preview' },
+    8: { show: 'panel-variables' },
   },
 };

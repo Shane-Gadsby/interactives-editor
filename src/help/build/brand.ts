@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, layerNamed, layerWhere, layers, renamed, saw } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 62,
@@ -103,5 +104,13 @@ In a branded project the logo and brand layers are locked, colours can only be t
 - Branded starter packs give you the whole UniSQ look, locked.
 
 **Next:** everything about tokens and themes is in [Themes and colour tokens](themes), and every pack and colourway in [Branded starter packs](branded-starters). To check a page the way a screen reader or keyboard user meets it, do [Check and fix accessibility](tutorial-accessible).`,
+  },
+  guide: {
+    1: { check: renamed, show: ['project-name', 'panel-themes'] },
+    2: { check: (c) => !!c.project.themes?.list.some((t) => /purple/i.test(t.name) && c.project.themes?.default === t.id), show: 'panel-themes' },
+    3: { check: all(layerWhere('rect', (n) => /^header$/i.test(n.name) && String((n.fill as { color?: string } | null)?.color).startsWith('token:')), layerWhere('rect', (n) => /^accent bar$/i.test(n.name) && String((n.fill as { color?: string } | null)?.color).startsWith('token:')), layerWhere('text', (n) => /^title$/i.test(n.name) && String(n.color).startsWith('token:'))), show: ['tool-rect', 'panel-inspector'] },
+    4: { check: all(layerWhere('rect', (n) => /^card$/i.test(n.name)), layerNamed('button', /^start$/i), layers('text', 3)), show: ['tool-button', 'tool-text'] },
+    5: { show: 'panel-themes' },
+    6: { check: saw('previewed'), show: 'preview' },
   },
 };

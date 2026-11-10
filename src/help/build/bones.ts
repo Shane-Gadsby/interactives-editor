@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, clickThen, layerNamed, layerWhere, layers, named, renamed, saw, timelineWhere } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 67,
@@ -131,5 +132,16 @@ Press <kbd>Esc</kbd> to close the Preview.
 - Bones are keyed on a timeline like any layer, Strength included.
 
 **Next:** everything about bones, skinning and IK is in [Bones and skinning](bones), and the other constraints are in [Constraints](constraints). For a pose that follows the pointer without a drag, see [Joysticks](joysticks).`,
+  },
+  guide: {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: layerNamed('path', /^arm$/i), show: ['tool-pen', 'panel-inspector'] },
+    3: { check: all(layers('bone', 3), named(/^upper arm$/i), named(/^forearm$/i), named(/^hand$/i)), show: ['tool-bone', 'panel-layers'] },
+    4: { check: layerWhere('path', (n) => (n.skin?.bones.length ?? 0) >= 3), show: 'panel-inspector' },
+    5: { check: layerWhere('ellipse', (n) => /^target$/i.test(n.name) && !!n.draggable), show: ['tool-ellipse', 'panel-inspector'] },
+    6: { check: layerWhere('bone', (n) => (n.constraints ?? []).some((k) => k.type === 'ik' && !!k.target)), show: 'panel-inspector' },
+    7: { check: timelineWhere((t) => /wave/i.test(t.name) && t.duration >= 1500 && t.tracks.some((tr) => tr.keys.length >= 3)), show: ['timeline-new', 'timeline-record', 'panel-timeline'] },
+    8: { check: all(layerNamed('button', /wave/i), clickThen('button', 'action.timeline'), layers('text')), show: ['tool-button', 'add-when-clicked'] },
+    9: { check: saw('previewed'), show: 'preview' },
   },
 };

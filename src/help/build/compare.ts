@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, layerNamed, layerWhere, named, renamed, saw, variable } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 34,
@@ -102,5 +103,14 @@ Add a line of instructions under the pictures saying how to use the keyboard, si
 - A frame with **Clip content** shows as much of its picture as it is wide, and a **Width** binding makes that follow the variable.
 
 **Next:** [A course presentation](tutorial-presentation). More on [Drag and drop](drag-and-drop) and [Bindings](bindings#which-way-in-out-or-both).`,
+  },
+  guide: {
+    1: { check: all(renamed, variable('handleX', 'number')), show: ['project-name', 'add-variable', 'panel-variables'] },
+    2: { check: named(/after picture/i), show: ['tool-rect', 'panel-inspector'] },
+    3: { check: layerWhere('frame', (n) => /before reveal/i.test(n.name) && n.clip === true), show: ['tool-frame', 'panel-layers'] },
+    4: { check: all(named(/divider line/i), layerNamed('ellipse', /divider handle/i)), show: ['tool-ellipse', 'panel-inspector'] },
+    5: { check: layerWhere('ellipse', (n) => !!n.draggable && n.draggable.axis === 'x'), show: 'panel-inspector' },
+    6: { check: all(layerWhere('ellipse', (n) => n.bindingModes?.x === 'both' && (n.bindings?.x ?? '').includes('handleX')), bound('frame', 'width', 'handleX'), bound('rect', 'x', 'handleX')), show: 'panel-inspector' },
+    7: { check: saw('previewed'), show: 'preview' },
   },
 };

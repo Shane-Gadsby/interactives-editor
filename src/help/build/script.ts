@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, clickThen, layerNamed, named, renamed, saw, variable } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 68,
@@ -133,5 +134,14 @@ Leave it ticked. Untick it only for code you trust that needs the page itself (\
 - **Run scripts in the sandbox** keeps a script away from the page, cookies and the network. Leave it on.
 
 **Next:** the whole \`ix\` API is in [Scripts](scripts). To paint a layer from code every frame, see [Script layers](script-layers). Formulas and their helpers are in [Expressions](expressions).`,
+  },
+  guide: {
+    1: { check: all(renamed, named(/^question$/i), named(/^feedback$/i), layerNamed('input', /answer box/i), layerNamed('button', /^check$/i)), show: ['tool-text', 'tool-input', 'tool-button'] },
+    2: { check: all(variable('answer', 'string'), variable('distance', 'number'), bound('input', 'value', 'answer')), show: ['panel-inspector', 'panel-variables'] },
+    3: { check: (c) => (c.project.scripts ?? []).some((s) => /close enough/i.test(s.name) && !s.runOnStart && s.code.includes('distance')), show: 'panel-scripts' },
+    4: { check: bound('text', 'text', 'distance'), show: 'panel-inspector' },
+    5: { check: clickThen('button', 'action.script'), show: ['add-empty-click', 'panel-logic'] },
+    6: { show: 'panel-inspector' },
+    7: { check: saw('previewed'), show: 'preview' },
   },
 };

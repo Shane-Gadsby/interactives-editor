@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, clickThen, dataSourceWhere, layerWhere, layers, nodesOfKind, pageNamed, pages, renamed, saw, textHas, variable } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 51,
@@ -116,5 +117,15 @@ Set the data source up before you share. Its rules are fixed when the project is
 - A **Chart** reads any list: here \`responses.answers\` with \`text\` and \`count\`, and it redraws as the counts come in.
 
 **Next:** every setting and where the answers are kept is in [Shared responses](shared-responses). More about the Chart layer is in [Charts](charts). To chart numbers the learner sets themselves, try [A what-if explorer](tutorial-whatif).`,
+  },
+  guide: {
+    1: { check: all(renamed, pages(3), pageNamed(/^vote$/i), pageNamed(/^results$/i)), show: ['project-name', 'add-page'] },
+    2: { check: dataSourceWhere((d) => d.source === 'shared' && d.shared?.perPerson === 1 && (d.shared?.refresh ?? 0) > 0 && (d.shared?.sample?.length ?? 0) > 0), show: 'panel-data' },
+    3: { check: all(layers('text', 3), clickThen('button', 'action.artboard')), show: ['tool-text', 'tool-button'] },
+    4: { check: all(layerWhere('input', (n) => n.inputType === 'select'), variable('choice'), bound('input', 'value', 'choice')), show: ['tool-input', 'panel-inspector'] },
+    5: { check: all(nodesOfKind('logic.if'), clickThen('button', 'action.sharedWithdraw'), clickThen('button', 'action.sharedAdd')), show: ['add-empty-click', 'panel-logic'] },
+    6: { check: all(layerWhere('chart', (n) => n.data.includes('responses.answers') && n.labelKey === 'text' && n.valueKey === 'count'), textHas('responses.people')), show: ['tool-chart', 'panel-inspector'] },
+    7: { check: saw('previewed'), show: 'preview' },
+    8: { show: 'share' },
   },
 };
