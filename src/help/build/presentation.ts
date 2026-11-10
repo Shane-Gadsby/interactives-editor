@@ -111,7 +111,7 @@ Learners whose device asks for less motion get an instant change instead of the 
     2: { check: all(hasMaster, textHas('{slideTitle}'), (c) => c.project.artboards.some((a) => a.isMaster === true)), show: ['panel-layers', 'panel-inspector'] },
     3: { check: (c) => c.project.artboards.filter((a) => (a.masterSlots?.slideTitle ?? '').trim() !== '').length >= 3, show: 'panel-inspector' },
     4: { check: question('single', (q) => !/prime number/i.test(q.prompt) && q.options.some((o) => o.correct)), show: ['add-question', 'panel-inspector'] },
-    5: { check: all(clickThen('button', 'action.artboard', (n) => n.params.to === 'next', 3), clickThen('button', 'action.artboard', (n) => n.params.to === 'previous', 3)), show: 'panel-inspector' },
+    5: { check: all(clickThen('button', 'action.artboard', (n) => n.params.to === 'next', 1), clickThen('button', 'action.artboard', (n) => n.params.to === 'previous', 1)), show: 'panel-inspector' },
     6: { check: saw('previewed'), show: 'preview' },
   },
 };

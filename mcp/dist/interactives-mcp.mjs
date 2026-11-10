@@ -10202,6 +10202,9 @@ function plainParam(kind, p, technical = technicalWording()) {
   };
 }
 function allNodes(p) {
+  return (p.artboards ?? []).flatMap(artboardNodes);
+}
+function artboardNodes(ab) {
   const out = [];
   const go = (list) => {
     for (const n of list ?? []) {
@@ -10209,7 +10212,7 @@ function allNodes(p) {
       go(n.children);
     }
   };
-  for (const ab of p.artboards ?? []) go(ab.children);
+  go(ab.children);
   return out;
 }
 const byId = (p) => new Map(allNodes(p).map((n) => [n.id, n]));
@@ -10235,17 +10238,28 @@ const renamed = (c2) => {
   return n !== "" && n !== "Untitled project";
 };
 const layers = (type, min = 1) => (c2) => allNodes(c2.project).filter((n) => n.type === type).length >= min;
+const layerNamed = (type, name) => (c2) => allNodes(c2.project).some((n) => n.type === type && name.test(n.name));
+const named = (name, min = 1) => (c2) => allNodes(c2.project).filter((n) => name.test(n.name)).length >= min;
 const textHas = (part) => (c2) => allNodes(c2.project).some((n) => n.type === "text" && n.text.includes(part));
 const bound = (type, prop, includes) => (c2) => allNodes(c2.project).some((n) => n.type === type && Object.entries(n.bindings ?? {}).some(([k, f2]) => (k === prop || k.startsWith(`${prop}.`)) && (!includes || String(f2).includes(includes))));
 const layerWhere = (type, ok) => (c2) => allNodes(c2.project).some((n) => n.type === type && ok(n));
+const layersWhere = (type, ok, min) => (c2) => allNodes(c2.project).filter((n) => n.type === type && ok(n)).length >= min;
+const dataSourceWhere = (ok) => (c2) => !!c2.project.dataSources?.some(ok);
 const repeats = (items) => (c2) => allNodes(c2.project).some((n) => {
   const r2 = n.repeat;
   return !!r2 && (!items || (r2.items ?? "").includes(items));
 });
+const timelines = (min = 1) => (c2) => c2.project.artboards.reduce((n, ab) => n + ab.timelines.length, 0) >= min;
+const timelineWhere = (ok, min = 1) => (c2) => c2.project.artboards.reduce((n, ab) => n + ab.timelines.filter(ok).length, 0) >= min;
+const noAutoplay = (c2) => {
+  const all2 = c2.project.artboards.flatMap((ab) => ab.timelines);
+  return all2.length > 0 && all2.every((t2) => !t2.autoplay);
+};
 const variable = (name, type) => (c2) => !!c2.project.variables?.some((v) => v.name === name && (!type || v.type === type));
 const variableWhere = (name, ok) => (c2) => !!c2.project.variables?.some((v) => v.name === name && ok(v));
 const variables = (...list) => (c2) => list.every(([name, type]) => variable(name, type)(c2));
 const pages = (min) => (c2) => c2.project.artboards.length >= min;
+const pageNamed = (name) => (c2) => c2.project.artboards.some((a) => name.test(a.name));
 const nodesOfKind = (kind, min = 1) => (c2) => c2.project.artboards.reduce((n, ab) => n + ab.logic.nodes.filter((x) => x.kind === kind).length, 0) >= min;
 const clickThen = (layerType, kind, ok, min = 1) => (c2) => {
   const layers2 = byId(c2.project);
@@ -10262,7 +10276,7 @@ const clickThen = (layerType, kind, ok, min = 1) => (c2) => {
 };
 const setsVariable = (name) => (n, p) => variableRef(p, n.params.variable)?.name === name;
 const hasMaster = (c2) => c2.project.artboards.some((a) => !!a.master);
-const question = (kind, ok) => (c2) => allNodes(c2.project).some((n) => n.type === "frame" && !!n.question && n.question.kind === kind && (!ok || ok(n.question)));
+const question = (kind, ok) => (c2) => allNodes(c2.project).some((n) => n.type === "frame" && !!n.question && (!kind || n.question.kind === kind) && (!ok || ok(n.question)));
 const scoredFromQuestions = (c2) => c2.project.settings?.reporting?.scoreFrom === "questions";
 const saw = (what) => (c2) => c2.seen[what];
 const all = (...list) => (c2) => list.every((f2) => f2(c2));
@@ -10765,6 +10779,22 @@ The checker looks at every theme for text that uses tokens, so a title that pass
 - **Respect reduced motion**, **Play once** and the **Tab order** section deal with motion and focus.
 
 **Next:** every check is explained in [Accessibility checker](accessibility-checker), and roles, Tab order and dialogs in [Accessibility: roles and keyboard](accessibility). To restyle a project with themes and tokens, do [Use the UniSQ look and colour themes](tutorial-brand).`
+  },
+  guide: {
+    1: { check: all(renamed, named(/^title$/i), layers("image"), layerNamed("button", /^next$/i), layerNamed("ellipse", /^info$/i), timelines()), show: ["project-name", "tool-text"] },
+    2: { show: "panel-a11y" },
+    3: { check: layerWhere("text", (n) => /^title$/i.test(n.name) && n.role === "heading"), show: ["panel-a11y", "panel-inspector"] },
+    4: { check: layerWhere("image", (n) => (n.ariaLabel ?? "").trim().length > 10), show: "panel-a11y" },
+    5: { check: layerWhere("ellipse", (n) => /^info$/i.test(n.name) && n.role === "button" && (n.ariaLabel ?? "").trim() !== "" && n.width >= 24 && n.height >= 24), show: ["panel-a11y", "panel-inspector"] },
+    6: { check: all(timelineWhere((t2) => t2.loop === "once" && t2.autoplay), (c2) => c2.project.settings?.reducedMotion === true), show: ["panel-a11y", "panel-timeline"] },
+    7: { check: (c2) => {
+      const find2 = (re) => allNodes(c2.project).find((n) => re.test(n.name));
+      const info = find2(/^info$/i);
+      const next = find2(/^next$/i);
+      return info?.tabOrder !== void 0 && next?.tabOrder !== void 0 && info.tabOrder < next.tabOrder;
+    }, show: "panel-inspector" },
+    8: { show: "panel-themes" },
+    9: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -10835,7 +10865,7 @@ Four sections appear, one under the other, each with its own title and text. The
 
 1. Select **Section text**. In **Data bindings** add **Visible**, choose **Formula**, press **Edit as formula** and type \`open.includes(index)\`.
 
-Only the first section shows its text now (on the canvas the hidden text is a faint ghost, and it is gone in Preview). A hidden layer takes no room in auto layout, so the closed sections shrink to their header, and the column closes up.
+Only the first section shows its text now (a hidden layer takes no room in auto layout, so the closed sections shrink to their header and the column closes up, on the canvas as in Preview). To edit a hidden text, pick it in the **Layers** panel.
 
 The line under the formula works it out for the first section (\`index\` 0).
 
@@ -10896,6 +10926,15 @@ Tabs show one section's text at a time under a row of titles. They read the same
 - **Expanded (button role)** and a **Text alternative** binding make a text header a proper button for screen readers.
 
 **Next:** [An image slider (carousel)](tutorial-carousel). More on [Auto layout](auto-layout), [Repeated lists](repeaters) and [Accessibility](accessibility#pressed-and-current).`
+  },
+  guide: {
+    1: { check: all(renamed, variables(["sections", "list"], ["open", "list"])), show: ["project-name", "add-variable", "panel-variables"] },
+    2: { check: layerWhere("frame", (n) => /accordion/i.test(n.name) && n.layout?.direction === "column"), show: ["tool-frame", "panel-inspector"] },
+    3: { check: all(textHas("{item.title}"), textHas("{item.body}")), show: ["tool-text", "panel-layers"] },
+    4: { check: repeats("sections"), show: "panel-inspector" },
+    5: { check: all(bound("text", "visible", "open.includes"), clickThen("text", "action.setVariable", setsVariable("open"))), show: ["add-empty-click", "panel-inspector"] },
+    6: { check: all(layerWhere("text", (n) => n.role === "button"), bound("text", "ariaExpanded", "open")), show: "panel-inspector" },
+    7: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_1$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -11015,6 +11054,14 @@ When the question finishes, it marks each gap on its own: the box of a right gap
 - **Part marks** give a share for each right gap. Once the question finishes, \`q1_items\` tells you how each gap went, so a binding can react to one gap.
 
 **Next:** more about every question type is in [Questions and quizzes](question-kit). Patterns are explained in [Expressions](expressions#patterns-regular-expressions), and the **Text patterns** example (**Templates**, **Examples**) has more to try. Bindings are explained in [Bindings](bindings). For a question answered by dragging, try [Drag and drop matching](tutorial-drag-match).`
+  },
+  guide: {
+    1: { check: renamed, show: "project-name" },
+    2: { check: question("blank"), show: "add-question" },
+    3: { check: question("blank", (q) => q.blanks.length >= 4 && q.blanks.some((b) => (b.tolerance ?? 0) > 0) && q.blanks.some((b) => b.answers.some((a) => /^\/.+\/[a-z]*$/.test(a))) && q.blanks.some((b) => b.caseSensitive) && !q.blanks.some((b) => /capital of France/i.test(b.label))), show: "panel-inspector" },
+    4: { check: question("blank", (q) => q.hints.length >= 2 && q.attempts > 0 && q.points > 1 && q.feedbackPartial.trim() !== ""), show: "panel-inspector" },
+    5: { check: all(layerNamed("text", /gap 3 tip/i), bound("text", "visible", "wrong")), show: ["tool-text", "panel-layers"] },
+    6: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -11152,6 +11199,17 @@ Press <kbd>Esc</kbd> to close the Preview.
 - Bones are keyed on a timeline like any layer, Strength included.
 
 **Next:** everything about bones, skinning and IK is in [Bones and skinning](bones), and the other constraints are in [Constraints](constraints). For a pose that follows the pointer without a drag, see [Joysticks](joysticks).`
+  },
+  guide: {
+    1: { check: renamed, show: "project-name" },
+    2: { check: layerNamed("path", /^arm$/i), show: ["tool-pen", "panel-inspector"] },
+    3: { check: all(layers("bone", 3), named(/^upper arm$/i), named(/^forearm$/i), named(/^hand$/i)), show: ["tool-bone", "panel-layers"] },
+    4: { check: layerWhere("path", (n) => (n.skin?.bones.length ?? 0) >= 3), show: "panel-inspector" },
+    5: { check: layerWhere("ellipse", (n) => /^target$/i.test(n.name) && !!n.draggable), show: ["tool-ellipse", "panel-inspector"] },
+    6: { check: layerWhere("bone", (n) => (n.constraints ?? []).some((k) => k.type === "ik" && !!k.target)), show: "panel-inspector" },
+    7: { check: timelineWhere((t2) => /wave/i.test(t2.name) && t2.duration >= 1500 && t2.tracks.some((tr) => tr.keys.length >= 3)), show: ["timeline-new", "timeline-record", "panel-timeline"] },
+    8: { check: all(layerNamed("button", /wave/i), clickThen("button", "action.timeline"), layers("text")), show: ["tool-button", "add-when-clicked"] },
+    9: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -11426,6 +11484,14 @@ In a branded project the logo and brand layers are locked, colours can only be t
 - Branded starter packs give you the whole UniSQ look, locked.
 
 **Next:** everything about tokens and themes is in [Themes and colour tokens](themes), and every pack and colourway in [Branded starter packs](branded-starters). To check a page the way a screen reader or keyboard user meets it, do [Check and fix accessibility](tutorial-accessible).`
+  },
+  guide: {
+    1: { check: renamed, show: ["project-name", "panel-themes"] },
+    2: { check: (c2) => !!c2.project.themes?.list.some((t2) => /purple/i.test(t2.name) && c2.project.themes?.default === t2.id), show: "panel-themes" },
+    3: { check: all(layerWhere("rect", (n) => /^header$/i.test(n.name) && String(n.fill?.color).startsWith("token:")), layerWhere("rect", (n) => /^accent bar$/i.test(n.name) && String(n.fill?.color).startsWith("token:")), layerWhere("text", (n) => /^title$/i.test(n.name) && String(n.color).startsWith("token:"))), show: ["tool-rect", "panel-inspector"] },
+    4: { check: all(layerWhere("rect", (n) => /^card$/i.test(n.name)), layerNamed("button", /^start$/i), layers("text", 3)), show: ["tool-button", "tool-text"] },
+    5: { show: "panel-themes" },
+    6: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -11676,6 +11742,15 @@ Add a line of instructions under the pictures saying how to use the keyboard, si
 - A frame with **Clip content** shows as much of its picture as it is wide, and a **Width** binding makes that follow the variable.
 
 **Next:** [A course presentation](tutorial-presentation). More on [Drag and drop](drag-and-drop) and [Bindings](bindings#which-way-in-out-or-both).`
+  },
+  guide: {
+    1: { check: all(renamed, variable("handleX", "number")), show: ["project-name", "add-variable", "panel-variables"] },
+    2: { check: named(/after picture/i), show: ["tool-rect", "panel-inspector"] },
+    3: { check: layerWhere("frame", (n) => /before reveal/i.test(n.name) && n.clip === true), show: ["tool-frame", "panel-layers"] },
+    4: { check: all(named(/divider line/i), layerNamed("ellipse", /divider handle/i)), show: ["tool-ellipse", "panel-inspector"] },
+    5: { check: layerWhere("ellipse", (n) => !!n.draggable && n.draggable.axis === "x"), show: "panel-inspector" },
+    6: { check: all(layerWhere("ellipse", (n) => n.bindingModes?.x === "both" && (n.bindings?.x ?? "").includes("handleX")), bound("frame", "width", "handleX"), bound("rect", "x", "handleX")), show: "panel-inspector" },
+    7: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -11777,6 +11852,14 @@ To use it for real, give learners the **Link for StudyDesk** from [Share link](e
 - **Per-course values** start variables differently in each course, so one project serves several.
 
 **Next:** every context field and the rules for per-course values are in [Course and learner context](course-context). Formulas in text and bindings are in [Expressions](expressions) and [Bindings](bindings). For data that comes from a file, see [Data sources](data-sources).`
+  },
+  guide: {
+    1: { check: renamed, show: "project-name" },
+    2: { check: all(textHas("context.firstName"), textHas("context.courseCode")), show: "tool-text" },
+    3: { show: "panel-data" },
+    4: { check: all(variableWhere("assignment", (v) => v.type === "string"), variableWhere("dueWeek", (v) => v.type === "number"), textHas("{assignment}"), (c2) => (c2.project.courseValues?.length ?? 0) >= 2), show: ["panel-variables", "panel-data"] },
+    5: { check: bound("text", "visible", "context.isStaff"), show: "panel-inspector" },
+    6: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_8$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -11913,6 +11996,16 @@ Press **Preview** at the top right. The page plays with the words from the file,
 - The **Form** view edits the file in place, and the arrow in **Assets** swaps it for a new one.
 
 **Next:** every way to read and edit a data file is in [Data sources](data-sources). Repeaters, grids and clicking a copy are in [Repeated lists](repeaters), and bindings in [Bindings](bindings).`
+  },
+  guide: {
+    1: { show: "panel-assets" },
+    2: { check: all(renamed, dataSourceWhere((d) => d.name === "tips" && d.source === "asset")), show: ["project-name", "panel-data"] },
+    3: { check: all(textHas("{tips.title}"), textHas("{tips.intro}"), textHas("{tips.footer}")), show: "tool-text" },
+    4: { check: all(repeats("tips.cards"), textHas("{item.title}"), textHas("{item.text}")), show: ["tool-frame", "panel-inspector"] },
+    5: { check: bound("rect", "fill", "item.colour"), show: "panel-inspector" },
+    6: { show: "panel-data" },
+    7: { show: "panel-assets" },
+    8: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_9$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -12083,6 +12176,14 @@ The copy of the mind map's click came with nothing joined to it on this page: in
 - A **Connector** in a repeater joins two copies by their places in the list, with **Which copy**. You edit the data, never the boxes.
 
 **Next:** back to [Build it](build-it) for the other tutorials. More on [Connectors](connectors), [Repeated lists](repeaters) and worked out variables in [Variables](variables#worked-out-from-a-formula).`
+  },
+  guide: {
+    1: { check: all(renamed, pageNamed(/mind map/i), variables(["ideas", "list"], ["folded", "list"]), variableWhere("map", (v) => !!v.formula && !!v.live)), show: ["project-name", "add-variable", "panel-variables"] },
+    2: { check: all(repeats("map"), bound("frame", "x", "item.x"), bound("frame", "width", "item.w")), show: ["tool-frame", "panel-inspector"] },
+    3: { check: layerWhere("connector", (n) => JSON.stringify(n).includes("parentIndex")), show: ["tool-connector", "panel-inspector"] },
+    4: { check: all(bound("frame", "visible", "item.visible"), layerWhere("frame", (n) => n.role === "button"), clickThen("frame", "action.setVariable", setsVariable("folded"))), show: ["add-empty-click", "panel-inspector"] },
+    5: { check: all(pageNamed(/flowchart/i), variables(["steps", "list"], ["links", "list"], ["current", "string"], ["chart", "list"], ["arrows", "list"], ["outs", "list"]), repeats("outs"), clickThen("button", "action.setVariable", setsVariable("current"), 2)), show: ["add-page", "panel-variables"] },
+    6: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_10$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -12180,6 +12281,14 @@ The terms and slots are ordinary layers. The **Restyle a part** buttons at the b
 - **Tries**, **Part marks** and **Try again** come with the question, and **Try again** puts every term back.
 
 **Next:** put the slots on a picture in [Label the diagram](tutorial-label), or let a box hold several items in [Sort into groups](tutorial-sort). How dragging works on any layer is in [Drag and drop](drag-and-drop).`
+  },
+  guide: {
+    1: { check: renamed, show: "project-name" },
+    2: { check: question("matching"), show: "add-question" },
+    3: { check: question("matching", (q) => q.pairs.length >= 4 && !q.pairs.some((p) => /^(France|Japan|Egypt|Peru)$/.test(p.term))), show: "panel-inspector" },
+    4: { check: question("matching", (q) => (q.extras ?? []).some((x) => x.text.trim() !== "")), show: "panel-inspector" },
+    5: { check: question("matching", (q) => q.attempts > 0 && q.points > 1 && q.feedbackPartial.trim() !== "" && !q.hints.some((h) => /Egypt/.test(h))), show: "panel-inspector" },
+    6: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_11$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -12426,6 +12535,17 @@ Both ways save to the same place. See [Save user data and Load user data](result
 - **Download a file** gives the learner their work as a file.
 
 **Next:** more on saving in [Save as user data](variables#save-as-user-data) and [Results and progress](results). The formula helpers, \`wordCount\` among them, are in [Expressions](expressions#helpers). Saving reports and pictures is in [Download a file](sensors#download-a-file).`
+  },
+  guide: {
+    1: { check: all(renamed, pageNamed(/^write$/i)), show: ["project-name", "panel-inspector"] },
+    2: { check: all(variableWhere("happened", (v) => v.type === "string" && v.userData === true), variableWhere("learnt", (v) => v.type === "string" && v.userData === true)), show: ["add-variable", "panel-variables"] },
+    3: { check: all(layerWhere("input", (n) => n.inputType === "textarea"), bound("input", "value", "happened"), bound("input", "value", "learnt")), show: ["tool-input", "panel-inspector"] },
+    4: { check: all(textHas("wordCount(happened)"), textHas("wordCount(learnt)"), variableWhere("totalWords", (v) => !!v.formula && !!v.live), textHas("{totalWords}")), show: ["tool-text", "panel-variables"] },
+    5: { check: textHas("userData.restored"), show: "tool-text" },
+    6: { check: all(variableWhere("reflection", (v) => !!v.formula && !!v.live), pageNamed(/my reflection/i), textHas("{reflection}"), clickThen("button", "action.artboard", void 0, 2)), show: ["add-page", "add-when-clicked"] },
+    7: { check: all(nodesOfKind("action.saveFile"), clickThen("button", "action.saveFile")), show: ["add-empty-click", "panel-logic"] },
+    8: { check: (c2) => c2.project.settings?.reporting?.completion === "artboard" && !!c2.project.settings.reporting.completionArtboard, show: "panel-inspector" },
+    9: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_13$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -12547,6 +12667,16 @@ Press <kbd>Esc</kbd> to close the Preview.
 - The picture's **Text alternative** and the spot names (the box under each label in the **Question** section) make the activity usable without seeing the picture.
 
 **Next:** see [Accessibility](accessibility) for text alternatives and the keyboard, and [Drag and drop](drag-and-drop) for drop zones on any layer. Every question type is in [Questions and quizzes](question-kit).`
+  },
+  guide: {
+    1: { check: all(renamed, question("matching")), show: ["project-name", "add-question"] },
+    2: { check: question("matching", (q) => q.pairs.length >= 4 && !q.pairs.some((p) => /^(France|Japan|Egypt|Peru)$/.test(p.term)) && (q.extras ?? []).some((x) => x.text.trim() !== "")), show: "panel-inspector" },
+    3: { check: layerWhere("frame", (n) => /^matches$/i.test(n.name) && !n.layout), show: "panel-layers" },
+    4: { check: (c2) => allNodes(c2.project).some((n) => (n.type === "image" || n.role === "image") && (n.ariaLabel ?? "").trim().length > 20), show: ["tool-image", "panel-inspector"] },
+    5: { check: all(question("matching"), (c2) => !allNodes(c2.project).some((n) => /^definition/i.test(n.name))), show: "panel-layers" },
+    6: { check: (c2) => new Set(allNodes(c2.project).filter((n) => /^match \d/i.test(n.name)).map((n) => Math.round(n.x))).size >= 2, show: "panel-layers" },
+    7: { check: question("matching", (q) => q.attempts > 0 && q.points > 1 && q.feedbackPartial.trim() !== ""), show: "panel-inspector" },
+    8: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_14$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -12804,6 +12934,16 @@ The **Wait** is the timer that turns cards back. For that second both cards are 
 - \`count\` and \`positions\` read a list without an arrow function: \`count(cards, "state", "matched")\`.
 
 **Next:** [Word search and crossword from a word list](tutorial-wordgames) builds bigger grids from a list. More in [Repeated lists](repeaters), [Variables](variables#lists) and [Expressions](expressions#helpers).`
+  },
+  guide: {
+    1: { check: all(renamed, pageNamed(/well done/i)), show: ["project-name", "add-page"] },
+    2: { check: all(variables(["pairs", "list"], ["seed", "number"], ["cards", "list"], ["moves", "number"], ["ups", "list"], ["matched", "number"]), variableWhere("cards", (v) => !!v.formula), variableWhere("ups", (v) => !!v.formula && !!v.live), variableWhere("matched", (v) => !!v.formula && !!v.live)), show: ["add-variable", "panel-variables"] },
+    3: { check: all(repeats("cards"), bound("button", "fill", "item.state"), textHas("{moves}")), show: ["tool-button", "panel-inspector"] },
+    4: { check: all(nodesOfKind("event.start"), nodesOfKind("action.resetVariables"), nodesOfKind("action.setVariable")), show: "panel-logic" },
+    5: { check: clickThen("button", "action.setVariable", setsVariable("cards")), show: ["add-empty-click", "panel-logic"] },
+    6: { check: all(nodesOfKind("logic.if", 2), nodesOfKind("action.delay")), show: "panel-logic" },
+    7: { check: all(nodesOfKind("event.variable"), clickThen("button", "action.artboard")), show: ["panel-logic", "add-when-clicked"] },
+    8: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_16$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -12926,6 +13066,16 @@ To try your real microphone, share the project with **In a StudyDesk page, and k
 - **Play recording** plays the take back; \`recordings.talk\` tells bindings what it is doing.
 
 **Next:** every microphone, camera and photo node is in [Microphone, camera and photos](sensors), with what learners see and what the page needs. More on the timer: [Interaction node reference](interaction-nodes).`
+  },
+  guide: {
+    1: { check: all(renamed, (c2) => c2.project.settings?.sensors?.microphone === true && (c2.project.settings.sensors.purpose ?? "").trim() !== "" && c2.project.settings.sensors.maxSeconds === 90), show: ["project-name", "panel-inspector"] },
+    2: { check: variables(["left", "number"], ["confidence", "number"]), show: ["add-variable", "panel-variables"] },
+    3: { check: all(layers("button", 2), textHas("{left}"), textHas("{mediaMessage}")), show: ["tool-text", "tool-button"] },
+    4: { check: all(bound("button", "label", "recordings.talk"), clickThen("button", "action.recordStart")), show: ["add-empty-click", "panel-logic"] },
+    5: { check: all(nodesOfKind("action.clock", 3), nodesOfKind("action.recordStop")), show: "panel-logic" },
+    6: { check: all(bound("button", "visible", "hasRecording"), clickThen("button", "action.recordPlay")), show: ["add-empty-click", "panel-logic"] },
+    7: { check: all(layerWhere("input", (n) => n.inputType === "range"), bound("input", "value", "confidence")), show: ["tool-input", "panel-inspector"] },
+    8: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_17$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -13018,6 +13168,14 @@ Leave the fill colour alone: it is set by the question, so a step can turn green
 - The steps are a repeated layer: restyle the one **Item** and they all follow.
 
 **Next:** put labels on a picture in [Label the diagram](tutorial-label). How repeated layers work is in [Repeaters](repeaters), and every question type is in [Questions and quizzes](question-kit).`
+  },
+  guide: {
+    1: { check: renamed, show: "project-name" },
+    2: { check: question("ordering"), show: "add-question" },
+    3: { check: question("ordering", (q) => q.options.length >= 6 && !q.options.some((o) => /^(Evaporation|Condensation)$/.test(o.text))), show: "panel-inspector" },
+    4: { check: question("ordering", (q) => q.attempts > 0 && q.points > 1 && q.hints.length > 0 && q.feedbackPartial.trim() !== ""), show: "panel-inspector" },
+    5: { check: layerWhere("frame", (n) => n.name === "Item" && n.type === "frame" && n.cornerRadius >= 20), show: ["panel-layers", "panel-inspector"] },
+    6: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_18$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -13147,6 +13305,16 @@ On **Question 3**, open the **Interactions** tab. Each answer's last node is a *
 - A **Worked out** variable with **Keep up to date** picks the highest, and **One named by an expression** goes to the page it names.
 
 **Next:** [Progress, badges and a page master](tutorial-progress) keeps state across every page. More on formulas in [Variables](variables#worked-out-from-a-formula) and [Expressions](expressions), and the branching version of this idea in [A branching scenario](tutorial-branching).`
+  },
+  guide: {
+    1: { check: all(renamed, pageNamed(/question 1/i)), show: ["project-name", "panel-inspector"] },
+    2: { check: all(layers("button", 3), layers("text", 2)), show: ["tool-text", "tool-button"] },
+    3: { check: all(variables(["planner", "number"], ["explorer", "number"], ["collaborator", "number"]), clickThen("button", "action.setVariable", setsVariable("planner")), clickThen("button", "action.setVariable", setsVariable("explorer")), clickThen("button", "action.setVariable", setsVariable("collaborator")), clickThen("button", "action.artboard")), show: "add-when-clicked" },
+    4: { check: all(pages(3), nodesOfKind("action.setVariable", 18), nodesOfKind("action.artboard", 9)), show: "panel-layers" },
+    5: { check: all(pages(6), textHas("{planner}"), clickThen("button", "action.startOver", void 0, 3)), show: ["add-page", "add-when-clicked"] },
+    6: { check: variableWhere("result", (v) => !!v.formula && !!v.live), show: ["add-variable", "panel-variables"] },
+    7: { check: clickThen("button", "action.artboard", (n) => n.params.to === "expression" && String(n.params.expr).trim() === "result", 3), show: "panel-logic" },
+    8: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_19$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -13257,6 +13425,14 @@ Learners whose device asks for less motion get an instant change instead of the 
 - **How the page changes** sets the transition, and people who ask for less motion get none.
 
 **Next:** [Mind maps and flowcharts from data](tutorial-diagram). More on [Page masters](page-master), [Page navigation](page-navigation) and [How the page changes](links-cursors#how-the-page-changes).`
+  },
+  guide: {
+    1: { check: all(renamed, pages(5)), show: ["project-name", "add-page"] },
+    2: { check: all(hasMaster, textHas("{slideTitle}"), (c2) => c2.project.artboards.some((a) => a.isMaster === true)), show: ["panel-layers", "panel-inspector"] },
+    3: { check: (c2) => c2.project.artboards.filter((a) => (a.masterSlots?.slideTitle ?? "").trim() !== "").length >= 3, show: "panel-inspector" },
+    4: { check: question("single", (q) => !/prime number/i.test(q.prompt) && q.options.some((o) => o.correct)), show: ["add-question", "panel-inspector"] },
+    5: { check: all(clickThen("button", "action.artboard", (n) => n.params.to === "next", 1), clickThen("button", "action.artboard", (n) => n.params.to === "previous", 1)), show: "panel-inspector" },
+    6: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_20$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -13528,6 +13704,18 @@ When a viewer's page changes width while they are using it, the player swaps pag
 - Layers and timelines pair **by name** across the set, and the pairing report says what would not carry.
 
 **Next:** every auto layout setting is in [Auto layout](auto-layout), and how a set switches and what it keeps is in [Responsive artboards](responsive). To check the page for keyboard users and screen readers, do [Check and fix accessibility](tutorial-accessible).`
+  },
+  guide: {
+    1: { check: renamed, show: "project-name" },
+    2: { check: layerWhere("frame", (n) => /^content$/i.test(n.name) && !!n.layout), show: ["tool-frame", "panel-inspector"] },
+    3: { check: layerWhere("text", (n) => /^title$/i.test(n.name) && n.layoutItem?.width === "fill"), show: ["tool-text", "panel-inspector"] },
+    4: { check: layerWhere("frame", (n) => /^cards$/i.test(n.name) && (n.layout?.grid?.columns.length ?? 0) >= 3), show: ["tool-frame", "panel-inspector"] },
+    5: { check: layerWhere("frame", (n) => /^mercury$/i.test(n.name) && !!n.layout), show: ["tool-frame", "panel-layers"] },
+    6: { check: all(named(/^venus$/i), named(/^mars$/i), layerNamed("button", /^next$/i)), show: ["tool-button", "panel-layers"] },
+    7: { check: (c2) => c2.project.artboards.some((a) => !!a.variantOf), show: "panel-inspector" },
+    8: { check: (c2) => c2.project.artboards.some((a) => !!a.variantOf && artboardNodes(a).some((n) => n.type === "frame" && /^cards$/i.test(n.name) && n.layout?.grid?.columns.length === 1)), show: "panel-inspector" },
+    9: { show: "panel-inspector" },
+    10: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_22$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -13670,6 +13858,16 @@ The **Variables (live)** list on the left shows \`seen1\`, \`seen2\` and \`seen3
 - A switch variable and a **Fill colour** binding give a visited style, and a bound description says it out loud.
 
 **Next:** [Flip cards from a list](tutorial-flipcards). More on dialogs in [Accessibility](accessibility#dialogs), and on the nodes in [Interactions](interactions).`
+  },
+  guide: {
+    1: { check: all(renamed, layers("text", 2)), show: ["project-name", "tool-text"] },
+    2: { check: layerWhere("button", (n) => /^point \d/i.test(n.name) && (n.ariaLabel ?? "").trim() !== ""), show: ["tool-button", "panel-inspector"] },
+    3: { check: layerWhere("frame", (n) => !!n.dialog && (n.ariaLabel ?? "").trim() !== ""), show: ["tool-frame", "panel-inspector"] },
+    4: { check: (c2) => allNodes(c2.project).filter((n) => n.type === "frame" && !!n.dialog).length >= 3 && allNodes(c2.project).filter((n) => n.type === "button" && /^point \d/i.test(n.name)).length >= 3, show: "panel-layers" },
+    5: { check: clickThen("button", "action.visibility", (n) => n.params.op === "hide", 3), show: "add-when-clicked" },
+    6: { check: clickThen("button", "action.visibility", (n) => n.params.op === "show", 3), show: "add-when-clicked" },
+    7: { check: all(variables(["seen1", "boolean"], ["seen2", "boolean"], ["seen3", "boolean"]), bound("button", "fill", "seen"), clickThen("button", "action.setVariable", void 0, 3)), show: ["add-variable", "panel-variables"] },
+    8: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -13781,6 +13979,15 @@ Preview, then watch the **Variables (live)** list on the left of the Preview as 
 - A Rive state machine is driven by its inputs: true/false and number inputs are variables, triggers are messages, and view model values are shared variables.
 
 **Next:** what each format brings in is in [Importing](import). More on the pieces: [Joysticks](joysticks), [Blends](blends) and [Variables](variables). To make your own poses rather than import them, see [Rig a character with bones](tutorial-bones).`
+  },
+  guide: {
+    2: { show: "panel-timeline" },
+    3: { check: noAutoplay, show: ["panel-timeline", "timeline-play"] },
+    4: { check: clickThen("button", "action.timeline", (n) => n.params.op === "toggle"), show: ["tool-button", "add-when-clicked"] },
+    5: { check: all(layerWhere("ellipse", (n) => /knob/i.test(n.name) && n.draggable?.axis === "x"), (c2) => c2.project.artboards.some((a) => (a.joysticks ?? []).some((j) => !!j.handle && !!j.xTimeline))), show: ["tool-ellipse", "panel-inspector"] },
+    6: { check: textHas("Play or pause"), show: "tool-text" },
+    7: { check: saw("previewed"), show: "preview" },
+    8: { show: "panel-variables" }
   }
 };
 const __vite_glob_0_24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -13911,6 +14118,18 @@ For those viewers both timelines now jump straight to their last pose: Sam is al
 - **Skip for less motion** gives viewers who ask for less motion the finished pose, and markers with **Announce** read the lines aloud.
 
 **Next:** more on keys, markers and timeline settings in [Timelines and keyframes](timelines), and on screen readers and less motion in [Accessibility](accessibility). Back to the list: [Build it](build-it).`
+  },
+  guide: {
+    1: { check: all(renamed, pageNamed(/scene/i)), show: ["project-name", "panel-inspector"] },
+    2: { check: layerWhere("group", (n) => /^set$/i.test(n.name)), show: ["tool-rect", "panel-layers"] },
+    3: { check: all(named(/^alex$/i), named(/^sam$/i)), show: ["tool-ellipse", "panel-layers"] },
+    4: { check: all(named(/alex bubble/i), named(/sam bubble/i), layerNamed("button", /skip/i)), show: ["tool-text", "tool-button"] },
+    5: { check: timelineWhere((t2) => /run in/i.test(t2.name) && t2.autoplay && t2.tracks.some((tr) => tr.keys.length >= 2)), show: ["timeline-new", "panel-timeline"] },
+    6: { check: timelineWhere((t2) => /talk/i.test(t2.name) && t2.autoplay && t2.tracks.filter((tr) => tr.keys.length >= 2).length >= 2), show: ["timeline-new", "panel-timeline"] },
+    7: { check: all(nodesOfKind("event.timelineMarker", 2), nodesOfKind("action.announce", 2)), show: "panel-logic" },
+    8: { check: all(clickThen("button", "action.timeline", (n) => n.params.op === "seek"), nodesOfKind("action.timeline", 2), nodesOfKind("action.announce", 3)), show: "add-when-clicked" },
+    9: { check: timelineWhere((t2) => t2.calm === true, 2), show: ["timeline-new", "panel-timeline"] },
+    10: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -14050,6 +14269,15 @@ Leave it ticked. Untick it only for code you trust that needs the page itself (\
 - **Run scripts in the sandbox** keeps a script away from the page, cookies and the network. Leave it on.
 
 **Next:** the whole \`ix\` API is in [Scripts](scripts). To paint a layer from code every frame, see [Script layers](script-layers). Formulas and their helpers are in [Expressions](expressions).`
+  },
+  guide: {
+    1: { check: all(renamed, named(/^question$/i), named(/^feedback$/i), layerNamed("input", /answer box/i), layerNamed("button", /^check$/i)), show: ["tool-text", "tool-input", "tool-button"] },
+    2: { check: all(variable("answer", "string"), variable("distance", "number"), bound("input", "value", "answer")), show: ["panel-inspector", "panel-variables"] },
+    3: { check: (c2) => (c2.project.scripts ?? []).some((s) => /close enough/i.test(s.name) && !s.runOnStart && s.code.includes("distance")), show: "panel-scripts" },
+    4: { check: bound("text", "text", "distance"), show: "panel-inspector" },
+    5: { check: clickThen("button", "action.script"), show: ["add-empty-click", "panel-logic"] },
+    6: { show: "panel-inspector" },
+    7: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -14155,6 +14383,15 @@ Open the **Interactions** tab. There is one **Item dropped in a group** node for
 - **Say right or wrong as each item is dropped** answers each drop without using a try, through an **Item dropped in a group** node per group.
 
 **Next:** put the steps of a process in order in [Put the steps in order](tutorial-order). More about categorise questions is in [Questions and quizzes](question-kit), and about drop zones in [Drag and drop](drag-and-drop).`
+  },
+  guide: {
+    1: { check: renamed, show: "project-name" },
+    2: { check: question("categorise"), show: "add-question" },
+    3: { check: question("categorise", (q) => (q.groups ?? []).length >= 2 && !(q.groups ?? []).some((g) => /^(Mammals|Birds)$/.test(g.name))), show: "panel-inspector" },
+    4: { check: question("categorise", (q) => (q.cards ?? []).length >= 6 && !(q.cards ?? []).some((c2) => /^(Dog|Whale|Eagle|Penguin)$/.test(c2.text)) && (q.cards ?? []).some((c2) => !!c2.feedback?.trim())), show: "panel-inspector" },
+    5: { check: nodesOfKind("action.questionDrop"), show: "panel-inspector" },
+    6: { check: question("categorise", (q) => q.attempts > 0 && q.points > 1 && q.feedbackPartial.trim() !== ""), show: "panel-inspector" },
+    7: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -14405,6 +14642,16 @@ Set the data source up before you share. Its rules are fixed when the project is
 - A **Chart** reads any list: here \`responses.answers\` with \`text\` and \`count\`, and it redraws as the counts come in.
 
 **Next:** every setting and where the answers are kept is in [Shared responses](shared-responses). More about the Chart layer is in [Charts](charts). To chart numbers the learner sets themselves, try [A what-if explorer](tutorial-whatif).`
+  },
+  guide: {
+    1: { check: all(renamed, pages(3), pageNamed(/^vote$/i), pageNamed(/^results$/i)), show: ["project-name", "add-page"] },
+    2: { check: dataSourceWhere((d) => d.source === "shared" && d.shared?.perPerson === 1 && (d.shared?.refresh ?? 0) > 0 && (d.shared?.sample?.length ?? 0) > 0), show: "panel-data" },
+    3: { check: all(layers("text", 3), clickThen("button", "action.artboard")), show: ["tool-text", "tool-button"] },
+    4: { check: all(layerWhere("input", (n) => n.inputType === "select"), variable("choice"), bound("input", "value", "choice")), show: ["tool-input", "panel-inspector"] },
+    5: { check: all(nodesOfKind("logic.if"), clickThen("button", "action.sharedWithdraw"), clickThen("button", "action.sharedAdd")), show: ["add-empty-click", "panel-logic"] },
+    6: { check: all(layerWhere("chart", (n) => n.data.includes("responses.answers") && n.labelKey === "text" && n.valueKey === "count"), textHas("responses.people")), show: ["tool-chart", "panel-inspector"] },
+    7: { check: saw("previewed"), show: "preview" },
+    8: { show: "share" }
   }
 };
 const __vite_glob_0_29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -14564,6 +14811,18 @@ The **Variables (live)** list on the left of the Preview shows \`question\` chan
 - A cue ticked **Pause the video here** fires **When a video reaches a cue point**, and **Hold paused** keeps it paused until the question is done.
 
 **Next:** everything a video layer can do is in [Images, video and audio](images-media#cue-points-and-chapters). More on the question cards: [Questions and quizzes](question-kit). More on bindings: [Bindings](bindings).`
+  },
+  guide: {
+    1: { check: renamed, show: "project-name" },
+    2: { check: layerWhere("video", (n) => /clip/i.test(n.name) && n.controls === true && !n.autoplay && !n.loop && !n.muted), show: ["tool-video", "panel-inspector"] },
+    3: { show: "panel-inspector" },
+    4: { check: layerWhere("video", (n) => (n.chapters ?? []).length >= 3 && (n.chapters ?? []).every((ch) => ch.title.trim() !== "")), show: "panel-inspector" },
+    5: { check: all(layersWhere("button", (n) => /^chapter \d/i.test(n.name), 3), clickThen("button", "action.video", (n) => n.params.op === "seek" && /chapters\[/.test(String(n.params.seconds)), 3)), show: ["tool-button", "add-empty-click"] },
+    6: { check: variable("question", "number"), show: ["add-variable", "panel-variables"] },
+    7: { check: all(layersWhere("frame", (n) => !!n.question, 2), bound("frame", "visible", "question ==")), show: ["add-question", "panel-inspector"] },
+    8: { check: all(layerWhere("video", (n) => (n.cues ?? []).filter((q) => q.pause).length >= 2), bound("video", "media", "question"), nodesOfKind("event.videoCue")), show: ["panel-inspector", "panel-logic"] },
+    9: { check: all(layerWhere("button", (n) => /^continue/i.test(n.name)), bound("button", "visible", "q1_locked"), nodesOfKind("action.delay")), show: ["tool-button", "add-empty-click"] },
+    10: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_30 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -14679,6 +14938,15 @@ The **Variables (live)** list on the left of the Preview shows all seven values 
 - A **Chart** can read a list written out in its **Data**, and redraws as the variables change.
 
 **Next:** more about worked out values is in [Variables](variables), and every helper like **fmt** is in [Expressions](expressions). Chart settings are in [Charts](charts). To chart what a whole class says, try [A poll with a live chart](tutorial-survey-chart).`
+  },
+  guide: {
+    1: { check: renamed, show: "project-name" },
+    2: { check: all(variableWhere("hours", (v) => Number(v.initial) === 15), variableWhere("pay", (v) => Number(v.initial) === 28), variableWhere("rent", (v) => Number(v.initial) === 220), variableWhere("food", (v) => Number(v.initial) === 150)), show: ["add-variable", "panel-variables"] },
+    3: { check: all(variableWhere("income", (v) => !!v.formula && !!v.live), variableWhere("spending", (v) => !!v.formula && !!v.live), variableWhere("leftover", (v) => !!v.formula && !!v.live)), show: ["add-variable", "panel-variables"] },
+    4: { check: all(layersWhere("input", (n) => n.inputType === "range", 3), bound("input", "value", "hours"), bound("input", "value", "pay"), bound("input", "value", "rent")), show: ["tool-input", "panel-inspector"] },
+    5: { check: all(textHas("{hours}"), textHas("fmt(pay"), textHas("{leftover")), show: "tool-text" },
+    6: { check: layerWhere("chart", (n) => n.data.includes("income") && n.data.includes("leftover")), show: ["tool-chart", "panel-inspector"] },
+    7: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_31 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -14838,6 +15106,19 @@ Press **Preview** and **Start**. Click a clue, type the answer, and press **Chec
 - Checking reads those live variables, so every way of choosing shares one check.
 
 **Next:** [Repeated lists](repeaters), [Expressions](expressions#helpers) for the puzzle helpers, and [Branded starter packs](branded-starters) for the other games. A smaller game built from scratch: [A memory card game](tutorial-memory).`
+  },
+  guide: {
+    1: { check: all(renamed, variableWhere("rows", (v) => /wordSearch\(/.test(v.formula ?? ""))), show: "project-name" },
+    2: { check: variableWhere("words", (v) => String(v.initial).includes("EVAPORATE")), show: ["panel-variables"] },
+    3: { show: "panel-variables" },
+    4: { show: "panel-layers" },
+    5: { show: "panel-logic" },
+    6: { show: "panel-logic" },
+    7: { check: all(saw("previewed"), variableWhere("rows", (v) => /wordSearch\(/.test(v.formula ?? ""))), show: "preview" },
+    8: { check: (c2) => !!c2.project.variables?.some((v) => /^(words|clues)$/.test(v.name) && String(v.initial).includes('"answer"') && String(v.initial).includes("EVAPORATE")), show: "panel-variables" },
+    9: { show: "panel-variables" },
+    10: { show: "panel-layers" },
+    11: { check: all(saw("previewed"), variableWhere("entries", (v) => /crossword\(/.test(v.formula ?? ""))), show: "preview" }
   }
 };
 const __vite_glob_0_32 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -14975,10 +15256,10 @@ A frame can hug too: **Hug width** and **Hug height** make it grow and shrink wi
 
 ## Where people get caught out
 
-- **"I drag a child and it jumps back."** Its x and y belong to the layout, so the frame puts it back. Typing a new X or Y in the Inspector does the same: the number stays in the field, but the layout still places the child. To change the order, move it up or down in the **Layers** panel. To place one child freely, set its **Position** to *Absolute* (pinned by insets from the frame's edges) or *Ignore* (keeps its own x and y and takes no room).
+- **"I drag a child and it jumps back."** Its x and y belong to the layout, so the frame puts it back. The X and Y boxes in the Inspector are greyed out for a child the layout places, with a line saying which frame places it, so there is nothing to type that would be ignored. To change the order, move it up or down in the **Layers** panel. To place one child freely, set its **Position** to *Absolute* (pinned by insets from the frame's edges) or *Ignore* (keeps its own x and y and takes no room).
 - **"My text box won't grow."** A text grows only if its **Sizing** lets it: *Auto width* or *Auto height*, not *Fixed*. The frame around it has to grow too: a frame with a fixed height stays that height, so turn on **Hug height** on it.
 - **"Gap or padding?"** **Gap** is the space between children. **Padding** is the space between the frame's edges and the children. **Margin** (in Layout item) is extra space around one child.
-- **"I hid a layer and everything moved."** In Preview a hidden layer takes no room, so the others close up. That is on purpose. On the canvas a hidden layer stays as a faint ghost in its place, so the layout there doesn't move.
+- **"I hid a layer and everything moved."** A hidden layer takes no room, so the others close up. That is on purpose, and the canvas and Preview now agree on it. The hidden layer is not drawn on the canvas either, but it is still in the **Layers** panel: pick it there and its outline shows where it sat. A hidden layer set to *Absolute* or *Ignore* is different: it keeps its own place, and shows as a faint ghost on the canvas.
 - **"My layout settings aren't on the timeline."** They aren't keyframed. Animate a layer's size or position with a timeline, or turn on **Animate changes** on the frame so children glide when the layout changes while it plays.
 
 ## How to tell what is going on
@@ -15046,10 +15327,11 @@ const concept$i = {
 
 ## Where people get caught out
 
-- **"I put a layer in a group and its numbers changed."** It didn't move on the page; its X and Y are now counted from the group's corner instead of the page's. Making a group, dragging a layer into one in **Layers**, or ungrouping all keep the layer where it was and change the numbers to match. (Ungroup leaves a group that is rotated or scaled alone.)
+- **"I put a layer in a group and its numbers changed."** It didn't move on the page; its X and Y are now counted from the group's corner instead of the page's. Making a group, dragging a layer into one in **Layers**, or ungrouping all keep the layer where it was and change the numbers to match.
+- **"I changed a layer's X inside a group and the group's X changed instead."** A group is as big as the layers in it, so it moves to stay around them. Put a layer at X 20 and the group's X moves 20 to the right, while the layer's own X goes back to 0 (it is counted from the group's corner, and the group's corner moved). The layer is where you put it on the page. To keep a group still, turn off **Size to contents** on it. (Ungroup leaves a group that is rotated or scaled alone.)
 - **"My animation jumped after I grouped the layer."** Keyframes on X and Y are not changed when a layer moves into or out of a group, so they now count from the new parent's corner. Move the keys, or group the layer before you animate it.
 - **"I bound X and the layer went off the page."** A binding or a **Change a layer's setting** on X is measured from the parent too. \`event.x\` and \`event.y\` from a click or drag are measured on the page, so they only line up for a layer at the top of the list. For dragging, \`start + event.dx\` (how far the pointer has moved) works wherever the layer is.
-- **"I can't move a layer inside an auto layout frame."** That frame places its children, so X and Y stop being yours to set. See [Auto layout](auto-layout); a child set to **Ignore** keeps its own X and Y.
+- **"I can't move a layer inside an auto layout frame."** That frame places its children, so their X and Y are greyed out in the Inspector (they show where the layout put the child). Set the child's **Position** to **Ignore** in Layout item and they are yours again. See [Auto layout](auto-layout).
 - **"I want a layer to keep to the bottom right as the frame changes size."** In an auto layout frame, set the child's **Position** to **Absolute** and give it an **Inset** from the edges you want.
 
 ## How to tell what is going on
@@ -16723,7 +17005,7 @@ Type in **Filter layers** above the list to show only the layers whose name has 
 ## Hide and lock
 Hover a row and two small buttons appear at its right: a padlock (**Lock** / **Unlock**) and an eye (**Hide** / **Show**). They stay visible for any layer that is locked or hidden. The **Visible** and **Locked** ticks in the Inspector do the same.
 
-- **Hidden** layers are not drawn by the player or in Preview. In the editor they show as a faint **ghost** on the canvas, so you can still see where they are and pick them. Their names are faded in the Layers panel. Hide a mask layer and its clipping stops.
+- **Hidden** layers are not drawn by the player or in Preview. In the editor they show as a faint **ghost** on the canvas, so you can still see where they are and pick them. The exception is a hidden layer that an auto layout frame places: it takes no room in Preview, so it is not drawn on the canvas either (the others close up, as in Preview). Pick it in the Layers panel and its outline shows where it sat. Their names are faded in the Layers panel. Hide a mask layer and its clipping stops.
 - **Outside a clipping artboard**: when an artboard has **Clip content to artboard** on, the part of a layer that hangs past its edge is also drawn as a faint, diagonally striped ghost on the canvas, and clicking it selects the layer. Preview and exports still cut it off. You can switch this off in [Preferences](preferences).
 - **Locked** layers can't be selected or moved by clicking on the canvas, so a backdrop never gets in your way. You can still select one in the Layers panel and edit it in the Inspector.
 - **Brand-locked layers** are the brand layers of a [branded project](branded-starters) (the logo, the sweeps, the footer line). They are really locked: you can't select or drag them on the canvas or in the Layers panel, and the selection box and Select all skip them. Their padlock in the list can't be turned off. Projects made before this was added are locked when you open them. That leaves nothing on them to change by accident.
@@ -17299,7 +17581,7 @@ Select a child of an auto-layout frame and its **Layout item** section says how 
 
 ![Ticking Auto margin: Left on the button pushes it to the end of the toolbar. Then changing Grow on a card changes how much of the free room it takes.](help/layout-item.mp4)
 
-- **Position**: *In flow* (laid out with its siblings), *Absolute* (placed by **Inset** from the frame's edges, e.g. pinned to the bottom right; leave a side empty (*auto*) to leave that edge free, and set left and right, or top and bottom, to stretch a layer that isn't fixed size) or *Ignore* (keeps its own x/y and takes no room, and has no sizing fields).
+- **Position**: *In flow* (laid out with its siblings), *Absolute* (placed by **Inset** from the frame's edges, e.g. pinned to the bottom right; leave a side empty (*auto*) to leave that edge free, and set left and right, or top and bottom, to stretch a layer that isn't fixed size) or *Ignore* (keeps its own x/y and takes no room, and has no sizing fields). While a layer is *In flow* or *Absolute*, its **X** and **Y** in the Inspector are greyed out and a line says which frame places it: set *Ignore* to place it yourself.
 - **W** and **H** (width and height):
   - *Fixed*: its own size.
   - *Hug*: fits its own contents (frames and text).
@@ -21900,9 +22182,9 @@ The **Tutorials** button on the projects page (next to **Help**) lists every tut
 
 In a tutorial, each numbered step has a tick box beside its heading. Tick it when you have done the step. A short line says how many are left, and a strip under the title shows how many steps you have ticked. Tick the last one and you get a **badge card** in the corner of the screen with a quick burst of confetti. It clears itself after a few seconds, never stops you working, and **Esc** or its **x** puts it away at once. Did it without ticking along? **I have done all of this**, at the foot of the tutorial, counts the lot. **Start again** in the strip clears that one's ticks and badge. A concept has one button instead, **Mark as read**.
 
-Many tutorials are **guided** while a project is open. A step that can be checked ticks itself the moment you have done it: draw a rectangle and step 2 of the first animation ticks, add a timeline and step 3 does, and so on. You get the same short line as when you tick by hand. It only looks at the project you have open, a moment after each change, so a step that is already true of the project when you open the tutorial ticks too. A step with nothing to check, such as one that is about reading, is yours to tick. Ticking by hand always works, and so does taking a tick off: if you untick a step that ticked itself, it stays unticked until you undo the thing and do it again. **Start again** does the same for everything already in the project. Preview counts too: a step that says to try it ticks once you have opened Preview (or pressed Play in the Timeline) with the tutorial showing. On the projects page, with no project open, nothing ticks itself, and the strip under the title says so.
+Every **Getting started** and **Build it** tutorial is **guided** while a project is open. A step that can be checked ticks itself the moment you have done it: draw a rectangle and step 2 of the first animation ticks, add a timeline and step 3 does, and so on. You get the same short line as when you tick by hand. It only looks at the project you have open, a moment after each change, so a step that is already true of the project when you open the tutorial ticks too. A step with nothing to check, such as one that is about reading, is yours to tick. Ticking by hand always works, and so does taking a tick off: if you untick a step that ticked itself, it stays unticked until you undo the thing and do it again. **Start again** does the same for everything already in the project. Preview counts too: a step that says to try it ticks once you have opened Preview (or pressed Play in the Timeline) with the tutorial showing. On the projects page, with no project open, nothing ticks itself, and the strip under the title says so.
 
-A step that talks about a control has a **Show me** button at its right. Press it and the control gets a gold ring and its name for a few seconds: a tool in the tool bar, a tab of the bottom panel, **Preview**, **+ When clicked…** and so on. The ring never blocks anything, so you can click the control straight through it. It goes when you press <kbd>Esc</kbd> (that <kbd>Esc</kbd> does nothing else), when you click or press a key, when you close the tutorial, or by itself after a few seconds. If the control is not on screen, because its tool group is folded or its panel is closed, a note says where it is instead. With reduced motion on, the ring does not pulse. It works the same when you start a tutorial from the **Tutorials** window. The tutorials that are guided so far are the five **Getting started** ones and Multiple choice, Flip cards, Carousel, Branching, Progress and Sound; the rest are ticked by hand.
+A step that talks about a control has a **Show me** button at its right. Press it and the control gets a gold ring and its name for a few seconds: a tool in the tool bar, a tab of the bottom panel, **Preview**, **+ When clicked…** and so on. The ring never blocks anything, so you can click the control straight through it. It goes when you press <kbd>Esc</kbd> (that <kbd>Esc</kbd> does nothing else), when you click or press a key, when you close the tutorial, or by itself after a few seconds. If the control is not on screen, because its tool group is folded or its panel is closed, a note says where it is instead. With reduced motion on, the ring does not pulse. It works the same when you start a tutorial from the **Tutorials** window. Every **Getting started** and **Build it** tutorial has its steps checked and its **Show me** buttons. The **Concepts** are for reading, so you mark those as read. A few steps in a guided tutorial have nothing to check, such as one that only asks you to read, a file you make outside the editor, or something a project cannot show afterwards (what the Accessibility tab found, say). Those still have **Show me** when there is a control to point at, and you tick them by hand.
 
 Finishing every tutorial in a set earns a **set badge**: Getting started, Questions, Show and explain, Games and stories, Learners, media and data, Polish and advanced, all of Build it, and the Concepts. The badges and your totals show at the top of the **Tutorials** window, and a tick appears beside each finished tutorial in this help's contents.
 
