@@ -519,7 +519,12 @@ export function buildFlow(event: LogicNode, ctx: FlowCtx, opts: FlowOptions = {}
   const off = isOff(event);
   let when = eventPhrase(event, c, ctx.self);
   const shown = off ? turnedOn(cond) : cond;
-  if (shown) when += `, only if ${conditionWords(shown)}`;
+  //The "all of these are done" trigger reads as what it is, not as the list test it is built from
+  const doneAll = event.kind === 'event.variable' ? /^includesAll\(\s*([A-Za-z_$][\w$]*)\s*,\s*\[(.*)\]\s*\)$/.exec(shown) : null;
+  if (doneAll && doneAll[1] === c.variable(event.params.variable)) {
+    const names = [...doneAll[2].matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]);
+    when = `When all of these are done: ${names.length ? names.join(', ') : 'none yet'}`;
+  } else if (shown) when += `, only if ${conditionWords(shown)}`;
   return { event, when, off, steps, more };
 }
 

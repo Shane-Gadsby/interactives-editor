@@ -53,7 +53,7 @@ describe('When all of these are done', () => {
     expect(adds.map((x) => x.params)).toEqual(f.points.map((_, i) => expect.objectContaining({ variable: b.variables[0].id, op: 'push', value: JSON.stringify(['Point A', 'Point B', 'Point C'][i]) })));
     //every node is on a wire that starts at an event, and the sentence reads
     expect(b.edges).toHaveLength(b.nodes.length - 4);
-    expect(b.sentence).toMatch(/^When explored changes/);
+    expect(b.sentence).toMatch(/^When all of these are done: Point A, Point B, Point C/);
     expect(b.sentence).toContain('show');
   });
 

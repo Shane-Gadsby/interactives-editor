@@ -198,7 +198,7 @@ describe('BehaviourDialog', () => {
     expect(ticked()).toEqual(['Next button']);
     click(boxes().find((b) => b.closest('label')!.textContent === 'Hint text'));
     expect(ticked()).toEqual(['Next button', 'Hint text']);
-    expect(q('.behaviour-preview')!.textContent).toContain('When explored changes');
+    expect(q('.behaviour-preview')!.textContent).toContain('When all of these are done: Next button, Hint text');
     //answered: no layer here is a question, so the ticked ones go and it says so
     const how = qa('.behaviour-dialog select').find((x) => [...(x as HTMLSelectElement).options].some((o) => o.value === 'answered')) as HTMLSelectElement;
     set(how, 'answered');
