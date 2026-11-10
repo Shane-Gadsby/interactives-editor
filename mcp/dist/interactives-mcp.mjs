@@ -10186,8 +10186,8 @@ Names can only use letters, digits and \`_\`, and can't start with a digit. That
 A *binding* keeps a property up to date with an expression.
 
 1. Select **Bulb** and scroll the Properties panel to **Data bindings**.
-2. Choose **Fill colour** in the dropdown and press **Bind**.
-3. In the expression box that appears, type:
+2. Press **+ Add binding** and pick **Fill colour** (type \`fill\` to find it quickly).
+3. A row for the binding appears. Choose **Formula** rather than **Variable**, and in the box under it type:
 
 \`\`\`
 lit ? "#ffd23f" : "#c9ced6"
@@ -10367,7 +10367,648 @@ See [Embedding and the player API](embedding) for the iframe snippet, how the pa
 You've built, animated, wired up, imported and published. Keep going with the topics on the left. Good places to go next: [Timelines and keyframes](timelines), [Groups and frames](groups-frames), [Auto layout](auto-layout), [Data sources](data-sources) and [Troubleshooting and common questions](troubleshooting).`
   }
 ];
-const tutorial = {
+const tutorial$d = {
+  order: 20,
+  level: "intermediate",
+  minutes: 15,
+  example: "tut-blanks",
+  topic: {
+    id: "tutorial-blanks",
+    title: "Fill in the blanks with typed answers",
+    group: "Build it",
+    summary: "Four gaps the learner types into, accepting other wordings, near numbers and a pattern, with part marks and a tip for one gap.",
+    keywords: "tutorial fill in the blank blanks gap gaps cloze typed answer type accepted answers alternatives pattern regex regular expression match case capitals spaces tolerance number near part marks tip per gap feedback",
+    body: `You will make one question with four gaps to type into. Each gap shows a different way of deciding what counts as right: other wordings of the same answer, a number that only has to be close, a pattern, and a gap where capital letters matter. One gap also gets its own tip when it is answered wrong. It takes about fifteen minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Fill in the blanks**. **Play** runs it and **Make my copy** gives you your own copy.
+
+If you haven't made a question before, do [A multiple choice question](tutorial-mcq) first. This one uses the same **Question** section.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Science gaps** as the name and press **Create project**.
+
+## 2. Add the question
+
+1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
+2. Click **Add question** and pick **Fill in the blank**.
+
+A card called **Question 1** appears with one gap, *The capital of France is*, that accepts *Paris*. It is selected and the **Question** section is open in the Properties panel. Leave **Answer by** on **Typing**.
+
+## 3. Write the gaps
+
+1. Replace the **Prompt** with \`Fill in each gap, then press Check answer.\`
+2. Each gap has a **Blank** box (the words shown above the box the learner types in) and an **Accepted answers** box, with **Match case** and **± Tolerance** under it.
+
+**Gap 1: other wordings.** In **Blank 1** type \`The largest ocean on Earth is the\`. In **Accepted answers** type three lines:
+
+\`\`\`
+Pacific
+Pacific Ocean
+the Pacific
+\`\`\`
+
+Any one line is right. Capital letters and extra spaces are ignored, so *pacific  ocean* counts too.
+
+**Gap 2: a near number.** Press **+ Add blank**. In **Blank 2** type \`Light from the Sun reaches Earth in about this many minutes:\` and in **Accepted answers** type \`8.3\`. Set **± Tolerance** to **0.5**. A number is compared as a number, so *8*, *8.5* and *8.30* all count, and *9* does not.
+
+**Gap 3: a pattern.** Press **+ Add blank**. In **Blank 3** type \`Plants take in this gas from the air:\` and give it two lines of accepted answers:
+
+\`\`\`
+carbon dioxide
+/^(carbon\\s+dioxide|co2)$/i
+\`\`\`
+
+A line written between slashes is a pattern. This one accepts *carbon dioxide* or *CO2*: \`^\` and \`$\` mean the whole answer, \`|\` means or, \`\\s+\` is any number of spaces, and the \`i\` at the end ignores capitals. Keep the plain line first: it is what the learner is shown if the gap is revealed, and a pattern has nothing to show.
+
+**Gap 4: capitals count.** Press **+ Add blank**. In **Blank 4** type \`The chemical symbol for sodium is\` and accept \`Na\`. Tick **Match case**, so *NA* and *na* are wrong.
+
+The **×** beside a blank removes it.
+
+## 4. Marking, hints and feedback
+
+1. Under **Marking**, set **Points** to **4** and **Tries** to **2**. **Part marks** is already ticked, so each right gap is worth a share: three right out of four scores 3.
+2. In **Hints**, type two lines: \`The ocean is between Asia and the Americas.\` and \`Sodium's symbol comes from its Latin name, natrium.\` Each press of **Hint** shows the next one.
+3. Change the feedback lines:
+   - **Right**: \`All four are right. Well done!\`
+   - **Wrong**: \`None are right yet. Have another look and check again.\`
+   - **Partly right**: \`Some are right, but not all. Have another look and check again.\`
+   - **Out of tries**: \`Out of tries. Each gap you missed shows its answer.\`
+4. Leave **Show the right answer when finished wrong** ticked. When the tries run out, each wrong gap shows *Accepted answer:* and the first plain line of its answers.
+
+While the learner still has a try left, the feedback only says how it went overall. Which gaps are right is not shown until the question finishes, so a learner can't find the answers by changing one gap at a time.
+
+## 5. A tip for one gap
+
+When the question finishes, it marks each gap on its own: the box of a right gap turns green and a wrong one red. You can use that to show a tip under one gap only.
+
+1. Press <kbd>T</kbd> for the **Text** tool and click on the page below the card. Type \`Tip: it is the gas you breathe out. CO2 is accepted too.\` and press <kbd>Escape</kbd>. Name the layer **Gap 3 tip**.
+2. In the **Layers** panel, open **Question 1** and then **Blanks** with their arrows. Drag **Gap 3 tip** onto the middle of the **Blank 3** row, so it goes inside it. It now sits under the third gap.
+3. With **Gap 3 tip** selected, find **Data bindings** in the Properties panel and press **+ Add binding**. Pick **Visible**, choose **Formula** and type \`q1_items[2]?.state == "wrong"\`.
+
+\`q1_items\` is the question's list of gaps, counted from 0, so \`[2]\` is the third. Its \`state\` is *correct* or *wrong* once the question has finished. The tip disappears from the canvas, because nothing has been marked yet.
+
+## 6. Try it
+
+1. Press **Preview** at the top right.
+2. Type \`pacific ocean\`, \`8\`, \`Carbon dioxide\` and \`NA\`, then press **Check answer** (or <kbd>Enter</kbd> in any gap). The **Partly right** feedback shows: three are right, and *NA* is wrong because **Match case** is on.
+3. Change the last gap to \`Na\` and the third to \`oxygen\`, and check again. That was the last try, so the question finishes: three boxes turn green and gap 3 red, the tip and *Accepted answer: carbon dioxide* show under it, and the score is 3.
+4. Press **Try again** to start over. Press <kbd>Esc</kbd> to close the Preview.
+
+## Go further
+
+- **A spelling test.** Tick **Spelling: letters must match exactly** on a gap and every letter has to be there, with no near misses. The **Spelling test** starter (**Templates**, **Built-in**) builds a whole test this way: see [Spelling tests](question-kit#spelling-tests).
+- **Drag the words in instead.** Set **Answer by** to **Dragging words from a word bank**. Each gap becomes a slot, and the first plain answer of each gap becomes a word to drag. **Extra words** adds words that fit no gap.
+- **A gap in the middle of a sentence.** The **Fill in the blanks** starter on **Templates**, **Built-in** puts the end of each sentence after its box, so the passage reads as one paragraph.
+
+## What you learned
+
+- **Accepted answers** take one answer per line, and capitals and spaces are ignored unless **Match case** is ticked.
+- A number is compared as a number, and **± Tolerance** accepts one that is close. A line between slashes is a pattern.
+- **Part marks** give a share for each right gap. Once the question finishes, \`q1_items\` tells you how each gap went, so a binding can react to one gap.
+
+**Next:** more about every question type is in [Questions and quizzes](question-kit). Patterns are explained in [Expressions](expressions#patterns-regular-expressions), and the **Text patterns** example (**Templates**, **Examples**) has more to try. Bindings are explained in [Bindings](bindings). For a question answered by dragging, try [Drag and drop matching](tutorial-drag-match).`
+  }
+};
+const __vite_glob_0_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$d
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$c = {
+  order: 54,
+  level: "intermediate",
+  minutes: 15,
+  example: "tut-context",
+  topic: {
+    id: "tutorial-context",
+    title: "Personalise it for the course and the learner",
+    group: "Build it",
+    summary: "Greet the learner by first name, name their course, give each course its own due date, and show a line only to staff.",
+    keywords: "tutorial context personalise personalize first name greeting welcome course code course name per-course values course label sample context staff student isStaff studydesk one project several courses",
+    body: `You will make a welcome page that greets the learner by their first name, says which course they are in, and tells them when their first assignment is due. The assignment and the week are different in each course, from one project. A line at the bottom shows only to staff. It takes about fifteen minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Personalised for the course and learner**. **Play** runs it and **Make my copy** gives you your own copy.
+
+All of it comes from **context**, a data source every project has. It holds the course the project is in and the person playing. On the **Link for StudyDesk** it is filled in from their StudyDesk session. While you edit, it uses made-up sample values, so you can see what a learner would.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Course welcome** as the name and press **Create project**.
+
+## 2. Greet the learner
+
+1. Pick the **Text** tool in the tool bar down the left, click near the top of the page and type:
+
+   \`{context.firstName ? "Welcome, " + context.firstName + "!" : "Welcome!"}\`
+
+   Anything in curly brackets is a formula. This one says *Welcome, Alex!* with the sample name, and just *Welcome!* when nobody is known (a downloaded file, or a share link opened outside StudyDesk). Always word it so it still reads well with the name missing.
+2. Make it big and bold in the Properties panel.
+3. Add a second text under it for the course:
+
+   \`{context.courseCode ? "You are in " + context.courseCode + ", " + context.courseName + "." : "Open this from your StudyDesk course to see your course here."}\`
+
+   On the canvas it reads *You are in MAT1000, Introduction to Mathematics.*
+
+## 3. See the sample values
+
+1. Open the **Data** tab at the bottom of the window. **context** is first in the list, marked **built in**. Click it.
+2. The table lists every field with its **Sample value**. Change the one beside **context.firstName** to your own name: the greeting on the canvas follows.
+3. Clear it to see the page as someone nobody knows would.
+
+Sample values are only for designing. They are never in an export or a share link, and learners never see them.
+
+## 4. Give each course its own values
+
+The assignment and the week it is due are two ordinary variables. Each course can start them at a different value.
+
+1. In the **Variables** tab press **+ Add variable**, pick **Text** and call it **assignment**. Set its starting value to \`first assignment\`.
+2. Press **+ Add variable** again, pick **Counter** and call it **dueWeek**. Set it to **5**.
+3. Add a text to the page: \`Your {assignment} is due in week {dueWeek}.\`
+4. Back in the **Data** tab, with **context** picked, find **Per-course values** and press **+ Add a course**.
+5. Type \`MAT1000_*\` in the box. The \`*\` stands for anything, so this row is every run of MAT1000. It says **matches the sample course**, because the sample label is \`MAT1000_26S1_ONC\`.
+6. From **Set a variable…** pick **assignment** and type \`problem set\`. Pick **dueWeek** too and make it **4**.
+7. Press **+ Add a course** again for \`MAT1001_*\`: **assignment** \`project proposal\`, **dueWeek** **6**. This one says **no match**.
+
+Any course with no row gets the starting values from the Variables tab: *first assignment*, week 5.
+
+## 5. A line only staff see
+
+1. Add a text at the bottom: \`Staff only: students never see this line.\`
+2. With it selected, open **Data bindings** in the Properties panel and press **+ Add binding**. Pick **Visible**.
+3. Choose **Formula**, then **Edit as formula**, and type \`context.isStaff\`.
+
+The line disappears, because the sample person is a student. In the Data tab's sample values, untick the one beside **context.isStudent** and it shows. \`context.isStaff\` is true for anyone signed in who is not a student.
+
+## 6. Try it
+
+1. Press **Preview**. With the sample course it says *Your problem set is due in week 4.*
+2. Close the Preview. In the Data tab, change the sample value of **context.courseLabel** to \`MAT1001_26S2_ONC\`. The MAT1001 row now says **matches the sample course**. Preview again: *Your project proposal is due in week 6.*
+3. Try \`ENG1000_26S1_ONC\` to see a course with no row.
+
+To use it for real, give learners the **Link for StudyDesk** from [Share link](export#share-link), not the plain share link: only that link knows the course and the learner. After changing per-course values, press **Update to the latest version** there.
+
+## Good to know
+
+- Rows apply from the top, and a later row wins where two set the same variable. \`MAT1000_*, MAT1001_*\` with a comma covers both in one row.
+- A per-course value is only the starting value. Leave **Remember** off on these variables, because a learner's remembered value would win over it.
+- Only the course, the first name and display name, and whether the person is a student or staff reach the project. Never a username, email or student number, and none of it goes to results or Insights.
+
+## What you learned
+
+- **context** is a built-in data source: \`context.firstName\`, \`context.courseCode\`, \`context.courseName\`, \`context.isStaff\` and more, usable in any formula.
+- **Sample values** in the Data tab show you the page as a learner would see it, and as nobody.
+- **Per-course values** start variables differently in each course, so one project serves several.
+
+**Next:** every context field and the rules for per-course values are in [Course and learner context](course-context). Formulas in text and bindings are in [Expressions](expressions) and [Bindings](bindings). For data that comes from a file, see [Data sources](data-sources).`
+  }
+};
+const __vite_glob_0_1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$c
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$b = {
+  order: 53,
+  level: "advanced",
+  minutes: 25,
+  example: "tut-data-source",
+  topic: {
+    id: "tutorial-data-source",
+    title: "Content from a data file",
+    group: "Build it",
+    summary: "A page whose heading, text and cards all come from one JSON file, so next term's rewrite is a file swap, not an edit of every layer.",
+    keywords: "tutorial data file data source json csv content words text from a file repeater repeat list cards binding bind item replace file swap rewrite reuse form view",
+    body: `You will make a page of study tips where every word comes from one small file: the heading, the intro line, four cards and the footer. Each card even takes its colour from the file. Change the file and the page changes, so a new version for next term, or another course, is a file swap. It takes about twenty-five minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Content from a data file**. **Play** runs it and **Make my copy** gives you your own copy.
+
+This tutorial uses **expressions**: words in braces, such as \`{tips.title}\`, that the player swaps for a value. If you haven't met them, do [Tutorial 3](tutorial-state-machine) first.
+
+## 1. Write the data file
+
+1. Open a plain text editor (Notepad on Windows, or TextEdit set to plain text on a Mac).
+2. Copy this in, exactly as it is:
+
+\`\`\`json
+{
+  "title": "Five study tips",
+  "intro": "Small habits that make studying easier. Pick one to try this week.",
+  "cards": [
+    { "title": "Plan your week", "text": "Block out classes, study and rest before the week begins.", "colour": "#FFF4D6" },
+    { "title": "Skim first", "text": "Read the headings and summary before the whole text.", "colour": "#E3F1FB" },
+    { "title": "Use your own words", "text": "Notes in your own words show what you understand.", "colour": "#E6F4EA" },
+    { "title": "Take breaks", "text": "A short break every hour keeps your focus.", "colour": "#F6E7F3" }
+  ],
+  "footer": "Study skills, week 1"
+}
+\`\`\`
+
+3. Save it as \`tips.json\`. In Notepad, set **Save as type** to **All files** so it doesn't become \`tips.json.txt\`.
+
+This is JSON. \`title\`, \`intro\` and \`footer\` are single values; \`cards\` is a list in square brackets, and each card in it has the same three fields. Keep those names: the page will ask for them.
+
+## 2. Make a project and add the file
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Study tips** as the name and press **Create project**.
+2. Open the **Data** tab at the bottom. If it isn't there, press **More panels** at the right of the bottom tabs and choose **Data**.
+3. Press **+ From file** and pick \`tips.json\`.
+
+The file is uploaded, and a data source called **tips** (from the file's name) appears in the list with a **json** badge. Pick it. On the left, **Name** says \`tips\` and **From** says **Uploaded file**. On the right, the file opens in its **Form** view: **Title**, **Intro**, a card for each of the four tips, and **Footer**.
+
+## 3. Words from the file
+
+1. Press <kbd>T</kbd> for the **Text** tool, click near the top left of the page and type \`{tips.title}\`. Press <kbd>Escape</kbd>. The canvas shows **Five study tips**: the words come from the file. Name the layer **Heading** and make it big.
+2. Under it, add another text layer with \`{tips.intro}\`. Name it **Intro**.
+3. Near the bottom of the page, add one with \`{tips.footer}\`. Name it **Footer**.
+
+\`tips\` is the data source's name, and \`.title\` is a field in it. Anywhere an expression goes you can read the file this way.
+
+## 4. One card, repeated
+
+The cards are a **repeater**: you design one card, and it is copied once for each item in the list.
+
+1. Press <kbd>F</kbd> for the **Frame** tool and drag a large box under the intro, most of the page wide and down to just above the footer. Name it **Cards**.
+2. Press <kbd>R</kbd> and draw a rectangle inside the top left of **Cards**, about 350 wide and 150 high. Because you drew it over the frame, it goes inside it. Name it **Card background**, and give it a **Radius** of 12.
+3. With the **Text** tool, click inside the rectangle and type \`{item.title}\`. Name it **Card title** and make it bold.
+4. Click under it and type \`{item.text}\`. Name it **Card text**. Make it a little narrower than the rectangle so long lines wrap inside it.
+5. In the **Layers** panel, click **Card background**, then <kbd>Shift</kbd>+click **Card text**, so all three are selected. Press <kbd>Ctrl</kbd>+<kbd>G</kbd> to group them, and name the group **Card**. It is now the only layer inside **Cards**.
+6. Select the **Cards** frame. In the Properties panel open **Repeat (list)** and tick **Repeat the first child for each item**.
+7. Change **Items** to \`tips.cards\` and press <kbd>Enter</kbd>. (It starts as \`tips\`, the whole file, which is not a list.)
+8. Set **Layout** to **Grid**, **Cols** to **2** and **Gap** to **16**.
+
+Four cards appear, two by two, each with its own tip. Inside a repeated layer, \`item\` is the item it was copied for, so \`{item.title}\` is that card's title. Change the card you drew (its size, its font) and every copy follows.
+
+## 5. A colour from the file
+
+The words aren't the only thing a file can hold. Each card has a \`colour\` too.
+
+1. In the **Layers** panel pick **Card background** (inside **Card**, inside **Cards**).
+2. In the Properties panel find **Data bindings** and press **+ Add binding**. Type \`fill\` and choose **Fill colour**.
+3. Press **Formula** and type \`item.colour\`, then press <kbd>Enter</kbd>.
+
+Each card now takes its colour from its own line in the file. A **binding** ties any property to an expression in the same way: the position, the size, whether it shows.
+
+## 6. Change the words in the editor
+
+You don't have to go back to Notepad for small changes.
+
+1. Open the **Data** tab and pick **tips**.
+2. In the **Form** view, change **Footer** to \`Study skills, week 2\`. Wait a moment and the page shows it.
+3. At the end of the cards press **Add another**. A fifth, empty card is added to the list, and a fifth copy appears on the page. Fill in its **Title**, **Text** and **Colour** (\`#FDEBDD\`).
+
+Five cards don't fit two by two in the frame you drew. Make **Cards** taller, or set **Cols** to **3**. Every change in the form is saved as a new version of the file, and **Undo** brings the old one back.
+
+## 7. Swap the whole file
+
+This is the point of it: a new version is a new file, not an edit of every layer.
+
+1. In your text editor, change \`tips.json\`: a new title, new tips, other colours. Keep the same field names (\`title\`, \`intro\`, \`cards\` with \`title\`, \`text\` and \`colour\`, and \`footer\`). Save it as \`tips-term2.json\`.
+2. Open the **Assets** tab on the left and find **tips.json**.
+3. Press the arrow on it (its tooltip says **Replace with a new version of the file**) and pick \`tips-term2.json\`.
+
+The page shows the new words at once. Everything that used the old file now uses the new one, and one **Undo** puts the old one back.
+
+## 8. Try it
+
+Press **Preview** at the top right. The page plays with the words from the file, exactly as a learner sees it. Press <kbd>Esc</kbd> to close it.
+
+## Go further
+
+- **A spreadsheet instead.** Save a sheet as CSV (first row the column names: \`title,text,colour\`) and add it with **+ From file**. A CSV becomes a list of rows, so **Items** is the source's name on its own, such as \`cards\`.
+- **More than one page.** Every page can read the same source. A second page could show \`{tips.cards[0].text}\` large, for a tip of the week.
+- **A file somebody else keeps up to date.** **+ From URL** reads the file from a web address each time the project opens. See [Data sources](data-sources).
+
+## What you learned
+
+- A **data source** is a file the project reads by name. **+ From file** in the **Data** tab adds one.
+- \`{tips.title}\` in text shows a value from the file.
+- A frame with **Repeat (list)** copies its first child once for each item, and \`item\` is that item.
+- **Data bindings** set a property, such as **Fill colour**, from the data.
+- The **Form** view edits the file in place, and the arrow in **Assets** swaps it for a new one.
+
+**Next:** every way to read and edit a data file is in [Data sources](data-sources). Repeaters, grids and clicking a copy are in [Repeated lists](repeaters), and bindings in [Bindings](bindings).`
+  }
+};
+const __vite_glob_0_2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$b
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$a = {
+  order: 21,
+  level: "beginner",
+  minutes: 10,
+  example: "tut-drag-match",
+  topic: {
+    id: "tutorial-drag-match",
+    title: "Drag and drop matching",
+    group: "Build it",
+    summary: "Drag each country onto its capital, with a country that belongs nowhere, three tries, part marks and Try again.",
+    keywords: "tutorial drag drop matching match pairs terms definitions slots drop zone country capital extra term distractor tries part marks try again reset keyboard score",
+    body: `You will make a matching question: the learner drags each country onto its capital city. One extra country has no capital on the list, so it has to be left alone. The learner gets three tries, a share of the points for each one in the right place, and **Try again** at the end. It takes about ten minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Drag and drop matching**. **Play** runs it and **Make my copy** gives you your own copy.
+
+You don't make anything draggable by hand. **Add question** builds the countries as draggable layers and the slots as drop zones, and it checks where each country landed.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Capital cities** as the name and press **Create project**.
+
+## 2. Add the question
+
+1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
+2. Click **Add question** and pick **Matching (drag and drop)**.
+
+A card called **Question 1** appears, already working. On the left is a pile of **terms** to drag (four countries). On the right each capital has a dashed **slot** beside it. The card is selected and the **Question** section is open in the Properties panel.
+
+## 3. Write the pairs
+
+Each pair in the **Question** section is a term (what the learner drags) and what it matches (the words beside its slot).
+
+1. Replace the **Prompt** with \`Drag each country onto its capital city. One country has no capital here.\`
+2. Change the four pairs, the term in the top box and what it matches in the box under it:
+   - \`Australia\` and \`Canberra\`
+   - \`Canada\` and \`Ottawa\`
+   - \`Brazil\` and \`Brasília\`
+   - \`Kenya\` and \`Nairobi\`
+
+The terms and the words beside the slots change on the canvas as you type. **+ Add pair** adds another (up to eight), the arrows move a pair, and **×** removes one.
+
+## 4. Add a country that fits nowhere
+
+Under the pairs is **Extra terms**. Press **+ Add extra term** and type \`Spain\`.
+
+Spain joins the pile and is dragged like the others, but it has no slot of its own. Left in the pile is right. Dropped into a slot it is wrong, and it takes that slot from the country that belongs there.
+
+## 5. Tries, marks and feedback
+
+1. Under **Marking**, set **Points** to **4** and **Tries** to **3**.
+2. **Part marks** is already ticked, so three countries in the right place score 3. **Shuffle** is ticked too, so the pile is dealt in a different order each time.
+3. In **Hints**, replace the sample with \`Canberra was built to be the capital, between Sydney and Melbourne.\`
+4. Change the feedback lines:
+   - **Right**: \`All four matched. Well done!\`
+   - **Wrong**: \`Not yet. Move the countries and check again.\`
+   - **Partly right**: \`Some are right, but not all. Move a few and check again.\`
+   - **Out of tries**: \`Out of tries. Each slot now shows the country that belongs there.\`
+
+The question adds how many are right to the feedback by itself, such as *2 of 4 matched correctly*. It doesn't say which ones until the question finishes, so a learner can't just try each country in each slot.
+
+## 6. Try it
+
+1. Press **Preview** at the top right.
+2. Drag **Spain** onto the Canberra slot and the other three onto their own capitals, then press **Check answer**. The **Partly right** feedback shows, with *3 of 4 matched correctly*. Spain in a slot also costs a share of the points.
+3. Drag a country onto a slot that is already full: the two swap, and the one that was there goes back to where the new one came from.
+4. Use your tries up with a wrong answer. The question finishes: the countries stop moving, every slot is marked ✓ Right or ✗ Wrong, each wrong one says which country belongs there, the score shows, and **Try again** appears. Press it and the countries go back to the pile.
+5. Try it with the keyboard: <kbd>Tab</kbd> to a country, <kbd>Space</kbd> to pick it up, the arrow keys to choose a slot and <kbd>Space</kbd> to drop it. <kbd>Esc</kbd> puts it back.
+
+Press <kbd>Esc</kbd> to close the Preview.
+
+## Make it yours
+
+The terms and slots are ordinary layers. The **Restyle a part** buttons at the bottom of the **Question** section select a **Term**, a **Slot** or a **Definition** for you. Unlike the options of a multiple choice question, each pair has layers of its own, so select all four terms in the **Layers** panel (<kbd>Ctrl</kbd>+click) to restyle them together.
+
+## What you learned
+
+- A matching question's terms are draggable layers and its slots are drop zones that hold one term each. **Check answer** reads which slot every term ended up in.
+- **Extra terms** are dragged like the others but belong nowhere.
+- **Tries**, **Part marks** and **Try again** come with the question, and **Try again** puts every term back.
+
+**Next:** put the slots on a picture in [Label the diagram](tutorial-label), or let a box hold several items in [Sort into groups](tutorial-sort). How dragging works on any layer is in [Drag and drop](drag-and-drop).`
+  }
+};
+const __vite_glob_0_3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$a
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$9 = {
+  order: 50,
+  level: "intermediate",
+  minutes: 25,
+  example: "tut-journal",
+  topic: {
+    id: "tutorial-journal",
+    title: "A reflection journal that remembers",
+    group: "Build it",
+    summary: "Two reflection prompts with text boxes and word counts that are still there when the learner comes back, and a page that puts it all together to download.",
+    keywords: "tutorial journal reflection writing text box textarea word count wordCount save as user data save progress load saved progress before activity loads resume come back remember download a file export",
+    body: `You will make a short reflection journal: two prompts, each with a text box and a word count. What the learner writes is saved as they type, so it is all still there when they come back. A second page puts the whole reflection together and downloads it as a text file. It takes about twenty-five minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Reflection journal**. **Play** runs it and **Make my copy** gives you your own copy.
+
+The trick is that the text boxes are tied to variables, and those variables are ticked **Save as user data**. The player saves them and puts them back for you, so there is nothing to wire up for saving. The **Reflection journal** and **Guided writing workbook** starters work the same way.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **My learning journal** as the name and press **Create project**. Click the page so the Properties panel shows it, and change its **Name** to **Write**.
+
+## 2. Make the two variables
+
+Each text box needs a variable to keep what is typed in it.
+
+1. Open the **Variables** tab at the bottom of the window.
+2. Press **+ Add variable** and pick **Text**. A variable called **words** appears. Type **happened** over its name.
+3. Open **Options** under it and tick **Save as user data**. That is the whole of the saving: the value is put back before the project starts, and saved a moment after it changes.
+4. Do it again for a second **Text** variable called **learnt**, also ticked **Save as user data**.
+
+## 3. Lay out the page
+
+1. Pick the **Text** tool in the tool bar down the left, click near the top of the page and type \`My learning journal\`. Make it bigger in the Properties panel.
+2. Add another text under it, for the prompt: \`What happened this week?\`
+3. In the tool bar, click **Web** to open that group and pick **Input field**. Drag a wide box under the prompt, about 110 high.
+4. In the Properties panel's **Input** section, set **Type** to **textarea** so it takes several lines, and write a **Placeholder** such as \`Describe what happened...\`
+5. Still in the **Input** section, press **Bind to a variable…** and pick **happened**. The row now says the value is bound **⇄ Both**: typing writes the variable, and the variable fills the box.
+6. In the **Accessibility** section, type \`What happened\` in **Text alternative**, so a screen reader says what the box is for.
+7. Add a second prompt, \`What did you learn from it?\`, and a second text box bound to **learnt** the same way.
+
+## 4. Count the words
+
+A text layer can show a formula: anything between curly brackets is worked out as the project plays.
+
+1. Under the first box add a text: \`{wordCount(happened)} words\`. It reads **0 words** on the canvas and counts up as the learner types.
+2. Under the second box add \`{wordCount(learnt)} words\`.
+3. For a total, make a variable that works it out. In the **Variables** tab press **+ Add variable**, pick **Counter** and call it **totalWords**. Change **Starts as a value** to **Worked out** and type \`wordCount(happened) + wordCount(learnt)\` in the formula box. Tick **Keep up to date**, so it is worked out again whenever either answer changes.
+4. Add a text near the bottom of the page: \`{totalWords} words so far. Aim for about 100.\`
+
+## 5. Say welcome back
+
+\`userData.restored\` is how many saved variables came back, so it is more than 0 only for someone returning. Add a text under the title:
+
+\`{userData.restored > 0 ? "Welcome back. Your writing is just as you left it." : "Your writing is saved as you type, so you can come back to it."}\`
+
+## 6. Put the whole reflection together
+
+1. In the **Variables** tab add one more **Text** variable called **reflection**. Set it to **Worked out**, tick **Keep up to date**, and give it this formula (one line):
+
+   \`"WHAT HAPPENED\\n" + (happened.trim() || "(Not written yet)") + "\\n\\nWHAT I LEARNT\\n" + (learnt.trim() || "(Not written yet)")\`
+
+   \`\\n\` starts a new line, and \`||\` gives the words after it when nothing has been written. Leave **Save as user data** off: it is worked out from the two answers, which are saved already.
+2. In the **Layers** panel press **+ Add page**. Change the new page's **Name** to **My reflection**.
+3. Give it a title, **My reflection**, and a big text layer under it that says just \`{reflection}\`.
+4. Go back to **Write** and add a **Button** at the bottom right. Change its **Label** to **See my reflection**. In its **Interactions** section press **+ When clicked…**, choose **Go to a page…**, pick **My reflection** under **Which page** and press **Add**.
+5. On **My reflection**, add a **Back** button the same way, with **Go to the previous page**.
+
+## 7. Download it
+
+1. On **My reflection**, add one more button with the **Label** **Download as a file**.
+2. In its **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens on a **When clicked or hovered** node.
+3. Drag from the dot on its right edge into empty space. In the **Add and connect** menu, type \`download\` in **Find a node…** and pick **Download a file**.
+4. In the node's settings set **File name** to \`"my-reflection"\` (with the quotes: it is a formula), **Contents** to \`reflection\` and **Type** to **Text (.txt)**.
+
+## 8. Count it as done
+
+Click an empty part of the canvas, open **Results and progress**, and set **Complete when** to **Reaching an artboard**, then pick **My reflection**. A learner who gets to the end has completed it.
+
+## 9. Try it
+
+1. Press **Preview**. Type a few sentences in each box and watch the counts go up.
+2. Press **See my reflection**: both answers are there under their headings. Press **Download as a file** to get **my-reflection.txt**.
+3. Close the Preview with <kbd>Esc</kbd> and open it again. That is like a learner coming back: your writing is still in the boxes and the welcome line says so.
+4. **Forget saved data** in Preview's bar makes you a new learner again.
+
+On the **Link for StudyDesk** the writing is kept for each learner in each course, under their StudyDesk session, so it follows them to another computer. Anywhere else it stays in their browser.
+
+## Go further: choose when it saves
+
+**Save as user data** saves all the time, which suits a journal. If you would rather save at one moment, such as when the learner presses **Submit**, use two nodes instead (and untick **Save as user data**):
+
+1. On the **Write** page, in the **Interactions** tab, type \`before\` in **Search nodes** and click **Before activity loads**. It runs once as the activity opens, before anything shows.
+2. Join a **Load saved progress** node after it and tick **happened** and **learnt** under **Variables**. It goes on from **Loaded** when something came back and from **Nothing saved** on a first visit, so you can set up a fresh start there.
+3. On the button that should save, add a **Save progress** node with the same two variables ticked.
+
+Both ways save to the same place. See [Save user data and Load user data](results#save-user-data-and-load-user-data).
+
+## Make it yours
+
+- Add more prompts: one more **Text** variable ticked **Save as user data**, a box bound to it, a count line, and a part for it in the **reflection** formula.
+- Change **Type** in **Download a file** to **Markdown (.md)** or **Web page (.html)** for a nicer file. Put \`html(...)\` around anything the learner typed in a web page.
+
+## What you learned
+
+- A text box bound **⇄ Both** to a variable keeps what is typed in that variable.
+- **Save as user data** saves a variable for each learner and puts it back before the project starts. **Save progress** and **Load saved progress** do the same at moments you choose.
+- \`wordCount\` and other formulas work in text, and a **Worked out** variable with **Keep up to date** follows the variables it reads.
+- **Download a file** gives the learner their work as a file.
+
+**Next:** more on saving in [Save as user data](variables#save-as-user-data) and [Results and progress](results). The formula helpers, \`wordCount\` among them, are in [Expressions](expressions#helpers). Saving reports and pictures is in [Download a file](sensors#download-a-file).`
+  }
+};
+const __vite_glob_0_4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$9
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$8 = {
+  order: 24,
+  level: "intermediate",
+  minutes: 20,
+  example: "tut-label",
+  topic: {
+    id: "tutorial-label",
+    title: "Label the diagram",
+    group: "Build it",
+    summary: "A picture with empty spots the learner drags labels onto, checked spot by spot, with a text alternative so it works without seeing the picture.",
+    keywords: "tutorial label labels diagram picture image drag drop slots drop zones spots parts plant alt text text alternative accessibility matching remove auto layout move",
+    body: `You will make a labelled diagram: a picture of a plant with four empty spots, and a pile of labels for the learner to drag onto them. One label belongs nowhere. **Check answer** marks each spot on its own. It is a matching question whose slots you move onto the picture, so the marking, tries and keyboard use all come with it. It takes about twenty minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Label the diagram**. **Play** runs it and **Make my copy** gives you your own copy. Its diagram is drawn with shapes, so it needs no picture file.
+
+Do [Drag and drop matching](tutorial-drag-match) first: this tutorial starts from the same question. You need a picture with four parts to label. Any picture of a plant will do, or use a diagram from your own course.
+
+## 1. Make a project and add the question
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Parts of a plant** as the name and press **Create project**.
+2. In the tool bar, open the **Web** group, click **Add question** and pick **Matching (drag and drop)**.
+
+## 2. Write the labels and the spots
+
+Each pair is a label (the term the learner drags) and a spot (what it matches).
+
+1. Replace the **Prompt** with \`Drag each label onto its part of the plant.\`
+2. Change the four pairs:
+   - \`Flower\` and \`Spot 1, top left\`
+   - \`Leaf\` and \`Spot 2, middle right\`
+   - \`Stem\` and \`Spot 3, middle left\`
+   - \`Roots\` and \`Spot 4, bottom right\`
+3. Under **Extra terms**, press **+ Add extra term** and type \`Bark\`.
+
+The spot's words won't show on the page by the end, but a screen reader says them when a label is dropped there. So say where the spot is, not what goes in it.
+
+## 3. Make room for the picture
+
+1. With **Question 1** selected, set **X** to **40** and **W** to **720** in the **Layer** section. The card gets wider.
+2. In the **Layers** panel, open **Question 1** and then **Matching** with their arrows, and click **Matches**. It is the column of slots on the right.
+3. In its **Auto layout** section, press **Remove auto layout**. The slots stay where they are, but now each **Match** row can be moved anywhere.
+4. Set the height of **Matches**, **H**, to **300**.
+
+## 4. Put the picture in
+
+1. Drop your picture file on the canvas (or use the **Image** tool).
+2. In the **Layers** panel, drag the picture's row onto the middle of the **Matches** row, so it goes inside it.
+3. Right-click the picture and choose **Order**, then **Send to back**. It goes behind the slots.
+4. Set its **X** and **Y** to **0**, **W** to **482** and **H** to **300**, so it fills **Matches**. If changing **W** changes **H** as well, click the link between them first.
+5. In its **Accessibility** section, type a **Text alternative** that says where each part is: \`A flowering plant. The flower is at the top, the leaf grows to the right halfway down, the stem runs down the middle, and the roots spread under the ground at the bottom.\`
+
+With that and the spot names, someone who can't see the picture can still do the activity from the keyboard.
+
+## 5. Cut each row down to its slot
+
+Each **Match** row is the spot's words (**Definition**), the dashed **Slot**, and a **Match result** line that says ✓ or ✗ after the question finishes. On a picture you only want the slot.
+
+1. In the **Layers** panel, open **Match 1** to **Match 4** and their **Match line** rows. Click the first **Definition**, <kbd>Ctrl</kbd>+click the other three, and press <kbd>Delete</kbd>.
+2. Click **Match 1** and <kbd>Ctrl</kbd>+click **Match 2**, **Match 3** and **Match 4**. Set **W** to **170**, the width of a slot.
+3. Click the first **Match result** and <kbd>Ctrl</kbd>+click the other three. In the **Layout item** section, set the first box of **Inset from the frame** (left) to **0**, so each result sits under its slot.
+
+## 6. Move the slots onto the picture
+
+Select **Match 1** and drag it on the canvas to the empty place beside the flower. Do the same for the others: **Match 2** beside the leaf, **Match 3** beside the stem and **Match 4** below the ground near the roots.
+
+The example's diagram uses these places, if you'd like to type them in as **X** and **Y**:
+
+| Row | X | Y |
+|---|---|---|
+| Match 1 | 20 | 24 |
+| Match 2 | 292 | 112 |
+| Match 3 | 20 | 150 |
+| Match 4 | 292 | 220 |
+
+Leave room under each slot for its result line, and keep the slots inside the picture.
+
+## 7. Marking and feedback
+
+1. Under **Marking**, set **Points** to **4** and **Tries** to **3**. **Part marks** is already ticked.
+2. In **Hints**, replace the sample with \`The roots are the only part under the ground.\`
+3. Change the feedback lines:
+   - **Right**: \`Every label is in the right place. Well done!\`
+   - **Wrong**: \`Not yet. Look at where each spot points.\`
+   - **Partly right**: \`Some are right, but not all. Move a few and check again.\`
+   - **Out of tries**: \`Out of tries. Each spot now shows the label that belongs there.\`
+
+## 8. Try it
+
+1. Press **Preview** at the top right.
+2. Drag the labels onto the spots, leaving one wrong, and press **Check answer**. The feedback says how many are right, such as *3 of 4 matched correctly*.
+3. Use your tries up. The question finishes: each spot is marked ✓ Right or ✗ Wrong, and a wrong one says which label belongs there.
+4. Try it with the keyboard: <kbd>Tab</kbd> to a label, <kbd>Space</kbd> to pick it up, the arrow keys to move between the spots and <kbd>Space</kbd> to drop it.
+
+Press <kbd>Esc</kbd> to close the Preview.
+
+## Go further
+
+- **Lines from the spots.** Draw a line from each slot to its part with the **Pen** tool, inside **Matches** and behind the slots. Set each line's **Role** to **Decorative (hidden from screen readers)** in its **Accessibility** section, since the text alternative already says where everything is.
+- **A ready-made one.** The **Label the diagram** starter (**Templates**, **Built-in**) has six spots on a placeholder picture, with a results page.
+
+## What you learned
+
+- A labelled diagram is a matching question whose slots are moved onto a picture. **Check answer** reads which slot each label is in, wherever the slot sits.
+- **Remove auto layout** frees a frame's layers to go anywhere, and **Send to back** puts the picture behind them.
+- The picture's **Text alternative** and the spot names in **What it matches** make the activity usable without seeing the picture.
+
+**Next:** see [Accessibility](accessibility) for text alternatives and the keyboard, and [Drag and drop](drag-and-drop) for drop zones on any layer. Every question type is in [Questions and quizzes](question-kit).`
+  }
+};
+const __vite_glob_0_5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$8
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$7 = {
   order: 10,
   level: "beginner",
   minutes: 10,
@@ -10456,11 +11097,777 @@ The card is made of ordinary layers, so restyle it like anything else. The **Res
 **Next:** more question types are in [Questions and quizzes](question-kit). To turn a list of questions into a quiz in one go, see [Pasting questions in](paste-questions). How results reach StudyDesk is in [Results and progress](results).`
   }
 };
-const __vite_glob_0_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$7
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$6 = {
+  order: 56,
+  level: "intermediate",
+  minutes: 20,
+  example: "tut-microphone",
+  topic: {
+    id: "tutorial-microphone",
+    title: "Speaking practice with the microphone",
+    group: "Build it",
+    summary: "A one minute talk the learner records with one button, a countdown that ends the take, playback, and a slider to rate how it went.",
+    keywords: "tutorial microphone record recording voice speaking practice oral talk play back playback countdown timer clock consent permission sensors start recording stop recording play recording rate self assessment",
+    body: `You will make a speaking practice page. The learner reads a prompt, presses **Start my talk** and speaks for up to a minute while a countdown runs. The recording stops by itself when the time is up, **Play it back** lets them hear it, and a slider asks how confident they sounded. It takes about twenty minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Speaking practice with the microphone**. **Play** runs it and **Make my copy** gives you your own copy.
+
+Recordings stay on the learner's device, in the page, and are gone when they leave. Nothing is uploaded or marked. For a recording you need to mark, use the Moodle assignment's own recorder.
+
+## 1. Make a project and turn the microphone on
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Speaking practice** as the name and press **Create project**.
+2. Click an empty part of the canvas, away from the page, so the Properties panel shows the project. Open **Microphone and camera**.
+3. Tick **Microphone**. A project can only use what is ticked here.
+4. In **What it is used for**, type \`record your one minute talk so you can play it back and rate it\`. It finishes the sentence learners read before they are asked.
+5. Set **Longest recording (seconds)** to **90**, a little over the minute.
+
+The box under it, **What learners are asked**, shows the consent screen exactly as learners will see it, with its three buttons: **Continue**, **Not now** and **Do not use my microphone or camera**.
+
+## 2. Two variables
+
+Open the **Variables** tab at the bottom. Press **+ Add variable**, pick **Counter**, name it \`left\` and set its **Value** to 60. Add another **Counter** called \`confidence\` with the **Value** 3.
+
+## 3. The page
+
+1. Press <kbd>T</kbd> for the **Text** tool and click near the top left. Type \`Talk for one minute\` and press <kbd>Escape</kbd>. Make it large and bold.
+2. Add a second text under it with the prompt: \`Explain to a friend why sleep matters for learning. Give one reason and one example.\`
+3. Add a text for the clock: \`{left} seconds left\`. Anything in braces is worked out, so it shows the number. Name it **Clock** and make it big.
+4. Press <kbd>B</kbd> and drag a button under the clock. **Label** it **Start my talk** and **Name** it **Talk button**.
+5. Add a second button beside it, **Label** **Play it back**, **Name** **Play button**.
+6. Under the buttons add a small text with just \`{mediaMessage}\`. If the microphone can't be used it says why in plain words, and otherwise it is empty.
+
+## 4. One button that records and stops
+
+The **Talk button** starts the take and, pressed again, stops it. Its label should say so.
+
+1. Select **Talk button**. In **Data bindings** press **+ Add binding** and pick **Button label**. Press **Formula** and type:
+
+\`\`\`
+recordings.talk.state == "recording" ? "Stop" : recordings.talk.hasRecording ? "Record again" : "Start my talk"
+\`\`\`
+
+\`talk\` is the name you will give the recording. \`recordings.talk.state\` says what it is doing and \`hasRecording\` whether there is a take yet.
+
+2. In its **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens with a **When clicked or hovered** node.
+3. Drag from the node's output into empty space and choose **Start recording** (type \`record\` to find it). Set **Do** to **Start or stop** and **Recording name** to \`talk\`. Leave **Record** on **Sound from the microphone** and **Quiet other sounds first** ticked.
+
+**Start recording** has three outputs: **Recording** (it started), **Recorded** (it was pressed while recording, so it stopped) and **Could not start**.
+
+## 5. The countdown
+
+1. Drag from **Recording** into empty space and choose **Countdown / clock**. Set **Variable** to **left**, **Do** to **Start**, **Counts** to **Down (seconds left)** and **Seconds** to \`60\`.
+2. Drag from **Could not start** onto the same **Countdown / clock** node. A learner who said no, or has no microphone, still gets the timed talk: they talk to the room instead.
+3. Drag from **Recorded** into empty space and choose **Countdown / clock** again. Set **Variable** **left**, **Do** **Reset**, **Seconds** \`60\`. Stopping early puts the clock back.
+4. From the first countdown's **Time up** output, add **Stop recording** with **Recording name** \`talk\`. When the minute is up the take ends.
+
+The page around the project also shows a recording bar with its own **Stop**, which always works. To put the clock back when that is used too, add **When the microphone or camera is used** from **Search nodes** on the left, set **When** to **A recording is ready** and **Recording name** to \`talk\`, and join it to another **Countdown / clock** set to **Reset**.
+
+## 6. Play it back
+
+1. Select **Play button**. Bind its **Visible** to \`recordings.talk.hasRecording\` (**+ Add binding**, **Visible**, **Formula**, then **Edit as formula**), so it only shows once there is something to play.
+2. Press **+ On click (empty)**, drag from the node's output and choose **Play recording**. Set **Do** to **Play** and **Recording name** to \`talk\`.
+
+The recording plays through the project's own sound, so the learner's sound button and volume apply.
+
+## 7. Rate it
+
+1. Add a text: \`How confident did you sound?\`
+2. Open the **Web** group in the tool bar, click **Input field** and drag a box under the text. In the **Input** section set **Type** to **range**, **Min** to 1, **Max** to 5 and **Step** to 1.
+3. Press **Bind to a variable…** and pick **confidence**. Moving the slider now sets \`confidence\`, both ways.
+4. Add a text beside it: \`{confidence} out of 5\`.
+
+Select the slider and fill in **Text alternative** in its **Accessibility** section, such as *How confident did you sound, 1 to 5*, so a screen reader says what it is for.
+
+## 8. Try it
+
+1. Press **Preview**. Preview has a pretend microphone, since a real one needs the page the project is shared in.
+2. Press **Start my talk**. The clock counts down and the button says **Stop**. A small *Simulated microphone (Preview)* note shows while it records.
+3. Press **Stop**, then **Play it back** to hear the pretend take.
+4. Change the list above the preview from **Microphone and camera: Works** to **Microphone and camera: Denied by the learner**. Press **Start my talk** again: the clock still runs, and the status line says why nothing is recorded.
+
+To try your real microphone, share the project with **In a StudyDesk page, and keep learners' results** (see [Publishing and sharing](tutorial-publish)) and open it in the course. The plain share link can't use a microphone at all, and the StudyDesk page's iframe must have \`allow="microphone; camera"\`, which StudyDesk pages keep.
+
+## Make it yours
+
+- **A model answer.** Add a **Play sound** of a model talk before the learner's turn, so they can compare.
+- **Preparation time.** Add a **Get ready** button that starts a 30 second **Countdown / clock** on a new \`prep\` variable, and a text showing \`{prep}\`. Recording only starts from a real tap, so the learner still presses **Start my talk** when the time is up.
+- **Keep the rating.** Tick **Remember** on \`confidence\` in the Variables tab, under **Options**, so it is there next time.
+
+## What you learned
+
+- **Microphone and camera** in the project settings declares the microphone and writes the consent screen.
+- **Start recording** with **Start or stop** makes one button record and stop, and **Could not start** keeps the activity working without a microphone.
+- **Countdown / clock** runs the timer, and its **Time up** output ends the take with **Stop recording**.
+- **Play recording** plays the take back; \`recordings.talk\` tells bindings what it is doing.
+
+**Next:** every microphone, camera and photo node is in [Microphone, camera and photos](sensors), with what learners see and what the page needs. More on the timer: [Interaction node reference](interaction-nodes).`
+  }
+};
+const __vite_glob_0_7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$6
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$5 = {
+  order: 23,
+  level: "intermediate",
+  minutes: 12,
+  example: "tut-order",
+  topic: {
+    id: "tutorial-order",
+    title: "Put the steps in order",
+    group: "Build it",
+    summary: "Six shuffled steps the learner moves up and down, from the mouse or the keyboard, checked against the right order with part marks, and restyled in one go.",
+    keywords: "tutorial order ordering sequence steps put in order arrange reorder shuffle move up down keyboard right order part marks restyle repeater list process",
+    body: `You will make an ordering question: the steps for making a cup of tea, dealt in a shuffled order, for the learner to put right. Each step has an up and a down button, so it works from the keyboard as well as the mouse. **Check answer** compares the list with the right order and gives a point for each step in its place. Then you restyle all six steps by changing one. It takes about twelve minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Put the steps in order**. **Play** runs it and **Make my copy** gives you your own copy.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Make a cup of tea** as the name and press **Create project**.
+
+## 2. Add the question
+
+1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
+2. Click **Add question** and pick **Put in order**.
+
+A card called **Question 1** appears with four steps of the water cycle, each with **↑** and **↓** buttons. It is selected and the **Question** section is open in the Properties panel.
+
+## 3. Write the steps in the right order
+
+The list in the **Question** section is always the **right** order. The learner never sees it that way: **Shuffle** is ticked, so the steps are dealt in a different order each time, and never already right.
+
+1. Replace the **Prompt** with \`Put the steps for making a cup of tea in order.\`
+2. Change the four items to the first four steps, in order: \`Boil the water\`, \`Put a tea bag in the cup\`, \`Pour the hot water in\`, \`Let it brew for three minutes\`.
+3. Press **+ Add item** and type \`Take the tea bag out\`. Press it again and type \`Add milk if you like\`.
+
+The arrows beside an item move it earlier or later in the list, which changes the right order. **×** removes an item.
+
+## 4. Marking, hints and feedback
+
+1. Under **Marking**, set **Points** to **6** and **Tries** to **2**. **Part marks** is already ticked, so each step in its right place is worth one point: four in place scores 4.
+2. In **Hints**, type \`You can't brew anything until the water is hot.\`
+3. Change the feedback lines:
+   - **Right**: \`That's the order. Enjoy your tea!\`
+   - **Wrong**: \`Not yet. Think about what has to happen first.\`
+   - **Partly right**: \`Some steps are in the right place, but not all. Move a few and check again.\`
+   - **Out of tries**: \`Out of tries. Here is the right order.\`
+4. Leave **Show the right answer when finished wrong** ticked. When the tries run out, the steps move into the right order and the ones that were out of place are marked.
+
+## 5. Restyle every step at once
+
+The steps are one **Item** layer repeated once for each step, so changing that one layer changes all six.
+
+1. At the bottom of the **Question** section, under **Restyle a part**, press **Option**. It selects the Item layer.
+2. In the **Frame** section set **Radius** to **26**. Every step becomes a pill.
+3. Press **Question 1** in the **Layers** panel to go back, and under **Restyle a part** press **Option text**. Set its **Weight** to **600**. Every step's words become bolder.
+
+Leave the fill colour alone: it is set by the question, so a step can turn green or red when it is marked. Change the font, size, radius, padding and shadow as much as you like.
+
+## 6. Try it
+
+1. Press **Preview** at the top right. The steps are shuffled.
+2. Move them with **↑** and **↓** until you think they are right, and press **Check answer**. If some are out of place the **Partly right** feedback shows.
+3. Now use the keyboard: press <kbd>Tab</kbd> until a **↑** or **↓** button is outlined (a screen reader hears *Move Boil the water up*), and press <kbd>Enter</kbd> or <kbd>Space</kbd> to move that step.
+4. Check again with a step still out of place. That was the last try: the steps jump into the right order, the ones you had in the wrong place are marked, and the score shows how many you had right.
+
+**Try again** deals the steps again. Press <kbd>Esc</kbd> to close the Preview.
+
+## Go further
+
+- **A second question and a total.** Add a page with **+ Add page** at the bottom of the **Layers** panel, and add another question on it. Every project has a built-in \`quiz\` that adds the questions up: a text layer reading \`You scored {quiz.score} of {quiz.max}\` shows the total for every question in the project. See [The whole quiz](question-kit#the-whole-quiz).
+- **A timeline instead.** The **Interactive timeline** starter (**Templates**, **Built-in**) shows events in order for the learner to explore, rather than to sort.
+
+## What you learned
+
+- An ordering question's list is the right order. The learner gets it shuffled and moves each step with its **↑** and **↓** buttons, which are real buttons, so the keyboard works.
+- **Part marks** count the steps in their right place, and **Show the right answer when finished wrong** puts them in order at the end.
+- The steps are a repeated layer: restyle the one **Item** and they all follow.
+
+**Next:** put labels on a picture in [Label the diagram](tutorial-label). How repeated layers work is in [Repeaters](repeaters), and every question type is in [Questions and quizzes](question-kit).`
+  }
+};
+const __vite_glob_0_8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$5
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$4 = {
+  order: 22,
+  level: "intermediate",
+  minutes: 12,
+  example: "tut-sort",
+  topic: {
+    id: "tutorial-sort",
+    title: "Sort into groups",
+    group: "Build it",
+    summary: "Six cards to drag into two labelled groups, each drop answered as it lands, then all of them checked together with a count of how many are right.",
+    keywords: "tutorial sort sorting categorise categorize groups group boxes drag drop cards items belongs in drop feedback right wrong count part marks renewable energy",
+    body: `You will make a sorting activity: six energy sources to drag into two groups, **Renewable** and **Non-renewable**. Each group box holds as many cards as you drop in it. As each card lands the learner is told whether it fits, and **Check answer** then marks all of them together and says how many are right. It takes about twelve minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Sort into groups**. **Play** runs it and **Make my copy** gives you your own copy.
+
+If you haven't made a question before, [Drag and drop matching](tutorial-drag-match) is a gentler start. This one works the same way, except a box holds several cards.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Energy sort** as the name and press **Create project**.
+
+## 2. Add the question
+
+1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
+2. Click **Add question** and pick **Categorise (drag into groups)**.
+
+A card called **Question 1** appears with two group boxes, **Mammals** and **Birds**, and four animals under them to drag. It is selected and the **Question** section is open in the Properties panel.
+
+## 3. Name the groups
+
+1. Replace the **Prompt** with \`Drag each energy source into the group it belongs to.\`
+2. The groups are listed first, one box each. Change **Mammals** to \`Renewable\` and **Birds** to \`Non-renewable\`. The headings in the boxes change as you type.
+
+**+ Add group** adds another box (up to six). With three groups the boxes share the width of the card.
+
+## 4. Write the cards
+
+Under the groups is one entry for each card: its words, and **Belongs in**, the group it is right in.
+
+1. Change the four cards to \`Solar\`, \`Wind\`, \`Coal\` and \`Oil\`. The first two already belong in **Renewable** and the last two in **Non-renewable**, because the animals they replace did.
+2. Press **+ Add item** and type \`Hydro\`. A new card belongs in the first group, which is right for Hydro.
+3. Press **+ Add item** again and type \`Natural gas\`. Set its **Belongs in** to **Non-renewable**.
+4. Under each card is **Feedback if put in the wrong group (optional)**. Give the two that are easiest to get wrong a reason:
+   - Hydro: \`Hydro runs on flowing water, which rain keeps topping up.\`
+   - Natural gas: \`Natural gas took millions of years to form, so once it is burnt it is gone.\`
+
+The new cards appear under the boxes as you add them.
+
+## 5. Answer each drop as it lands
+
+Tick **Say right or wrong as each item is dropped**.
+
+Now each drop answers straight away, in the feedback line and to screen readers: *Solar goes in Renewable. Right.* A card dropped in the wrong group says its own feedback from step 4, or *Coal does not go in Renewable. Try another group.* if it has none. This does not use a try, and the learner can still move the card. **Check answer** is what marks the activity.
+
+Leave it unticked when the sort is a test and the learner should find out only at the end.
+
+## 6. Marking, hints and feedback
+
+1. Under **Marking**, set **Points** to **6** and **Tries** to **2**. **Part marks** is already ticked, so each card in the right group is worth one point.
+2. In **Hints**, replace the sample with \`Ask: will it run out if we keep using it?\`
+3. Change the feedback lines:
+   - **Right**: \`All six are in the right group. Well done!\`
+   - **Wrong**: \`Not yet. Think about which ones can run out.\`
+   - **Partly right**: \`Some are right, but not all. Move a few and check again.\`
+   - **Out of tries**: \`Out of tries. Where each one goes is listed below.\`
+
+The question adds the count to the feedback by itself, such as *4 of 6 in the right group*, and the reason of a card that ended up in the wrong group.
+
+## 7. Try it
+
+1. Press **Preview** at the top right.
+2. Drag **Solar** into **Renewable**: the feedback says it is right. Drag **Natural gas** into **Renewable**: its own reason shows.
+3. Put the rest where they belong, leave Natural gas where it is, and press **Check answer**. It says *Some are right* with *5 of 6 in the right group*.
+4. Check once more without moving it. That was the last try: the question finishes, the cards are marked ✓ or ✗ and stop moving, and a line under the cards says where Natural gas goes.
+5. Try it with the keyboard: <kbd>Tab</kbd> to a card, <kbd>Space</kbd> to pick it up, the arrow keys to choose a group and <kbd>Space</kbd> to drop it.
+
+**Try again** puts the cards back. Press <kbd>Esc</kbd> to close the Preview.
+
+## Go further
+
+Open the **Interactions** tab. There is one **Item dropped in a group** node for each group, made when you ticked the box in step 5. It has a *right* and a *wrong* output, so you can add your own steps after it: a sound for a right drop, or a **Set variable** that adds 1 to a \`misses\` variable on *wrong*, to say on a results page how many wrong drops it took. The **Sort into groups** starter (**Templates**, **Built-in**) counts wrong drops that way.
+
+## What you learned
+
+- A group box is a drop zone with no limit, so it holds any number of cards, and every box takes every card. Whether it is right is for **Check answer** to say.
+- **Belongs in** sets the right group, and a card's own feedback explains a wrong one.
+- **Say right or wrong as each item is dropped** answers each drop without using a try, through an **Item dropped in a group** node per group.
+
+**Next:** put the steps of a process in order in [Put the steps in order](tutorial-order). More about categorise questions is in [Questions and quizzes](question-kit), and about drop zones in [Drag and drop](drag-and-drop).`
+  }
+};
+const __vite_glob_0_9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$4
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$3 = {
+  order: 57,
+  level: "beginner",
+  minutes: 15,
+  example: "tut-sound",
+  topic: {
+    id: "tutorial-sound",
+    title: "Sound effects and music across pages",
+    group: "Build it",
+    summary: "Music that starts on the first page and keeps playing on the next, a sound effect on a button, a sound on or off button and a button that stops the music.",
+    keywords: "tutorial sound sounds audio music soundtrack background music effect click sound ding play sound stop sound mute unmute sound off sound on across pages carry on loop",
+    body: `You will make two pages. The first has a **Start** button that starts some music and moves on. The music keeps playing on the second page, where one button plays a sound effect, one turns all sound on or off, and one stops the music. It takes about fifteen minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Sound effects and music**. **Play** runs it and **Make my copy** gives you your own copy. Its two sounds are short made-up tones, so swap them for real ones.
+
+You need two sound files on your computer (\`.mp3\`, \`.wav\` or \`.ogg\`): a short sound effect, such as a ding or a click, and a piece of music you are allowed to use. Every step here is done from the Properties panel except one, the sound on or off button, which takes one node in the **Interactions** graph.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Sound tour** as the name and press **Create project**. The editor opens with one page called **Home**.
+
+## 2. Make the first page
+
+1. Press <kbd>T</kbd> for the **Text** tool, click near the top left of the page and type \`Sound tour\`. Press <kbd>Escape</kbd> to finish. Make it big in the Properties panel if you like.
+2. Add a second line under it the same way: \`Press Start to hear the music. It keeps playing on the next page.\`
+3. Press <kbd>B</kbd> for the **Button** tool and drag a button under the text. In the Properties panel change **Label** to **Start** and **Name** to **Start button**.
+
+## 3. Start the music
+
+1. With **Start button** selected, scroll the Properties panel to its **Interactions** section and press **+ When clicked…**.
+2. In the list, under **Motion and sound**, choose **Play music that carries on across pages**.
+3. Under it, **Which music** says *none in this project yet*. Press **+ Add a new sound…** and pick your music file. It is added to the project and chosen.
+4. Press **Add**.
+
+That one choice made a **Play sound** node with **Soundtrack: keep playing on the next pages** and **Loop** both on. A soundtrack is the project's music: it carries on when the page changes, goes quiet while any narration plays over it, and goes round until something stops it.
+
+## 4. Move on to the next page
+
+1. Press **+ When clicked…** on **Start button** again. A layer can do more than one thing when it is clicked.
+2. Choose **Go to the next page** and press **Add**. Leave **How the page changes** and **Speed** as they are.
+
+The **Interactions** section now has two sentences, one for the music and one for the page. There is no next page yet, so make it.
+
+## 5. Add the second page
+
+1. At the bottom of the **Layers** panel press **+ Add page**. A new page appears beside **Home** and is selected.
+2. In the Properties panel change its **Name** to **Sounds**.
+3. Give it a heading with the **Text** tool: \`Sounds\`, and a line under it: \`Press Ding for a sound effect. The music carries on from the first page until you stop it.\`
+
+## 6. A sound effect
+
+1. Draw a button on **Sounds**. Set **Label** to **Ding** and **Name** to **Ding button**.
+2. Press **+ When clicked…**, choose **Play a sound**, and under **Which sound** press **+ Add a new sound…** and pick your short sound file. Check **Which sound** shows it, not the music.
+3. Press **Add**.
+
+**Play a sound** plays the file once, each time the button is pressed. It does not stop the music: the two play together.
+
+## 7. Stop the music, and go back
+
+1. Draw another button. **Label**: **Stop the music**, **Name**: **Stop button**.
+2. Press **+ When clicked…**, choose **Stop the music** and press **Add**. It fades the soundtrack out, and stops any other sound that is still playing.
+3. Draw one more button near the bottom. **Label**: **Back**, **Name**: **Back button**. Give it **+ When clicked…**, **Go to the previous page**, **Add**.
+
+Going back to **Home** and pressing **Start** again does not start a second copy of the music. A soundtrack that is already playing just carries on.
+
+## 8. A sound on or off button
+
+The list under **+ When clicked…** has no mute, so this one is built in the graph. It takes one node.
+
+1. Draw a button beside **Ding**. **Label**: **Sound on or off**, **Name**: **Sound button**.
+2. In its **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens at the bottom with a new **When clicked or hovered** node, set to this button, with nothing joined to it.
+3. Find the small dot on the right edge of that node. Drag from it into empty space and let go. A menu opens, headed **Add and connect**.
+4. Type \`sound\` in **Find a node…** and choose **Captions and sound**. It appears where you let go, already joined.
+5. Click the new node. In its settings on the right, set **Do** to **Sound: flip**.
+
+**Sound: flip** turns every sound in the project off for this learner, the music, the effects and any narration, and turns them back on the next time. The learner's browser remembers their choice, so a learner who wants silence gets it next time too.
+
+## 9. Try it
+
+1. Press **Preview** at the top right. With **From the start artboard** chosen in its bar it starts on **Home**. Press **Start**: the music starts and the **Sounds** page shows.
+2. Press **Ding**. The sound plays over the music.
+3. Press **Sound on or off**. Everything goes quiet. Press it again and the music is back.
+4. Press **Back**, then **Start**. The music carries on without starting again.
+5. Press **Stop the music**. It fades out.
+
+Press <kbd>Esc</kbd> to close the Preview.
+
+> Browsers won't play sound until the learner has clicked or pressed a key on the page. That is why the music starts from a button. A sound started before then waits, and the player shows **Sound is waiting. Press to start it**.
+
+## Make it yours
+
+- **Change a sound for a better one** without touching a button: open the **Assets** tab, and on the file press the arrow (**Replace with a new version of the file**). Every button that plays it plays the new one.
+- **Quieter music.** Click the **Play sound** node in the graph and set **Volume (0-1)** to \`0.4\`, so voices and effects stand out over it.
+- **Credit the music.** If its licence asks for a credit, add it in the **Attributions** tab.
+- **A sound on every button.** A button can have a sound and something else: give **Back** a second **+ When clicked…** with **Play a sound**.
+
+## What you learned
+
+- **+ When clicked…** has **Play a sound**, **Play music that carries on across pages** and **Stop the music**, and each makes ordinary nodes in the graph.
+- A **soundtrack** keeps playing from page to page, and starting it again does not make a second copy.
+- **Stop sound** ends it with a fade.
+- A **Captions and sound** node set to **Sound: flip** is your own mute button.
+
+**Next:** everything the **Play sound** node can do (speed, a sound from a list item, what is playing now) is in [Sound](captions#sound) and [Soundtrack music](captions#soundtrack-music). Sound that follows an animation, with captions, is in [Narration, captions and transcript](captions).`
+  }
+};
+const __vite_glob_0_10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$3
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$2 = {
+  order: 51,
+  level: "intermediate",
+  minutes: 25,
+  example: "tut-survey-chart",
+  topic: {
+    id: "tutorial-survey-chart",
+    title: "A poll with a live chart",
+    group: "Build it",
+    summary: "Learners vote on one question, then see a bar chart of how the whole class answered, counted and anonymous.",
+    keywords: "tutorial poll survey vote chart bar results class shared responses anonymous counts everyone live refresh look again dropdown select studydesk",
+    body: `You will make a class poll: how do you usually get to campus? Each learner picks an answer and presses **Vote**, then sees a bar chart of how everyone in their class answered. Votes are counted and anonymous. It takes about twenty-five minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Poll with a live chart**. **Play** runs it and **Make my copy** gives you your own copy.
+
+The class's answers live in a **Shared responses** data source. The Vote button adds the learner's answer to it, and the chart reads the counts back out. There are three pages: a start page, the question, and the results.
+
+## 1. Make a project with three pages
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Class poll** as the name and press **Create project**. The editor opens with one page called **Home**.
+2. In the **Layers** panel, press **+ Add page** twice. You now have **Home**, **Page 2** and **Page 3**.
+3. Click **Page 2** in the Layers panel and change its **Name** in the Properties panel to **Vote**. Rename **Page 3** to **Results** the same way.
+
+## 2. Make the shared responses
+
+1. Open the **Data** tab at the bottom of the window.
+2. Press **+ Shared responses**. A data source called \`responses\` appears in the list with a **shared** badge, and its settings open beside it.
+3. Leave **Who sees it** on **Everyone in this class**.
+4. Set **Answers each** to **1**, so one person has one vote.
+5. Set **Look again** to **5**. While the results page is open it asks for the class's answers every five seconds.
+6. In **Sample answers**, type a few votes, one a line: \`Bus\`, \`Bus\`, \`Car\`, \`Walk\`, \`Train\`. Each line counts as one person. Only the canvas and Preview see them, so you can lay out the chart before anyone has voted.
+
+## 3. The start page
+
+1. Click **Home** in the Layers panel to open it.
+2. Press <kbd>T</kbd> for the **Text** tool, click near the top of the page and type \`Class poll\`. Make it big in the **Properties** panel.
+3. Add a second text under it: \`One question and one vote. Then see how the whole class answered.\`
+4. Add a third: \`Your vote is anonymous. The chart shows how many people chose each answer, never who chose it.\` Say this where people decide whether to take part. It is true of every Shared responses source: the page only ever gets counts.
+5. Press <kbd>B</kbd> for the **Button** tool and drag a button under the text. Change its **Label** to **Start**.
+6. With the button selected, press **+ When clicked…** in its **Interactions** section, choose **Go to the next page** and press **Add**.
+
+## 4. The question
+
+1. Open the **Vote** page. Add a text with the question: \`How do you usually get to campus?\`
+2. In the tool bar down the left, click **Web** to open that group and pick **Input field**. Drag a box under the question.
+3. In the **Input** section of the Properties panel, set **Type** to **select**. In **Options** type the answers, one per line: \`Bus\`, \`Train\`, \`Car\`, \`Bike\`, \`Walk\`.
+4. Beside **Variable**, press **Bind to a variable…** and choose **+ New variable…**. Call it \`choice\` and press **Create variable**. Whatever the learner picks is now in \`choice\`.
+5. Open the **Accessibility** section and type a **Text alternative**: \`How you usually get to campus\`.
+6. Add a button under the dropdown with the **Label** **Vote** and the **Name** **Vote button**.
+
+## 5. Send the vote
+
+The Vote button needs four things in a row, so build it in the **Interactions** graph.
+
+1. With **Vote button** selected, press **+ On click (empty)** in its **Interactions** section, then open the **Interactions** tab at the bottom. A **When clicked or hovered** node is there with nothing joined to it.
+2. Drag from the dot on its right edge into empty space and let go. In the **Add and connect** menu, type \`condition\` in **Find a node…** and choose **Check a condition**. Set its **Condition** to \`choice != ""\`, so nothing happens until an answer is picked.
+3. Drag from its **true** dot and add **Take back shared responses**. Set **Shared responses** to \`responses\` and leave **Answer** empty. It takes this learner's earlier vote out, if they had one, so voting again changes their vote instead of being refused.
+4. Drag from its output and add **Add to shared responses**. Set **Shared responses** to \`responses\` and **Answer** to \`choice\`.
+5. Drag from its **Added** dot and add **Go to a page**. Set **Go to** to **A chosen page** and **Page** to **Results**.
+
+> **Add to shared responses** goes on from **Not added** when the answer was refused: empty, a blocked word, or over the **Answers each** limit. Leave that dot unjoined here.
+
+## 6. The chart
+
+1. Open the **Results** page and add a heading text: \`How the class gets to campus\`.
+2. In the tool bar, click **Data** to open that group and pick **Chart**. Drag a wide box under the heading. It starts as a column chart of four made-up items.
+3. In the **Chart** section of the Properties panel:
+   - Set **Kind** to **Bar (sideways)**, so long answers have room.
+   - Set **Data** to \`responses.answers\`. That is the counted list, most votes first.
+   - Set **Label key** to \`text\` and **Value key** to \`count\`.
+   - Tick **Value labels**, so each bar says how many.
+
+   The preview under **Data** lists your sample answers with their counts, and the chart on the canvas draws them.
+4. Under the chart, add a text that counts the voters: \`{responses.people} people have voted so far.\` Anything in curly brackets is worked out as the page plays.
+5. Add a button with the **Label** **Change my vote**. Give it **+ When clicked…**, **Go to the previous page**.
+
+## 7. Try it
+
+1. Go back to **Home** and press **Preview** at the top right.
+2. Press **Start**, pick **Bike** and press **Vote**. The results page shows your sample answers as the class, plus your vote for Bike.
+3. Press **Change my vote**, pick **Bus** and vote again. Bike drops out and Bus goes up by one: **Take back shared responses** did its job.
+
+Press <kbd>Esc</kbd> to close the Preview.
+
+## 8. Use it with a class
+
+A real class only exists on the **StudyDesk learner page**: press **Share**, then **Share…**, choose **In a StudyDesk page, and keep learners’ results**, and put the **Link for StudyDesk** it gives you in your course. There each vote is kept under the learner's StudyDesk account and course, and everyone in the same course sees the same chart. Anywhere else (an exported file, an ordinary link) there is no class, so the chart stays empty.
+
+Set the data source up before you share. Its rules are fixed when the project is shared, and **Update to the latest version** does not pick up a changed Shared responses source.
+
+**How live is it?** The chart is not instant. The page asks for the class's votes again every **Look again** seconds (5 here, never less than 2), so a new vote shows up within a few seconds of being made.
+
+## Make it yours
+
+- **Show at** holds an answer back until that many people have given it. Set it to 3 or so for a small class, so one person's vote never shows on its own.
+- An answer nobody has chosen is not in \`responses.answers\`, so it has no bar. To show every option, even at zero, see [Charts](charts) for writing the list out in **Data**.
+- The data source's **What the class has said** list shows every answer by course, with **Hide**, **Remove** and **Clear this course**. Only the project's owner (or a power user) sees it.
+
+## What you learned
+
+- A **Shared responses** data source counts what a class adds, and never says who.
+- **Add to shared responses** and **Take back shared responses** put a learner's answer in and take it out again.
+- A **Chart** reads any list: here \`responses.answers\` with \`text\` and \`count\`, and it redraws as the counts come in.
+
+**Next:** every setting and where the answers are kept is in [Shared responses](shared-responses). More about the Chart layer is in [Charts](charts). To chart numbers the learner sets themselves, try [A what-if explorer](tutorial-whatif).`
+  }
+};
+const __vite_glob_0_11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$2
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$1 = {
+  order: 55,
+  level: "intermediate",
+  minutes: 25,
+  example: "tut-video-chapters",
+  topic: {
+    id: "tutorial-video-chapters",
+    title: "Interactive video with chapters and questions",
+    group: "Build it",
+    summary: "A video with chapter buttons that jump to each part, captions, and two questions that pause it at set times until they are answered.",
+    keywords: "tutorial video chapters chapter buttons seek jump cue cue points pause question interactive video captions subtitles vtt srt hold paused control video play",
+    body: `You will make a video lesson. Three chapter buttons under the video jump to each part, and at two set times the video pauses and a question appears over it. When the question is finished, **Continue the video** plays on. It takes about twenty-five minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Video with chapters and questions**. **Play** runs it and **Make my copy** gives you your own copy. It has no video in it: pick your own (step 2) and it works.
+
+You need a video file (an \`.mp4\` is safest) or a web address for one, and if you have them, captions for it as a WebVTT (\`.vtt\`) or SRT (\`.srt\`) file. This tutorial uses a short video about reading a research article, with chapters at 0, 35 and 75 seconds. Change the times to suit yours.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Video lesson** as the name and press **Create project**. The editor opens with one page called **Home**, 800 by 600.
+
+## 2. Add the video
+
+1. In the tool bar down the left, click **Media** to open the group, then click **Video**. Drag a box on the page.
+2. In the Properties panel change **Name** to **Clip**, and set **X** to 80, **Y** to 40, **W** to 640 and **H** to 360. That is where the questions will sit too.
+3. In the **Video** section, open the **Video** list and choose **+ Add a new video…** to pick your file. For a web address instead, leave it on **Use a URL** and paste the address into **URL**.
+4. A new video layer starts silent and playing by itself on a loop. Untick **Autoplay**, **Loop** and **Muted**, and tick **Controls** so the learner gets play, pause and the time bar.
+
+The video doesn't play on the editing canvas. It plays in **Preview**.
+
+## 3. Captions
+
+Further down the **Video** section, under **Captions**, press **Import…** and pick your \`.vtt\` or \`.srt\` file. A message says how many captions came in. Type the language in **Language**, such as \`en\`.
+
+Captions are what is said, for learners who can't hear it or would rather read. If you don't have a file yet, come back to this step before you share it. See [Captions](captions).
+
+## 4. Chapters
+
+Still in the **Video** section, under **Chapters**:
+
+1. Press **Add a chapter** three times.
+2. Fill in each one. **From** is the second it starts and **Title** is its name:
+   - **0**, \`Start with the abstract\`
+   - **35**, \`Skim the headings\`
+   - **75**, \`Read closely\`
+
+The video's own controls list the chapters in browsers that show them. The buttons you make next read the same list.
+
+## 5. Chapter buttons
+
+1. Press <kbd>B</kbd> for the **Button** tool and drag a button under the video. Set its **Label** to **Start with the abstract**, **Name** to **Chapter 1**, **X** to 80, **Y** to 416 and **W** to 200.
+2. Make two more beside it: **Skim the headings** (**Chapter 2**, X 300) and **Read closely** (**Chapter 3**, X 520), both at Y 416 and W 200.
+3. Select all three (<kbd>Shift</kbd>+click them in the **Layers** panel) and press <kbd>Ctrl</kbd>+<kbd>G</kbd> to group them. Name the group **Chapter buttons**.
+
+Now make each one jump to its chapter:
+
+1. Select **Chapter 1**. In its **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens with a **When clicked or hovered** node for the button.
+2. Drag from the dot on the right of that node into empty space and let go. In the **Add and connect** menu, type \`video\` and choose **Control video**.
+3. In the new node set **Video layer** to **Clip** and **Do** to **Go to a time (seconds)**. In **Seconds** type:
+
+\`\`\`
+layer("Clip").chapters[0].time
+\`\`\`
+
+That is the start of the first chapter (the list counts from 0). Move a chapter in step 4 and the button follows.
+
+4. Drag from that node's output into empty space again, choose **Control video**, set **Video layer** to **Clip** and **Do** to **Play**.
+5. Do the same for **Chapter 2** with \`chapters[1]\` and **Chapter 3** with \`chapters[2]\`.
+
+## 6. A variable for the open question
+
+Open the **Variables** tab at the bottom, press **+ Add variable** and pick **Counter**. Name it \`question\` and leave its **Value** at 0. It says which question is showing: 0 for none, 1 for the first, 2 for the second.
+
+## 7. Add the two questions
+
+1. Open the **Web** group in the tool bar, click **Add question** and pick **Multiple choice (one answer)**. A card called **Question 1** appears over the video, the same width.
+2. In the **Question** section, set the **Prompt** to \`What does the video say to read first?\` and the options to \`The abstract\`, \`The reference list\` and \`The last paragraph\` (press **×** on the fourth). Mark **The abstract** as the right one, tick **Shuffle** and set **Tries** to **2**. [A multiple choice question](tutorial-mcq) explains every setting.
+3. Add a second one the same way: \`Why skim the headings before reading closely?\`, with \`To see the structure and the main points\` (right), \`So you can skip the reading\` and \`To find the longest section\`.
+
+Now let each card show only at its turn:
+
+1. Select **Question 1** in the **Layers** panel. In **Data bindings**, press **+ Add binding** and pick **Visible**.
+2. Press **Formula**, then **Edit as formula**, and type \`question == 1\`.
+3. Do the same for **Question 2** with \`question == 2\`.
+
+Both cards fade to faint ghosts on the canvas, since \`question\` starts at 0. They are still there: pick them in the **Layers** panel to edit them. Bind **Chapter buttons** the same way, with \`question == 0\`, so the chapters are hidden while a question is open.
+
+## 8. Cue points that pause
+
+1. Select **Clip**. In the **Video** section, under **Cue points**, press **Add a cue** twice.
+2. Set the first cue's **At** to **30** and **Name** to \`q1\`, and tick **Pause the video here**.
+3. Set the second to **70**, \`q2\`, and tick **Pause the video here**.
+4. In **Data bindings** on **Clip**, press **+ Add binding** and pick **Hold paused (it will not play while true)**. Press **Formula**, then **Edit as formula**, and type \`question > 0\`. While a question is open, nothing starts the video, not even its own play button.
+
+Now show the question when a cue is reached:
+
+1. In the **Interactions** tab, type \`cue\` in **Search nodes** on the left and click **When a video reaches a cue point**. Set its **Video layer** to **Clip**.
+2. Drag from its output into empty space and choose **Change a value or counter**. Set **Variable** to **question**, **Do** to **Set to** and **Value** to \`event.index + 1\`.
+
+\`event.index\` is the cue's place in the list, counting from 0, so the first cue sets \`question\` to 1 and the second to 2.
+
+## 9. Continue the video
+
+1. Make one more button at **X** 80, **Y** 476, **W** 220. **Label** it **Continue the video** and **Name** it **Continue**.
+2. Bind its **Visible** (as in step 7) to:
+
+\`\`\`
+(question == 1 && q1_locked) || (question == 2 && q2_locked)
+\`\`\`
+
+\`q1_locked\` turns true when the first question is finished (right, or out of tries), so the button shows once the open question is done.
+
+3. Press **+ On click (empty)** on it and build this chain from the **When clicked or hovered** node:
+   - **Change a value or counter**: **Variable** **question**, **Do** **Set to**, **Value** \`0\`.
+   - **Wait**: **Milliseconds** \`40\`.
+   - **Control video**: **Video layer** **Clip**, **Do** **Play**.
+
+Setting \`question\` back to 0 hides the card and lets go of **Hold paused**. That happens on the next frame, which is what the short **Wait** is for: a **Play** any sooner is ignored.
+
+## 10. Try it
+
+1. Press **Preview**. Press play on the video.
+2. At 30 seconds it pauses and **Question 1** shows. The chapter buttons are gone, and the video's play button does nothing.
+3. Answer it. **Continue the video** appears. Press it and the video carries on.
+4. Press a chapter button and the video jumps there. Drag the time bar past 70 seconds and no question shows: only playing across a cue counts. Drag back before it and it is ready again.
+
+The **Variables (live)** list on the left of the Preview shows \`question\` changing. Press <kbd>Esc</kbd> to close.
+
+## Go further
+
+- **More questions.** Add a cue and a question card, and bind the card's **Visible** to its number. The cue flow needs nothing new.
+- **Where am I?** Add a binding to **Clip** with **Chapter showing (1 is the first, 0 before it)** going **Out →** to a new variable, and bind each chapter button's fill colour to light up the one playing.
+- **A score.** Each question has its own \`q1_score\`. A text layer with \`Score: {q1_score + q2_score} of 2\` adds them up, and **Report result** on each question sends them to the project's results. See [Results and progress](results).
+- **Descriptions.** Under **Descriptions (what is on screen)** add short lines a voice reads for learners who can't see the picture.
+
+## What you learned
+
+- A video layer holds its own **Chapters**, **Cue points** and **Captions**, all in the **Video** section.
+- **Control video** goes to a time and plays, and \`layer("Clip").chapters[0].time\` reads a chapter's start.
+- A cue ticked **Pause the video here** fires **When a video reaches a cue point**, and **Hold paused** keeps it paused until the question is done.
+
+**Next:** everything a video layer can do is in [Images, video and audio](images-media#cue-points-and-chapters). More on the question cards: [Questions and quizzes](question-kit). More on bindings: [Bindings](bindings).`
+  }
+};
+const __vite_glob_0_12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$1
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial = {
+  order: 52,
+  level: "intermediate",
+  minutes: 25,
+  example: "tut-whatif",
+  topic: {
+    id: "tutorial-whatif",
+    title: "A what-if explorer (sliders and formulas)",
+    group: "Build it",
+    summary: "A weekly budget with sliders for hours, pay and rent, and the totals and a chart worked out again as the learner drags.",
+    keywords: "tutorial what if explorer model simulation slider range input formula worked out keep up to date live variable chart budget money number format fmt decimals bind variable",
+    body: `You will make a what-if explorer for a student's week: how many hours of paid work, the pay per hour and the rent. As the learner drags a slider, the income, the spending, what is left over and a chart all change with it. There is not a single interaction to wire. It takes about twenty-five minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **What-if budget explorer**. **Play** runs it and **Make my copy** gives you your own copy.
+
+The model is made of **variables**. Three are inputs, each tied to a slider. Three more are **worked out** from the others with a formula, and are worked out again whenever an input changes. Text and the chart only read them.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Weekly budget** as the name and press **Create project**. The editor opens with one page called **Home**.
+
+## 2. The inputs
+
+1. Open the **Variables** tab at the bottom of the window.
+2. Press **+ Add variable** and choose **Counter**. A number variable called \`count\` appears. Type \`hours\` in its name box, and set its starting value (the number in the **Value** column) to **15**.
+3. Do the same three more times:
+   - \`pay\`, starting at **28** (dollars an hour);
+   - \`rent\`, starting at **220** (dollars a week);
+   - \`food\`, starting at **150** (food and bills a week). This one has no slider. It is a fixed part of the model you can change in one place.
+
+## 3. The worked out values
+
+1. Add one more **Counter** and call it \`income\`.
+2. In its **Value** column, change **Starts as a value** to **Worked out**. A formula box appears. Type \`hours * pay\` and press <kbd>Enter</kbd>.
+3. Tick **Keep up to date**. Now \`income\` is worked out again every time \`hours\` or \`pay\` changes, not only at the start. It is read only: nothing can set it by hand.
+4. Add two more the same way:
+   - \`spending\`, worked out as \`rent + food\`;
+   - \`leftover\`, worked out as \`income - spending\`.
+
+A worked out value can read other worked out values, so \`leftover\` follows both of the others.
+
+## 4. The sliders
+
+1. In the tool bar down the left, click **Web** to open that group and pick **Input field**. Drag a box near the top left of the page, about 320 wide and 32 high.
+2. In the **Input** section of the Properties panel, set **Type** to **range**. The box becomes a slider.
+3. Set **Min** to **0**, **Max** to **40** and **Step** to **1**.
+4. Beside **Variable**, press **Bind to a variable…** and choose \`hours\`. The slider jumps to 15. Dragging it now sets \`hours\`, and changing \`hours\` moves it: it is a two-way (**⇄ Both**) binding.
+5. Change its **Name** to **Hours slider**, and in the **Accessibility** section type a **Text alternative**: \`Hours of paid work a week\`. A slider has no words on it, so this is what a screen reader says.
+6. Make two more sliders under it the same way:
+   - **Pay slider**: **Min** 20, **Max** 40, **Step** 0.5, bound to \`pay\`;
+   - **Rent slider**: **Min** 100, **Max** 500, **Step** 10, bound to \`rent\`.
+
+## 5. Formulas in text
+
+Text can show a value as it changes: anything in curly brackets is worked out as the page plays.
+
+1. Press <kbd>T</kbd> for the **Text** tool and click just above the hours slider. Type \`Hours of paid work: {hours}\`.
+2. Above the pay slider: \`Pay per hour: \${fmt(pay, 2)}\`. **fmt** writes a number with a set number of decimals, so 28.5 shows as 28.50.
+3. Above the rent slider: \`Rent: \${rent} a week\`. Under it: \`Food and bills: \${food} a week\`.
+4. Under the sliders, three lines in bold:
+   - \`Income: \${fmt(income, 2, true)}\`
+   - \`Spending: \${fmt(spending, 2, true)}\`
+   - \`{leftover < 0 ? "Short by $" + fmt(-leftover, 2, true) : "Left over: $" + fmt(leftover, 2, true)}\`
+
+The third argument of **fmt**, \`true\`, puts a comma in every three digits. The last line picks its own words: when the week runs short it says so, instead of showing a minus sign.
+
+## 6. The chart
+
+1. In the tool bar, click **Data** to open that group and pick **Chart**. Drag a box on the right half of the page.
+2. In the **Chart** section, set **Data** to:
+
+   \`[{label: "Income", value: income}, {label: "Rent", value: rent}, {label: "Food and bills", value: food}, {label: "Left over", value: leftover}]\`
+
+   That is a list written out, one item per column, each reading a variable. The preview under **Data** shows the four items with today's numbers.
+3. Tick **A colour for each item** and **Value labels**.
+4. Set **Prefix** to \`$\` and **Decimals** to **0**, so each column says *$420* rather than *420*.
+5. In the **Accessibility** section, give the chart a **Text alternative**: \`Column chart of a week of income, rent, food and bills, and what is left over\`.
+
+## 7. Try it
+
+1. Press **Preview** at the top right.
+2. Drag the hours slider. The income line, the left over line and the Income and Left over columns change as you drag.
+3. Drag the rent up past 300. The last line says *Short by* and the Left over column drops below zero.
+4. Tab to a slider and use the arrow keys: it moves one **Step** at a time.
+
+The **Variables (live)** list on the left of the Preview shows all seven values changing. Press <kbd>Esc</kbd> to close the Preview.
+
+## Make it yours
+
+- **Change the model, not the page.** Swap the formulas in the Variables tab and every text and the chart follow. A savings goal, a dose by body weight or a break-even point all work the same way.
+- **Add an input.** Give \`food\` a slider of its own, or add a \`transport\` counter and make \`spending\` \`rent + food + transport\`.
+- **Colour the result.** In the left over line's **Data bindings**, press **+ Add binding**, pick **Text colour** and use a **Formula** such as \`leftover < 0 ? "#b00020" : "#1b5e20"\`.
+
+## What you learned
+
+- A slider is an **Input field** of **Type** **range**, bound to a number variable.
+- A variable that is **Worked out** with **Keep up to date** ticked recalculates whenever what it reads changes.
+- \`{...}\` in text shows a formula's value, and \`fmt(n, decimals, true)\` writes money neatly.
+- A **Chart** can read a list written out in its **Data**, and redraws as the variables change.
+
+**Next:** more about worked out values is in [Variables](variables), and every helper like **fmt** is in [Expressions](expressions). Chart settings are in [Charts](charts). To chart what a whole class says, try [A poll with a live chart](tutorial-survey-chart).`
+  }
+};
+const __vite_glob_0_13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   tutorial
 }, Symbol.toStringTag, { value: "Module" }));
-const mods$1 = /* @__PURE__ */ Object.assign({ "./mcq.ts": __vite_glob_0_0$1 });
+const mods$1 = /* @__PURE__ */ Object.assign({ "./blanks.ts": __vite_glob_0_0$1, "./context.ts": __vite_glob_0_1, "./data-source.ts": __vite_glob_0_2, "./drag-match.ts": __vite_glob_0_3, "./journal.ts": __vite_glob_0_4, "./label.ts": __vite_glob_0_5, "./mcq.ts": __vite_glob_0_6, "./microphone.ts": __vite_glob_0_7, "./order.ts": __vite_glob_0_8, "./sort.ts": __vite_glob_0_9, "./sound.ts": __vite_glob_0_10, "./survey-chart.ts": __vite_glob_0_11, "./video-chapters.ts": __vite_glob_0_12, "./whatif.ts": __vite_glob_0_13 });
 const BUILD_TUTORIALS = Object.entries(mods$1).filter(([file]) => !/\/index\.ts$/.test(file)).map(([, m]) => m.tutorial).filter(Boolean).sort((a, b) => a.order - b.order || a.topic.title.localeCompare(b.topic.title));
 const LEVELS = ["beginner", "intermediate", "advanced"];
 const levelName = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" };
