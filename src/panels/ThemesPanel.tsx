@@ -147,7 +147,7 @@ export function ThemesPanel() {
             Link colours to tokens
           </button>
         )}
-        <span className="themes-raw" title="Fills, strokes and text colours that are plain colours. They look the same in every theme. Imported files bring theirs in as plain colours, on purpose">
+        <span className="themes-raw" title="Page backgrounds, fills, strokes, text and shadow colours that are plain colours. They look the same in every theme. Imported files bring theirs in as plain colours, on purpose">
           {counts.raw} {counts.raw === 1 ? 'colour' : 'colours'} not following a theme
         </span>
       </div>

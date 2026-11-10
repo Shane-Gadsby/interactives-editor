@@ -413,6 +413,21 @@ div.cm-editor.cm-focused {
   white-space: nowrap;
   flex: none;
 }
+.bound-mark {
+  display: inline-flex;
+  vertical-align: -1px;
+  margin-left: 4px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  color: var(--text);
+  background: var(--bg);
+}
+.field.is-bound input:not([type='checkbox']):not([type='color']),
+.field.is-bound select,
+.field.is-bound textarea {
+  border-style: dashed;
+}
 .field-label.block {
   display: block;
   margin: 6px 0 3px;
@@ -2191,6 +2206,13 @@ body.dock-dragging * {
 .menu button:hover {
   background: var(--line);
 }
+/* The Share pointer at the top of the Export menu, set apart from the file entries below it */
+.menu .menu-share-hint {
+  border-bottom: 1px solid var(--line-2);
+  border-radius: 6px 6px 0 0;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
 .toolbar {
   grid-area: tools;
   display: flex;
@@ -2457,6 +2479,21 @@ body.col-resizing * {
   stroke-width: 1;
   opacity: 0.8;
   filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
+}
+.master-outline {
+  fill: none;
+  stroke: var(--logic);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 3;
+  pointer-events: none;
+}
+.master-tag {
+  fill: var(--text);
+  font-size: 10.5px;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 4px;
+  stroke-linejoin: round;
 }
 .focus-outline {
   fill: none;
@@ -9239,6 +9276,13 @@ code {
 }
 .tl-row-hit {
   font-weight: 600;
+}
+.tl-row-clash {
+  font-weight: 600;
+  color: var(--danger-text);
+}
+.tl-row.active .tl-row-clash {
+  color: var(--primary-fg);
 }
 .tl-row-problem {
   color: var(--danger-text);

@@ -26,8 +26,18 @@ export const unbroken = (label: ReactNode): ReactNode => (typeof label === 'stri
  * The classes every field carries, so one stylesheet block lays them all out on the panel's grid (label column, control, trailing slot).
  * `unlabelled` has no label column, so its control starts at the left edge.
  */
-export function fieldClass(kind: string, label: ReactNode, hide = false, extra = ''): string {
-  return `field ${kind}${extra ? ' ' + extra : ''}${label === undefined ? ' unlabelled' : ''}${hide ? ' ps-hide' : ''}`;
+export function fieldClass(kind: string, label: ReactNode, ps: boolean | { hide: boolean; bound?: boolean } = false, extra = ''): string {
+  const { hide, bound } = typeof ps === 'boolean' ? { hide: ps, bound: false } : ps;
+  return `field ${kind}${extra ? ' ' + extra : ''}${label === undefined ? ' unlabelled' : ''}${hide ? ' ps-hide' : ''}${bound ? ' is-bound' : ''}`;
+}
+
+/** Sits after a field's label when a binding sets that property: the value is replaced every time the variable changes, so a typed one won't stick. */
+export function BoundMark() {
+  return (
+    <span className="bound-mark" role="img" aria-label="Set by a data binding" title="Set by a data binding (see Data bindings, further down). A value typed here is replaced whenever the variable changes.">
+      <Icons.link width={10} height={10} />
+    </span>
+  );
 }
 
 /** The fixed slot at the end of a field: a unit or suffix goes in it, and it is there (empty) when there is none, so the boxes in a column end together */
@@ -99,10 +109,11 @@ export function NumberField({
     el.addEventListener('pointerup', up);
   };
   return (
-    <label className={fieldClass('number-field', label, ps.hide)} data-prop={ps.prop} title={tipFor(label, title)}>
+    <label className={fieldClass('number-field', label, ps)} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && (
         <span className="field-label scrub" onPointerDown={scrub}>
           {unbroken(label)}
+          {ps.bound && <BoundMark />}
         </span>
       )}
       <input
@@ -184,8 +195,11 @@ export function UnitField({
     onChange(clamp(Math.round(v * 100) / 100), to);
   };
   return (
-    <label className={fieldClass('number-field', label, ps.hide, 'unit-field')} data-prop={ps.prop} title={tipFor(label, title)}>
-      {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
+    <label className={fieldClass('number-field', label, ps, 'unit-field')} data-prop={ps.prop} title={tipFor(label, title)}>
+      {label !== undefined && <span className="field-label">
+          {unbroken(label)}
+          {ps.bound && <BoundMark />}
+        </span>}
       <input
         value={text}
         placeholder={mixed ? 'Mixed' : undefined}
@@ -298,8 +312,11 @@ export function TextField({
   };
   // Only a text area puts its label above it. A long label wraps inside the label column like any other
   return (
-    <label className={fieldClass('text-field', label, ps.hide, multiline ? 'multiline stacked' : '')} data-prop={ps.prop} title={tipFor(label, title)}>
-      {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
+    <label className={fieldClass('text-field', label, ps, multiline ? 'multiline stacked' : '')} data-prop={ps.prop} title={tipFor(label, title)}>
+      {label !== undefined && <span className="field-label">
+          {unbroken(label)}
+          {ps.bound && <BoundMark />}
+        </span>}
       {multiline ? <textarea rows={rows ?? 3} {...props} /> : <input {...props} />}
       {!multiline && <FieldTrail />}
     </label>
@@ -340,8 +357,11 @@ export function TrackField({ label, title, tracks, onChange }: { label?: ReactNo
   };
   return (
     <>
-      <label className={fieldClass('text-field track-field', label, ps.hide)} data-prop={ps.prop} title={tipFor(label, title)}>
-        {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
+      <label className={fieldClass('text-field track-field', label, ps)} data-prop={ps.prop} title={tipFor(label, title)}>
+        {label !== undefined && <span className="field-label">
+          {unbroken(label)}
+          {ps.bound && <BoundMark />}
+        </span>}
         <input
           value={text}
           spellCheck={false}
@@ -401,8 +421,11 @@ export function SelectField<T extends string>({
   const ps = useRowSearch(label, tipFor(label, title));
   const opts = (options as (T | { value: T; label: string })[]).map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
   return (
-    <label className={fieldClass('select-field', label, ps.hide)} data-prop={ps.prop} title={tipFor(label, title)}>
-      {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
+    <label className={fieldClass('select-field', label, ps)} data-prop={ps.prop} title={tipFor(label, title)}>
+      {label !== undefined && <span className="field-label">
+          {unbroken(label)}
+          {ps.bound && <BoundMark />}
+        </span>}
       <select value={value} disabled={disabled} data-tip={fullName(opts.find((o) => o.value === value)?.label, tipFor(label, title))} onChange={(e) => onChange(e.target.value as T)} onKeyDown={(e) => e.stopPropagation()}>
         {opts.map((o) => (
           <option key={o.value} value={o.value}>
@@ -446,9 +469,10 @@ export function SpeedField({ label = 'Speed', value, onChange, title }: { label?
 export function CheckField({ label, value, onChange, title, disabled }: { label: ReactNode; value: boolean; onChange: (v: boolean) => void; title?: string; disabled?: boolean }) {
   const ps = useRowSearch(label, tipFor(label, title));
   return (
-    <label className={`field check-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
+    <label className={`field check-field${ps.hide ? ' ps-hide' : ''}${ps.bound ? ' is-bound' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
       <input type="checkbox" checked={value} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       <span>{label}</span>
+      {ps.bound && <BoundMark />}
     </label>
   );
 }
@@ -597,11 +621,12 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
     label !== undefined && (
       <label className="field-label" htmlFor={forHex ? hexId : undefined} title={tipFor(label, title)}>
         {unbroken(label)}
+        {ps.bound && <BoundMark />}
       </label>
     );
   if (link) {
     return (
-      <div className={fieldClass('color-field', label, ps.hide, 'linked')} data-prop={ps.prop}>
+      <div className={fieldClass('color-field', label, ps, 'linked')} data-prop={ps.prop}>
         {labelEl(false)}
         <span className="field-control">
           <span className="swatch linked" style={{ background: link.shown }} title={link.token ? `Follows ${link.token.name}: changes with the theme` : 'Follows a token that no longer exists'}>
@@ -632,7 +657,7 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
   }
   if (locked && tokenTab) {
     return (
-      <div className={fieldClass('color-field', label, ps.hide, 'linked')} data-prop={ps.prop}>
+      <div className={fieldClass('color-field', label, ps, 'linked')} data-prop={ps.prop}>
         {labelEl(false)}
         <span className="field-control">
           <span className="swatch" style={{ background: value }} title="Not a theme colour. Pick one from the Tokens tab" />
@@ -644,7 +669,7 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
     );
   }
   return (
-    <div className={fieldClass('color-field', label, ps.hide)} data-prop={ps.prop}>
+    <div className={fieldClass('color-field', label, ps)} data-prop={ps.prop}>
       {labelEl(true)}
       <span className="field-control">
         <span className="swatch" style={{ background: value }}>

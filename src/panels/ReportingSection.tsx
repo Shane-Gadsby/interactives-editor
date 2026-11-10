@@ -47,6 +47,7 @@ export function ReportingSection({ project }: { project: Project }) {
   const booleans = project.variables.filter((v) => v.type === 'boolean');
   const completion: Completion = r.completion ?? 'manual';
   const remembered = project.variables.filter((v) => v.persist).length;
+  const userData = project.variables.filter((v) => v.userData).length;
   const fromQuestions = r.scoreFrom === 'questions';
   const hasQuestions = project.artboards.some((a) => questionFrames(a).length > 0);
   return (
@@ -107,7 +108,13 @@ export function ReportingSection({ project }: { project: Project }) {
       {completion === 'pass' && !((r.scoreVariable || fromQuestions) && r.passMark !== undefined) && <p className="hint">Pick a score variable and set a pass mark above, or this never completes.</p>}
       <CheckField label="Resume on the same artboard" title="A learner who comes back opens on the artboard they left, not the start artboard" value={!!r.resumeArtboard} onChange={(v) => set({ resumeArtboard: v ? true : undefined })} />
       <SectionBlurb
-        text={remembered ? `${remembered} variable${remembered === 1 ? ' is' : 's are'} remembered between visits.` : 'Tick Remember on a variable in the Variables tab to keep its value between visits.'}
+        text={[
+          remembered ? `${remembered} variable${remembered === 1 ? ' is' : 's are'} remembered between visits.` : '',
+          userData ? `${userData} variable${userData === 1 ? ' is' : 's are'} saved as user data.` : '',
+          remembered || userData ? '' : 'To keep a value between visits, open a variable in the Variables tab, then Options. Remember keeps it in their results record or their browser. Save as user data keeps it on the server, so it follows them to another device.',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         name="Results and progress"
         help={['results', 'where-it-goes']}
       />

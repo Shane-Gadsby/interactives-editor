@@ -124,7 +124,8 @@ describe('the Themes panel', () => {
     // a project that just got the starters has nothing to update
     expect([...host.querySelectorAll('button')].some((b) => b.textContent === 'Update starter colours')).toBe(false);
     expect(host.querySelectorAll('.themes-table thead .tk-theme')).toHaveLength(3);
-    expect(host.querySelector('.themes-raw')!.textContent).toContain('0 colours not following a theme');
+    //the page's own plain white background is a plain colour too
+    expect(host.querySelector('.themes-raw')!.textContent).toContain('1 colour not following a theme');
   });
 
   it('counts plain colours, flags a failing pair, and shows another theme on the canvas', async () => {
@@ -136,7 +137,8 @@ describe('the Themes panel', () => {
     open(p);
     act(() => root.render(<ThemesPanel />));
     await flush();
-    expect(host.querySelector('.themes-raw')!.textContent).toContain('1 colour not following a theme');
+    //the rectangle and the page background
+    expect(host.querySelector('.themes-raw')!.textContent).toContain('2 colours not following a theme');
     expect(host.querySelectorAll('.tk-cell.warn').length).toBeGreaterThan(0);
     expect(host.querySelector('.themes-contrast')!.textContent).toMatch(/Dark: text on background/);
     const eye = host.querySelectorAll<HTMLElement>('.theme-head button')[2];

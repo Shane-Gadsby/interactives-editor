@@ -27,7 +27,7 @@ Ask: **does it change while it runs?**
 
 ## Where people get caught out
 
-- **"I typed a value and it snapped back."** That setting is bound. The binding sets it every time the page is drawn, on the canvas and in Preview, so what you type never shows. Look in **Data bindings** (it opens by itself on a layer that has any) and change or remove the binding there.
+- **"I typed a value and it snapped back."** That setting is bound. The binding sets it every time the page is drawn, on the canvas and in Preview, so what you type never shows. A bound field has a small link mark after its label and a dashed box; hover or focus the mark and it says so. Look in **Data bindings** (it opens by itself on a layer that has any) and change or remove the binding there. A binding that only writes **Out** to a variable doesn't mark its field, since what you type still sticks.
 - **"I changed the starting value but Preview still shows the old one."** Preview takes the starting values when it starts. Press **Restart** in Preview's bar.
 - **"My Change a value or counter node does nothing."** The variable may be a live one (**Keep up to date** under its formula). A live variable is worked out from its formula and can't be set by hand; the Variables tab says how many nodes try to.
 - **"The learner's dragged position is never saved."** A draggable layer whose X or Y is bound **← In** never writes back to the variable. Bind it **⇄ Both**.
@@ -35,6 +35,7 @@ Ask: **does it change while it runs?**
 
 ## How to tell what is going on
 
+- A field a binding sets has a small link mark after its label (**Set by a data binding**) and a dashed box. A typed value in it is replaced whenever the variable changes.
 - Under each binding, a grey line works it through with the starting values: *the formula is 1, Look up: no line for 1, so it stays 1*. If the layer looks wrong on the canvas, that line usually says why.
 
 ![A Play button's Data bindings: Button label set by the formula playing ? "Pause" : "Play", currently Play, and Pressed (button, toggle) set straight from the variable playing; under each, a line saying what it is set to at the start.](help/concept-variables-data-bindings-bindings.png)

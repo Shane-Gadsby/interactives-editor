@@ -9,6 +9,16 @@ import { analyzeUsage } from '../lib/dependencies';
 import { LOOP_LABEL, lengthLabel, missingStates, timelineRows, type TimelineRow } from '../lib/timeline-list';
 import { prefs, setPrefs } from '../lib/prefs';
 
+/** The tooltip for a clash: what both animate, and who wins if they play together (the one further down the list). */
+function clashText(r: TimelineRow, at: number, names: string[]): string {
+  return r.clashes
+    .map((c) => {
+      const winner = names.indexOf(c.other) > at ? c.other : r.name;
+      return `${c.other} also animates ${c.props.join(', ')}. If both play at once, ${winner} wins (the one further down the list is applied last).`;
+    })
+    .join(' ');
+}
+
 /** Show a timeline on the canvas (or the design view, with none). Same as the Timeline bar's dropdown. */
 export function openTimeline(id: string | null): void {
   store().set({ activeTimelineId: id, playhead: 0, selectedKeys: [], ...(id ? {} : { recording: false }) });
@@ -175,6 +185,12 @@ export function TimelineList() {
               <div className={`tl-row-use small${r.idle ? ' idle' : ''}`} title={r.playedBy.length ? `Started by: ${r.playedBy.join(', ')}` : r.idle ? 'Nothing starts this timeline: no interaction, joystick, blend or autoplay' : undefined}>
                 {r.idle ? 'Nothing plays it' : r.playedBy.length ? `Started by ${r.playedBy.length === 1 ? r.playedBy[0] : `${r.playedBy.length} things`}` : ''}
               </div>
+              {r.clashes.length > 0 && (
+                <div className="tl-row-clash small" role="note" title={clashText(r, ab.timelines.findIndex((t) => t.id === r.id), ab.timelines.map((t) => t.name))}>
+                  <span aria-hidden="true">⚠ </span>Also animated by {r.clashes.length === 1 ? r.clashes[0].other : `${r.clashes.length} other timelines`}: {r.clashes[0].props.slice(0, 2).join(', ')}
+                  {r.clashes[0].props.length > 2 ? '…' : ''}
+                </div>
+              )}
               {hits.length > 0 && <div className="tl-row-hit small">Animates {hits.length === 1 ? hits[0].name : `${hits.length} selected layers`}</div>}
             </li>
           );

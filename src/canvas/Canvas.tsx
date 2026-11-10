@@ -52,6 +52,7 @@ import { comments } from '../lib/comments';
 import { drawnBox, drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
 import { isBrandHeld } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
+import { masterOutlines } from '../lib/page-master';
 import { groupFrame, groupMembers, pickedArtboardIds } from '../lib/artboard-groups';
 import { artboardMenuItems, fitPageCommand, fitPageSelectionItems } from '../lib/artboard-commands';
 import { assetUrls } from '../lib/assets';
@@ -1733,6 +1734,26 @@ export function Canvas() {
     if (s.focusId && locate(active, s.focusId)) {
       const pts = nodeCorners(active, s.focusId).map((p) => toS(active, p));
       overlay.push(<polygon key="focus" className="focus-outline" points={pts.map((p) => `${p.x},${p.y}`).join(' ')} />);
+    }
+
+    // Layers that come from a page master can't be picked (a click selects the page), so with the page selected they are
+    // outlined and named, which says where they live
+    const fromMaster = s.artboardSelected && !s.previewPlaying ? masterOutlines(project.artboards, active) : null;
+    if (fromMaster) {
+      fromMaster.boxes.forEach((b, i) => {
+        const o = toS(active, { x: b.x, y: b.y });
+        overlay.push(
+          <rect key={`master-box-${b.id}`} className="master-outline" x={o.x} y={o.y} width={b.width * zoom} height={b.height * zoom} />,
+        );
+        if (i === 0) {
+          const label = `From page master: ${fromMaster.master}`;
+          overlay.push(
+            <text key="master-tag" className="master-tag" x={o.x + 3} y={Math.max(o.y - 4, 10)} pointerEvents="none">
+              {label}
+            </text>,
+          );
+        }
+      });
     }
 
     if (s.artboardSelected) {

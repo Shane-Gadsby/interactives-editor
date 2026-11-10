@@ -7,12 +7,10 @@ import {
   countTokenUse,
   createProject,
   defaultTheme,
-  fillList,
   findTheme,
   hasTokens,
   isTokenRef,
   makeColorResolver,
-  strokeList,
   tokenByName,
   tokenIdOf,
   tokenRef,
@@ -32,6 +30,7 @@ import {
 } from 'interactives-player';
 import { contrastRatio, over, toRgba } from './a11y/colour';
 import { syncNodeStyles } from './libraries';
+import { followCounts } from './link-colours';
 
 /**
  * Theme tokens in the editor: the Themes panel's operations on a project draft, and what the canvas, picker and checks need
@@ -346,24 +345,12 @@ export interface ThemeCounts {
 
 export function themeCounts(project: Project): ThemeCounts {
   const used = new Map<string, number>();
-  let raw = 0;
-  const paint = (p: Paint | null | undefined) => {
-    if (p && p.type === 'solid' && p.visible !== false && !isTokenRef(p.color)) raw++;
-  };
-  const count = (list: SceneNode[]) => {
-    countTokenUse(list, used);
-    walk(list, (n) => {
-      for (const p of fillList(n as never)) paint(p);
-      for (const s of strokeList(n as never)) paint(s.paint);
-      const c = (n as unknown as { color?: unknown }).color;
-      if (typeof c === 'string' && (n.type === 'text' || n.type === 'button' || n.type === 'link' || n.type === 'input') && !isTokenRef(c)) raw++;
-    });
-  };
   for (const ab of project.artboards) {
-    count(ab.children);
+    countTokenUse(ab.children, used);
     if (isTokenRef((ab.background as { color?: unknown } | null)?.color)) used.set(tokenIdOf((ab.background as { color: string }).color), (used.get(tokenIdOf((ab.background as { color: string }).color)) ?? 0) + 1);
   }
-  return { used, raw };
+  //The plain count is the one "Nothing here follows the theme" uses, so the two can't disagree: page backgrounds, shadows, gradient stops and text runs count as well as fills, strokes and text colours
+  return { used, raw: followCounts(project).plain };
 }
 
 export interface PairResult {

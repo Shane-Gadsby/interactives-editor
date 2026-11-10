@@ -1,5 +1,5 @@
 import { Fragment, useContext, useState } from 'react';
-import { PropRow } from '../lib/prop-search';
+import { PropRow, propKey } from '../lib/prop-search';
 import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, layerOwnProps, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { findArtboardOf, isIdentifier } from '../store/doc';
 import { previewScope } from '../lib/data';
@@ -76,6 +76,38 @@ export function bindableProps(node: SceneNode, project: Project): { prop: string
     if (at >= 0) out[at] = { ...out[at], kind };
   }
   return out;
+}
+
+/** Fields that call a property something other than the binding list does (Sx for scale X, Radius for corner radius, Colour for the fill colour). */
+const FIELD_ALIASES: Record<string, string[]> = {
+  scaleX: ['Scale W'],
+  scaleY: ['Scale H'],
+  originX: ['Pivot x'],
+  originY: ['Pivot y'],
+  cornerRadius: ['Radius'],
+  'fill.color': ['Fill', 'Colour'],
+};
+
+/**
+ * The inspector row keys (what a field's `data-prop` carries) of the properties a layer's bindings write every frame: the
+ * ones bound in (or both ways). A value typed into one of those fields is replaced the next time the variable changes, so
+ * the field gets a marker saying so. Out-only bindings are left out, since the field still sticks.
+ */
+export function boundFieldKeys(node: SceneNode, project: Project): Set<string> {
+  const keys = new Set<string>();
+  const bindings = node.bindings ?? {};
+  const modes = node.bindingModes ?? {};
+  if (!Object.keys(bindings).length) return keys;
+  const props = bindableProps(node, project);
+  for (const p of Object.keys(bindings)) {
+    if (!bindings[p] || (modes[p] ?? 'in') === 'out') continue;
+    const label = props.find((x) => x.prop === p)?.label ?? humanize(p);
+    for (const l of [label, humanize(p), ...(FIELD_ALIASES[p] ?? [])]) {
+      const k = propKey(l);
+      if (k) keys.add(k);
+    }
+  }
+  return keys;
 }
 
 /**

@@ -30,6 +30,7 @@ A **page master** is a page that holds what other pages share, such as a logo, a
 
 ![The Layers panel with every page folded: Word search has start and on Hero master badges, the other pages say which master they draw, and Hero master, Content master and End master say master · 2, master · 2 and master · 1.](help/concept-pages-masters-layers.png)
 
+- On the canvas, with a page selected, the layers it gets from its master are outlined with a dashed line, under a tag that says **From page master** and the master's name. That is how you tell a master's layer from the page's own: the page's own layers get the usual selection box when you click them.
 - With a page selected, its **Page master** section says which master it draws and lists the master's layers, so you can leave one off this page.
 
 ![The Page master section of a page: Master set to Content master, Edit master and Detach, and a ticked box for each master layer to show on this page.](help/concept-pages-masters-section.png)

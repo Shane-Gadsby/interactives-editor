@@ -651,7 +651,8 @@ function importLottieUnchecked(json: Json, name: string): LottieImport {
     depth: 0,
   };
   if (json.ddd) ctx.warnings.add('3D layers are flattened to 2D');
-  const artboard = createArtboard({ name: json.nm || name, width: Math.round(json.w), height: Math.round(json.h), background: null });
+  //A solid white page, not none: with no background Preview shows its dark backdrop through the animation and any dark text on it vanishes
+  const artboard = createArtboard({ name: json.nm || name, width: Math.round(json.w), height: Math.round(json.h), background: { type: 'solid', color: '#ffffff' } });
   artboard.children = layersToNodes(ctx, json.layers, json, json.w, json.h);
   const tl: Timeline = {
     id: uid('tl'),
