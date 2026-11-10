@@ -9270,6 +9270,13 @@ code {
 .tl-row-hit {
   font-weight: 600;
 }
+.tl-row-clash {
+  font-weight: 600;
+  color: var(--danger-text);
+}
+.tl-row.active .tl-row-clash {
+  color: var(--primary-fg);
+}
 .tl-row-problem {
   color: var(--danger-text);
 }
