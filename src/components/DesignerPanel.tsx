@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { session } from '../lib/db';
-import { copilotChat, type ChatState } from '../lib/copilot';
+import { designerChat, type ChatState } from '../lib/designer';
 import { Markdown } from '../help/markdown';
 import { store } from '../store/store';
 import { IconButton } from './ui';
 import { Icons } from './icons';
 
-const WIDTH_KEY = 'ix-copilot-width';
+const WIDTH_KEY = 'ix-designer-width';
 
 function savedWidth(): number {
   try {
@@ -17,72 +17,77 @@ function savedWidth(): number {
   }
 }
 
-/** Whether this box has the Activity Designer set up (the server holds its secret). */
-export function useCopilotOn(): boolean {
+/** Whether this box has the Activity Designer set up (the server holds its Cogniti token). */
+export function useDesignerOn(): boolean {
   const [on, setOn] = useState(false);
   useEffect(() => {
     let live = true;
     session()
-      .then((s) => live && setOn(s.copilot === true))
+      .then((s) => live && setOn(s.designer === true))
       .catch(() => undefined);
     return () => void (live = false);
   }, []);
   return on;
 }
 
-/** What the agent is told about where the person is: the open project's name and id (never its content). */
-function context(): Record<string, unknown> {
+/** The open project's id. That's all the server is told: it reads the name itself, and the agent reads the rest as the person. */
+const openProjectId = (): string => {
   try {
-    const p = store().get().project;
-    return { projectId: p.id, projectName: p.name };
+    return store().get().project.id;
   } catch {
-    return {};
+    return '';
   }
-}
+};
+
+const EXAMPLES = ['Add a page called Results with a heading and a button back to the start', 'Check my project for problems and fix them', 'Make a multiple choice question with feedback for each answer'];
 
 const openLink = (href: string) => {
   if (/^https?:\/\//i.test(href)) window.open(href, '_blank', 'noopener,noreferrer');
 };
 
 /**
- * Ask the Activity Designer: UniSQ's Copilot Studio agent in a panel beside the canvas, over Direct Line. It's told the
- * open project's name but can't see or change the project; it gives advice. Kept mounted once opened, and the
- * conversation lives with the tab, so closing and reopening carries on.
+ * Ask the Activity Designer: UniSQ's Cogniti agent in a panel beside the canvas. It builds in the open project while you
+ * watch (its edits arrive like another person's, as "Activity Designer"), and one click undoes what it did. Kept mounted once
+ * opened, and the conversation lives with the tab, so closing and reopening carries on.
  */
-export function CopilotPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [width, setWidth] = useState(savedWidth);
-  const [chat, setChat] = useState<ChatState>(() => copilotChat().state);
+  const [chat, setChat] = useState<ChatState>(() => designerChat().state);
   const [draft, setDraft] = useState('');
   const headRef = useRef<HTMLHeadingElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => copilotChat().subscribe(setChat), []);
+  useEffect(() => designerChat().subscribe(setChat), []);
 
   useEffect(() => {
-    if (!open) return;
-    if (copilotChat().state.status === 'idle') void copilotChat().start(context());
-    inputRef.current?.focus();
+    if (open) inputRef.current?.focus();
   }, [open]);
 
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [chat.messages.length, chat.typing, open]);
+  }, [chat.messages.length, chat.working, chat.status, chat.undo, open]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && document.activeElement?.closest('.copilot-panel')) onClose();
+      if (e.key === 'Escape' && document.activeElement?.closest('.designer-panel')) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
   const send = (text: string) => {
-    if (!text.trim()) return;
-    void copilotChat().send(text, context());
+    if (!text.trim() || chat.working) return;
+    void designerChat().send(text, openProjectId());
     setDraft('');
+  };
+
+  const undo = async () => {
+    await designerChat().undo();
+    //Live editors get told to reload by the server. A tab that isn't connected to the live session won't, so it does it itself
+    if (!designerChat().state.undo && store().get().live?.status !== 'live') location.reload();
   };
 
   const startResize = (e: React.PointerEvent) => {
@@ -120,11 +125,10 @@ export function CopilotPanel({ open, onClose }: { open: boolean; onClose: () => 
       return n;
     });
 
-  const busy = chat.status === 'connecting';
   return (
-    <aside className="copilot-panel" hidden={!open} style={{ width }} aria-label="Ask the Activity Designer">
+    <aside className="designer-panel" hidden={!open} style={{ width }} aria-label="Ask the Activity Designer">
       <div
-        className="copilot-resize"
+        className="designer-resize"
         role="separator"
         aria-orientation="vertical"
         aria-label="Panel width"
@@ -147,8 +151,7 @@ export function CopilotPanel({ open, onClose }: { open: boolean; onClose: () => 
           className="btn small"
           title="Start a new conversation (this one is cleared)"
           onClick={() => {
-            copilotChat().close();
-            void copilotChat().start(context());
+            void designerChat().newChat();
             inputRef.current?.focus();
           }}
         >
@@ -156,12 +159,28 @@ export function CopilotPanel({ open, onClose }: { open: boolean; onClose: () => 
         </button>
         <IconButton icon={<Icons.close />} title="Close the chat (it keeps the conversation)" onClick={onClose} />
       </header>
-      <p className="copilot-note muted small">UniSQ's Copilot agent. It knows your project's name and can suggest how to build it, but it can't see or change the project. Check what it says.</p>
-      <div className="copilot-log" ref={listRef} role="log" aria-live="polite" aria-label="Conversation">
+      <p className="designer-note muted small">It builds in your project as you watch. Check what it made; you can undo it.</p>
+      <div className="designer-log" ref={listRef} role="log" aria-live="polite" aria-label="Conversation">
+        {chat.messages.length === 0 && (
+          <div className="designer-examples">
+            <p className="muted small">Say what you want in your own words, for example:</p>
+            {EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                className="btn small"
+                onClick={() => {
+                  setDraft(ex);
+                  inputRef.current?.focus();
+                }}
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        )}
         {chat.messages.map((m) => (
-          <div key={m.id} className={`copilot-msg ${m.from}${m.failed ? ' failed' : ''}`}>
+          <div key={m.id} className={`designer-msg ${m.from}${m.failed ? ' failed' : ''}`}>
             {m.from === 'agent' ? <Markdown text={m.text} onLink={openLink} /> : <p>{m.text}</p>}
-            {m.hasCard && <p className="muted small">The agent sent a card the editor can't show. Ask it to say it in words.</p>}
             {m.failed && (
               <p className="small">
                 Not sent.{' '}
@@ -170,30 +189,26 @@ export function CopilotPanel({ open, onClose }: { open: boolean; onClose: () => 
                 </button>
               </p>
             )}
-            {m.actions && (
-              <div className="copilot-actions">
-                {m.actions.map((a) => (
-                  <button key={a.title} className="btn small" onClick={() => send(a.value)}>
-                    {a.title}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         ))}
-        {busy && <p className="muted small">Connecting…</p>}
-        {chat.typing && <p className="copilot-typing muted small">The Activity Designer is writing…</p>}
-        {chat.status === 'error' && (
-          <p className="copilot-error small">
-            {chat.error}{' '}
-            <button className="link-btn" onClick={() => void copilotChat().start(context())}>
-              Try again
+        {chat.working && (
+          <p className="designer-progress muted small" role="status">
+            {chat.status || 'Working'}…{' '}
+            <button className="link-btn" onClick={() => designerChat().stop()} title="Stop after the step it's on">
+              Stop
             </button>
           </p>
         )}
+        {!chat.working && chat.undo && (
+          <div className="designer-undo">
+            <button className="btn small" disabled={chat.undoing} onClick={() => void undo()} title="Put the project back as it was before this request">
+              {chat.undoing ? 'Undoing…' : 'Undo what the Activity Designer did'}
+            </button>
+          </div>
+        )}
       </div>
       <form
-        className="copilot-send"
+        className="designer-send"
         onSubmit={(e) => {
           e.preventDefault();
           send(draft);
@@ -204,7 +219,7 @@ export function CopilotPanel({ open, onClose }: { open: boolean; onClose: () => 
           value={draft}
           rows={2}
           aria-label="Your message"
-          placeholder="Ask for ideas, or how to build something"
+          placeholder="Say what you would like built"
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -213,7 +228,7 @@ export function CopilotPanel({ open, onClose }: { open: boolean; onClose: () => 
             }
           }}
         />
-        <button className="btn primary" type="submit" disabled={!draft.trim()} title="Send (Enter; Shift+Enter for a new line)">
+        <button className="btn primary" type="submit" disabled={!draft.trim() || chat.working} title="Send (Enter; Shift+Enter for a new line)">
           Send
         </button>
       </form>

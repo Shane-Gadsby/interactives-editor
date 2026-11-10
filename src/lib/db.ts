@@ -48,8 +48,8 @@ export interface SessionInfo {
   power: boolean;
   /** May publish and mark brand kits (a power user, or in the server's brand group); also the brand lock override in the editor. */
   brand?: boolean;
-  /** The box has the Activity Designer (Copilot Studio agent) set up, so the editor shows its button. */
-  copilot?: boolean;
+  /** The box has the Activity Designer (a Cogniti agent) set up, so the editor shows its button. */
+  designer?: boolean;
 }
 
 /** A request the server answered with an error (status 0: it was never reached). */
@@ -124,9 +124,12 @@ export function session(): Promise<SessionInfo> {
   return call<SessionInfo>('session');
 }
 
-/** A Direct Line token for one Activity Designer conversation, from the server (which holds the agent's secret). */
-export function copilotToken(): Promise<{ token: string; conversationId: string; expiresIn: number; userId: string }> {
-  return call('copilot/token', { method: 'POST' });
+/** The full url of an api route, for the few callers that read a stream themselves instead of going through `call`. */
+export const apiUrl = (path: string): string => API + path;
+
+/** Forget the Activity Designer's conversation for a project (New chat). The server keeps it, not the browser. */
+export function resetDesigner(projectId: string): Promise<{ ok: boolean }> {
+  return call('designer/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId }) });
 }
 
 export async function listProjects(all = false): Promise<ProjectMeta[]> {

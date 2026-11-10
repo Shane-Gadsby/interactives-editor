@@ -3433,17 +3433,38 @@ A question keeps its settings on its frame, and each part layer is marked as par
     id: 'activity-designer',
     title: 'Ask the Activity Designer',
     group: 'Getting started',
-    summary: "UniSQ's Copilot agent in a panel beside the canvas, for ideas and how-to while you build.",
-    keywords: 'copilot ai chat assistant agent activity designer ask help ideas microsoft copilot studio chatbot',
-    body: `The speech bubble button at the top right of the editor opens **Ask the Activity Designer**, UniSQ's own Copilot agent, in a panel down the right. Ask it for ideas ("what would make a good activity for teaching the water cycle?") or how to do something ("how do I make a drag and drop that checks the answers?").
+    summary: 'Describe what you want in plain words and UniSQ\'s Activity Designer builds it in your project while you watch. One click undoes it.',
+    keywords: 'ai chat assistant agent activity designer ask help ideas build cogniti undo limit',
+    body: `The speech bubble button at the top right of the editor opens **Ask the Activity Designer**, in a panel down the right. Tell it what you want and it **builds it in your open project**: pages, layers, text, buttons, flows between them. You see its changes appear on the canvas as it works, the same way you see a colleague's, and it shows in the project as "Activity Designer".
 
-- It's told your project's name, but it **can't see or change your project**, so describe what you have and follow its steps yourself.
-- Press <kbd>Enter</kbd> to send, <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line. When it offers choices as buttons, click one to answer.
-- Closing the panel keeps the conversation; open it again to carry on. **New chat** starts afresh.
-- Drag the panel's left edge (or focus it and use the arrow keys) to make it wider or narrower.
-- Check what it suggests: it can be wrong, and these help pages are the final word on how the editor works.
+## Things to ask
 
-The conversation goes to Microsoft under UniSQ's Copilot Studio agreement. The button only shows on servers where the agent is set up.`,
+- "Add a page called Results with a heading 'Well done!', and make the Add one button go to it when the score reaches 5."
+- "Make a multiple choice question with three answers and feedback for each one."
+- "Check my project for problems and fix them."
+- "What would make a good activity for teaching the water cycle?" It answers questions and gives ideas without changing anything.
+
+Short, specific requests work best. If your request is unclear, or would replace a lot of your work, it asks first.
+
+## While it works
+
+The panel says what it's doing ("Reading the project", "Changing the project", "Checking the project"). A request can take a minute or two. **Stop** ends it after the step it's on. Press <kbd>Enter</kbd> to send, <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line.
+
+## Undo
+
+Before it changes anything, the Activity Designer saves a copy of your project as a revision called **Before the Activity Designer**. After a request that changed something, an **Undo what the Activity Designer did** button appears under its reply; it puts the project back as it was before that request. Anything you or someone else changed in the meantime goes back too, so undo straight away if you're going to. You can always find that copy in the Revision history. It can't see how the canvas looks, only what's in the project, so check what it made.
+
+## Chats
+
+Closing the panel keeps the conversation; **New chat** starts afresh. It remembers the chat for a couple of hours. Drag the panel's left edge (or focus it and use the arrow keys) to make it wider or narrower.
+
+## The hourly limit
+
+The Activity Designer is shared by everyone using the editor, and UniSQ's Cogniti allows only so many messages an hour. When it's used up the panel says **"The Activity Designer has reached its hourly limit"**: try again in a little while. A request that changes things sends a number of messages, so ask for a piece at a time.
+
+## Where your project goes
+
+Your requests, and the parts of the project the Activity Designer reads (layer names, text, flows, settings), are sent to **UniSQ's Cogniti**, the university's AI platform, and from there to UniSQ's own Azure OpenAI. It can't read learners' answers or results, so no learner data is sent. Only people who can edit a project can ask it to change it, and everything it does is recorded in the project's audit log. The button only shows on servers where it's set up.`,
   },
   {
     id: 'command-palette',
