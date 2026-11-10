@@ -2314,11 +2314,11 @@ function checkPattern(src, flags = "") {
     } else {
       const q = last ? parseQuantifier(src, i) : void 0;
       if (q) {
-        const repeats = q.max > 1;
+        const repeats2 = q.max > 1;
         const open = q.max === Infinity || q.max - q.min > 50;
         if (open && ++unbounded > MAX_UNBOUNDED) throw new RegexRefused(`more than ${MAX_UNBOUNDED} open-ended repetitions (*, +, {n,})`);
         const g = last.group;
-        if (g && repeats) {
+        if (g && repeats2) {
           if (g.multi) throw new RegexRefused("a repeated group contains another repetition, like (a+)+");
           if (g.optional > 1) throw new RegexRefused("a repeated group contains several optional parts, like (a?a?)+");
           for (const o of g.optionals) if (g.starts.some((f2) => f2 !== o && canShare(o, f2, flags))) throw new RegexRefused("a repeated group has an optional part that could also start it, like (\\d\\d?)+");
@@ -2327,7 +2327,7 @@ function checkPattern(src, flags = "") {
             if (g.complex || !distinct || g.optional) throw new RegexRefused("a repeated group contains alternatives that can match the same text, like (a|aa)+");
           }
         }
-        if (repeats && q.min !== q.max) cur.multi = true;
+        if (repeats2 && q.min !== q.max) cur.multi = true;
         else if (q.max === 1 && q.min === 0) cur.optional++;
         if (q.max !== Infinity && q.max !== q.min) cur.work *= q.max - q.min + 1;
         if (g && q.max !== Infinity && q.max > 1) cur.work *= g.work ** (q.max - 1);
@@ -3237,9 +3237,9 @@ function substitute(m, s, template) {
   }
   return out;
 }
-function linearReplace(re, s, replacement, all) {
+function linearReplace(re, s, replacement, all2) {
   const prog = progOf(re);
-  if (all && !prog.g) throw new TypeError("replaceAll must be called with a global RegExp");
+  if (all2 && !prog.g) throw new TypeError("replaceAll must be called with a global RegExp");
   const fn = typeof replacement === "function" ? replacement : null;
   const template = fn ? "" : String(replacement);
   const matches = [];
@@ -7416,16 +7416,16 @@ function makeBinary(op, a, b) {
   }
 }
 const fold = (v) => typeof v === "string" ? v.toLowerCase() : v;
-function hasEach(list, items, all) {
+function hasEach(list, items, all2) {
   const wanted = (Array.isArray(items) ? items : [items]).map(fold);
   if (typeof list === "string") {
     const text = list.toLowerCase();
     const has2 = (w) => text.includes(String(w));
-    return all ? wanted.every(has2) : wanted.some(has2);
+    return all2 ? wanted.every(has2) : wanted.some(has2);
   }
   const have = (Array.isArray(list) ? list : []).map(fold);
   const has = (w) => have.some((h) => Object.is(h, w) || h === w);
-  return all ? wanted.every(has) : wanted.some(has);
+  return all2 ? wanted.every(has) : wanted.some(has);
 }
 const FORMULA_HELPERS = {
   fmt(n, decimals = 0, thousands = false) {
@@ -7688,8 +7688,8 @@ function liveWriters(project) {
     for (const n of ab.logic.nodes) {
       const ids = n.kind === "action.setVariable" ? [n.params.variable] : n.kind === "action.resetVariables" && Array.isArray(n.params.variables) ? n.params.variables : [];
       for (const id of ids) {
-        const variable = live.get(String(id));
-        if (variable) out.push({ artboardId: ab.id, artboardName: ab.name, nodeId: n.id, label: n.kind === "action.setVariable" ? "Set variable" : "Reset variables", variable });
+        const variable2 = live.get(String(id));
+        if (variable2) out.push({ artboardId: ab.id, artboardName: ab.name, nodeId: n.id, label: n.kind === "action.setVariable" ? "Set variable" : "Reset variables", variable: variable2 });
       }
     }
   }
@@ -10181,6 +10181,71 @@ function plainParam(kind, p, technical = technicalWording()) {
     }))
   };
 }
+function allNodes(p) {
+  const out = [];
+  const go = (list) => {
+    for (const n of list ?? []) {
+      out.push(n);
+      go(n.children);
+    }
+  };
+  for (const ab of p.artboards ?? []) go(ab.children);
+  return out;
+}
+const byId = (p) => new Map(allNodes(p).map((n) => [n.id, n]));
+const variableRef = (p, ref) => typeof ref === "string" ? p.variables?.find((v) => v.id === ref || v.name === ref) : void 0;
+function reaches(ab, from, then) {
+  const seen = /* @__PURE__ */ new Set([from.id]);
+  const todo = [from.id];
+  const nodes = new Map(ab.logic.nodes.map((n) => [n.id, n]));
+  while (todo.length) {
+    const id = todo.pop();
+    for (const e of ab.logic.edges) {
+      if (e.from !== id || seen.has(e.to)) continue;
+      seen.add(e.to);
+      const n = nodes.get(e.to);
+      if (n && then(n)) return true;
+      todo.push(e.to);
+    }
+  }
+  return false;
+}
+const renamed = (c2) => {
+  const n = c2.project.name.trim();
+  return n !== "" && n !== "Untitled project";
+};
+const layers = (type, min = 1) => (c2) => allNodes(c2.project).filter((n) => n.type === type).length >= min;
+const textHas = (part) => (c2) => allNodes(c2.project).some((n) => n.type === "text" && n.text.includes(part));
+const bound = (type, prop, includes) => (c2) => allNodes(c2.project).some((n) => n.type === type && Object.entries(n.bindings ?? {}).some(([k, f2]) => (k === prop || k.startsWith(`${prop}.`)) && (!includes || String(f2).includes(includes))));
+const layerWhere = (type, ok) => (c2) => allNodes(c2.project).some((n) => n.type === type && ok(n));
+const repeats = (items) => (c2) => allNodes(c2.project).some((n) => {
+  const r2 = n.repeat;
+  return !!r2 && (!items || (r2.items ?? "").includes(items));
+});
+const variable = (name, type) => (c2) => !!c2.project.variables?.some((v) => v.name === name && (!type || v.type === type));
+const variableWhere = (name, ok) => (c2) => !!c2.project.variables?.some((v) => v.name === name && ok(v));
+const variables = (...list) => (c2) => list.every(([name, type]) => variable(name, type)(c2));
+const pages = (min) => (c2) => c2.project.artboards.length >= min;
+const nodesOfKind = (kind, min = 1) => (c2) => c2.project.artboards.reduce((n, ab) => n + ab.logic.nodes.filter((x) => x.kind === kind).length, 0) >= min;
+const clickThen = (layerType, kind, ok, min = 1) => (c2) => {
+  const layers2 = byId(c2.project);
+  let found = 0;
+  for (const ab of c2.project.artboards) {
+    for (const ev of ab.logic.nodes) {
+      if (ev.kind !== "event.pointer") continue;
+      const target = layers2.get(String(ev.params.target ?? ""));
+      if (!target || layerType && target.type !== layerType) continue;
+      if (reaches(ab, ev, (n) => n.kind === kind && (!ok || ok(n, c2.project)))) found++;
+    }
+  }
+  return found >= min;
+};
+const setsVariable = (name) => (n, p) => variableRef(p, n.params.variable)?.name === name;
+const hasMaster = (c2) => c2.project.artboards.some((a) => !!a.master);
+const question = (kind, ok) => (c2) => allNodes(c2.project).some((n) => n.type === "frame" && !!n.question && n.question.kind === kind && (!ok || ok(n.question)));
+const scoredFromQuestions = (c2) => c2.project.settings?.reporting?.scoreFrom === "questions";
+const saw = (what) => (c2) => c2.seen[what];
+const all = (...list) => (c2) => list.every((f2) => f2(c2));
 const TUTORIALS = [
   {
     id: "tutorial-first-animation",
@@ -10533,6 +10598,13 @@ See [Embedding and the player API](embedding) for the iframe snippet, how the pa
 You've built, animated, wired up, imported and published. Keep going with the topics on the left. Good places to go next: [Timelines and keyframes](timelines), [Groups and frames](groups-frames), [Auto layout](auto-layout), [Data sources](data-sources) and [Troubleshooting and common questions](troubleshooting).`
   }
 ];
+({
+  "tutorial-state-machine": {
+    1: { check: variables(["lit", "boolean"], ["taps", "number"]) },
+    2: { check: all(layers("ellipse"), textHas("{taps}"), layers("button")) },
+    4: { check: all(clickThen("button", "action.setVariable", setsVariable("lit")), clickThen("button", "action.setVariable", setsVariable("taps"))) }
+  }
+});
 const tutorial$w = {
   order: 61,
   level: "intermediate",
@@ -11215,6 +11287,16 @@ Watch \`score\`, \`taken\` and \`ending\` change in **Variables (live)** on the 
 - **Start over** puts every variable back and returns to the first page.
 
 **Next:** [A "which one are you?" quiz](tutorial-personality) uses several scores at once. More on the graph in [Interactions](interactions), on formulas in [Variables](variables#worked-out-from-a-formula) and [Expressions](expressions).`
+  },
+  guide: {
+    1: { check: pages(7), show: "add-page" },
+    2: { check: variable("taken", "list"), show: ["add-variable", "panel-variables"] },
+    3: { show: "tool-button" },
+    4: { check: all(variable("score", "number"), clickThen("button", "action.artboard")), show: "add-when-clicked" },
+    5: { check: clickThen("button", "action.artboard", void 0, 3), show: "add-when-clicked" },
+    6: { check: variableWhere("ending", (v) => !!v.formula && !!v.live), show: ["add-variable", "panel-variables"] },
+    8: { check: clickThen("button", "action.startOver"), show: "add-when-clicked" },
+    9: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -11457,6 +11539,15 @@ Once you leave the formula box, **Only while** shows it as two rows you could al
 - **When a timer goes off** with **Only while** runs only when it should, and \`reducedMotion\` respects people who ask for less movement.
 
 **Next:** [Before and after compare](tutorial-compare). More on [Bindings](bindings), [Expressions](expressions) and [Shortcuts](accessibility#shortcuts).`
+  },
+  guide: {
+    1: { check: variables(["slides", "list"], ["slide", "number"], ["playing", "boolean"]), show: ["add-variable", "panel-variables"] },
+    2: { check: all(bound("rect", "fill", "slides[slide"), textHas("slides[slide")), show: "tool-rect" },
+    3: { check: clickThen("button", "action.setVariable", setsVariable("slide"), 2), show: "add-when-clicked" },
+    4: { check: all(layerWhere("button", (n) => n.shortcut === "ArrowRight"), layerWhere("button", (n) => n.shortcut === "ArrowLeft")), show: "panel-inspector" },
+    5: { check: all(repeats("slides"), clickThen("ellipse", "action.setVariable", setsVariable("slide"))), show: "tool-ellipse" },
+    6: { check: nodesOfKind("event.timer"), show: "panel-logic" },
+    7: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -12187,6 +12278,15 @@ A click on any copy runs this one flow, and \`event.index\` is the place of the 
 - **Add to the list, or take out if it is there** keeps one list of which cards are turned, and bindings on **Visible** show the right face.
 
 **Next:** [Accordion and tabs from data](tutorial-accordion). More on lists in [Repeated lists](repeaters) and [Variables](variables#lists).`
+  },
+  guide: {
+    1: { check: variables(["cards", "list"], ["flipped", "list"]), show: ["add-variable", "panel-variables"] },
+    2: { check: all(layers("frame"), textHas("{item.front}"), textHas("{item.back}")), show: "tool-frame" },
+    3: { check: repeats("cards"), show: "panel-inspector" },
+    4: { check: all(bound("text", "visible", "flipped"), bound("frame", "fill", "flipped")), show: "panel-inspector" },
+    5: { check: clickThen("frame", "action.setVariable", setsVariable("flipped")), show: "add-empty-click" },
+    6: { check: clickThen("button", "action.resetVariables"), show: "tool-button" },
+    7: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_12$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -12537,6 +12637,14 @@ The card is made of ordinary layers, so restyle it like anything else. The **Res
 - **Report result** and the project's **Results and progress** send the score.
 
 **Next:** more question types are in [Questions and quizzes](question-kit). To turn a list of questions into a quiz in one go, see [Pasting questions in](paste-questions). How results reach StudyDesk is in [Results and progress](results).`
+  },
+  guide: {
+    1: { check: renamed, show: "project-name" },
+    2: { check: question("single"), show: "add-question" },
+    3: { check: question("single", (q) => !/prime number/i.test(q.prompt) && q.options.some((o) => o.correct)), show: "panel-inspector" },
+    4: { check: question("single", (q) => q.attempts > 0 && q.hints.length > 0 && !/two factors/i.test(q.hints.join(" "))), show: "panel-inspector" },
+    5: { check: all(question("single", (q) => q.report === "complete" || q.report === "progress"), scoredFromQuestions), show: "panel-inspector" },
+    6: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_15$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -13259,6 +13367,15 @@ Build **Read actively** and **Write a draft** the same way. Copy the heading, ti
 - **Width** and **Opacity** bindings turn a list into a bar and badges.
 
 **Next:** [An animated scene with speech bubbles](tutorial-scene). More in [Page masters](page-master), [Page navigation](page-navigation), [Bindings](bindings) and [Variables](variables#lists).`
+  },
+  guide: {
+    1: { check: pages(6), show: "add-page" },
+    2: { check: variable("done", "list"), show: ["add-variable", "panel-variables"] },
+    3: { check: all(textHas("{done.length}"), bound("rect", "width", "done")), show: "tool-rect" },
+    4: { check: hasMaster, show: "panel-layers" },
+    5: { check: clickThen("button", "action.setVariable", setsVariable("done")), show: "add-empty-click" },
+    6: { check: clickThen("button", "action.setVariable", setsVariable("done"), 3), show: "add-empty-click" },
+    8: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_21$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -14133,6 +14250,17 @@ Press <kbd>Esc</kbd> to close the Preview.
 - **Turn the sound off or on** is your own mute button: a **Captions and sound** node set to **Sound: flip**.
 
 **Next:** everything the **Play sound** node can do (speed, a sound from a list item, what is playing now) is in [Sound](captions#sound) and [Soundtrack music](captions#soundtrack-music). Sound that follows an animation, with captions, is in [Narration, captions and transcript](captions).`
+  },
+  guide: {
+    1: { check: renamed, show: "project-name" },
+    2: { check: all(layers("text", 2), layers("button")), show: "tool-button" },
+    3: { check: clickThen("button", "action.sound", (n) => n.params.soundtrack === true), show: "add-when-clicked" },
+    4: { check: clickThen("button", "action.artboard"), show: "add-when-clicked" },
+    5: { check: pages(2), show: "add-page" },
+    6: { check: clickThen("button", "action.sound", (n) => n.params.soundtrack !== true), show: "add-when-clicked" },
+    7: { check: all(clickThen("button", "action.stopSound"), clickThen("button", "action.artboard", (n) => n.params.to === "previous")), show: "add-when-clicked" },
+    8: { check: clickThen("button", "action.captions", (n) => n.params.op === "soundToggle"), show: "add-when-clicked" },
+    9: { check: saw("previewed"), show: "preview" }
   }
 };
 const __vite_glob_0_28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -16131,7 +16259,7 @@ The small **(i)** icon in the title bar shows the version of Interactives you ar
   - It is yours, not the project's: nobody else sees it, and it follows you between browsers.
 - **Show tooltips**: explanations when you hover buttons and fields.
 - **Getting started strip**: the five jobs along the top of the editor that tick themselves. On until you put it away or tick all five; turning it on again brings it back (with the ticks kept, or cleared if all five were done). See [Your first five minutes](welcome#your-first-five-minutes).
-- **Tutorial badges and cheers**: on by default. Gives every tutorial a tick box on each step, a short line when you tick one, a badge card (with a quick burst of confetti) when you finish a whole tutorial or a set of them, and your progress on the **Tutorials** button on the projects page. Turn it off and all of that goes: no tick boxes, no badges, no cheers, no progress marks. What you had ticked is kept, and comes back if you turn it on again. If your system is set to reduce motion, the badge card is still and there is no confetti. See [Tutorials, badges and progress](help#tutorials-badges-and-progress).
+- **Tutorial badges and cheers**: on by default. Gives every tutorial a tick box on each step, a short line when you tick one, a badge card (with a quick burst of confetti) when you finish a whole tutorial or a set of them, and your progress on the **Tutorials** button on the projects page. Turn it off and all of that goes: no tick boxes, no badges, no cheers, no progress marks, no self-ticking steps and no **Show me** buttons. What you had ticked is kept, and comes back if you turn it on again. If your system is set to reduce motion, the badge card is still and there is no confetti. See [Tutorials, badges and progress](help#tutorials-badges-and-progress).
 - **Soft chime with the cheers**: off by default. Nothing in the editor makes a sound unless you ask. Tick it for a short, quiet chime with the cheers. It is greyed out while the badges and cheers are off.
 - **Reset tutorial progress**: after you press it and say yes, every tutorial goes back to not started: the steps you ticked, the finished marks and every badge are cleared. It is greyed out when nothing has been started, it asks first, and it cannot be undone. It leaves the two switches above as they are, and **Reset this page** and **Reset everything** do not touch your progress.
 - **Always show the Alt-drag hint**: off by default. Dragging a layer, a page, a page group or a row in Layers says "Alt: drag a copy" for your first three drags, then goes quiet. Tick this to see it on every drag. See [Alt-drag](shortcuts#mouse).
@@ -21496,7 +21624,8 @@ ${sid ? `> The \`X-Session-ID\` above is **your** sign-in for this tab. The agen
 - Your **Undo** only undoes your own changes. To roll back an agent's work, use the [revision history](live-editing#revision-history) (a snapshot is kept every few minutes while the project changes). A snapshot that has an agent's changes in it says so, for example **Autosave (edited with Claude (AI))**, so you can find the version from before it started. **Save a named version…** there first is the surest way back.
 - The agent can only open projects its session can open.
 - An agent that goes quiet for two hours is disconnected and leaves any project it was in. Its client reconnects by itself the next time it is used.
-- The people who run the server can switch agent access off altogether. Then connecting says **AI agent access is turned off on this server**, and that is not something you can change from the editor.`;
+- The people who run the server can switch agent access off altogether. Then connecting says **AI agent access is turned off on this server**, and that is not something you can change from the editor.
+- Every tool an agent runs is written to the project's audit log (who, which agent, which tool), which power users can read. An agent that sends a great many requests in a minute is asked to wait (**Too many requests**) and can carry on after that.`;
     }
   },
   // ---------------------------------------------------------------- reference
@@ -21653,6 +21782,10 @@ The button's tooltip names what it will open, and the drawer says "Help for Char
 The **Tutorials** button on the projects page (next to **Help**) lists every tutorial as a card: the **Getting started** ones, the **Build it** ones by level and the **Concepts**. Each card has the finished project's picture, a line about it, how long it takes and where you are. **Start** (or **Carry on**) opens it in this help. **Open the finished example** plays the finished project, and **Make my copy** there gives you your own to pull apart. The search box at the top finds a tutorial by any word in its title or summary.
 
 In a tutorial, each numbered step has a tick box beside its heading. Tick it when you have done the step. A short line says how many are left, and a strip under the title shows how many steps you have ticked. Tick the last one and you get a **badge card** in the corner of the screen with a quick burst of confetti. It clears itself after a few seconds, never stops you working, and **Esc** or its **x** puts it away at once. Did it without ticking along? **I have done all of this**, at the foot of the tutorial, counts the lot. **Start again** in the strip clears that one's ticks and badge. A concept has one button instead, **Mark as read**.
+
+Many tutorials are **guided** while a project is open. A step that can be checked ticks itself the moment you have done it: draw a rectangle and step 2 of the first animation ticks, add a timeline and step 3 does, and so on. You get the same short line as when you tick by hand. It only looks at the project you have open, a moment after each change, so a step that is already true of the project when you open the tutorial ticks too. A step with nothing to check, such as one that is about reading, is yours to tick. Ticking by hand always works, and so does taking a tick off: if you untick a step that ticked itself, it stays unticked until you undo the thing and do it again. **Start again** does the same for everything already in the project. Preview counts too: a step that says to try it ticks once you have opened Preview (or pressed Play in the Timeline) with the tutorial showing. On the projects page, with no project open, nothing ticks itself, and the strip under the title says so.
+
+A step that talks about a control has a **Show me** button at its right. Press it and the control gets a gold ring and its name for a few seconds: a tool in the tool bar, a tab of the bottom panel, **Preview**, **+ When clicked…** and so on. The ring never blocks anything, so you can click the control straight through it. It goes when you press <kbd>Esc</kbd> (that <kbd>Esc</kbd> does nothing else), when you click or press a key, when you close the tutorial, or by itself after a few seconds. If the control is not on screen, because its tool group is folded or its panel is closed, a note says where it is instead. With reduced motion on, the ring does not pulse. It works the same when you start a tutorial from the **Tutorials** window. The tutorials that are guided so far are the five **Getting started** ones and Multiple choice, Flip cards, Carousel, Branching, Progress and Sound; the rest are ticked by hand.
 
 Finishing every tutorial in a set earns a **set badge**: Getting started, Questions, Show and explain, Games and stories, Learners, media and data, Polish and advanced, all of Build it, and the Concepts. The badges and your totals show at the top of the **Tutorials** window, and a tick appears beside each finished tutorial in this help's contents.
 

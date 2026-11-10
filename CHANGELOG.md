@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Guided tutorials**: with a project open, steps in the five Getting started tutorials and in Multiple choice, Flip cards, Carousel, Branching, Progress and Sound tick themselves when you've done them (a rectangle drawn, a timeline made, a click wired up, Preview opened), with the same cheer as ticking by hand. Take a tick off and it stays off until you do the step again. A Show me button on a step points at the control it talks about; Esc, your next click or a few seconds puts it away, and if the control isn't on screen it says where to find it.
 - **More in + When clicked…**: change a number (add, take away or set it), set a text or choice, change a layer's colour, text, opacity or size, show only one of a set (good for tabs), put values back to the start, say something to screen readers, and turn a switch on or off as well as flip it. **+ then also…** adds as many more steps as you like.
 - **More ways to start**: + When clicked… can start from more than a click: the page being shown, some seconds passing, a value reaching something, being dropped on a zone, a key, or a video reaching a time. **+ only if…** and **+ otherwise…** use the same condition pickers as the graph.
 - **Next and previous without formulas**: Go to the next item… and Go to the previous item… step through slides, cards or tabs and go round at the ends (or stop), with no formula. Change a value or counter has the same as Next number in a range and Previous number in a range. The carousel tutorial, its example and the Image slider starter use it.
