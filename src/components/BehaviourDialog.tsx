@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { DEFAULT_TRANSITION_MS, PAGE_TRANSITIONS, speedOf, TRANSITION_SPEEDS } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { pickNewAsset } from '../lib/quick-add';
-import { RECIPES, RECIPE_BY_ID, KEY_CHOICES, NEW_PREFIX, THIS_LAYER, TRIGGERS, TRIGGER_BY_ID, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, defaultTriggerAnswers, incomplete, joinSet, layerChoices, listChoices, lookColour, otherPages, reachOps, resettable, seedCondition, splitSet, switchChoices, textChoices, triggerIncomplete, triggerLabel, triggerUnavailable, unavailable, videoChoices, zoneChoices, type Answers, type Need, type Recipe, type RecipeCtx, type Step, type Trigger } from '../lib/recipes';
+import { RECIPES, RECIPE_BY_ID, KEY_CHOICES, NEW_PREFIX, THIS_LAYER, TRIGGERS, TRIGGER_BY_ID, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, defaultTriggerAnswers, findLayer, incomplete, joinSet, layerChoices, listChoices, lookColour, otherPages, reachOps, resettable, seedCondition, splitSet, switchChoices, textChoices, triggerIncomplete, triggerLabel, triggerUnavailable, unavailable, videoChoices, zoneChoices, type Answers, type Need, type Recipe, type RecipeCtx, type Step, type Trigger } from '../lib/recipes';
 import { OP_LABELS } from '../lib/condition';
 import { ColorField, TextField } from './ui';
 import { ConditionField } from './ConditionField';
@@ -228,6 +228,7 @@ function BehaviourDialog({ req }: { req: BehaviourRequest }) {
                   </select>
                 </label>
                 {!triggerBlocked && <NeedFields needs={TRIGGER_BY_ID[trigger].needs} ctx={ctx} answers={when} onAnswers={(patch) => setWhen((a) => ({ ...a, ...patch }))} recipeId={trigger} />}
+                {trigger === 'drop' && !(findLayer(ctx.ab, ctx.layerId) as { draggable?: unknown } | undefined)?.draggable && <p className="recipe-detail">This layer can’t be dragged yet. Add Draggable to it in the Inspector, or nothing will be dropped.</p>}
                 {then.map((st, i) => (
                   <StepRow key={i} label="Then" step={st} ctx={ctx} onChange={(x) => setThen((l) => l.map((y, j) => (j === i ? x : y)))} onRemove={() => setThen((l) => l.filter((_, j) => j !== i))} />
                 ))}

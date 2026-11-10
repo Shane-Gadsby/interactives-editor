@@ -364,6 +364,8 @@ describe('Other triggers', () => {
     expect(b.nodes[0]).toMatchObject({ kind: 'event.drop', params: { target: f.panel1.id, layer: f.btn.id, result: 'accepted' } });
     expect(b.sentence).toBe('When this layer is dropped on Panel one: tell screen readers “Hi”');
     expect(build('drop', { zone: '' }, f).b.nodes[0].params).toMatchObject({ target: '', layer: f.btn.id });
+    //any drop zone is a fine answer
+    expect(triggerIncomplete('drop', { zone: '' })).toBeNull();
     //the dragged layer's own Inspector lists it
     const st = { ...f.home, logic: { nodes: b.nodes, edges: b.edges } } as Artboard;
     expect(flowsForLayer({ ab: st, project: f.p }, f.btn.id).map((x) => x.when)).toEqual(['When this layer is dropped on Panel one']);

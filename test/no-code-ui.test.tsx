@@ -488,7 +488,17 @@ describe('BehaviourDialog: more steps, other triggers, Only if and Otherwise', (
     expect(sc.s.get().project.artboards[0].logic.nodes[1]).toMatchObject({ kind: 'action.setProperty', params: { prop: 'width', value: '240' } });
   });
 
-  it('a key and a drop zone are asked for in plain words', () => {
+  it('dropped on something says so when the layer cannot be dragged yet, and writes the drop event', () => {
+    const sc = open();
+    set(selectWith('drop'), 'drop');
+    expect(dlg().textContent).toContain('can’t be dragged yet');
+    expect(selects().find((x) => [...x.options].some((o) => o.textContent === 'Any drop zone'))!.value).toBe('');
+    expect(preview()).toBe('It will do this: When this layer is dropped where it belongs: go to the next page.');
+    click(byText('Add'));
+    expect(sc.s.get().project.artboards[0].logic.nodes[0]).toMatchObject({ kind: 'event.drop', params: { layer: sc.btn.id, target: '' } });
+  });
+
+  it('a key is asked for in plain words', () => {
     const sc = open();
     set(selectWith('key'), 'key');
     expect([...selectWith('ArrowLeft').options].map((o) => o.textContent)).toContain('Left arrow');

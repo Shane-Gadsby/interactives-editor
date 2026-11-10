@@ -648,7 +648,7 @@ function gapsIn(needs: Need[], a: Answers, project?: Project): string | null {
       if (watched?.type === 'number' ? !isNumber(v) : !v && watched?.type !== 'string') return watched?.type === 'number' ? 'Say the number it reaches.' : 'Say what it reaches.';
       continue;
     }
-    if (n.kind === 'reachop') continue;
+    if (n.kind === 'reachop' || n.kind === 'zone') continue;
     if (n.kind === 'key') {
       if (!v) return 'Choose which key.';
       continue;
