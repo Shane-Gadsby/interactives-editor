@@ -11,7 +11,7 @@ export const tutorial: BuildTutorial = {
     title: 'Use the UniSQ look and colour themes',
     group: 'Build it',
     summary: 'Give a page the UniSQ Purple colourway with theme tokens, see it in Light, Dark and High contrast, and know when to start from a branded starter pack instead.',
-    keywords: 'tutorial brand branding unisq colourway purple gold theme themes token tokens colour picker light dark high contrast default branded starter pack logo themes tab',
+    keywords: 'tutorial brand branding unisq colourway purple gold theme themes token tokens colour picker light dark high contrast default branded starter pack logo themes tab apply the unisq look existing project page master',
     body: `You will make a welcome page for a "Space week" in the UniSQ Purple colourway: a deep purple header with a gold bar under it, a card of text and a **Start** button. Every colour on it is a **token**, so the page also looks right for viewers who use dark mode or ask for more contrast. It takes about fifteen minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Use the UniSQ look and colour themes**. **Play** runs it and **Make my copy** gives you your own copy.
@@ -29,6 +29,8 @@ A new project already has these three themes, and every layer you add follows th
 ## 2. Add the UniSQ Purple colourway
 
 The UniSQ colourways are the colours of the branded starter packs: Gold, Purple, Blue, Green, Orange and Red.
+
+**Short cut:** in a project you already have, **Apply the UniSQ look…** in this tab (or <kbd>Ctrl</kbd>+<kbd>K</kbd>, then **UniSQ look**) does step 2 below in one go (it adds the colourway and makes it the default) and also gives every page the UniSQ logo and accent bar as a page master. It is described under **The look in one step** near the end. Doing it by hand here shows what it is made of.
 
 1. In the **Themes** tab, open **+ Colourway…** and pick **Purple: Deep purple with gold, the UniSQ dark slides.**
 2. A **Purple** column appears. The starter tokens have Purple's values in it (gold buttons), and new rows starting **brand/** have arrived: the gradient, the deep purple, the accent and the logo colours.
@@ -80,6 +82,16 @@ So detach a colour only when it really must stay the same in every theme.
 
 ![Preview with Theme: follow the viewer and Viewer: more contrast: the page in High contrast, white text on near black, with the purple header and gold bar.](help/tutorial-brand-preview.png)
 
+## The look in one step, for a project you already have
+
+The steps above build the look from tokens so you can see how it works. For a project that is already made, one command does the same and more:
+
+1. In the **Themes** tab open **Apply the UniSQ look…**, or in **Project** (in the Inspector, with a page selected), or press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type **UniSQ look**.
+2. Pick a colourway, for example **Purple**.
+3. A message says what it did: it added the Purple theme and the brand colours, made it the theme the project opens in, made a **Content master** with the gold accent bar and the logo, and set every page to use it.
+
+Your own layers stay where they are. Any that already use tokens follow the colourway; plain colours stay as they are. Press **Undo** on the message to take it all back. It does not lock the project like a starter pack does.
+
 ## The ready-made way: branded starter packs
 
 For the full UniSQ look (gradient title pages with the logo, white content pages with a footer line, deep purple section pages) start from a **branded starter pack** instead of a blank project:
@@ -99,6 +111,7 @@ In a branded project the logo and brand layers are locked, colours can only be t
 
 - Tokens name colours, and themes give them values. Layers that use tokens change with the theme; plain colours don't.
 - **+ Colourway…** in the **Themes** tab adds a UniSQ colourway, with its **brand/** tokens, and **Default** makes it the one the project opens in.
+- **Apply the UniSQ look…** does that for a project you already have, and gives its pages the logo and accent bar as a page master, in one undo step.
 - The colour picker's **Tokens** tab links a colour to a token.
 - **High contrast** and **Dark** are chosen by the viewer's own settings, so check them before you share.
 - Branded starter packs give you the whole UniSQ look, locked.

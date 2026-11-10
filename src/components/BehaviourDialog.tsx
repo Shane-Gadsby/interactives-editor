@@ -22,6 +22,19 @@ export interface BehaviourRequest {
   trigger: Trigger;
   /** Start with this recipe picked (the command palette asks for one by name). */
   recipe?: string;
+  /** Start with these answers filled in too (Describe it in the command palette reads them out of a sentence). */
+  prefill?: BehaviourPrefill;
+}
+
+/** What Describe it understood, to start the dialog with: answers for the recipe and the trigger, more steps, an Only if, an Otherwise. */
+export interface BehaviourPrefill {
+  answers?: Answers;
+  when?: Answers;
+  then?: Step[];
+  only?: string;
+  otherwise?: Step | null;
+  /** The lines shown above the list: what was understood, then what was not found or not understood. Nothing shown when empty. */
+  notes?: string[];
 }
 
 let request: BehaviourRequest | null = null;
@@ -69,13 +82,13 @@ function BehaviourDialog({ req }: { req: BehaviourRequest }) {
   const layer = ab ? layerChoices(ab).find((l) => l.id === req.layerId) : undefined;
   const ctx: RecipeCtx | null = ab ? { project, ab, layerId: req.layerId } : null;
   const [recipeId, setRecipeId] = useState(req.recipe && RECIPE_BY_ID[req.recipe] ? req.recipe : 'page-next');
-  const [answers, setAnswers] = useState<Answers>(() => (ctx ? defaultAnswers(RECIPE_BY_ID[req.recipe && RECIPE_BY_ID[req.recipe] ? req.recipe : 'page-next'], ctx) : {}));
+  const [answers, setAnswers] = useState<Answers>(() => (ctx ? { ...defaultAnswers(RECIPE_BY_ID[req.recipe && RECIPE_BY_ID[req.recipe] ? req.recipe : 'page-next'], ctx), ...req.prefill?.answers } : {}));
   // what starts it (clicked unless the person says otherwise), and the optional extras: more steps, an Only if, an Otherwise
   const [trigger, setTrigger] = useState<Trigger>(req.trigger);
-  const [when, setWhen] = useState<Answers>(() => (ctx ? defaultTriggerAnswers(req.trigger, ctx) : {}));
-  const [then, setThen] = useState<Step[]>([]);
-  const [only, setOnly] = useState<string | null>(null);
-  const [otherwise, setOtherwise] = useState<Step | null>(null);
+  const [when, setWhen] = useState<Answers>(() => (ctx ? { ...defaultTriggerAnswers(req.trigger, ctx), ...req.prefill?.when } : {}));
+  const [then, setThen] = useState<Step[]>(() => req.prefill?.then ?? []);
+  const [only, setOnly] = useState<string | null>(() => (req.prefill?.only ? req.prefill.only : null));
+  const [otherwise, setOtherwise] = useState<Step | null>(() => (req.prefill?.only ? (req.prefill.otherwise ?? null) : null));
   const box = useRef<HTMLDivElement>(null);
   const titleId = 'behaviour-title';
 
@@ -194,6 +207,13 @@ function BehaviourDialog({ req }: { req: BehaviourRequest }) {
           <strong id={titleId}>{counting ? 'Count what has been done…' : <>When {triggerLabel(trigger, who)}…</>}</strong>
         </header>
         <div className="dialog-body">
+          {!!req.prefill?.notes?.length && (
+            <div className="behaviour-described" role="status">
+              {req.prefill.notes.map((n, i) => (
+                <p key={i}>{n}</p>
+              ))}
+            </div>
+          )}
           <p className="dialog-message">What should happen? It is added to the Interactions graph, where you can take it further.</p>
           <ul className="recipe-list" role="radiogroup" aria-label="What should happen">
             {GROUPS.map((g) => (

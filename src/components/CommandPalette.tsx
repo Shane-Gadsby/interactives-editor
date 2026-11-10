@@ -6,6 +6,7 @@ import type { HelpHit } from '../help/search';
 import { helpSearch } from '../help/lazy';
 import { openHelp, openHelpSearch } from '../help/Help';
 import { track } from '../lib/analytics';
+import { describeCommand } from '../lib/describe-command';
 
 type Row = { kind: 'command'; c: Command } | { kind: 'help'; h: HelpHit };
 
@@ -25,7 +26,10 @@ function Palette({ onClose }: { onClose: () => void }) {
   //help results come once the search's chunk is in (a moment after the palette opens, the first time)
   const helpSearcher = helpSearch.use();
   const rows = useMemo<Row[]>(() => {
-    const cmds = q.trim() ? searchCommands(all, q, 24) : suggestedCommands(all);
+    const found = q.trim() ? searchCommands(all, q, 24) : suggestedCommands(all);
+    //A sentence may be a behaviour: the Describe it row goes first when it can be used, last among the commands when it cannot yet
+    const described = q.trim() ? describeCommand(q, found.length) : null;
+    const cmds = !described ? found : described.disabled ? [...found, described] : [described, ...found];
     const help = q.trim() && helpSearcher ? helpSearcher.searchHelp(q, 4) : [];
     return [...cmds.map((c): Row => ({ kind: 'command', c })), ...help.map((h): Row => ({ kind: 'help', h }))];
   }, [all, q, helpSearcher]);
@@ -46,6 +50,7 @@ function Palette({ onClose }: { onClose: () => void }) {
     onClose();
     noteCommandUsed(r.c.id);
     track('feature', 'palette-run', { thing: r.c.id.split(':')[0] });
+    if (r.c.id.startsWith('describe:')) track('feature', r.c.id === 'describe:it' ? 'describe-it' : 'describe-it-none');
     //Let the palette unmount (and give focus back) before the command opens a dialog of its own
     setTimeout(r.c.run, 0);
   };
@@ -59,7 +64,7 @@ function Palette({ onClose }: { onClose: () => void }) {
           aria-controls="palette-list"
           aria-activedescendant={rows.length ? `palette-row-${sel}` : undefined}
           aria-label="Type what you want to do"
-          placeholder="What do you want to do? (e.g. “add a button”, “grid”, “go to page 3”, “share”)"
+          placeholder="What do you want to do? (e.g. “add a button”, “grid”, “go to page 3”, or describe a behaviour: “when clicked show the hint”)"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => {

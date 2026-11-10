@@ -2801,6 +2801,13 @@ Under the list there are three more things, all optional, and a plain click does
 
 The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the event, for building the flow by hand in the graph.
 
+### Describe it in words
+You do not have to find the right item in the list. Select the layer, press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type what you want in a plain sentence, such as **make this go to the results page**, **when clicked show the hint**, **play a sound when this is clicked**, **add 1 to score** or **after 5 seconds go to the next page**. The first row says what it understood. Press <kbd>Enter</kbd> and this same box opens already filled in: the thing to do, **It starts when**, and any **then also**, **only if** or **otherwise** you described. A note above the list says what it read from your words. Check it, change anything, and press **Add**.
+
+It matches fixed phrasings, not an AI service, and nothing you type leaves the editor. The names of your layers, pages, values, animations and sounds are looked up in the open project, in any case, with a plural or a small typo forgiven. Anything it could not find (a page called something you have not made) is listed in the note, and you choose it in the box. A part of the sentence it could not read is listed too and left out. If it cannot read the sentence at all, the palette says so and offers this box empty.
+
+It works for most of the list: pages, showing and hiding, a layer's colour, text, opacity or size, animations, sounds and music, video, adding to or taking from a number, setting a text or a switch, putting values back, saying something to a screen reader, opening a link and starting over. For **It starts when** it knows **after 5 seconds**, **when the page opens**, **when hovered**, **when score reaches 10**, **when I press space**, **when dropped on the bin** and **when the video reaches 10 seconds**. Join steps with **then**, **and** or a comma, add **only if score is at least 3**, and give **otherwise** what to do when it is not true. It needs a layer to attach the behaviour to, so select one first, or name it: **when the Start button is clicked, show the hint**.
+
 ### Counting what is done
 Choose **all of these are done** under **It starts when** and the thing you picked to happen runs once every layer you tick has been done. Or choose **Count what has been done…** from the list to get only the counting, with nothing to run at the end. Either way you answer three questions:
 - **Each counts as done when it is**: *clicked*, *opened (a pop-up or dialog layer)* or *answered (a question)*. Opened works for a frame with the **Dialog** setting and an **open value**. Answered works for a layer made into a question. Only layers that can be done that way are listed.
@@ -3422,7 +3429,7 @@ A question keeps its settings on its frame, and each part layer is marked as par
     title: 'The command palette',
     group: 'Getting started',
     summary: 'Ctrl+K: type what you want to do, and do it, without hunting through menus.',
-    keywords: 'command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share',
+    keywords: 'command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share describe it sentence words plain behaviour',
     body: `Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
 
 ![The command palette searching for timeline: the New timeline and Open Timeline commands, then matching help pages.](help/command-palette.png)
@@ -3436,6 +3443,7 @@ Each row shows its **shortcut** if it has one (your own keys, if you changed the
 - **Selection**: duplicate, delete, group, ungroup, the four ordering commands, hide or show, lock, select all.
 - **Animate**: **Fade in**, **Slide in**, **Pop**, **Pulse**, **Shake**, **Fade out** on the selected layers (see [Animation presets](animation-presets)). They use the **When** and **Delay** chosen in the Animate section.
 - **Behaviours**: **When clicked: Go to the next page**, **Show a layer**, **Play a sound** and the other [behaviours](interactions) for the selected layer: it opens the behaviour dialog on that one.
+- **Describe it**: type a sentence, such as **when clicked show the hint** or **add 1 to score**, and the first row opens the behaviour dialog already filled in with what it understood, for you to check and **Add**. See [Describe it in words](interactions#describe-it-in-words).
 - **View**: zoom, grid, rulers, notes, bones, snapping and each snap target, page arrows.
 - **Tools**: pick any tool, with its key.
 - **Panels** and **Workspaces**: open any panel (Timeline, Interactions, Accessibility, Usage...) or switch to any workspace, built in or saved.
@@ -4242,6 +4250,14 @@ Projects made before this, and imported ones, have no themes until you add them 
 
 A project with no themes yet can start from one. High contrast is the one every project already has.
 
+## Apply the UniSQ look
+A project that did not start from a [branded starter pack](branded-starters) can still get the UniSQ look in one step. In the **Themes** tab (beside **+ Colourway…**), or in **Project** in the Inspector, open **Apply the UniSQ look…** and pick a colourway. Or press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type **UniSQ look**. It:
+- adds that colourway as a theme with the brand colours (as **+ Colourway…** does) and makes it the theme the project opens in;
+- makes a **Content master** (one for each page size) with the branded frame: the gold accent bar under the title and the UniSQ logo at the bottom left, painted with tokens so they follow the colourway;
+- sets every page that has no master to use it. A page that already has a master of its own keeps it.
+
+Your own layers are not moved or recoloured. A layer you coloured with a token follows the new colourway, and a plain colour stays as it is. The brand lock that a starter pack's project is held to is **not** switched on, so the project stays free to edit. A message says what it did, and **Undo** on it (or <kbd>Ctrl</kbd>+<kbd>Z</kbd>) takes all of it back in one step. If a layer of yours sits where the logo or accent bar goes, the message names the page. Pick another colourway later and only the theme the project opens in changes. The option is not shown for a project that already has the look from a starter pack: change its colourway in **Project**.
+
 ## The loading spinner
 When a project has to wait before its first page shows, a spinner appears after a quarter of a second. The waits are remembered progress or saved data coming from StudyDesk, a **Before activity loads** flow, and the first page's fonts. A quick start never shows it.
 
@@ -4338,6 +4354,9 @@ Tick **Map tokens from the page's CSS variables** and a token is read from a CSS
 The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` and \`color/button\` to \`--bs-primary\`, \`color/on-button\` to \`--bs-white\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other.
 
 A missing or odd variable leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
+
+## A project that did not start from a pack
+**Apply the UniSQ look…** (in the **Themes** tab, in **Project** settings, or in <kbd>Ctrl</kbd>+<kbd>K</kbd>) gives any other project the colourway and the frame: a theme, the brand tokens, a Content master with the logo and accent bar, and the pages set to use it. It does not lock anything. See [Themes and colour tokens](themes#apply-the-unisq-look).
 
 ## Branded projects
 A project made from a [branded starter pack](branded-starters) carries a theme for each UniSQ colourway (Gold, Purple, Blue, Green, Orange, Red) and High contrast. Its **Project** settings have a **Colourway** row that picks the default theme, and an option to let learners switch. Its layers can only use the project's tokens, so edit a colourway's colours here rather than typing a hex.
@@ -4932,6 +4951,7 @@ The **Project** section holds the settings for the whole project, not one page. 
 | Setting | Meaning |
 |---|---|
 | Colourway | Branded starters only. The colour theme the project opens in, and whether learners can switch it. See [Branded starter packs](branded-starters#switching-colourway) |
+| UniSQ look | Every other project. **Apply the UniSQ look…** adds a colourway and the branded page frame to the pages. See [Themes and colour tokens](themes#apply-the-unisq-look) |
 | Name | The project's name, as on the projects page |
 | Page title | The title of the browser tab for the exported page |
 | Description | A note about the project, kept in the file |
@@ -5561,7 +5581,7 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
     title: 'Branded starter packs',
     group: 'Working together',
     summary: 'UniSQ-branded ready-made activities in six colourways: what is locked and why, how to switch colourway, and every starter by set.',
-    keywords: 'branded brand starter pack unisq colourway colourways theme logo locked open sans chrome template quiz switch colour gold purple blue green orange red',
+    keywords: 'branded brand starter pack unisq colourway colourways theme logo locked open sans chrome template quiz switch colour gold purple blue green orange red apply the look existing project',
     body: () => {
       const src = brandedHelp?.();
       const ways = src ? src.colourways.map((c) => `- **${c.name}**: ${c.description}`).join('\n') : 'Gold, Purple, Blue, Green, Orange and Red, from the UniSQ palette.';

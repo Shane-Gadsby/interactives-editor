@@ -9,6 +9,7 @@ import { confirmDialog, promptDialog } from '../components/dialogs';
 import { ALL_COLOURWAYS, addColourwayTheme } from '../lib/branded/colourway';
 import { addTheme, addToken, checkThemePairs, convertStylesToTokens, ensureThemes, removeTheme, removeToken, setTokenValue, starterUpgrade, themeCounts, upgradeStarterTokens, type PairResult } from '../lib/themes';
 import { SectionBlurb } from '../components/SectionBlurb';
+import { UniSQLookPick } from '../components/UniSQLookPick';
 
 /** The Themes tab: tokens down the side, themes across, a colour in each cell. */
 export function ThemesPanel() {
@@ -114,6 +115,7 @@ export function ThemesPanel() {
             </option>
           ))}
         </select>
+        <UniSQLookPick />
         <button className="btn small-btn" onClick={newTheme} title="Add a theme: a new column of colours, copied from the default theme">
           <Icons.plus width={12} /> Theme
         </button>
