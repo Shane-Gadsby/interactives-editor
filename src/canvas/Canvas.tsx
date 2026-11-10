@@ -2204,6 +2204,7 @@ export function Canvas() {
         { label: 'Copy', hint: keyHints('copy'), onClick: () => copySelection() },
         paste,
         { label: 'Duplicate', hint: keyHints('duplicate'), onClick: () => s2.duplicateSelection() },
+        { label: 'Duplicate layer only', hint: keyHints('duplicate-layer'), onClick: () => s2.duplicateSelection(10, { behaviour: false }) },
         { label: 'Delete', hint: keyHints('delete'), danger: true, onClick: () => s2.deleteSelection() },
         { separator: true },
         {

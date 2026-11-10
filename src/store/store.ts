@@ -48,6 +48,7 @@ import { booleanPath, type BooleanOp } from '../lib/boolean';
 import { insertPoint, keyTimes, pointParts, POINT_PARTS, pointTracks, posedPaths, remapPointTracks, shapeToPaths } from '../lib/path-edit';
 import { apply as applyOps, type Op, type PathStep } from '../../shared/ops.mjs';
 import type { Peer } from '../lib/live';
+import { copyBehaviour } from '../lib/duplicate-behaviour';
 import { getArtboard, locate, parentToArtboard, selectionBounds, topmost, uniqueName, nodeNames } from './doc';
 import { dropRefsToRemoved, retargetChildRefs } from './refs';
 import { adoptQuestions, dropOrphanKitNodes } from '../lib/question-kit';
@@ -805,25 +806,32 @@ export class EditorStore {
     this.set({ selection: [] });
   }
 
-  duplicateSelection(offset = 10): void {
+  /**
+   * Duplicate the selected layers (or artboards). A copy of a layer brings what it does: the interactions that start from it are
+   * copied too, pointed at the copy (see lib/duplicate-behaviour.ts). `behaviour: false` copies the layers alone.
+   */
+  duplicateSelection(offset = 10, opts: { behaviour?: boolean } = {}): void {
     // With artboards selected (not layers), Ctrl+D duplicates the artboards
     if (this.state.artboardSelected) {
       this.duplicateArtboards(this.pickedArtboards());
       return;
     }
-    track('doc', 'duplicate');
+    const withBehaviour = opts.behaviour !== false;
+    track('doc', 'duplicate', withBehaviour ? undefined : { thing: 'layers-only' });
     const ab = this.artboard();
     if (!ab) return;
     const ids = topmost(ab, this.state.selection);
     if (!ids.length) return;
     const newIds: string[] = [];
+    const idMap = new Map<string, string>();
+    let copied = { events: 0, nodes: 0 };
     this.update((d) => {
       const dab = getArtboard(d as Project, ab.id)!;
       const names = nodeNames(dab);
       for (const id of ids) {
         const loc = locate(dab, id);
         if (!loc) continue;
-        const copy = cloneWithNewIds(JSON.parse(JSON.stringify(loc.node)) as SceneNode);
+        const copy = cloneWithNewIds(JSON.parse(JSON.stringify(loc.node)) as SceneNode, idMap);
         copy.x += offset;
         copy.y += offset;
         copy.name = uniqueName(names, loc.node.name);
@@ -831,9 +839,11 @@ export class EditorStore {
         loc.siblings.splice(loc.index + 1, 0, copy);
         newIds.push(copy.id);
       }
+      if (withBehaviour) copied = copyBehaviour(dab, idMap);
       adoptQuestions(d as Project, ab.id, newIds);
     });
     this.select(newIds);
+    if (copied.events) this.toast(`Copied ${copied.events === 1 ? 'its interaction' : `${copied.events} interactions`} too, pointed at the copy. Use Duplicate layer only to leave them out.`);
   }
 
   /**
@@ -1082,6 +1092,7 @@ export class EditorStore {
     if (!ab) return null;
     track('doc', 'duplicate', { thing: 'layers-drag' });
     let made: string | null = null;
+    let copied = { events: 0, nodes: 0 };
     this.update((d) => {
       const dab = getArtboard(d as Project, ab.id)!;
       const loc = locate(dab, id);
@@ -1091,15 +1102,18 @@ export class EditorStore {
       const target = parentId ? locate(dab, parentId) : null;
       const list = target && isContainer(target.node) ? target.node.children : dab.children;
       const newOffset = target ? [...target.ancestors, target.node].reduce((o, a) => ({ x: o.x + a.x, y: o.y + a.y }), { x: 0, y: 0 }) : { x: 0, y: 0 };
-      const copy = cloneWithNewIds(JSON.parse(JSON.stringify(loc.node)) as SceneNode);
+      const idMap = new Map<string, string>();
+      const copy = cloneWithNewIds(JSON.parse(JSON.stringify(loc.node)) as SceneNode, idMap);
       copy.x += oldOffset.x - newOffset.x;
       copy.y += oldOffset.y - newOffset.y;
       copy.name = uniqueName(nodeNames(dab), loc.node.name);
       list.splice(Math.max(0, Math.min(list.length, index)), 0, copy);
       made = copy.id;
+      copied = copyBehaviour(dab, idMap);
       adoptQuestions(d as Project, ab.id, [copy.id]);
     });
     if (made) this.select([made]);
+    if (copied.events) this.toast(`Copied ${copied.events === 1 ? 'its interaction' : `${copied.events} interactions`} too, pointed at the copy.`);
     return made;
   }
 

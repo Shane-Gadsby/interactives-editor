@@ -66,6 +66,7 @@ export function installEditorKeys(zoomTo: (mode: 'fit' | '100' | 'selection' | '
   set('undo', (e) => (stop(e), store().undo()));
   set('redo', (e) => (stop(e), store().redo()));
   set('duplicate', (e) => (stop(e), store().duplicateSelection()));
+  set('duplicate-layer', (e) => (stop(e), store().duplicateSelection(10, { behaviour: false })));
   set('group', (e) => (stop(e), store().groupSelection()));
   set('ungroup', (e) => (stop(e), store().ungroupSelection()));
   //Copy and cut leave the key to the browser; with keys picked in the Timeline they mean those keys

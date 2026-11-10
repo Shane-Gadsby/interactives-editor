@@ -87,7 +87,7 @@ One press adds *Planning* to the list, so the bar grows and the Planner badge li
 
 ## 6. The other two tasks
 
-Build **Read actively** and **Write a draft** the same way. Copy the heading, tip and button from **Plan your week** if you like, but each button needs its own click: copying a layer doesn't copy its interactions.
+Build **Read actively** and **Write a draft** the same way. Copy the heading, tip and button from **Plan your week** if you like, but each button needs its own click: **Copy** and **Paste** onto another page bring the layer without what it does. (<kbd>Ctrl</kbd>+<kbd>D</kbd> on the same page does copy the click too, pointed at the copy.)
 
 | Page | Tip | The task's name (in the label and the Value) |
 |---|---|---|
