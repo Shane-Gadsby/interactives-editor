@@ -2059,6 +2059,15 @@ let current: EditorStore | null = null;
 
 export function setCurrentStore(s: EditorStore | null): void {
   current = s;
+  storeWatchers.forEach((f) => f(s));
+}
+
+const storeWatchers = new Set<(s: EditorStore | null) => void>();
+
+/** Told whenever a project is opened or closed (the help's guided tutorials follow the open project). Returns the way to stop. */
+export function onCurrentStore(fn: (s: EditorStore | null) => void): () => void {
+  storeWatchers.add(fn);
+  return () => void storeWatchers.delete(fn);
 }
 
 /** The open project's store, or null outside an editor (a component that only sometimes has a project behind it). */

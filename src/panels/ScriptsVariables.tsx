@@ -268,7 +268,7 @@ export function VariablesPanel() {
         </tbody>
       </table>
       <div className="var-add">
-        <button className="btn" aria-expanded={menu} aria-haspopup="true" onClick={() => setMenu(!menu)}>
+        <button className="btn" data-tour="add-variable" aria-expanded={menu} aria-haspopup="true" onClick={() => setMenu(!menu)}>
           + Add variable
         </button>
         {menu && (

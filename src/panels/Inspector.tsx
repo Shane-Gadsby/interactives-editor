@@ -1818,7 +1818,7 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
         <p className="hint">Nothing happens when this layer is used yet.</p>
       )}
       <Row k="Add interaction" words={['on click', 'on hover', 'event', 'action', 'trigger', 'click', 'hover', 'behaviour', 'when', 'show', 'hide', 'page', 'sound', 'counter']}>
-        <button className="btn" title="Choose what happens when this layer is clicked: go to a page, show or hide something, play a sound, count..." onClick={() => openBehaviours({ abId: ab.id, layerId: node.id, trigger: 'click' })}>
+        <button className="btn" data-tour="add-when-clicked" title="Choose what happens when this layer is clicked: go to a page, show or hide something, play a sound, count..." onClick={() => openBehaviours({ abId: ab.id, layerId: node.id, trigger: 'click' })}>
           + When clicked…
         </button>
         <button className="btn" title="Choose what happens when the pointer moves onto this layer" onClick={() => openBehaviours({ abId: ab.id, layerId: node.id, trigger: 'pointerenter' })}>
@@ -1826,7 +1826,7 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
         </button>
       </Row>
       <Row k="Add an empty event" words={['empty', 'advanced', 'graph', 'on pointer', 'on click', 'on hover']}>
-        <button className="btn small" title="Add just the On pointer event, with nothing joined to it, and build the rest in the graph" onClick={() => add('click')}>
+        <button className="btn small" data-tour="add-empty-click" title="Add just the On pointer event, with nothing joined to it, and build the rest in the graph" onClick={() => add('click')}>
           + On click (empty)
         </button>
         <button className="btn small" title="Add just the On pointer event, with nothing joined to it, and build the rest in the graph" onClick={() => add('pointerenter')}>

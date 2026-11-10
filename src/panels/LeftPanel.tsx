@@ -612,7 +612,7 @@ export function Layers() {
       <div style={{ height: first * ROW_H }} />
       {flat.slice(first, last).map((r) => (r.kind === 'group' ? groupRow(r.group, r.boards) : r.kind === 'artboard' ? artboardRow(r.ab) : row(r.ab, r.n, r.depth, r.parent)))}
       <div style={{ height: (flat.length - last) * ROW_H }} />
-      <button className="link-btn add-artboard" onClick={() => store().addArtboard()}>
+      <button className="link-btn add-artboard" data-tour="add-page" onClick={() => store().addArtboard()}>
         + Add page
       </button>
       <button

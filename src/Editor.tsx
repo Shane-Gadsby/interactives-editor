@@ -682,6 +682,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       <IconButton icon={<Icons.home />} title="All projects" onClick={home} />
       <input
         className="project-title"
+        data-tour="project-name"
         value={s.name}
         onChange={(e) =>
           st.update(
@@ -743,11 +744,11 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       {motionOpen && <MotionExportModal onClose={() => setMotionOpen(false)} />}
       {reviewOpen && <ShareForReviewModal onClose={() => setReviewOpen(false)} />}
       {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} />}
-      <button className="btn primary" onClick={onPreview} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Play the project exactly as the exported file will">
+      <button className="btn primary" data-tour="preview" onClick={onPreview} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Play the project exactly as the exported file will">
         <Icons.preview width={14} /> Preview
       </button>
       <div className="menu-wrap">
-        <button className="btn" onClick={() => setMenu(!menu)} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Export: save the project, or a picture or animation of it, as files">
+        <button className="btn" data-tour="export" onClick={() => setMenu(!menu)} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Export: save the project, or a picture or animation of it, as files">
           <Icons.download width={14} /> Export
         </button>
         {menu && (
@@ -801,7 +802,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         )}
       </div>
       <div className="menu-wrap">
-        <button className="btn" onClick={() => setShareMenu(!shareMenu)} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Share the project: a link to play it, people to edit it with, reviewers to comment on it">
+        <button className="btn" data-tour="share" onClick={() => setShareMenu(!shareMenu)} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Share the project: a link to play it, people to edit it with, reviewers to comment on it">
           <Icons.share width={14} /> Share
         </button>
         {shareMenu && (
@@ -891,6 +892,7 @@ function AddQuestion({ reorderKey }: { reorderKey?: string }) {
       {pasteOpen && <PasteQuestionsModal onClose={() => setPasteOpen(false)} />}
       <IconButton
         reorderKey={reorderKey}
+        tour="add-question"
         icon={<Icons.question />}
         title="Add question: multiple choice, true/false, fill in the blank, ordering, matching, hotspot"
         active={!!at}
@@ -1015,7 +1017,7 @@ export function Toolbar() {
     const t = all.find((x) => x.tool === id);
     if (!t) return null;
     const I = Icons[t.icon];
-    return <IconButton key={t.tool} reorderKey={t.tool} icon={<I />} title={toolTip(t.label, t.tool)} active={tool === t.tool} onClick={() => store().set({ tool: t.tool, editingPathId: null })} />;
+    return <IconButton key={t.tool} reorderKey={t.tool} tour={`tool-${t.tool}`} icon={<I />} title={toolTip(t.label, t.tool)} active={tool === t.tool} onClick={() => store().set({ tool: t.tool, editingPathId: null })} />;
   };
   const image = (
     <IconButton

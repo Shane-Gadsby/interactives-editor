@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 //(for import.meta.glob: the MCP server's typecheck leaves the vite client types out, and its bundle is made by vite too)
 import type { HelpTopic } from '../topics';
+import type { Guide } from '../../lib/tutorial-checks';
 
 /**
  * The Build it tutorials: one topic per kind of thing people make (a quiz question, flip cards, a branching story...), each in its
@@ -16,6 +17,8 @@ export interface BuildTutorial {
   /** The example key, `tut-<slug>`. */
   example: string;
   topic: HelpTopic;
+  /** How the help tells each step is done and what Show me points at, by step number (see lib/tutorial-checks.ts). Steps it leaves out are ticked by hand. */
+  guide?: Guide;
 }
 
 const mods = import.meta.glob<{ tutorial: BuildTutorial }>('./*.ts', { eager: true });

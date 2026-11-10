@@ -219,7 +219,7 @@ export function TimelinePanel() {
         ) : (
           <>
             <p>Timelines animate layer properties with keyframes. Play them on start or from interactions.</p>
-            <button className="btn primary" onClick={() => store().addTimeline()}>
+            <button className="btn primary" data-tour="timeline-new" onClick={() => store().addTimeline()}>
               + New timeline
             </button>
           </>
@@ -543,9 +543,9 @@ export function TimelinePanel() {
         >
           List ({ab.timelines.length})
         </button>
-        <IconButton icon={s.playing ? <Icons.pause /> : <Icons.play />} title={withKey(s.playing ? 'Pause preview' : 'Play preview', 'timeline-play')} onClick={() => store().set({ previewPlaying: !s.playing, playhead: !s.playing && s.playhead >= tl.duration ? 0 : s.playhead })} />
+        <IconButton tour="timeline-play" icon={s.playing ? <Icons.pause /> : <Icons.play />} title={withKey(s.playing ? 'Pause preview' : 'Play preview', 'timeline-play')} onClick={() => store().set({ previewPlaying: !s.playing, playhead: !s.playing && s.playhead >= tl.duration ? 0 : s.playhead })} />
         <IconButton icon={<Icons.stop />} title="Back to start" onClick={() => store().set({ previewPlaying: false, playhead: 0 })} />
-        <IconButton icon={<Icons.record />} className="record-btn" title="Record: property changes become keyframes" active={s.recording} onClick={() => store().set({ recording: !s.recording })} />
+        <IconButton tour="timeline-record" icon={<Icons.record />} className="record-btn" title="Record: property changes become keyframes" active={s.recording} onClick={() => store().set({ recording: !s.recording })} />
         <span className="time-readout mono">{Math.round(s.playhead)} ms</span>
         <span className="tl-summary muted small" title="This timeline's settings; the gear changes them">
           {tl.duration} ms · {{ once: 'Play once', loop: 'Loop', pingpong: 'Ping-pong' }[tl.loop] ?? tl.loop} · {tl.speed}×{tl.autoplay ? ' · autoplay' : ''}

@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { clickThen, pages, saw, variable, variableWhere, all } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 40,
@@ -149,5 +150,15 @@ Watch \`score\`, \`taken\` and \`ending\` change in **Variables (live)** on the 
 - **Start over** puts every variable back and returns to the first page.
 
 **Next:** [A "which one are you?" quiz](tutorial-personality) uses several scores at once. More on the graph in [Interactions](interactions), on formulas in [Variables](variables#worked-out-from-a-formula) and [Expressions](expressions).`,
+  },
+  guide: {
+    1: { check: pages(7), show: 'add-page' },
+    2: { check: variable('taken', 'list'), show: ['add-variable', 'panel-variables'] },
+    3: { show: 'tool-button' },
+    4: { check: all(variable('score', 'number'), clickThen('button', 'action.artboard')), show: 'add-when-clicked' },
+    5: { check: clickThen('button', 'action.artboard', undefined, 3), show: 'add-when-clicked' },
+    6: { check: variableWhere('ending', (v) => !!v.formula && !!v.live), show: ['add-variable', 'panel-variables'] },
+    8: { check: clickThen('button', 'action.startOver'), show: 'add-when-clicked' },
+    9: { check: saw('previewed'), show: 'preview' },
   },
 };
