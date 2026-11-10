@@ -2,6 +2,7 @@
 //It writes nothing new. It is the Look up converter (a map) on a binding whose formula is the variable, the item field or the
 //condition the table is about, so the Formula and Converters views show exactly what the table does. These are the pure
 //parts: which "when" choices there are, what the table rows are, and how a row changes.
+import { variableOption } from './friendly-names';
 import { isIdentifier, tryEvaluate, type Converter, type Variable } from 'interactives-player';
 
 export type MapConverter = Extract<Converter, { type: 'map' }>;
@@ -21,7 +22,7 @@ export interface WhenChoice {
  * text or a number, and its place in the list. `repeat` is what the Inspector knows about the repeater's first copy.
  */
 export function whenChoices(variables: Variable[], repeat?: { locals?: string[]; values?: Record<string, unknown> }): WhenChoice[] {
-  const out: WhenChoice[] = variables.filter((v) => isIdentifier(v.name)).map((v) => ({ value: v.name, label: v.name, hint: v.type }));
+  const out: WhenChoice[] = variables.filter((v) => isIdentifier(v.name)).map((v) => variableOption(v, v.type));
   const item = repeat?.values?.item;
   if (repeat?.locals?.includes('item')) {
     if (item && typeof item === 'object' && !Array.isArray(item)) {

@@ -266,9 +266,9 @@ describe('BehaviourDialog', () => {
     expect(select.value).toBe('vs');
     set(select, '__new__');
     set(q('.behaviour-dialog input:not([type])') as HTMLInputElement, 'Number of hovers');
-    expect(q('.behaviour-preview')!.textContent).toBe('It will do this: When hovered over: add 1 to Number_of_hovers.');
+    expect(q('.behaviour-preview')!.textContent).toBe('It will do this: When hovered over: add 1 to Number of hovers.');
     click(byText('Add'));
-    expect(sc.s.get().project.variables.map((v) => v.name)).toEqual(['score', 'done', 'who', 'Number_of_hovers']);
+    expect(sc.s.get().project.variables.map((v) => v.name)).toEqual(['score', 'done', 'who', 'numberOfHovers']);
   });
 
   it('says what is missing, and keeps Add off until it is there', () => {

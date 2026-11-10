@@ -1,3 +1,4 @@
+import { variableOption } from '../lib/friendly-names';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { LOCAL_SCOPE_HINTS, PLAYER_SCOPE_HINTS, type Variable } from 'interactives-player';
 import { maybeStore } from '../store/store';
@@ -87,7 +88,7 @@ export function ConditionField({
   };
 
   const options = useMemo<PickerOption[]>(() => {
-    const out: PickerOption[] = variables.filter((v) => /^[A-Za-z_$][\w$]*$/.test(v.name)).map((v) => ({ value: v.name, label: v.name, hint: v.type === 'boolean' ? 'on/off' : v.type }));
+    const out: PickerOption[] = variables.filter((v) => /^[A-Za-z_$][\w$]*$/.test(v.name)).map((v) => variableOption(v, v.type === 'boolean' ? 'on/off' : v.type));
     for (const d of project?.dataSources ?? []) out.push({ value: d.name, label: d.name, hint: 'data' });
     for (const l of names) out.push({ value: l, label: l, hint: LOCAL_SCOPE_HINTS[l]?.type });
     for (const [n, h] of Object.entries(PLAYER_SCOPE_HINTS)) if (h.type !== 'function' && h.type !== 'object') out.push({ value: n, label: n, hint: h.type });

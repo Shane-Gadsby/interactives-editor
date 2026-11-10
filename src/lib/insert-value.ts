@@ -1,4 +1,4 @@
-import { CONTEXT_FIELDS, LOCAL_SCOPE_HINTS } from 'interactives-player';
+import { CONTEXT_FIELDS, LOCAL_SCOPE_HINTS, variableLabel, variableLabelAndName } from 'interactives-player';
 import { braceSpan, preview, typeOf, type SuggestEnv } from './suggest';
 
 /** One thing the Insert value menu offers: what to call it, what it puts in the text and what it is right now. */
@@ -61,8 +61,8 @@ export function insertChoices(env: SuggestEnv): InsertChoice[] {
   for (const v of env.project.variables) {
     if (!ident.test(v.name)) continue;
     const now = scope[v.name];
-    if (v.type === 'list') out.push({ group: 'Your variables', label: `How many in ${v.name}`, expr: `${v.name}.length`, hint: `number · ${Array.isArray(now) ? now.length : 0}` });
-    else out.push({ group: 'Your variables', label: v.name, expr: v.name, hint: hint(now) });
+    if (v.type === 'list') out.push({ group: 'Your variables', label: `How many in ${variableLabel(v)}`, expr: `${v.name}.length`, hint: `number · ${Array.isArray(now) ? now.length : 0}` });
+    else out.push({ group: 'Your variables', label: variableLabelAndName(v), expr: v.name, hint: hint(now) });
   }
 
   for (const d of env.project.dataSources) {

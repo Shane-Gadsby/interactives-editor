@@ -159,7 +159,7 @@ You will build a lamp. A button switches it on and off, and a counter shows how 
 3. In **Name** type \`lit\`, then press <kbd>Tab</kbd> (the name is saved when you leave the field). The **Type** is already **True/false (switch)**. Leave the starting value unticked (false).
 4. Press **+ Add variable** again and pick **Counter**. Name it \`taps\`. The **Type** is **Number (counter, score)** with the starting value 0.
 
-Names can only use letters, digits and \`_\`, and can't start with a digit. That is so they work inside expressions.
+You can type a name in plain words too, such as **Lamp on**. Formulas need a name made of letters, digits and \`_\`, so the editor offers \`lampOn\` in a small **Name in formulas** box, and keeps your words as the label you see in lists. The names in this tutorial are already plain, so they are used as typed.
 
 ![The Variables tab: lit is true/false and starts false, taps is a number and starts at 0.](help/variables-panel.png)
 

@@ -108,7 +108,9 @@ describe('buildBehaviour', () => {
     expect(defaultAnswers(RECIPE_BY_ID.counter, ctx).counter).toBe('v1');
     const named = buildBehaviour(ctx, 'counter', 'click', { counter: 'new:count' }, mk);
     expect(named.variables[0].name).toBe('count2');
-    expect(buildBehaviour(ctx, 'counter', 'click', { counter: 'new:Number of clicks!' }, mk).variables[0].name).toBe('Number_of_clicks_');
+    //words with spaces become an identifier, and the words are kept as the label
+    const words = buildBehaviour(ctx, 'counter', 'click', { counter: 'new:Number of clicks!' }, mk).variables[0];
+    expect([words.name, words.label]).toEqual(['numberOfClicks', 'Number of clicks!']);
     const existing = buildBehaviour(ctx, 'counter', 'click', { counter: 'v1' }, mk);
     expect(existing.variables).toEqual([]);
     expect(existing.nodes[1].params.variable).toBe('v1');

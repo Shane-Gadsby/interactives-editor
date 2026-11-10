@@ -3494,7 +3494,7 @@ Ordering, categorise and hotspot questions are not pasted (add them from the Add
     title: 'Variables',
     group: 'Interactivity',
     summary: 'Named values (number, text, true/false, colour, choice) shared by the whole project.',
-    keywords: 'variable state value number string boolean color enum choice options input rename',
+    keywords: 'label friendly name quiz score spaces capitals identifier name in formulas variable state value number string boolean color enum choice options input rename',
     body: `A variable is a named value the activity remembers while it runs: a score, a name, whether a panel is open. Use variables when something on one page has to change something else, on the same page or another. They belong to the project, so every page sees the same values.
 
 Add them in the **Variables** tab. Each has a name, a type and a starting value.
@@ -3597,7 +3597,14 @@ One project can start with different values in different courses (a due date, a 
 ## Adding a variable
 Press **+ Add variable** and pick what it is for: a **Counter** (a number that goes up and down), a **Switch (on or off)**, **Text**, a **Score** (a running total, remembered between visits), a **List**, a **Choice** or a **Colour**. Each one is an ordinary variable of that type with a name you can change, so the table still shows the type and starting value. See [Tutorial 3](tutorial-state-machine) for a worked example.
 
-Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field.
+## Naming a variable
+Type the name in your own words, spaces and capitals included: **Quiz score**. Formulas need a short name with letters, digits and \`_\` only, so the editor offers one made from your words, \`quizScore\`, in a small **Name in formulas** box under the field. Leave it, or change it. Your words are kept as the variable's **label**.
+
+Everywhere you pick a variable (the Variables tab, the pickers in the graph and the bindings, the sentences that say what an interaction does, **Insert value**, the live list in Preview) you see your words, with the formula name small beside them. Formulas, \`{braces}\` in text and scripts always use the formula name: \`Score: {quizScore}\`.
+
+A name that is already plain, like \`score\` or \`high_score\`, is used as typed and has no separate label. Change the words later and the formula name stays, so nothing that uses it breaks; change the **Name in formulas** and the project follows everywhere it is used, as renaming always did.
+
+The name is saved when you leave the field. If there is nothing to build a name from (only symbols, say) or the **Name in formulas** is not valid, the field stays as a draft with a message and the project keeps the last good name until you fix it.
 
 Next to the type, **Starts as a value** is the number, text or switch the project starts with. **Worked out** is for a variable that is calculated, such as a crossword grid: it shows a box for the formula (for example \`crossword(words, 10)\`), and the value stays as what it falls back to if the formula fails. **Keep up to date** (for a formula) works it out again whenever something it reads changes.
 
@@ -5931,8 +5938,8 @@ The property is probably bound: the binding sets it again straight away. Look in
 **My text shows \`{score}\` instead of the number.**
 The variable needs to exist with exactly that name (it's case sensitive). Make it in the **Variables** tab. To show a real brace, write \`{{\`. See [Variables](variables).
 
-**It says "Use letters, digits and _ only".**
-Variable and data source names are used inside expressions, so they can't contain spaces or dashes. Try \`high_score\`. A variable whose name is empty or not valid is not saved: it stays in the field as a draft, with this message, and the project keeps the last good name until you fix it.
+**It says "Formulas need a name with letters, digits and _ only".**
+Formulas use a variable's **Name in formulas**, so that one can't contain spaces or dashes. Type your own words in the name field (**Quiz score**) and the editor offers \`quizScore\`; if you changed that box to something with a space or a dash, try \`high_score\`. Data source names must be plain like this too. A name that is empty or not valid is not saved: it stays in the field as a draft, with the message, and the project keeps the last good name until you fix it.
 
 **A script does nothing.**
 Open **Preview** and look at the **Events** list for an error message. Scripts in the sandbox can only use \`ix\`, timers and \`console\`. See [Scripts](scripts).

@@ -1,3 +1,4 @@
+import { variableOption } from '../lib/friendly-names';
 import { useEffect, useMemo, useState } from 'react';
 import { LOCAL_SCOPE_HINTS, PLAYER_SCOPE_HINTS, type SceneNode } from 'interactives-player';
 import { maybeStore } from '../store/store';
@@ -41,7 +42,7 @@ export function CalculationPicker({ value, names, self, values, onUse }: { value
   }, [variables, project?.dataSources, names]);
   const listOptions = useMemo<PickerOption[]>(
     () => [
-      ...variables.filter((v) => v.type === 'list' && NAME.test(v.name)).map((v) => ({ value: v.name, label: v.name, hint: 'list' })),
+      ...variables.filter((v) => v.type === 'list' && NAME.test(v.name)).map((v) => variableOption(v, 'list')),
       ...(project?.dataSources ?? []).map((d) => ({ value: d.name, label: d.name, hint: 'data' })),
     ],
     [variables, project?.dataSources],

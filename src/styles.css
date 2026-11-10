@@ -4479,6 +4479,22 @@ button.twisty:hover {
 .var-used {
   margin-top: 2px;
 }
+.var-ident {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 12px;
+}
+.var-ident input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  padding: 2px 6px;
+}
+.preview-var small {
+  font-size: 11px;
+}
 .var-used .link-btn {
   font-size: 12px;
 }

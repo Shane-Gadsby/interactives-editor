@@ -3,6 +3,7 @@ import { store } from '../store/store';
 import { uniqueIdentifier } from '../store/doc';
 import { insertFiles, pickFiles } from './insert';
 import { promptDialog } from '../components/dialogs';
+import { nameFromWords } from './friendly-names';
 
 /** Dropdown values that mean "make a new one" instead of picking an existing item. */
 export const ADD_ASSET = '__add_asset__';
@@ -39,18 +40,19 @@ export async function createVariable(type: VariableType = 'number', suggested = 
   const taken = store().get().project.variables.map((v) => v.name);
   const raw = await promptDialog({
     title: 'New variable',
-    label: 'Name for the new variable (letters, digits and _)',
+    label: 'Name for the new variable (spaces are fine)',
     initial: uniqueIdentifier(taken, suggested),
     confirmLabel: 'Create variable',
   });
   if (raw === null) return null;
-  const name = variableNameFrom(raw, store().get().project.variables.map((v) => v.name), suggested);
+  const made = nameFromWords(raw, taken);
+  const name = made ? uniqueIdentifier(store().get().project.variables.map((v) => v.name), made.name) : variableNameFrom(raw, store().get().project.variables.map((v) => v.name), suggested);
   const id = uid('v');
   const initial = type === 'number' ? 0 : type === 'boolean' ? false : type === 'color' ? LIGHT_LOOK.button : '';
   store().update((d) => {
-    d.variables.push({ id, name, type, initial });
+    d.variables.push({ id, name, ...(made?.label ? { label: made.label } : {}), type, initial });
   });
-  store().toast(`Created variable “${name}”. Change its type and starting value in the Variables tab.`);
+  store().toast(`Created variable “${made?.label ?? name}”. Change its type and starting value in the Variables tab.`);
   return id;
 }
 

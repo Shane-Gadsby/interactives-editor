@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { cleanSharedSettings, type DataSource, type SharedSettings, type SharedWho, type Variable } from 'interactives-player';
+import { cleanSharedSettings, type DataSource, type SharedSettings, type SharedWho, type Variable, variableLabelAndName } from 'interactives-player';
 import { store } from '../store/store';
 import { getSharedResponses, hideSharedAnswer, removeSharedAnswers, type SharedCourse, type SharedSourceInfo } from '../lib/db';
 import { NumberField, SelectField, TextField } from '../components/ui';
@@ -33,7 +33,7 @@ export function SharedForm({ source, variables, setSource }: { source: DataSourc
       <SelectField
         label="Switch with"
         value={s.whoVariable ?? ''}
-        options={[{ value: '', label: 'Nothing (use the setting above)' }, ...pickers.map((v) => ({ value: v.id, label: v.name }))]}
+        options={[{ value: '', label: 'Nothing (use the setting above)' }, ...pickers.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))]}
         title="Take who sees it from a text variable instead, so the same project switches by one setting. A variable that says Only me keeps answers private; one that says everyone, class or shared shows them to the class"
         onChange={(v) => set({ whoVariable: v || undefined })}
       />

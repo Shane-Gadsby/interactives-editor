@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { DEFAULT_TRANSITION_MS, PAGE_TRANSITIONS, speedOf, TRANSITION_SPEEDS } from 'interactives-player';
+import { DEFAULT_TRANSITION_MS, PAGE_TRANSITIONS, speedOf, TRANSITION_SPEEDS, variableLabelAndName } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { pickNewAsset } from '../lib/quick-add';
 import { RECIPES, RECIPE_BY_ID, KEY_CHOICES, NEW_PREFIX, THIS_LAYER, TRIGGERS, TRIGGER_BY_ID, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, defaultTriggerAnswers, findLayer, incomplete, joinSet, layerChoices, listChoices, lookColour, otherPages, reachOps, resettable, seedCondition, splitSet, switchChoices, textChoices, triggerIncomplete, triggerLabel, triggerUnavailable, unavailable, videoChoices, zoneChoices, type Answers, type Need, type Recipe, type RecipeCtx, type Step, type Trigger } from '../lib/recipes';
@@ -442,8 +442,8 @@ function NeedField({ need, ctx, answers, onAnswer, onAnswers, recipeId }: { need
       const fresh = need.newName ?? (need.kind === 'counter' ? 'count' : 'isOn');
       return (
         <>
-          {sel(isNew ? NEW_VALUE : v, [...existing.map((x) => ({ value: x.id, label: x.name })), { value: NEW_VALUE, label: `A new ${noun}…` }], (x) => onAnswer(x === NEW_VALUE ? NEW_PREFIX + fresh : x))}
-          {isNew && <TextField label={`Name the ${noun}`} value={v.slice(NEW_PREFIX.length)} onChange={(x) => onAnswer(NEW_PREFIX + x)} title="Letters, digits and _ . It becomes a variable you can show in text or test in a condition" />}
+          {sel(isNew ? NEW_VALUE : v, [...existing.map((x) => ({ value: x.id, label: variableLabelAndName(x) })), { value: NEW_VALUE, label: `A new ${noun}…` }], (x) => onAnswer(x === NEW_VALUE ? NEW_PREFIX + fresh : x))}
+          {isNew && <TextField label={`Name the ${noun}`} value={v.slice(NEW_PREFIX.length)} onChange={(x) => onAnswer(NEW_PREFIX + x)} title="Plain words are fine, spaces too. It becomes a variable you can show in text or test in a condition" />}
         </>
       );
     }
@@ -476,8 +476,8 @@ function NeedField({ need, ctx, answers, onAnswer, onAnswers, recipeId }: { need
       };
       return (
         <>
-          {sel(isNew ? NEW_VALUE : v, [...existing.map((x) => ({ value: x.id, label: x.type === 'enum' ? `${x.name} (a choice)` : x.name })), { value: NEW_VALUE, label: 'A new piece of text…' }], pick)}
-          {isNew && <TextField label="Name it" value={v.slice(NEW_PREFIX.length)} onChange={(x) => onAnswer(NEW_PREFIX + x)} title="Letters, digits and _ . It becomes a variable you can show in text or test in a condition" />}
+          {sel(isNew ? NEW_VALUE : v, [...existing.map((x) => ({ value: x.id, label: x.type === 'enum' ? `${variableLabelAndName(x)} (a choice)` : variableLabelAndName(x) })), { value: NEW_VALUE, label: 'A new piece of text…' }], pick)}
+          {isNew && <TextField label="Name it" value={v.slice(NEW_PREFIX.length)} onChange={(x) => onAnswer(NEW_PREFIX + x)} title="Plain words are fine, spaces too. It becomes a variable you can show in text or test in a condition" />}
         </>
       );
     }
@@ -519,14 +519,14 @@ function NeedField({ need, ctx, answers, onAnswer, onAnswers, recipeId }: { need
           {resettable(ctx.project).map((x) => (
             <label key={x.id} className="check-row">
               <input type="checkbox" checked={ticked.includes(x.id)} onChange={(e) => onAnswer(joinSet(e.target.checked ? [...ticked, x.id] : ticked.filter((y) => y !== x.id)))} />
-              <span>{x.name}</span>
+              <span>{variableLabelAndName(x)}</span>
             </label>
           ))}
         </fieldset>
       );
     }
     case 'watch':
-      return sel(v, ctx.project.variables.map((x) => ({ value: x.id, label: x.name })), (x) => {
+      return sel(v, ctx.project.variables.map((x) => ({ value: x.id, label: variableLabelAndName(x) })), (x) => {
         const w = ctx.project.variables.find((y) => y.id === x);
         onAnswers({ [need.key]: x, reachop: reachOps(w)[0], reachto: w?.type === 'enum' ? (w.options?.[0] ?? '') : '1' });
       });

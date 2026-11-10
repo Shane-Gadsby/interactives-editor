@@ -1,3 +1,4 @@
+import { nameFromWords } from './friendly-names';
 import { defaultParams, DEFAULT_TRANSITION_MS, isPageTransition, uid, walk, type Artboard, type LogicEdge, type LogicNode, type Project, type SceneNode, type Script, type Variable } from 'interactives-player';
 import { assetKind } from './assets';
 import { buildFlow, flowSentence } from './flow-describe';
@@ -756,11 +757,13 @@ function stepsFor(ctx: RecipeCtx, recipeId: string, answers: Answers, makeId: (p
       continue;
     }
     if (MAKES_VARIABLE.includes(n.kind) && (a[n.key] ?? '').startsWith(NEW_PREFIX)) {
-      const name = identifier(a[n.key].slice(NEW_PREFIX.length), acc.taken, newNameOf(n));
+      //words with spaces or capitals ("Quiz score") become quizScore, and are kept as the variable's label
+      const made = nameFromWords(a[n.key].slice(NEW_PREFIX.length), acc.taken);
+      const name = made ? uniqueIdentifier(acc.taken, made.name) : identifier(a[n.key].slice(NEW_PREFIX.length), acc.taken, newNameOf(n));
       acc.taken.push(name);
       //a slideshow number starts on its first item
       const initial = n.kind === 'counter' ? (recipe.id.startsWith('item-') && a.startat !== '0' ? 1 : 0) : n.kind === 'switch' ? false : '';
-      const v: Variable = { id: makeId('v'), name, type: n.kind === 'counter' ? 'number' : n.kind === 'switch' ? 'boolean' : 'string', initial };
+      const v: Variable = { id: makeId('v'), name, ...(made?.label && made.label !== name ? { label: made.label } : {}), type: n.kind === 'counter' ? 'number' : n.kind === 'switch' ? 'boolean' : 'string', initial };
       acc.variables.push(v);
       a[n.key] = v.id;
     }
