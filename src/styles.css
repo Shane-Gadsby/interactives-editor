@@ -13328,3 +13328,314 @@ body.reorder-active .ix-tooltip {
 .reorder-landed {
   box-shadow: inset 3px 0 0 var(--primary-bg);
 }
+/* ---------------------------------------------------------------- tutorials: dashboard cards, step ticks, badges and cheers */
+.tutorials-modal {
+  width: min(1040px, calc(100vw - 32px));
+  height: min(86vh, 900px);
+}
+.tut-body-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tut-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  align-items: center;
+  position: sticky;
+  top: -12px;
+  z-index: 2;
+  background: var(--panel);
+  padding: 8px 0;
+}
+.tut-top .help-search {
+  flex: 0 1 260px;
+}
+.tut-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  font-size: 12.5px;
+}
+.tut-total {
+  font-weight: 600;
+}
+.tut-sets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tut-sets li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+}
+.tut-sets li.earned {
+  color: var(--text);
+  font-weight: 600;
+}
+.tut-group h3 {
+  margin: 14px 0 0;
+  font-size: 16px;
+}
+.tut-group > p {
+  margin: 2px 0 8px;
+}
+.tut-level {
+  margin: 12px 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.tut-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 12px;
+}
+.tut-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-2, var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.tut-card.done {
+  border-color: var(--primary-bg);
+}
+.tut-pic {
+  background: var(--bg);
+  aspect-ratio: 16 / 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+}
+.tut-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.tut-body {
+  padding: 10px 12px 4px;
+  flex: 1;
+}
+.tut-body h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tut-body p {
+  margin: 0 0 4px;
+}
+.tut-line {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tut-progress {
+  color: var(--text);
+}
+.tut-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 12px;
+}
+.tut-badge .tut-badge-disc {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.6;
+}
+.tut-badge .tut-badge-ribbon {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.tut-badge .tut-badge-tick {
+  stroke: var(--muted);
+}
+.tut-badge.earned .tut-badge-disc {
+  fill: var(--primary-bg);
+  stroke: var(--focus-edge, #333);
+}
+.tut-badge.earned .tut-badge-ribbon {
+  fill: var(--primary-bg-hover, var(--primary-bg));
+  stroke: var(--focus-edge, #333);
+}
+.tut-badge.earned .tut-badge-tick {
+  stroke: var(--primary-fg);
+}
+/* the help: a tick box on each step, a strip under the title, a footer button */
+.help-article .help-step {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.step-tick {
+  appearance: none;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  align-self: center;
+  border: 1.5px solid var(--muted);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+}
+.step-tick:checked {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+}
+.step-tick:checked::after {
+  content: '';
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid var(--primary-fg);
+  border-bottom: 2px solid var(--primary-fg);
+  transform: translateY(-1px) rotate(-45deg);
+}
+.step-tick:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+.help-step.step-done {
+  color: var(--muted);
+}
+.tutorial-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 10px 0 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+.tutorial-bar progress {
+  flex: 1 1 80px;
+  max-width: 220px;
+  height: 8px;
+  accent-color: var(--primary-bg);
+}
+.tutorial-foot {
+  margin: 18px 0 6px;
+}
+.help-nav .nav-done {
+  float: right;
+  color: var(--ok-text, var(--ok));
+  line-height: 1;
+  margin-left: 4px;
+}
+/* the cheers: a line, or a badge card, in the bottom corner. They never take the focus or block a click outside themselves */
+.cheer-line,
+.cheer-badge {
+  position: fixed;
+  z-index: var(--z-toast);
+  right: 18px;
+  bottom: 18px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--primary-bg);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  max-width: min(360px, calc(100vw - 36px));
+}
+.cheer-line {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.cheer-tick {
+  color: var(--ok-text, var(--ok));
+}
+.cheer-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 10px 12px 14px;
+}
+.cheer-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+.cheer-text span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.cheer-confetti {
+  position: absolute;
+  left: 40px;
+  top: 40%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.cheer-confetti i {
+  position: absolute;
+  width: 7px;
+  height: 11px;
+  border-radius: 1px;
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cheer-line,
+  .cheer-badge:not(.still) {
+    animation: cheer-in 0.25s ease-out;
+  }
+  .cheer-confetti i {
+    animation: cheer-burst 1.3s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+  }
+  .help-step.step-done .step-tick:checked {
+    animation: cheer-pop 0.3s ease-out;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cheer-confetti {
+    display: none;
+  }
+}
+@keyframes cheer-in {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+@keyframes cheer-burst {
+  0% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), calc(var(--dy) + 90px)) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+@keyframes cheer-pop {
+  50% {
+    transform: scale(1.35);
+  }
+}

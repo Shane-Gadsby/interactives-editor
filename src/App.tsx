@@ -8,6 +8,7 @@ import { Review } from './Review';
 import { HelpHost, HelpPage } from './help/Help';
 import { DialogHost } from './components/dialogs';
 import { BehaviourHost } from './components/BehaviourDialog';
+import { CelebrationHost } from './components/Celebration';
 import { installTooltips } from './components/tooltips';
 import { sessionUser } from './lib/session';
 import { installStaleBuildNotice } from './lib/stale-build';
@@ -89,6 +90,7 @@ export function App() {
       <PrefsHost />
       <DialogHost />
       <BehaviourHost />
+      <CelebrationHost />
     </>
   );
 }

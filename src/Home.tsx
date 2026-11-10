@@ -19,6 +19,7 @@ import { noteIfStale } from './lib/stale-build';
 import { NoticeBell } from './components/NoticeBell';
 import { TemplatesTab } from './components/TemplatesTab';
 import { NewProjectModal } from './components/NewProjectModal';
+import { TutorialsModal } from './components/TutorialsModal';
 import { clearLeft, peekLeft } from './lib/home-return';
 
 declare global {
@@ -291,6 +292,7 @@ export function Home({ open }: { open: (id: string) => void }) {
 
   //New project and the + card both ask how to start first (blank, a copy, a built-in starter, an example)
   const [choosing, setChoosing] = useState(false);
+  const [tutorials, setTutorials] = useState(false);
 
   /** A blank project in the folder the chooser asked for. Returns its id for the chooser to open. */
   const createBlank = async (name: string, folder: string | null) => {
@@ -444,6 +446,9 @@ export function Home({ open }: { open: (id: string) => void }) {
           <button className="icon-btn" title="Preferences (theme, mouse wheel, tooltips)" onClick={() => openPrefs()}>
             <Icons.gear width={16} />
           </button>
+          <button className="btn" onClick={() => setTutorials(true)} title="Step-by-step tutorials for the things people make most, each with its finished example to open">
+            <Icons.book width={14} /> Tutorials
+          </button>
           <a className="btn" href="#/help" title="How to use Interactives (F1 to search)">
             <Icons.help width={14} /> Help
           </a>
@@ -485,6 +490,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           </button>
         </div>
       )}
+      {tutorials && <TutorialsModal folder={folderSel.kind === 'folder' ? folderSel.name : null} folders={folders.names} open={open} onClose={() => setTutorials(false)} />}
       {choosing && <NewProjectModal projects={list ?? []} me={me ?? undefined} folder={folderSel.kind === 'folder' ? folderSel.name : null} folders={folders.names} onBlank={createBlank} onMade={open} onClose={() => setChoosing(false)} />}
       <nav className="home-tabs" role="tablist" aria-label="Projects or templates">
         <button role="tab" aria-selected={tab === 'projects'} className={tab === 'projects' ? 'on' : ''} onClick={() => pickTab('projects')} title="Your projects">

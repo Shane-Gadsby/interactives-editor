@@ -92,6 +92,18 @@ describe('preferences', () => {
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { gridSize: 7.5 } } })).json.prefs).toEqual({});
   });
 
+  it('keeps tutorial progress: short ids, whole step numbers in order, a finished time, and drops the rest', async () => {
+    const good = { 'tutorial-mcq': { steps: [3, 1, 2, 2], done: 1700000000000 }, 'concept-assets': { done: 5 } };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { tutorialBadges: false, tutorialSound: true, tutorialProgress: good } } })).json.prefs).toEqual({
+      tutorialBadges: false,
+      tutorialSound: true,
+      tutorialProgress: { 'tutorial-mcq': { steps: [1, 2, 3], done: 1700000000000 }, 'concept-assets': { done: 5 } },
+    });
+    const bad = { 'Bad Id!': { done: 5 }, 'tutorial-x': { steps: ['a', 0, 100, 1.5], done: 'now' }, 'tutorial-y': 'done', 'tutorial-z': [1] };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { tutorialProgress: bad } } })).json.prefs).toEqual({ tutorialProgress: {} });
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { tutorialProgress: [1], tutorialBadges: 'yes' } } })).json.prefs).toEqual({});
+  });
+
   it('keeps the snapping choices: switches as booleans, the distance as a whole number from 2 to 24', async () => {
     const snap = { snapOn: false, snapGrid: true, snapArtboard: false, snapLayers: true, snapLayersAll: true, snapGuides: false, snapSpacing: true, snapPixels: false, snapPoints: true, snapDistance: 12 };
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: snap } })).json.prefs).toEqual(snap);

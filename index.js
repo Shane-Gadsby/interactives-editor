@@ -478,7 +478,7 @@ fontsProxy.prewarm()
 
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
-const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], codeTheme: ['follow', 'light', 'dark'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', attachGuides: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean', technicalWording: 'boolean', showNewInteractions: 'boolean', altDragHintAlways: 'boolean', gettingStarted: 'boolean', timelineList: 'boolean', timelineFoldEmpty: 'boolean', timelineHideSound: 'boolean', timelineHideCaptions: 'boolean', timelineHideDescriptions: 'boolean', singleKeys: 'boolean', keymapPreset: ['default', 'illustration']},
+const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], codeTheme: ['follow', 'light', 'dark'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', attachGuides: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean', technicalWording: 'boolean', showNewInteractions: 'boolean', altDragHintAlways: 'boolean', gettingStarted: 'boolean', timelineList: 'boolean', timelineFoldEmpty: 'boolean', timelineHideSound: 'boolean', timelineHideCaptions: 'boolean', timelineHideDescriptions: 'boolean', singleKeys: 'boolean', tutorialBadges: 'boolean', tutorialSound: 'boolean', keymapPreset: ['default', 'illustration']},
 	cleanKeymap = (m) => Object.fromEntries(
 		Object.entries(m)
 			.filter(([k, v]) => /^[a-z][a-z0-9.-]{0,59}$/i.test(k) && Array.isArray(v))
@@ -540,6 +540,25 @@ const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], co
 				Object.entries(p.onboarding)
 					.filter(([k, v]) => k.length > 0 && k.length <= 40 && k !== '__proto__' && typeof v === 'boolean')
 					.slice(0, 40)
+			)
+		}
+		//How far the person is through the tutorials: help topic id to the step numbers ticked and, once finished, when.
+		//At most 120 tutorials, 40 steps each, ids short plain keys, and anything else is dropped
+		if (p?.tutorialProgress && typeof p.tutorialProgress === 'object' && !Array.isArray(p.tutorialProgress)) {
+			out.tutorialProgress = Object.fromEntries(
+				Object.entries(p.tutorialProgress)
+					.filter(([k, v]) => /^[a-z0-9-]{1,60}$/.test(k) && v && typeof v === 'object' && !Array.isArray(v))
+					.map(([k, v]) => {
+						let e = {}
+						if (Array.isArray(v.steps)) {
+							let steps = [...new Set(v.steps.filter((n) => Number.isInteger(n) && n >= 1 && n <= 99))].sort((a, b) => a - b).slice(0, 40)
+							if (steps.length) e.steps = steps
+						}
+						if (Number.isInteger(v.done) && v.done > 0 && v.done < 8.64e15) e.done = v.done
+						return [k, e]
+					})
+					.filter(([, e]) => e.steps || e.done)
+					.slice(0, 120)
 			)
 		}
 		//Saved workspaces (panel layouts under a name). The editor checks the layout inside each one itself, so here

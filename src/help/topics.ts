@@ -192,6 +192,7 @@ See [Using this help](help) for the detail.
   The search box above each list filters it as you type. Press <kbd>Down</kbd> to move from the search box to the list, the arrow keys to move through it, and <kbd>Enter</kbd> to create the project from the one you picked. <kbd>Esc</kbd> closes the window without making anything. The name starts as something sensible and follows what you pick until you type your own. The folder starts as the one you were looking at, and you can change it.
 - Click a card's picture to open the project. **Help** and the gear (**Preferences**) are at the top right too.
 - **All projects** (the house in the editor's top bar) brings you back here, with the project you left highlighted for a moment.
+- The **Tutorials** button (next to **Help**) lists every tutorial as a card, each with its finished example to open or copy, and keeps your progress and badges. See [Tutorials, badges and progress](help#tutorials-badges-and-progress).
 - The **Templates** tab (next to **Projects**) starts a project from a template, or from one of the finished examples. See [Templates, examples and remix](templates).
 - **Import** (also the **import a file** link on the **+** card) brings in a file. You can choose:
   - A \`${PACKAGE_EXTENSION}\` package (a whole project with its assets) or a project JSON file. It comes back as a project of its own, and importing the same file twice gives you two copies.
@@ -474,6 +475,9 @@ The small **(i)** icon in the title bar shows the version of Interactives you ar
   - It is yours, not the project's: nobody else sees it, and it follows you between browsers.
 - **Show tooltips**: explanations when you hover buttons and fields.
 - **Getting started strip**: the five jobs along the top of the editor that tick themselves. On until you put it away or tick all five; turning it on again brings it back (with the ticks kept, or cleared if all five were done). See [Your first five minutes](welcome#your-first-five-minutes).
+- **Tutorial badges and cheers**: on by default. Gives every tutorial a tick box on each step, a short line when you tick one, a badge card (with a quick burst of confetti) when you finish a whole tutorial or a set of them, and your progress on the **Tutorials** button on the projects page. Turn it off and all of that goes: no tick boxes, no badges, no cheers, no progress marks. What you had ticked is kept, and comes back if you turn it on again. If your system is set to reduce motion, the badge card is still and there is no confetti. See [Tutorials, badges and progress](help#tutorials-badges-and-progress).
+- **Soft chime with the cheers**: off by default. Nothing in the editor makes a sound unless you ask. Tick it for a short, quiet chime with the cheers. It is greyed out while the badges and cheers are off.
+- **Reset tutorial progress**: after you press it and say yes, every tutorial goes back to not started: the steps you ticked, the finished marks and every badge are cleared. It is greyed out when nothing has been started, it asks first, and it cannot be undone. It leaves the two switches above as they are, and **Reset this page** and **Reset everything** do not touch your progress.
 - **Always show the Alt-drag hint**: off by default. Dragging a layer, a page, a page group or a row in Layers says "Alt: drag a copy" for your first three drags, then goes quiet. Tick this to see it on every drag. See [Alt-drag](shortcuts#mouse).
 - **Comment notices**: a bell on the projects page, and a message while a project is open, when a review comment is handed to you, mentions you or gets a reply in a conversation you are in.
 
@@ -5951,6 +5955,15 @@ The **Help** button in the top bar (or <kbd>Shift</kbd>+<kbd>F1</kbd>) opens the
 7. The general help.
 
 The button's tooltip names what it will open, and the drawer says "Help for Chart layer" at the top, with a **Back to general help** link. Only selection and focus count, not what the pointer is over. The tool bar has no Help button of its own: right-click it for **Help for the tools**. The **Help** link is also on the projects page.
+
+## Tutorials, badges and progress
+The **Tutorials** button on the projects page (next to **Help**) lists every tutorial as a card: the **Getting started** ones, the **Build it** ones by level and the **Concepts**. Each card has the finished project's picture, a line about it, how long it takes and where you are. **Start** (or **Carry on**) opens it in this help. **Open the finished example** plays the finished project, and **Make my copy** there gives you your own to pull apart. The search box at the top finds a tutorial by any word in its title or summary.
+
+In a tutorial, each numbered step has a tick box beside its heading. Tick it when you have done the step. A short line says how many are left, and a strip under the title shows how many steps you have ticked. Tick the last one and you get a **badge card** in the corner of the screen with a quick burst of confetti. It clears itself after a few seconds, never stops you working, and **Esc** or its **x** puts it away at once. Did it without ticking along? **I have done all of this**, at the foot of the tutorial, counts the lot. **Start again** in the strip clears that one's ticks and badge. A concept has one button instead, **Mark as read**.
+
+Finishing every tutorial in a set earns a **set badge**: Getting started, Questions, Show and explain, Games and stories, Learners, media and data, Polish and advanced, all of Build it, and the Concepts. The badges and your totals show at the top of the **Tutorials** window, and a tick appears beside each finished tutorial in this help's contents.
+
+Your progress is kept with your [Preferences](preferences), so it follows you to any browser. If your system asks for less motion the badge card is still, with no confetti. Nothing makes a sound unless you turn on **Soft chime with the cheers**. To switch all of it off, or to clear your progress and start again, see **Tutorial badges and cheers** and **Reset tutorial progress** in [Preferences](preferences).
 
 ## Home, Back and Forward
 The three buttons at the left of the drawer's top.
