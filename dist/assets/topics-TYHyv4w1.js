@@ -1,4 +1,4 @@
-import{bA as r,bB as y,bC as b,bD as f,bg as k,a7 as v,b8 as x,ad as h,aX as T}from"./index-BBLbEOku.js";const S=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bA as r,bB as y,bC as b,bD as f,bg as k,a7 as v,b8 as x,ad as h,aX as T}from"./index-DGkfr2H-.js";const S=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -153,7 +153,7 @@ A *binding* keeps a property up to date with an expression.
 lit ? "#ffd23f" : "#c9ced6"
 \`\`\`
 
-That says: if \`lit\` is true the colour is yellow, otherwise it is grey. The fill now shows a link icon and can't be edited by hand while it is bound.
+That says: if \`lit\` is true the colour is yellow, otherwise it is grey. While it is bound, the binding decides the fill: a colour picked by hand is replaced by the binding's.
 
 ![The Data bindings section with a binding on fill.color. The + Convert… menu below changes the value before it is set.](help/bindings-section.png)
 
@@ -308,7 +308,228 @@ See [Embedding and the player API](embedding) for the iframe snippet, how the pa
 
 ## You're done
 
-You've built, animated, wired up, imported and published. Keep going with the topics on the left. Good places to go next: [Timelines and keyframes](timelines), [Groups and frames](groups-frames), [Auto layout](auto-layout), [Data sources](data-sources) and [Troubleshooting and common questions](troubleshooting).`}],A={order:20,level:"intermediate",minutes:15,example:"tut-blanks",topic:{id:"tutorial-blanks",title:"Fill in the blanks with typed answers",group:"Build it",summary:"Four gaps the learner types into, accepting other wordings, near numbers and a pattern, with part marks and a tip for one gap.",keywords:"tutorial fill in the blank blanks gap gaps cloze typed answer type accepted answers alternatives pattern regex regular expression match case capitals spaces tolerance number near part marks tip per gap feedback",body:`You will make one question with four gaps to type into. Each gap shows a different way of deciding what counts as right: other wordings of the same answer, a number that only has to be close, a pattern, and a gap where capital letters matter. One gap also gets its own tip when it is answered wrong. It takes about fifteen minutes.
+You've built, animated, wired up, imported and published. Keep going with the topics on the left. Good places to go next: [Timelines and keyframes](timelines), [Groups and frames](groups-frames), [Auto layout](auto-layout), [Data sources](data-sources) and [Troubleshooting and common questions](troubleshooting).`}],A={order:61,level:"intermediate",minutes:20,example:"tut-accessible",topic:{id:"tutorial-accessible",title:"Check and fix accessibility",group:"Build it",summary:"Make a small page with five common problems in it, then use the Accessibility checker to find and fix each one: contrast, names, keyboard, motion and Tab order.",keywords:"tutorial accessibility a11y checker wcag contrast keyboard tab order focus screen reader name text alternative alt text description role button heading reduced motion autoplay pause small click target high contrast theme",body:`You will make a one-page Mars fact the quick way, with five problems a lot of real projects have. Then you open the **Accessibility** checker and fix them one at a time, until it finds nothing. Along the way you meet roles, text alternatives, the Tab order, reduced motion and the High contrast theme. It takes about twenty minutes.
+
+**Just want to look?** The finished one, with every problem fixed, is on the projects page: **Templates**, then under **Examples** find **Build it**, **Check and fix accessibility**. **Play** runs it and **Make my copy** gives you your own copy.
+
+You need a picture of Mars, or of anything at all: a file on your computer or one from the **Media Catalogue**.
+
+## 1. Make the page, problems and all
+
+Build this quickly. Each problem is on purpose, and the checker will find it.
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Mars fact** as the name and press **Create project**.
+2. **Problem 1, pale text.** Press <kbd>T</kbd> and drag a wide text box across the top of the page. Type \`Mars, the red planet\` and press <kbd>Esc</kbd>. Name it **Title**. In its **Text** section set **Size** to 32, then press the small arrow beside **Colour**, open the **Tokens** tab and pick **color/muted**. It is a quiet grey, meant for small print, not for a title.
+3. **Problem 2, a picture with no description.** Drag your picture from your computer onto the left of the page. A box asks **What is this a picture of?**: press **Skip**. Name the layer **Mars photo**.
+4. Press <kbd>T</kbd> again and drag a text box to the right of the picture. Type \`Mars has the tallest volcano we know of: Olympus Mons, about 22 km high.\` and name it **Fact**.
+5. Press <kbd>B</kbd> and drag a button in the bottom right corner. Set its **Label** and **Name** to **Next**.
+6. **Problem 3, a tiny dot only a mouse can use.** Press <kbd>O</kbd> for the **Ellipse** tool and draw a small circle between the picture and the fact. Set **W** and **H** to 20 and name it **Info**. In its **Interactions** section press **+ When clicked…**, choose **Show a layer**, pick **Fact** under **Which layer**, and press **Add**. **Fact** is hidden now, until the dot is clicked.
+7. **Problem 4, motion that never stops.** Select **Mars photo**. Open the **Timeline** tab and press **+ New timeline**. With the playhead at 0 ms, set **Opacity** to 0 and click the diamond beside it. Move the playhead to **1000 ms**, set **Opacity** to 100 and click the diamond again. Change **Play once** to **Loop** and tick **Autoplay**. The picture now fades in over and over.
+8. **Problem 5, the wrong Tab order** is already there: you drew **Next** before **Info**, and Tab follows the order layers were added, so a keyboard reaches **Next** first.
+
+Press **Preview** and try it with the mouse: it works. Now press <kbd>Tab</kbd> a few times. Focus goes to **Next**, then to the dot, and the picture keeps flashing in. Press <kbd>Esc</kbd>.
+
+## 2. Run the checker
+
+Open the **Accessibility** tab at the bottom of the window. It checks the whole project every time something changes, and lists what it found under the page's name:
+
+| Finding | Layer |
+|---|---|
+| **Low text contrast** | Title |
+| **Only works with a mouse or touch** | Info |
+| **No name for a screen reader** | Info |
+| **Small click target** | Info |
+| **Picture has no description** | Mars photo |
+| **Animation starts by itself** | (the page) |
+| **No way to pause moving content** | (the page) |
+
+The coloured dots at the top count them: red **Problem**s, amber **Probable** ones and blue ones **to look at**. Click a finding and the right side says what was found, **Why it matters** to the person using the page, and **What to do**. Clicking it also selects the layer, so you can fix it straight away.
+
+The bar says **Checks found, not a compliance result**, and it means it. A clean list is a good start, not proof. The checker can't hear a video's captions or tell whether a description is any good.
+
+## 3. Fix the pale title
+
+1. Click **Low text contrast**. It says how far the title falls short. Text this big needs 3:1 against what is behind it (smaller text needs 4.5:1), and this grey on white is well under.
+2. **Title** is selected. Press the small arrow beside **Colour** in its **Text** section, open **Tokens** and pick **color/text**.
+
+The finding goes. Pick a token rather than typing a darker grey: a token has a value in every theme, so the title stays readable in **Dark** and **High contrast** too (step 8). A **Fix** button on a contrast finding, where one is offered, changes the colour to a plain one that no longer follows the theme.
+
+While **Title** is selected, open its **Accessibility** section and set **Role** to **Heading**, with **Level** 1. A screen reader user can now jump straight to it. The checker doesn't ask for this, which is one of the things it can't see.
+
+## 4. Describe the picture
+
+1. Click **Picture has no description**.
+2. Its box under **What to do** takes the words. Type \`Mars from space: a red, dusty planet with a white ice cap at the top\` and press **Apply**.
+
+That fills in the picture's **Text alternative**, the words a screen reader says instead of the picture. Say what it shows and why it is there, in a sentence. If a picture were only decoration, **Decorative / reviewed** would say so instead.
+
+## 5. Make the dot work with a keyboard
+
+Three findings are about **Info**. A plain shape can be clicked with a mouse, but a keyboard can't reach it and a screen reader doesn't know what it is.
+
+1. Click **Only works with a mouse or touch**. **Info** is selected.
+2. In its **Accessibility** section, set **Role** to **Button**. Enter and Space now click it.
+3. Set **Tab stop** to **Always**. (The line under it already says it is reachable with Tab, but the checker only counts a shape as keyboard-ready when this says **Always**.)
+4. Type \`Show a fact about Mars\` in **Text alternative**. That is its name: say what it does, not what it looks like.
+5. In the **Layer** section, set **W** and **H** to 32. Small targets are hard to hit for anyone with a shaky hand or a big thumb, and 24 by 24 is the least the guidelines ask for.
+
+All three findings go.
+
+> When you can, use a real **Button** layer instead. It is a control already, so the keyboard, the name and the role all come for free.
+
+## 6. Calm the motion
+
+1. Click **Animation starts by itself** and press its button, **Respect reduced motion**. Viewers who ask their device for less motion now see the last frame straight away.
+2. Click **No way to pause moving content**. There is no button for this one, because it needs a decision: give people a way to pause it, or stop it repeating. A fade-in only needs to happen once, so in the **Timeline** tab change **Loop** back to **Play once**.
+
+Moving content that runs on for more than five seconds needs a pause. Something that plays once and stops does not.
+
+## 7. Put the Tab order right
+
+The checker can't see focus order, so this one is yours to check.
+
+1. Click the page's name, **Home**, above it on the canvas. The **Tab order** section in the Properties panel lists every tab stop in the order Tab visits them: **Next**, then **Info**.
+2. Press the **↑** beside **Info** (**Earlier in the Tab order**). Now Tab reaches the dot first, then **Next**, the order a sighted reader would take.
+
+**Reset to layer order** goes back to the order the layers were added.
+
+## 8. Look at it in every theme
+
+A new project has three themes: **Light**, **Dark** and **High contrast**. The player picks one from the viewer's own settings.
+
+1. Use the theme menu in the top bar (it shows **Light** now) to show **Dark** on the canvas, then **High contrast**. Everything you picked from **Tokens** changes with it.
+2. Open the **Themes** tab at the bottom. It lists each token's colour in each theme and warns where a pair is too close.
+
+The checker looks at every theme for text that uses tokens, so a title that passes in Light but fails in Dark is listed too.
+
+## 9. Try it
+
+1. Press **Preview**. Press <kbd>Tab</kbd>: a ring shows on the dot. Press <kbd>Enter</kbd> and the fact appears. <kbd>Tab</kbd> again reaches **Next**.
+2. Press **Screen reader** in the Preview's bar. A strip under the preview shows what would be said as you move around.
+3. Press <kbd>Esc</kbd>. Back in the **Accessibility** tab, the list says **The checks found nothing to look at**.
+
+## Go further
+
+- **Export report** downloads a printable page of every finding, what was not checked, and a box to sign. Use it when someone needs to sign the project off.
+- **Mark reviewed** takes a finding you have looked at and accepted out of the counts, with the date in the report.
+- **Apply quick fixes** does every fix that needs no typing in one go. Read the list first.
+- Test with a real screen reader and with only a keyboard as well. The checker finds the common things, not all of them.
+
+## What you learned
+
+- The **Accessibility** tab finds problems as you work, says why each matters, and fixes the safe ones.
+- A clickable shape needs a **Role**, a **Tab stop** and a **Text alternative**; a real **Button** has them already.
+- A picture needs a **Text alternative**, or to be marked decorative.
+- Colours from **Tokens** follow the **Light**, **Dark** and **High contrast** themes.
+- **Respect reduced motion**, **Play once** and the **Tab order** section deal with motion and focus.
+
+**Next:** every check is explained in [Accessibility checker](accessibility-checker), and roles, Tab order and dialogs in [Accessibility: roles and keyboard](accessibility). To restyle a project with themes and tokens, do [Use the UniSQ look and colour themes](tutorial-brand).`}},P=Object.freeze(Object.defineProperty({__proto__:null,tutorial:A},Symbol.toStringTag,{value:"Module"})),C={order:32,level:"intermediate",minutes:20,example:"tut-accordion",topic:{id:"tutorial-accordion",title:"Accordion and tabs from data",group:"Build it",summary:"Sections that open and close while the ones below move to make room, one open at a time, drawn from one list. Then the same list as tabs.",keywords:"tutorial accordion tabs collapsible expand collapse sections open close show more faq repeater list auto layout reflow hug height expanded aria screen reader event.index current tab",body:`You will make an accordion: four sections, each a heading you select to open the text under it. The sections below slide down to make room, and opening one closes the one that was open. A screen reader is told whether each section is open. All four come from one list, so you build one section. It takes about twenty minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Accordion from data**. **Play** runs it and **Make my copy** gives you your own copy.
+
+Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repeater before. This one adds **auto layout**, which moves the copies when one grows or shrinks.
+
+## 1. Make a project and the list
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Study habits** as the name and press **Create project**.
+2. Add a title at the top with the **Text** tool: \`Four study habits\`.
+3. Open the **Variables** tab. Press **+ Add variable**, pick **List** and name it \`sections\`. Replace its \`[]\` with:
+
+\`\`\`
+[
+  {"title": "Plan your week", "body": "Put classes, work and study in one calendar at the start of the week, so a crowded day is no surprise."},
+  {"title": "Study in short blocks", "body": "Forty-five minutes of focused work, then a real break, suits most people better than one long sitting."},
+  {"title": "Test yourself", "body": "Close the book and try to recall the main points. Remembering an idea strengthens it more than reading it again."},
+  {"title": "Ask for help early", "body": "If something does not make sense, ask your teaching team sooner rather than later."}
+]
+\`\`\`
+
+4. Add another **List** called \`open\` and set it to \`[0]\`. It holds the places of the open sections, counting from 0, so the first section starts open. Use \`[]\` to start with everything closed.
+
+## 2. The frame that holds the sections
+
+1. Press <kbd>F</kbd> and draw a frame under the title, 720 wide and about 440 high. Name it **Accordion**.
+2. In its **Auto layout** section press the **+** (**Add auto layout**). **Layout** is **Row or column** and **Direction** is **Column ↓**: its layers now stack top to bottom.
+3. Set **Gap** to **10**, set all four **Padding** boxes to **0**, and untick **Hug height**, so the frame keeps the height you drew.
+
+## 3. One section
+
+1. Draw a second frame somewhere empty on the page, 720 wide and 60 high. Name it **Section**, give it a light grey **Fill** (\`#f3f4f8\`) and a **Radius** of **12**.
+2. Press the **+** in its **Auto layout** section too. Set **Align** to **Stretch**, so the text inside spans the whole width. Leave **Hug height** ticked: the section is always as tall as what is in it.
+3. Press <kbd>T</kbd> and click inside **Section**. Type \`{open.includes(index) ? "-" : "+"}  {item.title}\` and press <kbd>Escape</kbd>. Name it **Section header**, and make it **Size** 20, **Weight** 600.
+4. Click inside **Section** again, under the header, and type \`{item.body}\`. Name it **Section text**.
+
+Auto layout puts the text under the header for you. Both are empty until the section is repeated.
+
+## 4. Put the section in the accordion and repeat it
+
+1. In the **Layers** panel, drag the **Section** row onto the middle of the **Accordion** row. Accordion is outlined, and Section goes inside it.
+2. Select **Accordion**. In **Repeat (list)** tick **Repeat the first child for each item**, set **Items** to \`sections\` and **Layout** to **Column**.
+
+Four sections appear, one under the other, each with its own title. The first is open: its text shows and its sign is a minus.
+
+## 5. Open and close
+
+\`open.includes(index)\` is true for an open section. Use it to show the text:
+
+1. Select **Section text**. In **Data bindings** add **Visible**, choose **Formula**, press **Edit as formula** and type \`open.includes(index)\`.
+
+Only the first section shows its text now. A hidden layer takes no room in auto layout, so the closed sections shrink to their header, and the column closes up.
+
+Now make the header open its section:
+
+1. Select **Section header**. In **Interactions** press **+ On click (empty)** and then **Show in graph**.
+2. Drag from the dot on the right of the **When clicked or hovered** node, type \`change\` in **Find a node…** and pick **Change a value or counter**.
+3. Set **Variable** to **open**, **Do** to **Set to**, and **Value** to:
+
+\`\`\`
+open.includes(event.index) ? [] : [event.index]
+\`\`\`
+
+\`event.index\` is the section that was clicked. If it is open, \`open\` becomes empty and it closes. If not, \`open\` becomes just that one, which closes every other section at the same time.
+
+## 6. Make it work for everyone
+
+The header is a text layer, so tell the keyboard and screen readers it is a button that opens something.
+
+1. With **Section header** selected, open **Accessibility** and set **Role** to **Button**. <kbd>Tab</kbd> now reaches each header and <kbd>Enter</kbd> clicks it.
+2. In **Data bindings**, add **Expanded (button role)** with the formula \`open.includes(index)\`. A screen reader says *expanded* or *collapsed*.
+3. Add **Text alternative**, choose **Formula** and type \`item.title\`. The screen reader then says the title without the plus or minus sign.
+
+## 7. Try it
+
+1. Press **Preview**.
+2. Open **Test yourself**. The first section closes, Test yourself opens, and the last section moves down to make room.
+3. Open it again and it closes. Watch \`open\` in **Variables (live)**.
+4. Use <kbd>Tab</kbd> and <kbd>Enter</kbd> to do the same with the keyboard.
+
+## Go further: let several stay open
+
+Change the **Value** in step 5 to \`event.index\` and **Do** to **Add to the list, or take out if it is there**. Each header now opens or closes just its own section.
+
+## Go further: the same list as tabs
+
+Tabs show one section's text at a time under a row of titles. They read the same \`sections\` list.
+
+1. Add a **Counter** variable called \`tab\`, starting at 0.
+2. Make a button with the **Label** \`{item.title}\`, select it, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and give the group **Repeat (list)** with **Items** \`sections\` and **Layout** **Row**. One button per section appears in a row.
+3. On the button, press **+ On click (empty)** and add **Change a value or counter**: **Variable** \`tab\`, **Do** **Set to**, **Value** \`event.index\`.
+4. Bind the button's **Current (true, or page, step, location)** to \`tab == index\`, and its **Fill colour** to \`tab == index ? "#ffd54f" : "#e8eefc"\`, so the open tab looks and reads as the current one.
+5. Under the row, add a text \`{sections[tab].body}\`. It shows the open tab's text.
+
+## Make it yours
+
+- **Add a section.** Add a line to \`sections\`. A fifth section appears, already working.
+- **Too many for the frame?** Set the **Accordion** frame's **Overflow** to **Scroll vertically** so it scrolls in the player.
+- **Ready-made.** The **Accordion** starter (Templates, **Explore and reveal**) is this, with the university look, a header button with its own sign, and a switch to let several stay open. Its **Fill in** tab edits the sections as a form.
+
+## What you learned
+
+- **Auto layout** stacks a frame's layers and closes the gap when one is hidden. A repeater in an auto layout frame reflows as its copies change size.
+- A list such as \`open\` holds the state of every copy, and \`index\` reads it per copy.
+- **Expanded (button role)** and a **Text alternative** binding make a text header a proper button for screen readers.
+
+**Next:** [An image slider (carousel)](tutorial-carousel). More on [Auto layout](auto-layout), [Repeated lists](repeaters) and [Accessibility](accessibility#pressed-and-current).`}},I=Object.freeze(Object.defineProperty({__proto__:null,tutorial:C},Symbol.toStringTag,{value:"Module"})),j={order:20,level:"intermediate",minutes:15,example:"tut-blanks",topic:{id:"tutorial-blanks",title:"Fill in the blanks with typed answers",group:"Build it",summary:"Four gaps the learner types into, accepting other wordings, near numbers and a pattern, with part marks and a tip for one gap.",keywords:"tutorial fill in the blank blanks gap gaps cloze typed answer type accepted answers alternatives pattern regex regular expression match case capitals spaces tolerance number near part marks tip per gap feedback",body:`You will make one question with four gaps to type into. Each gap shows a different way of deciding what counts as right: other wordings of the same answer, a number that only has to be close, a pattern, and a gap where capital letters matter. One gap also gets its own tip when it is answered wrong. It takes about fifteen minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Fill in the blanks**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -397,7 +618,512 @@ When the question finishes, it marks each gap on its own: the box of a right gap
 - A number is compared as a number, and **± Tolerance** accepts one that is close. A line between slashes is a pattern.
 - **Part marks** give a share for each right gap. Once the question finishes, \`q1_items\` tells you how each gap went, so a binding can react to one gap.
 
-**Next:** more about every question type is in [Questions and quizzes](question-kit). Patterns are explained in [Expressions](expressions#patterns-regular-expressions), and the **Text patterns** example (**Templates**, **Examples**) has more to try. Bindings are explained in [Bindings](bindings). For a question answered by dragging, try [Drag and drop matching](tutorial-drag-match).`}},P=Object.freeze(Object.defineProperty({__proto__:null,tutorial:A},Symbol.toStringTag,{value:"Module"})),C={order:54,level:"intermediate",minutes:15,example:"tut-context",topic:{id:"tutorial-context",title:"Personalise it for the course and the learner",group:"Build it",summary:"Greet the learner by first name, name their course, give each course its own due date, and show a line only to staff.",keywords:"tutorial context personalise personalize first name greeting welcome course code course name per-course values course label sample context staff student isStaff studydesk one project several courses",body:`You will make a welcome page that greets the learner by their first name, says which course they are in, and tells them when their first assignment is due. The assignment and the week are different in each course, from one project. A line at the bottom shows only to staff. It takes about fifteen minutes.
+**Next:** more about every question type is in [Questions and quizzes](question-kit). Patterns are explained in [Expressions](expressions#patterns-regular-expressions), and the **Text patterns** example (**Templates**, **Examples**) has more to try. Bindings are explained in [Bindings](bindings). For a question answered by dragging, try [Drag and drop matching](tutorial-drag-match).`}},W=Object.freeze(Object.defineProperty({__proto__:null,tutorial:j},Symbol.toStringTag,{value:"Module"})),D={order:67,level:"advanced",minutes:30,example:"tut-bones",topic:{id:"tutorial-bones",title:"Rig a character with bones",group:"Build it",summary:"An arm drawn with the Pen, bound to three bones, that reaches for a dot you drag (IK) and waves when a button is pressed.",keywords:"tutorial bones bone rig rigging skeleton skin skinning bind weights ik inverse kinematics constraint reach target arm character puppet pose wave timeline strength chain",body:`You will rig an arm. You draw its outline, put three bones inside it and bind the outline to them, so the arm bends where the bones turn. Then an IK constraint makes the arm reach for an orange dot the learner drags, and a **Wave** button plays a keyed pose before handing the arm back to the dot. It takes about thirty minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Arm rig with bones**. **Play** runs it and **Make my copy** gives you your own copy.
+
+If you only want to see bones working first, [Try bones in two minutes](bones#try-bones-in-two-minutes) builds a ready-made arm with one click. This tutorial builds the same kind of rig yourself, one piece at a time, so you can rig your own characters afterwards. Do [Tutorial 1](tutorial-first-animation) first if you haven't made a timeline before.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Arm rig** as the name and press **Create project**. The editor opens with one page called **Home**, 800 by 600.
+
+## 2. Draw the arm
+
+The arm is one closed outline. Skinning moves each point of the outline with the bones near it, so the outline needs points along its length, not just at its corners. A point every 50 px or so bends smoothly.
+
+1. Press <kbd>P</kbd> for the **Pen** tool (or click the pen in the **Draw** group of the tool bar).
+2. Click once for each point, without dragging (a drag makes a curve handle). Go along the top edge from left to right, about 40 px above the middle of the page: seven clicks, roughly 50 px apart, from about x 200 to x 500.
+3. Click once just past the right end, level with the middle, to round off the hand end.
+4. Come back along the bottom edge from right to left, about 40 px below the top edge: seven more clicks, under the first seven.
+5. Click once just past the left end, level with the middle, then click your very first point to close the outline.
+6. In the Properties panel change **Name** to **Arm**. In **Fill** pick a light colour, and in **Stroke** a darker one.
+
+You now have a long bar, about 340 by 40, with sixteen points. It doesn't need to be neat.
+
+## 3. Draw the bones
+
+A **bone** only exists to be posed. It is drawn as a gold glyph in the editor and the player never shows it.
+
+1. In the tool bar find the **Rig** group. It starts folded: click **Rig** to open it, then click **Bone** (or press <kbd>J</kbd>).
+2. Hold <kbd>Shift</kbd> (it keeps the angle straight) and drag from the left end of the arm, along its middle, about a third of the way. That is the first bone.
+3. Start the next drag **on the tip** of that bone (the small round end) and drag another third. Starting on a tip carries on the chain: the new bone is the first one's child.
+4. Do it once more from the second bone's tip to the right end of the arm.
+5. Press <kbd>V</kbd> for the Select tool. In the **Layers** panel the bones sit one inside the other. Open them and rename them, from the outside in: **Upper arm**, **Forearm** and **Hand**. (Select one and change **Name** in the Properties panel, or double-click its name in Layers.)
+
+Click the **Forearm** glyph and look at the **Bone** section of the Properties panel. A bone points along its own x axis from its base, for its **Length**. Change its **Rotation** to 40: the Forearm and the Hand inside it turn, but the arm outline stays put. Set **Rotation** back to 0 before you carry on.
+
+## 4. Bind the arm to the bones
+
+1. Select **Arm**. The **Skin** section in the Properties panel lists your three bones, each ticked.
+2. Leave **Max per point** at 4 and press **Bind to 3 bones**.
+
+Every point gets weights from how close it is to each bone, and the pose the bones are in now becomes the **bind pose**. That is why you bind with the arm straight.
+
+3. Select **Forearm** again and set **Rotation** to 40. This time the outline bends at the elbow. Set it back to 0.
+4. Select **Arm** and look at **Weights of** in the **Skin** section. Pick a point near the elbow: it lists two bones with a weight each. Pick a point near the shoulder: only **Upper arm** pulls on it. You can change a weight here, or press **Auto** to work it out again.
+
+> Move the rig, not the arm. A bound outline follows its bones, not its own position, so to move the whole arm drag **Upper arm** by its round base.
+
+## 5. Add the dot to reach for
+
+1. Press <kbd>O</kbd> for the **Ellipse** tool and <kbd>Shift</kbd>-drag a small circle, about 44 px across, above and to the right of the elbow.
+2. Change **Name** to **Target** and pick an orange **Fill**.
+3. Find the **Draggable** section and press its **+**. Set **Stays inside** to **The artboard**, so it can't be dragged off the page.
+4. Type \`Orange dot, the arm reaches for it\` in **Name read out**. A screen reader says it when the dot is picked up with the keyboard.
+
+## 6. Make the arm reach: IK
+
+An **IK** (inverse kinematics) constraint turns a chain of bones so the tip of the last one reaches a target. It goes on the bone at the **end** of the chain.
+
+1. Select **Hand** (open **Upper arm** and **Forearm** in Layers to find it).
+2. In the **Constraints** section press **+**. A constraint is added as **Follow path**.
+3. Set **Type** to **IK (reach a target)** and **Target** to **Target**.
+4. Set **Chain bones** to **3**, so the Hand, the Forearm and the Upper arm all turn.
+
+The arm bends on the canvas straight away, reaching for the dot. If the elbow points the wrong way, tick **Bend the other way**. Drag the dot somewhere out of reach and the arm straightens towards it.
+
+**Strength** (at the bottom of the constraint) mixes the IK with the bones' own rotations: 1 is all IK, 0 is all the rotations you set. You'll animate it next.
+
+## 7. Key a wave
+
+A timeline can pose bones like any other layer. While the IK is at full strength it would win over your keys, so the wave turns **Strength** down first and back up at the end.
+
+1. Open the **Timeline** tab and press **+ New timeline**. Press the gear (**Timeline settings**), change **Name** to **Wave** and **Length** to **2000**. Leave it on **Play once**, with **Autoplay** off.
+2. With the playhead at **0 ms**, select **Hand** and click the key diamond beside **Strength**. Select **Upper arm** and click the diamond beside **Rotation**, then do the same for **Forearm**. That keys the starting pose.
+3. Press the red **Record** button.
+4. Click the ruler at about **300 ms**. Select **Hand** and set **Strength** to **0**. Select **Upper arm** and set **Rotation** to **-60**, and **Forearm** to **-40**. The arm lifts.
+5. At about **700 ms**, set **Forearm**'s **Rotation** to **10**. At **1100 ms** set it to **-40**, and at **1500 ms** to **10** again. That is the wave.
+6. At about **1700 ms**, click the diamonds beside **Hand**'s **Strength** and **Upper arm**'s **Rotation**, so they hold still until here.
+7. At the end, **2000 ms**, set **Hand**'s **Strength** to **1**, and **Rotation** to **0** on **Upper arm** and **Forearm**.
+8. Press **Record** again to switch it off, then press the **Play preview** triangle. The arm lifts, waves twice, and swings back to the dot.
+
+## 8. Add the Wave button and the words
+
+1. Press <kbd>B</kbd> for the **Button** tool and draw a button under the arm. Change **Label** to **Wave** and **Name** to **Wave button**.
+2. In its **Interactions** section press **+ When clicked…**, choose **Play an animation**, pick **Wave** under **Which animation** and press **Add**.
+3. Press <kbd>T</kbd> for the **Text** tool, click above the arm and type \`Drag the orange dot\`. Make it big and bold so learners see it first.
+
+## 9. Try it
+
+1. Press **Preview** at the top right. The bones are gone; only the arm, the dot, the button and the words show.
+2. Drag the orange dot round the page. The arm follows it, bending at the elbow and the wrist.
+3. Press **Wave**. The arm waves, then reaches for the dot again wherever you left it.
+4. Press <kbd>Tab</kbd> until the dot is focused and move it with the arrow keys. The arm follows the keyboard too.
+
+Press <kbd>Esc</kbd> to close the Preview.
+
+## Make it yours
+
+- **Draw a real character.** Any closed path can be bound the same way, and so can a picture: select an image and its section is called **Mesh and skin**. Binding lays a grid mesh over the picture and bends it with the bones.
+- **Ride, don't bind.** A layer dropped inside a bone in Layers rides on it with no skinning at all, which is the quickest way to attach a hand or a hat.
+- **Try two bones.** Set **Chain bones** to **2** and the hand swings free while the forearm and upper arm do the reaching.
+- **Hide the glyphs.** The eye button in the tool bar (**Hide bones on the canvas**, <kbd>Shift</kbd>+<kbd>J</kbd>) hides them while you design.
+
+## What you learned
+
+- Bones are drawn in chains with the **Bone** tool; starting on a tip makes a child bone.
+- **Bind to bones** in the **Skin** section gives each point weights, from the pose the bones are in at the time.
+- An **IK (reach a target)** constraint on the last bone turns the chain towards a target, and **Strength** mixes it with the keyed pose.
+- Bones are keyed on a timeline like any layer, Strength included.
+
+**Next:** everything about bones, skinning and IK is in [Bones and skinning](bones), and the other constraints are in [Constraints](constraints). For a pose that follows the pointer without a drag, see [Joysticks](joysticks).`}},L=Object.freeze(Object.defineProperty({__proto__:null,tutorial:D},Symbol.toStringTag,{value:"Module"})),R={order:40,level:"intermediate",minutes:30,example:"tut-branching",topic:{id:"tutorial-branching",title:"A branching scenario",group:"Build it",summary:"A situation with three choices, consequence pages that branch again, a path so far line and three endings picked by the score.",keywords:"tutorial branching scenario story choices choose your own path decision consequence ending endings score points go to page scene path so far start again start over expression worked out formula live",body:`You will make a short scenario about group work. The first page sets out a problem and offers three choices. Each choice leads to a page of consequences with two more choices, and the last choice lands on one of three endings, picked by how many points the learner's choices earned. A line at the bottom of each page shows the path so far, and every ending has **Start again**. It takes about thirty minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Branching scenario**. **Play** runs it and **Make my copy** gives you your own copy. The **Branching scenario** starter (**Templates**, **Built-in**, **Branded starter packs**) is a bigger version of the same idea in the UniSQ look.
+
+Each page is one scene. A choice is a button that does three things in a row: it adds its points to a score, adds its words to the path, and goes to the next page.
+
+## 1. Make the project and its pages
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Group work scenario** as the name and press **Create project**.
+2. The editor opens with one page called **Home**. Click its name above the page, and in the Properties panel change **Name** (under **Page**) to \`Tuesday: a quiet group\`.
+3. Press **+ Add page** at the bottom of the **Layers** panel six times, and name the new pages, in this order:
+   - \`Sam replies\`
+   - \`Wednesday night\`
+   - \`The lecturer replies\`
+   - \`A strong outcome\`
+   - \`A mixed outcome\`
+   - \`A learning moment\`
+
+The names matter: the choices go to pages by name, and the endings are picked by name in step 6.
+
+## 2. A list for the path
+
+1. Open the **Variables** tab at the bottom and press **+ Add variable**. Pick **List**.
+2. In **Name** type \`taken\` and press <kbd>Tab</kbd>. Leave its value as \`[]\`, an empty list.
+
+Every choice adds a few words to \`taken\`, so the list is the learner's path.
+
+## 3. Write the first scene
+
+On **Tuesday: a quiet group**:
+
+1. Press <kbd>T</kbd>, click near the top of the page and type the situation: \`Your group assignment is due on Friday. The four of you agreed to write one section each, but Sam, who has the data analysis, has not posted anything in the group chat for a week. The read-through is tomorrow.\` Press <kbd>Escape</kbd>. Widen the box so the text wraps across the page, and name the layer **Situation**.
+2. Add another text layer under it saying \`What do you do?\`, named **Prompt**. Make it bold and a little bigger.
+3. Press <kbd>B</kbd> and drag three wide buttons under the prompt, one under another. Set their **Label**s and **Name**s:
+   - **Choice 1**: \`Message Sam and ask how it is going\`
+   - **Choice 2**: \`Quietly write Sam's section yourself\`
+   - **Choice 3**: \`Email the lecturer and ask them to step in\`
+4. Add a small text layer at the bottom of the page, named **Path so far**, and type exactly:
+
+\`\`\`
+Path so far: {taken.length ? taken.join(" > ") : "just starting"}
+\`\`\`
+
+The part in braces is an expression. While \`taken\` is empty it says *just starting*; after two choices it says *Asked Sam > Set a checkpoint*.
+
+## 4. Wire the first choice
+
+1. Select **Choice 1**. In its **Interactions** section press **+ When clicked…** and choose **Add 1 to a counter**.
+2. Under **Which counter** pick **A new counter…**, and in **Name the counter** type \`score\`. Press **Add**. This makes the \`score\` variable for you.
+3. Press **Show in graph** under the sentence. The **Interactions** tab opens on two nodes: **When clicked or hovered** and **Change a value or counter**.
+4. Click the **Change a value or counter** node and change **Value** from \`1\` to \`3\`. This choice is worth three points.
+5. Drag from the small dot on the right edge of that node into empty space and let go. In the menu, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set it up:
+   - **Variable**: **taken**
+   - **Do**: **Add to the end of the list**
+   - **Value**: \`"Asked Sam"\` (with the quotes: it is text)
+6. Drag from the new node's dot into empty space again, find **Go to a page** and pick it. Leave **Go to** on **A chosen page** and set **Page** to **Sam replies**.
+
+That is one choice: click, add 3 to \`score\`, add *Asked Sam* to \`taken\`, go to **Sam replies**.
+
+## 5. Wire the other two choices
+
+Do the same for **Choice 2** and **Choice 3**. From now on **Which counter** already says **score**, so just press **Add**.
+
+| Button | Value (points) | Words for the path | Page |
+|---|---|---|---|
+| Choice 2 | \`0\` | \`"Wrote it yourself"\` | Wednesday night |
+| Choice 3 | \`2\` | \`"Emailed the lecturer"\` | The lecturer replies |
+
+Press **Read as sentences** above the graph to check all three rows read the way you expect.
+
+## 6. The ending the score earns
+
+The last choices don't go to a fixed page. They go to whichever ending the score has earned, so that is worked out in one place.
+
+1. In the **Variables** tab press **+ Add variable** and pick **Text**. Name it \`ending\`.
+2. Change **Starts as a value** to **Worked out**, and type this formula in the box that appears:
+
+\`\`\`
+score >= 5 ? "A strong outcome" : score >= 3 ? "A mixed outcome" : "A learning moment"
+\`\`\`
+
+3. Tick **Keep up to date**. Now \`ending\` is always the name of the page the score has earned, and it changes the moment \`score\` does.
+
+## 7. The consequence pages
+
+Each of the three middle pages is built like the first, with two choices instead of three: a **Situation**, a **Prompt**, **Choice 1** and **Choice 2**, and a **Path so far** text (copy it from the first page with <kbd>Ctrl</kbd>+<kbd>C</kbd> and <kbd>Ctrl</kbd>+<kbd>V</kbd>).
+
+Wire each choice as in step 4, with one change at the end: on the **Go to a page** node, set **Go to** to **One named by an expression** and type \`ending\` in **Page name or id**.
+
+| Page | Situation | Choice 1 (points, path) | Choice 2 (points, path) |
+|---|---|---|---|
+| Sam replies | Sam answers within the hour. They have been unwell and fell behind. They can finish most of it by Thursday morning, but they are worried about the quality. | *Agree a draft to the group by Wednesday night* (\`3\`, \`"Set a checkpoint"\`) | *Offer to take half the section* (\`2\`, \`"Shared the work"\`) |
+| Wednesday night | You finish Sam's section at midnight. Your own section is rushed. On Wednesday Sam appears in the chat: "Sorry, nearly done with mine!" | *Tell the group what happened and agree how to merge* (\`3\`, \`"Told the group"\`) | *Say nothing and hand in both versions* (\`0\`, \`"Said nothing"\`) |
+| The lecturer replies | The lecturer thanks you and suggests you talk to Sam and the group first, using the course's group work guide. | *Message the group, following the guide* (\`3\`, \`"Followed the guide"\`) | *Wait for the lecturer to contact Sam* (\`0\`, \`"Waited"\`) |
+
+Use the prompts *How do you respond?*, *What now?* and *What next?*. The best route, asking Sam and agreeing a checkpoint, scores 6.
+
+## 8. The endings
+
+On each of the three ending pages:
+
+1. Add a title (\`A strong outcome\` and so on) and a line saying how it went, for example \`You raised it early, kept everyone talking and the work stayed fair.\`
+2. Add a text layer saying \`Score: {score} out of 6\`, and one saying \`Your path: {taken.join(" > ")}\`.
+3. Add a button labelled **Start again**. In its **Interactions** section press **+ When clicked…**, choose **Start over** and press **Add**. It clears \`score\` and \`taken\` and goes back to the first page.
+
+## 9. Try it
+
+1. Click an empty part of the canvas and press **Preview**.
+2. Choose *Message Sam*. You land on **Sam replies**, and the path line says *Path so far: Asked Sam*.
+3. Choose *Agree a draft*. You land on **A strong outcome** with a score of 6.
+4. Press **Start again** and take the quiet route instead (*Quietly write Sam's section*, then *Say nothing*). That scores 0 and ends on **A learning moment**.
+
+Watch \`score\`, \`taken\` and \`ending\` change in **Variables (live)** on the left of the Preview. Press <kbd>Esc</kbd> to close it.
+
+## Make it yours
+
+- **Change the bands.** The numbers in \`ending\`'s formula decide which ending a score earns. If you add choices, raise them to match.
+- **Branch deeper.** A choice can go to any page, including another consequence page. Only the last choices on a route need **One named by an expression**.
+- **Go back a step.** A **Go to a page** node set to **Back (where the learner came from)** returns to the page before, but the score keeps the points. To undo a choice too, use **Change a value or counter** first: **Do** **Add to it** with a minus value, and **Remove from the list (by position)** on \`taken\`.
+
+## What you learned
+
+- Each page is a scene, and **Go to a page** moves between them.
+- One click can run a row of nodes: add to a score, add to a list, then change page.
+- A **Worked out** variable with **Keep up to date** turns the score into a page name, and **One named by an expression** goes there.
+- **Start over** puts every variable back and returns to the first page.
+
+**Next:** [A "which one are you?" quiz](tutorial-personality) uses several scores at once. More on the graph in [Interactions](interactions), on formulas in [Variables](variables#worked-out-from-a-formula) and [Expressions](expressions).`}},M=Object.freeze(Object.defineProperty({__proto__:null,tutorial:R},Symbol.toStringTag,{value:"Module"})),E={order:62,level:"beginner",minutes:15,example:"tut-brand",topic:{id:"tutorial-brand",title:"Use the UniSQ look and colour themes",group:"Build it",summary:"Give a page the UniSQ Purple colourway with theme tokens, see it in Light, Dark and High contrast, and know when to start from a branded starter pack instead.",keywords:"tutorial brand branding unisq colourway purple gold theme themes token tokens colour picker light dark high contrast default branded starter pack logo themes tab",body:`You will make a welcome page for a "Space week" in the UniSQ Purple colourway: a deep purple header with a gold bar under it, a card of text and a **Start** button. Every colour on it is a **token**, so the page also looks right for viewers who use dark mode or ask for more contrast. It takes about fifteen minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Use the UniSQ look and colour themes**. **Play** runs it and **Make my copy** gives you your own copy.
+
+Two words first. A **token** is a name for a colour, like \`color/text\`. A **theme**, such as **Light**, **Dark** or **High contrast**, gives every token a colour. A layer that uses a token changes colour when the theme changes; a layer with a plain colour never does.
+
+## 1. Make a project and look at its themes
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Space week** as the name and press **Create project**.
+2. Find the theme box in the top bar. It says **Light**. Pick **Dark**, then **High contrast**: the page goes dark. Put it back to **Light**.
+3. Open the **Themes** tab at the bottom of the window. Each row is a token and each column a theme. **Used** counts the layers that follow each one (none yet).
+
+A new project already has these three themes, and every layer you add follows the tokens without you choosing anything.
+
+## 2. Add the UniSQ Purple colourway
+
+The UniSQ colourways are the colours of the branded starter packs: Gold, Purple, Blue, Green, Orange and Red.
+
+1. In the **Themes** tab, open **+ Colourway…** and pick **Purple: Deep purple with gold, the UniSQ dark slides.**
+2. A **Purple** column appears. The starter tokens have Purple's values in it (gold buttons), and new rows starting **brand/** have arrived: the gradient, the deep purple, the accent and the logo colours.
+3. Under **Purple**, tick **Default**. That is the theme the project opens in.
+4. Set **Showing**, at the left of the tab's bar, to **Purple**, so the canvas draws it.
+
+## 3. A purple header
+
+1. Press <kbd>R</kbd> and drag a rectangle across the top of the page. Set **X** and **Y** to 0, **W** to 800 and **H** to 170, and name it **Header**.
+2. In its **Fill**, press the small arrow beside the colour, open the **Tokens** tab and pick **brand/deep**. The colour box turns into a chip with the token's name on it.
+3. Draw a thin rectangle under it (**Y** 170, **W** 800, **H** 8), name it **Accent bar**, and give it the token **brand/accent**, the gold.
+4. Press <kbd>T</kbd> and drag a text box on the header. Type \`Space week\`, press <kbd>Esc</kbd> and name it **Title**. In its **Text** section set **Size** to 44, and for **Colour** pick the token **brand/on-deep**: the colour that reads on deep purple.
+
+Pick tokens in pairs like this: **brand/on-deep** goes on **brand/deep**, **color/on-button** on **color/button**. Each pair is chosen to be readable in every theme.
+
+## 4. The content
+
+1. Draw a rectangle under the header for a card, about 680 by 230. Set **Radius** to 16 and its fill to the token **color/surface**, a soft grey.
+2. Drag a text box on the card and write a welcome:
+
+   \`Welcome. This week we tour the planets, from scorching Mercury to icy Neptune. Each day has a short activity and a quiz to finish.\`
+
+   Set **Size** to 20. Below it add a second text, \`Due Friday, 5 pm\`, in bold.
+3. Press <kbd>B</kbd> and drag a button in the bottom right. Set its **Label** and **Name** to **Start**.
+
+You didn't pick a colour for the text or the button. They follow **color/text**, **color/button** and **color/on-button** already, which in Purple make a gold button with a dark label.
+
+## 5. See why tokens matter
+
+1. Select the **Due** text. Its **Colour** is a chip saying **color/text**. Press the **×** on the chip (**Detach from the token**). It looks the same, but it is a plain colour now: a hex box is back where the chip was, and the **Themes** tab says **1 colour not following a theme**.
+2. Switch the theme box in the top bar to **High contrast**. The page goes black, the header and card change, and the **Due** text stays dark grey on black, nearly invisible.
+3. Open the **Accessibility** tab: it lists **Low text contrast** for **Due**, starting **In High contrast:**.
+4. Put it right: press the small arrow beside **Colour**, open **Tokens** and pick **color/text**. The text turns white in High contrast and the finding goes.
+
+So detach a colour only when it really must stay the same in every theme.
+
+## 6. Try it as a viewer
+
+1. Press **Preview**. The page opens in **Purple**, the default.
+2. Change **Theme: follow the viewer** to **Theme: High contrast**, then **Theme: Dark**. Every colour follows.
+3. Back on **Theme: follow the viewer**, the box beside it pretends the viewer has changed their own settings. Pick **Viewer: more contrast** and the player switches to **High contrast** by itself, as it would for a real viewer. Press <kbd>Esc</kbd>.
+
+## The ready-made way: branded starter packs
+
+For the full UniSQ look (gradient title pages with the logo, white content pages with a footer line, deep purple section pages) start from a **branded starter pack** instead of a blank project:
+
+1. On the projects page open **Templates**, then **Built-in**. **Branded starter packs** is at the top.
+2. Pick a colourway from the swatches, find an activity, and press **Play** to try it or **Use template** to make your own.
+
+In a branded project the logo and brand layers are locked, colours can only be tokens and the font is Open Sans, so it stays on brand whoever edits it. Its **Project** settings have a **Colourway** row to switch colourway in one go, and **Let learners switch colourway** to give learners swatches of their own.
+
+## Go further
+
+- A gradient fill takes tokens too: set **Header**'s fill to a linear gradient and give its two stops **brand/gradient-start** and **brand/gradient-end**.
+- Change a token's colour in one theme by clicking its colour in the **Themes** tab. Every layer that uses it changes at once.
+- In the Interactions graph, the **Set theme** action lets a button change the theme while the page runs.
+
+## What you learned
+
+- Tokens name colours, and themes give them values. Layers that use tokens change with the theme; plain colours don't.
+- **+ Colourway…** in the **Themes** tab adds a UniSQ colourway, with its **brand/** tokens, and **Default** makes it the one the project opens in.
+- The colour picker's **Tokens** tab links a colour to a token.
+- **High contrast** and **Dark** are chosen by the viewer's own settings, so check them before you share.
+- Branded starter packs give you the whole UniSQ look, locked.
+
+**Next:** everything about tokens and themes is in [Themes and colour tokens](themes), and every pack and colourway in [Branded starter packs](branded-starters). To check a page the way a screen reader or keyboard user meets it, do [Check and fix accessibility](tutorial-accessible).`}},O=Object.freeze(Object.defineProperty({__proto__:null,tutorial:E},Symbol.toStringTag,{value:"Module"})),B={order:33,level:"beginner",minutes:20,example:"tut-carousel",topic:{id:"tutorial-carousel",title:"An image slider (carousel)",group:"Build it",summary:"Slides with Previous, Next, a dot for each slide and the arrow keys, plus an autoplay that pauses and never runs for people who ask for less motion.",keywords:"tutorial carousel slider slideshow image slider gallery slides previous next dots arrow keys autoplay timer pause play reduced motion current index variable binding shortcut wrap round",body:`You will make a slider of four slides, each a picture with a heading and a caption. **Previous** and **Next** step through them and wrap round at the ends, a row of dots jumps to any slide, and the left and right arrow keys work too. **Play** starts an autoplay that moves on every four seconds, and stops as soon as someone steps through by hand. It takes about twenty minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Image slider (carousel)**. **Play** runs it and **Make my copy** gives you your own copy.
+
+The idea that makes it simple: one number, \`slide\`, says which slide is showing. Everything on the page reads it, and every control just changes it.
+
+## 1. Make a project and the variables
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Research steps** as the name and press **Create project**.
+2. Open the **Variables** tab. Press **+ Add variable**, pick **List** and name it \`slides\`. Replace its \`[]\` with:
+
+\`\`\`
+[
+  {"title": "Choose a topic", "body": "Start with a question you can say in one sentence.", "colour": "#cfe8f7"},
+  {"title": "Find sources", "body": "Search the library and note where each idea came from.", "colour": "#d7ecd0"},
+  {"title": "Take notes", "body": "Write the main points in your own words, with the page number.", "colour": "#fbe7c6"},
+  {"title": "Draft and review", "body": "Write a first version, then check it against the task and the criteria.", "colour": "#e6dcf5"}
+]
+\`\`\`
+
+3. Press **+ Add variable**, pick **Counter**, name it \`slide\` and set its starting value to **1**.
+4. Press **+ Add variable**, pick **Switch (on or off)** and name it \`playing\`. Leave it unticked.
+
+Each slide has a colour so you can see the slides change before you have pictures. Swapping in real pictures comes at the end.
+
+## 2. One slide that reads the number
+
+1. Press <kbd>R</kbd> and draw a large box across the top of the page, about 720 by 320. Name it **Slide picture** and give it a **Radius** of **16**.
+2. In its **Data bindings** press **+ Add binding**, pick **Fill colour**, choose **Formula** and type \`slides[slide - 1].colour\`.
+3. Press <kbd>T</kbd> and click under the box. Type \`{slides[slide - 1].title}\` and press <kbd>Escape</kbd>. Name it **Slide heading** and make it **Size** 26, **Weight** 700.
+4. Under that, add a text \`{slides[slide - 1].body}\` and name it **Slide caption**.
+5. Add a small text in the top left corner of the box: \`Slide {slide} of {slides.length}\`.
+
+\`slides[0]\` is the first item of a list, so \`slides[slide - 1]\` is the slide whose number is in \`slide\`. Change **slide** to 3 in the Variables tab and the page shows Take notes. Put it back to 1.
+
+## 3. Previous and Next
+
+1. Press <kbd>B</kbd> and draw a button at the bottom right. Set its **Label** to \`Next\` and its **Name** to **Next**.
+2. Press **+ On click (empty)**, then **Show in graph**.
+3. Drag from the dot on the right of the **When clicked or hovered** node into empty space. Type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **playing**, **Do** to **Set to** and **Value** to \`false\`. Moving by hand stops the autoplay.
+4. Drag from that node's dot and add another **Change a value or counter**: **Variable** **slide**, **Do** **Set to**, **Value**:
+
+\`\`\`
+slide >= slides.length ? 1 : slide + 1
+\`\`\`
+
+That is: on the last slide go back to 1, otherwise add 1.
+
+5. Draw another button at the bottom left called **Previous**, and build the same two nodes, with this **Value** for the second one:
+
+\`\`\`
+slide <= 1 ? slides.length : slide - 1
+\`\`\`
+
+## 4. The arrow keys
+
+1. Select **Next**, open **Accessibility** and type \`ArrowRight\` in **Shortcut**.
+2. Select **Previous** and type \`ArrowLeft\` in its **Shortcut**.
+
+A shortcut presses the button from anywhere on the page, so the arrow keys run the same flows. There is nothing to wire.
+
+## 5. A dot for each slide
+
+1. Press <kbd>O</kbd> for the **Ellipse** tool and draw a small circle between Previous and Next, 18 by 18. Name it **Dot**.
+2. Select it and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Name the group **Dots**. In its **Repeat (list)** tick **Repeat the first child for each item**, set **Items** to \`slides\`, **Layout** to **Row** and **Gap** to **14**. Four dots appear.
+3. Select **Dot** again and add three bindings in **Data bindings**, each a **Formula**:
+   - **Fill colour**: \`slide == index + 1 ? "#1f3a68" : "#c9ced6"\`. The current slide's dot is dark.
+   - **Current (true, or page, step, location)**: \`slide == index + 1\`. A screen reader says which dot is current.
+   - **Text alternative**: \`"Go to slide " + (index + 1)\`.
+4. In **Accessibility**, set **Role** to **Button**, so each dot is a tab stop.
+5. Press **+ On click (empty)** and add the same two **Change a value or counter** nodes as for Next, with \`event.index + 1\` as the second **Value**. \`event.index\` is the dot that was clicked, counting from 0.
+
+## 6. Autoplay that pauses
+
+1. Draw a button between the dots and Next. Name it **Play**.
+2. Press **+ When clicked…**, choose **Switch something on or off**, pick **playing** and press **Add**.
+3. In **Data bindings** add **Button label** with the formula \`playing ? "Pause" : "Play"\`, and **Pressed (button, toggle)** with \`playing\`.
+4. Open the **Interactions** tab. In the node list on its left, type \`timer\` in **Search nodes** and click **When a timer goes off**. Set **Every (ms)** to \`4000\`, leave **Repeat** ticked, and set **Only while** to:
+
+\`\`\`
+playing && !reducedMotion
+\`\`\`
+
+5. Drag from its dot and add **Change a value or counter**: **Variable** **slide**, **Do** **Set to**, and the same **Value** as Next.
+
+\`reducedMotion\` is true when the learner's device asks for less movement. For them the timer never fires, even after Play, so nothing moves on its own.
+
+## 7. Try it
+
+1. Press **Preview**.
+2. Press **Next** four times. The fourth press wraps back to slide 1. Press a dot to jump.
+3. Click an empty part of the page and use the left and right arrow keys.
+4. Press **Play**. The slides move every four seconds and the button says **Pause**. Press **Next**: the autoplay stops.
+
+## Make it yours
+
+- **Real pictures.** The simplest way is a picture layer per slide, each with a **Visible** binding such as \`slide == 2\`. To keep one picture layer instead, bind its **Image / video asset** to a field of each slide that holds the picture's asset id. The **Image slider** starter (Templates, **Explore and reveal**) is set up that way, and its **Fill in** tab lets you pick each slide's picture by name, so you never see an id.
+- **Describe each picture.** Give each slide an \`alt\` field and bind the picture's **Text alternative** to \`slides[slide - 1].alt\`.
+- **A slower show.** Change **Every (ms)** on the timer.
+
+## What you learned
+
+- One number variable holds the whole state, and bindings read the current item with \`slides[slide - 1]\`.
+- A button's **Shortcut** gives it a key without any nodes.
+- **When a timer goes off** with **Only while** runs only when it should, and \`reducedMotion\` respects people who ask for less movement.
+
+**Next:** [Before and after compare](tutorial-compare). More on [Bindings](bindings), [Expressions](expressions) and [Shortcuts](accessibility#shortcuts).`}},N=Object.freeze(Object.defineProperty({__proto__:null,tutorial:B},Symbol.toStringTag,{value:"Module"})),F={order:34,level:"beginner",minutes:15,example:"tut-compare",topic:{id:"tutorial-compare",title:"Before and after compare",group:"Build it",summary:"Two pictures stacked, with a divider handle you drag, or move with the keyboard, to show more of one or the other. No nodes: a handle, a variable and two bindings.",keywords:"tutorial before after compare comparison slider divider handle drag draggable reveal wipe clip mask width binding both ways keyboard arrow keys then now picture",body:`You will put two pictures on top of each other, a *before* and an *after*, with a round handle on the line between them. Drag the handle right and more of the Before picture shows; drag it left and more of After shows. Keyboard users move it with the arrow keys. It takes about fifteen minutes, and there are no interaction nodes at all.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Before and after compare**. **Play** runs it and **Make my copy** gives you your own copy.
+
+How it works: the handle's **X** is tied to a number variable both ways. Dragging the handle changes the number, and the number sets how wide the Before picture's frame is. The frame clips its picture, so a narrower frame shows less of it.
+
+## 1. Make a project and the variable
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Before and after** as the name and press **Create project**.
+2. Add a title at the top with the **Text** tool: \`Then and now\`.
+3. Open the **Variables** tab, press **+ Add variable**, pick **Counter** and name it \`handleX\`. Set its starting value to **380**.
+
+## 2. The After picture
+
+1. Drop your After picture on the page. (No pictures to hand? Press <kbd>R</kbd> and draw a box, and give it a pale green fill.)
+2. Name it **After picture** and, in the Properties panel, set **X** to **60**, **Y** to **100**, **W** to **680** and **H** to **380**.
+3. Add a text \`After\` in its top right corner.
+
+Both pictures must be the same size and in the same place, so they line up exactly.
+
+## 3. The Before picture, in a clipping frame
+
+1. Press <kbd>F</kbd> and draw a frame over the left half of the After picture. Name it **Before reveal** and set **X** **60**, **Y** **100**, **W** **340**, **H** **380**.
+2. In its **Frame** section make sure **Clip content** is ticked. In **Fill**, press the **×** beside its fill (**Remove fill**), so it has no colour of its own.
+3. Draw a box inside the frame with the **Rectangle** tool and give it a pale brown fill, or drop your Before picture on the page and, in the **Layers** panel, drag its row onto the middle of the **Before reveal** row so it goes inside. Name it **Before picture** and set its **X** and **Y** to **0**, **W** **680** and **H** **380**. It is as big as the After picture, but the frame only shows its left half.
+4. Add a text \`Before\` inside the frame, in its top left corner.
+
+Positions inside a frame count from the frame's own corner, which is why the picture's X and Y are 0.
+
+## 4. The handle and the line
+
+Anything you draw over a frame goes inside it, and these two must not, so draw them on an empty part of the page (under the pictures) and then type where they go.
+
+1. Press <kbd>R</kbd> and draw a thin box. Name it **Divider line**, give it a white fill, and set **X** **398**, **Y** **100**, **W** **4**, **H** **380**. It jumps to the middle of the pictures.
+2. Press <kbd>O</kbd> and draw a circle, holding <kbd>Shift</kbd>. Name it **Divider handle**, give it a dark fill and a white stroke, and set **W** and **H** **40**, **X** **380**, **Y** **270**. It sits on the line.
+
+## 5. Let people drag the handle
+
+1. With **Divider handle** selected, find the **Draggable** section and press its **+**.
+2. Set **Moves** to **Left and right only**.
+3. Set **Stays inside** to **Layer: After picture**. The handle can't be dragged past the pictures.
+4. Set **Key step** to **34**. That is how far each arrow key moves it.
+5. In **Accessibility**, type \`Divider\` in **Text alternative**.
+
+## 6. Tie everything to handleX
+
+1. Still on **Divider handle**, open **Data bindings**, press **+ Add binding** and pick **X**.
+2. At the top of the binding press **⇄ Both**, and pick the variable **handleX**. Now the handle starts where \`handleX\` says, and dragging it writes its new X into \`handleX\`.
+3. Select **Before reveal**. Add a binding on **Width**, choose **Formula**, and type:
+
+\`\`\`
+handleX + 20 - 60
+\`\`\`
+
+The handle is 40 wide, so its middle is \`handleX + 20\`, and the pictures start at 60. The frame is as wide as the distance from the pictures' left edge to the handle's middle.
+
+4. Select **Divider line** and bind its **X** to the formula \`handleX + 18\`, so the 4 px line sits under the middle of the handle.
+
+The grey line under each binding works it out with \`handleX\` at 380: the width is 340 and the line's X is 398, exactly what you drew.
+
+## 7. Try it
+
+1. Press **Preview**.
+2. Drag the handle right: more of Before shows. Drag it left: more of After.
+3. Now the keyboard. Press <kbd>Tab</kbd> until the handle has the focus ring, press <kbd>Space</kbd> to pick it up, use the left and right arrow keys to move it, and <kbd>Space</kbd> to put it down. <kbd>Esc</kbd> puts it back where it was.
+4. Watch \`handleX\` change in **Variables (live)**.
+
+Add a line of instructions under the pictures saying how to use the keyboard, since not everyone knows a handle can be picked up with Space.
+
+## Make it yours
+
+- **Buttons to jump.** A **Show Before** button with **+ On click (empty)** and a **Change a value or counter** that sets \`handleX\` to \`700\`, and **Show After** setting it to \`60\`, help people who can't drag at all.
+- **Describe both pictures.** Give each picture a **Text alternative** that says what it shows.
+- **Ready-made.** The **Before and after** starter (Templates, **Explore and reveal**) has the university look, labels on chips, and the handle moves to wherever you press on the pictures. It moves with the arrow keys straight away, without picking it up first.
+
+## What you learned
+
+- A **Draggable** layer can be locked to one direction and kept inside another layer, and it can be moved by the keyboard.
+- A **⇄ Both** binding ties a layer's setting to a variable both ways, so dragging writes the variable.
+- A frame with **Clip content** shows as much of its picture as it is wide, and a **Width** binding makes that follow the variable.
+
+**Next:** [A course presentation](tutorial-presentation). More on [Drag and drop](drag-and-drop) and [Bindings](bindings#which-way-in-out-or-both).`}},q=Object.freeze(Object.defineProperty({__proto__:null,tutorial:F},Symbol.toStringTag,{value:"Module"})),z={order:54,level:"intermediate",minutes:15,example:"tut-context",topic:{id:"tutorial-context",title:"Personalise it for the course and the learner",group:"Build it",summary:"Greet the learner by first name, name their course, give each course its own due date, and show a line only to staff.",keywords:"tutorial context personalise personalize first name greeting welcome course code course name per-course values course label sample context staff student isStaff studydesk one project several courses",body:`You will make a welcome page that greets the learner by their first name, says which course they are in, and tells them when their first assignment is due. The assignment and the week are different in each course, from one project. A line at the bottom shows only to staff. It takes about fifteen minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Personalised for the course and learner**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -471,7 +1197,7 @@ To use it for real, give learners the **Link for StudyDesk** from [Share link](e
 - **Sample values** in the Data tab show you the page as a learner would see it, and as nobody.
 - **Per-course values** start variables differently in each course, so one project serves several.
 
-**Next:** every context field and the rules for per-course values are in [Course and learner context](course-context). Formulas in text and bindings are in [Expressions](expressions) and [Bindings](bindings). For data that comes from a file, see [Data sources](data-sources).`}},I=Object.freeze(Object.defineProperty({__proto__:null,tutorial:C},Symbol.toStringTag,{value:"Module"})),j={order:53,level:"advanced",minutes:25,example:"tut-data-source",topic:{id:"tutorial-data-source",title:"Content from a data file",group:"Build it",summary:"A page whose heading, text and cards all come from one JSON file, so next term's rewrite is a file swap, not an edit of every layer.",keywords:"tutorial data file data source json csv content words text from a file repeater repeat list cards binding bind item replace file swap rewrite reuse form view",body:`You will make a page of study tips where every word comes from one small file: the heading, the intro line, four cards and the footer. Each card even takes its colour from the file. Change the file and the page changes, so a new version for next term, or another course, is a file swap. It takes about twenty-five minutes.
+**Next:** every context field and the rules for per-course values are in [Course and learner context](course-context). Formulas in text and bindings are in [Expressions](expressions) and [Bindings](bindings). For data that comes from a file, see [Data sources](data-sources).`}},_=Object.freeze(Object.defineProperty({__proto__:null,tutorial:z},Symbol.toStringTag,{value:"Module"})),H={order:53,level:"advanced",minutes:25,example:"tut-data-source",topic:{id:"tutorial-data-source",title:"Content from a data file",group:"Build it",summary:"A page whose heading, text and cards all come from one JSON file, so next term's rewrite is a file swap, not an edit of every layer.",keywords:"tutorial data file data source json csv content words text from a file repeater repeat list cards binding bind item replace file swap rewrite reuse form view",body:`You will make a page of study tips where every word comes from one small file: the heading, the intro line, four cards and the footer. Each card even takes its colour from the file. Change the file and the page changes, so a new version for next term, or another course, is a file swap. It takes about twenty-five minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Content from a data file**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -484,7 +1210,7 @@ This tutorial uses **expressions**: words in braces, such as \`{tips.title}\`, t
 
 \`\`\`json
 {
-  "title": "Five study tips",
+  "title": "Four study tips",
   "intro": "Small habits that make studying easier. Pick one to try this week.",
   "cards": [
     { "title": "Plan your week", "text": "Block out classes, study and rest before the week begins.", "colour": "#FFF4D6" },
@@ -510,7 +1236,7 @@ The file is uploaded, and a data source called **tips** (from the file's name) a
 
 ## 3. Words from the file
 
-1. Press <kbd>T</kbd> for the **Text** tool, click near the top left of the page and type \`{tips.title}\`. Press <kbd>Escape</kbd>. The canvas shows **Five study tips**: the words come from the file. Name the layer **Heading** and make it big.
+1. Press <kbd>T</kbd> for the **Text** tool, click near the top left of the page and type \`{tips.title}\`. Press <kbd>Escape</kbd>. The canvas shows **Four study tips**: the words come from the file. Name the layer **Heading** and make it big.
 2. Under it, add another text layer with \`{tips.intro}\`. Name it **Intro**.
 3. Near the bottom of the page, add one with \`{tips.footer}\`. Name it **Footer**.
 
@@ -579,7 +1305,7 @@ Press **Preview** at the top right. The page plays with the words from the file,
 - **Data bindings** set a property, such as **Fill colour**, from the data.
 - The **Form** view edits the file in place, and the arrow in **Assets** swaps it for a new one.
 
-**Next:** every way to read and edit a data file is in [Data sources](data-sources). Repeaters, grids and clicking a copy are in [Repeated lists](repeaters), and bindings in [Bindings](bindings).`}},D=Object.freeze(Object.defineProperty({__proto__:null,tutorial:j},Symbol.toStringTag,{value:"Module"})),W={order:21,level:"beginner",minutes:10,example:"tut-drag-match",topic:{id:"tutorial-drag-match",title:"Drag and drop matching",group:"Build it",summary:"Drag each country onto its capital, with a country that belongs nowhere, three tries, part marks and Try again.",keywords:"tutorial drag drop matching match pairs terms definitions slots drop zone country capital extra term distractor tries part marks try again reset keyboard score",body:`You will make a matching question: the learner drags each country onto its capital city. One extra country has no capital on the list, so it has to be left alone. The learner gets three tries, a share of the points for each one in the right place, and **Try again** at the end. It takes about ten minutes.
+**Next:** every way to read and edit a data file is in [Data sources](data-sources). Repeaters, grids and clicking a copy are in [Repeated lists](repeaters), and bindings in [Bindings](bindings).`}},G=Object.freeze(Object.defineProperty({__proto__:null,tutorial:H},Symbol.toStringTag,{value:"Module"})),V={order:36,level:"intermediate",minutes:20,example:"tut-diagram",topic:{id:"tutorial-diagram",title:"Mind maps and flowcharts from data",group:"Build it",summary:"A mind map whose branches fold and open on a click, and a flowchart learners follow one decision at a time, each drawn from a list by one box and one line.",keywords:"tutorial mind map mindmap flowchart flow chart diagram concept map tree branches connector connectors lines arrows layout mindMap flowChart flowLinks list data repeater fold collapse decision follow step",body:'You will make two diagrams without placing a single box by hand. A **mind map** of study habits whose branches fold away and open again when you select them, and a **flowchart** for booking a study room that learners follow one answer at a time. Each is a list in the Variables tab, one box layer and one line layer: add a line to the list and a box and its line appear in the right place. It takes about twenty minutes.\n\n**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Mind map and flowchart from data**. **Play** runs it and **Make my copy** gives you your own copy.\n\nDo [Flip cards from a list](tutorial-flipcards) first if you haven\'t used a repeater before. This one adds **connectors**, and a formula, `mindMap(...)`, that works out where every box goes.\n\n## 1. Make a project and the list of ideas\n\n1. On the projects page press **New project**. Keep **Blank project**, type **Diagrams** as the name and press **Create project**. Rename the page **Mind map**.\n2. Open the **Variables** tab. Press **+ Add variable**, pick **List** and name it `ideas`. Replace its `[]` with:\n\n```\n[\n  {"id": "root", "label": "Healthy study"},\n  {"id": "sleep", "parent": "root", "label": "Sleep"},\n  {"id": "sleep1", "parent": "sleep", "label": "Same bedtime"},\n  {"id": "sleep2", "parent": "sleep", "label": "No screens late"},\n  {"id": "breaks", "parent": "root", "label": "Breaks"},\n  {"id": "breaks1", "parent": "breaks", "label": "Every hour"},\n  {"id": "food", "parent": "root", "label": "Food"},\n  {"id": "food1", "parent": "food", "label": "Water at hand"},\n  {"id": "move", "parent": "root", "label": "Movement"},\n  {"id": "move1", "parent": "move", "label": "Walk between classes"}\n]\n```\n\nEach idea has an `id`, its words in `label`, and the `id` of the idea it hangs off in `parent`. The one with no parent is the middle of the map.\n\n3. Add another **List** called `folded` and leave it as `[]`. It will hold the ids of the branches that are folded away.\n4. Add a third **List** called `map`. Next to its type, change **Starts as a value** to **Worked out**, and type this formula in the box that appears:\n\n```\nmindMap(ideas, {width: 720, height: 440, nodeW: 112, gapX: 32, collapsed: folded})\n```\n\n5. Tick **Keep up to date**, so `map` is worked out again whenever `ideas` or `folded` changes.\n\n`map` is the same ideas with a place worked out for each: `x`, `y`, `w` and `h`, its `depth`, whether it is `visible`, and `parentIndex`, the place in the list of the idea it hangs off. The branches are spread either side of the middle, in a 720 by 440 area.\n\n## 2. One box for every idea\n\n1. Press <kbd>F</kbd> and draw a small frame where the top left corner of the map should be, under a title: **X** 40, **Y** 120, **W** 130, **H** 44. Name it **Idea**, give it a pale fill (`#e8eefc`), a dark **Stroke** and a **Radius** of 10.\n2. Press <kbd>T</kbd>, click inside it and type `{item.label}`. Set **Sizing** to **Fixed**, **Align** center and **V-align** middle.\n3. Select **Idea** and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Name the group **Ideas**. In **Repeat (list)** tick **Repeat the first child for each item**, set **Items** to `map` and **Layout** to **Free (bind x/y)**.\n\nAll ten boxes are on top of each other for now. Tell each copy where it goes:\n\n4. Select **Idea** (inside **Ideas**). In **Data bindings** add four bindings, each a **Formula**: **X** `item.x`, **Y** `item.y`, **Width** `item.w`, **Height** `item.h`.\n5. Select the text inside it and bind its **Width** to `item.w` and **Height** to `item.h`, so the words stay centred in a box of any size.\n\nThe map spreads out: the middle idea with four branches round it. The positions count from the corner where you drew the box.\n\n6. Back on **Idea**, add **Fill colour** with `item.depth == 0 ? "#ffd54f" : "#e8eefc"`, so the middle stands out.\n\n## 3. One line for every idea\n\n1. Open the **Draw** group in the tool bar and pick **Connector** (or press <kbd>K</kbd>). Drag from the middle box to any other box and let go. A curved line joins them. Both ends are on **Idea**, copy 0 for now.\n2. In the **Connector** section, under **Start**, set **Which copy** to `item.parentIndex`. Under **End**, set **Which copy** to `index`. That is: from this idea\'s parent, to this idea.\n3. Set the **End** cap to **Plain**: mind map lines have no arrow.\n4. With the connector selected, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and name the group **Lines**. In **Repeat (list)**, tick it, set **Items** to `map` and **Layout** to **Free (bind x/y)**.\n5. In the **Layers** panel, drag **Lines** below **Ideas**, so the lines go under the boxes.\n\nThere is now one line for each idea, from its parent to it. The middle idea has no parent (its `parentIndex` is -1), so it gets no line.\n\n## 4. Fold and open branches\n\n1. Select **Idea**. Add a binding on **Visible**: **Formula**, **Edit as formula**, `item.visible`. An idea inside a folded branch hides, and so does its line: a connector hides when the layer at either end is hidden.\n2. In **Accessibility**, set **Role** to **Button**, and bind **Text alternative** to `item.label + (item.folded ? ", " + item.kids + " ideas folded away" : "")`.\n3. Press **+ On click (empty)** and **Show in graph**. Drag from the event\'s dot and add **Change a value or counter**: **Variable** **folded**, **Do** **Add to the list, or take out if it is there**, **Value** `map[event.index].id`.\n\nPress **Preview** and select **Sleep**: its two ideas fold into it, and selecting it again opens them. Then try the real point of it: close the Preview, add a line to `ideas` such as `{"id": "food2", "parent": "food", "label": "Fruit for snacks"}`, and the map makes room for it.\n\n## 5. A flowchart to follow\n\nA flowchart is the same idea with two lists, the steps and the links between them, and arrows instead of lines.\n\n1. Press **+ Add page** at the bottom of the **Layers** panel and name it **Flowchart**.\n2. Add two **List** variables. `steps`:\n\n```\n[\n  {"id": "s1", "kind": "start", "label": "Need a quiet room?"},\n  {"id": "d1", "kind": "decision", "label": "Is a room free?"},\n  {"id": "p1", "kind": "process", "label": "Book the room"},\n  {"id": "p2", "kind": "process", "label": "Pick another time"},\n  {"id": "e1", "kind": "end", "label": "Go and study"}\n]\n```\n\nand `links`, where `label` is the answer that takes you along it:\n\n```\n[\n  {"from": "s1", "to": "d1"},\n  {"from": "d1", "to": "p1", "label": "Yes"},\n  {"from": "d1", "to": "p2", "label": "No"},\n  {"from": "p1", "to": "e1"},\n  {"from": "p2", "to": "d1"}\n]\n```\n\n3. Add a **Text** variable called `current`, set to `s1`. It is the step the learner is on.\n4. Add three **Worked out** lists, each with **Keep up to date** ticked:\n   - `chart`: `flowChart(steps, links, {width: 440, height: 440})`, a place for every step, row by row from the start.\n   - `arrows`: `flowLinks(steps, links)`, every link with `a` and `b`, the places of the steps it joins.\n   - `outs`: `arrows.filter(l => l.from == current && l.b >= 0)`, the links out of the step the learner is on.\n5. Go back to **Mind map**, select **Ideas** and **Lines** together, press <kbd>Ctrl</kbd>+<kbd>C</kbd>, select the **Flowchart** page and press <kbd>Ctrl</kbd>+<kbd>V</kbd>. Rename them **Steps** and **Arrows**.\n6. Change the **Items** of **Steps** to `chart` and of **Arrows** to `arrows`.\n7. Select the connector inside **Arrows**. Set **Which copy** to `item.a` for **Start** and `item.b` for **End**, **Route** to **Elbow (right angles)**, the **End** cap to **Arrow**, and its label **Text** to `{item.label ?? ""}`, so the decision\'s arrows say Yes and No.\n8. Select the box inside **Steps**. Remove the **Visible** binding and change **Fill colour** to `item.id == current ? "#ffd54f" : "#ffffff"`: the step you are on is yellow. Set its **Role** back to **None (plain shape)**, and bind **Current (true, or page, step, location)** to `item.id == current ? "step" : false`.\n\nNow the panel that walks the learner through it, to the right of the chart:\n\n9. A text `{steps.find(s => s.id == current).label}`, large and bold. It says where you are.\n10. A button with the **Label** `{item.label || "Continue"}`. Select it, press <kbd>Ctrl</kbd>+<kbd>G</kbd>, and give the group **Repeat (list)** with **Items** `outs` and **Layout** **Column**. At the start there is one button, **Continue**. At the decision there are two, **Yes** and **No**.\n11. On that button, **+ On click (empty)** and **Change a value or counter**: **Variable** **current**, **Do** **Set to**, **Value** `outs[event.index].to`.\n12. A **Start again** button with **Change a value or counter** setting **current** to `"s1"`.\n\nThe copy of the mind map\'s click came with nothing joined to it on this page: interactions belong to a page, and only the layers were copied.\n\n## 6. Try it\n\n1. Select the **Flowchart** page and press **Preview**.\n2. Press **Continue**. *Is a room free?* lights up and the buttons say **Yes** and **No**.\n3. Press **No**: you are at *Pick another time*, and **Continue** takes you back to the question. Press **Yes** this time and carry on to *Go and study*.\n\n## Make it yours\n\n- **A text version.** A diagram is a picture to a screen reader. Add a text with `{mindMapOutline(ideas)}` on the mind map page, and `{flowOutline(steps, links)}` on the flowchart page: each gives the whole diagram as indented or numbered lines.\n- **Shapes for each kind.** Bind the step\'s **Corner radius** to `item.kind == "start" || item.kind == "end" ? item.h / 2 : 6` for rounded ends.\n- **Ready-made.** The **Mind map** and **Flowchart** starters (Templates, **Explore and reveal**) go much further: learners can add their own ideas to the map, the flowchart has proper diamond shapes, lights up the route taken and has a second page where learners drag the missing steps into place.\n\n## What you learned\n\n- `mindMap(...)` and `flowChart(...)` work out a place for every item, in a **Worked out** variable that keeps itself up to date.\n- One box repeated with **Free (bind x/y)** and bindings on X, Y, Width and Height draws every item where it belongs.\n- A **Connector** in a repeater joins two copies by their places in the list, with **Which copy**. You edit the data, never the boxes.\n\n**Next:** back to [Build it](build-it) for the other tutorials. More on [Connectors](connectors), [Repeated lists](repeaters) and worked out variables in [Variables](variables#worked-out-from-a-formula).'}},U=Object.freeze(Object.defineProperty({__proto__:null,tutorial:V},Symbol.toStringTag,{value:"Module"})),Y={order:21,level:"beginner",minutes:10,example:"tut-drag-match",topic:{id:"tutorial-drag-match",title:"Drag and drop matching",group:"Build it",summary:"Drag each country onto its capital, with a country that belongs nowhere, three tries, part marks and Try again.",keywords:"tutorial drag drop matching match pairs terms definitions slots drop zone country capital extra term distractor tries part marks try again reset keyboard score",body:`You will make a matching question: the learner drags each country onto its capital city. One extra country has no capital on the list, so it has to be left alone. The learner gets three tries, a share of the points for each one in the right place, and **Try again** at the end. It takes about ten minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Drag and drop matching**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -648,7 +1374,100 @@ The terms and slots are ordinary layers. The **Restyle a part** buttons at the b
 - **Extra terms** are dragged like the others but belong nowhere.
 - **Tries**, **Part marks** and **Try again** come with the question, and **Try again** puts every term back.
 
-**Next:** put the slots on a picture in [Label the diagram](tutorial-label), or let a box hold several items in [Sort into groups](tutorial-sort). How dragging works on any layer is in [Drag and drop](drag-and-drop).`}},L=Object.freeze(Object.defineProperty({__proto__:null,tutorial:W},Symbol.toStringTag,{value:"Module"})),E={order:50,level:"intermediate",minutes:25,example:"tut-journal",topic:{id:"tutorial-journal",title:"A reflection journal that remembers",group:"Build it",summary:"Two reflection prompts with text boxes and word counts that are still there when the learner comes back, and a page that puts it all together to download.",keywords:"tutorial journal reflection writing text box textarea word count wordCount save as user data save progress load saved progress before activity loads resume come back remember download a file export",body:`You will make a short reflection journal: two prompts, each with a text box and a word count. What the learner writes is saved as they type, so it is all still there when they come back. A second page puts the whole reflection together and downloads it as a text file. It takes about twenty-five minutes.
+**Next:** put the slots on a picture in [Label the diagram](tutorial-label), or let a box hold several items in [Sort into groups](tutorial-sort). How dragging works on any layer is in [Drag and drop](drag-and-drop).`}},K=Object.freeze(Object.defineProperty({__proto__:null,tutorial:Y},Symbol.toStringTag,{value:"Module"})),$={order:31,level:"beginner",minutes:15,example:"tut-flipcards",topic:{id:"tutorial-flipcards",title:"Flip cards from a list",group:"Build it",summary:"Term and meaning cards that turn over on a click or Enter, all drawn by one card layer from one list, so adding a card is adding a line.",keywords:"tutorial flip cards flashcards card term meaning definition front back turn over list repeater repeat item index event.index grid keyboard enter pressed toggle reset",body:`You will make six cards with a term on the front and its meaning on the back. Selecting a card, or pressing <kbd>Enter</kbd> on it, turns it over. You build **one** card and a list of words, and the editor draws a card for every line of the list. It takes about fifteen minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Flip cards from a list**. **Play** runs it and **Make my copy** gives you your own copy.
+
+You will meet a **List** variable, a **repeater** that draws one layer once per item, \`item\` and \`index\` inside it, and \`event.index\`, which says which copy was clicked.
+
+## 1. Make a project and write the cards
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Key terms** as the name and press **Create project**.
+2. Press <kbd>T</kbd> and click near the top left of the page. Type \`Key terms\` and press <kbd>Escape</kbd>.
+3. Open the **Variables** tab at the bottom. Press **+ Add variable** and pick **List**. Name it \`cards\`.
+4. Its value is a box of text that holds the items. Replace \`[]\` with this, one card per line:
+
+\`\`\`
+[
+  {"front": "Plagiarism", "back": "Presenting someone else's words or ideas as your own."},
+  {"front": "Paraphrase", "back": "Putting an idea in your own words. You still cite the source."},
+  {"front": "Citation", "back": "A short note in your text that points to the full reference."},
+  {"front": "Reference list", "back": "The full details of every source you cited, at the end."},
+  {"front": "Collusion", "back": "Working with others on work that must be your own."},
+  {"front": "Common knowledge", "back": "Facts that are widely known and easy to check."}
+]
+\`\`\`
+
+Each card is a pair of braces with a \`front\` and a \`back\`. Keep the quotes and the commas between cards: if the text isn't a proper list, a red line under the box says so, and the list starts empty.
+
+5. Press **+ Add variable** again, pick **List** and name it \`flipped\`. Leave it as \`[]\`. It will hold the places of the cards that are turned over: \`[0, 3]\` means the first and the fourth.
+
+## 2. Draw one card
+
+1. Press <kbd>F</kbd> for the **Frame** tool and draw a card under the title, about 220 wide and 150 high (set **W** and **H** to be exact). Name it **Card**.
+2. Give it a dark blue **Fill**, \`#1f3a68\`, and a **Radius** of **16**.
+3. Press <kbd>T</kbd> and click inside the card. Type \`{item.front}\` and press <kbd>Escape</kbd>. Name the layer **Card front**. Make it white (**Colour** \`#ffffff\`), **Size** 22, **Weight** 700, **Align** center.
+4. Click inside the card again and type \`{item.back}\`. Name it **Card back**, **Align** center. Leave it dark.
+
+The two texts are empty for now. \`item\` is the card the copy is drawing, and there are no copies yet.
+
+## 3. Repeat it for every card
+
+1. Select **Card** and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. It goes into a new group. Name the group **Cards**.
+2. With **Cards** selected, open the **Repeat (list)** section and tick **Repeat the first child for each item**.
+3. Set **Items** to \`cards\`, **Layout** to **Grid**, **Cols** to **3** and **Gap** to **20**.
+
+Six cards appear in two rows, each with its own term. That is the same **Card** layer drawn six times, so restyling it restyles them all. Inside a copy, \`item\` is that card's line from the list and \`index\` is its place, counting from 0.
+
+## 4. Show one face at a time
+
+A card is turned over when its place is in \`flipped\`. The formula for that is \`flipped.includes(index)\`.
+
+1. Select **Card back** (in the **Layers** panel, inside **Card**). In **Data bindings** press **+ Add binding** and pick **Visible**. Choose **Formula**, press **Edit as formula**, and type \`flipped.includes(index)\`.
+2. Select **Card front** and do the same with \`!flipped.includes(index)\`. The \`!\` means *not*.
+3. Select **Card** and add a binding to **Fill colour**: **Formula**, \`flipped.includes(index) ? "#ffffff" : "#1f3a68"\`. A turned card is white, so the dark words on its back show.
+
+Every card shows its front now, because \`flipped\` is empty.
+
+## 5. Turn a card over on a click
+
+1. With **Card** selected, open **Accessibility** and set **Role** to **Button**. The card is now a tab stop, and <kbd>Enter</kbd> or <kbd>Space</kbd> clicks it.
+2. Type \`Press Enter to turn the card over\` in **Description**.
+3. In **Data bindings**, add **Pressed (button, toggle)** with the formula \`flipped.includes(index)\`. A screen reader then says whether the card is turned.
+4. In the **Interactions** section press **+ On click (empty)**, then **Show in graph**.
+5. Drag from the dot on the right of the **When clicked or hovered** node into empty space. In **Find a node…** type \`change\` and pick **Change a value or counter**.
+6. Set **Variable** to **flipped**, **Do** to **Add to the list, or take out if it is there**, and **Value** to \`event.index\`.
+
+A click on any copy runs this one flow, and \`event.index\` is the place of the card that was clicked. If it isn't in \`flipped\` it goes in, and the card turns over; if it is, it comes out, and the card turns back.
+
+## 6. Turn them all back
+
+1. Press <kbd>B</kbd> and draw a button under the cards. Set its **Label** to \`Turn all back\`.
+2. Press **+ On click (empty)** and **Show in graph**, drag from its dot and pick **Put values back to the start**.
+3. In its **Variables** list, tick **flipped**. It goes back to \`[]\`, so every card shows its front.
+
+## 7. Try it
+
+1. Press **Preview**.
+2. Click a few cards. Each turns over on its own, and turns back on a second click.
+3. Press <kbd>Tab</kbd> to reach a card and <kbd>Enter</kbd> to turn it.
+4. Watch \`flipped\` in **Variables (live)** on the left: it lists the places of the cards that are turned.
+5. Press **Turn all back**.
+
+## Make it yours
+
+- **Add a card.** Add a line to \`cards\` in the Variables tab. A seventh card appears in the grid: there is nothing to copy or wire. Make sure the button under the grid still has room.
+- **A picture on the front.** Lay a picture over **Card front** inside **Card**, and give it the same **Visible** binding.
+- **Turning motion.** The faces swap at once, the same as in the starter. A timeline can't turn just one copy, because every copy is the same layer.
+- **Ready-made.** The **Flip and dialog cards** starter (Templates, **Explore and reveal**) has these cards plus a page that steps through them one at a time. A starter has a **Fill in** tab where the cards are rows of a form, so nobody has to type braces and quotes (see [Fill in this starter](fill-in-starter)).
+
+## What you learned
+
+- A **List** variable holds the content, and a group's **Repeat (list)** draws its first child once per item.
+- Inside the copies, \`item\` is the item and \`index\` its place. In a click, \`event.index\` says which copy was clicked.
+- **Add to the list, or take out if it is there** keeps one list of which cards are turned, and bindings on **Visible** show the right face.
+
+**Next:** [Accordion and tabs from data](tutorial-accordion). More on lists in [Repeated lists](repeaters) and [Variables](variables#lists).`}},Q=Object.freeze(Object.defineProperty({__proto__:null,tutorial:$},Symbol.toStringTag,{value:"Module"})),X={order:50,level:"intermediate",minutes:25,example:"tut-journal",topic:{id:"tutorial-journal",title:"A reflection journal that remembers",group:"Build it",summary:"Two reflection prompts with text boxes and word counts that are still there when the learner comes back, and a page that puts it all together to download.",keywords:"tutorial journal reflection writing text box textarea word count wordCount save as user data save progress load saved progress before activity loads resume come back remember download a file export",body:`You will make a short reflection journal: two prompts, each with a text box and a word count. What the learner writes is saved as they type, so it is all still there when they come back. A second page puts the whole reflection together and downloads it as a text file. It takes about twenty-five minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Reflection journal**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -746,7 +1565,7 @@ Both ways save to the same place. See [Save user data and Load user data](result
 - \`wordCount\` and other formulas work in text, and a **Worked out** variable with **Keep up to date** follows the variables it reads.
 - **Download a file** gives the learner their work as a file.
 
-**Next:** more on saving in [Save as user data](variables#save-as-user-data) and [Results and progress](results). The formula helpers, \`wordCount\` among them, are in [Expressions](expressions#helpers). Saving reports and pictures is in [Download a file](sensors#download-a-file).`}},R=Object.freeze(Object.defineProperty({__proto__:null,tutorial:E},Symbol.toStringTag,{value:"Module"})),M={order:24,level:"intermediate",minutes:20,example:"tut-label",topic:{id:"tutorial-label",title:"Label the diagram",group:"Build it",summary:"A picture with empty spots the learner drags labels onto, checked spot by spot, with a text alternative so it works without seeing the picture.",keywords:"tutorial label labels diagram picture image drag drop slots drop zones spots parts plant alt text text alternative accessibility matching remove auto layout move",body:`You will make a labelled diagram: a picture of a plant with four empty spots, and a pile of labels for the learner to drag onto them. One label belongs nowhere. **Check answer** marks each spot on its own. It is a matching question whose slots you move onto the picture, so the marking, tries and keyboard use all come with it. It takes about twenty minutes.
+**Next:** more on saving in [Save as user data](variables#save-as-user-data) and [Results and progress](results). The formula helpers, \`wordCount\` among them, are in [Expressions](expressions#helpers). Saving reports and pictures is in [Download a file](sensors#download-a-file).`}},J=Object.freeze(Object.defineProperty({__proto__:null,tutorial:X},Symbol.toStringTag,{value:"Module"})),Z={order:24,level:"intermediate",minutes:20,example:"tut-label",topic:{id:"tutorial-label",title:"Label the diagram",group:"Build it",summary:"A picture with empty spots the learner drags labels onto, checked spot by spot, with a text alternative so it works without seeing the picture.",keywords:"tutorial label labels diagram picture image drag drop slots drop zones spots parts plant alt text text alternative accessibility matching remove auto layout move",body:`You will make a labelled diagram: a picture of a plant with four empty spots, and a pile of labels for the learner to drag onto them. One label belongs nowhere. **Check answer** marks each spot on its own. It is a matching question whose slots you move onto the picture, so the marking, tries and keyboard use all come with it. It takes about twenty minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Label the diagram**. **Play** runs it and **Make my copy** gives you your own copy. Its diagram is drawn with shapes, so it needs no picture file.
 
@@ -841,7 +1660,7 @@ Press <kbd>Esc</kbd> to close the Preview.
 - **Remove auto layout** frees a frame's layers to go anywhere, and **Send to back** puts the picture behind them.
 - The picture's **Text alternative** and the spot names in **What it matches** make the activity usable without seeing the picture.
 
-**Next:** see [Accessibility](accessibility) for text alternatives and the keyboard, and [Drag and drop](drag-and-drop) for drop zones on any layer. Every question type is in [Questions and quizzes](question-kit).`}},O=Object.freeze(Object.defineProperty({__proto__:null,tutorial:M},Symbol.toStringTag,{value:"Module"})),q={order:10,level:"beginner",minutes:10,example:"tut-mcq",topic:{id:"tutorial-mcq",title:"A multiple choice question with scoring and feedback",group:"Build it",summary:"One question with four options, two tries, a hint, feedback for each wrong answer, and a result sent when it finishes.",keywords:"tutorial multiple choice question quiz mcq options right answer feedback hint tries attempts score points result report pass mark check answer",body:`You will make one multiple choice question: which planet is closest to the Sun? The learner gets two tries and a hint. Each wrong answer says why it is wrong, and when the question finishes its score is reported. It takes about ten minutes.
+**Next:** see [Accessibility](accessibility) for text alternatives and the keyboard, and [Drag and drop](drag-and-drop) for drop zones on any layer. Every question type is in [Questions and quizzes](question-kit).`}},ee=Object.freeze(Object.defineProperty({__proto__:null,tutorial:Z},Symbol.toStringTag,{value:"Module"})),te={order:10,level:"beginner",minutes:10,example:"tut-mcq",topic:{id:"tutorial-mcq",title:"A multiple choice question with scoring and feedback",group:"Build it",summary:"One question with four options, two tries, a hint, feedback for each wrong answer, and a result sent when it finishes.",keywords:"tutorial multiple choice question quiz mcq options right answer feedback hint tries attempts score points result report pass mark check answer",body:`You will make one multiple choice question: which planet is closest to the Sun? The learner gets two tries and a hint. Each wrong answer says why it is wrong, and when the question finishes its score is reported. It takes about ten minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Multiple choice question**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -916,7 +1735,7 @@ The card is made of ordinary layers, so restyle it like anything else. The **Res
 - Each option can have its own feedback, and **Tries**, **Hints** and **Show the right answer** shape what a learner sees.
 - **Report result** and the project's **Results and progress** send the score.
 
-**Next:** more question types are in [Questions and quizzes](question-kit). To turn a list of questions into a quiz in one go, see [Pasting questions in](paste-questions). How results reach StudyDesk is in [Results and progress](results).`}},B=Object.freeze(Object.defineProperty({__proto__:null,tutorial:q},Symbol.toStringTag,{value:"Module"})),F={order:56,level:"intermediate",minutes:20,example:"tut-microphone",topic:{id:"tutorial-microphone",title:"Speaking practice with the microphone",group:"Build it",summary:"A one minute talk the learner records with one button, a countdown that ends the take, playback, and a slider to rate how it went.",keywords:"tutorial microphone record recording voice speaking practice oral talk play back playback countdown timer clock consent permission sensors start recording stop recording play recording rate self assessment",body:`You will make a speaking practice page. The learner reads a prompt, presses **Start my talk** and speaks for up to a minute while a countdown runs. The recording stops by itself when the time is up, **Play it back** lets them hear it, and a slider asks how confident they sounded. It takes about twenty minutes.
+**Next:** more question types are in [Questions and quizzes](question-kit). To turn a list of questions into a quiz in one go, see [Pasting questions in](paste-questions). How results reach StudyDesk is in [Results and progress](results).`}},ae=Object.freeze(Object.defineProperty({__proto__:null,tutorial:te},Symbol.toStringTag,{value:"Module"})),oe={order:41,level:"intermediate",minutes:35,example:"tut-memory",topic:{id:"tutorial-memory",title:"A memory card game",group:"Build it",summary:"Twelve cards dealt face down from six pairs: turn two, keep a match, a miss turns back after a moment, with a moves count and a win page.",keywords:"tutorial memory game pairs cards concentration match matching flip turn shuffle seed deal repeater grid list change one list item wait timer moves game state live variable",body:'You will make a memory game. Six pairs of words (an animal and its young) are dealt as twelve cards, face down. The learner turns two at a time: a pair stays face up, a miss turns back after a second. A counter shows the moves, and finding every pair goes to a **Well done** page. It takes about thirty-five minutes.\n\n**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Memory card game**. **Play** runs it and **Make my copy** gives you your own copy. The **Memory game** starter (**Templates**, **Built-in**, **Branded starter packs**) works the same way.\n\nThe whole game lives in one list. Each card is an item with its words, which pair it belongs to and its state: `down`, `up` or `matched`. A click changes one card\'s state, and everything on screen is worked out from the list.\n\n## 1. Make the project\n\n1. On the projects page press **New project**. Keep **Blank project**, type **Animal pairs** and press **Create project**.\n2. Click the page\'s name and change **Name** to `Memory`. Press **+ Add page** at the bottom of the **Layers** panel and name the new page `Well done`.\n\n## 2. The pairs and the deal\n\nOpen the **Variables** tab and add these, in this order, with **+ Add variable**. The name is saved when you press <kbd>Tab</kbd> or click away.\n\n1. **List**, named `pairs`. Replace its value with the six pairs:\n\n```\n[{"a": "Cat", "b": "Kitten"}, {"a": "Dog", "b": "Puppy"}, {"a": "Cow", "b": "Calf"}, {"a": "Sheep", "b": "Lamb"}, {"a": "Horse", "b": "Foal"}, {"a": "Duck", "b": "Duckling"}]\n```\n\n2. **Counter**, named `seed`. It stays at 0.\n3. **List**, named `cards`. Change **Starts as a value** to **Worked out** and type this formula:\n\n```\nshuffle(pairs.flatMap((p, i) => [{text: p.a, pair: i, state: "down"}, {text: p.b, pair: i, state: "down"}]), seed)\n```\n\nIt makes two face-down cards from every pair, both with the pair\'s number, and shuffles all twelve. `shuffle(list, seed)` gives the same order for the same seed, so changing `seed` deals a new order and you can always get a deal back to test it.\n\n4. **Counter**, named `moves`.\n5. **List**, named `ups`. **Worked out**, with `cards.map((c, i) => c.state == "up" ? i : -1).filter(i => i >= 0)`, and tick **Keep up to date**. It is the positions of the cards that are face up right now.\n6. **Counter**, named `matched`. **Worked out**, with `cards.filter(c => c.state == "matched").length / 2`, and tick **Keep up to date**. It is how many pairs are found.\n\n`ups` and `matched` are never set by hand. They follow `cards`, so the game state is all in one list.\n\n## 3. Lay out the cards\n\n1. On **Memory**, press <kbd>F</kbd> and drag a frame across most of the page, below the top. Name it **Cards**.\n2. Press <kbd>B</kbd> and drag a button inside the frame, about 170 by 100. A layer you draw over a frame goes into it. Name the button **Card**.\n3. Select **Cards**. In its **Repeat (list)** section tick **Repeat the first child for each item**. Set **Items** to `cards`, **Layout** to **Grid**, **Cols** to `4` and **Gap** to `12`. Twelve cards appear in three rows of four.\n4. Select **Card** and set its **Label** to:\n\n```\n{item.state == "down" ? "?" : item.text}\n```\n\n`item` is the card each copy shows. Face down it says **?**; face up it shows its word.\n\n5. Still on **Card**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **Formula** and type `item.state == "down" ? "#f6c344" : item.state == "matched" ? "#bfe5c4" : "#ffffff"`. Down cards are gold, matched ones green, turned ones white.\n6. Add one more binding: **Text alternative**, **Formula**, `"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text)`, so a screen reader hears more than a question mark.\n7. Above the frame, add two text layers: `Moves: {moves}` and `Pairs found: {matched} of {pairs.length}`.\n\n## 4. Deal when the page opens\n\n1. Open the **Interactions** tab. Type `page is shown` in **Search nodes** and click **When the page is shown** to add it.\n2. Drag from its dot into empty space, find **Change a value or counter** and set **Variable** to **seed**, **Do** to **Add to it** and **Value** to `1`.\n3. Drag from that node into empty space, find **Put values back to the start** and tick **cards** and **moves** in its list.\n\nPutting `cards` back works its formula out again with the new seed, so every visit to the page is a fresh deal with the moves at 0.\n\n## 5. Turn a card\n\nThis is the one flow for all twelve cards. A click on any copy runs it, and `event.index` says which card it was.\n\n1. Select **Card** on the canvas and press **+ On click (empty)** in its **Interactions** section. A **When clicked or hovered** node appears in the graph.\n2. Click the node. In **Only if**, press **Edit as formula** and type:\n\n```\nups.length < 2 && cards[event.index].state == "down"\n```\n\nClicks are ignored while two cards are already up, and on a card that is not face down. (Conditions in this tutorial are typed: wherever a condition box shows pickers, press **Edit as formula** first.)\n\n3. Drag from its dot, find **Change a value or counter** and set: **Variable** **cards**, **Do** **Change one list item**, leave **Item position** empty (it is then `event.index`, the card that was clicked), **Field** `state`, **Value** `"up"`.\n\n## 6. Check the pair\n\n1. Drag from that node, find **Check a condition** and set **Condition** to `ups.length == 2`. Its **true** output runs when this was the second card up.\n2. Drag from **true**, find **Change a value or counter**: **Variable** **moves**, **Do** **Add to it**, **Value** `1`. Two cards turned is one move.\n3. Drag from that node, find **Check a condition** and set **Condition** to `cards[ups[0]].pair == cards[ups[1]].pair`: the two cards up belong to the same pair.\n4. From its **true** output, add **Change a value or counter**: **Variable** **cards**, **Do** **Set to**, **Value**:\n\n```\ncards.map(c => c.state == "up" ? {...c, state: "matched"} : c)\n```\n\n5. From its **false** output, add **Wait** with **Milliseconds** `1000`. Then, after the **Wait**, add **Change a value or counter**: **Variable** **cards**, **Do** **Set to**, **Value**:\n\n```\ncards.map(c => c.state == "up" ? {...c, state: "down"} : c)\n```\n\nThe **Wait** is the timer that turns cards back. For that second both cards are up, so `ups.length` is 2 and the **Only if** from step 5 holds every other click.\n\n## 7. Win, and play again\n\n1. Add a **When a value changes** node from the palette and set **Variable** to **matched**. In **Only if**, type `matched == pairs.length`.\n2. Drag from it to a **Wait** of `800`, then to a **Go to a page** with **Go to** set to **Next page**.\n3. On **Well done**, add a title and a text layer saying `You found all {pairs.length} pairs in {moves} moves.`\n4. Add a **Play again** button. In its **Interactions** section press **+ When clicked…**, choose **Go to a page…**, pick **Memory** and press **Add**. Arriving on **Memory** runs the deal from step 4 again.\n\n## 8. Try it\n\n1. Click an empty part of **Memory** and press **Preview**.\n2. Turn two cards that don\'t match. They stay up for a second and turn back; **Moves** says 1. Try clicking a third card while two are up: nothing happens.\n3. Find a pair. Both turn green and stay.\n4. In **Variables (live)**, open `cards` to watch the states change as you play. Find every pair to reach **Well done**, then press **Play again** for a new deal.\n\n## Make it yours\n\n- **Your own pairs.** Change `pairs` in the Variables tab: a term and its meaning, a picture name and a word, a question and its answer. Six pairs fill four columns by three rows; for eight, set **Cols** to 4 and make the frame taller.\n- **A fixed deal.** Take `seed` out of the start flow and every learner gets the same order, which is handy while you test. Or replace `seed` in the formula with `Date.now()` for an order nobody can predict.\n- **A gentler pace.** Change the **Wait** after a miss to `1500` to give more time to remember.\n\n## What you learned\n\n- One **List** variable can hold a whole game\'s state, with **Worked out** variables that follow it.\n- `shuffle(list, seed)` deals the same order for the same seed, and **Put values back to the start** deals again.\n- A repeater shows a list with one layer, and one click flow serves every copy through `event.index`.\n- **Change one list item** turns one card; **Only if** and **Wait** make the two-card turn.\n\n**Next:** [Word search and crossword from a word list](tutorial-wordgames) builds bigger grids from a list. More in [Repeated lists](repeaters), [Variables](variables#lists) and [Expressions](expressions#helpers).'}},se=Object.freeze(Object.defineProperty({__proto__:null,tutorial:oe},Symbol.toStringTag,{value:"Module"})),ne={order:56,level:"intermediate",minutes:20,example:"tut-microphone",topic:{id:"tutorial-microphone",title:"Speaking practice with the microphone",group:"Build it",summary:"A one minute talk the learner records with one button, a countdown that ends the take, playback, and a slider to rate how it went.",keywords:"tutorial microphone record recording voice speaking practice oral talk play back playback countdown timer clock consent permission sensors start recording stop recording play recording rate self assessment",body:`You will make a speaking practice page. The learner reads a prompt, presses **Start my talk** and speaks for up to a minute while a countdown runs. The recording stops by itself when the time is up, **Play it back** lets them hear it, and a slider asks how confident they sounded. It takes about twenty minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Speaking practice with the microphone**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -1009,7 +1828,7 @@ To try your real microphone, share the project with **In a StudyDesk page, and k
 - **Countdown / clock** runs the timer, and its **Time up** output ends the take with **Stop recording**.
 - **Play recording** plays the take back; \`recordings.talk\` tells bindings what it is doing.
 
-**Next:** every microphone, camera and photo node is in [Microphone, camera and photos](sensors), with what learners see and what the page needs. More on the timer: [Interaction node reference](interaction-nodes).`}},z=Object.freeze(Object.defineProperty({__proto__:null,tutorial:F},Symbol.toStringTag,{value:"Module"})),N={order:23,level:"intermediate",minutes:12,example:"tut-order",topic:{id:"tutorial-order",title:"Put the steps in order",group:"Build it",summary:"Six shuffled steps the learner moves up and down, from the mouse or the keyboard, checked against the right order with part marks, and restyled in one go.",keywords:"tutorial order ordering sequence steps put in order arrange reorder shuffle move up down keyboard right order part marks restyle repeater list process",body:`You will make an ordering question: the steps for making a cup of tea, dealt in a shuffled order, for the learner to put right. Each step has an up and a down button, so it works from the keyboard as well as the mouse. **Check answer** compares the list with the right order and gives a point for each step in its place. Then you restyle all six steps by changing one. It takes about twelve minutes.
+**Next:** every microphone, camera and photo node is in [Microphone, camera and photos](sensors), with what learners see and what the page needs. More on the timer: [Interaction node reference](interaction-nodes).`}},ie=Object.freeze(Object.defineProperty({__proto__:null,tutorial:ne},Symbol.toStringTag,{value:"Module"})),re={order:23,level:"intermediate",minutes:12,example:"tut-order",topic:{id:"tutorial-order",title:"Put the steps in order",group:"Build it",summary:"Six shuffled steps the learner moves up and down, from the mouse or the keyboard, checked against the right order with part marks, and restyled in one go.",keywords:"tutorial order ordering sequence steps put in order arrange reorder shuffle move up down keyboard right order part marks restyle repeater list process",body:`You will make an ordering question: the steps for making a cup of tea, dealt in a shuffled order, for the learner to put right. Each step has an up and a down button, so it works from the keyboard as well as the mouse. **Check answer** compares the list with the right order and gives a point for each step in its place. Then you restyle all six steps by changing one. It takes about twelve minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Put the steps in order**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -1075,7 +1894,814 @@ Leave the fill colour alone: it is set by the question, so a step can turn green
 - **Part marks** count the steps in their right place, and **Show the right answer when finished wrong** puts them in order at the end.
 - The steps are a repeated layer: restyle the one **Item** and they all follow.
 
-**Next:** put labels on a picture in [Label the diagram](tutorial-label). How repeated layers work is in [Repeaters](repeaters), and every question type is in [Questions and quizzes](question-kit).`}},G=Object.freeze(Object.defineProperty({__proto__:null,tutorial:N},Symbol.toStringTag,{value:"Module"})),H={order:22,level:"intermediate",minutes:12,example:"tut-sort",topic:{id:"tutorial-sort",title:"Sort into groups",group:"Build it",summary:"Six cards to drag into two labelled groups, each drop answered as it lands, then all of them checked together with a count of how many are right.",keywords:"tutorial sort sorting categorise categorize groups group boxes drag drop cards items belongs in drop feedback right wrong count part marks renewable energy",body:`You will make a sorting activity: six energy sources to drag into two groups, **Renewable** and **Non-renewable**. Each group box holds as many cards as you drop in it. As each card lands the learner is told whether it fits, and **Check answer** then marks all of them together and says how many are right. It takes about twelve minutes.
+**Next:** put labels on a picture in [Label the diagram](tutorial-label). How repeated layers work is in [Repeaters](repeaters), and every question type is in [Questions and quizzes](question-kit).`}},he=Object.freeze(Object.defineProperty({__proto__:null,tutorial:re},Symbol.toStringTag,{value:"Module"})),de={order:42,level:"intermediate",minutes:25,example:"tut-personality",topic:{id:"tutorial-personality",title:'A "which one are you?" quiz',group:"Build it",summary:"Three questions whose answers each add to several tallies, ending on the result page for the highest score.",keywords:"tutorial personality quiz which one are you what type study style tally tallies several scores outcome result page highest score formula worked out live counter duplicate page",body:`You will make a three-question quiz: *Which study style are you?* Every answer adds points to two of three tallies (Planner, Explorer and Collaborator), and the last answer goes to the result page of whichever tally is highest. It takes about twenty-five minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Which one are you? quiz**. **Play** runs it and **Make my copy** gives you your own copy. The **Personality quiz** starter (**Templates**, **Built-in**, **Branded starter packs**) is a longer one in the UniSQ look.
+
+There is no right answer, so nothing is marked. Each result has its own counter, and a formula picks the biggest.
+
+## 1. Make the project
+
+On the projects page press **New project**. Keep **Blank project**, type **Which study style are you?** and press **Create project**. Click the page's name and change **Name** to \`Question 1\`.
+
+## 2. Build the first question
+
+1. Press <kbd>T</kbd> and add a small line at the top saying \`Question 1 of 3\`, then a bigger, bold one with the question: \`It is the start of semester. What do you do first?\`
+2. Press <kbd>B</kbd> and drag three wide buttons under it. Name them **Answer 1**, **Answer 2** and **Answer 3**, and give them these **Label**s:
+   - \`Put every due date in a calendar\`
+   - \`Browse the course sites to see what looks interesting\`
+   - \`Message people in my course to see who is studying what\`
+
+The first answer on every page will lean to Planner, the second to Explorer, the third to Collaborator. Keeping that order is what lets you copy the page in step 5.
+
+## 3. Three tallies
+
+Each answer makes one counter as you wire it.
+
+1. Select **Answer 1**. In its **Interactions** section press **+ When clicked…** and choose **Add 1 to a counter**. Under **Which counter** pick **A new counter…** and name it \`planner\`. Press **Add**.
+2. Do the same for **Answer 2** with a new counter named \`explorer\`, and **Answer 3** with \`collaborator\`.
+
+The **Variables** tab now has the three counters, each starting at 0.
+
+## 4. Points to two tallies, then the next page
+
+An answer that fits Planner best might also fit Collaborator a little. So each answer gives 2 points to one tally and 1 to another.
+
+1. Under **Answer 1**'s sentence press **Show in graph**. Click its **Change a value or counter** node and change **Value** to \`2\`.
+2. Drag from the node's dot into empty space, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **collaborator**, **Do** to **Add to it** and **Value** to \`1\`.
+3. Drag from that node into empty space and pick **Go to a page**. Set **Go to** to **Next page**.
+4. Do the same for the other two answers:
+
+| Answer | 2 points to | 1 point to |
+|---|---|---|
+| Answer 1 | planner | collaborator |
+| Answer 2 | explorer | planner |
+| Answer 3 | collaborator | explorer |
+
+Press **Read as sentences** above the graph: each answer should read as two counters and a page change.
+
+## 5. Copy the page for the other questions
+
+1. Right-click the name **Question 1** above the page and choose **Duplicate**. The copy, **Question 2**, has the same layers and the same interactions, already joined to its own buttons.
+2. Duplicate **Question 1** once more for **Question 3**.
+3. Change the words on the copies. Keep the order: Planner first, Explorer second, Collaborator third.
+
+| Page | Question | Answer 1 | Answer 2 | Answer 3 |
+|---|---|---|---|---|
+| Question 2 | How do you like to prepare for an exam? | Work through a study timetable I made weeks ago | Hunt for extra examples and read around the topic | Quiz each other in a study group |
+| Question 3 | A hard idea is not making sense. What do you do? | Break it into small steps and take one a day | Look for a video or a different explanation | Ask a classmate to talk it through with me |
+
+Remember the line at the top: \`Question 2 of 3\` and \`Question 3 of 3\`.
+
+## 6. The result pages
+
+1. Press **+ Add page** at the bottom of the **Layers** panel three times, and name the pages \`You are a Planner\`, \`You are an Explorer\` and \`You are a Collaborator\`.
+2. On each one, add the page's name as a title, a line or two about that style, and a text layer saying:
+
+\`\`\`
+Your points: Planner {planner}, Explorer {explorer}, Collaborator {collaborator}
+\`\`\`
+
+3. Add a **Take it again** button to each. In its **Interactions** section press **+ When clicked…**, choose **Start over** and press **Add**. It sets the tallies back to 0 and goes to the first page.
+
+Ideas for the words: a Planner likes a clear schedule; an Explorer follows their curiosity; a Collaborator learns by talking things through.
+
+## 7. Pick the highest
+
+1. In the **Variables** tab press **+ Add variable**, pick **Text** and name it \`result\`.
+2. Change **Starts as a value** to **Worked out** and type:
+
+\`\`\`
+planner >= explorer && planner >= collaborator ? "You are a Planner" : explorer >= collaborator ? "You are an Explorer" : "You are a Collaborator"
+\`\`\`
+
+3. Tick **Keep up to date**.
+
+\`result\` is now the name of the result page with the highest tally. Ties go to the one asked about first: Planner, then Explorer.
+
+## 8. Send the last answers to the result
+
+On **Question 3**, open the **Interactions** tab. Each answer's last node is a **Go to a page** set to **Next page**. For all three, set **Go to** to **One named by an expression** and type \`result\` in **Page name or id**.
+
+## 9. Try it
+
+1. Select **Question 1** and press **Preview**.
+2. Pick the first answer every time. You land on **You are a Planner**, with 6 Planner points and 3 Collaborator points.
+3. Press **Take it again** and try a mix. Watch the tallies and \`result\` in **Variables (live)** as you go. Press <kbd>Esc</kbd> to close.
+
+## Make it yours
+
+- **More results.** Add a fourth counter and page, then add it to every answer's points and to \`result\`'s formula. With four or more, a list is tidier: the **Personality quiz** starter keeps one \`scores\` list and works out the top with \`scores.reduce((m, s, i) => s > scores[m] ? i : m, 0)\`.
+- **Uneven weights.** An answer can give 3 to one tally and nothing to the others. Keep the totals roughly fair, or one result will win too often.
+- **More questions.** Duplicate any question page; just move the result questions' **Go to a page** change to whichever page is last.
+
+## What you learned
+
+- Several **Counter** variables can each keep a tally, and one click can add to two of them.
+- **Duplicate** copies a page with its interactions, so a pattern is built once.
+- A **Worked out** variable with **Keep up to date** picks the highest, and **One named by an expression** goes to the page it names.
+
+**Next:** [Progress, badges and a page master](tutorial-progress) keeps state across every page. More on formulas in [Variables](variables#worked-out-from-a-formula) and [Expressions](expressions), and the branching version of this idea in [A branching scenario](tutorial-branching).`}},le=Object.freeze(Object.defineProperty({__proto__:null,tutorial:de},Symbol.toStringTag,{value:"Module"})),ce={order:35,level:"beginner",minutes:15,example:"tut-presentation",topic:{id:"tutorial-presentation",title:"A course presentation",group:"Build it",summary:"Four slides that share a page master, a check your understanding question, and Back, Next and the page number added in one go, with a slide transition.",keywords:"tutorial presentation slides slide deck powerpoint lecture page master text slot back next page number navigation transition slide left question check your understanding branded look",body:`You will make a short slide deck: a welcome slide, a content slide, a check your understanding question and a thank you slide. A **page master** gives every slide the same bar, title position and footer, and **Page navigation** adds Back, Next and *Page 2 of 4* to all of them at once, with a slide transition. It takes about fifteen minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Course presentation**. **Play** runs it and **Make my copy** gives you your own copy.
+
+Each slide is a page of the project. The order of the pages in the **Layers** panel is the order of the slides.
+
+## 1. Make the slides
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Study week slides** as the name and press **Create project**.
+2. Click the page's name above it on the canvas, so the Properties panel shows the **Page**. Change its **Name** from **Home** to **Welcome**.
+3. At the bottom of the **Layers** panel press **+ Add page** three times. Name the new pages **Plan your week**, **Check your understanding** and **Thank you**.
+4. Press **+ Add page** once more and name this one **Slide master**. It will not be a slide: it holds what every slide shares.
+
+## 2. Build the master
+
+On **Slide master**:
+
+1. Press <kbd>R</kbd> and draw a thin bar across the very top: **X** 0, **Y** 0, **W** 800, **H** 12. Give it a dark blue fill. Name it **Accent bar**.
+2. Press <kbd>T</kbd> and click near the top left, under the bar. Type \`{slideTitle}\` and press <kbd>Escape</kbd>. Make it **Size** 30, **Weight** 700, and name it **Slide title**. The braces make it a *text slot*: each slide fills in its own words.
+3. Add a small text at the very bottom left, \`Study skills\`, **Size** 13. Name it **Footer**. Keep it below about **Y** 570, clear of the buttons that go along the bottom later.
+4. Select the page itself (click its name above it) and open the **Page master** section. Press **Make this a master**.
+5. The section now lists who uses it. Press **Use for all other pages**.
+
+Every slide now shows the bar and the footer, drawn underneath its own layers. The title is empty because no slide has filled in its slot yet.
+
+## 3. Fill in each slide
+
+1. Select the **Welcome** page and open its **Page master** section. Under **Text slots** there is a box called **slideTitle**. Type \`Welcome\`. The title appears on the slide.
+2. Add a text under the title: \`Four short slides about planning your study week. Press Next, or use the arrow keys, to move on.\`
+3. On **Plan your week**, type \`Plan your week\` in **slideTitle** and add a text with a few lines:
+   - \`Block out study time in your calendar.\`
+   - \`Start with the task that is due first.\`
+   - \`Leave a gap each week for catching up.\`
+4. On **Thank you**, type \`Thank you\` and add a closing line.
+
+To change the bar or the footer later, change it once on **Slide master** (or press **Edit master** on any slide) and every slide follows.
+
+## 4. The question slide
+
+1. Select **Check your understanding** and type the same words in its **slideTitle**.
+2. In the tool bar on the left, open **Web**, press **Add question** and pick **Multiple choice (one answer)**. The card appears on the slide, selected.
+3. Drag it so its top sits just under the title. It is about 420 high, so it fits above the bottom bar.
+4. In the **Question** section, write the **Prompt** \`What is the best first step when an assignment is released?\` and three options: \`Read the task sheet and the marking criteria\` (mark it right with the round button), \`Start writing the introduction\` and \`Wait until the week before it is due\`.
+
+[A multiple choice question](tutorial-mcq) covers the Question section in full: feedback per option, tries, hints and results.
+
+## 5. Back, Next and the page number
+
+1. Select the **Welcome** page and open **Page navigation** in the Properties panel.
+2. Choose the style **Back and Next**.
+3. Set **How the page changes** to **Slide left**, and **Speed** to **Medium**.
+4. Press **Add to all 4 pages**.
+
+Every slide now has **Back** on the left, **Next** on the right and *Page 1 of 4* between them. Back is hidden on the first slide and Next on the last. The master isn't counted: it is not a slide.
+
+Nothing here is hidden. Each button is an ordinary button with a **Go to a page** node in the **Interactions** tab, set to the next or previous page with the transition you chose. They follow the page order, so a slide you add or move later needs no rewiring (press **Add to all** again to give a new slide its buttons).
+
+## 6. Try it
+
+1. Select **Welcome** and press **Preview**.
+2. Press **Next**. The next slide slides in from the right. The page number counts up.
+3. Answer the question, then carry on to the end. **Back** goes the other way.
+
+Learners whose device asks for less motion get an instant change instead of the slide.
+
+## Make it yours
+
+- **The arrow keys.** Select a **Next button** and type \`ArrowRight\` in **Shortcut** (in **Accessibility**), and \`ArrowLeft\` on the **Back button**. Do it on each slide. The welcome text already promises it.
+- **Another transition.** Pick another look in **How the page changes** and press **Add to all** again: the buttons are replaced in the new style.
+- **More slides.** Add a page, pick **Slide master** as its **Master**, fill in its slot, and drag its row into place in the **Layers** panel.
+- **The branded look.** The **Course presentation** starter (Templates, **Stories and presentations**) is eight slides with the university's look, an Acknowledgement of Country slide and a question slide, ready to fill in.
+
+## What you learned
+
+- A **page master** holds what every slide shares, drawn under each page. A \`{name}\` in its text is a slot each page fills in.
+- **Page navigation** adds Back, Next and the page number to every page in one go, following the page order.
+- **How the page changes** sets the transition, and people who ask for less motion get none.
+
+**Next:** [Mind maps and flowcharts from data](tutorial-diagram). More on [Page masters](page-master), [Page navigation](page-navigation) and [How the page changes](links-cursors#how-the-page-changes).`}},pe=Object.freeze(Object.defineProperty({__proto__:null,tutorial:ce},Symbol.toStringTag,{value:"Module"})),ue={order:43,level:"intermediate",minutes:25,example:"tut-progress",topic:{id:"tutorial-progress",title:"Progress, badges and a page master",group:"Build it",summary:"A panel on every page with a progress bar and badges that light up as tasks are done, drawn once on a page master.",keywords:"tutorial progress bar badges badge achievement reward page master shared panel header every page list variable tick list mark as done state across pages binding width opacity",body:`You will make a short tour of three study tips. Along the top of every page sits a panel with a progress bar and three badges. Pressing **Mark as done** on a tip fills the bar a third of the way and lights up that tip's badge, and both stay as the learner moves between pages. It takes about twenty-five minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Progress, badges and a page master**. **Play** runs it and **Make my copy** gives you your own copy.
+
+Two ideas make it work. A **page master** draws the same panel on every page, so it is built once. And one **List** variable, \`done\`, holds the tasks that are finished. Variables belong to the whole project, so every page sees the same list.
+
+## 1. Make the project and its pages
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Study skills tour** and press **Create project**.
+2. Click the page's name and change **Name** to \`Welcome\`.
+3. Press **+ Add page** at the bottom of the **Layers** panel four times, and name the pages \`Plan your week\`, \`Read actively\`, \`Write a draft\` and \`All done\`.
+4. Press **+ Add page** once more and name it \`Progress panel\`. This one becomes the master.
+
+## 2. The list of tasks done
+
+Open the **Variables** tab, press **+ Add variable** and pick **List**. Name it \`done\` and leave its value as \`[]\`.
+
+## 3. Build the panel
+
+Work on **Progress panel**. Keep everything in the top 85 pixels of the page, because that strip is drawn over every page.
+
+1. Press <kbd>R</kbd> and drag a rectangle across the whole top, about 800 by 84, starting at the top left corner. Name it **Panel background** and give it a light fill.
+2. Add a text layer at the top left: \`Your progress: {done.length} of 3 done\`. Name it **Progress label**.
+3. Draw a thin rectangle under it, 260 by 14, with **Radius** 7 and a pale grey fill. Name it **Bar track**.
+4. Draw another exactly on top of it, the same size, in a strong colour. Name it **Bar fill**. In **Data bindings** press **+ Add binding**, pick **Width**, choose **Formula** and type:
+
+\`\`\`
+260 * done.length / 3
+\`\`\`
+
+With nothing done the bar is 0 wide; with all three it covers the track.
+
+5. Make the first badge on the right of the panel: a circle (<kbd>O</kbd>, hold <kbd>Shift</kbd>) about 44 across, a text layer with the letter \`P\` on top of it, and the word \`Planner\` in small text underneath. Select all three and press <kbd>Ctrl</kbd>+<kbd>G</kbd> to group them. Name the group **Planner badge**.
+6. On the group, press **+ Add binding** in **Data bindings**, pick **Opacity**, choose **Formula** and type:
+
+\`\`\`
+done.includes("Planning") ? 1 : 0.25
+\`\`\`
+
+A binding's opacity runs from 0 to 1, so the badge shows faintly until *Planning* is in the list, then fully.
+
+7. Copy the group twice (<kbd>Ctrl</kbd>+<kbd>D</kbd>) and move the copies along. Make them **Reader badge** (\`R\`, \`Reader\`, \`"Reading"\` in its binding) and **Writer badge** (\`W\`, \`Writer\`, \`"Writing"\`).
+
+> Why rectangles and not the **Progress bar** tool? A master only draws shapes, paths, text, pictures, groups and frames, and a **Progress bar** layer is left out of it. On an ordinary page, use the **Progress bar** tool: see [Progress bars](progress-bars).
+
+## 4. Make it the master of every page
+
+1. Right-click **Progress panel** (its name above the page, or its row in the **Layers** panel) and choose **Make this a master**.
+2. With it selected, open the **Page master** section of the Properties panel and press **Use for all other pages**.
+
+Every page now shows the panel under its own layers. The panel's layers can't be clicked or changed on a page: **Edit master** in a page's **Page master** section takes you back to **Progress panel** to change them.
+
+## 5. A task page
+
+On **Plan your week**:
+
+1. Add a heading \`Plan your week\` below the panel, and a tip under it: \`Block out your classes, then put two study sessions for each course into the gaps. Write the due dates in too.\`
+2. Press <kbd>B</kbd> and drag a button under the tip. Name it **Mark as done** and set its **Label** to:
+
+\`\`\`
+{done.includes("Planning") ? "Done ✓" : "Mark as done"}
+\`\`\`
+
+3. In its **Interactions** section press **+ On click (empty)**, then press **Show in graph**.
+4. Drag from the **When clicked or hovered** node's dot into empty space, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **done**, **Do** to **Add to the list, or take out if it is there** and **Value** to \`"Planning"\` (with the quotes).
+
+One press adds *Planning* to the list, so the bar grows and the Planner badge lights up. A second press takes it out again, so the button works as a tick box.
+
+## 6. The other two tasks
+
+Build **Read actively** and **Write a draft** the same way. Copy the heading, tip and button from **Plan your week** if you like, but each button needs its own click: copying a layer doesn't copy its interactions.
+
+| Page | Tip | The task's name (in the label and the Value) |
+|---|---|---|
+| Read actively | Before you read, skim the headings and write one question. As you read, note the answer in your own words. | \`"Reading"\` |
+| Write a draft | Write the messy first draft quickly, without editing. Fix it tomorrow, when you can see it with fresh eyes. | \`"Writing"\` |
+
+## 7. The welcome, the end and the way through
+
+1. On **Welcome**, add a title and a line such as \`Three short tips. Try each one, press Mark as done, and earn its badge in the panel at the top.\`
+2. On **All done**, add a title and \`You earned {done.length} of 3 badges.\`
+3. Select **Welcome**, open **Page navigation** in the Properties panel, choose **Back and Next** and press **Add to all 5 pages**. The master is left out, so it never becomes a stop on the way.
+
+## 8. Try it
+
+1. Select **Welcome** and press **Preview**.
+2. Press **Next**, then **Mark as done** on **Plan your week**. The bar fills a third and the Planner badge lights up.
+3. Press **Next**. The panel on **Read actively** shows the same progress: it is the same list, read again on a new page.
+4. Go back and press **Done ✓** to take it out again. Press <kbd>Esc</kbd> to close.
+
+## Go further
+
+- **Remember it.** In the Variables tab, open **Options** under \`done\` and tick **Remember**. A learner who comes back finds their badges still lit.
+- **Different badges.** A badge can read anything: \`done.length == 3\` for a gold star at the end, or a score from a quiz.
+- **Leave it off a page.** On **Welcome**, untick a layer under **Show these master layers on this page** in the **Page master** section.
+- **Screen readers.** Master layers are decorative, so a screen reader doesn't read the panel. The **Mark as done** label says the state on each page, and **All done** says the count.
+
+## What you learned
+
+- A **page master** holds what every page shares, and its bindings still follow the variables.
+- A **List** variable and **Add to the list, or take out if it is there** make a tick list.
+- Variables belong to the project, so state set on one page shows on every page.
+- **Width** and **Opacity** bindings turn a list into a bar and badges.
+
+**Next:** [An animated scene with speech bubbles](tutorial-scene). More in [Page masters](page-master), [Page navigation](page-navigation), [Bindings](bindings) and [Variables](variables#lists).`}},ge=Object.freeze(Object.defineProperty({__proto__:null,tutorial:ue},Symbol.toStringTag,{value:"Module"})),me={order:60,level:"intermediate",minutes:25,example:"tut-responsive",topic:{id:"tutorial-responsive",title:"Make it work on a phone",group:"Build it",summary:"A page of cards laid out by auto layout, and a narrow variant that stacks them for a phone. The player swaps between them by width.",keywords:"tutorial responsive phone mobile narrow wide variant breakpoint auto layout hug fill fixed grid stack column fr page width slider pairing report layout item",body:`You will make one page with a title, three cards about the rocky planets and a **Next** button. Nothing on it is placed by hand: auto layout arranges it. Then you add a narrow version for phones, where the cards stack in one column, and watch the player swap between the two as the page gets narrower. It takes about twenty-five minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Make it work on a phone**. **Play** runs it and **Make my copy** gives you your own copy.
+
+Three words come up all the way through. A layer that is **Fixed** keeps the size you gave it. One that **hugs** shrinks or grows to fit what is in it. One that **fills** takes the room its frame has to give.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Rocky planets** as the name and press **Create project**. The editor opens with one page called **Home**, 800 by 600.
+
+## 2. A frame that lays itself out
+
+1. Press <kbd>F</kbd> for the **Frame** tool and drag a frame over the whole page.
+2. In the Properties panel, change **Name** to **Content**. Set **X** and **Y** to 0, and **W** to 800.
+3. Find the **Auto layout** section and press its **+** (**Add auto layout**). The frame is now a column.
+4. Set **Gap** to 16, and all four boxes under **Padding (top, right, bottom, left)** to 32.
+
+**Hug height** is ticked, so the frame shrinks to fit what is in it. It is empty for now, so it is only as tall as its padding. That is fine: it grows as you add things.
+
+## 3. The title
+
+1. Press <kbd>T</kbd> for the **Text** tool and drag a text box inside **Content**. A layer you draw inside a frame goes into it, and the frame places it.
+2. Type \`The rocky planets\`, then press <kbd>Esc</kbd>. Name it **Title**, and in its **Text** section set **Size** to 32.
+3. A **Layout item** section has appeared near the top of the Properties panel. It says how this layer sits in its frame. Set **W** to **Fill**. The title now runs the whole width of **Content**, inside the padding, however wide **Content** is.
+
+## 4. A grid for the cards
+
+1. Press <kbd>F</kbd> and draw a smaller frame anywhere on the page. Name it **Cards**.
+2. A frame you draw always goes on the page itself, so move it in: in the **Layers** panel, drag **Cards** onto **Content**. It should sit under the title on the page. If it is above it, drag it again. (The Layers panel lists a frame's layers last first, so the one at the top of the list is the one at the bottom of a column.)
+3. With **Cards** selected, set **W** to **Fill** and **H** to **Hug** in **Layout item**.
+4. Press **+** on its **Auto layout** section, then change **Layout** to **Grid**.
+5. Type \`1fr 1fr 1fr\` in **Columns** and press <kbd>Enter</kbd>: three columns, each an equal share. Leave **Rows** empty, and set **Column gap** and **Row gap** to 16.
+6. Set the four **Padding** boxes to 0, so the cards line up with the title.
+
+## 5. The first card
+
+1. Draw one more frame, name it **Mercury**, and drag it onto **Cards** in the Layers panel. It drops into the first cell of the grid.
+2. Set **Radius** in its **Frame** section to 12. In **Fill**, press the small arrow beside the colour, open the **Tokens** tab and pick **color/surface**, a soft grey that changes with the theme.
+3. Press **+** on its **Auto layout** section. Keep it a column, set **Gap** to 8 and the **Padding** boxes to 16.
+4. In **Layout item**, set **W** to **Fill** (in a grid, that fills the cell) and **H** to **Hug**.
+5. Press <kbd>T</kbd> and drag a text box inside **Mercury**. In the Properties panel's **Text** box, write the name on the first line and a fact on the second:
+
+   \`\`\`
+   Mercury
+   The smallest planet, and the closest to the Sun.
+   \`\`\`
+
+6. Name the text **Mercury text**, and set its **W** to **Fill** in **Layout item**. The card now hugs its text: write more and it grows.
+
+## 6. Two more cards and a button
+
+1. Select the **Mercury** frame and press <kbd>Ctrl</kbd>+<kbd>D</kbd> (<kbd>Cmd</kbd>+<kbd>D</kbd> on a Mac) twice. The copies fill the second and third columns.
+2. Rename them **Venus** and **Mars**, and their texts **Venus text** and **Mars text**. Change the words:
+   - \`Venus\` and \`The hottest planet, under thick clouds.\`
+   - \`Mars\` and \`The red planet, with the tallest volcano we know of.\`
+3. Press <kbd>B</kbd> for the **Button** tool and drag a button inside **Content**, below the cards. Set its **Label** and **Name** to **Next**. Leave its **W** and **H** in **Layout item** on **Fixed**: a button should stay the size you made it.
+
+Try changing **Content**'s **W** to 600 and back. The title and the grid follow it, the cards share the width, and the button stays the same.
+
+## 7. Add a phone version
+
+1. Click the page's name, **Home**, above it on the canvas. The Properties panel shows the page.
+2. Open the **Responsive** section and press **Add narrow variant**.
+
+A copy called **Home narrow**, 360 px wide, appears to the right of **Home**, and it is selected. The two are now a **responsive set**: **Home** is the **base**, shown from a page width of 560 px up, and **Home narrow** is shown below that. Its layers, timelines and interactions are copies of **Home**'s.
+
+3. The usual breakpoint is 600. In the list in the **Responsive** section, set **Home**'s **from** to **600**.
+
+## 8. Rearrange the phone version
+
+The copy is still laid out for 800 px, so it runs off its page. Fix it on **Home narrow** only:
+
+1. Select **Content** on **Home narrow** and set **W** to 360. Set its four **Padding** boxes to 20.
+2. Select **Cards** and change **Columns** to \`1fr\`. The three cards stack in one column, each as wide as the page.
+3. Select **Title** and set its **Size** to 26.
+
+If the button now sits below the bottom of the page, select the page (click **Home narrow** above it) and make its **H** bigger.
+
+## 9. Read the pairing report
+
+Select either page and look at the bottom of its **Responsive** section. It has a line for moving between the two, **Home ⇄ Home narrow**, and under it how many layers were **paired by name**, then **nothing left over**.
+
+When a viewer's page changes width while they are using it, the player swaps pages and carries over what they did, matching layers and timelines **by name**. That is why the card texts have their own names. Rename **Mars text** to **Text** on one page only and the report lists it as only in one of them, so anything an interaction changed on it would be lost in the swap. Put the name back.
+
+## 10. Try it
+
+1. Press **Preview** at the top right.
+2. A **Page width** slider shows under the top bar, with **600** marked on it. Next to it, **Showing** says which page is on screen.
+3. Drag the slider slowly to the left. As it crosses 600 the three cards in a row become one column: **Showing Home narrow**. Drag back to the right and **Home** returns.
+4. **Full width** puts the preview back to its whole width. Press <kbd>Esc</kbd> to close the Preview.
+
+## Go further
+
+- **Add wider** in the **Responsive** section adds a member above the widest one, for big screens.
+- Mix fixed and shared tracks: **Columns** of \`200px 1fr\` gives a column that stays 200 px and one that takes the rest.
+- **Stack** in **Layout** puts every child in one cell on top of each other, which is handy for a badge on a picture. **Stack position** says where they sit.
+- Select a page and, in its **Project** section, set **Fit** to **Fit width (page height follows)**. Each page then fills the width of the box it is in, which suits a responsive set.
+
+## What you learned
+
+- **Auto layout** places a frame's children for you: a column, a row, or a **Grid** of tracks such as \`1fr 1fr 1fr\`.
+- **Layout item** says how one layer sits in its frame: **Fixed**, **Hug** or **Fill**.
+- **Add narrow variant** makes a phone version of a page; the player shows whichever member fits the width, from its breakpoint up.
+- Layers and timelines pair **by name** across the set, and the pairing report says what would not carry.
+
+**Next:** every auto layout setting is in [Auto layout](auto-layout), and how a set switches and what it keeps is in [Responsive artboards](responsive). To check the page for keyboard users and screen readers, do [Check and fix accessibility](tutorial-accessible).`}},we=Object.freeze(Object.defineProperty({__proto__:null,tutorial:me},Symbol.toStringTag,{value:"Module"})),ye={order:30,level:"beginner",minutes:20,example:"tut-reveal",topic:{id:"tutorial-reveal",title:"Click to reveal: image hotspots",group:"Build it",summary:"A picture with numbered points. Each opens a dialog with a heading, text and a picture, closed by a button or Esc, and a point turns green once it has been opened.",keywords:"tutorial hotspots hotspot image picture points reveal click show hide layer dialog popup modal close escape esc focus keyboard enter visited seen explored label diagram",body:`You will make a picture of the water cycle with three numbered points on it. Selecting a point opens a dialog that explains that stage, with a heading, a few lines of text and a picture. **Close** or <kbd>Esc</kbd> shuts it, and a point you have opened turns green. Everything works from the keyboard too. It takes about twenty minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Click to reveal: image hotspots**. **Play** runs it and **Make my copy** gives you your own copy.
+
+You will meet **Show a layer** and **Hide a layer**, a frame that is a **dialog**, and a switch variable that remembers which points have been opened.
+
+## 1. Make a project and put the picture in
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Water cycle** as the name and press **Create project**.
+2. Drop a picture onto the page: a diagram, a photo or a map. It becomes an image layer. Make it about 520 wide and place it on the left, leaving room for a column of text on the right.
+3. No picture to hand? Press <kbd>R</kbd> for the **Rectangle** tool and draw a large box instead, and name it **Picture**. (The finished example draws a sea, some land, the sun and a cloud with a few shapes.)
+4. Press <kbd>T</kbd> for the **Text** tool and click above the picture. Type \`The water cycle\` and press <kbd>Escape</kbd>.
+5. Add a second text in the space to the right of the picture: \`Select each numbered point to find out what happens there. Press Esc to close the panel.\`
+
+If your picture is a photo, describe it when the editor asks **What is this a picture of?**. A screen reader reads that instead of the picture.
+
+## 2. Make the first point
+
+A point is a small button. Buttons already work with the keyboard: <kbd>Tab</kbd> reaches them and <kbd>Enter</kbd> presses them.
+
+1. In the tool bar down the left, click **Web** to open that group, then pick **Button** (or press <kbd>B</kbd>).
+2. Drag a small square over the place on the picture where water evaporates, such as the sea.
+3. In the Properties panel set **W** and **H** to **44**, then in the **Button** section set **Label** to \`1\` and **Radius** to **22**. It is now a round button with a 1 on it.
+4. Change **Name** to **Point 1**.
+5. Open the **Accessibility** section and type \`Point 1: Evaporation\` in **Text alternative**. That is what a screen reader says, so it says more than "1".
+
+## 3. Make the dialog
+
+A **dialog** is a panel that sits over everything else. While it is open, <kbd>Tab</kbd> stays inside it, and <kbd>Esc</kbd> closes it.
+
+1. Press <kbd>F</kbd> for the **Frame** tool and draw a panel over the middle of the picture, about 480 wide and 300 high. Name it **Dialog 1**.
+2. Give it a white fill in **Fill**, and a **Radius** of **16** so its corners are rounded.
+3. With the **Text** tool, click inside the frame and type \`Evaporation\`. Make it bigger: **Size** 24 and **Weight** 700. Anything you draw over a frame goes inside it.
+4. Click inside the frame again, under the heading, and type the text: \`The sun warms the sea. Some of the water turns into vapour and rises into the air.\` Keep it to the left half of the panel.
+5. Drop a small picture into the right half of the panel, or draw a rectangle there as a stand-in.
+6. Press <kbd>B</kbd> and draw a button in the bottom right corner of the panel. Set its **Label** to \`Close\` and its **Name** to **Close**.
+
+Now tell the editor it is a dialog. Select **Dialog 1** again (click its row in the **Layers** panel):
+
+1. Open the **Dialog** section and tick **This frame is a dialog**. **Modal**, **Close on Escape** and **Return focus** come ticked. Leave them on.
+2. Tick **Scrim** too. It dims the page behind the dialog while it is open.
+3. In the **Accessibility** section, type \`Evaporation\` in **Text alternative**. A screen reader announces the dialog by that name.
+
+**Initial focus** says which layer the keyboard lands on when the dialog opens. **Automatic (first tab stop)** is the **Close** button here, which is what you want.
+
+## 4. Copy the dialog for the other points
+
+1. Select **Dialog 1** and press <kbd>Ctrl</kbd>+<kbd>D</kbd> twice. You now have three dialogs on top of each other. That is fine: only one will ever show at a time.
+2. Rename the copies **Dialog 2** and **Dialog 3**.
+3. In the **Layers** panel, open **Dialog 2** and select its heading. Change the words in the **Text** box of the Properties panel to \`Condensation\`. Select its text and change it to \`High up the air is cooler. The vapour turns back into tiny drops of water, which gather as clouds.\` Set the dialog's **Text alternative** to \`Condensation\`.
+4. Do the same for **Dialog 3**: \`Precipitation\`, with \`When the drops in a cloud grow heavy enough they fall as rain, hail or snow.\`
+
+Then select **Point 1** and press <kbd>Ctrl</kbd>+<kbd>D</kbd> twice for the other points. Name them **Point 2** and **Point 3**, set their **Label** to \`2\` and \`3\`, drag each onto its place on the picture (a cloud, then the rain), and change their **Text alternative** to \`Point 2: Condensation\` and \`Point 3: Precipitation\`.
+
+The points have to sit **below** the dialogs in the **Layers** panel, or they would show through an open dialog. Drag their rows down if they are not.
+
+## 5. Close buttons hide their dialog
+
+1. In the **Layers** panel, open **Dialog 1** and select its **Close** button.
+2. In its **Interactions** section press **+ When clicked…**.
+3. Choose **Hide a layer**, and under **Which layer** pick **Dialog 1**. Press **Add**. The section reads *When clicked: hide Dialog 1*.
+4. Do the same for the **Close** buttons in **Dialog 2** and **Dialog 3**, each hiding its own dialog.
+
+<kbd>Esc</kbd> needs nothing more. A dialog with no **Open variable** hides itself when <kbd>Esc</kbd> is pressed.
+
+## 6. Points show their dialog
+
+1. Select **Point 1** and press **+ When clicked…**.
+2. Choose **Show a layer**, and under **Which layer** pick **Dialog 1**. Press **Add**.
+3. Do the same for **Point 2** (showing **Dialog 2**) and **Point 3** (showing **Dialog 3**).
+
+**Show a layer** hides the dialog for you when you add it, because a layer that is already showing can't be shown. The dialogs now look faint on the canvas: hidden layers show as ghosts while you edit, so you can still find them.
+
+## 7. Colour the points you have opened
+
+Each point needs a switch that remembers whether it has been opened.
+
+1. Open the **Variables** tab at the bottom. Press **+ Add variable**, pick **Switch (on or off)** and name it \`seen1\`. Add \`seen2\` and \`seen3\` the same way. They all start unticked (false).
+2. Select **Point 1** and press **Show in graph** under its sentence. The **Interactions** tab opens on its two nodes.
+3. Drag from the dot on the right edge of the **Show or hide a layer** node into empty space and let go. In **Add and connect**, type \`change\` in **Find a node…** and pick **Change a value or counter**.
+4. In its settings set **Variable** to **seen1**, **Do** to **Set to** and **Value** to \`true\`.
+5. Back on **Point 1**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **Formula**, and type:
+
+\`\`\`
+seen1 ? "#a5d6a7" : "#ffd54f"
+\`\`\`
+
+The point is yellow until \`seen1\` is true, then green.
+
+6. Press **+ Add binding** again, pick **Accessible description**, choose **Formula** and type \`seen1 ? "Already explored" : ""\`. A screen reader now says so too, since the colour alone tells it nothing.
+7. Repeat steps 2 to 6 for **Point 2** with \`seen2\` and **Point 3** with \`seen3\`.
+
+## 8. Try it
+
+1. Press **Preview** at the top right.
+2. Click **1**. The page dims and the Evaporation dialog opens. Press **Close**. The point is green now.
+3. Now use only the keyboard. Press <kbd>Tab</kbd> until point **2** has the focus ring, then <kbd>Enter</kbd>. The dialog opens with the focus on **Close**. Press <kbd>Tab</kbd>: the focus stays inside the dialog.
+4. Press <kbd>Esc</kbd>. The dialog closes and the focus goes back to point **2**, so a keyboard user carries on from where they were.
+
+The **Variables (live)** list on the left shows \`seen1\`, \`seen2\` and \`seen3\` turning true. Press <kbd>Esc</kbd> to close the Preview.
+
+## Make it yours
+
+- **More points.** Copy a point and a dialog, add a \`seen4\` switch, and wire them the same way.
+- **A progress line.** A text that says \`{[seen1, seen2, seen3].filter(s => s).length} of 3 explored\` counts as the learner goes.
+- **Ready-made.** The **Image hotspots** starter (Templates, **Explore and reveal**) does all of this with one dialog for every point, reading its words from a list. Its points are one frame, so adding a point is copying a layer.
+
+## What you learned
+
+- **+ When clicked…** has **Show a layer** and **Hide a layer**. Showing a layer starts it hidden.
+- A frame with **This frame is a dialog** ticked keeps the keyboard inside, closes on <kbd>Esc</kbd>, and puts the focus back where it came from.
+- A switch variable and a **Fill colour** binding give a visited style, and a bound description says it out loud.
+
+**Next:** [Flip cards from a list](tutorial-flipcards). More on dialogs in [Accessibility](accessibility#dialogs), and on the nodes in [Interactions](interactions).`}},be=Object.freeze(Object.defineProperty({__proto__:null,tutorial:ye},Symbol.toStringTag,{value:"Module"})),fe={order:66,level:"advanced",minutes:25,example:"tut-rive-drive",topic:{id:"tutorial-rive-drive",title:"Drive an imported Rive or Lottie animation",group:"Build it",summary:"Import an animation made elsewhere, then put the learner in charge of it: a play and pause button, a knob that scrubs it, and your own controls for a Rive state machine.",keywords:"tutorial rive riv lottie json import imported animation state machine input trigger view model shared variable blend joystick scrub knob handle play pause toggle control drive slider",body:`You will bring in an animation made in another tool and hand the controls to the learner: a button that plays and pauses it, and a knob they drag to scrub through it. Then, if your file is a Rive file, you will drive its state machine from your own buttons and sliders. It takes about twenty-five minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Drive an imported animation**. **Play** runs it and **Make my copy** gives you your own copy. Its animation is a small Lottie file of a bouncing ball.
+
+You need an animation file of your own: a Lottie file (\`.json\` or \`.lottie\`, the kind After Effects and many animation sites give you) or a Rive file (\`.riv\`, exported from the Rive editor). Steps 1 to 7 work with either. Step 8 is for Rive files only. [Tutorial 4](tutorial-import-design) is the general introduction to importing.
+
+## 1. Import the file
+
+1. On the projects page press **Import** and pick your file.
+2. A new project opens, named after the animation. If anything couldn't be carried over exactly, a box lists it. Read it once, then press the **×**.
+
+## 2. Look at what you got
+
+- **A Lottie file** becomes one page and one timeline, named after the animation. Open the **Timeline** tab to see it: it is set to **Loop**, with **Autoplay** on, so it plays as soon as the page shows.
+- **A Rive file** becomes a page for each Rive artboard and a timeline for each animation. Its **state machine** becomes ordinary flows in the **Interactions** tab: press **Read as sentences** above the graph to read them. Its **inputs** become variables in the **Variables** tab (a true/false input is a true/false variable, a number input a number), and its **triggers** become messages. Blend states are in the page's **Blends** section and joysticks in its **Joysticks** section.
+
+Nothing imported is locked. Every flow, timeline and variable can be changed like one you made yourself.
+
+## 3. Stop it playing by itself
+
+1. In the **Timeline** tab, pick your animation's timeline in the list at the top left.
+2. Press the gear (**Timeline settings**) and untick **Autoplay**.
+
+Now nothing moves until the learner says so. (A Rive state machine may start animations itself, in its **When the page is shown** flow. Pick a timeline the state machine doesn't play, or try step 8 instead.)
+
+## 4. A Play or pause button
+
+1. Press <kbd>B</kbd> for the **Button** tool and draw a button under the animation. Change **Label** to **Play or pause** and **Name** to **Play button**.
+2. In its **Interactions** section press **+ When clicked…**, choose **Play an animation**, pick your timeline under **Which animation** and press **Add**.
+3. The **Interactions** graph opens on the two new nodes. Click the **Play or stop an animation** node and change **Do** from **Play** to **Toggle play/pause**.
+
+The sentence under the button's **Interactions** section now says what it does. **Do** has more choices: **Restart**, **Stop (reset)**, **Play in reverse** and **Jump to time** each make a good button too.
+
+## 5. A knob that scrubs it
+
+A **joystick** sets a timeline's position from a number between 0 and 1 instead of from time. Here the number is where a knob sits on a track.
+
+1. Press <kbd>R</kbd> for the **Rectangle** tool and draw a long, low bar near the bottom of the page, about 480 by 36. Name it **Track**, give it a light grey **Fill**, and set **Radius** to 18.
+2. Press <kbd>O</kbd> for the **Ellipse** tool and <kbd>Shift</kbd>-drag a circle 36 across at the left end of the track. Name it **Knob** and give it a strong colour.
+3. In the Knob's **Draggable** section press **+**. Set **Moves** to **Left and right only** and **Stays inside** to **Layer: Track**. Type \`Scrub the bounce\` (or what your animation does) in **Name read out**.
+4. Select the page: click its name above it on the canvas. In the **Joysticks** section press **+**.
+5. Change **Name** to **Scrub**. Set **X timeline** to your timeline and type \`handle.x\` in **X value**.
+6. Set **Handle** to **Knob**. An **Area** appears. It is where the knob's centre can go, so make it the track less half a knob at each end: **Area X** is the track's X plus 18, **Area W** is the track's width less 36, and **Y** and **H** are the track's.
+
+\`handle.x\` is 0 when the knob's centre is at the left of the area and 1 at the right, so dragging along the track runs the timeline from start to end. A joystick only acts when its number changes: dragging the knob pauses the timeline where it is, and **Play or pause** carries on from there.
+
+## 6. Say what to do
+
+Press <kbd>T</kbd> for the **Text** tool, click above the animation and type \`Press Play or pause, or drag the knob to scrub\`.
+
+## 7. Try it
+
+1. Press **Preview** at the top right. Nothing moves.
+2. Press **Play or pause**. It plays; press it again and it stops where it is.
+3. Drag the knob slowly along the track. The animation follows your hand, forwards and backwards.
+4. Press <kbd>Tab</kbd> until the knob is focused and use the arrow keys: the keyboard scrubs it too.
+
+Press <kbd>Esc</kbd> to close the Preview.
+
+## 8. A Rive file: drive the state machine
+
+A Rive file's state machine already decides what plays when. You change what it decides by changing its inputs, so your controls only need to set the variables it reads. Open the **Variables** tab to see their names.
+
+- **A true/false input** (say \`isOpen\`): draw a button, press **+ When clicked…**, choose **Switch something on or off** and pick the input under **Which switch**. Each click flips it, and the state machine's flows that watch it move to the other state.
+- **A number input** (say \`level\`): open the **Web** group in the tool bar, draw an **Input field**, and set its **Type** to **range**. Set **Min** and **Max** to the numbers the file uses, then under **Variable** press **Bind to a variable…** and pick the input. Dragging the slider sets the number. If a blend state reads it, the slider blends the animations as it moves.
+- **A trigger** (say \`jump\`): triggers are messages. On a button press **+ On click (empty)**, drag from the new node's output dot into empty space, and choose **Action**, then **Send message**. Type the trigger's name exactly in **Message**. The imported flows that wait for it start when it arrives.
+- **A view model property** comes in as a variable too, and drives it the same way. It is **shared**: one value for the page and every embedded page inside it, as in Rive, so a control on the main page reaches a button nested in another artboard.
+
+Preview, then watch the **Variables (live)** list on the left of the Preview as you press your buttons. If nothing happens, the **Events** list under it says which flows ran.
+
+## Go further
+
+- **Follow the pointer.** A joystick doesn't need a handle. Leave **Handle** on **None** and keep the **X value** the **+** gave you, \`pointer.x / artboard.width\`, and the timeline follows the pointer across the page. Add a **Y timeline** for up and down. The **Joysticks** example has eyes made this way.
+- **Mix two timelines.** A **blend** plays several timelines at once and mixes them by a number variable. Bind that number to a range slider and the learner mixes the poses. See the **Blends** example.
+- **See a big import.** The **Breathing for calm** example is a whole Rive file brought in: its splash screen, choices and end screen are all imported state machine flows.
+
+## What you learned
+
+- **Import** on the projects page makes a project from a Lottie or Rive file, with its timelines, and a Rive file's state machine as ordinary flows and variables.
+- A **Play or stop an animation** node can play, pause, toggle, restart or jump a timeline.
+- A **joystick** sets a timeline's position from a number; with a **Handle** that number is where a dragged knob sits.
+- A Rive state machine is driven by its inputs: true/false and number inputs are variables, triggers are messages, and view model values are shared variables.
+
+**Next:** what each format brings in is in [Importing](import). More on the pieces: [Joysticks](joysticks), [Blends](blends) and [Variables](variables). To make your own poses rather than import them, see [Rig a character with bones](tutorial-bones).`}},ke=Object.freeze(Object.defineProperty({__proto__:null,tutorial:fe},Symbol.toStringTag,{value:"Module"})),ve={order:44,level:"advanced",minutes:30,example:"tut-scene",topic:{id:"tutorial-scene",title:"An animated scene with speech bubbles",group:"Build it",summary:"A layered scene where a character runs in and a speech bubble pops up for each speaker, with a Skip button, lines read to screen readers and a still version for less motion.",keywords:"tutorial animated scene story character speech bubble dialogue conversation layers groups depth timelines autoplay marker skip jump to time seek reduced motion less motion calm announce screen reader accessibility",body:`You will make a short animated scene outside the library. Alex is waiting; Sam runs in from the left; then a speech bubble pops up over each of them in turn. A **Skip** button jumps straight to the end, a screen reader hears each line as its bubble appears, and anyone whose device asks for less motion sees the finished scene without the movement. It takes about thirty minutes, and everything is drawn with simple shapes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Animated scene with speech bubbles**. **Play** runs it and **Make my copy** gives you your own copy.
+
+Do [Tutorial 1](tutorial-first-animation) first if you haven't made a timeline before: this one uses the same keyframes, two timelines at once.
+
+## 1. Make the project
+
+On the projects page press **New project**. Keep **Blank project**, type **Library morning** and press **Create project**. Click the page's name and change **Name** to \`Scene\`.
+
+## 2. The set, at the back
+
+Layers higher in the **Layers** panel are drawn in front. Build from the back forwards, and group each part so it moves and hides as one.
+
+1. Press <kbd>R</kbd> and draw a rectangle over the top two thirds of the page, light blue. Name it **Sky**.
+2. Draw a green rectangle over the bottom third: **Ground**.
+3. Press <kbd>O</kbd> and draw a yellow circle in the top right: **Sun**.
+4. Draw a brown rectangle standing on the ground at the left: **Library**, with a darker one at its foot for the **Door**.
+5. Select all five (click the first, <kbd>Shift</kbd>-click the rest in the **Layers** panel) and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Name the group **Set**.
+
+## 3. Two characters
+
+1. Draw a tall rectangle with a big **Radius** (about 30) for a body, and a circle on top for a head. Group them (<kbd>Ctrl</kbd>+<kbd>G</kbd>) and name the group **Alex**. Put Alex on the ground in the middle of the page.
+2. Make another the same way, in other colours, called **Sam**. Put Sam on the ground to the right of Alex. This is where Sam ends up.
+
+Check the **Layers** panel: **Alex** and **Sam** must be above **Set**, or the set hides them. Drag a row up or down to change the order.
+
+## 4. Two speech bubbles
+
+1. Draw a white rectangle, about 250 by 96, with **Radius** 18 and a dark **Stroke**, above Alex's head. Press <kbd>T</kbd> and click inside it: type \`Morning! Have you seen the new study rooms in the library?\` Make the text box fit inside the rectangle.
+2. Group the rectangle and its text and name the group **Alex bubble**.
+3. Make another above Sam, **Sam bubble**, saying \`Not yet. Show me? I have an essay due on Friday.\`
+4. Last, press <kbd>B</kbd> and add a button in the bottom right corner labelled **Skip**, named **Skip**.
+
+Now the **Layers** panel reads, from the top: **Skip**, **Sam bubble**, **Alex bubble**, **Sam**, **Alex**, **Set**. That order is the depth of the scene.
+
+## 5. Timeline one: Sam runs in
+
+1. Open the **Timeline** tab and press **+ New timeline**. Click the gear in the Timeline bar and set **Name** to \`Run in\`, **Length** to \`1200\`, and tick **Autoplay**.
+2. With the playhead at **0 ms**, select **Sam** and click the diamond next to **X** in the Properties panel. Then type \`-140\` in **X**: Sam starts off the page, to the left.
+3. Click the ruler at the far right so the playhead is at **1200 ms**, and type Sam's resting X back in (the number it had before, about 560). A second key appears.
+4. Click the line between the two keys and choose **easeOut** in **Ease**, so Sam slows down on arrival.
+
+Press the **Play preview** triangle: Sam runs in.
+
+## 6. Timeline two: the bubbles
+
+A second timeline plays at the same time as the first. Each timeline only moves what it has keys for, so they never fight.
+
+1. In the dropdown at the top left of the Timeline, choose **+ New timeline**. In its settings set **Name** to \`Talk\`, **Length** to \`3500\`, and tick **Autoplay**.
+2. Playhead at **0 ms**: select **Alex bubble**, click the diamond next to **Opacity** and set **Opacity** to 0. Do the same for **Sam bubble**.
+3. Put the playhead at **1300 ms**, select **Alex bubble** and click its **Opacity** diamond (it keys 0, the value there). Move to **1500 ms** and set **Opacity** to 100. Alex's bubble now pops up just after Sam arrives.
+4. Do the same for **Sam bubble**: a key at **2800 ms** (still 0) and **100** at **3000 ms**.
+
+> The canvas shows the timeline that is open. Choose **Design view (no timeline)** in the same dropdown to see the layers as they really are: both bubbles fully visible.
+
+## 7. Say each line to screen readers
+
+The bubbles are ordinary text, so a screen reader can find them. Saying each one aloud as it appears is kinder.
+
+1. On the **Talk** timeline, put the playhead at **1500 ms** and press **+ Marker**. In the **Marker** panel on the right, set **Name** to \`Alex speaks\`.
+2. Press **+ When the playhead reaches this…**. The **Interactions** tab opens on two new nodes: **When an animation reaches a marker** and **Change a value or counter**.
+3. Click the **Change a value or counter** node and press <kbd>Delete</kbd>. Drag from the marker node's dot into empty space, type \`announce\` in **Find a node…** and pick **Announce**. Set **Text** to \`"Alex says: Morning! Have you seen the new study rooms in the library?"\` (with the quotes).
+4. Do the same with a marker called \`Sam speaks\` at **3000 ms**, announcing Sam's line.
+
+## 8. Skip to the end
+
+1. Select **Skip**. In its **Interactions** section press **+ When clicked…**, choose **Play an animation**, pick **Run in** and press **Add**. Then press **Show in graph**.
+2. Click the **Play or stop an animation** node. Set **Do** to **Jump to time** and **Time (ms)** to \`1200\`, the end of **Run in**.
+3. Drag from its dot into empty space and add another **Play or stop an animation**: **Timeline** **Talk**, **Do** **Jump to time**, **Time (ms)** \`3500\`.
+4. Drag from that one and add an **Announce** saying \`"Skipped. Alex says: Morning! Have you seen the new study rooms in the library? Sam says: Not yet. Show me? I have an essay due on Friday."\`
+
+Jumping never passes the markers, so the announcement in step 4 is what tells a screen reader both lines after a Skip.
+
+## 9. Less motion
+
+Some people set their device to ask for less motion, because movement on screen makes them unwell or distracts them.
+
+1. Open **Run in**'s settings (the gear) and tick **Skip for less motion**.
+2. Do the same for **Talk**.
+
+For those viewers both timelines now jump straight to their last pose: Sam is already standing there and both bubbles are showing. Everyone else sees the animation. Your timelines don't change at all.
+
+## 10. Try it
+
+1. Press **Preview**. Sam runs in, Alex's bubble pops up, then Sam's.
+2. Press **Screen reader off** in the Preview's bar so it says **Screen reader on**, then press **Restart**: a strip under the scene shows each line as its bubble appears.
+3. Press **Restart** again and press **Skip** straight away. Everything lands at once and the strip shows the Skip announcement.
+4. To see the still version, turn on your computer's reduce motion setting (in Windows: **Settings**, **Accessibility**, **Visual effects**, **Animation effects** off) and press **Restart**. Turn it back afterwards.
+
+## Go further
+
+- **Bubbles by speaker.** Give each character's bubble the colour of their shirt, so it is clear who is talking even without the tail.
+- **A tail.** Put a small rotated square under each bubble, inside the bubble's group, so it fades with it.
+- **More lines.** Lengthen **Talk**, add more bubbles with their own keys, and a marker and an **Announce** for each.
+- **Ready-made motion.** [Animation presets](animation-presets) write a Fade in or Pop for you, already set to **Skip for less motion**.
+
+## What you learned
+
+- Layer order is depth: the set at the bottom, then characters, bubbles and buttons. Groups move and hide a part as one.
+- Several timelines can play at once, each animating its own layers.
+- **Jump to time** on **Play or stop an animation** skips to the end.
+- **Skip for less motion** gives viewers who ask for less motion the finished pose, and markers with **Announce** read the lines aloud.
+
+**Next:** more on keys, markers and timeline settings in [Timelines and keyframes](timelines), and on screen readers and less motion in [Accessibility](accessibility). Back to the list: [Build it](build-it).`}},xe=Object.freeze(Object.defineProperty({__proto__:null,tutorial:ve},Symbol.toStringTag,{value:"Module"})),Te={order:68,level:"advanced",minutes:25,example:"tut-script",topic:{id:"tutorial-script",title:"When you need a script",group:"Build it",summary:"A spelling question that accepts a near miss: a short sandboxed script does the one sum the nodes can't, and the graph and a binding do the rest. Also when not to write one.",keywords:"tutorial script scripts javascript code ix api sandbox run script run code node spelling near miss typo close enough levenshtein edit distance when to use a script",body:`You will make a spelling question: name the largest moon in the solar system. A learner who types *Ganymede* is right, and one who types *Ganimede* or *ganymed* is told they are right, nearly. Working out how close a spelling is needs a loop over the letters, which no interaction node does, so that one sum goes in a script. Everything else stays in ordinary nodes and bindings. It takes about twenty-five minutes, and you need to be happy reading a little JavaScript.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **When you need a script**. **Play** runs it and **Make my copy** gives you your own copy.
+
+## First: do you need one?
+
+Most of what people reach for a script to do already has a node, a binding or a formula, and those are easier for the next person to read and change. Before writing code, check this list:
+
+| You want to | Use instead |
+|---|---|
+| Show, hide or move something when it is clicked | **+ When clicked…** in the layer's **Interactions** section |
+| Count clicks, tries or points | **Add 1 to a counter**, or a **Change a value or counter** node |
+| Mark a question and give feedback | **Add question** (see [Questions and quizzes](question-kit)) |
+| Put a number or a name into some words | \`{braces}\` in the text, or a [binding](bindings) with a formula |
+| Pick something at random | \`randInt\` or \`Math.random()\` in an [expression](expressions) |
+| Do one thing after another, or wait | The graph: actions run in order, and **Wait** waits |
+
+Reach for a script when the job is a real calculation (a loop, a search, a sum over a list that a formula can't express), or when something must happen every frame. Keep the script small: let it work out a value and put it in a variable, and let the page show that value.
+
+## 1. Make the page
+
+1. On the projects page press **New project**. Keep **Blank project**, type **Spell it** as the name and press **Create project**.
+2. Press <kbd>T</kbd> for the **Text** tool, click near the top left of the page and type \`Name the largest moon in the solar system.\` In the Properties panel set **Name** to **Question**.
+3. Add a second, smaller text under it: \`It goes round Jupiter.\` Name it **Hint**.
+4. In the tool bar down the left, open the **Web** group (it starts folded: click **Web**). Pick **Input field** and drag a box under the hint, about 360 wide. Name it **Answer box**. In its **Input** section set **Placeholder** to \`Type the moon's name\` and tick **No browser help**, so the browser's spellcheck doesn't fix the word for the learner.
+5. Pick **Button** in the same group and drag a button to the right of the box. Set **Label** to \`Check\` and **Name** to **Check**.
+6. Add one more text under the box and name it **Feedback**. What it says doesn't matter: step 4 replaces it.
+
+## 2. Make the two variables
+
+The script reads one variable and writes another.
+
+1. Select **Answer box**. In the **Input** section press **Bind to a variable…**, then **+ New variable…** at the bottom of the list, and call it \`answer\`. Whatever the learner types is now in \`answer\` (it is a **⇄ Both** binding on the box's value).
+2. Open the **Variables** tab at the bottom of the window. Press **+ Add variable** and pick **Counter**. Rename it \`distance\` and set its **Value** to **-1**. It will hold how many letters are wrong; -1 means nothing has been checked yet.
+
+## 3. Write the script
+
+1. Open the **Scripts** tab at the bottom of the window and press **+ New script**. It starts with a short example.
+2. In the box at the top of the code, rename it **Close enough**.
+3. Untick **Run on start**. A script that runs on start runs once, when the player starts, which suits code that sets up \`ix.on\` handlers. This one should run each time **Check** is pressed, so the graph will run it.
+4. Select all of the example code and replace it with this:
+
+\`\`\`
+// How many letters would have to change to turn what was typed into the answer.
+// 0 is spelt right, 1 or 2 is a near miss. The words on the page are worked out from it by a binding.
+const typed = String(ix.vars.answer).trim().toLowerCase();
+const target = 'ganymede';
+
+let row = [];
+for (let j = 0; j <= target.length; j++) row.push(j);
+for (let i = 1; i <= typed.length; i++) {
+  const next = [i];
+  for (let j = 1; j <= target.length; j++) {
+    const change = typed[i - 1] === target[j - 1] ? 0 : 1;
+    next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + change);
+  }
+  row = next;
+}
+ix.vars.distance = row[target.length];
+\`\`\`
+
+\`ix\` is the player: \`ix.vars.answer\` reads a variable and \`ix.vars.distance = ...\` sets one. The column on the right of the Scripts tab lists the rest of the **ix API**. Everything saves as you type.
+
+## 4. Turn the number into words
+
+The script doesn't write any feedback. The words live on the page, where anyone can change them without reading code.
+
+1. Select **Feedback**. In the **Data bindings** section press **+ Add binding** and pick **Text**.
+2. Press **Formula** and type:
+
+\`\`\`
+distance < 0 ? "" : distance == 0 ? "Right! Ganymede is the largest moon in the solar system." : distance <= 2 ? "Right, nearly. It is spelt Ganymede." : "Not quite. Try again."
+\`\`\`
+
+The grey line under it works the formula through with \`distance\` at -1, so the text is empty for now.
+
+## 5. Run the script from the graph
+
+1. Select **Check**. In its **Interactions** section press **+ On click (empty)**, then open the **Interactions** tab at the bottom. A **When clicked or hovered** node is there, with **Layer: Check** and **Event: Click / tap**.
+2. Drag from the dot on its right edge into empty space and let go. In the **Add and connect** menu type \`script\` in **Find a node…** and pick **Run script**.
+3. Click the new **Run script** node and set **Script** to **Close enough**.
+
+**Read as sentences** now says the Check button runs the script \`Close enough\`. For a line or two of code you don't need a whole script: a **Run code** node holds the code in the node itself. A named script is easier to find, and several flows can run the same one.
+
+## 6. Keep the sandbox on
+
+Click an empty part of the canvas, away from the page, so the Properties panel shows the project. In the **Project** section, **Run scripts in the sandbox** is ticked: new projects start that way. In the sandbox a script only gets \`ix\`, timers and \`console\`. It can't reach the page, cookies or the network, and one that runs too long is stopped. The note at the top of the Scripts tab's right-hand column says which way the project is set.
+
+Leave it ticked. Untick it only for code you trust that needs the page itself (\`node.element\` or \`fetch\`); this script needs neither. See [Scripts](scripts#the-sandbox).
+
+## 7. Try it
+
+1. Press **Preview** at the top right. (Scripts don't run on the editing canvas, only in Preview and the published player.)
+2. Type \`Ganymede\` and press **Check**. It says *Right!*
+3. Type \`ganimede\` and check again: *Right, nearly.* Then try \`Callisto\`: *Not quite.*
+4. Watch \`distance\` in the **Variables (live)** list on the left of the Preview as you check. Press <kbd>Esc</kbd> to close the Preview.
+
+> If nothing happens when you check, look in Preview's event list: an error in a script is shown there, with the line it was on. A typing slip in the code is the usual cause.
+
+## Go further
+
+- **More than one right answer.** Put the answers in a list and keep the smallest distance: \`ix.vars.distance = Math.min(...answers.map(score))\`, with the loop moved into a \`score(target)\` function.
+- **Count the tries without code.** After **Run script**, connect a **Change a value or counter** node that adds 1 to a \`tries\` counter. The graph carries on once the script has finished.
+- **Let Enter check it.** Add a **When a key is pressed** event for <kbd>Enter</kbd> with its layer set to **Answer box**, and connect it to the same **Run script** node.
+- **Report a result** the way a question does: \`ix.report({ completed: true })\` from the script, or the project's [Results and progress](results).
+
+## What you learned
+
+- Most behaviour needs no code: nodes, bindings and formulas cover it and are easier to change.
+- A script is for a real calculation. Keep it to working out a value and putting it in a variable.
+- **Run on start** is for setting up; a **Run script** node runs a script each time a flow reaches it, and **Run code** holds a line or two.
+- **Run scripts in the sandbox** keeps a script away from the page, cookies and the network. Leave it on.
+
+**Next:** the whole \`ix\` API is in [Scripts](scripts). To paint a layer from code every frame, see [Script layers](script-layers). Formulas and their helpers are in [Expressions](expressions).`}},Se=Object.freeze(Object.defineProperty({__proto__:null,tutorial:Te},Symbol.toStringTag,{value:"Module"})),Ae={order:22,level:"intermediate",minutes:12,example:"tut-sort",topic:{id:"tutorial-sort",title:"Sort into groups",group:"Build it",summary:"Six cards to drag into two labelled groups, each drop answered as it lands, then all of them checked together with a count of how many are right.",keywords:"tutorial sort sorting categorise categorize groups group boxes drag drop cards items belongs in drop feedback right wrong count part marks renewable energy",body:`You will make a sorting activity: six energy sources to drag into two groups, **Renewable** and **Non-renewable**. Each group box holds as many cards as you drop in it. As each card lands the learner is told whether it fits, and **Check answer** then marks all of them together and says how many are right. It takes about twelve minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Sort into groups**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -1152,7 +2778,7 @@ Open the **Interactions** tab. There is one **Item dropped in a group** node for
 - **Belongs in** sets the right group, and a card's own feedback explains a wrong one.
 - **Say right or wrong as each item is dropped** answers each drop without using a try, through an **Item dropped in a group** node per group.
 
-**Next:** put the steps of a process in order in [Put the steps in order](tutorial-order). More about categorise questions is in [Questions and quizzes](question-kit), and about drop zones in [Drag and drop](drag-and-drop).`}},U=Object.freeze(Object.defineProperty({__proto__:null,tutorial:H},Symbol.toStringTag,{value:"Module"})),V={order:57,level:"beginner",minutes:15,example:"tut-sound",topic:{id:"tutorial-sound",title:"Sound effects and music across pages",group:"Build it",summary:"Music that starts on the first page and keeps playing on the next, a sound effect on a button, a sound on or off button and a button that stops the music.",keywords:"tutorial sound sounds audio music soundtrack background music effect click sound ding play sound stop sound mute unmute sound off sound on across pages carry on loop",body:`You will make two pages. The first has a **Start** button that starts some music and moves on. The music keeps playing on the second page, where one button plays a sound effect, one turns all sound on or off, and one stops the music. It takes about fifteen minutes.
+**Next:** put the steps of a process in order in [Put the steps in order](tutorial-order). More about categorise questions is in [Questions and quizzes](question-kit), and about drop zones in [Drag and drop](drag-and-drop).`}},Pe=Object.freeze(Object.defineProperty({__proto__:null,tutorial:Ae},Symbol.toStringTag,{value:"Module"})),Ce={order:57,level:"beginner",minutes:15,example:"tut-sound",topic:{id:"tutorial-sound",title:"Sound effects and music across pages",group:"Build it",summary:"Music that starts on the first page and keeps playing on the next, a sound effect on a button, a sound on or off button and a button that stops the music.",keywords:"tutorial sound sounds audio music soundtrack background music effect click sound ding play sound stop sound mute unmute sound off sound on across pages carry on loop",body:`You will make two pages. The first has a **Start** button that starts some music and moves on. The music keeps playing on the second page, where one button plays a sound effect, one turns all sound on or off, and one stops the music. It takes about fifteen minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Sound effects and music**. **Play** runs it and **Make my copy** gives you your own copy. Its two sounds are short made-up tones, so swap them for real ones.
 
@@ -1244,7 +2870,7 @@ Press <kbd>Esc</kbd> to close the Preview.
 - **Stop sound** ends it with a fade.
 - A **Captions and sound** node set to **Sound: flip** is your own mute button.
 
-**Next:** everything the **Play sound** node can do (speed, a sound from a list item, what is playing now) is in [Sound](captions#sound) and [Soundtrack music](captions#soundtrack-music). Sound that follows an animation, with captions, is in [Narration, captions and transcript](captions).`}},_=Object.freeze(Object.defineProperty({__proto__:null,tutorial:V},Symbol.toStringTag,{value:"Module"})),Y={order:51,level:"intermediate",minutes:25,example:"tut-survey-chart",topic:{id:"tutorial-survey-chart",title:"A poll with a live chart",group:"Build it",summary:"Learners vote on one question, then see a bar chart of how the whole class answered, counted and anonymous.",keywords:"tutorial poll survey vote chart bar results class shared responses anonymous counts everyone live refresh look again dropdown select studydesk",body:`You will make a class poll: how do you usually get to campus? Each learner picks an answer and presses **Vote**, then sees a bar chart of how everyone in their class answered. Votes are counted and anonymous. It takes about twenty-five minutes.
+**Next:** everything the **Play sound** node can do (speed, a sound from a list item, what is playing now) is in [Sound](captions#sound) and [Soundtrack music](captions#soundtrack-music). Sound that follows an animation, with captions, is in [Narration, captions and transcript](captions).`}},Ie=Object.freeze(Object.defineProperty({__proto__:null,tutorial:Ce},Symbol.toStringTag,{value:"Module"})),je={order:51,level:"intermediate",minutes:25,example:"tut-survey-chart",topic:{id:"tutorial-survey-chart",title:"A poll with a live chart",group:"Build it",summary:"Learners vote on one question, then see a bar chart of how the whole class answered, counted and anonymous.",keywords:"tutorial poll survey vote chart bar results class shared responses anonymous counts everyone live refresh look again dropdown select studydesk",body:`You will make a class poll: how do you usually get to campus? Each learner picks an answer and presses **Vote**, then sees a bar chart of how everyone in their class answered. Votes are counted and anonymous. It takes about twenty-five minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Poll with a live chart**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -1337,7 +2963,7 @@ Set the data source up before you share. Its rules are fixed when the project is
 - **Add to shared responses** and **Take back shared responses** put a learner's answer in and take it out again.
 - A **Chart** reads any list: here \`responses.answers\` with \`text\` and \`count\`, and it redraws as the counts come in.
 
-**Next:** every setting and where the answers are kept is in [Shared responses](shared-responses). More about the Chart layer is in [Charts](charts). To chart numbers the learner sets themselves, try [A what-if explorer](tutorial-whatif).`}},K=Object.freeze(Object.defineProperty({__proto__:null,tutorial:Y},Symbol.toStringTag,{value:"Module"})),Q={order:55,level:"intermediate",minutes:25,example:"tut-video-chapters",topic:{id:"tutorial-video-chapters",title:"Interactive video with chapters and questions",group:"Build it",summary:"A video with chapter buttons that jump to each part, captions, and two questions that pause it at set times until they are answered.",keywords:"tutorial video chapters chapter buttons seek jump cue cue points pause question interactive video captions subtitles vtt srt hold paused control video play",body:`You will make a video lesson. Three chapter buttons under the video jump to each part, and at two set times the video pauses and a question appears over it. When the question is finished, **Continue the video** plays on. It takes about twenty-five minutes.
+**Next:** every setting and where the answers are kept is in [Shared responses](shared-responses). More about the Chart layer is in [Charts](charts). To chart numbers the learner sets themselves, try [A what-if explorer](tutorial-whatif).`}},We=Object.freeze(Object.defineProperty({__proto__:null,tutorial:je},Symbol.toStringTag,{value:"Module"})),De={order:55,level:"intermediate",minutes:25,example:"tut-video-chapters",topic:{id:"tutorial-video-chapters",title:"Interactive video with chapters and questions",group:"Build it",summary:"A video with chapter buttons that jump to each part, captions, and two questions that pause it at set times until they are answered.",keywords:"tutorial video chapters chapter buttons seek jump cue cue points pause question interactive video captions subtitles vtt srt hold paused control video play",body:`You will make a video lesson. Three chapter buttons under the video jump to each part, and at two set times the video pauses and a question appears over it. When the question is finished, **Continue the video** plays on. It takes about twenty-five minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Video with chapters and questions**. **Play** runs it and **Make my copy** gives you your own copy. It has no video in it: pick your own (step 2) and it works.
 
@@ -1467,7 +3093,7 @@ The **Variables (live)** list on the left of the Preview shows \`question\` chan
 - **Control video** goes to a time and plays, and \`layer("Clip").chapters[0].time\` reads a chapter's start.
 - A cue ticked **Pause the video here** fires **When a video reaches a cue point**, and **Hold paused** keeps it paused until the question is done.
 
-**Next:** everything a video layer can do is in [Images, video and audio](images-media#cue-points-and-chapters). More on the question cards: [Questions and quizzes](question-kit). More on bindings: [Bindings](bindings).`}},$=Object.freeze(Object.defineProperty({__proto__:null,tutorial:Q},Symbol.toStringTag,{value:"Module"})),J={order:52,level:"intermediate",minutes:25,example:"tut-whatif",topic:{id:"tutorial-whatif",title:"A what-if explorer (sliders and formulas)",group:"Build it",summary:"A weekly budget with sliders for hours, pay and rent, and the totals and a chart worked out again as the learner drags.",keywords:"tutorial what if explorer model simulation slider range input formula worked out keep up to date live variable chart budget money number format fmt decimals bind variable",body:`You will make a what-if explorer for a student's week: how many hours of paid work, the pay per hour and the rent. As the learner drags a slider, the income, the spending, what is left over and a chart all change with it. There is not a single interaction to wire. It takes about twenty-five minutes.
+**Next:** everything a video layer can do is in [Images, video and audio](images-media#cue-points-and-chapters). More on the question cards: [Questions and quizzes](question-kit). More on bindings: [Bindings](bindings).`}},Le=Object.freeze(Object.defineProperty({__proto__:null,tutorial:De},Symbol.toStringTag,{value:"Module"})),Re={order:52,level:"intermediate",minutes:25,example:"tut-whatif",topic:{id:"tutorial-whatif",title:"A what-if explorer (sliders and formulas)",group:"Build it",summary:"A weekly budget with sliders for hours, pay and rent, and the totals and a chart worked out again as the learner drags.",keywords:"tutorial what if explorer model simulation slider range input formula worked out keep up to date live variable chart budget money number format fmt decimals bind variable",body:`You will make a what-if explorer for a student's week: how many hours of paid work, the pay per hour and the rent. As the learner drags a slider, the income, the spending, what is left over and a chart all change with it. There is not a single interaction to wire. It takes about twenty-five minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **What-if budget explorer**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -1556,8 +3182,103 @@ The **Variables (live)** list on the left of the Preview shows all seven values 
 - \`{...}\` in text shows a formula's value, and \`fmt(n, decimals, true)\` writes money neatly.
 - A **Chart** can read a list written out in its **Data**, and redraws as the variables change.
 
-**Next:** more about worked out values is in [Variables](variables), and every helper like **fmt** is in [Expressions](expressions). Chart settings are in [Charts](charts). To chart what a whole class says, try [A poll with a live chart](tutorial-survey-chart).`}},X=Object.freeze(Object.defineProperty({__proto__:null,tutorial:J},Symbol.toStringTag,{value:"Module"})),Z=Object.assign({"./blanks.ts":P,"./context.ts":I,"./data-source.ts":D,"./drag-match.ts":L,"./journal.ts":R,"./label.ts":O,"./mcq.ts":B,"./microphone.ts":z,"./order.ts":G,"./sort.ts":U,"./sound.ts":_,"./survey-chart.ts":K,"./video-chapters.ts":$,"./whatif.ts":X}),l=Object.entries(Z).filter(([e])=>!/\/index\.ts$/.test(e)).map(([,e])=>e.tutorial).filter(Boolean).sort((e,t)=>e.order-t.order||e.topic.title.localeCompare(t.topic.title)),ee=["beginner","intermediate","advanced"],te={beginner:"Beginner",intermediate:"Intermediate",advanced:"Advanced"},ae={id:"build-it",title:"Build it: tutorials by kind of activity",group:"Build it",summary:"Step-by-step tutorials for the things people make most: questions, cards, sliders, stories, games, journals and more, each with its finished project to open.",keywords:"tutorial tutorials build how to make walkthrough step by step example finished project quiz question cards story game journal",body:()=>{const e=["Each tutorial builds one kind of activity from a blank project, one step at a time. Do [Tutorial 1](tutorial-first-animation) and [Tutorial 2](tutorial-first-interaction) first if you haven't used the editor before.","","**Just want to look?** Every tutorial's finished project is on the projects page: open **Templates**, and under **Examples** find **Build it**. **Play** runs it, and **Make my copy** gives you your own copy to pull apart."];for(const t of ee){const n=l.filter(a=>a.level===t);if(n.length){e.push("",`## ${te[t]}`,"");for(const a of n)e.push(`- [${a.topic.title}](${a.topic.id}), about ${a.minutes} minutes. ${a.topic.summary}`)}}return e.join(`
-`)}},oe=[ae,...l.map(e=>e.topic)],se={order:10,area:"interface",topic:{id:"concept-canvas-vs-preview",title:"The canvas shows the start; Preview runs it",group:"Concepts",summary:"Nothing happens on the canvas when you click a button: it shows every page as it starts. Events, timers, scripts and changing variables only run in Preview.",keywords:"concept canvas preview edit play run does nothing not working click button nothing happens hidden ghost starting value initial binding changes run mode",body:`The canvas is where you build. It draws every page **as it is when it starts**: each variable at its starting value, each timeline at its first frame, each data source as first loaded. Nothing on it runs. Clicking a button on the canvas selects the button; it doesn't press it.
+**Next:** more about worked out values is in [Variables](variables), and every helper like **fmt** is in [Expressions](expressions). Chart settings are in [Charts](charts). To chart what a whole class says, try [A poll with a live chart](tutorial-survey-chart).`}},Me=Object.freeze(Object.defineProperty({__proto__:null,tutorial:Re},Symbol.toStringTag,{value:"Module"})),Ee={order:45,level:"advanced",minutes:35,example:"tut-wordgames",topic:{id:"tutorial-wordgames",title:"Word search and crossword from a word list",group:"Build it",summary:"Puzzles made from a list you type, so the grid changes when the words do: how the Word search and Crossword starters work, and how to change them.",keywords:"tutorial word search wordsearch crossword puzzle grid word list clues letters across down formula wordSearch crossword seed repeater grid select cells drag check words game vocabulary",body:'You will make two word puzzles about the water cycle: a word search and a crossword. Neither grid is drawn by hand. Each is worked out from a list of words you type, so changing a word changes the puzzle, in the editor and when it plays. It takes about thirty-five minutes.\n\n**Just want to look?** The finished puzzles are on the projects page: **Templates**, then under **Examples** find **Build it**, **Word search and crossword**. **Play** runs them and **Make my copy** gives you your own copy. In the tutorial they are two projects; in the example they sit one after the other in one project, and the crossword\'s list is called `clues` so the two lists can\'t be mixed up.\n\nBuilding a word search from a blank page means a few dozen nodes and formulas, so this tutorial starts from the two starters instead. You change the words, then take a guided look at how each part works, so you can change more than the words with confidence.\n\n## Part 1: the word search\n\n### 1. Start from the starter\n\n1. On the projects page open **Templates**, then **Built-in**. **Branded starter packs** is at the top.\n2. Pick a colourway, find **Word search** under **Games and puzzles** and press **Use template**.\n3. Type **Water cycle word search** in **Name of your new project** and press **Create project**.\n\nA checklist opens beside the project. You will do its main job in the next step, and can tick items off as you go.\n\n### 2. Type your words\n\n1. Open the **Variables** tab. The first row is `words`: a **List** of eight words.\n2. Replace its value with your own list and click away:\n\n```\n["EVAPORATE", "CONDENSE", "CLOUD", "RAINFALL", "RIVER", "OCEAN", "VAPOUR", "RUNOFF"]\n```\n\n3. Look at the **Find the words** page. The letters have changed and your words are hidden in them, across, down, on diagonals and backwards. The **Words to find** list beside the grid shows your eight.\n\nThat is the whole job of making a new puzzle. The rest of Part 1 is how it works.\n\n### 3. Grid data: one formula\n\nFind `rows` in the **Variables** tab. It says **Worked out**, its formula is `wordSearch(words, 12)`, and **Keep up to date** is ticked.\n\n- `wordSearch(words, size, seed)` hides the words in a **size** by **size** grid and fills the gaps with random letters. It gives back one text per row: twelve rows of twelve letters.\n- **Keep up to date** works it out again whenever `words` changes. That is why the grid followed your list.\n- The same words and seed always make the same grid. Leave the seed out and it is 7. Change the formula to `wordSearch(words, 12, 3)` for the same words in another arrangement, and try a few numbers until you like one.\n- A word longer than 12 letters can\'t fit and is left out. Keep to about eight words: the **Words to find** list has room for eight.\n\n### 4. A repeater in a grid\n\n1. On **Find the words**, select **Grid** in the **Layers** panel.\n2. Open its **Repeat (list)** section. **Items** is:\n\n```\nrows.join("").split("").map((l, i) => ({l, i}))\n```\n\nThat joins the twelve rows into one run of 144 letters and makes an item for each: its letter `l` and its place `i`. **Layout** is **Grid** with **Cols** `12`, so the 144 copies wrap into twelve rows.\n\n3. Select **Letter square**, the one layer inside **Grid**. It is copied 144 times. Its text layer, **Letter**, says `{item.l}`. Its **Data bindings** colour it: `line.includes(index)` for the squares being chosen, `foundCells.includes(index)` for words already found.\n4. **Grid** also has **Keyboard navigation** on: the whole grid is one stop for <kbd>Tab</kbd>, the arrow keys move between squares, and <kbd>Enter</kbd> chooses one.\n\nTo restyle the squares, restyle **Letter square** once: every copy follows.\n\n### 5. Selecting across cells\n\nA word is chosen by its first and last square. Two variables hold them, `start` and `end` (`-1` means not chosen), and two **Worked out** variables follow them:\n\n- `line` is the list of squares from `start` to `end` when they are in a straight line (across, down or diagonal), worked out with `Math.floor(start / 12)` for the row and `start % 12` for the column.\n- `hit` is the number of the word those squares spell, forwards or backwards, or `-1` if they spell none.\n\nOpen the **Interactions** tab on **Find the words**. Every way of choosing ends up setting `start` and `end`:\n\n- **Dragging.** Three **When clicked or hovered** nodes on **Grid**, with **Event** set to **Drag starts**, **Dragging** and **Drag ends**. The first sets `start` from `event.startIndex` (the square pressed on); the others set `end` from `event.index` (the square under the pointer). Letting go sends the message `try`.\n- **Clicking.** A **When clicked or hovered** on **Letter square** with a **Check a condition** of `start < 0`: the first click sets `start`, the second sets `end` and sends `try`.\n- **The arrow keys.** A **When a value changes** on `cursor` (the square the keyboard is on) stretches `end` while a start is chosen.\n\n### 6. Checking the word\n\nFind the **When a message arrives** node for `try` (its **Note** says *Is it one of the words?*). Because `hit` already knows which word the line spells, the flow only reads it:\n\n1. `message` is set to *Found RIVER!*, or says why it didn\'t count.\n2. If `hit` is a word, its squares are added to `foundCells` and its number to `found`. Then `start` and `end` go back to `-1`.\n3. A **Check a condition** of `found.length >= words.length` pauses the clock and goes to the next page when every word is found.\n\n### 7. Try it\n\nPress **Preview**, then **Start**. Drag across a word: it turns green and is struck off the list. Click the first and last letters of another. With the keyboard, use the arrows and <kbd>Enter</kbd> on the first and last letter. Watch `start`, `end`, `line` and `hit` in **Variables (live)** as you choose. Press <kbd>Esc</kbd> to close.\n\n## Part 2: the crossword\n\n### 8. Start from the starter and type your clues\n\n1. Back on the projects page, open **Templates**, **Built-in**, and press **Use template** on **Crossword** (also under **Games and puzzles**). Name it **Water cycle crossword** and press **Create project**.\n2. In the **Variables** tab, `words` is a list of answers and clues. Replace it with:\n\n```\n[{"answer": "EVAPORATE", "clue": "What water does when the sun turns it into a gas"},\n {"answer": "CONDENSE", "clue": "What vapour does as it cools into droplets"},\n {"answer": "CLOUD", "clue": "Tiny droplets of water floating in the sky"},\n {"answer": "RAIN", "clue": "Water falling from the clouds"},\n {"answer": "RIVER", "clue": "Carries water downhill to the sea"},\n {"answer": "OCEAN", "clue": "Holds most of the water on Earth"},\n {"answer": "VAPOUR", "clue": "Water as a gas"},\n {"answer": "SNOW", "clue": "Frozen flakes that fall in winter"},\n {"answer": "RUNOFF", "clue": "Water flowing over the ground into streams"},\n {"answer": "STREAM", "clue": "A small river"}]\n```\n\n3. Look at the **Crossword** page: a new grid, numbered, with the across and down clues listed beside it.\n\n### 9. Grid data for a crossword\n\n- `entries` is **Worked out** as `crossword(words, 10)`, kept up to date. It lays the words out in a 10 by 10 grid, crossing where they share a letter, and adds `row`, `col` and `down` to each. The same words always give the same puzzle; to try another layout, change the order of the list.\n- A word that is too long, or can\'t cross any other, is **left out**. Count the clues in **Across** and **Down** after a change: if one is missing, add a word that shares a letter with it, or drop it.\n- `cells` is the 100 squares, each with its answer letter `ch` (empty for a black square), what was typed `t` and a mark `s` (right, wrong or shown). Unlike `entries` it isn\'t kept up to date, because it holds the learner\'s typing; opening the page puts it back to its formula.\n- `acrossClues`, `downClues`, `aw` (the word under the chosen square) and `done` all follow from these.\n\n### 10. The grid and the typing\n\n1. Select **Grid**. Its **Repeat (list)** has **Items** `cells`, **Layout** **Grid**, **Cols** `10`. Its one child, **Square**, has a **Visible** binding, `item.ch != ""`, so squares with no letter are hidden.\n2. In the **Interactions** tab, the **When a key is pressed** node with the **Note** *Type a letter* runs for any key on a square. A **Check a condition** lets only letters through, then **Change a value or counter** writes the letter into `cells` and moves the chosen square along the word.\n3. **Check letters** marks every typed letter right or wrong; **Reveal word** and **Reveal all** fill letters in. The live `done` is true once every square holds its answer, and its **When a value changes** says so.\n\n### 11. Try it\n\nPress **Preview** and **Start**. Click a clue, type the answer, and press **Check letters**. Click a square twice to switch between across and down.\n\n## Make it yours\n\n- **One topic, two puzzles.** Use the same words in both, so learners meet them twice: the word search first, then the crossword\'s clues to recall them.\n- **Bigger grids.** The word search\'s checklist says what else must change with the size: the formula\'s size, the repeater\'s **Cols** and the 12 in the `line` and `hit` formulas. Keep to the starters\' sizes unless you need more room.\n- **No clock.** In the word search, set `showTimer` to false in the Variables tab.\n\n## What you learned\n\n- A **Worked out** variable can build a whole puzzle from a list: `wordSearch(words, 12, seed)` and `crossword(words, 10)`.\n- A repeater with **Layout** **Grid** turns a long list into rows and columns of one repeated square.\n- Choosing across cells is just two numbers, `start` and `end`, with live variables working out the line and the word.\n- Checking reads those live variables, so every way of choosing shares one check.\n\n**Next:** [Repeated lists](repeaters), [Expressions](expressions#helpers) for the puzzle helpers, and [Branded starter packs](branded-starters) for the other games. A smaller game built from scratch: [A memory card game](tutorial-memory).'}},Oe=Object.freeze(Object.defineProperty({__proto__:null,tutorial:Ee},Symbol.toStringTag,{value:"Module"})),Be=Object.assign({"./accessible.ts":P,"./accordion.ts":I,"./blanks.ts":W,"./bones.ts":L,"./branching.ts":M,"./brand.ts":O,"./carousel.ts":N,"./compare.ts":q,"./context.ts":_,"./data-source.ts":G,"./diagram.ts":U,"./drag-match.ts":K,"./flipcards.ts":Q,"./journal.ts":J,"./label.ts":ee,"./mcq.ts":ae,"./memory.ts":se,"./microphone.ts":ie,"./order.ts":he,"./personality.ts":le,"./presentation.ts":pe,"./progress.ts":ge,"./responsive.ts":we,"./reveal.ts":be,"./rive-drive.ts":ke,"./scene.ts":xe,"./script.ts":Se,"./sort.ts":Pe,"./sound.ts":Ie,"./survey-chart.ts":We,"./video-chapters.ts":Le,"./whatif.ts":Me,"./wordgames.ts":Oe}),l=Object.entries(Be).filter(([e])=>!/\/index\.ts$/.test(e)).map(([,e])=>e.tutorial).filter(Boolean).sort((e,t)=>e.order-t.order||e.topic.title.localeCompare(t.topic.title)),Ne=["beginner","intermediate","advanced"],Fe={beginner:"Beginner",intermediate:"Intermediate",advanced:"Advanced"},qe={id:"build-it",title:"Build it: tutorials by kind of activity",group:"Build it",summary:"Step-by-step tutorials for the things people make most: questions, cards, sliders, stories, games, journals and more, each with its finished project to open.",keywords:"tutorial tutorials build how to make walkthrough step by step example finished project quiz question cards story game journal",body:()=>{const e=["Each tutorial builds one kind of activity from a blank project, one step at a time. Do [Tutorial 1](tutorial-first-animation) and [Tutorial 2](tutorial-first-interaction) first if you haven't used the editor before.","","**Just want to look?** Every tutorial's finished project is on the projects page: open **Templates**, and under **Examples** find **Build it**. **Play** runs it, and **Make my copy** gives you your own copy to pull apart."];for(const t of Ne){const n=l.filter(a=>a.level===t);if(n.length){e.push("",`## ${Fe[t]}`,"");for(const a of n)e.push(`- [${a.topic.title}](${a.topic.id}), about ${a.minutes} minutes. ${a.topic.summary}`)}}return e.join(`
+`)}},ze=[qe,...l.map(e=>e.topic)],_e={order:160,area:"construction",topic:{id:"concept-a11y-names",title:"Roles, names and focus order",group:"Concepts",summary:"A screen reader knows a layer by its role and name, not by how it looks. A keyboard moves through tab stops in the Tab order, not in the order things sit on the page.",keywords:"concept accessibility screen reader role name text alternative label keyboard tab stop tab order focus order clickable shape no name drag keyboard decorative wcag",body:`A screen reader can't see your page. For each layer it says what the layer **is** (its **role**: button, heading, image) and what it is **called** (its **name**). A keyboard user can't point. They press <kbd>Tab</kbd> to move between **tab stops**, and <kbd>Enter</kbd> or <kbd>Space</kbd> to press the one they are on.
+
+Buttons, inputs and links are real controls, so they already have a role and work from the keyboard. A shape, picture or group that you made clickable with *When clicked or hovered* doesn't, until its **Accessibility** section says so. With **Tab stop** left on *Automatic*, a layer with a click becomes a tab stop that Enter and Space click.
+
+## Where people get caught out
+
+- **"The screen reader just says *button*."** The layer has no name. Give it a **Text alternative** that says what it does (*Next question*), not what it looks like (*green arrow*). Its words count as its name when it has text.
+- **"The screen reader reads out every flourish."** Set the **Role** of layers that are only decoration to *Decorative*, and they are skipped.
+- **"The drag task can't be done from the keyboard."** Layers made **draggable** (the Draggable section) get a keyboard way of their own: Space to pick up, the arrows to choose a drop zone, Space to drop. Older drag events, hover, press and release can't be done from a keyboard, so give those a click as well.
+- **"Tab jumps all over the page after I rearranged it."** Tab follows the layer order, not where things sit, so moving layers around on the page doesn't change it. Set the order in the **Tab order** section, or reorder the layers.
+- **"Focus is lost after the page changes."** Moving focus somewhere sensible isn't automatic. Use a *Focus layer* node.
+
+## How to tell what is going on
+
+- The **Accessibility** checker (bottom panel) lists clickable layers with **No name for assistive technology**, layers that **Needs a mouse or touch** (no keyboard way), pictures with **No description** and more, page by page. Click a finding to select the layer.
+- With nothing selected, the **Tab order** section lists every tab stop on the page in the order Tab visits them.
+- In Preview, press <kbd>Tab</kbd> and watch the focus ring. Switch on **Screen reader** in Preview's bar to see a strip of what would be announced.
+
+**More:** [Accessibility: roles and keyboard](accessibility), [Tab order](accessibility#tab-order), [Accessibility checker](accessibility-checker), [Drag and drop](drag-and-drop#keyboard-touch-and-screen-readers), and [Label the diagram](tutorial-label), which gives a picture a text alternative and tries the activity from the keyboard.`}},He=Object.freeze(Object.defineProperty({__proto__:null,concept:_e},Symbol.toStringTag,{value:"Module"})),Ge={order:120,area:"interface",topic:{id:"concept-assets",title:"Assets: one file, used in many places",group:"Concepts",summary:"Pictures, sound, video, fonts and data files live once in the Assets tab, and layers point at them. Replace a file there and everything that uses it changes.",keywords:"concept assets files picture image replace update new version import again duplicate two copies linked design file psd ai pdf update from file optimised copy editing copy export size big photo",body:`Every picture, sound, video, font and data file in a project is an **asset**, listed once in the **Assets** tab of the left panel. A layer, a fill, a **Play sound** node or a data source doesn't hold the file itself: it points at the asset. So one logo can be on twenty pages and still be one file.
+
+Design files (Photoshop, Illustrator, PDF, AutoCAD) are different. They aren't stored as assets: they become artboards, and they are listed under **Design files** at the top of the Assets tab, each with **Update…** to bring in a new version of the file.
+
+## Where people get caught out
+
+- **"I imported the new picture and now I have two."** Importing or dropping a file again always adds a new asset, and the layers still point at the old one. To swap a file, press the arrow on the asset in the Assets tab (its tooltip says **Replace with a new version of the file**), or **Replace file…** in an image or video layer's inspector. Everything that used it shows the new file, and one undo puts the old one back.
+- **"The same logo is in there three times."** **Find duplicate files** (under **Upload files**) finds files added more than once and merges them, so everything uses one copy.
+- **"I changed the Photoshop file. Do I have to import it again?"** No. Press **Update…** beside it under **Design files**. What changed in the file comes in, and the edits you made in the editor are kept.
+- **"My photo looks fine, but is it slowing everything down?"** Big pictures (over about 2 MB, or 2560 px on the long side) get a lighter **editing copy** that the canvas draws instead, so editing stays quick. The original is kept at full size.
+- **"The exported file is huge."** With **Optimise output** on in the Project settings (it is on by default), the single HTML file and the share link carry smaller copies of big pictures. The project package and Preview always use the full-size originals.
+
+## How to tell what is going on
+
+- The Assets tab's **Details** view lists each file's kind and size, says **unused** beside a file nothing refers to, and for a big picture shows its **Editing copy** and **Output** sizes.
+- The **Usage** tab lists what uses what, and can clear out the files nothing uses.
+
+**More:** [The Assets panel](assets), [Replacing a file](assets#replacing-a-file), [Big pictures](assets#big-pictures), [Updating a design file](import#updating-a-design-file), [Optimised pictures](export#optimised-pictures), [Removing unused assets](usage#removing-unused-assets). The [data source tutorial](tutorial-data-source) and the [sound tutorial](tutorial-sound) both replace a file this way.`}},Ve=Object.freeze(Object.defineProperty({__proto__:null,concept:Ge},Symbol.toStringTag,{value:"Module"})),Ue={order:80,area:"construction",topic:{id:"concept-auto-layout",title:"Auto layout: the frame places its children",group:"Concepts",summary:"Inside a frame with auto layout, the frame decides where each child goes. Each child is fixed, hugs its content or fills, and its x and y are worked out for it.",keywords:"concept auto layout hug fill fixed percent jumps back snaps back drag child will not move text will not grow gap padding margin ignore absolute order flex",body:`Turn on **Auto layout** on a frame and the frame places its children for you: in a row, a column, a grid or a stack, in layer order, with a **Gap** between them and **Padding** inside its edges. The layout is worked out again after every change, on the canvas and in the player.
+
+Each child says how big it is, in its **Layout item** section:
+
+- **Fixed**: its own width or height.
+- **Hug**: as big as what is inside it (a frame's children, a text's words).
+- **Fill**: takes a share of the room the frame has left.
+- **Percent**: a share of the frame's inner size.
+
+A frame can hug too: **Hug width** and **Hug height** make it grow and shrink with its children.
+
+## Where people get caught out
+
+- **"I drag a child and it jumps back."** Its x and y belong to the layout, so the frame puts it back. To change the order, move it up or down in the **Layers** panel. To place one child freely, set its **Position** to *Absolute* (pinned by insets from the frame's edges) or *Ignore* (keeps its own x and y and takes no room).
+- **"My text box won't grow."** A text grows only if its **Sizing** lets it: *Auto width* or *Auto height*, not *Fixed*. The frame around it has to grow too: a frame with a fixed height stays that height, so turn on **Hug height** on it.
+- **"Gap or padding?"** **Gap** is the space between children. **Padding** is the space between the frame's edges and the children. **Margin** (in Layout item) is extra space around one child.
+- **"I hid a layer and everything moved."** A hidden layer takes no room, so the others close up. That is on purpose.
+- **"My layout settings aren't on the timeline."** They aren't keyframed. Animate a layer's size or position with a timeline, or turn on **Animate changes** on the frame so children glide when the layout changes while it plays.
+
+## How to tell what is going on
+
+- Select the child and read its **Layout item** section: it says how it sits in its frame, and only shows the settings that kind of layout uses.
+- Select the frame and read its **Auto layout** section for direction, gap, padding and hugging.
+- The children are placed in layer order, so if the order looks wrong, the Layers panel is where to change it.
+
+**More:** [Auto layout](auto-layout), [Child sizing](auto-layout#child-sizing), [Grids and stacks](auto-layout#grids-and-stacks), [Text](text), [Groups and frames](groups-frames).`}},Ye=Object.freeze(Object.defineProperty({__proto__:null,concept:Ue},Symbol.toStringTag,{value:"Module"})),Ke={order:90,area:"construction",topic:{id:"concept-components",title:"Components: one page, placed many times",group:"Concepts",summary:"Any page can be placed inside another as a component. Each copy is an instance that follows its source page, and Inputs are how one copy differs.",keywords:"concept component instance source page main reuse inputs copy edit instance change everywhere detach library shared variables per copy symbol",body:`A **component** is just a page placed inside another page. The layer it makes is an **instance**, shown in the Properties panel as **Component**. The page it comes from is the source: change the source page and every instance of it changes.
+
+An instance is one layer. You can move it, size it, choose how the page fits its box (**Fit**), and give it **Inputs**: starting values for the source page's variables, by name, written as JSON such as \`{"label": "Next"}\`. Each instance runs its own copy of the page, with its own timelines and its own variables, so one copy can say *Next* while another says *Back*.
+
+A **library** shares components between projects. Placing one copies its page into your project as a read-only **library page**.
+
+## Where people get caught out
+
+- **"I can't edit the button inside the instance."** The layers inside belong to the source page. Press **Edit** followed by the page's name in the Component section to go there, and the change reaches every instance.
+- **"I changed one instance and the others didn't follow."** Size, position, Fit and Inputs are that instance's own. Only changes to the source page reach them all.
+- **"I want one copy to look different."** Give the source page a variable for what changes (the label, a colour, a level), bind it, and set it per copy in **Inputs**. A timeline can key an input too.
+- **"The library page won't let me edit it."** It is read-only so it can take updates. **Detach to edit** makes it a normal page and stops its updates. It asks before it does.
+- **"Changing a variable in one copy changed it in all of them."** That variable is marked shared: one value for the page and every instance inside it. Some imported animation files bring their variables in this way; there is no switch for it in the Variables list. Ordinary variables are one per copy.
+
+## How to tell what is going on
+
+- Select the instance: the **Component** section names the source page in its **Artboard** field and shows the Inputs it sets.
+- A library page carries a **Library** section saying where it came from and which version.
+
+**More:** [Instances (components)](instances), [Settings on an instance](instances#settings-on-an-instance), [Steering an instance while it plays](instances#steering-an-instance-while-it-plays), [Libraries](libraries), [Bindings](bindings).`}},$e=Object.freeze(Object.defineProperty({__proto__:null,concept:Ke},Symbol.toStringTag,{value:"Module"})),Qe={order:110,area:"construction",topic:{id:"concept-coordinates",title:"Positions are measured from the parent",group:"Concepts",summary:"A layer's X and Y are measured from the top left of whatever holds it: the page, or the group or frame it is in.",keywords:"concept x y position coordinates relative parent group frame numbers changed moved into group off screen binding x event.x local world top left",body:`A layer's **X** and **Y** are its distance from the top left corner of its **parent**: the page for a layer at the top of the list, or the group or frame it sits in. A layer at X 20 inside a group at X 300 is 320 from the edge of the page.
+
+## Where people get caught out
+
+- **"I put a layer in a group and its numbers changed."** It didn't move on the page; its X and Y are now counted from the group's corner instead of the page's. Making a group, dragging a layer into one in **Layers**, or ungrouping all keep the layer where it was and change the numbers to match.
+- **"My animation jumped after I grouped the layer."** Keyframes on X and Y are not changed when a layer moves into or out of a group, so they now count from the new parent's corner. Move the keys, or group the layer before you animate it.
+- **"I bound X and the layer went off the page."** A binding or a **Change a layer's setting** on X is measured from the parent too. \`event.x\` and \`event.y\` from a click or drag are measured on the page, so they only line up for a layer at the top of the list. For dragging, \`start + event.dx\` (how far the pointer has moved) works wherever the layer is.
+- **"I can't move a layer inside an auto layout frame."** That frame places its children, so X and Y stop being yours to set. See [Auto layout](auto-layout); a child set to **Ignore** keeps its own X and Y.
+- **"I want a layer to keep to the bottom right as the frame changes size."** In an auto layout frame, set the child's **Position** to **Absolute** and give it an **Inset** from the edges you want.
+
+## How to tell what is going on
+
+- Hover **X** in the Inspector: it says the distance is from the left edge of the parent.
+- The **Layers** panel shows what each layer is inside. Drag a layer out to the top of the list and its X and Y are counted from the page again.
+- In Preview, **Variables (live)** shows the values your bindings use, so you can see the number a layer is being given.
+
+**More:** [Groups, frames and masks](groups-frames), [Child sizing](auto-layout#child-sizing), [Constraints](constraints), [When clicked or hovered](interactions#when-clicked-or-hovered).`}},Xe=Object.freeze(Object.defineProperty({__proto__:null,concept:Qe},Symbol.toStringTag,{value:"Module"})),Je={order:10,area:"interface",topic:{id:"concept-canvas-vs-preview",title:"The canvas shows the start; Preview runs it",group:"Concepts",summary:"Nothing happens on the canvas when you click a button: it shows every page as it starts. Events, timers, scripts and changing variables only run in Preview.",keywords:"concept canvas preview edit play run does nothing not working click button nothing happens hidden ghost starting value initial binding changes run mode",body:`The canvas is where you build. It draws every page **as it is when it starts**: each variable at its starting value, each timeline at its first frame, each data source as first loaded. Nothing on it runs. Clicking a button on the canvas selects the button; it doesn't press it.
 
 **Preview** (top right) is the project running, exactly as a learner gets it. Events fire, timers tick, scripts run and variables change.
 
@@ -1575,8 +3296,312 @@ The **Variables (live)** list on the left of the Preview shows all seven values 
 - The **Events** list under it records each event and the nodes it ran, and says why a click did nothing.
 - **Beside editor** in Preview's bar moves Preview up to the right, so the canvas and the **Interactions** graph stay in view. Nodes that ran light up green and the wires they followed pulse.
 
-**More:** [Preview](interface#preview), [Variables](variables), [Bindings](bindings).`}},ne=Object.freeze(Object.defineProperty({__proto__:null,concept:se},Symbol.toStringTag,{value:"Module"})),ie=Object.assign({"./edit-vs-play.ts":ne}),c=Object.entries(ie).filter(([e])=>!/\/index\.ts$/.test(e)).map(([,e])=>e.concept).filter(Boolean).sort((e,t)=>e.order-t.order||e.topic.title.localeCompare(t.topic.title)),re={id:"concepts",title:"Concepts: the ideas behind the editor",group:"Concepts",summary:"Short explanations of the ideas that catch people out: what the canvas shows, variables and bindings, repeaters, auto layout, what gets clicked and more.",keywords:"concepts ideas explain why confused does nothing not working understand how it works basics",body:()=>{const e=[`Each of these is a few minutes' read: the idea, the ways people get caught out, and how to tell what is going on. If something "does nothing", start with the first one.`,""];for(const t of c)e.push(`- [${t.topic.title}](${t.topic.id}). ${t.topic.summary}`);return e.join(`
-`)}},he=[re,...c.map(e=>e.topic)];let p=null;const ce=e=>{p=e},pe=["Getting started","Build it","Concepts","Design","Web elements","Motion","Interactivity","Data","Import and export","Working together","Reference"],de=[{id:"welcome",title:"Welcome to Interactives",group:"Getting started",summary:"What Interactives is, how a project fits together, and where to start.",keywords:"intro overview start getting started tutorial beginner first learn new user onboarding glossary words",body:`Interactives builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on pages, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
+**More:** [Preview](interface#preview), [Variables](variables), [Bindings](bindings).`}},Ze=Object.freeze(Object.defineProperty({__proto__:null,concept:Je},Symbol.toStringTag,{value:"Module"})),et={order:30,area:"construction",topic:{id:"concept-events-actions",title:"Events, actions and the graph",group:"Concepts",summary:"Nothing happens unless an event is joined to actions. The Interactions graph is the program; the sentences in the Inspector are another way of reading it.",keywords:"concept event action node graph interactions on click property flow wire sentences inspector when clicked how do I make it do something nothing happens three views",body:`Nothing in a project does anything by itself. Something happens because an **event** (green: a click, a key, the page being shown, a timer, a value changing, an animation finishing) is joined to **actions** (blue: play an animation, change a value, show a layer, go to a page). **Logic** nodes (purple) choose which way a flow goes.
+
+Each page has its own graph in the **Interactions** tab, and that graph is the whole program for the page. There is no hidden "on click" setting anywhere else.
+
+## Where people get caught out
+
+- **"Where is the on click setting?"** A layer has no click property. Select it and press **+ When clicked…** in its **Interactions** section. That adds a **When clicked or hovered** event and the action you pick to the graph, joined.
+- **"There are three ways to look at one interaction."** They are one thing. The graph holds the nodes. The sentences in a layer's **Interactions** section (**When clicked: play "Timeline".**) and the **Read as sentences** view over the graph are written from those nodes every time, so they can't disagree with it. **Show in graph** under a sentence takes you to its nodes.
+- **"I added an event and nothing happens."** An event with nothing joined to it says **nothing happens yet** in its sentence. Join an action to its output.
+- **"Something ran that I didn't expect."** Two events can listen for the same thing. Two **+ When clicked…** on one button make two flows, and both run on every click.
+- **"It ran once, then never again."** **Only the first time** lets a flow through once. **When the activity has loaded** runs once per visit, while **When the page is shown** runs every time the page appears.
+- **"My button does nothing on the canvas."** No event fires on the canvas. Test in Preview: see [The canvas shows the start; Preview runs it](concept-canvas-vs-preview).
+
+## How to tell what is going on
+
+- In Preview, the **Events** list shows each event as it fires, which layer it came from and what it set off. Click an event's name to select its node in the graph.
+- Press **Beside editor** in Preview's bar to keep the graph in view. Nodes light up green with *ran* as they run, and the wires they follow pulse.
+- **Read as sentences** lists steps that nothing starts under **Not joined to anything, so these never run**.
+
+**More:** [Interactions](interactions), [See what ran](interactions#see-what-ran), [Interaction node reference](interaction-nodes), [Tutorial 2: Your first interaction](tutorial-first-interaction).`}},tt=Object.freeze(Object.defineProperty({__proto__:null,concept:et},Symbol.toStringTag,{value:"Module"})),at={order:50,area:"construction",topic:{id:"concept-expressions",title:"Formulas, and {braces} in text",group:"Concepts",summary:"Bindings, conditions and the {slots} in text take small formulas, not plain words: quotes around text, == to compare, lists counted from 0.",keywords:"concept formula expression braces curly text slot quotes equals == = index zero typo nothing shows blank cheat sheet",body:'Wherever a field works a value out (a binding, a condition, the value of a **Change a value or counter** node, **Repeat → Items**, and anything in `{braces}` in a text layer), it takes a small **formula**, not plain words. Your variables and data sources are there by name.\n\nA few you will use all the time:\n\n| Formula | Gives |\n|---|---|\n| `score + 1` | One more than the score |\n| `lives > 0` | true or false, for a condition or a Visible binding |\n| `answer == "Paris"` | Whether the answer is the text *Paris* |\n| `name.length` | How many letters the name has |\n| `items[index].title` | The title of an item in a list |\n| `correct ? "Well done" : "Try again"` | One text or the other |\n| `fmt(price, 2)` | A number shown with two decimals |\n\nIn a text layer, `Score: {score} of {total}` puts the values in among the words. To show a real brace, type it twice: `{{`.\n\n## Where people get caught out\n\n- **"Paris" vs Paris.** Text needs quotes. `answer == Paris` looks for a variable called Paris, finds none, and the line under the field says so.\n- **= vs ==.** A single `=` sets something, and a formula can\'t. To compare, write `==`. To change a variable, use a **Change a value or counter** node.\n- **Lists start at 0.** The first item is `items[0]`, and `index` and `event.index` count from 0 too. Show `{index + 1}` when a learner should see *1*.\n- **"My text shows {scoer} with the braces."** A slot that can\'t be worked out is left as written in a text layer, and gives nothing in a binding. That is how a typo in a name shows up.\n- **"It shows nothing at all."** A typo after a dot (`item.titel`) isn\'t an error: it reads a field that isn\'t there, which is nothing. Check the field names in the data.\n\n## How to tell what is going on\n\n- **The line under every formula field.** Green says what it works out to right now (*currently 12*), with the starting values. Red says what is wrong in a sentence, and for a mistyped name it offers a fix: *There is no value called scoer. Did you mean score?* with a **Use score** button.\n- **Suggestions as you type.** Start a name, or type a dot after one, and the list shows what is there, with each value.\n- **Conditions without typing.** A field that wants a yes or no offers pickers (**[score] [is at least] [5]**), which write the formula for you.\n- A formula that uses `event` can only say *depends on what happens when it runs*. Try it in Preview and watch **Variables (live)**.\n\n**More:** [Expressions](expressions), [Checks as you type](expressions#checks-as-you-type), [Helpers](expressions#helpers), [What you can write](expressions#what-you-can-write), [A what-if explorer](tutorial-whatif).'}},ot=Object.freeze(Object.defineProperty({__proto__:null,concept:at},Symbol.toStringTag,{value:"Module"})),st={order:100,area:"interface",topic:{id:"concept-hit-testing",title:"What gets clicked",group:"Concepts",summary:"A click goes to the front layer under the pointer that can take it, and to the groups around that layer. See-through and hidden layers let it pass.",keywords:"concept click hit test which layer clicked hotspot transparent see-through invisible opacity not clickable group click order front behind on top nothing happens event.child",body:`When a learner clicks, the click goes to the layer **in front** under the pointer, then to every group and frame that layer sits in. A **When clicked or hovered** event on a group therefore fires when any layer inside it is clicked. An event on a layer that is behind something else never hears the click, because the layer in front took it.
+
+While the project plays, some layers let the pointer straight through to whatever is underneath:
+- **hidden** layers, always;
+- **see-through** layers: opacity under 100%, or a shape whose fills and strokes are all under 100%, and every layer inside one. Tick **Clickable while see-through** in a layer's **Interactions** section to keep it clickable;
+- **page master** layers, which belong to the master, not the page;
+- paths, polygons and stars between their painted parts: they take the click where they are drawn, not across their whole box.
+
+## Where people get caught out
+
+- **"My invisible hotspot can't be clicked."** A shape with its fill at 0% is see-through, so the click goes past it. Tick **Clickable while see-through** on it.
+- **"The button stopped working while it faded in."** It takes clicks again once it is fully showing. Tick **Clickable while see-through** if it should work during the fade.
+- **"The event on my group never fires."** Something outside the group is in front of it: a background, a big text box, a frame. Move the group up in the **Layers** panel (the front layer is at the top) or move the other layer down.
+- **"The frame's event fires when I click its background."** A click on the layer itself, not on anything inside it, counts too. Tick **Only when a child is hit** on the event to leave those out.
+- **"I want to know which card was clicked."** Put one event on the group that holds the cards and read \`event.child\` (the name of the child that was hit) or \`event.childIndex\` (its place, from 0). For a repeater, \`event.index\` is the copy.
+
+## How to tell what is going on
+
+- In Preview with **Beside editor**, a ring flashes round the layer each click landed on: green when the click started something, red when it started nothing. The ring is on the layer that actually took the click, which may not be the one you meant.
+- When a click starts nothing, the **Events** list says why under **Why did nothing happen?**: the click landed on empty space, nothing listens for a click on that layer (an upper layer may be in the way), or an **Only if** said no.
+- A layer with a click event or a link says so in its **Interactions** section when it is see-through and can't be clicked while playing.
+
+**More:** [See-through layers don't take clicks](interactions#see-through-layers-don-t-take-clicks), [Which layer inside was hit](interactions#which-layer-inside-was-hit), [See what ran](interactions#see-what-ran), [Order](arrange#order).`}},nt=Object.freeze(Object.defineProperty({__proto__:null,concept:st},Symbol.toStringTag,{value:"Module"})),it={order:200,area:"interface",topic:{id:"concept-live-revisions",title:"It saves as you go; revisions are the way back",group:"Concepts",summary:"There is no Save to remember: every change is saved, other editors see it live, and Revision history takes the project back to an earlier version.",keywords:"concept save autosave no save button saved failed live editing collaborate two people same text revision history restore undo go back mistake bad change conflict 409 changed in another tab overwrite reload",body:`Every change you make is saved as you go. The label next to the project name says **Saved**, **Saving…** or **Save failed**, and <kbd>Ctrl</kbd>+<kbd>S</kbd> saves at once if you want to be sure.
+
+When other people you invited have the project open, the **Live** badge shows, their initials appear in the top bar, and their changes arrive on your canvas as they make them.
+
+The server also keeps **revisions**: a snapshot every few minutes while the project changes (the newest 100), plus any version you name. Those are the way back from a change you regret.
+
+## Where people get caught out
+
+- **"Where is Save?"** You don't need one. Close the tab when the label says **Saved**.
+- **"I made a mess and undo isn't enough."** Open **Revision history** (the clock in the top bar), click a version to see a picture of it, and press **Restore this version**. What is there now is saved into the history first, so a restore can itself be undone the same way. Before a big change, **Save a named version…** pins a version that is never cleared out.
+- **"Undo took back my change, but not hers."** Undo only undoes your own changes, never someone else's.
+- **"We were both typing in the same text box."** The project keeps one value for each setting, and when two people change the same one at the same moment, the later change wins. Split the work by layer or by page.
+- **"A red bar says the project was changed in another tab or by someone else."** The project was saved from somewhere that wasn't in the live session with you, such as a second tab, and the server refused to quietly write over it. **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Whichever you don't pick is lost, though the revision history may still have it.
+
+## How to tell what is going on
+
+- Hover **Save failed** for the reason. The editor keeps trying by itself, so keep the tab open until it says **Saved** again.
+- The **Live** badge says **Reconnecting** while the connection is down. Your changes are kept and sent when it's back.
+
+**More:** [Live editing and saving](live-editing), [Revision history](live-editing#revision-history), [When a save fails](live-editing#when-a-save-fails), [When two copies disagree](live-editing#when-two-copies-disagree), [Inviting people](live-editing#inviting-people). [Tutorial 5](tutorial-publish) restores a version and invites someone to edit with you.`}},rt=Object.freeze(Object.defineProperty({__proto__:null,concept:it},Symbol.toStringTag,{value:"Module"})),ht={order:210,area:"interface",topic:{id:"concept-notes-comments",title:"Sticky notes are for editors; comments are for reviewers",group:"Concepts",summary:"A note is part of the project, for whoever edits it next, and reviewers never see it. A comment is a conversation kept beside the project, for reviewers and the people answering them.",keywords:"concept note notes sticky comment comments review reviewer feedback instructions which one cannot see hidden collaborator co-author template explanation pin thread resolve",body:`The editor has two ways to leave words on the canvas, and they go to different people.
+
+- A **note** (the **Note** tool, <kbd>S</kbd>) is a sticky note that is part of the project. It goes wherever the project goes: copies, templates, remixes, and everyone editing it live. It is for the people who **make** the project. Nobody who plays it ever sees it: not Preview, not a share link, not an export, and not the review page either.
+- A **comment** (the **Comment** tool, <kbd>C</kbd>) is a conversation pinned to a layer or a spot, kept on the server beside the project, not in it. It is for **reviewing**: replies, **Resolve**, **Assigned to**, @mentions and notices. Reviewers reach it through the review link; editors see it in the **Comments** tab.
+
+## Where people get caught out
+
+- **"The reviewer says there were no instructions."** You wrote them as notes, and notes are taken out of the review page. Leave reviewers a comment instead, or put the instructions in the message with the review link.
+- **"My co-author never saw my feedback."** Comments sit in the **Comments** tab, which someone editing may never open. A note on the canvas, attached to the layer it is about, is in front of them while they work. Or assign the comment to them: they get a notice, and it shows under **Assigned to me**.
+- **"The template came with notes everywhere."** They are the template's explanations. The eye button beside the **Note** tool hides them on your canvas only, and they never reach learners either way.
+- **"I duplicated the project and the comments didn't come."** Comments are not part of the project, so a copy starts with none. Notes do come with it.
+
+## How to tell what is going on
+
+- Notes are sticky cards with their text showing. Comments are numbered pins: grey with a tick once resolved, an amber ring when assigned to you.
+- The badge on the notes eye button counts the notes. The number on the **Comments** tab counts the open conversations.
+
+**More:** [Notes](notes), [Players never see notes](notes#players-never-see-notes), [Review comments](comments), [The review link](comments#the-review-link). [Tutorial 5](tutorial-publish) covers sharing for review.`}},dt=Object.freeze(Object.defineProperty({__proto__:null,concept:ht},Symbol.toStringTag,{value:"Module"})),lt={order:220,area:"construction",topic:{id:"concept-only-if",title:"Only if, Check a condition, and turning a flow off",group:"Concepts",summary:"Only if decides whether an event runs its flow at all. Check a condition chooses a way inside a flow. Both take a yes/no formula.",keywords:"concept only if condition check a condition if branch true false guard feedback shows both wrong place turn off flow disable held back blocked nothing happened",body:`There are two places to put a yes/no check, and they do different jobs.
+
+- **Only if** is on every event node. When it is false the event does nothing at all: the flow doesn't start. Use it when the event should only count sometimes (a key only while a question is open, a timer only while \`running\`).
+- **Check a condition** is a node inside a flow. The flow has already started, and it carries on down **true** or **false**. Use it when both answers lead somewhere, such as right and wrong feedback.
+
+Both take a formula, or the pickers (**[score] [is at least] [5]**). A formula that can't be worked out counts as false.
+
+## Where people get caught out
+
+- **"Both feedback messages show."** The check is missing or in the wrong place: two flows run from the same click, one for each message. Use one flow with a **Check a condition**, the right feedback on **true** and the wrong feedback on **false**. Or give each event its own **Only if**, one the opposite of the other.
+- **"Nothing happens when I click."** An **Only if** may be saying no. In Preview, the Events list says so (see below).
+- **"My check never goes the true way."** Look at the line under the formula field. It shows what the formula works out to with the starting values (*currently false*), and in red what is wrong: a misspelt name, or a single \`=\` where \`==\` was meant.
+- **"Can I switch a flow off without deleting it?"** Yes. **Turn off** under the flow's sentence (in the layer's **Interactions** section, or in **Read as sentences**) puts \`false\` in front of the event's **Only if**. **Turn on** takes it away again, and a condition that was already there stays.
+
+## How to tell what is going on
+
+- In the graph, an event with an **Only if** shows a short **if …** under its name.
+- In Preview with **Beside editor**, an event whose **Only if** said no goes grey with *held back*, and nodes that ran light up green. A **Check a condition** sends its pulse down the wire it took.
+- When a click starts nothing because of an **Only if**, the Events list says so under **Why did nothing happen?**.
+- **Variables (live)** in Preview shows the values the condition reads, and you can change them to try the other way.
+
+**More:** [Only if](interactions#only-if), [Conditions with pickers](interactions#conditions-with-pickers), [See what ran](interactions#see-what-ran), [Checks as you type](expressions#checks-as-you-type), [Tutorial 3: A state machine with variables](tutorial-state-machine).`}},ct=Object.freeze(Object.defineProperty({__proto__:null,concept:lt},Symbol.toStringTag,{value:"Module"})),pt={order:20,area:"construction",topic:{id:"concept-pages-masters",title:"Pages, page masters and the start page",group:"Concepts",summary:"Every artboard is a page, one of them plays first, and a page master is a page whose layers are drawn on the pages that use it.",keywords:"concept artboard page pages master page master start page first page which page plays first next page order logo changed everywhere shared layers footer header",body:`An **artboard** is a page: one screen of the interactive, with its own layers, timelines and interactions. Variables, data and assets belong to the whole project, so every page shares them.
+
+One page is the **start page**: the one the player shows first. Its name has **▸ start** after it on the canvas, and a **start** badge in the **Layers** panel. **Make start page** (in the Inspector or the right-click menu) moves it.
+
+A **page master** is a page that holds what other pages share, such as a logo, an accent bar or a footer. A page that uses it draws the master's layers under its own (or over them, for the layers the master says so). The layers live in one place only, so a change to the master changes every page that uses it.
+
+## Where people get caught out
+
+- **"I changed the logo on one page and every page changed."** The logo is in a master. Its layers can't be edited from a page: clicking one selects the page. **Edit master** in the **Page master** section takes you to it.
+- **"I changed the logo on one page and the others didn't change."** That logo was copied onto each page, so each copy is its own layer. Move the shared layers into a master (see [Page masters](page-master)) and they change together.
+- **"My Next button goes to the wrong page."** **Next page** and **Previous page** follow the order of the **Layers** panel, not where the pages sit on the canvas. A page in a page group only steps through its own group. Drag the pages into order in Layers; **Tidy up pages** then lays the canvas out in that order too.
+- **"That page off to the side is part of the project."** Every artboard is a page, even one you only used to try something out. Next and Previous step onto it if it is in the list. Delete it, or move it out of the way of the order.
+- **"The click on my master layer does nothing."** A master has no interactions or timelines that run on a page, and its layers let the pointer through. Put buttons and anything clickable on the page itself.
+- **"Preview opened on the wrong page."** The dropdown in Preview's bar says **From the start artboard** or **From this artboard**. The learner always gets the start page.
+
+## How to tell what is going on
+
+- In the **Layers** panel a page that uses a master has an **on …** badge naming it, and a master has a **master · 3** badge saying how many pages use it.
+- With a page selected, its **Page master** section says which master it draws and lists the master's layers, so you can leave one off this page.
+- In Preview, the **Now showing** line in the **Debug** panel names the page on screen.
+
+**More:** [Pages (artboards)](artboards), [Page masters](page-master), [Go to a page](interactions#go-to-a-page), [Page groups](artboards#page-groups).`}},ut=Object.freeze(Object.defineProperty({__proto__:null,concept:pt},Symbol.toStringTag,{value:"Module"})),gt={order:150,area:"construction",topic:{id:"concept-reduced-motion",title:"Reduced motion: it has to work without the movement",group:"Concepts",summary:"Some learners ask their device for less motion. Then animations that start by themselves show their end, transitions are instant, and anything that only exists mid-animation is lost.",keywords:"concept reduced motion less motion prefers reduced motion vestibular calm skip for less motion respect reduced motion autoplay jump to end animation preset transition test",body:`Some people set their device to ask for **less motion**, because movement on screen makes them unwell or distracts them. The player listens for that setting in two ways:
+
+- **Respect reduced motion** (Project settings). With it on, for those viewers, timelines that **autoplay** show where they end up instead of playing (a looping one stays on its first frame), page changes are instant, blend-ins are off, and auto layout glides and similar movement snap.
+- **Skip for less motion** (in a timeline's settings). For those viewers that timeline jumps to its last pose however it is started: autoplay, a **Play or stop an animation** node or a script. The [animation presets](animation-presets) turn it on. It works without the project setting.
+
+A timeline with neither, started by an interaction, still plays for everyone.
+
+## Where people get caught out
+
+- **"The learner never saw the hint."** If something only shows part-way through an animation (a label that fades in and out again, a caption that flies past), a viewer who gets the end pose never sees it. Put what matters in the end pose, or show it some other way too.
+- **"My Skip button does nothing for some people."** With reduced motion the intro may already be at its end, so a button that waits for it to finish, or skips to a marker, may have nothing to do. Make sure the page still makes sense when the animation has already finished.
+- **"I marked it calm and it still moves."** **Skip for less motion** only changes things for viewers whose device asks for less motion. For everyone else it plays as usual.
+- **"I can't see the difference in Preview."** Preview follows your own device's setting. To test it, turn on reduced motion on your computer (on Windows, turn off **Animation effects** in the accessibility settings), then restart Preview.
+
+## How to tell what is going on
+
+- The **Accessibility** checker flags **Animation starts by itself** when timelines autoplay and the project doesn't respect reduced motion, and its **Fix** turns the setting on. It also flags **No way to pause moving content**.
+- Open a timeline's settings (the gear on the Timeline bar) to see whether **Skip for less motion** is ticked.
+- With your device set to less motion, run the whole activity in Preview from start to finish and check nothing is missing.
+
+**More:** [Animation presets](animation-presets#for-people-who-prefer-less-motion), [Project settings](project-settings), [Timeline settings](timelines#timeline-settings), [Accessibility checker](accessibility-checker#the-checks).`}},mt=Object.freeze(Object.defineProperty({__proto__:null,concept:gt},Symbol.toStringTag,{value:"Module"})),wt={order:60,area:"construction",topic:{id:"concept-repeaters",title:"A repeater is one layer drawn many times",group:"Concepts",summary:"A repeater draws its first child once for each item in a list. There is one template, not many layers, and item, index and event.index say which row is which.",keywords:"concept repeater repeat list copies template item index event.index which one clicked all change own event per item state cards rows",body:'A repeater is a group or frame with **Repeat the first child for each item** ticked (in its **Repeat (list)** section). Its first child is the **template**, and it is drawn once for each item in **Items**: a card per question, a row per product.\n\nThere is only one layer. The copies you see on the canvas and in Preview are drawn from it, so anything you change on the template, every copy gets. What makes the copies different is the item: inside the template, `item` is this copy\'s item and `index` is its position, counting from 0. A text layer reading `{item.title}` shows each item\'s own title.\n\n## Where people get caught out\n\n- **"I changed one card and they all changed."** There is one card. To make one look different, make the difference come from its item: a binding on Fill colour like `item.done ? "#2e7d32" : "#ffffff"`, or a Visible binding on `index == 0`.\n- **"I want each card to have its own click."** Give the template one **When clicked or hovered** event. It fires for whichever copy was clicked, with `event.index` saying which. `questions[event.index]` is that copy\'s item, and a **Check a condition** on `event.index == 2` picks out one copy.\n- **"How do I remember which ones were flipped?"** Keep it in the list. Make **Items** a *List* variable, and use **Change a value or counter** with **Change one list item**: left empty, its position is `event.index`, and **Field** changes one field of the item (`flipped`, to `!item.flipped`). The copy redraws from its item.\n- **"My list has 6 items but I only see one."** Items has to give a list. A formula that fails gives an empty list, so check the line under **Items**.\n- **"The first item is number 0."** `index` counts from 0. Show `{index + 1}` to a learner.\n\n## How to tell what is going on\n\n- The line under **Items** says what the list is right now, with the starting values (*currently 6 items*), or what is wrong with it.\n- In Preview, the **Events** list shows each click with the nodes it ran, and **Variables (live)** shows the list variable change as you click.\n- For keyboard users, **Keyboard navigation** on the repeater makes one copy the Tab stop and the arrow keys move between the rest.\n\n**More:** [Repeated lists](repeaters), [Clicks and the keyboard](repeaters#clicks-and-the-keyboard), [Lists](variables#lists), [Content from a data file](tutorial-data-source), [Put the steps in order](tutorial-order).'}},yt=Object.freeze(Object.defineProperty({__proto__:null,concept:wt},Symbol.toStringTag,{value:"Module"})),bt={order:140,area:"construction",topic:{id:"concept-responsive-variants",title:"Responsive variants: one page, several widths",group:"Concepts",summary:"A page can have narrow and wide variants, each a whole page of its own. The player shows the one that fits the width it has, and carries what the learner did across by matching names.",keywords:"concept responsive variant narrow wide phone breakpoint width set base pairing report paired by name edit one other does not follow switch",body:`A **responsive set** is a page (the **base**) and its **variants**. Each variant is a whole page of its own, shown from a **breakpoint** width up. The player measures the box it is in and shows the member that fits, switching as the box is resized or a phone is turned.
+
+When it switches, the learner isn't sent back to the start. Variables stay, because they belong to the project. Timelines and layers are **paired by name**: a timeline carries on from the same moment in its namesake, and what interactions did to a layer goes to the layer with the same name.
+
+## Where people get caught out
+
+- **"I changed the wide one and the narrow one didn't follow."** They are separate pages. **Add narrow variant** copies the page once, and after that each has its own layers, timelines and interactions. If both should change, change both.
+- **"Something got lost when it switched."** Only layers and timelines with a namesake in the other member carry over. Rename one and the pairing breaks.
+- **"What does the report in the Responsive section mean?"** For each pair of members it counts the layers paired by name, then lists what would not carry: a layer or timeline only one of them has, several layers sharing a name, a layer that is a different kind in each, and steps, cards or drop zones in only one.
+- **"I placed the narrow variant as a component and it never switches."** An instance always shows the page it names. Variants switch only for the page the learner is on.
+- **"It switches at the wrong size."** The width that counts is the box the player is in (the page, an iframe), not the screen.
+
+## How to tell what is going on
+
+- Select a page and open **Responsive** in the Properties panel: it lists the members, their widths and the pairing report.
+- In the **Layers** panel the variants sit under their base with the range each is shown at, and on the canvas each member has a pill for the others.
+- In Preview, drag the **Page width** slider under the top bar across a breakpoint and watch it switch while it runs.
+
+**More:** [Responsive artboards](responsive), [How a set works](responsive#how-a-set-works), [What carries when it switches](responsive#what-carries-when-it-switches), [Instances (components)](instances).`}},ft=Object.freeze(Object.defineProperty({__proto__:null,concept:bt},Symbol.toStringTag,{value:"Module"})),kt={order:180,area:"construction",topic:{id:"concept-results",title:"Report result, and what StudyDesk sees",group:"Concepts",summary:"Report result sends a score and completion to the Toolbox's results for the project. Only the Link for StudyDesk keeps them; Preview and the plain share link keep none.",keywords:"concept report result score grade completion complete pass fail studydesk results view results no grade preview share link more than once attempts best last record learner staff",body:`A project says how a learner did with **Report result**: a node in the Interactions graph, or the **Report result** setting on a question. It sends a score (and, with *Complete*, that this attempt is finished). What the score is out of, the pass mark and when the project counts as complete without a node are set in **Results and progress**, in the Project section of the Inspector (click an empty part of the canvas).
+
+Where the result goes depends on how the project was opened:
+
+- **From the Link for StudyDesk**, by someone with a StudyDesk session: it is kept as one record per person, per course, in the project's results. You see them with **View results…**.
+- **In Preview, from the plain share link, or in an exported file**: nothing is kept anywhere. The project runs the same, and the result goes nowhere.
+
+From the Link for StudyDesk, the results live in the Toolbox under the project, not in the StudyDesk gradebook.
+
+## Where people get caught out
+
+- **"I tested in Preview and there is no result."** Preview never sends one. To see a real record, play it from the Link for StudyDesk while signed in, then open **View results…**.
+- **"I gave students the share link and nothing came back."** The share link keeps no results. Use the **Link for StudyDesk** from Share.
+- **"Does reporting twice count twice?"** No. Each report updates the same record: the latest score is kept, the best is kept separately, and once someone has completed or passed, that stays. Report *Score so far* along the way if you like, and *Complete* at the end.
+- **"There are rows for me and my colleagues."** Anyone with a session who plays it from the Link for StudyDesk makes a record, staff included. **Clear results** (owner only) empties them after testing, and can't be undone.
+- **"Results stopped after I changed the settings."** Results are only kept while the share link is on, and the link plays the version you last published. Press **Update to the latest version** in Share.
+
+## How to tell what is going on
+
+- In Preview, **Variables (live)** shows the score variable as the learner earns it, which is what a report would send.
+- **Results and progress** says how many variables are remembered between visits, and **View results…** lists every learner with their completion, pass, best and last score.
+- A project whose questions are marked on the server ignores what the browser reports, and keeps the server's marks instead.
+
+**More:** [Results and progress](results), [Report result and Start over](results#report-result-and-start-over), [Where it goes](results#where-it-goes), [The Link for StudyDesk](export#the-link-for-studydesk), [A multiple choice question](tutorial-mcq), [Tutorial 5](tutorial-publish).`}},vt=Object.freeze(Object.defineProperty({__proto__:null,concept:kt},Symbol.toStringTag,{value:"Module"})),xt={order:230,area:"construction",topic:{id:"concept-seeds-random",title:"Random, shuffle and seeds",group:"Concepts",summary:"A seed makes a shuffle come out the same way every time. Without one it is different on every run, and you can't repeat it.",keywords:"concept random shuffle seed same order every learner repeat reproduce bug randInt random node word search order question shuffle different each time",body:'Some things in a project are random: the **Random** node, a question\'s **Shuffle**, and the formula helpers `shuffle(list)` and `randInt(a, b)`. Each run comes out differently, so no two learners see quite the same thing.\n\nThe `shuffle` helper can also take a **seed**: `shuffle(cards, 42)`. A seed is a number that fixes the order. The same list with the same seed always gives the same order; another seed, another order. `wordSearch(words, size, seed)` works the same way, and so do text modifiers set to **Randomize** (their **Seed** field).\n\nThe **Random** node, a question\'s **Shuffle** and `randInt` take no seed. They are different every time.\n\n## Where people get caught out\n\n- **"Every learner gets the same \'random\' order."** The seed is a fixed number, so everyone gets the order that number makes. `wordSearch(words, 12)` uses seed 7 when you give none, so every learner gets the same grid. Leave the seed out of `shuffle` for a new order each time, or make the seed itself random (below).\n- **"A learner says something went wrong and I can\'t make it happen."** Without a seed you can\'t get their order back. Make a number variable `seed`, worked out from the formula `randInt(1, 100000)`, and below it in the Variables list a list worked out from `shuffle(cards, seed)`. Each learner still gets their own order, and with their seed you can get it again. Show `{seed}` somewhere small, such as the end page, so they can tell you it.\n- **"I typed the seed into a text box and it did nothing."** The seed has to be a number. Text such as `"42"` is ignored, and the shuffle goes back to being different each time.\n- **"I changed the seed in Preview and the order stayed."** A variable worked out from a formula is worked out once, at the start. Tick **Keep up to date** on the shuffled list so it is worked out again when `seed` changes.\n\n## How to tell what is going on\n\n- The line under a formula field says *changes each time it runs* for `shuffle(list)` with no seed and for `randInt`. With a seed it shows the order you will get.\n- In Preview, **Variables (live)** shows `seed` and the shuffled list. Type a learner\'s seed into `seed` and press <kbd>Enter</kbd> to see their order.\n- **Restart** in Preview starts a new run: a new random seed, a new shuffle.\n\n**More:** [Helpers](expressions#helpers), [Worked out from a formula](variables#worked-out-from-a-formula), [Live variables](variables#live-variables), [Shuffle](question-kit#shuffle), [Put the steps in order](tutorial-order).'}},Tt=Object.freeze(Object.defineProperty({__proto__:null,concept:xt},Symbol.toStringTag,{value:"Module"})),St={order:190,area:"interface",topic:{id:"concept-share-export",title:"Share gives links, Export gives files",group:"Concepts",summary:"Share holds links and people: the share link, the Link for StudyDesk, collaborators and reviewers. Export only ever makes a file, which is a copy that never changes again.",keywords:"concept share export which link studydesk link share link review link embed code iframe single html file package download students results grade update latest version snapshot old version fixes",body:`The top bar has two buttons that people mix up.
+
+- **Export** makes **files**: a single HTML file, a project package, pictures, video and so on. A file is a copy of the project at the moment you downloaded it. Nothing you change afterwards reaches it.
+- **Share** holds **links and people**. Nothing under it downloads anything.
+
+Share has four entries:
+
+- **Share…** asks **Where will people use it?** and gives you the one thing to copy for the answer: the embed code for a StudyDesk page (the **Link for StudyDesk**, which keeps each learner's results), the plain share link, the project name for the gradebook, or the file downloads.
+- **Invite to collaborate…** is for people who will edit it with you.
+- **Save as template…** is for people who will start their own project from it.
+- **Share for review…** is a link for reviewers to look and comment, not for learners.
+
+## Where people get caught out
+
+- **"I sent the review link to the students."** Anyone who has the review link and signs in can read the whole project and leave comments on it. It keeps no results. Learners need **Share…**, not **Share for review…**.
+- **"Nobody's results are coming through."** The plain share link plays the project but keeps nothing for learners. In a StudyDesk page, choose **In a StudyDesk page, and keep learners' results** and paste the code it gives you: that uses the **Link for StudyDesk**, the same project with each signed-in learner's score and progress kept.
+- **"I fixed it but the learners still see the old one."** A share link is a snapshot of when it was made. Open **Share…** and press **Update to the latest version**. Every page that holds the link, including the StudyDesk embed, shows the new version without being touched.
+- **"I fixed it but the file I uploaded is still wrong."** An exported HTML file never updates. Export it again and upload the new file, or use a link instead.
+- **"Can someone edit it from the link?"** No. Share links and review links can't change the project. Only people you invite can.
+
+## How to tell what is going on
+
+- **Share…** remembers your answer for the project in this browser, and says under the thing to copy what to do with it.
+- A line at the top of the dialog says whether there is anything to look at first, from [Before you share](before-you-share).
+- **Results…**, under **More ways to share**, shows how learners did. If it is empty, the learners aren't using the Link for StudyDesk.
+
+**More:** [Where will people use it?](export#where-will-people-use-it), [The Link for StudyDesk](export#the-link-for-studydesk), [Updating, reverting and turning off](export#updating-reverting-and-turning-off), [The review link](comments#the-review-link), [Exporting](export), [Results and progress](results). [Tutorial 5](tutorial-publish) walks through exporting, sharing and inviting people.`}},At=Object.freeze(Object.defineProperty({__proto__:null,concept:St},Symbol.toStringTag,{value:"Module"})),Pt={order:130,area:"construction",topic:{id:"concept-themes-tokens",title:"Theme colours and fixed colours",group:"Concepts",summary:"A colour is either a token, which changes with the theme (Light, Dark, High contrast), or a fixed colour, which never does. Mixing the two is how text vanishes in Dark.",keywords:"concept theme themes token tokens colour color fixed plain hex dark light high contrast vanished invisible text switch does nothing contrast fails starter palette link colours to tokens",body:`A colour in the editor is one of two things:
+
+- A **token**: a named colour such as \`color/text\` or \`color/button\`, with a value for each theme. A layer that uses one changes when the theme changes.
+- A **fixed colour**: just a colour, such as \`#ffffff\`. It is the same in every theme.
+
+The finished interactive picks a theme for each viewer. By default it follows their settings: a viewer who asks for more contrast gets **High contrast**, one in dark mode gets **Dark**, everyone else gets the default theme. So the same page can be drawn three ways, and only the token colours change between them.
+
+## Where people get caught out
+
+- **"I picked a hex colour and High contrast broke."** A fixed colour stays put while the theme changes everything around it. Pick from the **Tokens** tab of the colour picker instead (the arrow beside the swatch), or add a token with that colour in the **Themes** tab and use it.
+- **"My text vanished in Dark."** The text follows a token, which turned light in Dark, but the card behind it is a fixed white, which didn't. Both colours need to be tokens, or both fixed.
+- **"Switching the theme changes nothing."** Nothing in the project uses a token, which is normal for an imported file or an older project. The line **Nothing here follows the theme: these colours are fixed** shows, with **Link colours to tokens**, which turns each plain colour that exactly matches a token into that token and tells you what it will change first.
+- **"The starter colours fail the contrast check on Light."** That is expected. Light is the shared StudyDesk palette as the Toolbox uses it, and some of its pairs fall below WCAG AA. Dark and High contrast pass. Choose different colours for a piece that has to pass on Light.
+- **"I detached it by accident."** Choosing any other colour, or the **x** on a token's chip, keeps the colour as it is now as a fixed colour. Pick the token again from the **Tokens** tab.
+
+## How to tell what is going on
+
+- A colour that follows a token shows a named chip instead of a hex box. Hover it for its value in each theme.
+- **Showing** in the **Themes** tab, and the theme box in the top bar, switch what the canvas draws, so you can look at Dark without leaving the editor. Preview has a theme box and a **Viewer** box that pretends dark mode or more contrast is on.
+- The [Accessibility checker](accessibility-checker) checks text contrast in every theme (a finding that starts "In Dark:" is about Dark), and warns **Theme colour on a fixed colour** for text that follows a token on a fixed background.
+
+**More:** [Themes and colour tokens](themes), [Using a token](themes#using-a-token), [When switching the theme changes nothing](themes#when-switching-the-theme-changes-nothing), [Contrast](themes#contrast), [How the finished interactive picks a theme](themes#how-the-finished-interactive-picks-a-theme).`}},Ct=Object.freeze(Object.defineProperty({__proto__:null,concept:Pt},Symbol.toStringTag,{value:"Module"})),It={order:70,area:"construction",topic:{id:"concept-timelines",title:"Timelines, keyframes and recording",group:"Concepts",summary:"A timeline is a named animation of layer properties. Record turns your changes into keyframes, and several timelines can play at once.",keywords:"concept timeline keyframe key record recording animation design view playhead one key nothing moves two timelines same property fight wins order autoplay",body:`A **timeline** is a named animation on a page. It holds a track for each property it animates, and each track has **keyframes**: a value at a time. Between two keys the value moves from one to the other. A page can have any number of timelines, and more than one can play at the same time.
+
+There are two ways to look at a page. **Design view** shows the layers as they are, with no timeline applied. Pick a timeline in the list beside the Timeline and the canvas shows that timeline at the playhead instead.
+
+**Record** (the red dot) turns every change you make to an animatable property into a keyframe at the playhead. While it is on, a red bar across the top of the Properties panel says **Recording keyframes at …**.
+
+## Where people get caught out
+
+- **"I moved a box to tidy the page and now it slides."** Record was on, so the move became a key. Undo it, switch Record off, and do layout in **Design view**. Going back to Design view switches Record off for you.
+- **"I changed the colour, but only at one point in the animation."** Once a property has keys on the open timeline, changing it changes the key at the playhead (or adds one there), with or without Record. To change the layer's own value, go to Design view.
+- **"My one keyframe does nothing."** A single key holds that value for the whole timeline. Movement needs at least two keys with different values, at different times.
+- **"The animation is there but never plays."** A timeline only plays when something starts it: **Autoplay** in its settings, a **Play or stop an animation** node, a joystick, a blend or a script. The list of timelines says **Nothing plays it** when none of those does.
+- **"Two timelines fight over the same layer."** If both animate the same property while they play, the one further down the list of timelines is applied last and wins. Animate different properties, stop one before playing the other, or use a **Blend in** to hand over from one to the other.
+
+## How to tell what is going on
+
+- The **list of timelines** shows what each timeline animates, what starts it, and marks the timelines that animate the selected layer with **Animates …**.
+- In the Properties panel, the diamond beside a field is coloured when the open timeline animates that property, and glows when there is a key at the playhead. Its tooltip says **Add a keyframe** or **Update the keyframe**.
+- The red bar at the top of the Properties panel is there whenever Record is on.
+- In Preview, the **Events** list and the run highlights on the graph show whether the node that plays the timeline ran.
+
+**More:** [Timelines and keyframes](timelines), [Design view and timeline view](timelines#design-view-and-timeline-view), [Transitions between looks](timelines#transitions-between-looks), [Animation presets](animation-presets), and [Tutorial 1: Your first animation](tutorial-first-animation).`}},jt=Object.freeze(Object.defineProperty({__proto__:null,concept:It},Symbol.toStringTag,{value:"Module"})),Wt={order:170,area:"construction",topic:{id:"concept-user-data",title:"What is remembered, for whom, and for how long",group:"Concepts",summary:"Variables start again on every visit unless you ask for them to be kept. Kept values are per person, per course and per project, and only reach the server from the Link for StudyDesk.",keywords:"concept remember save user data keep between visits next week come back lost answers reset old values testing forget saved data guest browser per course per person",body:`Every variable starts at its starting value each time the project opens. Nothing is kept from last time unless you ask for it, in one of two ways (both under **Options** on a variable in the Variables tab):
+
+- **Remember** keeps the value as part of the learner's progress. A **Score** variable (from **+ Add variable**) has it ticked already. **Start over** puts remembered values back to the start.
+- **Save as user data** keeps the value for that person on its own: it is put back before the project starts, and saved a moment after it changes. Use it for the learner's own work, like journal answers. **Start over** and **Clear results** leave it alone.
+
+Kept values belong to **one person, in one course, in one project**. The same learner in another course starts fresh, and so does the same course in a copy of the project.
+
+## Where it is kept
+
+- **From the Link for StudyDesk**, with a StudyDesk session: on the server, so it follows the learner to another computer.
+- **With no session, from the plain share link, or in an exported file**: at best in that browser only. Another browser or device starts fresh.
+- **In Preview**: in your browser, for this project, so closing and reopening Preview is like a learner coming back.
+
+## Where people get caught out
+
+- **"Their answers were gone the next week."** The variable had neither **Remember** nor **Save as user data** ticked, or they opened it from a link that keeps nothing on the server.
+- **"I see my old answers when I test."** Preview, and the Link for StudyDesk, are keeping your own values from last time. In Preview, **Forget saved data** in the bar starts you as a new learner. **Restart** does not: it runs the project again for the same learner.
+- **"Guests lose everything."** Someone with no StudyDesk session still plays as normal, but what they do is kept in their browser at best, never on the server.
+- **"It isn't saved inside my embedded page."** An embedded page (an instance) keeps no user data. Tick it on a variable in the main project.
+
+## How to tell what is going on
+
+- In Preview, **Forget saved data** only appears once something has been kept, so seeing it tells you a save happened.
+- **Variables (live)** in Preview shows the values the project opened with. If they aren't the starting values, they came back from a save.
+- \`userData.loaded\` is true once saved values have been looked for, and \`userData.restored\` is how many came back. Put \`{userData.restored}\` in a text layer while testing.
+
+**More:** [Save as user data](variables#save-as-user-data), [Save user data and Load user data](results#save-user-data-and-load-user-data), [Where it goes](results#where-it-goes), [A reflection journal that remembers](tutorial-journal).`}},Dt=Object.freeze(Object.defineProperty({__proto__:null,concept:Wt},Symbol.toStringTag,{value:"Module"})),Lt={order:40,area:"construction",topic:{id:"concept-variables-data-bindings",title:"Variables, data sources and bindings",group:"Concepts",summary:"Variables are what changes while it runs, data sources are content loaded from a file, and a binding makes a layer follow either one.",keywords:"concept variable data source binding bound snaps back starting value state list questions content file json csv which one follow property link",body:`Three things work together here, and each has one job.
+
+- A **variable** is a value that changes while the project runs: a score, whether a panel is open, what the learner typed. It has a starting value, and interactions change it from there. Add them in the **Variables** tab.
+- A **data source** is content loaded from a file or a web address: a list of questions, a table of terms, a set of cards. The project reads it; interactions can load it again, but nothing edits it while it runs. Add them in the **Data** tab.
+- A **binding** ties one setting of a layer to a variable or a formula, so the layer follows it by itself. Add them in the **Data bindings** section of the Inspector.
+
+So a progress bar is a variable (\`done\`) plus a binding on the bar's Width (\`done / 10 * 300\`). The questions it counts through can be a data source.
+
+## Which one do I want?
+
+Ask: **does it change while it runs?**
+
+- **Yes, because of what the learner does** (a score, a tick-list of what they picked): a variable. For a list of things, a *List* variable.
+- **No, it's the content** (the questions, the glossary, next term's dates): a data source. Next term you swap the file, not every layer.
+- **A layer should show it**: a binding (or \`{braces}\` in a text layer, which do the same for words).
+
+## Where people get caught out
+
+- **"I typed a value and it snapped back."** That setting is bound. The binding sets it every time the page is drawn, on the canvas and in Preview, so what you type never shows. Look in **Data bindings** (it opens by itself on a layer that has any) and change or remove the binding there.
+- **"I changed the starting value but Preview still shows the old one."** Preview takes the starting values when it starts. Press **Restart** in Preview's bar.
+- **"My Change a value or counter node does nothing."** The variable may be a live one (**Keep up to date** under its formula). A live variable is worked out from its formula and can't be set by hand; the Variables tab says how many nodes try to.
+- **"The learner's dragged position is never saved."** A draggable layer whose X or Y is bound **← In** never writes back to the variable. Bind it **⇄ Both**.
+- **"Should my questions be a variable or a data source?"** If you write them once and the learner only answers them, a data source. If the learner adds, removes or reorders items, a List variable (it can start from the same items).
+
+## How to tell what is going on
+
+- Under each binding, a grey line works it through with the starting values: *the formula is 1, Look up: no line for 1, so it stays 1*. If the layer looks wrong on the canvas, that line usually says why.
+- Under each variable's name, the Variables tab says **used in 3 places** or **not used yet**. Click it to go to each place.
+- In Preview, **Variables (live)** shows every variable as it changes, and you can set one by hand to see what the bindings do with it.
+
+**More:** [Variables](variables), [Data sources](data-sources), [Bindings](bindings#which-way-in-out-or-both), [Tutorial 3](tutorial-state-machine), [Content from a data file](tutorial-data-source).`}},Rt=Object.freeze(Object.defineProperty({__proto__:null,concept:Lt},Symbol.toStringTag,{value:"Module"})),Mt=Object.assign({"./a11y-names.ts":He,"./assets.ts":Ve,"./auto-layout.ts":Ye,"./components.ts":$e,"./coordinates.ts":Xe,"./edit-vs-play.ts":Ze,"./events-actions.ts":tt,"./expressions.ts":ot,"./hit-testing.ts":nt,"./live-revisions.ts":rt,"./notes-comments.ts":dt,"./only-if.ts":ct,"./pages-masters.ts":ut,"./reduced-motion.ts":mt,"./repeaters.ts":yt,"./responsive-variants.ts":ft,"./results.ts":vt,"./seeds-random.ts":Tt,"./share-export.ts":At,"./themes-tokens.ts":Ct,"./timelines.ts":jt,"./user-data.ts":Dt,"./variables-data-bindings.ts":Rt}),c=Object.entries(Mt).filter(([e])=>!/\/index\.ts$/.test(e)).map(([,e])=>e.concept).filter(Boolean).sort((e,t)=>e.order-t.order||e.topic.title.localeCompare(t.topic.title)),Et={id:"concepts",title:"Concepts: the ideas behind the editor",group:"Concepts",summary:"Short explanations of the ideas that catch people out: what the canvas shows, variables and bindings, repeaters, auto layout, what gets clicked and more.",keywords:"concepts ideas explain why confused does nothing not working understand how it works basics",body:()=>{const e=[`Each of these is a few minutes' read: the idea, the ways people get caught out, and how to tell what is going on. If something "does nothing", start with the first one.`,""];for(const t of c)e.push(`- [${t.topic.title}](${t.topic.id}). ${t.topic.summary}`);return e.join(`
+`)}},Ot=[Et,...c.map(e=>e.topic)];let p=null;const Ft=e=>{p=e},qt=["Getting started","Build it","Concepts","Design","Web elements","Motion","Interactivity","Data","Import and export","Working together","Reference"],Bt=[{id:"welcome",title:"Welcome to Interactives",group:"Getting started",summary:"What Interactives is, how a project fits together, and where to start.",keywords:"intro overview start getting started tutorial beginner first learn new user onboarding glossary words",body:`Interactives builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on pages, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
 
 ![The editor: tools down the left edge, then Layers, Assets, Libraries and Comments, the pages in the middle, the Properties panel on the right, and the Timeline, Interactions, Scripts, Variables, Data and other tabs along the bottom. Share and Export are at the top right.](help/editor-overview.png)
 
@@ -1702,7 +3727,7 @@ The technical name of a node is in its tooltip and in search, and **Technical wo
 
 See [Using this help](help) for the detail.
 
-> Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`},...S,...oe,...he,{id:"projects",title:"Projects page",group:"Getting started",summary:"Start a new project (blank, a copy, a built-in template or an example), open, duplicate, import and delete projects, and organise them with folders, tags, search and sort.",keywords:"home new project start blank chooser copy clone import duplicate delete package ixp god mode power user folder folders tag tags search sort organise organize filter bin trash undelete restore recover deleted",body:`The projects page lists the projects you own. Each card shows a picture of the project's start page, its name, when it last changed, how many pages it has, its tags and a folder menu.
+> Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`},...S,...ze,...Ot,{id:"projects",title:"Projects page",group:"Getting started",summary:"Start a new project (blank, a copy, a built-in template or an example), open, duplicate, import and delete projects, and organise them with folders, tags, search and sort.",keywords:"home new project start blank chooser copy clone import duplicate delete package ixp god mode power user folder folders tag tags search sort organise organize filter bin trash undelete restore recover deleted",body:`The projects page lists the projects you own. Each card shows a picture of the project's start page, its name, when it last changed, how many pages it has, its tags and a folder menu.
 
 ![The projects page: the folder list on the left, the search box, sort menu and tag filter along the top, and a card for each project.](help/projects-page.png)
 
@@ -2841,7 +4866,7 @@ Select a child of an auto-layout frame and its **Layout item** section says how 
 ![Ticking Auto margin: Left on the button pushes it to the end of the toolbar. Then changing Grow on a card changes how much of the free room it takes.](help/layout-item.mp4)
 
 - **Position**: *In flow* (laid out with its siblings), *Absolute* (placed by **Inset** from the frame's edges, e.g. pinned to the bottom right; leave a side empty (*auto*) to leave that edge free, and set left and right, or top and bottom, to stretch a layer that isn't fixed size) or *Ignore* (keeps its own x/y and takes no room, and has no sizing fields).
-- **Width** and **Height**:
+- **W** and **H** (width and height):
   - *Fixed*: its own size.
   - *Hug*: fits its own contents (frames and text).
   - *Fill*: along a row or column, shares the frame's free space with the other fill children; across it, stretches; in a grid, fills its cell.
@@ -2939,7 +4964,7 @@ Photos in the catalogue have their own terms of use. Check them before you publi
 
 ## Quick start: a phone version
 1. Select an artboard (click its name above it on the canvas) and open **Responsive** in the Inspector.
-2. Click **Add narrow variant**. You get a copy, 360 px wide, to the right on the canvas. The original becomes the **base** and is shown from **600 px**; the copy is shown below that.
+2. Click **Add narrow variant**. You get a copy, 360 px wide, to the right on the canvas. The original becomes the **base** and is shown from about 70% of its own width, at most **600 px** (**560 px** for an 800 px page); the copy is shown below that. Change the **from** width to suit.
 3. Rearrange the copy for a narrow page: move, resize and restyle its layers. Its timelines and interactions are its own copies too, so change them if the phone needs something different.
 4. Click **Preview**. A **Page width** slider appears under the top bar, with the breakpoint marked. Drag it across 600 and the player switches artboard while it runs.
 
@@ -3246,7 +5271,7 @@ Iris, Zoom in, Star, Diamond, Heart and Clock start from **Opens from**: **The c
 
 **Speed** says how long the change takes: **Slow** (600 ms), **Medium** (300 ms), **Fast** (150 ms) or **Custom**, which shows a box for the milliseconds. It sits beside the look and is left out for Instant. Medium is what every page change already had, so nothing in an existing project plays differently. The Inspector's sentences say it too, as in "go to the next page (iris, slow)".
 
-A learner whose device asks for less motion always gets an instant change.
+With **Respect reduced motion** ticked in the [Project settings](project-settings), a learner whose device asks for less motion gets an instant change instead. It is off in a new project.
 
 In a script, \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer named Door, and a point is \`{ x: 25, y: 50, percent: true }\`. See [Scripts](scripts).
 
@@ -4565,7 +6590,7 @@ Examples:
 | Rotation | \`speed * 3\` |
 | Solo: active child | \`mode\` (a choice whose options are the children's names) |
 
-A bound property shows a link icon and can't be changed by hand or keyframed until you remove the binding. Every animatable property can be bound (see [Animatable properties](animatable-properties)), and so can every other plain setting the layer has, such as a video's **Autoplay** or **Src**, or a polygon's sides. A video layer also lists **Playback position (s)**, **Playing**, **Length (s)** and **Ended**, which come from the video itself.
+A bound property takes its value from the binding, on the canvas and in Preview, so a value typed into its field or keyed on a timeline is replaced by the binding's. The field itself has no lock or marker: **Data bindings** lists everything that is bound. Remove the binding to set the property by hand. Every animatable property can be bound (see [Animatable properties](animatable-properties)), and so can every other plain setting the layer has, such as a video's **Autoplay** or **Src**, or a polygon's sides. A video layer also lists **Playback position (s)**, **Playing**, **Length (s)** and **Ended**, which come from the video itself.
 
 ## Which way: in, out or both
 Each binding has **← In**, **Out →** and **⇄ Both** at the top.
@@ -4869,7 +6894,7 @@ The Light pairs that fall short are:
 
 ## How the finished interactive picks a theme
 In this order:
-1. The page or a script chose one: \`player.setTheme('Dark')\`, \`ix.setTheme('Dark')\`, the **Switch the colour theme** action, or \`theme="Dark"\` on \`<interactives-player>\`. A message \`{ target: 'interactives', type: 'setTheme', theme: 'Dark' }\` to the single-file export does the same.
+1. The page or a script chose one: \`player.setTheme('Dark')\`, \`ix.setTheme('Dark')\`, the **Set theme** action, or \`theme="Dark"\` on \`<interactives-player>\`. A message \`{ target: 'interactives', type: 'setTheme', theme: 'Dark' }\` to the single-file export does the same.
 2. Otherwise, with **Follow the viewer's settings** on (the default): a **High contrast** theme for a viewer who asks for more contrast (\`prefers-contrast: more\`) or uses forced colours, a **Dark scheme** theme for \`prefers-color-scheme: dark\`, else the default theme. It changes live when the viewer's setting does.
 3. \`"auto"\` or \`null\` in step 1 goes back to step 2.
 
@@ -5905,7 +7930,7 @@ ${t}
 ### Switching colourway
 Select nothing (or a page) and open **Project** in the Inspector. The **Colourway** swatches change the theme the project opens in. It is one undo step, and the canvas and Preview show it straight away.
 
-Tick **Let learners switch colourway** to add a small row of swatches to the top right of the start page. Each one is a button that runs the interaction graph's **Switch the colour theme** action, so learners can pick the colour they find easiest to read. The swatches are brand layers: they stay where they are, and unticking the box removes them.
+Tick **Let learners switch colourway** to add a small row of swatches to the top right of the start page. Each one is a button that runs the interaction graph's **Set theme** action, so learners can pick the colour they find easiest to read. The swatches are brand layers: they stay where they are, and unticking the box removes them.
 
 ### Contrast
 Every starter, in every colourway and High contrast, meets WCAG 2.2 AA: 4.5:1 for text (3:1 for large text), and 3:1 for the edge of a button, the focus ring, a progress bar against its track and chart marks. A test holds every page of every starter to it, including the states that show feedback and open dialogs, so a colourway change can't slip under it.
@@ -6186,8 +8211,8 @@ It is probably **locked**, or **hidden** (shown as a faint ghost). Hover it for 
 **A layer is in the editor but not in Preview.**
 Check that it is **Visible**; that it isn't hidden by a **Solo** group's active child; that it sits inside the page (**Clip content to page** hides what is outside in Preview and in exports; on the canvas the part outside shows faintly); and that no mask above it is clipping it. See [Groups and frames](groups-frames).
 
-**A field is greyed out and has a link icon.**
-It is bound to an expression. Remove the binding in **Data bindings** to edit it by hand. See [Bindings](bindings).
+**I change a field and it goes back.**
+The property is probably bound: the binding sets it again straight away. Look in the layer's **Data bindings** section, and remove the binding there to edit it by hand. See [Bindings](bindings).
 
 ## Text, variables and expressions
 **My text shows \`{score}\` instead of the number.**
@@ -6305,4 +8330,4 @@ Preview sits above the help drawer so it never covers its controls. Asking for h
 - **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.
 - **Pictures and clips**: click a picture to open it full size. Clips play on a loop without sound, and have controls if you want to pause.
 - **Tooltips**: hover a button or a field's name for a short explanation. Turn them off in [Preferences](preferences).
-- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).`}];function ue(e){return typeof e.body=="function"?e.body():e.body}function ge(e){return de.find(t=>t.id===e)}export{pe as GROUPS,de as TOPICS,ge as getTopic,ce as provideBrandedHelp,ue as topicBody};
+- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).`}];function zt(e){return typeof e.body=="function"?e.body():e.body}function _t(e){return Bt.find(t=>t.id===e)}export{qt as GROUPS,Bt as TOPICS,_t as getTopic,Ft as provideBrandedHelp,zt as topicBody};
