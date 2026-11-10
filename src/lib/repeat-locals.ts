@@ -1,4 +1,4 @@
-import { tryEvaluate, type Artboard, type Project } from 'interactives-player';
+import { pickedCopies, tryEvaluate, type Artboard, type Project } from 'interactives-player';
 import { locate } from '../store/doc';
 import { previewScope } from './data';
 
@@ -20,13 +20,20 @@ export function repeatLocals(project: Project, ab: Artboard, id: string): { loca
     vars = {};
   }
   let extra: Record<string, unknown> = {};
+  let selecting = false;
   for (const r of repeaters) {
     const items = tryEvaluate(r.repeat!.items, { vars, extra }, []);
     const list = Array.isArray(items) ? items : items && typeof items === 'object' ? Object.values(items) : [];
-    extra = { ...extra, item: list[0], index: 0 };
+    // A repeater with a selection gives its copies isSelected (and item.selected on records): the first copy's, from the variable's starting value
+    const sel = r.repeat!.select;
+    const byName = sel ? project.variables.find((v) => v.id === sel.variable)?.name : undefined;
+    const picks = sel && byName ? pickedCopies(sel, () => vars[byName]) : null;
+    const first = list[0] && typeof list[0] === 'object' && !Array.isArray(list[0]) && picks && !('selected' in (list[0] as object)) ? { ...(list[0] as object), selected: picks.has(0) } : list[0];
+    extra = { ...extra, item: first, index: 0, ...(picks ? { isSelected: picks.has(0) } : {}) };
+    if (picks) selecting = true;
   }
-  return { locals: ['item', 'index'], values: list0(extra) };
+  return { locals: selecting ? ['item', 'index', 'isSelected'] : ['item', 'index'], values: list0(extra) };
 }
 
 //An empty list leaves item undefined, which the checker reads as "depends on what happens when it runs"
-const list0 = (extra: Record<string, unknown>) => (extra.item === undefined ? { index: 0 } : { item: extra.item, index: 0 });
+const list0 = (extra: Record<string, unknown>) => ({ ...(extra.item === undefined ? {} : { item: extra.item }), index: 0, ...('isSelected' in extra ? { isSelected: extra.isSelected } : {}) });

@@ -19,6 +19,7 @@
  */
 import { REPEAT_SEP, artboardScope, isContainer, pageInfo, prepareNodes, relayoutTree, startingValue, evaluate, textAutoSize, withMaster, type Artboard, type CopySizes, type ExprScope, type Project, type SceneNode, type TextNode } from 'interactives-player';
 import { LOGO_CLEAR, OVERLAY_TAG, type LayoutState } from './kit';
+import { previewValue } from '../data';
 
 export type ViolationKind = 'button-text' | 'logo-clear' | 'text-overflow' | 'control-overflow' | 'text-chrome' | 'text-text';
 
@@ -261,7 +262,7 @@ function settledLook(page: Artboard, nodes: SceneNode[]): void {
 function drawn(project: Project, page: Artboard, scope: ExprScope): SceneNode[] {
   const source = withMaster(project.artboards, page);
   const sizes: CopySizes = new Map();
-  let nodes = prepareNodes(source, scope, { measured: sizes });
+  let nodes = prepareNodes(source, scope, { measured: sizes, variableValue: previewValue(project, scope.vars) });
   for (let pass = 0; pass < 4; pass++) {
     let changed = false;
     const visit = (list: SceneNode[]) => {
@@ -278,7 +279,7 @@ function drawn(project: Project, page: Artboard, scope: ExprScope): SceneNode[] 
     };
     visit(nodes);
     if (!changed) break;
-    nodes = prepareNodes(source, scope, { measured: sizes });
+    nodes = prepareNodes(source, scope, { measured: sizes, variableValue: previewValue(project, scope.vars) });
   }
   const mine = structuredClone(nodes) as SceneNode[];
   settledLook(page, mine);

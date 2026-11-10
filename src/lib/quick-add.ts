@@ -35,7 +35,7 @@ export function variableNameFrom(raw: string, taken: string[], suggested = 'valu
 }
 
 /** Ask for a name and make a variable; resolves to its id (null if the person cancelled). */
-export async function createVariable(type: VariableType = 'number', suggested = 'value'): Promise<string | null> {
+export async function createVariable(type: VariableType = 'number', suggested = 'value', start?: number | string | boolean): Promise<string | null> {
   const taken = store().get().project.variables.map((v) => v.name);
   const raw = await promptDialog({
     title: 'New variable',
@@ -46,7 +46,7 @@ export async function createVariable(type: VariableType = 'number', suggested = 
   if (raw === null) return null;
   const name = variableNameFrom(raw, store().get().project.variables.map((v) => v.name), suggested);
   const id = uid('v');
-  const initial = type === 'number' ? 0 : type === 'boolean' ? false : type === 'color' ? LIGHT_LOOK.button : '';
+  const initial = start ?? (type === 'number' ? 0 : type === 'boolean' ? false : type === 'color' ? LIGHT_LOOK.button : type === 'list' ? '[]' : '');
   store().update((d) => {
     d.variables.push({ id, name, type, initial });
   });
@@ -58,14 +58,14 @@ export async function createVariable(type: VariableType = 'number', suggested = 
  * Wrap a dropdown's onChange so the "add new" entries create the item first, then select it.
  * `variableType` is the type a new variable gets.
  */
-export function withQuickAdd(onChange: (v: string) => void, opts: { asset?: PickKind; variableType?: VariableType; variableName?: string } = {}) {
+export function withQuickAdd(onChange: (v: string) => void, opts: { asset?: PickKind; variableType?: VariableType; variableName?: string; variableInitial?: number | string | boolean } = {}) {
   return (v: string) => {
     if (v === ADD_ASSET && opts.asset) {
       void pickNewAsset(opts.asset).then((id) => id && onChange(id));
       return;
     }
     if (v === ADD_VARIABLE) {
-      void createVariable(opts.variableType, opts.variableName).then((id) => id && onChange(id));
+      void createVariable(opts.variableType, opts.variableName, opts.variableInitial).then((id) => id && onChange(id));
       return;
     }
     onChange(v);

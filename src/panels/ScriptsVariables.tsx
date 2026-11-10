@@ -15,6 +15,7 @@ import { analyzeUsage, type Usage } from '../lib/dependencies';
 import { VARIABLE_KINDS, TYPE_LABELS, variableFor, type VariableKind } from '../lib/variable-kinds';
 import { go, sourceLabel } from './UsagePanel';
 import { SectionBlurb } from '../components/SectionBlurb';
+import { ListTable } from '../components/ListTable';
 
 const SCRIPT_TEMPLATE = `// Runs with \`ix\` (the player API), \`event\` (what triggered it) and \`vars\`.
 // Tick "Run on start" to register handlers when the player starts.
@@ -132,15 +133,6 @@ ix.log(...)`}</pre>
       </div>
     </SplitColumns>
   );
-}
-
-/** Whether text is a JSON array (what a list variable's starting value has to be). */
-function validList(text: string): boolean {
-  try {
-    return Array.isArray(JSON.parse(text));
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -379,18 +371,8 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
         {v.type === 'boolean' && <CheckField label={v.initial ? 'true' : 'false'} value={!!v.initial} onChange={(x) => setVar(v.id, { initial: x })} />}
         {v.type === 'color' && <ColorField value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
         {v.type === 'list' && (
-          <div className="enum-edit">
-            <TextField
-              value={String(v.initial)}
-              multiline
-              mono
-              rows={3}
-              commitOnBlur
-              title="The starting items as JSON: an array, usually of objects"
-              placeholder={'[{"name": "Ann"}, {"name": "Bo"}]'}
-              onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)}
-            />
-            {!validList(String(v.initial)) && <div className="error small">Not a JSON array, so the list starts empty.</div>}
+          <div>
+            <ListTable label={`${v.name} starting items`} value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} jsonTitle="The starting items as JSON: an array, usually of objects" />
           </div>
         )}
         {v.type === 'enum' && (

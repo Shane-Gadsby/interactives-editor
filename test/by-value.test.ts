@@ -15,6 +15,7 @@ describe('By value table helpers', () => {
     const inRepeater = whenChoices(vars, { locals: ['item', 'index'], values: { item: { text: 'a', state: 'wrong', 'odd key': 1 }, index: 0 } });
     expect(inRepeater.map((c) => c.value)).toEqual(['mood', 'open', 'score', 'item.text', 'item.state', 'index']);
     expect(whenChoices([], { locals: ['item', 'index'], values: { item: 'plain', index: 0 } }).map((c) => c.value)).toEqual(['item', 'index']);
+    expect(whenChoices([], { locals: ['item', 'index', 'isSelected'], values: { item: 'plain', index: 0, isSelected: true } }).map((c) => c.value)).toEqual(['item', 'index', 'isSelected']);
   });
 
   it('tells a plain choice from a formula', () => {
