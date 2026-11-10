@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Live shared responses**: word clouds and polls now update live on the StudyDesk learner page. When anyone in the course adds or takes back an answer, or you hide or clear one, everyone sees the new counts within a second or so. Where the live link can't be made, the page still checks every few seconds as before, and the Look again setting is now that backup check.
 - **Describe it**: describe what you want in Ctrl+K, for example "make this go to the results page", "when clicked show the hint" or "add 1 to score". The behaviour box opens already filled in, with a note of what it understood, for you to check and Add.
 - **Apply the UniSQ look**: for a project that didn't start from a branded starter, pick a colourway in the Themes tab, in Project settings or in Ctrl+K. The pages get the UniSQ logo and accent bar as a page master, the colourway becomes the opening theme, and your own layers stay as they are. One undo takes it all back.
 - **Every tutorial is guided**: every Build it tutorial now ticks its steps itself when you've done them (a question added, a variable made, a click wired up, a timeline keyed, a dialog set up) and has Show me buttons that ring the tool, tab or button the step talks about. Steps that only ask you to read, or that happen outside the editor, are still ticked by hand.
