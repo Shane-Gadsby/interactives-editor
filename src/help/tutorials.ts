@@ -175,8 +175,8 @@ Names can only use letters, digits and \`_\`, and can't start with a digit. That
 A *binding* keeps a property up to date with an expression.
 
 1. Select **Bulb** and scroll the Properties panel to **Data bindings**.
-2. Choose **Fill colour** in the dropdown and press **Bind**.
-3. In the expression box that appears, type:
+2. Press **+ Add binding** and pick **Fill colour** (type \`fill\` to find it quickly).
+3. A row for the binding appears. Choose **Formula** rather than **Variable**, and in the box under it type:
 
 \`\`\`
 lit ? "#ffd23f" : "#c9ced6"

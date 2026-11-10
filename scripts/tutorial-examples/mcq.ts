@@ -25,7 +25,7 @@ function build(): Project {
     reveal: true,
     report: 'complete',
   });
-  p.reporting = { scoreFrom: 'questions', passMark: 50 };
+  p.settings.reporting = { scoreFrom: 'questions', passMark: 50 };
   return p;
 }
 
