@@ -2765,6 +2765,13 @@ Under the list there are three more things, all optional, and a plain click does
 
 The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the event, for building the flow by hand in the graph.
 
+### Describe it in words
+You do not have to find the right item in the list. Select the layer, press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type what you want in a plain sentence, such as **make this go to the results page**, **when clicked show the hint**, **play a sound when this is clicked**, **add 1 to score** or **after 5 seconds go to the next page**. The first row says what it understood. Press <kbd>Enter</kbd> and this same box opens already filled in: the thing to do, **It starts when**, and any **then also**, **only if** or **otherwise** you described. A note above the list says what it read from your words. Check it, change anything, and press **Add**.
+
+It matches fixed phrasings, not an AI service, and nothing you type leaves the editor. The names of your layers, pages, values, animations and sounds are looked up in the open project, in any case, with a plural or a small typo forgiven. Anything it could not find (a page called something you have not made) is listed in the note, and you choose it in the box. A part of the sentence it could not read is listed too and left out. If it cannot read the sentence at all, the palette says so and offers this box empty.
+
+It works for most of the list: pages, showing and hiding, a layer's colour, text, opacity or size, animations, sounds and music, video, adding to or taking from a number, setting a text or a switch, putting values back, saying something to a screen reader, opening a link and starting over. For **It starts when** it knows **after 5 seconds**, **when the page opens**, **when hovered**, **when score reaches 10**, **when I press space**, **when dropped on the bin** and **when the video reaches 10 seconds**. Join steps with **then**, **and** or a comma, add **only if score is at least 3**, and give **otherwise** what to do when it is not true. It needs a layer to attach the behaviour to, so select one first, or name it: **when the Start button is clicked, show the hint**.
+
 ### Counting what is done
 Choose **all of these are done** under **It starts when** and the thing you picked to happen runs once every layer you tick has been done. Or choose **Count what has been done…** from the list to get only the counting, with nothing to run at the end. Either way you answer three questions:
 - **Each counts as done when it is**: *clicked*, *opened (a pop-up or dialog layer)* or *answered (a question)*. Opened works for a frame with the **Dialog** setting and an **open value**. Answered works for a layer made into a question. Only layers that can be done that way are listed.
@@ -3386,7 +3393,7 @@ A question keeps its settings on its frame, and each part layer is marked as par
     title: 'The command palette',
     group: 'Getting started',
     summary: 'Ctrl+K: type what you want to do, and do it, without hunting through menus.',
-    keywords: 'command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share',
+    keywords: 'command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share describe it sentence words plain behaviour',
     body: `Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
 
 ![The command palette searching for timeline: the New timeline and Open Timeline commands, then matching help pages.](help/command-palette.png)
@@ -3400,6 +3407,7 @@ Each row shows its **shortcut** if it has one (your own keys, if you changed the
 - **Selection**: duplicate, delete, group, ungroup, the four ordering commands, hide or show, lock, select all.
 - **Animate**: **Fade in**, **Slide in**, **Pop**, **Pulse**, **Shake**, **Fade out** on the selected layers (see [Animation presets](animation-presets)). They use the **When** and **Delay** chosen in the Animate section.
 - **Behaviours**: **When clicked: Go to the next page**, **Show a layer**, **Play a sound** and the other [behaviours](interactions) for the selected layer: it opens the behaviour dialog on that one.
+- **Describe it**: type a sentence, such as **when clicked show the hint** or **add 1 to score**, and the first row opens the behaviour dialog already filled in with what it understood, for you to check and **Add**. See [Describe it in words](interactions#describe-it-in-words).
 - **View**: zoom, grid, rulers, notes, bones, snapping and each snap target, page arrows.
 - **Tools**: pick any tool, with its key.
 - **Panels** and **Workspaces**: open any panel (Timeline, Interactions, Accessibility, Usage...) or switch to any workspace, built in or saved.

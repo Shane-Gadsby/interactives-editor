@@ -12068,6 +12068,22 @@ button.flow-text:focus-visible {
   color: var(--muted);
   font-size: 12px;
 }
+/* what Describe it understood from the sentence, above the list */
+.behaviour-described {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--primary-bg);
+  background: var(--panel-2);
+  font-size: 12px;
+}
+.behaviour-described p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.behaviour-described p + p {
+  margin-top: 2px;
+  color: var(--muted);
+}
 .behaviour-preview {
   margin: 2px 0 8px;
   min-height: 1.4em;
