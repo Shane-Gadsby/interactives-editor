@@ -13,6 +13,8 @@ export function ListTable({ value, onChange, label, jsonTitle, placeholder }: { 
   const [note, setNote] = useState<string | null>(null);
   //The columns the list had when it last had rows, so emptying it out does not forget them
   const columns = useRef<string[]>([]);
+  //(an edit that leaves the text the same, like renaming a column of an empty list, still draws the table again)
+  const [, redraw] = useState(0);
   const lg = listToGrid(value, columns.current);
   if (lg && lg.grid.rows.length) columns.current = lg.grid.columns;
   const showing = view === 'table' && lg ? 'table' : 'json';
@@ -35,7 +37,11 @@ export function ListTable({ value, onChange, label, jsonTitle, placeholder }: { 
         </button>
       </div>
       {showing === 'table' && lg ? (
-        <DataTable grid={lg.grid} label={label} onProblem={setNote} onChange={(g) => onChange(gridToListText(g, lg.plain))} />
+        <DataTable grid={lg.grid} label={label} onProblem={setNote} onChange={(g) => {
+            columns.current = g.columns;
+            redraw((n) => n + 1);
+            onChange(gridToListText(g, lg.plain));
+          }} />
       ) : (
         <TextField value={value} multiline mono rows={4} commitOnBlur title={jsonTitle ?? 'The items as JSON: an array, usually of objects'} placeholder={placeholder ?? '[{"name": "Ann"}, {"name": "Bo"}]'} onChange={onChange} />
       )}

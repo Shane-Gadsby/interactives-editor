@@ -3505,12 +3505,16 @@ A name that another variable or a data source already has is refused. A question
 | True/false | \`true\` or \`false\` |
 | Colour | \`#ffb448\` |
 | Choice | One of a list of options you define, like \`easy\`, \`medium\`, \`hard\` |
-| List | Items, usually objects: \`[{"name": "Ann"}, {"name": "Bo"}]\` |
+| List | Items, usually a row of fields each: a table with a column for \`name\`, a row for Ann and a row for Bo |
 
 Choice variables show as a dropdown wherever you set them, so you can't type a value that isn't on the list. In expressions, \`enums.difficulty\` is the list of that choice's options, so \`enums.difficulty.indexOf(difficulty)\` is its position. A solo group's **active child** can be bound straight to a choice whose options are the children's names.
 
 ## Lists
-A list variable holds the items a [repeater](repeaters) draws. Put its name in **Repeat → Items**, and \`item\` and \`index\` are the current one. The starting items are JSON text in the Variables tab. Text that is not a JSON array makes an empty list.
+A list variable holds the items a [repeater](repeaters) draws. Pick it in the repeater's **Repeat for each**, and \`item\` and \`index\` are the current one.
+
+The starting items are a **table** in the Variables tab: a row for each item and a column for each thing it holds (\`name\`, \`price\`). Type in a cell to change it, and use the **Row** and **Column** buttons above the table to add, copy, delete and move them. A cell can hold text, a number, yes or no, or nothing (the **Cell** choice above the table says which). A plain list of words or numbers is a table with one column, \`value\`. Give that column another name, or add a column, and the items become records with fields. Press **JSON text** over the table to see and type the same list as JSON, for example \`[{"name": "Ann"}, {"name": "Bo"}]\`, and **Table** to come back. A list with lists or groups inside its items has no table, only the text. Text that is not a JSON array makes an empty list.
+
+A repeater with a **Selection** writes the copies people pick into a variable: a *Number* for one pick (the place of the copy, from 0, or -1 for none) or a *List* for several (the places picked). Read it like any other variable (see [Repeated lists](repeaters#selection)).
 
 Change the list while it runs with **Change a value or counter**. Its **Do** box has these list choices:
 - *Add to the end of the list* adds an item (\`{name: "Cy"}\`).
@@ -3625,7 +3629,7 @@ You can write an expression in four places:
 - **Text**: anything in \`{braces}\`.
 - **Bindings**: a property's value. See [Bindings](bindings).
 - **Node settings** marked *expr*, such as the value of **Change a value or counter** or the condition of **Check a condition**.
-- **Repeat → Items**: the list to repeat over.
+- **Repeat → Repeat for each**: the list to repeat over (a list variable, a data source, items you type, or a formula).
 
 In repeated copies, \`item\` and \`index\` are the current list item and its position. In interactions, \`event\` describes what fired.
 
@@ -4361,7 +4365,7 @@ Test with a keyboard, a screen reader and your own eyes as well.`,
 - **Refresh** (URLs): fetch again every n seconds; 0 loads once.
 - The right-hand side shows the file and lets you change it: see **Editing a data file** below. For any source it also lists the field names you can use.
 
-Use a source by its **name** anywhere expressions go: \`{products.length} products\`, a binding \`products[0].price\`, or **Repeat → Items** \`products\`. Scripts read \`ix.data.products\`.
+Use a source by its **name** anywhere expressions go: \`{products.length} products\`, a binding \`products[0].price\`, or **Repeat → Repeat for each** **Data: products**. Scripts read \`ix.data.products\`.
 
 **Load data** reloads a source (optionally from a different URL), and **When data has loaded** fires when it arrives. The host page can push data with \`player.setData('products', [...])\`.
 
@@ -4578,13 +4582,18 @@ Only the course, the learner's first name and display name, and whether they are
     title: 'Repeated lists',
     group: 'Data',
     summary: 'Copy a layer once per item in a list, with item and index in scope.',
-    keywords: 'repeat repeater list loop for each item index grid table',
+    keywords: 'repeat repeater list loop for each item index grid table type my own items selection select pick one several isSelected checkbox radio selected',
     body: `A **repeater** copies one layout once for each item in a list: a row for every product, a card for every question. Add an item to the list and a new copy appears.
 
 ## Turn it on
-Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the first child for each item**. Its **first child** is then copied once per item in **Items**. Items is an expression that gives a list, like \`products\` or \`[1, 2, 3]\`.
+Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the first child for each item**. Its **first child** is then copied once per item in **Items**. **Repeat for each** is where the items come from. Pick one of:
 
-**Items** can be a [data source](data-sources) or a *List* [variable](variables). The repeater redraws when the list changes, so a *Change a value or counter* node that adds to the list adds a row.
+- a **List** [variable](variables), so the items are the table in the Variables tab,
+- a [data source](data-sources),
+- **Type my own items**, which opens the same table right here, with a row for each copy and a column for each thing it holds. Nothing else needs to exist: the items live on this layer. Inside the copies use \`{item.text}\` for a column called *text*, or \`{item}\` for a plain list of words or numbers,
+- **A formula (advanced)**, an expression that gives a list, like \`products.filter(p => p.inStock)\` or \`[1, 2, 3]\`. A list that is already a name or typed table is shown as one of the choices above.
+
+The repeater redraws when the list changes, so a *Change a value or counter* node that adds to the list adds a row.
 
 Inside the copies, \`item\` is the current item and \`index\` is its position, counting from 0: \`{index + 1}. {item.name} - {item.price}\`. In a text or button label inside the copies, **Insert value** lists the item's fields (read from the first item) so you can pick one instead of typing it.
 
@@ -4601,8 +4610,20 @@ A height or width you bind on the template layer still wins. Only copies whose t
 ## Instances in a repeater
 Instances in a repeater can take their [inputs](instances) from the item. Select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
 
+## Selection
+Set **Selection** under the repeater to let people pick copies without any nodes:
+
+- **One at a time** keeps one pick: choosing a copy un-chooses the others (a choose-one picker, tabs, the open section of an accordion). The variable it writes holds the copy's number from 0, or -1 for none. Tick **Click again to clear** and a second click on the picked copy picks nothing.
+- **Several** switches each copy on and off (flip cards, a tick-list). The variable it writes is a *List* of the numbers picked.
+
+When you choose one, a box asks for a name for the variable (it suggests \`selectedIndex\` or \`selectedItems\`); you can pick another variable of the right kind later in **Remember the pick in**. It is an ordinary variable: read it in formulas and bindings, put it back to the start with *Put values back to the start*, or change it from a node.
+
+Inside the copies, \`isSelected\` is true for a picked copy, so a binding on Fill colour can be \`isSelected ? "#ffffff" : "#1f3a68"\`. If the items are records, \`item.selected\` says the same. **By value** offers \`isSelected\` as something to base a table on, with a row for true and one for false. Outside the copies, \`index == selectedIndex\` or \`selectedItems.includes(index)\` do the same job.
+
+A click, <kbd>Enter</kbd> or <kbd>Space</kbd> on a copy picks it, and the arrow keys, <kbd>Home</kbd> and <kbd>End</kbd> move between the copies. The copies are radio buttons (one) or checkboxes (several) and say whether they are checked to a screen reader, and the repeater is a radio group for one. If the layer you repeat already has its own **Role** or **Checked** setting, that is kept. The click is also an ordinary click, so a **When clicked or hovered** event on the same layer still runs, after the pick is written.
+
 ## Clicks and the keyboard
-Clicks on a copy fire **When clicked or hovered** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked.
+Clicks on a copy fire **When clicked or hovered** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked. For keeping track of which were clicked, **Selection** above does it for you.
 
 For lists a keyboard user moves through, tick **Keyboard navigation** under the repeater. One copy is the Tab stop and the arrow keys move between the rest (see [Accessibility](accessibility#keyboard-navigation)).`,
   },

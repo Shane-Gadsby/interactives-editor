@@ -51,7 +51,7 @@ It makes two face-down cards from every pair, both with the pair's number, and s
 
 1. On **Memory**, press <kbd>F</kbd> and drag a frame across most of the page, below the top. Name it **Cards**.
 2. Press <kbd>B</kbd> and drag a button inside the frame, about 170 by 100. A layer you draw over a frame goes into it. Name the button **Card**.
-3. Select **Cards**. In its **Repeat (list)** section tick **Repeat the first child for each item**. Set **Items** to \`cards\`, **Layout** to **Grid**, **Cols** to \`4\` and **Gap** to \`12\`. Twelve cards appear in three rows of four.
+3. Select **Cards**. In its **Repeat (list)** section tick **Repeat the first child for each item**. Set **Repeat for each** to **List: cards**, **Layout** to **Grid**, **Cols** to \`4\` and **Gap** to \`12\`. Twelve cards appear in three rows of four.
 4. Select **Card** and set its **Label** to:
 
 \`\`\`

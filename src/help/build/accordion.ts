@@ -52,7 +52,7 @@ Auto layout puts the text under the header for you. Both are empty until the sec
 ## 4. Put the section in the accordion and repeat it
 
 1. In the **Layers** panel, drag the **Section** row onto the middle of the **Accordion** row. Accordion is outlined, and Section goes inside it.
-2. Select **Accordion**. In **Repeat (list)** tick **Repeat the first child for each item** and replace the sample list in **Items** with \`sections\`. Leave **Layout** on **Column**.
+2. Select **Accordion**. In **Repeat (list)** tick **Repeat the first child for each item** and set **Repeat for each** to **List: sections**. Leave **Layout** on **Column**.
 
 Four sections appear, one under the other, each with its own title and text. The first has a minus sign, because \`open\` holds 0, and the others have a plus.
 
@@ -107,7 +107,7 @@ Change the **Value** in step 5 to \`event.index\` and **Do** to **Add to the lis
 Tabs show one section's text at a time under a row of titles. They read the same \`sections\` list.
 
 1. Add a **Counter** variable called \`tab\`, starting at 0.
-2. Make a button with the **Label** \`{item.title}\`, select it, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and give the group **Repeat (list)** with **Items** \`sections\` and **Layout** **Row**. One button per section appears in a row.
+2. Make a button with the **Label** \`{item.title}\`, select it, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and give the group **Repeat (list)** with **Repeat for each** set to **List: sections** and **Layout** **Row**. One button per section appears in a row.
 3. On the button, press **+ On click (empty)** and add **Change a value or counter**: **Variable** \`tab\`, **Do** **Set to**, **Value** \`event.index\`.
 4. Bind the button's **Current (true, or page, step, location)** to \`tab == index\`, and its **Fill colour** to \`tab == index ? "#ffd54f" : "#e8eefc"\`, so the open tab looks and reads as the current one.
 5. Under the row, add a text \`{sections[tab].body}\`. It shows the open tab's text.

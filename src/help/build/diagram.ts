@@ -56,7 +56,7 @@ mindMap(ideas, {width: 720, height: 440, nodeW: 112, gapX: 32, collapsed: folded
 
 1. Press <kbd>F</kbd> and draw a small frame where the top left corner of the map should be, under a title: **X** 40, **Y** 120, **W** 130, **H** 44. Name it **Idea**, give it a pale fill (\`#e8eefc\`), a dark **Stroke** and a **Radius** of 10.
 2. Press <kbd>T</kbd>, click inside it and type \`{item.label}\`. Set **Sizing** to **Fixed**, **Align** center and **V-align** middle.
-3. Select **Idea** and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Name the group **Ideas**. In **Repeat (list)** tick **Repeat the first child for each item**, set **Items** to \`map\` and **Layout** to **Free (bind x/y)**.
+3. Select **Idea** and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Name the group **Ideas**. In **Repeat (list)** tick **Repeat the first child for each item**, set **Repeat for each** to **List: map** and **Layout** to **Free (bind x/y)**.
 
 All ten boxes are on top of each other for now. Tell each copy where it goes:
 
@@ -77,7 +77,7 @@ The map spreads out: the middle idea with four branches round it. The positions 
 
 ![The Connector section of Line: Route Curved, Start on layer Idea with Which copy item.parentIndex, End on layer Idea with Which copy index, and both Ends Plain.](help/tutorial-diagram-connector.png)
 
-4. With the connector selected, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and name the group **Lines**. In **Repeat (list)**, tick it, set **Items** to \`map\` and **Layout** to **Free (bind x/y)**.
+4. With the connector selected, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and name the group **Lines**. In **Repeat (list)**, tick it, set **Repeat for each** to **List: map** and **Layout** to **Free (bind x/y)**.
 5. In the **Layers** panel, drag **Lines** below **Ideas**, so the lines go under the boxes.
 
 There is now one line for each idea, from its parent to it. The middle idea has no parent (its \`parentIndex\` is -1), so it gets no line.
@@ -129,14 +129,14 @@ and \`links\`, where \`label\` is the answer that takes you along it:
    - \`arrows\`: \`flowLinks(steps, links)\`, every link with \`a\` and \`b\`, the places of the steps it joins.
    - \`outs\`: \`arrows.filter(l => l.from == current && l.b >= 0)\`, the links out of the step the learner is on.
 5. Go back to **Mind map**, select **Ideas** and **Lines** together, press <kbd>Ctrl</kbd>+<kbd>C</kbd>, select the **Flowchart** page and press <kbd>Ctrl</kbd>+<kbd>V</kbd>. Rename them **Steps** and **Arrows**.
-6. Change the **Items** of **Steps** to \`chart\` and of **Arrows** to \`arrows\`.
+6. Change **Repeat for each** of **Steps** to **List: chart** and of **Arrows** to **List: arrows**.
 7. Select the connector inside **Arrows**. Set **Which copy** to \`item.a\` for **Start** and \`item.b\` for **End**, **Route** to **Elbow (right angles)**, and under **Ends** set **End** to **Arrow**. For the Yes and No on the decision's arrows, type \`{item.label ?? ""}\` in the label's **Text**. Each arrow's label reads its own item, and an arrow with no label in the list shows none.
 8. Select the box inside **Steps**. Remove the **Visible** binding and change **Fill colour** to \`item.id == current ? "#ffd54f" : "#ffffff"\`: the step you are on is yellow. Set its **Role** back to **None (plain shape)**, and bind **Current (true, or page, step, location)** to \`item.id == current ? "step" : false\`.
 
 Now the panel that walks the learner through it, to the right of the chart:
 
 9. A text \`{steps.find(s => s.id == current).label}\`, large and bold. It says where you are.
-10. A button with the **Label** \`{item.label || "Continue"}\`. Select it, press <kbd>Ctrl</kbd>+<kbd>G</kbd>, and give the group **Repeat (list)** with **Items** \`outs\` and **Layout** **Column**. At the start there is one button, **Continue**. At the decision there are two, **Yes** and **No**.
+10. A button with the **Label** \`{item.label || "Continue"}\`. Select it, press <kbd>Ctrl</kbd>+<kbd>G</kbd>, and give the group **Repeat (list)** with **Repeat for each** set to **List: outs** and **Layout** **Column**. At the start there is one button, **Continue**. At the decision there are two, **Yes** and **No**.
 11. On that button, **+ On click (empty)** and **Change a value or counter**: **Variable** **current**, **Do** **Set to**, **Value** \`outs[event.index].to\`.
 12. A **Start again** button with **Change a value or counter** setting **current** to \`"s1"\`.
 

@@ -1,7 +1,7 @@
 //The Flip cards tutorial's finished project: one card layer repeated over a list, flipped by a click or Enter, and Turn all back
 import { createNode, type Project } from 'interactives-player';
 import { blankProject, type TutorialExample } from './kit';
-import { C, bind, clickFlow, change, line, solid, text, variable } from './_content-helpers';
+import { C, bind, clickFlow, line, solid, text, variable } from './_content-helpers';
 
 const CARDS = [
   { front: 'Plagiarism', back: "Presenting someone else's words or ideas as your own." },
@@ -14,7 +14,8 @@ const CARDS = [
 
 const W = 220;
 const H = 150;
-const isUp = 'flipped.includes(index)';
+//The repeater's own selection tells each copy if it is turned over: isSelected, so no formula over the list is needed
+const isUp = 'isSelected';
 
 function build(): Project {
   const p = blankProject('Key terms');
@@ -39,18 +40,16 @@ function build(): Project {
       cornerRadius: 16,
       fill: solid(C.navy),
       stroke: line(C.navy, 2),
-      role: 'button',
       ariaDescription: 'Press Enter to turn the card over',
       children: [front, back],
     } as never),
-    { 'fill.color': `${isUp} ? "${C.white}" : "${C.navy}"`, ariaPressed: isUp },
+    { 'fill.color': `${isUp} ? "${C.white}" : "${C.navy}"` },
   );
   //Ctrl+G on the card makes the group the repeater; its first child is the card
-  const cards = createNode('group', { name: 'Cards', x: 40, y: 110, width: W, height: H, repeat: { items: 'cards', layout: 'grid', gap: 20, columns: 3 }, children: [card] } as never);
+  const cards = createNode('group', { name: 'Cards', x: 40, y: 110, width: W, height: H, repeat: { items: 'cards', layout: 'grid', gap: 20, columns: 3, select: { mode: 'several', variable: flipped.id } }, children: [card] } as never);
   const reset = createNode('button', { name: 'Turn all back', label: 'Turn all back', x: 40, y: 470, width: 180, height: 44 });
   ab.children.push(cards, reset);
 
-  clickFlow(ab, card, [change(flipped, 'event.index', 'toggleItem')]);
   clickFlow(ab, reset, [{ kind: 'action.resetVariables', params: { variables: [flipped.id] } }]);
   return p;
 }
@@ -64,6 +63,6 @@ export const example: TutorialExample = {
   build,
   notes: [
     { text: '**One card, drawn six times.** The Cards group repeats its first child for each item of the cards list (Variables tab). Add an item there and a seventh card appears.' },
-    { text: '**flipped is a list of the cards turned over.** A click adds the card\'s place (event.index) or takes it out, and each face is Visible only when that fits.', colour: 'sky' },
+    { text: '**Selection: Several keeps flipped for you.** A click or Enter on a card adds its place to the flipped list, or takes it out, with no nodes. Each copy knows if it is turned over as isSelected, and each face is Visible only when that fits.', colour: 'sky' },
   ],
 };

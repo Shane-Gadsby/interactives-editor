@@ -9,7 +9,7 @@ export const concept: Concept = {
     group: 'Concepts',
     summary: 'Bindings, conditions and the {slots} in text take small formulas, not plain words: quotes around text, == to compare, lists counted from 0.',
     keywords: 'concept formula expression braces curly text slot quotes equals == = index zero typo nothing shows blank cheat sheet',
-    body: `Wherever a field works a value out (a binding, a condition, the value of a **Change a value or counter** node, **Repeat → Items**, and anything in \`{braces}\` in a text layer), it takes a small **formula**, not plain words. Your variables and data sources are there by name.
+    body: `Wherever a field works a value out (a binding, a condition, the value of a **Change a value or counter** node, **Repeat → Items** (the formula choice of **Repeat for each**), and anything in \`{braces}\` in a text layer), it takes a small **formula**, not plain words. Your variables and data sources are there by name.
 
 A few you will use all the time:
 

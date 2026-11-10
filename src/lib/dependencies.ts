@@ -287,6 +287,7 @@ export function analyzeUsage(project: Project): UsageReport {
         for (const [prop, expr] of Object.entries(n.bindings ?? {})) useExpr(expr, by, `binding on ${prop}`);
         for (const [prop, list] of Object.entries(n.converters ?? {})) for (const expr of converterExpressions(list)) useExpr(expr, by, `converter on ${prop}`);
         if (isContainer(n) && n.repeat?.items) useExpr(n.repeat.items, by, 'repeater items');
+        if (isContainer(n) && n.repeat?.select?.variable) useId('variable', n.repeat.select.variable, by, 'repeater selection');
         if (n.type === 'text' || n.type === 'link') for (const e of templateSlots(n.text)) useExpr(e, by, 'text template');
         if (n.type === 'text') for (const r of n.runs ?? []) if (r.link?.url) for (const e of templateSlots(r.link.url)) useExpr(e, by, 'link template');
         if (n.type === 'button') for (const e of templateSlots(n.label)) useExpr(e, by, 'label template');

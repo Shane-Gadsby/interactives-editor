@@ -181,4 +181,22 @@ describe('a list variable as a table', () => {
     expect(cells().filter((c) => c.classList.contains('head')).map((c) => c.value)).toEqual(['value']);
     expect(cells().filter((c) => !c.classList.contains('head')).map((c) => c.value)).toEqual(['1', '2', '3']);
   });
+
+  it('renaming the columns of an empty list sticks, so rows added after are records', () => {
+    mount(null, [{ id: 've', name: 'cards', type: 'list', initial: '[]' } as Variable], 'variables');
+    const head = () => cells().find((c) => c.classList.contains('head'))!;
+    const type = (input: HTMLInputElement, text: string) =>
+      act(() => {
+        input.focus();
+        const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+        set.call(input, text);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.blur();
+      });
+    expect(head().value).toBe('value');
+    type(head(), 'front');
+    expect(head().value).toBe('front');
+    act(() => btn(host, 'Add').click());
+    expect(JSON.parse(String(s.get().project.variables[0].initial))).toEqual([{ front: '' }]);
+  });
 });

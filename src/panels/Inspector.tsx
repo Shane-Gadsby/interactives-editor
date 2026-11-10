@@ -63,7 +63,7 @@ import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { getArtboard, isIdentifier, locate } from '../store/doc';
 import { ColourwayRow } from './ColourwayRow';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, TrackField, UnitField } from '../components/ui';
-import { ExprField, ExprLocals } from '../components/ExprField';
+import { ExprField, ExprLocals, FormulaStatusLine, useFormulaStatus } from '../components/ExprField';
 import { repeatLocals } from '../lib/repeat-locals';
 import { openBehaviours } from '../components/BehaviourDialog';
 import { revealAdded } from '../lib/graph-reveal';
@@ -2020,6 +2020,8 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
   const [formula, setFormula] = useState(false);
   useEffect(() => setFormula(false), [node.id]);
   const choice = rep ? (formula ? FORMULA_ITEMS : itemsChoiceOf(rep.items, project)) : '';
+  //The line "currently 6 items" under the picker (a formula box has its own)
+  const itemsStatus = useFormulaStatus(rep?.items ?? '', [], undefined);
   const sel = rep?.select ?? null;
   const pickMode = async (mode: 'none' | 'one' | 'several') => {
     if (!rep) return;
@@ -2053,6 +2055,7 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
               update({ items: itemsFor(c, rep.items) });
             }}
           />
+          {choice !== FORMULA_ITEMS && <FormulaStatusLine status={itemsStatus} />}
           {choice === OWN_ITEMS && (
             <>
               <ListTable label="Items" value={rep.items} onChange={(text) => update({ items: text })} jsonTitle="The items as JSON: an array of text or numbers, or of objects" />
