@@ -309,6 +309,25 @@
 		}
 	},
 	{
+		"key": "tut-accessible",
+		"title": "Check and fix accessibility",
+		"description": "A one-page Mars fact that passes the accessibility checks: a heading, a described picture, a clickable dot a keyboard can use, an animation that plays once, and a sensible Tab order. The Check and fix accessibility tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"accessibility",
+			"keyboard",
+			"screen reader",
+			"contrast"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
 		"key": "tut-blanks",
 		"title": "Fill in the blanks",
 		"description": "Four gaps to type into: alternatives, a near number, a pattern and a case that counts, with part marks and a tip for one gap: the Fill in the blanks tutorial's project.",
@@ -325,6 +344,45 @@
 			"width": 800,
 			"height": 600,
 			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-bones",
+		"title": "Arm rig with bones",
+		"description": "An arm drawn with the Pen, bound to three bones, that reaches for an orange dot you drag (IK), with a Wave button that plays a keyed pose: the Bones tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"bones",
+			"ik",
+			"skinning",
+			"timeline"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-brand",
+		"title": "Use the UniSQ look and colour themes",
+		"description": "A welcome page in the UniSQ Purple colourway where every colour is a theme token, so it also works in Light, Dark and High contrast: the Use the UniSQ look and colour themes tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"theme",
+			"brand",
+			"colourway",
+			"tokens",
+			"high contrast"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
 		}
 	},
 	{
@@ -470,6 +528,62 @@
 			"quiz",
 			"ordering",
 			"sequence"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-responsive",
+		"title": "Make it work on a phone",
+		"description": "A page of three cards in a grid, with a narrow variant that stacks them for a phone and swaps in at 600 px: the Make it work on a phone tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"responsive",
+			"layout",
+			"phone",
+			"grid"
+		],
+		"artboards": 2,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-rive-drive",
+		"title": "Drive an imported animation",
+		"description": "A bouncing ball imported from a Lottie file, with a Play or pause button and a knob that scrubs it through a joystick: the Drive an imported animation tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"import",
+			"lottie",
+			"joystick",
+			"timeline"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "tut-script",
+		"title": "When you need a script",
+		"description": "A spelling question that accepts a near miss: one short script measures how far the typed word is from the answer, and a binding says so in words. The When you need a script tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"script",
+			"code",
+			"spelling"
 		],
 		"artboards": 1,
 		"preview": {
