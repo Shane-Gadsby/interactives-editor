@@ -51,6 +51,16 @@ describe('Lottie import', () => {
     expect(isLottie({ format: 'interactives' })).toBe(false);
   });
 
+  it('makes a solid white page, so Preview does not show its dark backdrop through the animation', () => {
+    const { artboard } = importLottie(sample);
+    expect(artboard.background).toEqual({ type: 'solid', color: '#ffffff' });
+  });
+
+  it('the Drive an imported animation example is on a solid page, so its dark text reads', async () => {
+    const { example } = await import('../scripts/tutorial-examples/rive-drive');
+    expect(example.build().artboards[0].background).toEqual({ type: 'solid', color: '#ffffff' });
+  });
+
   it('maps layers, shapes, keyframes and easing', () => {
     const { artboard, warnings } = importLottie(sample);
     expect([artboard.width, artboard.height, artboard.name]).toEqual([200, 100, 'Sample']);

@@ -67,7 +67,7 @@ A warning under **X value** may say *There is no value called handle*. Ignore it
 
 Press <kbd>T</kbd> for the **Text** tool, click above the animation and type \`Press Play or pause, or drag the knob to scrub\`.
 
-An imported page has no background, so Preview would show its dark backdrop through everything and your dark text would vanish. Click the page's name above it on the canvas, set **Background** to **Solid** and type \`#ffffff\` in the colour box beside it.
+The imported page has a plain white background, so dark text like this reads fine in Preview. To use another colour, click the page's name above it on the canvas and change **Background**.
 
 ## 7. Try it
 

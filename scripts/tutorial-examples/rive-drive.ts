@@ -82,7 +82,7 @@ function build(): Project {
   //Import on the projects page: a new project named after the animation, holding its page and timeline
   const imp = importLottie(structuredClone(LOTTIE), 'Bouncing ball');
   const p = createProject(imp.artboard.name);
-  const ab = imp.artboard;
+  const ab = imp.artboard; //the importer gives it a solid white page, so the dark instruction text reads in Preview
   ab.canvasX = 0;
   ab.canvasY = 0;
   p.artboards = [ab];
