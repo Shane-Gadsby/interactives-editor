@@ -3920,6 +3920,14 @@ button.twisty:hover {
 .logic-canvas {
   position: relative;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* the graph, its zoom buttons and the empty hint sit in a stage of their own, under the master's block */
+.logic-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
 }
 .logic-empty {
   position: absolute;
@@ -13057,6 +13065,32 @@ button.flow-text:focus-visible {
   width: 210px;
 }
 
+/* The Variables tab: a wide list table or a long textarea scrolls inside its own Value cell instead of
+   widening the table and squeezing Name and Type. Fixed layout, so the columns are what they say. */
+.var-main {
+  table-layout: fixed;
+  min-width: 620px;
+}
+.var-main th:nth-child(1) {
+  width: 190px;
+}
+.var-main th:nth-child(2) {
+  width: 170px;
+}
+.var-main td:nth-child(3) {
+  min-width: 0;
+  overflow-x: auto;
+}
+.var-main td:nth-child(3) textarea,
+.var-main td:nth-child(3) input[type='text'] {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.var-main td:nth-child(3) .list-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 /* Fill in this starter: the content of a starter as a plain form */
 .fillin {
   display: flex;
@@ -14141,11 +14175,10 @@ body.reorder-active .ix-tooltip {
 
 /* the page master's flows on the Interactions tab */
 .master-flows-slot {
-  position: absolute;
-  top: 6px;
-  left: 8px;
-  z-index: 5;
-  max-width: calc(100% - 230px);
+  flex: none;
+  max-height: 50%;
+  overflow-y: auto;
+  margin: 6px 0 0 8px;
 }
 .master-flows-slot:empty {
   display: none;
@@ -14162,14 +14195,13 @@ body.reorder-active .ix-tooltip {
 .master-flows > summary {
   cursor: pointer;
   padding: 4px 8px;
+  margin-right: 190px;
 }
 .master-flows > summary:focus-visible {
   outline: var(--focus-outline);
   box-shadow: var(--focus-halo);
 }
 .master-flows-body {
-  max-height: 50vh;
-  overflow-y: auto;
   padding: 0 8px 8px;
 }
 

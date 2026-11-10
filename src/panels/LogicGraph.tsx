@@ -1195,6 +1195,7 @@ export function LogicGraph() {
         <div className="master-flows-slot">
           <MasterFlows ab={ab} project={s.project} />
         </div>
+        <div className="logic-stage">
         {s.view === 'sentences' ? (
           <FlowSentences ab={ab} project={s.project} picked={s.sel} />
         ) : (
@@ -1260,6 +1261,7 @@ export function LogicGraph() {
             </p>
           </div>
         )}
+        </div>
       </div>
       <div className="logic-settings">
         {chosen.length > 1 ? (
