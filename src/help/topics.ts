@@ -1122,7 +1122,7 @@ Depth can be animated: look for the diamond next to a field. See [Animatable pro
     title: 'Text',
     group: 'Design',
     summary: 'Text layers, fonts, sizing and live values in text.',
-    keywords: 'font typography type size weight align template variables google fonts upload rich text runs bold italic underline selection range several styles',
+    keywords: 'drag variable value data field drop onto page insert font typography type size weight align template variables google fonts upload rich text runs bold italic underline selection range several styles',
     body: `Use the **Text** tool (<kbd>T</kbd>): click for text that grows as you type, or drag a box for wrapping text. Double-click text to edit it, and <kbd>Escape</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to finish.
 
 - **Sizing**: *Auto width* (one line, grows sideways), *Auto height* (fixed width, wraps and grows down) or *Fixed* (you set both). With *Fixed*, **Overflow** says what happens to lines that don't fit: *Show* them anyway, *Clip* them at the box, or cut the last line that fits with an *Ellipsis …*. Untick **Wrap lines** to keep the lines as written (long ones run on, or are clipped or cut by the overflow setting).
@@ -1196,6 +1196,15 @@ You do not have to type the braces. Put the cursor where the value should go and
 - **This item of the repeat**, for a layer inside a [repeater](repeaters): the fields of the item (a list of people with \`name\` and \`age\` offers both) and its number.
 
 Pick one with the arrow keys and **Enter**, or click it. It goes in as \`{name}\` at the cursor, over any words you had selected, and the line under the box shows what the whole text says now. The same button is on a button's **Label** and on a connector's label.
+
+## Drag a value onto the page
+You can also drag a value to where it should show. In the **Variables** tab, each variable has a small text-icon handle (its name reads **Show it on the page**) beside its name. In the **Data** tab, each field of a data source has the same handle. Drag it onto the page:
+- **Onto a text layer**: it is added to the end of that text as \`{name}\`, with a space before it, and the text keeps its styling. Dropping \`score\` on *Your score:* gives *Your score: {score}*.
+- **Anywhere else on a page**: a new text layer is made there that shows it, named after the value. A list variable shows how many items it holds, and a data field shows the first row's value.
+
+A line beside the pointer says which of the two letting go will do, and the page is outlined when it is a new text. **Undo** takes it back in one step.
+
+Without a mouse, select a text layer and press the handle: the value is added to that text. With no text layer selected it makes a new text near the top left of the open page. **Insert value** above is the way to put a value in at the cursor.
 
 To animate a text layer one letter, word or line at a time (typewriter, wave), see [Text modifiers](text-modifiers).`,
   },
@@ -3608,6 +3617,9 @@ The name is saved when you leave the field. If there is nothing to build a name 
 
 Next to the type, **Starts as a value** is the number, text or switch the project starts with. **Worked out** is for a variable that is calculated, such as a crossword grid: it shows a box for the formula (for example \`crossword(words, 10)\`), and the value stays as what it falls back to if the formula fails. **Keep up to date** (for a formula) works it out again whenever something it reads changes.
 
+## Show a variable on the page
+The text-icon handle beside a variable's name puts it on the page: drag it onto a text layer to add it to that text, or onto an empty part of a page to make a text that shows it. Press the handle instead of dragging to add it to the selected text layer. See [Live values in text](text#drag-a-value-onto-the-page).
+
 ## Options on a variable
 **Options** is folded away until something in it is on. It holds three switches, each with a sentence saying what it does:
 - **Remember** keeps the value between visits (for a score, a saved choice or a name). It is kept in the learner's record when the project is played from the Link for StudyDesk, otherwise in their browser. See [Results and progress](results).
@@ -4370,7 +4382,7 @@ Test with a keyboard, a screen reader and your own eyes as well.`,
     title: 'Data sources',
     group: 'Data',
     summary: 'JSON, CSV, TSV or text from an uploaded file or a URL, used by name.',
-    keywords: 'data json csv tsv text url fetch api spreadsheet refresh cors',
+    keywords: 'drag field show on page text data json csv tsv text url fetch api spreadsheet refresh cors',
     body: `A **data source** is a file or web address of information that your project reads by name: a list of products, quiz questions, a table of results. Open the **Data** tab and add a source **From file** (upload) or **From URL** (fetched by the player).
 
 - **Format**: JSON, CSV or TSV (first row is the column names), or plain text. CSV and TSV become a list of rows, with numbers and true/false converted.
@@ -4383,6 +4395,9 @@ Use a source by its **name** anywhere expressions go: \`{products.length} produc
 **Load data** reloads a source (optionally from a different URL), and **When data has loaded** fires when it arrives. The host page can push data with \`player.setData('products', [...])\`.
 
 **+ Shared responses** adds a different kind of source: answers the people playing add, counted for the class or kept for each person. See [Shared responses](shared-responses).
+
+## Show a field on the page
+Under a loaded source the **item fields** (or **fields**, for one object) are listed with the same text-icon handle as a variable. Drag one onto the page to show its value, or press it to add it to the selected text layer. For a list the value is the first row's (\`products[0].name\`); put it inside a [repeater](repeaters) when each row should show its own. See [Live values in text](text#drag-a-value-onto-the-page).
 
 ## Editing a data file
 A source **From: Uploaded file** can be edited right there, in up to four views: **Form**, **Table**, **Tree** and **Raw text**. Which ones you get depends on the file. They show the same text, so a change in one shows in the others.

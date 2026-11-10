@@ -4479,6 +4479,52 @@ button.twisty:hover {
 .var-used {
   margin-top: 2px;
 }
+.show-on-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: grab;
+  flex: none;
+}
+.show-on-page:hover,
+.show-on-page:focus-visible {
+  color: var(--primary-fg);
+  background: var(--primary-bg);
+}
+.show-on-page:active {
+  cursor: grabbing;
+}
+.var-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.var-name-row > .grow {
+  flex: 1;
+  min-width: 0;
+}
+.field-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.field-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12px;
+}
 .var-ident {
   display: flex;
   align-items: center;

@@ -12,6 +12,7 @@ import { addAssetOption, withQuickAdd } from '../lib/quick-add';
 import { CONTEXT_ID, ContextPanel } from './ContextPanel';
 import { SharedForm } from './SharedForm';
 import { DataFileEditor } from './DataFileEditor';
+import { ShowOnPage } from '../components/ShowOnPage';
 import { SectionBlurb } from '../components/SectionBlurb';
 
 const KINDS: { value: DataKind; label: string }[] = [
@@ -190,11 +191,11 @@ export function DataPanel() {
               <>
                 {loaded?.loading && <p className="muted">Loading…</p>}
                 {loaded?.error && <p className="error">{loaded.error}</p>}
-                {loaded && 'value' in loaded && <Preview value={loaded.value} />}
+                {loaded && 'value' in loaded && <Preview value={loaded.value} name={active.name} />}
               </>
             ) : (
               <>
-                {loaded && 'value' in loaded && <Fields value={loaded.value} />}
+                {loaded && 'value' in loaded && <Fields value={loaded.value} name={active.name} />}
                 <DataFileEditor key={active.id} source={active} />
               </>
             )}
@@ -212,25 +213,43 @@ export function DataPanel() {
   );
 }
 
-/** The field names a list of rows has, so people know what to write in an expression. */
-function Fields({ value }: { value: unknown }) {
-  if (!Array.isArray(value) || !value.length || !value.every((r) => r && typeof r === 'object' && !Array.isArray(r))) return null;
-  const cols = [...new Set(value.slice(0, 200).flatMap((r) => Object.keys(r as object)))];
+/**
+ * The field names a list of rows (or an object) has, so people know what to write in an expression. Each is also a handle: drag it
+ * onto the page to show it (the first row's, for a list), see lib/value-drag.ts.
+ */
+function Fields({ value, name }: { value: unknown; name: string }) {
+  const list = Array.isArray(value) && value.length && value.every((r) => r && typeof r === 'object' && !Array.isArray(r));
+  const record = !!value && typeof value === 'object' && !Array.isArray(value);
+  if (!list && !record) return null;
+  const cols = list ? [...new Set((value as object[]).slice(0, 200).flatMap((r) => Object.keys(r)))] : Object.keys(value as object).slice(0, 60);
+  const plain = isIdentifier(name);
   return (
     <div className="muted small">
-      {value.length} rows · item fields: {cols.join(', ')}
+      {list ? `${(value as unknown[]).length} rows · item fields:` : 'fields:'}
+      <span className="field-chip-row">
+        {cols.map((c) =>
+          plain && isIdentifier(c) ? (
+            <span key={c} className="field-chip">
+              <span className="mono">{c}</span>
+              <ShowOnPage value={{ expr: list ? `${name}[0].${c}` : `${name}.${c}`, label: list ? `${name}, first row: ${c}` : `${name}: ${c}` }} />
+            </span>
+          ) : (
+            <span key={c} className="mono">
+              {c}
+            </span>
+          ),
+        )}
+      </span>
     </div>
   );
 }
 
-function Preview({ value }: { value: unknown }) {
+function Preview({ value, name }: { value: unknown; name: string }) {
   if (Array.isArray(value) && value.length && value.every((r) => r && typeof r === 'object' && !Array.isArray(r))) {
     const cols = [...new Set(value.slice(0, 200).flatMap((r) => Object.keys(r as object)))];
     return (
       <>
-        <div className="muted small">
-          {value.length} rows · item fields: {cols.join(', ')}
-        </div>
+        <Fields value={value} name={name} />
         <table className="data-table">
           <thead>
             <tr>

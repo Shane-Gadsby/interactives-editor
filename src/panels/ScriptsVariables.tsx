@@ -16,6 +16,7 @@ import { analyzeUsage, type Usage } from '../lib/dependencies';
 import { VARIABLE_KINDS, TYPE_LABELS, variableFor, type VariableKind } from '../lib/variable-kinds';
 import { go, sourceLabel } from './UsagePanel';
 import { SectionBlurb } from '../components/SectionBlurb';
+import { ShowOnPage } from '../components/ShowOnPage';
 
 const SCRIPT_TEMPLATE = `// Runs with \`ix\` (the player API), \`event\` (what triggered it) and \`vars\`.
 // Tick "Run on start" to register handlers when the player starts.
@@ -380,7 +381,14 @@ function VariableRow({ v, others, used, circular, writers, setVar }: { v: Variab
   return (
     <tr>
       <td>
-        <VariableNameField v={v} others={others} onCommit={(name, label) => void renameFromPanel(v.id, name, label)} />
+        <div className="var-name-row">
+          {isIdentifier(v.name) && (
+            <ShowOnPage value={v.type === 'list' ? { expr: `${v.name}.length`, label: `How many in ${variableLabel(v)}` } : { expr: v.name, label: variableLabel(v) }} />
+          )}
+          <div className="grow">
+            <VariableNameField v={v} others={others} onCommit={(name, label) => void renameFromPanel(v.id, name, label)} />
+          </div>
+        </div>
         <div className="var-used">
           {used.length ? (
             <button type="button" className="link-btn" aria-expanded={places} onClick={() => setPlaces(!places)} title="Where this variable is read or changed. Click to list the places">
