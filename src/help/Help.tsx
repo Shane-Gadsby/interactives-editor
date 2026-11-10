@@ -7,6 +7,8 @@ import { matches } from '../lib/keymap';
 import { openShortcuts } from '../lib/shortcuts-sheet';
 import { VersionInfo } from '../components/VersionInfo';
 import { helpTopics, helpViews, useTopic } from './lazy';
+import { hideTour, tourActive } from '../lib/tour';
+import { TourOverlay } from './TourOverlay';
 
 
 // ---------------------------------------------------------------- opening help from anywhere
@@ -151,6 +153,11 @@ export function HelpHost() {
         e.preventDefault();
         if (state.drawer) closeHelp();
         else openContext();
+      } else if (e.key === 'Escape' && tourActive()) {
+        //Show me's ring goes first, and that Esc is all it does
+        hideTour();
+        e.preventDefault();
+        e.stopPropagation();
       } else if (e.key === 'Escape' && (state.drawer || state.search) && !e.defaultPrevented && !isPreviewOpen()) {
         if (state.search) emit({ search: false });
         else closeHelp();
@@ -167,6 +174,7 @@ export function HelpHost() {
         </aside>
       )}
       {s.search && <QuickSearchHost />}
+      <TourOverlay />
     </>
   );
 }

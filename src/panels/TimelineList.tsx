@@ -88,7 +88,7 @@ export function TimelineList() {
         <strong>Timelines</strong>
         <span className="muted small">{rows.length}</span>
         <span className="tl-list-head-btns">
-          <IconButton icon={<Icons.plus />} title="New timeline" onClick={() => store().addTimeline()} />
+          <IconButton tour="timeline-new" icon={<Icons.plus />} title="New timeline" onClick={() => store().addTimeline()} />
           <IconButton icon={<Icons.close />} title="Hide the list of timelines (the View button on the Timeline bar brings it back)" onClick={hideTimelineList} />
         </span>
       </div>

@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { clickThen, layerWhere, nodesOfKind, saw, setsVariable, variables, all, bound, textHas, repeats } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 33,
@@ -127,5 +128,14 @@ Once you leave the formula box, **Only while** shows it as two rows you could al
 - **When a timer goes off** with **Only while** runs only when it should, and \`reducedMotion\` respects people who ask for less movement.
 
 **Next:** [Before and after compare](tutorial-compare). More on [Bindings](bindings), [Expressions](expressions) and [Shortcuts](accessibility#shortcuts).`,
+  },
+  guide: {
+    1: { check: variables(['slides', 'list'], ['slide', 'number'], ['playing', 'boolean']), show: ['add-variable', 'panel-variables'] },
+    2: { check: all(bound('rect', 'fill', 'slides[slide'), textHas('slides[slide')), show: 'tool-rect' },
+    3: { check: clickThen('button', 'action.setVariable', setsVariable('slide'), 2), show: 'add-when-clicked' },
+    4: { check: all(layerWhere('button', (n) => n.shortcut === 'ArrowRight'), layerWhere('button', (n) => n.shortcut === 'ArrowLeft')), show: 'panel-inspector' },
+    5: { check: all(repeats('slides'), clickThen('ellipse', 'action.setVariable', setsVariable('slide'))), show: 'tool-ellipse' },
+    6: { check: nodesOfKind('event.timer'), show: 'panel-logic' },
+    7: { check: saw('previewed'), show: 'preview' },
   },
 };

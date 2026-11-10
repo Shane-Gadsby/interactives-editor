@@ -15,6 +15,10 @@ export function Markdown({ text, onLink, steps }: { text: string; onLink: (href:
 export interface StepTicks {
   done: ReadonlySet<number>;
   onTick: (n: number, on: boolean) => void;
+  /** Guided tutorials (a project is open): the steps that tick themselves when they are done, and the steps that have a Show me. */
+  auto?: ReadonlySet<number>;
+  shows?: ReadonlySet<number>;
+  onShow?: (n: number) => void;
 }
 
 const MEDIA = /^!\[([^\]]*)\]\(([^)\s]+)\)\s*$/;
@@ -74,12 +78,19 @@ function blocks(text: string, onLink: (href: string) => void, steps?: StepTicks)
       const Tag = `h${Math.min(5, level)}` as 'h2';
       const n = steps ? stepNumber(h[2], h[1].length) : null;
       const ticked = n !== null && steps!.done.has(n);
+      const auto = n !== null && !!steps!.auto?.has(n);
+      const show = n !== null && !!steps!.onShow && !!steps!.shows?.has(n);
       out.push(
         <Tag key={k++} id={slug(h[2])} className={n !== null ? `help-step${ticked ? ' step-done' : ''}` : undefined}>
           {n !== null && (
-            <input type="checkbox" className="step-tick" checked={ticked} aria-label={`Step ${n} done`} title={ticked ? `Step ${n} is ticked. Click to untick it` : `Tick this when you have done step ${n}`} onChange={(e) => steps!.onTick(n, e.target.checked)} />
+            <input type="checkbox" className="step-tick" checked={ticked} aria-label={`Step ${n} done`} title={ticked ? `Step ${n} is ticked. Click to untick it` : auto ? `This ticks itself when you have done step ${n}. You can tick it yourself too` : `Tick this when you have done step ${n}`} onChange={(e) => steps!.onTick(n, e.target.checked)} />
           )}
           {n !== null ? <span>{inl(h[2])}</span> : inl(h[2])}
+          {show && (
+            <button type="button" className="step-show" aria-label={`Show me where, for step ${n}`} title="Highlight the control this step talks about in the editor" onClick={() => steps!.onShow!(n)}>
+              Show me
+            </button>
+          )}
         </Tag>,
       );
       i++;

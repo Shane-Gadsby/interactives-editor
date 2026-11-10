@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { bound, clickThen, hasMaster, pages, saw, setsVariable, textHas, variable, all } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 43,
@@ -124,5 +125,14 @@ Build **Read actively** and **Write a draft** the same way. Copy the heading, ti
 - **Width** and **Opacity** bindings turn a list into a bar and badges.
 
 **Next:** [An animated scene with speech bubbles](tutorial-scene). More in [Page masters](page-master), [Page navigation](page-navigation), [Bindings](bindings) and [Variables](variables#lists).`,
+  },
+  guide: {
+    1: { check: pages(6), show: 'add-page' },
+    2: { check: variable('done', 'list'), show: ['add-variable', 'panel-variables'] },
+    3: { check: all(textHas('{done.length}'), bound('rect', 'width', 'done')), show: 'tool-rect' },
+    4: { check: hasMaster, show: 'panel-layers' },
+    5: { check: clickThen('button', 'action.setVariable', setsVariable('done')), show: 'add-empty-click' },
+    6: { check: clickThen('button', 'action.setVariable', setsVariable('done'), 3), show: 'add-empty-click' },
+    8: { check: saw('previewed'), show: 'preview' },
   },
 };

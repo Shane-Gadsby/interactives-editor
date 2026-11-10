@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { clickThen, layers, pages, renamed, saw, all } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 57,
@@ -111,5 +112,16 @@ Press <kbd>Esc</kbd> to close the Preview.
 - **Turn the sound off or on** is your own mute button: a **Captions and sound** node set to **Sound: flip**.
 
 **Next:** everything the **Play sound** node can do (speed, a sound from a list item, what is playing now) is in [Sound](captions#sound) and [Soundtrack music](captions#soundtrack-music). Sound that follows an animation, with captions, is in [Narration, captions and transcript](captions).`,
+  },
+  guide: {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: all(layers('text', 2), layers('button')), show: 'tool-button' },
+    3: { check: clickThen('button', 'action.sound', (n) => n.params.soundtrack === true), show: 'add-when-clicked' },
+    4: { check: clickThen('button', 'action.artboard'), show: 'add-when-clicked' },
+    5: { check: pages(2), show: 'add-page' },
+    6: { check: clickThen('button', 'action.sound', (n) => n.params.soundtrack !== true), show: 'add-when-clicked' },
+    7: { check: all(clickThen('button', 'action.stopSound'), clickThen('button', 'action.artboard', (n) => n.params.to === 'previous')), show: 'add-when-clicked' },
+    8: { check: clickThen('button', 'action.captions', (n) => n.params.op === 'soundToggle'), show: 'add-when-clicked' },
+    9: { check: saw('previewed'), show: 'preview' },
   },
 };

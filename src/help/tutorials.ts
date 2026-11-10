@@ -1,4 +1,5 @@
 import type { HelpTopic } from './topics';
+import { all, bound, clickThen, imported, keys, layers, noAutoplay, renamed, saw, setsVariable, textHas, timelines, titled, variables, type Guide } from '../lib/tutorial-checks';
 
 /**
  * The Getting started path: five hands-on tutorials, read in order. Each one is a topic with numbered steps a new person can
@@ -356,3 +357,42 @@ See [Embedding and the player API](embedding) for the iframe snippet, how the pa
 You've built, animated, wired up, imported and published. Keep going with the topics on the left. Good places to go next: [Timelines and keyframes](timelines), [Groups and frames](groups-frames), [Auto layout](auto-layout), [Data sources](data-sources) and [Troubleshooting and common questions](troubleshooting).`,
   },
 ];
+
+/**
+ * How the help tells each step of a Getting started tutorial is done (the checks) and what Show me points at, by tutorial id and
+ * step number. A step left out is ticked by hand. The pure questions are in lib/tutorial-checks.ts.
+ */
+export const TUTORIAL_GUIDES: Record<string, Guide> = {
+  'tutorial-first-animation': {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: layers('rect'), show: 'tool-rect' },
+    3: { check: timelines(), show: ['timeline-new', 'panel-timeline'] },
+    4: { check: keys(2), show: ['timeline-record', 'panel-timeline'] },
+    5: { check: saw('played'), show: ['timeline-play', 'panel-timeline'] },
+  },
+  'tutorial-first-interaction': {
+    1: { check: noAutoplay, show: 'panel-timeline' },
+    2: { check: layers('button'), show: 'tool-button' },
+    3: { check: clickThen('button', 'action.timeline'), show: 'add-when-clicked' },
+    4: { show: 'panel-logic' },
+    5: { check: clickThen('button', 'action.timeline', undefined, 2), show: 'add-empty-click' },
+    6: { check: saw('previewed'), show: 'preview' },
+  },
+  'tutorial-state-machine': {
+    1: { check: variables(['lit', 'boolean'], ['taps', 'number']), show: ['add-variable', 'panel-variables'] },
+    2: { check: all(layers('ellipse'), textHas('{taps}'), layers('button')), show: 'tool-ellipse' },
+    3: { check: bound('ellipse', 'fill'), show: 'panel-inspector' },
+    4: { check: all(clickThen('button', 'action.setVariable', setsVariable('lit')), clickThen('button', 'action.setVariable', setsVariable('taps'))), show: 'add-when-clicked' },
+    5: { check: saw('previewed'), show: 'preview' },
+  },
+  'tutorial-import-design': {
+    1: { check: imported, show: 'panel-layers' },
+    2: { check: imported, show: 'panel-layers' },
+  },
+  'tutorial-publish': {
+    1: { check: saw('previewed'), show: 'preview' },
+    2: { check: titled, show: 'panel-inspector' },
+    3: { show: 'export' },
+    4: { show: 'share' },
+  },
+};

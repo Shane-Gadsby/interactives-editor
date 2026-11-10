@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { bound, clickThen, layers, repeats, saw, setsVariable, textHas, variables, all } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 31,
@@ -112,5 +113,14 @@ A click on any copy runs this one flow, and \`event.index\` is the place of the 
 - **Add to the list, or take out if it is there** keeps one list of which cards are turned, and bindings on **Visible** show the right face.
 
 **Next:** [Accordion and tabs from data](tutorial-accordion). More on lists in [Repeated lists](repeaters) and [Variables](variables#lists).`,
+  },
+  guide: {
+    1: { check: variables(['cards', 'list'], ['flipped', 'list']), show: ['add-variable', 'panel-variables'] },
+    2: { check: all(layers('frame'), textHas('{item.front}'), textHas('{item.back}')), show: 'tool-frame' },
+    3: { check: repeats('cards'), show: 'panel-inspector' },
+    4: { check: all(bound('text', 'visible', 'flipped'), bound('frame', 'fill', 'flipped')), show: 'panel-inspector' },
+    5: { check: clickThen('frame', 'action.setVariable', setsVariable('flipped')), show: 'add-empty-click' },
+    6: { check: clickThen('button', 'action.resetVariables'), show: 'tool-button' },
+    7: { check: saw('previewed'), show: 'preview' },
   },
 };

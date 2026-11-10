@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { question, renamed, saw, scoredFromQuestions, all } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 10,
@@ -99,5 +100,13 @@ The card is made of ordinary layers, so restyle it like anything else. The **Res
 - **Report result** and the project's **Results and progress** send the score.
 
 **Next:** more question types are in [Questions and quizzes](question-kit). To turn a list of questions into a quiz in one go, see [Pasting questions in](paste-questions). How results reach StudyDesk is in [Results and progress](results).`,
+  },
+  guide: {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: question('single'), show: 'add-question' },
+    3: { check: question('single', (q) => !/prime number/i.test(q.prompt) && q.options.some((o) => o.correct)), show: 'panel-inspector' },
+    4: { check: question('single', (q) => q.attempts > 0 && q.hints.length > 0 && !/two factors/i.test(q.hints.join(' '))), show: 'panel-inspector' },
+    5: { check: all(question('single', (q) => q.report === 'complete' || q.report === 'progress'), scoredFromQuestions), show: 'panel-inspector' },
+    6: { check: saw('previewed'), show: 'preview' },
   },
 };

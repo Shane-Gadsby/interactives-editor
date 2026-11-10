@@ -843,9 +843,9 @@ function orderMenu(el: HTMLElement | null, after: boolean): MenuItem[] {
   ];
 }
 
-export function IconButton({ icon, title, onClick, active, disabled, className, pressed, onContextMenu, popup, expanded, reorderKey }: { reorderKey?: string; icon: ReactNode; title: string; onClick?: (e: React.MouseEvent) => void; active?: boolean; disabled?: boolean; className?: string; pressed?: boolean; onContextMenu?: (e: React.MouseEvent) => void; popup?: 'menu'; expanded?: boolean }) {
+export function IconButton({ icon, title, onClick, active, disabled, className, pressed, onContextMenu, popup, expanded, reorderKey, tour }: { reorderKey?: string; tour?: string; icon: ReactNode; title: string; onClick?: (e: React.MouseEvent) => void; active?: boolean; disabled?: boolean; className?: string; pressed?: boolean; onContextMenu?: (e: React.MouseEvent) => void; popup?: 'menu'; expanded?: boolean }) {
   return (
-    <button type="button" className={`icon-btn${active ? ' active' : ''}${className ? ' ' + className : ''}`} title={title} aria-label={title} aria-pressed={pressed} aria-haspopup={popup} aria-expanded={popup ? !!expanded : undefined} data-reorder-key={reorderKey} onClick={onClick} onContextMenu={onContextMenu} disabled={disabled}>
+    <button type="button" className={`icon-btn${active ? ' active' : ''}${className ? ' ' + className : ''}`} title={title} aria-label={title} aria-pressed={pressed} aria-haspopup={popup} aria-expanded={popup ? !!expanded : undefined} data-reorder-key={reorderKey} data-tour={tour} onClick={onClick} onContextMenu={onContextMenu} disabled={disabled}>
       {icon}
     </button>
   );

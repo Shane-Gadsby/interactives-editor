@@ -490,6 +490,7 @@ function DockTabs({ group, at, folded, extra }: { group: DockGroup; at: { zone: 
             aria-selected={on}
             className={`${on ? 'active' : ''}${over && t && 'index' in t && group.tabs[t.index] === p ? ' drop-before' : ''}${d?.panel === p ? ' dragging' : ''}`}
             data-dock-tab={p}
+            data-tour={`panel-${p}`}
             title={`${P.tip}. Drag to move it: onto another panel's tabs to dock it there, onto the canvas for its own window. Right-click for more`}
             onPointerDown={(e) =>
               startTabDrag(e, p, () => {

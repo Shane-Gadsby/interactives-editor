@@ -1,8 +1,9 @@
 import { BUILD_TUTORIALS } from './build';
 import { CONCEPTS } from './concepts';
-import { TUTORIALS } from './tutorials';
+import { TUTORIALS, TUTORIAL_GUIDES } from './tutorials';
 import { topicBody, type HelpTopic } from './topics';
 import { stepsOf, type Step, type TutorialSet } from '../lib/tutorial-progress';
+import type { Guide } from '../lib/tutorial-checks';
 
 /**
  * Everything the tutorials screens list, read from the help's own registries (nothing is written out a second time): the five
@@ -24,6 +25,8 @@ export interface CatalogItem {
   /** The key of the finished example, when there is one. */
   example?: string;
   steps: Step[];
+  /** Checks and Show me targets by step number, when the tutorial has them (see lib/tutorial-checks.ts). */
+  guide?: Guide;
 }
 
 //The Getting started tutorials' own examples (the Build it ones carry theirs) and the times their text gives
@@ -36,8 +39,8 @@ const stepsFor = (t: HelpTopic): Step[] => stepsOf(topicBody(t));
 export const LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
 
 export const CATALOG: CatalogItem[] = [
-  ...TUTORIALS.filter((t) => t.group === 'Getting started').map((t): CatalogItem => ({ id: t.id, title: t.title.replace(/^Tutorial \d+: /, ''), summary: t.summary, group: 'Getting started', minutes: START_MINUTES[t.id], example: START_EXAMPLE[t.id], steps: stepsFor(t) })),
-  ...BUILD_TUTORIALS.map((b): CatalogItem => ({ id: b.topic.id, title: b.topic.title, summary: b.topic.summary, group: 'Build it', level: LEVEL_NAME[b.level], minutes: b.minutes, example: b.example, steps: stepsFor(b.topic) })),
+  ...TUTORIALS.filter((t) => t.group === 'Getting started').map((t): CatalogItem => ({ id: t.id, title: t.title.replace(/^Tutorial \d+: /, ''), summary: t.summary, group: 'Getting started', minutes: START_MINUTES[t.id], example: START_EXAMPLE[t.id], steps: stepsFor(t), guide: TUTORIAL_GUIDES[t.id] })),
+  ...BUILD_TUTORIALS.map((b): CatalogItem => ({ id: b.topic.id, title: b.topic.title, summary: b.topic.summary, group: 'Build it', level: LEVEL_NAME[b.level], minutes: b.minutes, example: b.example, steps: stepsFor(b.topic), guide: b.guide })),
   ...CONCEPTS.map((c): CatalogItem => ({ id: c.topic.id, title: c.topic.title, summary: c.topic.summary, group: 'Concepts', steps: [] })),
 ];
 
