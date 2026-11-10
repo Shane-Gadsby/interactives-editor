@@ -14012,6 +14012,13 @@ body.reorder-active .ix-tooltip {
   flex: 1;
   min-width: 0;
 }
+/* the result's own label is for screen readers only ("when it is … Fill colour is" says it on screen), so it takes no column:
+   the colour's hex box gets the room */
+.inspector .by-value-then > .field:not(.check-field),
+.inspector .by-value-if > .field:not(.check-field) {
+  grid-template-columns: 0 minmax(0, 1fr) var(--field-trail);
+  column-gap: 0;
+}
 .by-value-word {
   flex: none;
   min-width: 56px;
