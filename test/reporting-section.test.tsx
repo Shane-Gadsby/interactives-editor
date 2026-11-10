@@ -134,6 +134,20 @@ describe('Results and progress section', () => {
     expect(host.textContent).toContain('1 variable is remembered');
   });
 
+  it('says which of Remember and Save as user data does what, and counts both', () => {
+    mount();
+    open();
+    expect(host.textContent).toContain('Remember keeps it in their results record or their browser');
+    expect(host.textContent).toContain('Save as user data keeps it on the server');
+  });
+
+  it('counts variables saved as user data instead of repeating the hint', () => {
+    mount((p) => (p.variables[0].userData = true));
+    open();
+    expect(host.textContent).toContain('1 variable is saved as user data');
+    expect(host.textContent).not.toContain('Save as user data keeps it on the server');
+  });
+
   it('every change undoes', () => {
     mount();
     open();
