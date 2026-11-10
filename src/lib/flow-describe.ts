@@ -327,6 +327,7 @@ const ACTION: Record<string, (p: P, c: Names) => string> = {
   'action.saveUserData': () => 'save the learner’s progress',
   'action.loadUserData': () => 'bring back the learner’s saved progress',
   'action.sharedAdd': (p, c) => `add an answer to ${c.data(p.source)}`,
+  'action.roomSend': (p, c) => `send ${p.text ? val(p.text) : 'a message'} to ${c.data(p.source)}`,
   'action.sharedWithdraw': (p, c) => `take this learner’s answers back out of ${c.data(p.source)}`,
   'action.courseAdd': (p) => `${String(p.what ?? 'stamp') === 'counter' ? `raise the counter ${val(p.name)} to ${val(p.value ?? '1')}` : `add the stamp ${val(p.name)}`} in the course collection ${quoted(String(p.collection ?? '') || 'you name')}`,
   'action.courseLoad': (p) => `load the course collection ${quoted(String(p.collection ?? '') || 'you name')}`,

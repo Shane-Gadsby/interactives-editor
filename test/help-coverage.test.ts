@@ -11,6 +11,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  Rooms: [['rooms', 'A class chat in a few steps'], ['rooms', 'Moderating a room'], ['interactions', 'Send a message to a room'], ['data-sources', '+ Room']],
   'Ask the Activity Designer': [['activity-designer', "can't see or change your project"]],
   'Live shared responses': [['shared-responses', 'updates live'], ['shared-responses', 'the backup']],
   'Describe it': [['interactions', 'Describe it in words'], ['command-palette', 'Describe it']],

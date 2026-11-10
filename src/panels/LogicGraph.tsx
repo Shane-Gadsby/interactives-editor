@@ -1392,10 +1392,11 @@ export function ParamForm({ node, ab, project, onChange, onNote }: { node: Logic
       case 'asset':
         return pick(project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio').map((a) => ({ value: a.id, label: a.name })), 'Choose sound…', [addAssetOption('audio')], { asset: 'audio' });
       case 'data': {
-        // The shared responses nodes work on shared sources only
+        // The shared responses nodes work on shared sources only, and Send to room on rooms
         const shared = node.kind.startsWith('action.shared');
-        const list = project.dataSources.filter((d) => !shared || d.source === 'shared');
-        return pick(list.map((d) => ({ value: d.id, label: d.name })), list.length ? 'Choose data source…' : shared ? 'No shared responses yet (Data tab)' : 'No data sources yet');
+        const room = node.kind === 'action.roomSend';
+        const list = project.dataSources.filter((d) => (!shared || d.source === 'shared') && (!room || d.source === 'room'));
+        return pick(list.map((d) => ({ value: d.id, label: d.name })), list.length ? 'Choose data source…' : shared ? 'No shared responses yet (Data tab)' : room ? 'No room yet (Data tab)' : 'No data sources yet');
       }
       case 'cursor':
         return <SelectField key={p.key} label={p.label} title={p.help} value={String(v ?? 'pointer')} options={[...CURSORS]} onChange={(x) => set(p.key, x)} />;

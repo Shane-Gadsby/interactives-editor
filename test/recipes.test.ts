@@ -32,9 +32,10 @@ describe('buildBehaviour', () => {
     for (const r of RECIPES) {
       const answers: Answers = { ...defaultAnswers(r, ctx), link: 'https://example.com', page: f.quiz.id };
       const b = buildBehaviour(ctx, r.id, 'click', answers, mk);
-      expect(b.nodes.map((n) => n.kind), r.id).toEqual(['event.pointer', expect.stringMatching(/^action\./)]);
+      //(Send a message to a room sends, then empties the box: its own test below)
+      expect(b.nodes.map((n) => n.kind), r.id).toEqual(r.id === 'room-send' ? ['event.pointer', 'action.roomSend', 'action.setVariable'] : ['event.pointer', expect.stringMatching(/^action\./)]);
       expect(b.nodes[0].params, r.id).toMatchObject({ target: f.btn.id, type: 'click' });
-      expect(b.edges, r.id).toEqual([{ id: expect.any(String), from: b.eventId, fromPort: 'out', to: b.actionId, toPort: 'in' }]);
+      if (r.id !== 'room-send') expect(b.edges, r.id).toEqual([{ id: expect.any(String), from: b.eventId, fromPort: 'out', to: b.actionId, toPort: 'in' }]);
       // only kinds the catalog has: no hidden node types
       for (const n of b.nodes) expect(CATALOG_BY_KIND[n.kind], n.kind).toBeTruthy();
       //(Count what has been done has no trigger of its own, and its own tests in all-done.test.ts)

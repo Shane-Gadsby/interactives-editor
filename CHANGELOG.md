@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Rooms**: a Room data source (Data tab, + Room) is a live chat or question wall for everyone in the same class on the StudyDesk learner page. People send with the new "Send a message to a room…" behaviour, a Send to room node or `ix.room.send`, and messages appear for everyone at once under a made-up name like Quiet Otter 41, or first names if you choose. Bind a repeat to the messages and a text to how many people are here. You and anyone you share the project with can hide a message from the Data tab, and the class stops seeing it at once. Preview has a pretend room that uses your sample messages.
 - **Ask the Activity Designer**: a speech bubble button at the top right opens UniSQ's Copilot agent in a panel beside the canvas, for ideas and how-to while you build. It knows your project's name but can't see or change the project, and closing the panel keeps the conversation.
 - **Live shared responses**: word clouds and polls now update live on the StudyDesk learner page. When anyone in the course adds or takes back an answer, or you hide or clear one, everyone sees the new counts within a second or so. Where the live link can't be made, the page still checks every few seconds as before, and the Look again setting is now that backup check.
 - **Describe it**: describe what you want in Ctrl+K, for example "make this go to the results page", "when clicked show the hint" or "add 1 to score". The behaviour box opens already filled in, with a note of what it understood, for you to check and Add.

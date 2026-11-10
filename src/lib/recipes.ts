@@ -32,6 +32,7 @@ export type NeedKind =
   | 'video'
   | 'seconds'
   | 'script'
+  | 'room'
   // changing a number
   | 'numhow'
   | 'switchhow'
@@ -407,6 +408,23 @@ export const RECIPES: Recipe[] = [
     action: (a) => ({ kind: 'action.script', params: { ...defaultParams('action.script'), script: a.script ?? '' } }),
   },
   {
+    id: 'room-send',
+    label: 'Send a message to a room…',
+    hint: 'Sends the text a person typed to everyone in the room, then empties the box. Add a Room in the Data tab first.',
+    group: 'Other',
+    needs: [
+      { key: 'room', kind: 'room', label: 'Which room' },
+      { key: 'textvar', kind: 'textvar', label: 'The text to send' },
+    ],
+    steps: (a, ctx) => {
+      const typed = ctx.project.variables.find((v) => v.id === a.textvar);
+      return [
+        { kind: 'action.roomSend', params: { ...defaultParams('action.roomSend'), source: a.room ?? '', text: typed?.name ?? '' } },
+        { kind: 'action.setVariable', params: { ...defaultParams('action.setVariable'), variable: a.textvar ?? '', op: 'set', value: JSON.stringify('') } },
+      ];
+    },
+  },
+  {
     id: 'start-over',
     label: 'Start over',
     hint: 'Clears everything the learner did and goes back to the first page.',
@@ -463,6 +481,9 @@ export function layerChoices(ab: Artboard): { id: string; name: string; hidden: 
 
 /** The pages other than the one being edited. */
 export const otherPages = (ctx: RecipeCtx) => ctx.project.artboards.filter((a) => a.id !== ctx.ab.id);
+
+/** The project's Room data sources, for Send a message to a room. */
+export const roomChoices = (project: Project) => project.dataSources.filter((d) => d.source === 'room');
 
 export const audioAssets = (project: Project) => project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio');
 
@@ -586,6 +607,7 @@ export function unavailable(recipe: Recipe, ctx: RecipeCtx): string | null {
   if (recipe.id === 'page-pick' && !otherPages(ctx).length) return 'There is no other page to go to yet.';
   if (recipe.id === 'animation' && !ctx.ab.timelines.length) return 'This page has no timelines yet. Make one in the Timeline tab first.';
   if (recipe.id === 'reset' && !resettable(ctx.project).length) return 'There are no values to put back yet. Add one in the Variables tab first.';
+  if (recipe.id === 'room-send' && !roomChoices(ctx.project).length) return 'There is no room yet. Add one in the Data tab (+ Room) first.';
   if (recipe.id === 'only-one' && layerChoices(ctx.ab).length < 2) return 'This page has no other layers yet.';
   if (recipe.needs.some((n) => n.kind === 'video') && !videoChoices(ctx.ab).length) return 'This page has no video layer yet. Add one with the Video tool (Web, in the tool bar) first.';
   return null;
@@ -602,6 +624,7 @@ function defaultsFor(needs: Need[], ctx: RecipeCtx, id: string): Answers {
       out[n.key] = pick?.id ?? THIS_LAYER;
     } else if (n.kind === 'page') out[n.key] = first(otherPages(ctx))?.id ?? '';
     else if (n.kind === 'timeline') out[n.key] = first(ctx.ab.timelines)?.id ?? '';
+    else if (n.kind === 'room') out[n.key] = first(roomChoices(ctx.project))?.id ?? '';
     else if (n.kind === 'sound') out[n.key] = first(audioAssets(ctx.project))?.id ?? '';
     else if (n.kind === 'counter') out[n.key] = first(counterChoices(ctx.project))?.id ?? NEW_PREFIX + newNameOf(n);
     else if (n.kind === 'switch') out[n.key] = first(switchChoices(ctx.project))?.id ?? NEW_PREFIX + newNameOf(n);

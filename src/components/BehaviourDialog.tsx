@@ -4,7 +4,7 @@ import { DEFAULT_TRANSITION_MS, PAGE_TRANSITIONS, speedOf, TRANSITION_SPEEDS, va
 import { onCurrentStore, store, useEditor } from '../store/store';
 import { pickNewAsset } from '../lib/quick-add';
 import { DONE_HOWS, doneHowOf, doneLayers } from '../lib/all-done';
-import { RECIPES, RECIPE_BY_ID, KEY_CHOICES, NEW_PREFIX, THIS_LAYER, TRIGGERS, TRIGGER_BY_ID, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, defaultTriggerAnswers, findLayer, incomplete, joinSet, layerChoices, listChoices, lookColour, otherPages, reachOps, resettable, seedCondition, splitSet, switchChoices, textChoices, triggerIncomplete, triggerLabel, triggerUnavailable, unavailable, videoChoices, zoneChoices, type Answers, type Need, type Recipe, type RecipeCtx, type Step, type Trigger } from '../lib/recipes';
+import { RECIPES, RECIPE_BY_ID, KEY_CHOICES, NEW_PREFIX, THIS_LAYER, TRIGGERS, TRIGGER_BY_ID, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, defaultTriggerAnswers, findLayer, incomplete, joinSet, layerChoices, listChoices, lookColour, otherPages, reachOps, resettable, roomChoices, seedCondition, splitSet, switchChoices, textChoices, triggerIncomplete, triggerLabel, triggerUnavailable, unavailable, videoChoices, zoneChoices, type Answers, type Need, type Recipe, type RecipeCtx, type Step, type Trigger } from '../lib/recipes';
 import { OP_LABELS } from '../lib/condition';
 import { ColorField, TextField } from './ui';
 import { ConditionField } from './ConditionField';
@@ -440,6 +440,8 @@ function NeedField({ need, ctx, answers, onAnswer, onAnswers, recipeId }: { need
         </div>
       );
     }
+    case 'room':
+      return sel(v, roomChoices(ctx.project).map((d) => ({ value: d.id, label: d.name })), onAnswer);
     case 'link':
       return <TextField label={need.label} value={v} placeholder="https://example.com" onChange={onAnswer} />;
     case 'video': {
