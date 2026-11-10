@@ -28,25 +28,42 @@ try {
 	let indexFile = path.join(dir, 'index.json'),
 		index = JSON.parse(fs.readFileSync(indexFile, 'utf8'))
 
-	for (let t of picked) {
-		let p = t.build(),
-			ab = p.artboards[0],
+	//the card's line in index.json, from the module and the project as written
+	let entryFor = (t, p) => {
+		let ab = p.artboards[0],
 			//the card's background as the default theme draws it
-			bg = hasTokens(p.themes) ? resolveBackground(ab, makeColorResolver(p.themes, defaultTheme(p.themes).id)) : ab.background,
-			entry = {
-				key: t.key,
-				title: t.title,
-				description: t.description,
-				group: 'Build it',
-				tags: ['tutorial', ...t.tags.filter((x) => x !== 'tutorial')],
-				artboards: p.artboards.length,
-				preview: {width: ab.width, height: ab.height, background: bg?.type === 'solid' ? bg.color : '#ffffff'},
-			}
-		fs.mkdirSync(path.join(dir, t.key), {recursive: true})
-		fs.writeFileSync(path.join(dir, t.key, 'project.json'), JSON.stringify(p))
-		let at = index.findIndex((e) => e.key === t.key)
+			bg = hasTokens(p.themes) ? resolveBackground(ab, makeColorResolver(p.themes, defaultTheme(p.themes).id)) : ab.background
+		return {
+			key: t.key,
+			title: t.title,
+			description: t.description,
+			group: 'Build it',
+			tags: ['tutorial', ...t.tags.filter((x) => x !== 'tutorial')],
+			artboards: p.artboards.length,
+			preview: {width: ab.width, height: ab.height, background: bg?.type === 'solid' ? bg.color : '#ffffff'},
+		}
+	}
+	let setEntry = (entry) => {
+		let at = index.findIndex((e) => e.key === entry.key)
 		if (at >= 0) index[at] = entry
 		else index.push(entry)
+	}
+
+	for (let t of picked) {
+		let p = t.build()
+		fs.mkdirSync(path.join(dir, t.key), {recursive: true})
+		fs.writeFileSync(path.join(dir, t.key, 'project.json'), JSON.stringify(p))
+		setEntry(entryFor(t, p))
+	}
+
+	//an example that is there already keeps its file but gets its line back (two merged branches each added lines, and the
+	//merge kept one side's index.json)
+	if (!only.length) {
+		for (let t of all) {
+			if (picked.includes(t)) continue
+			let file = path.join(dir, t.key, 'project.json')
+			if (fs.existsSync(file)) setEntry(entryFor(t, JSON.parse(fs.readFileSync(file, 'utf8'))))
+		}
 	}
 
 	//the tutorial examples last, in key order, so a rebuild writes the same file
