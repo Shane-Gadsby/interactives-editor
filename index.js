@@ -891,6 +891,7 @@ const purgeProject = async (row) => {
 	await store.dropProject(id)
 	await userData.deleteMany({project: id})
 	await activityData.deleteMany({project: id})
+	sharedLiveEndProject(id)
 	await sharedRows.deleteMany({project: id})
 	await sharedHidden.deleteMany({project: id})
 	await commentRows.deleteMany({project: id})
@@ -2112,6 +2113,7 @@ router.delete('/api/projects/:id/share', async (req, res) => {
 		await fs.promises.rm(shareFile(doc.share.token), {force: true})
 		await fs.promises.rm(sharePrevFile(doc.share.token), {force: true})
 		audit(req, 'share-off', doc)
+		sharedLiveEndProject(id)
 	}
 	await projects.updateOne({_id: id}, {$unset: {share: '', marking: '', previousMarking: ''}})
 	res.json({ok: true})
@@ -3976,6 +3978,10 @@ router.post('/learn/:token/shared/:source', express.json({limit: '4kb'}), async 
 
 	if (saved) {
 		sharedForget(project._id, source, person.course)
+
+		if (who === 'class') {
+			sharedNudge(project._id, source, person.course)
+		}
 	}
 
 	res.json({available: true, ok: true, kept: saved ? plan.kept : 0, value: await sharedValue(at, who, plan?.problem || '')})
@@ -3998,9 +4004,167 @@ router.post('/learn/:token/shared/:source/withdraw', express.json({limit: '4kb'}
 	let key = {project: project._id, source, course: person.course, username: person.username},
 		field = who === 'me' ? 'own' : 'answers'
 
-	await saveRecord(key, (existing) => existing && existing[field]?.length ? {[field]: responses.planWithdraw(existing[field], req.body?.answers, declared), updated: new Date()} : null, sharedRows)
+	let changed = await saveRecord(key, (existing) => existing && existing[field]?.length ? {[field]: responses.planWithdraw(existing[field], req.body?.answers, declared), updated: new Date()} : null, sharedRows)
 	sharedForget(project._id, source, person.course)
+
+	if (changed && who === 'class') {
+		sharedNudge(project._id, source, person.course)
+	}
+
 	res.json({available: true, ok: true, value: await sharedValue(at, who)})
+})
+
+//Live nudges for shared responses. A learner page opens one stream (server-sent events, over fetch, so it can send the session
+//headers) and the server says "changed" on it when somebody in the same project and course adds, takes back, hides or clears an
+//answer. The nudge is only the source id: no answer, no name, no count. The page hands it to the player, which reads the class
+//the normal way (same route, same privacy, same blocked words), so this can never show anybody more than a poll would. The poll
+//stays as the fallback, and the player slows it down while the stream is up.
+//One stream per open learner page, closed when it leaves and after sharedLiveAge anyway (so a share link turned off, or a session
+//that ended, stops holding it). A person has three at most (a second tab, a reconnect before the old one is noticed gone), a course
+//has sharedLiveMax, the box has sharedLiveTotalMax, and opening one is rate limited. Over any of those the page just keeps polling.
+//Nudges are coalesced: at most one per source every sharedLiveEvery ms for a course, however many people add at once.
+const sharedLive = new Map(),
+	sharedLiveEvery = 400,
+	sharedLiveAge = 20 * 60 * 1000,
+	sharedLiveMax = () => Number(process.env.INTERACTIVES_LIVE_PER_COURSE) || 600,
+	sharedLiveTotalMax = () => Number(process.env.INTERACTIVES_LIVE_TOTAL) || 5000,
+	sharedLiveCount = {open: 0},
+
+	sharedLiveSend = (hub, stream, event, data) => {
+		//A page that stopped reading is cut loose rather than buffered for
+		if (stream.res.writableLength > 16 * 1024) {
+			stream.res.destroy()
+			return
+		}
+
+		try {
+			sseSend(stream.res, event, data)
+		}
+		catch (e) {
+		}
+	},
+
+	sharedLiveFlush = (hub) => {
+		clearTimeout(hub.timer)
+		hub.timer = null
+		hub.last = Date.now()
+
+		for (let source of hub.pending) {
+			for (let stream of [...hub.streams]) {
+				sharedLiveSend(hub, stream, 'changed', {source})
+			}
+		}
+
+		hub.pending.clear()
+	},
+
+	sharedNudge = (project, source, course) => {
+		let hub = sharedLive.get(sharedKeyOf(project, '', course || ''))
+
+		if (!hub) {
+			return
+		}
+
+		hub.pending.add(source)
+		let wait = hub.last + sharedLiveEvery - Date.now()
+
+		if (wait <= 0) {
+			return sharedLiveFlush(hub)
+		}
+
+		if (!hub.timer) {
+			hub.timer = setTimeout(() => sharedLiveFlush(hub), wait)
+			hub.timer.unref?.()
+		}
+	},
+
+	//Every stream a project has (its share link went off, or the project is gone): they end, and the pages go back to polling
+	sharedLiveEndProject = (project) => {
+		for (let [key, hub] of [...sharedLive]) {
+			if (key.startsWith(`${project}|`)) {
+				for (let stream of [...hub.streams]) {
+					sharedLiveSend(hub, stream, 'bye', {})
+					stream.res.end()
+				}
+			}
+		}
+	}
+
+router.get('/learn/:token/shared-live', async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let person = learnerOf(req)
+
+	//No session, or a project with nothing shared in it: nothing to listen for, and the page keeps to its own poll
+	if (!person || !Object.keys(project.share?.shared || {}).length) {
+		return res.json({available: false})
+	}
+
+	if (!sharedLimits.live.hit(`${project._id}|${person.username}`)) {
+		return res.status(429).json({available: true, live: false, problem: 'busy'})
+	}
+
+	let key = sharedKeyOf(project._id, '', person.course || ''),
+		hub = sharedLive.get(key)
+
+	if (sharedLiveCount.open >= sharedLiveTotalMax() || (hub?.streams.size || 0) >= sharedLiveMax()) {
+		return res.status(503).json({available: true, live: false, problem: 'full'})
+	}
+
+	if (!hub) {
+		hub = {streams: new Set(), pending: new Set(), last: 0, timer: null}
+		sharedLive.set(key, hub)
+	}
+
+	//A fourth tab or a quick reconnect: the person's oldest stream makes way
+	let mine = [...hub.streams].filter((s) => s.username === person.username)
+
+	if (mine.length >= 3) {
+		mine[0].res.end()
+	}
+
+	res.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no'})
+	res.write(':ok\n\n')
+
+	let stream = {res, username: person.username},
+		finished = false
+
+	hub.streams.add(stream)
+	sharedLiveCount.open++
+	sharedLiveSend(hub, stream, 'hello', {live: true})
+
+	//Under haproxy's 25s server timeout, like the editing stream
+	let beat = setInterval(() => sharedLiveSend(hub, stream, 'beat', {}), 15 * 1000),
+		old = setTimeout(() => {
+			sharedLiveSend(hub, stream, 'bye', {})
+			res.end()
+		}, sharedLiveAge + Math.floor(Math.random() * 2 * 60 * 1000))
+
+	old.unref?.()
+
+	res.on('close', () => {
+		if (finished) {
+			return
+		}
+
+		finished = true
+		clearInterval(beat)
+		clearTimeout(old)
+		hub.streams.delete(stream)
+		sharedLiveCount.open--
+
+		if (!hub.streams.size) {
+			clearTimeout(hub.timer)
+
+			if (sharedLive.get(key) === hub) {
+				sharedLive.delete(key)
+			}
+		}
+	})
 })
 
 //Course collections: named stamps and counters that every project in the same course can read and add to, for one learner. Not a
@@ -4186,6 +4350,7 @@ router.put('/api/projects/:id/shared/:source/hidden', express.json({limit: '4kb'
 
 	await sharedHidden.updateOne(where, {$set: {keys: [...keys], updated: new Date()}}, {upsert: true})
 	sharedForget(at.doc._id, at.source, course)
+	sharedNudge(at.doc._id, at.source, course)
 	audit(req, req.body?.hidden === false ? 'shared-unhide' : 'shared-hide', at.doc, {source: at.source, course})
 	res.json({ok: true, hidden: keys.has(key)})
 })
@@ -4222,6 +4387,7 @@ router.delete('/api/projects/:id/shared/:source/answers', express.json({limit: '
 	}
 
 	sharedForget(at.doc._id, at.source, course)
+	sharedNudge(at.doc._id, at.source, course)
 	audit(req, key ? 'shared-removed' : 'shared-cleared', at.doc, {source: at.source, course, people: removed})
 	res.json({ok: true, people: removed})
 })
@@ -4336,6 +4502,77 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			})
 		})
 	}
+	//Shared responses go live: once the project reads a class, this page keeps one stream open to the server (fetch, so the session
+	//headers go with it) and tells the player when it says something changed. All that comes down is the source id, the player
+	//reads the class itself the usual way. Anything that goes wrong (no session, a full course, a dropped connection) leaves the
+	//player on its own poll, and this page tries again in a while. It is closed when the page goes
+	var live = {started: false, ctl: null, tries: 0, timer: null, gone: false}
+	var tellLive = function (msg) {
+		if (frame.contentWindow) frame.contentWindow.postMessage(Object.assign({target: 'interactives', type: 'shared-live'}, msg), '*')
+	}
+	var liveAgain = function (wait) {
+		if (live.gone) return
+		clearTimeout(live.timer)
+		live.timer = setTimeout(liveConnect, wait + Math.floor(Math.random() * 1500))
+	}
+	var liveConnect = function () {
+		if (live.gone || typeof AbortController === 'undefined') return
+		var ctl = new AbortController(), headers = {}, up = false
+		live.ctl = ctl
+		if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
+		else if (ltiSession) headers['X-LTI-Session'] = ltiSession
+		var ended = function () {
+			if (up) tellLive({up: false})
+			up = false
+			live.tries++
+			liveAgain(Math.min(60000, 2000 * Math.pow(2, Math.min(live.tries, 5))))
+		}
+		fetch(base + '/learn/' + token + '/shared-live', {headers: headers, signal: ctl.signal}).then(function (r) {
+			if ((r.headers.get('content-type') || '').indexOf('text/event-stream') !== 0 || !r.ok || !r.body) {
+				//No session or nothing shared: never. A busy server or a full course: later
+				if (r.ok) return
+				throw new Error('later')
+			}
+			up = true
+			live.tries = 0
+			tellLive({up: true})
+			var reader = r.body.getReader(), decoder = new TextDecoder(), buf = ''
+			var pump = function () {
+				return reader.read().then(function (chunk) {
+					if (chunk.done) return
+					buf += decoder.decode(chunk.value, {stream: true})
+					var at
+					while ((at = buf.indexOf('\\n\\n')) >= 0) {
+						var block = buf.slice(0, at)
+						buf = buf.slice(at + 2)
+						var ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block)
+						if (ev && ev[1] === 'changed' && data) {
+							try {
+								var d = JSON.parse(data[1])
+								tellLive({changed: true, source: typeof d.source === 'string' ? d.source.slice(0, 64) : ''})
+							}
+							catch (e) {
+							}
+						}
+					}
+					return pump()
+				})
+			}
+			return pump().then(ended, ended)
+		}).catch(function () {
+			if (!live.gone) ended()
+		})
+	}
+	var openLive = function () {
+		if (live.started) return
+		live.started = true
+		liveConnect()
+	}
+	window.addEventListener('pagehide', function () {
+		live.gone = true
+		clearTimeout(live.timer)
+		if (live.ctl) live.ctl.abort()
+	})
 	var cleanRecord = ${records.cleanRecord.toString()}
 	var rowFor = ${records.rowFor.toString()}
 	var cleanDiag = ${records.cleanDiag.toString()}
@@ -4443,6 +4680,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			}, failed)
 		}
 		else if (m.op === 'shared-read') {
+			if (m.who !== 'me') openLive()
 			call('GET', 'shared/' + encodeURIComponent(m.sharedSource) + '?who=' + encodeURIComponent(m.who || '')).then(function (j) {
 				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
 			}, failed)
@@ -4891,6 +5129,7 @@ client.connect()
 		//Shared responses: how often one person may add or take back (per project), and how often they may read
 		sharedLimits.write = new commentsMod.Limiter(30, 60 * 1000)
 		sharedLimits.read = new commentsMod.Limiter(180, 60 * 1000)
+		sharedLimits.live = new commentsMod.Limiter(12, 60 * 1000)
 
 		//Course collections: per person, whatever the project
 		courseLimits.write = new commentsMod.Limiter(60, 60 * 1000)
