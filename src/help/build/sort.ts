@@ -32,7 +32,7 @@ A card called **Question 1** appears with a sample prompt, two group boxes, **Ma
 ## 3. Name the groups
 
 1. Replace the **Prompt** with \`Drag each energy source into the group it belongs to.\`
-2. The groups are listed first, one box each. Change **Mammals** to \`Renewable\` and **Birds** to \`Non-renewable\`. The headings in the boxes change as you type. The box layers in the **Layers** panel keep their sample names, **Mammals** and **Birds**, and so do the drop events in Preview's **Debug** list; rename the layers if that bothers you.
+2. The groups are listed first, one box each. Change **Mammals** to \`Renewable\` and **Birds** to \`Non-renewable\`. The headings in the boxes change as you type. The box layers in the **Layers** panel take the new names too, and so do the drop events in Preview's **Debug** list. A layer you have named yourself keeps its name.
 
 **+ Add group** adds another box (up to six). With three groups the boxes share the width of the card.
 

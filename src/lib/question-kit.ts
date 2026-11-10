@@ -624,13 +624,15 @@ function syncCategories(frame: FrameNode, q: Question, ab: Artboard): void {
   groupsBox.children.sort((a, b) => (rank.get(zoneId(a) ?? '') ?? 0) - (rank.get(zoneId(b) ?? '') ?? 0));
   groups.forEach((g, i) => {
     const z = groupsBox.children.find((c) => zoneId(c) === g.id)!;
-    if (/^Group \d+$/.test(z.name) || z.name === g.name) z.name = g.name || `Group ${i + 1}`;
+    const heading = (partsOf(z as FrameNode).catHeading ?? [])[0];
+    //the layer follows the group's name while it still wears the old one (the heading text is the old name until just below)
+    const was = heading && heading.type === 'text' ? heading.text : '';
+    if (/^Group \d+$/.test(z.name) || z.name === g.name || (was && z.name === was && g.name)) z.name = g.name || `Group ${i + 1}`;
     z.ariaLabel = g.name;
     if (z.dropZone) {
       z.dropZone.label = g.name;
       z.dropZone.accepts = [catTag(q)];
     }
-    const heading = (partsOf(z as FrameNode).catHeading ?? [])[0];
     if (heading && heading.type === 'text') {
       heading.text = g.name;
       for (const r of heading.runs ?? []) r.text = g.name;
