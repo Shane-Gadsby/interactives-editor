@@ -32,4 +32,14 @@ describe('repeatLocals', () => {
     expect(repeatLocals(p, ab, 'extra')).toBeNull();
     expect(repeatLocals(p, ab, 'list')).toBeNull();
   });
+  it('adds isSelected when the repeater has a selection, from the variable\'s starting value', () => {
+    const { p, ab } = project();
+    p.variables.push({ id: 'pick', name: 'picked', type: 'number', initial: 0 } as never);
+    (ab.children[0] as unknown as { repeat: object }).repeat = { items: 'rows', layout: 'vertical', gap: 4, columns: 1, select: { mode: 'one', variable: 'pick' } };
+    const r = repeatLocals(p, ab, 'label')!;
+    expect(r.locals).toEqual(['item', 'index', 'isSelected']);
+    expect(r.values).toEqual({ item: { name: 'Ann', pets: ['cat', 'dog'], selected: true }, index: 0, isSelected: true });
+    p.variables[p.variables.length - 1].initial = -1;
+    expect(repeatLocals(p, ab, 'label')?.values.isSelected).toBe(false);
+  });
 });

@@ -68,12 +68,12 @@ The cards are a **repeater**: you design one card, and it is copied once for eac
 4. Click under it and type \`{item.text}\`. Name it **Card text**. Make it a little narrower than the rectangle so long lines wrap inside it.
 5. In the **Layers** panel, click **Card background**, then <kbd>Shift</kbd>+click **Card text**, so all three are selected. Press <kbd>Ctrl</kbd>+<kbd>G</kbd> to group them, and name the group **Card**. It is now the only layer inside **Cards**.
 6. Select the **Cards** frame. In the Properties panel open **Repeat (list)** and tick **Repeat the first child for each item**.
-7. Change **Items** to \`tips.cards\` and press <kbd>Enter</kbd>. (It starts as \`tips\`, the whole file, which is not a list.)
+7. Set **Repeat for each** to **A formula (advanced)**, change **Items** to \`tips.cards\` and press <kbd>Enter</kbd>. (It starts as **Data: tips**, the whole file, which is not a list.)
 8. Set **Layout** to **Grid**, **Cols** to **2** and **Gap** to **16**.
 
 Four cards appear, two by two, each with its own tip. Inside a repeated layer, \`item\` is the item it was copied for, so \`{item.title}\` is that card's title. Change the card you drew (its size, its font) and every copy follows.
 
-![The Cards frame selected, with four cards two by two on the canvas, and its Repeat (list) section: Items tips.cards, currently 4 items, Layout Grid, Gap 16 and Cols 2.](help/tutorial-data-source-repeat.png)
+![The Cards frame selected, with four cards two by two on the canvas, and its Repeat (list) section: Repeat for each a formula, Items tips.cards, currently 4 items, Layout Grid, Gap 16 and Cols 2.](help/tutorial-data-source-repeat.png)
 
 ## 5. A colour from the file
 
@@ -117,7 +117,7 @@ Press **Preview** at the top right. The page plays with the words from the file,
 
 ## Go further
 
-- **A spreadsheet instead.** Save a sheet as CSV (first row the column names: \`title,text,colour\`) and add it with **+ From file**. A CSV becomes a list of rows, so **Items** is the source's name on its own, such as \`cards\`.
+- **A spreadsheet instead.** Save a sheet as CSV (first row the column names: \`title,text,colour\`) and add it with **+ From file**. A CSV becomes a list of rows, so **Repeat for each** is just that source, such as **Data: cards**.
 - **More than one page.** Every page can read the same source. A second page could show \`{tips.cards[0].text}\` large, for a tip of the week.
 - **A file somebody else keeps up to date.** **+ From URL** reads the file from a web address each time the project opens. See [Data sources](data-sources).
 

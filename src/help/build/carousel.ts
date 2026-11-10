@@ -75,7 +75,7 @@ A shortcut presses the button from anywhere on the page, so the arrow keys run t
 ## 5. A dot for each slide
 
 1. Press <kbd>O</kbd> for the **Ellipse** tool and draw a small circle between Previous and Next, 18 by 18. Name it **Dot**.
-2. Select it and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Name the group **Dots**. In its **Repeat (list)** tick **Repeat the first child for each item**, set **Items** to \`slides\`, **Layout** to **Row** and **Gap** to **14**. Four dots appear.
+2. Select it and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Name the group **Dots**. In its **Repeat (list)** tick **Repeat the first child for each item**, set **Repeat for each** to **List: slides**, **Layout** to **Row** and **Gap** to **14**. Four dots appear.
 3. Select **Dot** again and add three bindings in **Data bindings**, each a **Formula**:
    - **Fill colour**: \`slide == index + 1 ? "#1f3a68" : "#c9ced6"\`. The current slide's dot is dark.
    - **Current (true, or page, step, location)**: \`slide == index + 1\`. A screen reader says which dot is current.

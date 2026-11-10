@@ -29,6 +29,7 @@ export function whenChoices(variables: Variable[], repeat?: { locals?: string[];
     } else out.push({ value: 'item', label: 'item', hint: 'this item' });
   }
   if (repeat?.locals?.includes('index')) out.push({ value: 'index', label: 'index', hint: 'its place in the list' });
+  if (repeat?.locals?.includes('isSelected')) out.push({ value: 'isSelected', label: 'isSelected', hint: 'true when this copy is picked' });
   return out;
 }
 

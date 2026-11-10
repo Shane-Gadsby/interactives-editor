@@ -65,9 +65,22 @@ describe('Content and explore tutorial examples', () => {
     const { ab, player } = play('tut-flipcards');
     const card = find(ab.children, 'Card');
     expect(copies(card.id)).toBeGreaterThanOrEqual(6);
+    //(there are no nodes for the click: the repeater's own selection writes the list, and tells each copy if it is turned over)
+    expect(card.role).toBeUndefined();
+    expect(el(`${card.id}~2`).getAttribute('role')).toBe('checkbox');
     click(`${card.id}~2`);
     tick();
     expect(player.getVariable('flipped')).toEqual([2]);
+    expect(el(`${card.id}~2`).getAttribute('aria-checked')).toBe('true');
+    expect(el(`${card.id}~3`).getAttribute('aria-checked')).toBe('false');
+    expect(el(`${find(ab.children, 'Card back').id}~2`).style.display).not.toBe('none');
+    expect(el(`${find(ab.children, 'Card back').id}~3`).style.display).toBe('none');
+    //Enter on a focused card turns it over too
+    el(`${card.id}~0`).focus();
+    el(`${card.id}~0`).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    tick();
+    expect(player.getVariable('flipped')).toEqual([0, 2]);
+    click(`${card.id}~0`);
     click(`${card.id}~4`);
     click(`${card.id}~2`);
     tick();

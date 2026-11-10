@@ -77,6 +77,12 @@ class DataCache {
 
 export const dataCache = new DataCache();
 
+/** What a variable holds in a preview scope, by id: how a repeater with a selection shows which copies are picked on the canvas. */
+export const previewValue = (project: Project, vars: Record<string, unknown>) => (id: string): unknown => {
+  const v = project.variables.find((x) => x.id === id);
+  return v ? vars[v.name] : undefined;
+};
+
 /** Variables (initial values) and data, the way the player scopes them. */
 export function previewScope(project: Project, artboard?: Artboard): Record<string, unknown> {
   const data = dataCache.scope(project);

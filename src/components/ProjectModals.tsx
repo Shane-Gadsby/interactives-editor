@@ -15,6 +15,7 @@ import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
 import { confirmDialog, promptDialog } from './dialogs';
 import { inUseWarning } from '../lib/in-use';
+import { previewValue } from '../lib/data';
 import { getReview, putReview, reviewUrl, stopReview, type ReviewLink } from '../lib/comments';
 
 export function Modal({ title, help, onClose, children, className }: { title: string; help?: string; onClose: () => void; children: React.ReactNode; className?: string }) {
@@ -56,7 +57,7 @@ function ProjectThumb({ project }: { project: Project }) {
     if (!ab) return;
     const r = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve });
     const vars = Object.fromEntries(project.variables.map((v) => [v.name, v.initial]));
-    r.render(ab, prepareNodes(withMaster(project.artboards, ab), { vars }), { vars });
+    r.render(ab, prepareNodes(withMaster(project.artboards, ab), { vars }, { variableValue: previewValue(project, vars) }), { vars });
     const scale = Math.min(el.clientWidth / ab.width, el.clientHeight / ab.height);
     Object.assign(r.root.style, { position: 'absolute', left: `${(el.clientWidth - ab.width * scale) / 2}px`, top: `${(el.clientHeight - ab.height * scale) / 2}px`, transform: `scale(${scale})`, transformOrigin: '0 0' });
     el.appendChild(r.root);

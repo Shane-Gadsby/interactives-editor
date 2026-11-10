@@ -56,7 +56,7 @@ Find \`rows\` in the **Variables** tab. It says **Worked out**, its formula is \
 ### 4. A repeater in a grid
 
 1. On **Find the words**, select **Grid** in the **Layers** panel.
-2. Open its **Repeat (list)** section. **Items** is:
+2. Open its **Repeat (list)** section. **Repeat for each** is **A formula (advanced)**, and **Items** is:
 
 \`\`\`
 rows.join("").split("").map((l, i) => ({l, i}))
@@ -129,7 +129,7 @@ Press **Preview**, then **Start**. Drag across a word: it turns green and is str
 
 ### 10. The grid and the typing
 
-1. Select **Grid**. Its **Repeat (list)** has **Items** \`cells\`, **Layout** **Grid**, **Cols** \`10\`. Its one child, **Square**, has a **Visible** binding, \`item.ch != ""\`, so squares with no letter are hidden.
+1. Select **Grid**. Its **Repeat (list)** has **Repeat for each** set to **List: cells**, **Layout** **Grid**, **Cols** \`10\`. Its one child, **Square**, has a **Visible** binding, \`item.ch != ""\`, so squares with no letter are hidden.
 2. In the **Interactions** tab, the **When a key is pressed** node with the **Note** *Type a letter* runs for any key on a square. A **Check a condition** lets only letters through, then **Change a value or counter** writes the letter into \`cells\` and moves the chosen square along the word.
 3. **Check letters** marks every typed letter right or wrong; **Reveal word** and **Reveal all** fill letters in. The live \`done\` is true once every square holds its answer, and its **When a value changes** says so.
 

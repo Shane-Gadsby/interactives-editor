@@ -63,7 +63,7 @@ import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { getArtboard, isIdentifier, locate } from '../store/doc';
 import { ColourwayRow } from './ColourwayRow';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, TrackField, UnitField } from '../components/ui';
-import { ExprField, ExprLocals } from '../components/ExprField';
+import { ExprField, ExprLocals, FormulaStatusLine, useFormulaStatus } from '../components/ExprField';
 import { repeatLocals } from '../lib/repeat-locals';
 import { openBehaviours } from '../components/BehaviourDialog';
 import { revealAdded } from '../lib/graph-reveal';
@@ -78,7 +78,9 @@ import { assetKind } from '../lib/assets';
 import { acceptFor, pickFiles, replaceAssetFile } from '../lib/insert';
 import { updateFromFile } from '../lib/importers';
 import { pointTracks } from '../lib/path-edit';
-import { addAssetOption, createVariable, withQuickAdd } from '../lib/quick-add';
+import { addAssetOption, addVariableOption, createVariable, withQuickAdd } from '../lib/quick-add';
+import { FORMULA_ITEMS, OWN_ITEMS, defaultItems, itemExample, itemsChoiceOf, itemsChoices, itemsFor } from '../lib/repeat-items';
+import { ListTable } from '../components/ListTable';
 import { SearchPicker, type PickerOption } from '../components/SearchPicker';
 import { CodeEditor } from '../components/CodeEditor';
 import { AccessibilitySection, TabOrderSection } from './AccessibilitySections';
@@ -2014,16 +2016,57 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
   const rep = node.repeat;
   const update = (patch: Partial<Repeat>) => set({ repeat: { ...(rep as Repeat), ...patch } }, `repeat-${node.id}`);
   const lists = project.dataSources.map((d) => d.name);
+  //"A formula" stays picked while its text happens to look like a list name or a typed list, until another source is chosen
+  const [formula, setFormula] = useState(false);
+  useEffect(() => setFormula(false), [node.id]);
+  const choice = rep ? (formula ? FORMULA_ITEMS : itemsChoiceOf(rep.items, project)) : '';
+  //The line "currently 6 items" under the picker (a formula box has its own)
+  const itemsStatus = useFormulaStatus(rep?.items ?? '', [], undefined);
+  const sel = rep?.select ?? null;
+  const pickMode = async (mode: 'none' | 'one' | 'several') => {
+    if (!rep) return;
+    if (mode === 'none') return update({ select: null });
+    const type = mode === 'one' ? 'number' : 'list';
+    const have = project.variables.find((v) => v.id === sel?.variable);
+    // The variable it writes has to be the right kind (a number for one, a list for several); ask for a name when there isn't one
+    if (have && have.type === type) return update({ select: { ...sel!, mode } });
+    const id = await createVariable(type, mode === 'one' ? 'selectedIndex' : 'selectedItems', mode === 'one' ? -1 : '[]');
+    if (id) update({ select: { mode, variable: id, ...(mode === 'one' && sel?.toggle ? { toggle: true } : {}) } });
+  };
   return (
     <Section help="repeaters" title="Repeat (list)" defaultOpen={!!rep}>
       <CheckField
         label="Repeat the first child for each item"
         value={!!rep}
-        onChange={(on) => set({ repeat: on ? { items: lists[0] ?? '[1, 2, 3]', layout: 'vertical', gap: 8, columns: 2 } : null })}
+        onChange={(on) => {
+          setFormula(false);
+          set({ repeat: on ? { items: defaultItems(project), layout: 'vertical', gap: 8, columns: 2 } : null });
+        }}
       />
       {rep && (
         <>
-          <ExprField label="Items" value={rep.items} commitOnBlur placeholder="products" onChange={(v) => update({ items: v })} />
+          <SelectField
+            label="Repeat for each"
+            title="Where the items come from: a list variable, a data source, or items you type into a table here. A formula is there for anything else"
+            value={choice}
+            options={itemsChoices(project)}
+            onChange={(c) => {
+              setFormula(c === FORMULA_ITEMS);
+              update({ items: itemsFor(c, rep.items) });
+            }}
+          />
+          {choice !== FORMULA_ITEMS && <FormulaStatusLine status={itemsStatus} />}
+          {choice === OWN_ITEMS && (
+            <>
+              <PropRow k="Items table" words={['items', 'table', 'rows', 'columns', 'type my own items', 'json']}>
+                <ListTable label="Items" value={rep.items} onChange={(text) => update({ items: text })} jsonTitle="The items as JSON: an array of text or numbers, or of objects" />
+              </PropRow>
+              <div className="muted small">
+                In the layers inside, use <code>{itemExample(rep.items)}</code> for what each row holds.
+              </div>
+            </>
+          )}
+          {choice === FORMULA_ITEMS && <ExprField label="Items" value={rep.items} commitOnBlur placeholder="products" onChange={(v) => update({ items: v })} />}
           <Row>
             <SelectField
               label="Layout"
@@ -2053,6 +2096,42 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
                 onChange={(v) => update({ direction: v === 'columns' ? 'columns' : undefined })}
               />
             </Row>
+          )}
+          <SelectField<'none' | 'one' | 'several'>
+            label="Selection"
+            title="Let people pick copies. One: choosing a copy un-chooses the others. Several: each copy switches on and off. A click, Space or Enter picks, arrow keys move between the copies, and no nodes are needed"
+            value={sel ? sel.mode : 'none'}
+            options={[
+              { value: 'none', label: 'None' },
+              { value: 'one', label: 'One at a time' },
+              { value: 'several', label: 'Several' },
+            ]}
+            onChange={(m) => void pickMode(m)}
+          />
+          {sel && (
+            <>
+              <SelectField
+                label="Remember the pick in"
+                title={sel.mode === 'one' ? 'A number variable. It holds the number of the picked copy, from 0, or -1 for none' : 'A list variable. It holds the numbers of the picked copies, from 0'}
+                value={sel.variable}
+                options={[
+                  ...project.variables.filter((v) => v.type === (sel.mode === 'one' ? 'number' : 'list')).map((v) => ({ value: v.id, label: v.name })),
+                  addVariableOption(),
+                ]}
+                onChange={withQuickAdd((v) => update({ select: { ...sel, variable: v } }), { variableType: sel.mode === 'one' ? 'number' : 'list', variableName: sel.mode === 'one' ? 'selectedIndex' : 'selectedItems', variableInitial: sel.mode === 'one' ? -1 : '[]' })}
+              />
+              {sel.mode === 'one' && (
+                <CheckField
+                  label="Click again to clear"
+                  title="Clicking the picked copy again picks nothing (an accordion that can close). Off: a choice stays chosen until another is picked"
+                  value={!!sel.toggle}
+                  onChange={(on) => update({ select: { ...sel, toggle: on ? true : undefined } })}
+                />
+              )}
+              <div className="muted small">
+                In the copies, <code>isSelected</code> is true for a picked one. Bind a look to it.
+              </div>
+            </>
           )}
           <SectionBlurb
             text={

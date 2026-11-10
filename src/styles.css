@@ -6190,6 +6190,19 @@ kbd {
 .constraint:first-child {
   border-top: 0;
 }
+.list-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.list-table .seg {
+  align-self: flex-start;
+}
+.list-table .seg-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+}
 .enum-edit {
   display: flex;
   gap: 6px;
