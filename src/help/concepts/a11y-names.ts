@@ -33,7 +33,7 @@ Buttons, inputs and links are real controls, so they already have a role and wor
 
 ![The Tab order section with Switch moved above Bulb by its arrows, and the Reset to layer order button under the list.](help/concept-a11y-names-tab-order.png)
 
-- In Preview, press <kbd>Tab</kbd> and watch the focus ring. Roles, tab stops and the ring only work while **Accessibility** is on in Preview's bar. Switch on **Screen reader** there to see a strip of what Announce nodes and scripts would tell a screen reader.
+- In Preview, press <kbd>Tab</kbd> and watch the focus ring. Roles, tab stops and the ring only work while **Accessibility** is on in Preview's bar. Switch on **Screen reader** there to see a strip of what Announce nodes, **Say it** boxes and scripts would tell a screen reader. A status line set to **Read changes aloud** is a live region the screen reader watches itself, so it is not in the strip.
 
 **More:** [Accessibility: roles and keyboard](accessibility), [Tab order](accessibility#tab-order), [Accessibility checker](accessibility-checker), [Drag and drop](drag-and-drop#keyboard-touch-and-screen-readers), and [Label the diagram](tutorial-label), which gives a picture a text alternative and tries the activity from the keyboard.`,
   },

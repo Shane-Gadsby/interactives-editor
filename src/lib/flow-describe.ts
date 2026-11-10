@@ -206,7 +206,14 @@ const TIMELINE_OP: Record<string, (t: string, p: P) => string> = {
   seek: (t, p) => `jump ${t} to ${secs(p.time)}`,
 };
 
+//Set variable's sentence, with what it says to a screen reader afterwards when it has a Say it
 function setVariable(p: P, c: Names): string {
+  const what = setVariableDoes(p, c);
+  const say = String(p.say ?? '').trim();
+  return say ? `${what}, then say “${say}” to screen readers` : what;
+}
+
+function setVariableDoes(p: P, c: Names): string {
   const v = c.variable(p.variable);
   const op = String(p.op ?? 'set');
   //an easing time on a number: only worded when it is not 0

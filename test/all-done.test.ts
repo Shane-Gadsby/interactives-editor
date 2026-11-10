@@ -183,3 +183,12 @@ describe('answered and opened', () => {
     player.destroy();
   });
 });
+
+describe('Say it in the sentences', () => {
+  it('reads a Set variable with words to say as saying them afterwards', () => {
+    const f = fixture();
+    f.p.variables.push({ id: 'vsl', name: 'slide', type: 'number', initial: 1 });
+    const b = buildBehaviour(ctxOf(f), 'counter', 'click', { counter: 'vsl', numhow: 'add', amount: '1', say: 'Slide {slide}' }, mk);
+    expect(b.sentence).toBe('When clicked: add 1 to slide, then say “Slide {slide}” to screen readers');
+  });
+});
