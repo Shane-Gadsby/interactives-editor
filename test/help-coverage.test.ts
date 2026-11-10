@@ -12,6 +12,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Drag to put things in order': [['question-kit', 'by dragging an item to its place']],
+  'Less motion in Preview': [['interface', '**Less motion** plays it'], ['concept-reduced-motion', 'press **Less motion**']],
   'Feedback for each blank': [['question-kit', 'Feedback if wrong'], ['question-kit', '**Shown as** appears']],
   'Polls keep their shape': [['shared-responses', 'Poll options']],
   'More one-click behaviours': [['interactions', 'Turn the sound off or on'], ['interactions', 'Jump a video to a time'], ['interactions', 'Run a script']],

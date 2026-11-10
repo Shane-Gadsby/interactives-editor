@@ -1123,6 +1123,8 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const [said, setSaid] = useState<{ text: string; politeness: string }[]>([]);
   const [buildError, setBuildError] = useState<string | null>(null);
   const [from, setFrom] = useState<'start' | 'current'>('start');
+  //Play it as if this device asked for less motion, to check the calm version without changing the computer's own setting
+  const [lessMotion, setLessMotion] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   // The Events list follows the newest entry unless this is unticked (kept in this browser)
   const [autoScroll, setAutoScroll] = useState(() => {
@@ -1254,14 +1256,14 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
     let live = true;
     setBuildError(null);
     // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show
-    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true, accessibility, context: sampleContextFor(project as Project) }).then(
+    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project) }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );
     return () => {
       live = false;
     };
-  }, [project, from, abId, nonce, accessibility]);
+  }, [project, from, abId, nonce, accessibility, lessMotion]);
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow) return;
@@ -1333,6 +1335,14 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             title="Show a strip under the preview with what a screen reader would be told by Announce nodes and ix.announce (also in Preferences). It needs Accessibility on"
           >
             Screen reader {screenReader ? 'on' : 'off'}
+          </button>
+          <button
+            className={`btn${lessMotion ? ' active' : ''}`}
+            onClick={() => setLessMotion(!lessMotion)}
+            aria-pressed={lessMotion}
+            title={`Play it as a viewer whose device asks for less motion sees it, without changing your own computer's setting. ${project.settings.reducedMotion ? 'Autoplaying timelines show their end, page changes are instant, and timelines marked Skip for less motion jump to the end' : 'Respect reduced motion is off for this project, so only timelines marked Skip for less motion change'}`}
+          >
+            Less motion {lessMotion ? 'on' : 'off'}
           </button>
           {themes?.list.length ? (
             <>

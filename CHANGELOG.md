@@ -2,7 +2,8 @@
 
 ## Unreleased: Symposium 3
 
-- **Drag to put things in order**: in a Put in order question a learner can now drag an item up or down the list, as well as using its arrow buttons. The buttons stay the keyboard's way.
+- **Drag to put things in order**: in a Put in order question a learner can now drag an item up or down the list, as well as using its arrow buttons. The held item lifts, the others slide aside to show where it will land, and the numbers follow. The buttons stay the keyboard's way.
+- **Less motion in Preview**: a Less motion button in Preview's header plays the project as a viewer whose device asks for less motion sees it, so you can check the calm version without changing your own computer's settings.
 - **Feedback for each blank**: every blank in a Fill in the blank question has its own **Feedback if wrong**, said after the Wrong line when that blank is wrong. A blank that only accepts a /pattern/ also gets **Shown as**, what Show the right answer puts in it (before, it showed nothing), and the question's checks say when one is missing.
 - **Polls keep their shape**: a Shared responses source can list its **Poll options**. Each one is always in the list with 0 until someone picks it, so a poll chart has a bar for every option from the start instead of growing bars as votes arrive.
 - **More one-click behaviours**: + When clicked… can now turn the sound off or on, play or pause a video, jump a video to a time, and run a script (an existing one or a new one made for you).
