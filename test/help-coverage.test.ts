@@ -49,7 +49,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'More one-click behaviours': [['interactions', 'Turn the sound off or on'], ['interactions', 'Jump a video to a time'], ['interactions', 'Run a script']],
   'Shared with instances': [['variables', 'Shared with instances']],
   'New projects respect reduced motion': [['links-cursors', 'It is on in a new project']],
-  Fixes: [['page-master', 'progress bars, groups and frames only'], ['page-master', 'keeps its slot text'], ['concept-auto-layout', 'greyed out for a child the layout places'], ['concept-coordinates', "the group's X changed instead"]],
+  Fixes: [['page-master', 'progress bars, groups and frames only'], ['page-master', 'keeps its slot text'], ['concept-auto-layout', 'greyed out for a child the layout places'], ['concept-coordinates', "the group's X changed instead"], ['tutorial-sort', 'take the new names too']],
   'Guides, reworked': [['canvas', 'one endless dashed line'], ['canvas', 'Attach new guides to the page'], ['canvas', 'Rounding while you drag'], ['shortcuts', 'Keys you hold while dragging']],
   'Credits on every starter': [['attributions', 'A Credits button of your own'], ['branded-starters', 'button in a corner']],
   'Smaller saves and a faster first load': [['interface', 'sent squeezed']],

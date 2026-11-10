@@ -1,4 +1,4 @@
-import{bX as a,bY as o,bZ as m,b_ as r,b$ as k,c0 as V,c1 as R,c2 as L,c3 as h,c4 as s,c5 as i,c6 as U,c7 as E,c8 as b,c9 as n,ca as S,cb as C,cc as f,cd as w,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-BGMYp_vE.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bX as a,bY as o,bZ as m,b_ as r,b$ as k,c0 as V,c1 as R,c2 as L,c3 as h,c4 as s,c5 as i,c6 as U,c7 as E,c8 as b,c9 as n,ca as S,cb as C,cc as f,cd as w,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-PiUYdFZ9.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -3117,7 +3117,7 @@ A card called **Question 1** appears with a sample prompt, two group boxes, **Ma
 ## 3. Name the groups
 
 1. Replace the **Prompt** with \`Drag each energy source into the group it belongs to.\`
-2. The groups are listed first, one box each. Change **Mammals** to \`Renewable\` and **Birds** to \`Non-renewable\`. The headings in the boxes change as you type. The box layers in the **Layers** panel keep their sample names, **Mammals** and **Birds**, and so do the drop events in Preview's **Debug** list; rename the layers if that bothers you.
+2. The groups are listed first, one box each. Change **Mammals** to \`Renewable\` and **Birds** to \`Non-renewable\`. The headings in the boxes change as you type. The box layers in the **Layers** panel take the new names too, and so do the drop events in Preview's **Debug** list. A layer you have named yourself keeps its name.
 
 **+ Add group** adds another box (up to six). With three groups the boxes share the width of the card.
 
