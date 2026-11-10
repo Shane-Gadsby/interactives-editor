@@ -36,9 +36,11 @@ function build(): Project {
   const card = button(p, 'Card', '{item.state == "down" ? "?" : item.text}', 0, 0, 170, 100);
   card.fontSize = 22;
   card.bindings = {
-    'fill.color': 'item.state == "down" ? "#f6c344" : item.state == "matched" ? "#bfe5c4" : "#ffffff"',
+    'fill.color': 'item.state',
     ariaLabel: '"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text)',
   };
+  //By value on the card's state: down is gold, matched is green, turned up is white
+  card.converters = { 'fill.color': [{ type: 'map', map: { down: '#f6c344', matched: '#bfe5c4' }, fallback: '#ffffff' }] };
   const grid = layer('frame', 'Cards', 60, 110, 4 * 170 + 3 * 12, 3 * 100 + 2 * 12, { fill: null, clip: false, children: [card], repeat: { items: 'cards', layout: 'grid', gap: 12, columns: 4 } });
   board.children.push(grid);
 
