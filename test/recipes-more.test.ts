@@ -133,6 +133,30 @@ describe('Change a layer’s look', () => {
   });
 });
 
+describe('Switch something on or off', () => {
+  it('flips unless told to turn it on or off, and reads as switching it', () => {
+    const f = fixture();
+    const ctx = ctxOf(f);
+    expect(buildBehaviour(ctx, 'switch', 'click', { switch: 'vf' }, mk).nodes[1].params).toMatchObject({ op: 'toggle' });
+    const on = buildBehaviour(ctx, 'switch', 'click', { switch: 'vf', how: 'on' }, mk);
+    expect(on.nodes[1].params).toMatchObject({ op: 'set', value: 'true' });
+    expect(on.sentence).toBe('When clicked: switch done on');
+    const off = buildBehaviour(ctx, 'switch', 'click', { switch: 'vf', how: 'off' }, mk);
+    expect(off.nodes[1].params).toMatchObject({ op: 'set', value: 'false' });
+    expect(off.sentence).toBe('When clicked: switch done off');
+    expect(defaultAnswers(RECIPE_BY_ID.switch, ctx).how).toBe('flip');
+  });
+
+  it('turns it on when played', async () => {
+    document.body.innerHTML = '<div id="stage" style="width:800px;height:600px"></div>';
+    const r = play(fixture(), 'switch', { switch: 'vf', how: 'on' });
+    await r.click(r.f.btn.id);
+    await r.click(r.f.btn.id);
+    expect(r.player.getVariable('done')).toBe(true);
+    r.player.destroy();
+  });
+});
+
 describe('Show only one of a set', () => {
   it('hides the others in the set, then shows the one, all ordinary Show or hide nodes', () => {
     const f = fixture();

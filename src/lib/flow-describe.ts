@@ -241,8 +241,12 @@ function setVariable(p: P, c: Names): string {
       return `remove ${val(p.value)} from the list ${v}`;
     case 'setItem':
       return `change an item of the list ${v}`;
-    default:
+    default: {
+      //a yes/no value set to true or false reads as switching it
+      const t = String(p.value ?? '').trim();
+      if ((t === 'true' || t === 'false') && c.project.variables.find((x) => x.id === p.variable)?.type === 'boolean') return `switch ${v} ${t === 'true' ? 'on' : 'off'}`;
       return `set ${v} to ${val(p.value)}${over}`;
+    }
   }
 }
 

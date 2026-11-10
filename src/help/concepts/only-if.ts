@@ -16,6 +16,8 @@ export const concept: Concept = {
 
 Both take a formula, or the pickers (**[score] [is at least] [5]**). A formula that can't be worked out counts as false.
 
+You don't have to choose between them in **+ When clicked…**. **+ only if…** there writes an **Only if** on the event, and adding **+ otherwise…** to it writes a **Check a condition** with **true** and **false** ways instead.
+
 ## Where people get caught out
 
 - **"Both feedback messages show."** The check is missing or in the wrong place: two flows run from the same click, one for each message. Use one flow with a **Check a condition**, the right feedback on **true** and the wrong feedback on **false**. Or give each event its own **Only if**, one the opposite of the other.

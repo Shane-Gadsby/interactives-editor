@@ -53,23 +53,16 @@ Each slide has a colour so you can see the slides change before you have picture
 ## 3. Previous and Next
 
 1. Press <kbd>B</kbd> and draw a button at the bottom right. Set its **Label** to \`Next\` and its **Name** to **Next**.
-2. Press **+ On click (empty)**. The **Interactions** tab opens with the new **When clicked or hovered** node framed. (If you switched that off in Preferences, press **Show in graph**.)
-3. Drag from the dot on the right of the **When clicked or hovered** node into empty space. Type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **playing**, **Do** to **Set to** and **Value** to \`false\`. Moving by hand stops the autoplay.
-4. Drag from that node's dot and add another **Change a value or counter**: **Variable** **slide**, **Do** **Set to**, **Value**:
+2. Press **+ When clicked…** and choose **Go to the next item…**. **Which number** is **slide**, **The first one is** **Number 1**, **How many items** is **As many as the list slides has**, and **After the last** is **Go round to the other end**. Those are what it starts as, so there is nothing to change.
+3. Press **+ then also…**. Change the new row to **Switch something on or off**, pick **playing** and set **What to do** to **Turn it off**. Moving by hand stops the autoplay. Press **Add**.
 
-\`\`\`
-slide >= slides.length ? 1 : slide + 1
-\`\`\`
+The **Interactions** tab opens with the new flow framed. (If you switched that off in Preferences, press **Show in graph**.) It reads: *When clicked: go to the next slide (1 to slides.length, going round at the ends), then switch playing off*.
 
-That is: on the last slide go back to 1, otherwise add 1.
+![The Interactions graph: Next's When clicked or hovered node wired to Change a value or counter (slide, Next number in a range, 1 to slides.length, Go round to the other end), then to a second one switching playing off; Previous and the Dot have a pair of their own below it.](help/tutorial-carousel-next-graph.png)
 
-![The Interactions graph: Next's When clicked or hovered node wired to Change a value or counter (playing, Set to, false), then to a second one setting slide; Previous and the Dot have the same pair below it.](help/tutorial-carousel-next-graph.png)
+4. Draw another button at the bottom left called **Previous**, press **+ When clicked…** and choose **Go to the previous item…**, with the same answers. Add the same **+ then also…** that turns **playing** off.
 
-5. Draw another button at the bottom left called **Previous**, and build the same two nodes, with this **Value** for the second one:
-
-\`\`\`
-slide <= 1 ? slides.length : slide - 1
-\`\`\`
+The wrap round at the ends is one setting of one node (**Do** is **Go to the next number in a range**, with a **First number** and a **Last number**), not a formula you type twice.
 
 ## 4. The arrow keys
 
@@ -90,7 +83,7 @@ A shortcut presses the button from anywhere on the page, so the arrow keys run t
 
 The line under each of those bindings works it out for the first dot (\`index\` 0).
 
-5. Press **+ On click (empty)** and add the same two **Change a value or counter** nodes as for Next, with \`event.index + 1\` as the second **Value**. \`event.index\` is the dot that was clicked, counting from 0.
+5. Press **+ When clicked…** and choose **Change a number…**. Pick **slide**, set **What to do** to **Set it to** and **Amount** to \`event.index + 1\`. \`event.index\` is the dot that was clicked, counting from 0. Press **+ then also…** and turn **playing** off as you did for Next.
 
 ## 6. Autoplay that pauses
 
@@ -103,7 +96,7 @@ The line under each of those bindings works it out for the first dot (\`index\` 
 playing && !reducedMotion
 \`\`\`
 
-5. Drag from its dot and add **Change a value or counter**: **Variable** **slide**, **Do** **Set to**, and the same **Value** as Next.
+5. Drag from its dot and add **Change a value or counter**: **Variable** **slide**, **Do** **Go to the next number in a range**, **First number** \`1\` and **Last number** \`slides.length\`. It is the same node Next wrote, so it goes round at the end too.
 
 Once you leave the formula box, **Only while** shows it as two rows you could also have built with **+ Add a condition**: **playing** **is on (true)** and **reducedMotion** **is off (false)**.
 
@@ -114,7 +107,7 @@ Once you leave the formula box, **Only while** shows it as two rows you could al
 ## 7. Try it
 
 1. Press **Preview**.
-2. Press **Next** four times. The fourth press wraps back to slide 1. Press a dot to jump.
+2. Press **Next** four times. The fourth press goes round to slide 1. Press a dot to jump.
 3. Click an empty part of the page and use the left and right arrow keys.
 4. Press **Play**. The slides move every four seconds and the button says **Pause**. Press **Next**: the autoplay stops.
 
@@ -129,6 +122,7 @@ Once you leave the formula box, **Only while** shows it as two rows you could al
 ## What you learned
 
 - One number variable holds the whole state, and bindings read the current item with \`slides[slide - 1]\`.
+- **Go to the next item…** goes round a list's slides with no formula, and **+ then also…** puts a second thing in the same click.
 - A button's **Shortcut** gives it a key without any nodes.
 - **When a timer goes off** with **Only while** runs only when it should, and \`reducedMotion\` respects people who ask for less movement.
 

@@ -97,7 +97,7 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 2. A short list of things that can happen opens. Choose **Play an animation**, then pick your timeline under **Which animation**. The line at the bottom reads back what it will do: *When clicked: play “Timeline”*.
 3. Press **Add**. The **Interactions** graph opens at the bottom, zoomed in on the two new nodes (more on them in step 4), and the section now says it in a sentence: **When clicked: play “Timeline”.** (If you would rather the view stayed put, untick **Show new interactions in the graph** in [Preferences](preferences#interactions).)
 
-That is the whole interaction. The same list can go to another page, show or hide a layer, play a sound, open a link, add 1 to a counter or switch something on or off. Every one is added to the **Interactions** graph as ordinary nodes, so you can always take it further.
+That is the whole interaction. The same list can go to another page, show or hide a layer, play a sound, open a link, change a number or switch something on or off. Every one is added to the **Interactions** graph as ordinary nodes, so you can always take it further.
 
 > A shortcut: right-click a layer, choose **Add interaction**, then **When clicked…**.
 
@@ -190,7 +190,7 @@ That says: if \`lit\` is true the colour is yellow, otherwise it is grey. While 
 
 1. Select the **Switch** button. In its **Interactions** section press **+ When clicked…**.
 2. Choose **Switch something on or off** and, under **Which switch**, pick **lit**. Press **Add**.
-3. Press **+ When clicked…** again. Choose **Add 1 to a counter** and pick **taps**. Press **Add**.
+3. Press **+ When clicked…** again. Choose **Change a number…**, pick **taps** and press **Add** (it adds 1).
 
 The section now reads: **When clicked: switch lit on or off** and **When clicked: add 1 to taps**. Two flows start from the same click, and both run. (In the graph they are a **When clicked or hovered** joined to a **Change a value or counter** each, with **Do** on **Flip on or off** and on **Add to it**.)
 

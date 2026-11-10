@@ -32,6 +32,7 @@ export type NeedKind =
   | 'script'
   // changing a number
   | 'numhow'
+  | 'switchhow'
   | 'amount'
   // going round a range (carousels, slideshows)
   | 'startat'
@@ -332,10 +333,16 @@ export const RECIPES: Recipe[] = [
   {
     id: 'switch',
     label: 'Switch something on or off',
-    hint: 'Flips a yes/no setting each time, such as sound on or off.',
+    hint: 'Flips a yes/no setting each time, such as sound on or off. Or turns it on, or off, every time.',
     group: 'Counting and switches',
-    needs: [{ key: 'switch', kind: 'switch', label: 'Which switch' }],
-    action: (a) => ({ kind: 'action.setVariable', params: { ...defaultParams('action.setVariable'), variable: a.switch ?? '', op: 'toggle', value: '' } }),
+    needs: [
+      { key: 'switch', kind: 'switch', label: 'Which switch' },
+      { key: 'how', kind: 'switchhow', label: 'What to do' },
+    ],
+    action: (a) => {
+      const how = a.how ?? 'flip';
+      return { kind: 'action.setVariable', params: { ...defaultParams('action.setVariable'), variable: a.switch ?? '', ...(how === 'on' || how === 'off' ? { op: 'set', value: how === 'on' ? 'true' : 'false' } : { op: 'toggle', value: '' }) } };
+    },
   },
   {
     id: 'reset',
@@ -575,6 +582,7 @@ function defaultsFor(needs: Need[], ctx: RecipeCtx, id: string): Answers {
     else if (n.kind === 'seconds') out[n.key] = '0';
     else if (n.kind === 'script') out[n.key] = first(ctx.project.scripts.filter((x) => !x.runOnStart))?.id ?? NEW_PREFIX + 'onClick';
     else if (n.kind === 'numhow') out[n.key] = 'add';
+    else if (n.kind === 'switchhow') out[n.key] = 'flip';
     else if (n.kind === 'amount') out[n.key] = '1';
     else if (n.kind === 'startat') out[n.key] = '1';
     else if (n.kind === 'last') out[n.key] = first(listChoices(ctx.project)) ? `list:${first(listChoices(ctx.project))!.id}` : '3';
@@ -610,7 +618,7 @@ function gapsIn(needs: Need[], a: Answers, project?: Project): string | null {
       if (!v) return 'Say how much.';
       continue;
     }
-    if (n.kind === 'textvalue' || n.kind === 'numhow' || n.kind === 'startat' || n.kind === 'ends' || n.kind === 'lookwhat') continue;
+    if (n.kind === 'textvalue' || n.kind === 'numhow' || n.kind === 'switchhow' || n.kind === 'startat' || n.kind === 'ends' || n.kind === 'lookwhat') continue;
     if (n.kind === 'words') {
       if (!v) return `Write ${n.label.toLowerCase()}.`;
       continue;

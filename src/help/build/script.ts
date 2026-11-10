@@ -22,7 +22,7 @@ Most of what people reach for a script to do already has a node, a binding or a 
 | You want to | Use instead |
 |---|---|
 | Show, hide or move something when it is clicked | **+ When clicked…** in the layer's **Interactions** section |
-| Count clicks, tries or points | **Add 1 to a counter**, or a **Change a value or counter** node |
+| Count clicks, tries or points | **Change a number…**, or a **Change a value or counter** node |
 | Mark a question and give feedback | **Add question** (see [Questions and quizzes](question-kit)) |
 | Put a number or a name into some words | \`{braces}\` in the text, or a [binding](bindings) with a formula |
 | Pick something at random | \`randInt\` or \`Math.random()\` in an [expression](expressions) |

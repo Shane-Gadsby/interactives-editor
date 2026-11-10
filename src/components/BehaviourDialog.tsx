@@ -448,6 +448,8 @@ function NeedField({ need, ctx, answers, onAnswer, onAnswers, recipeId }: { need
     }
     case 'numhow':
       return sel(v || 'add', [{ value: 'add', label: 'Add to it' }, { value: 'subtract', label: 'Take away from it' }, { value: 'set', label: 'Set it to' }], onAnswer);
+    case 'switchhow':
+      return sel(v || 'flip', [{ value: 'flip', label: 'Flip it each time' }, { value: 'on', label: 'Turn it on' }, { value: 'off', label: 'Turn it off' }], onAnswer);
     case 'amount':
       return <TextField label={need.label} value={v} placeholder="1" title="A number, or a formula such as score * 2" onChange={onAnswer} />;
     case 'startat':
