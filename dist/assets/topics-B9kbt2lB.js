@@ -1,4 +1,4 @@
-import{bH as r,bI as b,bJ as f,bK as k,bg as v,a7 as x,b8 as T,ad as h,aX as S}from"./index-ZCQQuIFu.js";const A=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bH as r,bI as b,bJ as f,bK as k,bg as v,a7 as x,b8 as T,ad as h,aX as S}from"./index-qf2V8Rj2.js";const A=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -2806,7 +2806,7 @@ A warning under **X value** may say *There is no value called handle*. Ignore it
 
 Press <kbd>T</kbd> for the **Text** tool, click above the animation and type \`Press Play or pause, or drag the knob to scrub\`.
 
-An imported page has no background, so Preview would show its dark backdrop through everything and your dark text would vanish. Click the page's name above it on the canvas, set **Background** to **Solid** and type \`#ffffff\` in the colour box beside it.
+The imported page has a plain white background, so dark text like this reads fine in Preview. To use another colour, click the page's name above it on the canvas and change **Background**.
 
 ## 7. Try it
 
@@ -3877,6 +3877,7 @@ A **page master** is a page that holds what other pages share, such as a logo, a
 
 ![The Layers panel with every page folded: Word search has start and on Hero master badges, the other pages say which master they draw, and Hero master, Content master and End master say master · 2, master · 2 and master · 1.](help/concept-pages-masters-layers.png)
 
+- On the canvas, with a page selected, the layers it gets from its master are outlined with a dashed line, under a tag that says **From page master** and the master's name. That is how you tell a master's layer from the page's own: the page's own layers get the usual selection box when you click them.
 - With a page selected, its **Page master** section says which master it draws and lists the master's layers, so you can leave one off this page.
 
 ![The Page master section of a page: Master set to Content master, Edit master and Detach, and a ticked box for each master layer to show on this page.](help/concept-pages-masters-section.png)
@@ -3961,6 +3962,8 @@ From the Link for StudyDesk, the results live in the Toolbox under the project, 
 - **Export** makes **files**: a single HTML file, a project package, pictures, video and so on. A file is a copy of the project at the moment you downloaded it. Nothing you change afterwards reaches it.
 - **Share** holds **links and people**. Nothing under it downloads anything.
 
+The first line of the Export menu, **Want a link instead of a file?**, opens **Share…** for you, so if a link or a StudyDesk embed code is what you were after you land in the right place.
+
 ![The Export menu: Single HTML file, Project package, Project JSON, the public interface reference and TypeScript definitions, Lottie, dotLottie, PNG and SVG pictures, and Video, GIF or frames.](help/concept-share-export-export.png)
 
 Share has four entries:
@@ -4031,11 +4034,11 @@ There are two ways to look at a page. **Design view** shows the layers as they a
 - **"I changed the colour, but only at one point in the animation."** Once a property has keys on the open timeline, changing it changes the key at the playhead (or adds one there), with or without Record. To change the layer's own value, go to Design view.
 - **"My one keyframe does nothing."** A single key holds that value for the whole timeline. Movement needs at least two keys with different values, at different times.
 - **"The animation is there but never plays."** A timeline only plays when something starts it: **Autoplay** in its settings, a **Play or stop an animation** node, a joystick, a blend or a script. The list of timelines says **Nothing plays it** when none of those does.
-- **"Two timelines fight over the same layer."** If both animate the same property while they play, the one further down the list of timelines is applied last and wins. Animate different properties, stop one before playing the other, or use a **Blend in** to hand over from one to the other.
+- **"Two timelines fight over the same layer."** If both animate the same property while they play, the one further down the list of timelines is applied last and wins. The list now warns you: each of the two says **⚠ Also animated by** and the other's name, with the layer and property, and its tooltip says which wins. Animate different properties, stop one before playing the other, or use a **Blend in** to hand over from one to the other.
 
 ## How to tell what is going on
 
-- The **list of timelines** shows what each timeline animates, what starts it, and marks the timelines that animate the selected layer with **Animates …**.
+- The **list of timelines** shows what each timeline animates, what starts it, marks the timelines that animate the selected layer with **Animates …**, and warns with **⚠ Also animated by …** when another timeline animates the same property of the same layer.
 - In the Properties panel, the diamond beside a field is coloured when the open timeline animates that property, and glows when there is a key at the playhead. Its tooltip says **Add a keyframe** or **Update the keyframe**.
 - The red bar at the top of the Properties panel is there whenever Record is on.
 - In Preview, the **Events** list and the run highlights on the graph show whether the node that plays the timeline ran.
@@ -4086,7 +4089,7 @@ Ask: **does it change while it runs?**
 
 ## Where people get caught out
 
-- **"I typed a value and it snapped back."** That setting is bound. The binding sets it every time the page is drawn, on the canvas and in Preview, so what you type never shows. Look in **Data bindings** (it opens by itself on a layer that has any) and change or remove the binding there.
+- **"I typed a value and it snapped back."** That setting is bound. The binding sets it every time the page is drawn, on the canvas and in Preview, so what you type never shows. A bound field has a small link mark after its label and a dashed box; hover or focus the mark and it says so. Look in **Data bindings** (it opens by itself on a layer that has any) and change or remove the binding there. A binding that only writes **Out** to a variable doesn't mark its field, since what you type still sticks.
 - **"I changed the starting value but Preview still shows the old one."** Preview takes the starting values when it starts. Press **Restart** in Preview's bar.
 - **"My Change a value or counter node does nothing."** The variable may be a live one (**Keep up to date** under its formula). A live variable is worked out from its formula and can't be set by hand; the Variables tab says how many nodes try to.
 - **"The learner's dragged position is never saved."** A draggable layer whose X or Y is bound **← In** never writes back to the variable. Bind it **⇄ Both**.
@@ -4094,6 +4097,7 @@ Ask: **does it change while it runs?**
 
 ## How to tell what is going on
 
+- A field a binding sets has a small link mark after its label (**Set by a data binding**) and a dashed box. A typed value in it is replaced whenever the variable changes.
 - Under each binding, a grey line works it through with the starting values: *the formula is 1, Look up: no line for 1, so it stays 1*. If the layer looks wrong on the canvas, that line usually says why.
 
 ![A Play button's Data bindings: Button label set by the formula playing ? "Pause" : "Play", currently Play, and Pressed (button, toggle) set straight from the variable playing; under each, a line saying what it is set to at the start.](help/concept-variables-data-bindings-bindings.png)
@@ -5518,7 +5522,7 @@ A page that embeds the player can listen for the switch: \`player.on('variantcha
 1. Build an artboard with the shared layers: the logo, the bar, the footer. It does not need a background; the page keeps its own.
 2. Right-click it in the Layers panel and choose **Make this a master** (or **Make this a master** in its **Page master** section).
 3. Select a page, open **Page master** in the Inspector and pick the master. Or select the master and choose **Use as master for…**, or **Use for all other pages**.
-4. To change the shared layers, click **Edit master** on any page. The master's own layers are read-only on a page: clicking where one is selects the page, not the master's layer.
+4. To change the shared layers, click **Edit master** on any page. The master's own layers are read-only on a page: clicking where one is selects the page, not the master's layer. With the page selected, the layers it gets from the master are outlined with a dashed line on the canvas, under a tag saying **From page master** and the master's name, so you can see which ones to change in the master.
 
 ## On a page
 - **Master**: the artboard drawn under this page, or **None**. A page set to None keeps its slot text and hidden layers, so they are back if it gets a master again.
@@ -5861,6 +5865,9 @@ These work after you click in the Timeline. The full list is on the [Keyboard sh
 - <kbd>,</kbd> and <kbd>.</kbd> step back and forward one frame. Add <kbd>Shift</kbd> to jump between keys instead.
 - <kbd>P</kbd>, <kbd>S</kbd>, <kbd>R</kbd>, <kbd>T</kbd> and <kbd>A</kbd> take you to the selected layer's **P**osition, **S**cale, **R**otation, opacity (**T**ransparency) and **A**nchor point. The Properties panel opens that field and focuses it, and the Timeline marks that property's track if the layer has one.
 - <kbd>Shift</kbd>+<kbd>L</kbd> shows or hides [the list of timelines](timelines#the-list-of-timelines).
+
+## When two timelines animate the same thing
+If two timelines on a page both animate the same property of the same layer (both move Box's X, say), the list of timelines warns on each of them: **⚠ Also animated by** and the other timeline's name, with the layer and property. Nothing is wrong while only one of them plays. If both play at once, the one further down the list is applied last and wins; the warning's tooltip says which. Move the timelines in the list, animate different properties, stop one before the other starts, or use a **Blend in** to hand over.
 
 ## Timeline settings
 The Timeline bar shows a short summary (length, loop, speed, autoplay, frame rate). Click the **gear** beside it to change them, and to rename the timeline; Esc or a click outside closes it.
@@ -7101,7 +7108,7 @@ Examples:
 | Rotation | \`speed * 3\` |
 | Solo: active child | \`mode\` (a choice whose options are the children's names) |
 
-A bound property takes its value from the binding, on the canvas and in Preview, so a value typed into its field or keyed on a timeline is replaced by the binding's. The field itself has no lock or marker: **Data bindings** lists everything that is bound. Remove the binding to set the property by hand. Every animatable property can be bound (see [Animatable properties](animatable-properties)), and so can every other plain setting the layer has, such as a video's **Autoplay** or **Src**, or a polygon's sides. A video layer also lists **Playback position (s)**, **Playing**, **Length (s)** and **Ended**, which come from the video itself.
+A bound property takes its value from the binding, on the canvas and in Preview, so a value typed into its field or keyed on a timeline is replaced by the binding's. A field set by a binding (in, or both ways) has a small link mark after its label, with a dashed box, so you can see why a typed value won't stick; hover or focus the mark for the reason. **Data bindings** lists everything that is bound. A binding that only writes out to a variable (**Out**) doesn't mark its field, because what you type still sticks. Remove the binding to set the property by hand. Every animatable property can be bound (see [Animatable properties](animatable-properties)), and so can every other plain setting the layer has, such as a video's **Autoplay** or **Src**, or a polygon's sides. A video layer also lists **Playback position (s)**, **Playing**, **Length (s)** and **Ended**, which come from the video itself.
 
 ## Which way: in, out or both
 Each binding has **← In**, **Out →** and **⇄ Both** at the top.
@@ -7353,7 +7360,7 @@ Dark and High contrast are built for contrast. They take their colours from the 
 - **Showing** (and the theme box in the top bar) picks the theme the canvas draws while you edit. It is not saved with the project. Pictures, SVG and PNG exports, and Lottie, write the colours of the theme being shown.
 - **Convert colour styles to tokens** makes a token from every colour style, with its colour in every theme to start with. Layers that follow a style keep following it, now through the token. Styles from a library convert too, and a library update keeps the link.
 - **Update starter colours** shows on a project made before this look that still has the old starter tokens. It gives the tokens you never edited the new values and adds the ones the project lacks. Layers that follow those tokens change with them; plain colours and tokens you edited do not. Nothing changes until you press it.
-- The count at the top says how many plain colours are **not following a theme**, with a **Link colours to tokens** button beside it (see below).
+- The count at the top says how many plain colours are **not following a theme** (page backgrounds, fills, strokes, text and shadows), with a **Link colours to tokens** button beside it (see below).
 
 ## Using a token
 In any colour picker in the inspector, open the arrow beside the swatch and choose the **Tokens** tab. Pick a token and the swatch shows a ring and link badge, and a one-line named chip replaces the hex box. Hover the chip to read the token's value in each theme. The **x** on the chip **detaches** it: the colour as it is now stays, as a plain colour. Choosing any other colour does the same.
@@ -8094,7 +8101,7 @@ After an import, a report lists anything that couldn't be carried over exactly. 
 | SVG image (this artboard) | The open page as an SVG file that scales cleanly. It uses HTML inside the SVG for text and web elements, so it opens in browsers but not in every drawing program |
 | Video, GIF or frames… | One timeline of the open page as an MP4 or WebM video, an animated GIF, or a ZIP of PNG pictures, one per frame (below) |
 
-Sharing is on its own button, **Share**, next to Export (below).
+Sharing is on its own button, **Share**, next to Export (below). Export only makes files, so the first line of the Export menu, **Want a link instead of a file?**, opens **Share…**, which asks **Where will people use it?** and gives you the link or code to copy.
 
 The files are named after the project (and the page, for pictures, Lottie and video).
 

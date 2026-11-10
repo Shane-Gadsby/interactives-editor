@@ -2,6 +2,11 @@
 
 ## Unreleased: Symposium 3
 
+- **See what a binding sets**: a field that a data binding sets has a small link mark after its label and a dashed box, so you can see why a value you type doesn't stick.
+- **Master layers on the canvas**: with a page selected, the layers it gets from its page master are outlined and tagged with the master's name.
+- **Timeline clashes**: the list of timelines warns when two timelines animate the same property of the same layer, and says which one wins if they play together.
+- **A link instead of a file**: the Export menu starts with "Want a link instead of a file?", which opens Share.
+- **More fixes**: an Input field's text alternative and description are now read by screen readers (they were only on the box around the field). Imported Lottie animations get a plain white page, so dark text on them shows in Preview. The Results and progress hint says what Remember and Save as user data each do, and counts both. The Themes tab's count of colours not following a theme now includes page backgrounds and agrees with "Nothing here follows the theme".
 - **Tutorials on the projects page**: a Tutorials button lists every tutorial and concept as a card with its picture, how long it takes and your progress. Start opens it in the help, and Open the finished example plays the finished project, with Make my copy beside it.
 - **Tutorial badges**: tutorial steps have tick boxes. Ticking gives a short cheer, finishing a tutorial gives a badge, and finishing a whole set (Questions, Games and stories and so on) gives a set badge. Your progress follows you between browsers. If your system asks for less motion the cheer is a still badge with no confetti.
 - **Tutorial preferences**: Preferences > General > Tutorials turns the badges and cheers off, turns on a soft chime (off by default), or resets your tutorial progress.

@@ -11,6 +11,11 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'See what a binding sets': [['bindings', 'link mark after its label'], ['concept-variables-data-bindings', 'Set by a data binding']],
+  'Master layers on the canvas': [['page-master', 'From page master'], ['concept-pages-masters', 'From page master']],
+  'Timeline clashes': [['timelines', 'When two timelines animate the same thing'], ['concept-timelines', 'Also animated by']],
+  'More fixes': [['themes', 'page backgrounds, fills, strokes, text and shadows']],
+  'A link instead of a file': [['export', 'Want a link instead of a file?'], ['concept-share-export', 'Want a link instead of a file?']],
   'Tutorials on the projects page': [['projects', 'Tutorials']],
   'Tutorial badges': [['help', 'Tutorials, badges and progress'], ['help', 'I have done all of this']],
   'Tutorial preferences': [['preferences', 'Tutorial badges and cheers'], ['preferences', 'Soft chime with the cheers'], ['preferences', 'Reset tutorial progress']],
