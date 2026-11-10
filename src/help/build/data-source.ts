@@ -24,7 +24,7 @@ This tutorial uses **expressions**: words in braces, such as \`{tips.title}\`, t
 
 \`\`\`json
 {
-  "title": "Five study tips",
+  "title": "Four study tips",
   "intro": "Small habits that make studying easier. Pick one to try this week.",
   "cards": [
     { "title": "Plan your week", "text": "Block out classes, study and rest before the week begins.", "colour": "#FFF4D6" },
@@ -50,7 +50,7 @@ The file is uploaded, and a data source called **tips** (from the file's name) a
 
 ## 3. Words from the file
 
-1. Press <kbd>T</kbd> for the **Text** tool, click near the top left of the page and type \`{tips.title}\`. Press <kbd>Escape</kbd>. The canvas shows **Five study tips**: the words come from the file. Name the layer **Heading** and make it big.
+1. Press <kbd>T</kbd> for the **Text** tool, click near the top left of the page and type \`{tips.title}\`. Press <kbd>Escape</kbd>. The canvas shows **Four study tips**: the words come from the file. Name the layer **Heading** and make it big.
 2. Under it, add another text layer with \`{tips.intro}\`. Name it **Intro**.
 3. Near the bottom of the page, add one with \`{tips.footer}\`. Name it **Footer**.
 

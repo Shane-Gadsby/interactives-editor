@@ -51,7 +51,7 @@ describe('tutorial example: content from a data file', () => {
     player.setData('tips', tips);
     player.step(16);
     const stage = document.getElementById('stage')!;
-    expect(stage.textContent).toContain('Five study tips');
+    expect(stage.textContent).toContain('Four study tips');
     expect(stage.textContent).toContain('Study skills, week 1');
     const card = byName(p.artboards[0].children, 'Card');
     expect(document.querySelectorAll(`[data-ix-id^="${card.id}~"]`).length).toBe(4);

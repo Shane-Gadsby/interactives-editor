@@ -8,7 +8,7 @@ import { textLayer, writeExampleAssets } from './_data-helpers';
 
 /** The file the tutorial has you write and upload, word for word. */
 export const TIPS = {
-  title: 'Five study tips',
+  title: 'Four study tips',
   intro: 'Small habits that make studying easier. Pick one to try this week.',
   cards: [
     { title: 'Plan your week', text: 'Block out classes, study and rest before the week begins.', colour: '#FFF4D6' },
