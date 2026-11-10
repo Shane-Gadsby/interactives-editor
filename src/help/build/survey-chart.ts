@@ -33,7 +33,7 @@ The class's answers live in a **Shared responses** data source. The Vote button 
 2. Press **+ Shared responses**. A data source called \`responses\` appears in the list with a **shared** badge, and its settings open beside it.
 3. Leave **Who sees it** on **Everyone in this class**.
 4. Set **Answers each** to **1**, so one person has one vote.
-5. Set **Look again** to **5**. While the results page is open it asks for the class's answers every five seconds.
+5. Set **Look again** to **5**. While the results page is open it checks for the class's answers every five seconds, as a backup. On the StudyDesk learner page a new vote also shows up straight away.
 6. In **Sample answers**, type a few votes, one a line: \`Bus\`, \`Bus\`, \`Car\`, \`Walk\`, \`Train\`. Each line counts as one person. Only the canvas and Preview see them, so you can lay out the chart before anyone has voted.
 
 ![The Data tab: responses is selected with a shared badge, Who sees it is Everyone in this class, Answers each 1, Look again 5, and the counted answers show on the right.](help/tutorial-survey-chart-responses.png)
@@ -102,7 +102,7 @@ A real class only exists on the **StudyDesk learner page**: press **Share**, the
 
 Set the data source up before you share. Its rules are fixed when the project is shared, and **Update to the latest version** does not pick up a changed Shared responses source.
 
-**How live is it?** The chart is not instant. The page asks for the class's votes again every **Look again** seconds (5 here, never less than 2), so a new vote shows up within a few seconds of being made.
+**How live is it?** On the StudyDesk learner page the chart moves as votes come in: when anyone in the course votes, takes a vote back, or you hide or clear one, the page is told and asks for the new counts at once, within a second or so. If that live link cannot be made (a busy server, a network that blocks it), the page falls back to asking every **Look again** seconds (5 here, never less than 2), so a new vote still shows up within a few seconds.
 
 ## Make it yours
 

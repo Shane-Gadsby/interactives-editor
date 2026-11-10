@@ -402,6 +402,9 @@ describe('the learner page passes the player\'s requests on', () => {
     send({ op: 'shared-add', rid: 'r2', sharedSource: 'ds1', who: 'class', answers: ['x'] });
     send({ op: 'shared-withdraw', rid: 'r3', sharedSource: 'ds1', who: 'me', answers: ['x'] });
     await new Promise((r) => setTimeout(r, 50));
+    //a read of the class also opens the page's live link (its own test is in server-shared-live)
+    expect(calls.filter((c) => c.url.endsWith('/shared-live'))).toHaveLength(1);
+    calls.splice(0, calls.length, ...calls.filter((c) => !c.url.endsWith('/shared-live')));
     expect(calls.map((c) => [c.method, c.url.replace(/^.*\/learn\//, '')])).toEqual([
       ['GET', `${token}/shared/ds1?who=class`],
       ['POST', `${token}/shared/ds1`],
