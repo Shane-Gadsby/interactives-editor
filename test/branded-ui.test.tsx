@@ -233,11 +233,13 @@ describe('switching colourway', () => {
     expect(hasLearnerSwitcher(s.get().project)).toBe(true);
   });
 
-  it('draws nothing for a project that is not branded', async () => {
+  it('draws no colourway swatches for a project that is not branded, only the way to apply the look', async () => {
     const s = new EditorStore({ ...make(), brandLook: undefined } as Project);
     setCurrentStore(s);
     await act(async () => root.render(<Wrap />));
-    expect(host.textContent).toBe('');
+    expect(host.querySelector('.colourway-swatches, [role=radiogroup]')).toBeNull();
+    expect(host.querySelector('input[type=checkbox]')).toBeNull();
+    expect(host.querySelector('select[aria-label="Apply the UniSQ look"]')).toBeTruthy();
   });
 });
 

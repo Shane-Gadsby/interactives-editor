@@ -14056,3 +14056,8 @@ body.reorder-active .ix-tooltip {
 .ix-kit-tab:hover {
   background: color-mix(in srgb, var(--primary-bg) 14%, var(--panel-2));
 }
+.colourway-look-pick {
+  max-width: 100%;
+  height: 26px;
+  font-size: 12px;
+}

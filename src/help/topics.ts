@@ -4200,6 +4200,14 @@ Projects made before this, and imported ones, have no themes until you add them 
 
 A project with no themes yet can start from one. High contrast is the one every project already has.
 
+## Apply the UniSQ look
+A project that did not start from a [branded starter pack](branded-starters) can still get the UniSQ look in one step. In the **Themes** tab (beside **+ Colourway…**), or in **Project** in the Inspector, open **Apply the UniSQ look…** and pick a colourway. Or press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type **UniSQ look**. It:
+- adds that colourway as a theme with the brand colours (as **+ Colourway…** does) and makes it the theme the project opens in;
+- makes a **Content master** (one for each page size) with the branded frame: the gold accent bar under the title and the UniSQ logo at the bottom left, painted with tokens so they follow the colourway;
+- sets every page that has no master to use it. A page that already has a master of its own keeps it.
+
+Your own layers are not moved or recoloured. A layer you coloured with a token follows the new colourway, and a plain colour stays as it is. The brand lock that a starter pack's project is held to is **not** switched on, so the project stays free to edit. A message says what it did, and **Undo** on it (or <kbd>Ctrl</kbd>+<kbd>Z</kbd>) takes all of it back in one step. If a layer of yours sits where the logo or accent bar goes, the message names the page. Pick another colourway later and only the theme the project opens in changes. The option is not shown for a project that already has the look from a starter pack: change its colourway in **Project**.
+
 ## The loading spinner
 When a project has to wait before its first page shows, a spinner appears after a quarter of a second. The waits are remembered progress or saved data coming from StudyDesk, a **Before activity loads** flow, and the first page's fonts. A quick start never shows it.
 
@@ -4296,6 +4304,9 @@ Tick **Map tokens from the page's CSS variables** and a token is read from a CSS
 The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` and \`color/button\` to \`--bs-primary\`, \`color/on-button\` to \`--bs-white\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other.
 
 A missing or odd variable leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
+
+## A project that did not start from a pack
+**Apply the UniSQ look…** (in the **Themes** tab, in **Project** settings, or in <kbd>Ctrl</kbd>+<kbd>K</kbd>) gives any other project the colourway and the frame: a theme, the brand tokens, a Content master with the logo and accent bar, and the pages set to use it. It does not lock anything. See [Themes and colour tokens](themes#apply-the-unisq-look).
 
 ## Branded projects
 A project made from a [branded starter pack](branded-starters) carries a theme for each UniSQ colourway (Gold, Purple, Blue, Green, Orange, Red) and High contrast. Its **Project** settings have a **Colourway** row that picks the default theme, and an option to let learners switch. Its layers can only use the project's tokens, so edit a colourway's colours here rather than typing a hex.
@@ -4870,6 +4881,7 @@ The **Project** section holds the settings for the whole project, not one page. 
 | Setting | Meaning |
 |---|---|
 | Colourway | Branded starters only. The colour theme the project opens in, and whether learners can switch it. See [Branded starter packs](branded-starters#switching-colourway) |
+| UniSQ look | Every other project. **Apply the UniSQ look…** adds a colourway and the branded page frame to the pages. See [Themes and colour tokens](themes#apply-the-unisq-look) |
 | Name | The project's name, as on the projects page |
 | Page title | The title of the browser tab for the exported page |
 | Description | A note about the project, kept in the file |
@@ -5499,7 +5511,7 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
     title: 'Branded starter packs',
     group: 'Working together',
     summary: 'UniSQ-branded ready-made activities in six colourways: what is locked and why, how to switch colourway, and every starter by set.',
-    keywords: 'branded brand starter pack unisq colourway colourways theme logo locked open sans chrome template quiz switch colour gold purple blue green orange red',
+    keywords: 'branded brand starter pack unisq colourway colourways theme logo locked open sans chrome template quiz switch colour gold purple blue green orange red apply the look existing project',
     body: () => {
       const src = brandedHelp?.();
       const ways = src ? src.colourways.map((c) => `- **${c.name}**: ${c.description}`).join('\n') : 'Gold, Purple, Blue, Green, Orange and Red, from the UniSQ palette.';

@@ -31,6 +31,9 @@ import { selectSameItems } from './layer-find';
 import { linkColoursCommand } from './link-colours-action';
 import { tidyArtboardsCommand } from './tidy-command';
 import { openHelpSearch } from '../help/Help';
+import { COLOURWAYS } from './branded/looks';
+import { lookBlocked } from './branded/unisq-look-check';
+import { unisqLook } from './branded-lazy';
 import type { BottomTab, Tool } from '../store/store';
 
 export type CommandGroup = 'Add' | 'Selection' | 'Pages' | 'Layers' | 'Animate' | 'Behaviours' | 'View' | 'Tools' | 'Panels' | 'Workspaces' | 'Questions' | 'Project';
@@ -326,6 +329,19 @@ export function buildCommands(): Command[] {
   add({ id: 'project:redo', title: 'Redo', group: 'Project', hint: keyHints('redo'), disabled: s.canRedo() ? undefined : 'Nothing to redo', run: () => s.redo() });
   for (const [id, title, words] of EXPORTS) {
     add({ id: `project:${id}`, title, group: 'Project', words, disabled: NO_PAGE_NEEDED.includes(id) ? undefined : noPage, run: () => requestAppAction(id as AppAction) });
+  }
+  {
+    const why = lookBlocked(p) ?? undefined;
+    for (const w of COLOURWAYS) {
+      add({
+        id: `project:unisq-look-${w.id}`,
+        title: w === COLOURWAYS[0] ? 'Apply the UniSQ look' : `Apply the UniSQ look in ${w.name}`,
+        group: 'Project',
+        words: `brand branding colourway theme master logo accent bar header footer gold purple blue green orange red unisq university frame ${w.name}`,
+        disabled: why,
+        run: () => void unisqLook.ensure().then((m) => m.applyUniSQLookCommand(w.id)),
+      });
+    }
   }
   add({ id: 'project:reference', title: 'Public interface reference…', group: 'Project', words: 'embedding page set read hear api', run: () => requestAppAction('reference') });
   add({ id: 'project:home', title: 'Back to all projects', group: 'Project', words: 'home close projects list', run: () => requestAppAction('home') });
