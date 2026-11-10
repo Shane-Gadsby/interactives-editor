@@ -65,7 +65,7 @@ It makes two face-down cards from every pair, both with the pair's number, and s
 5. Still on **Card**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **Formula** and type \`item.state == "down" ? "#f6c344" : item.state == "matched" ? "#bfe5c4" : "#ffffff"\`. Down cards are gold, matched ones green, turned ones white.
 6. Add one more binding: **Text alternative**, **Formula**, \`"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text)\`, so a screen reader hears more than a question mark.
 
-The line under these bindings warns *There is no value called item* (or *index*). Take no notice: the editor doesn't yet know a repeated layer has \`item\` and \`index\`, and the cards work in Preview.
+The line under each binding works it out for the first card, from the first item of the deal.
 
 7. Above the frame, add two text layers: \`Moves: {moves}\` and \`Pairs found: {matched} of {pairs.length}\`.
 

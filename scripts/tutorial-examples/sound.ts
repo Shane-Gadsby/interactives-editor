@@ -5,7 +5,7 @@ import { DEFAULT_TRANSITION_MS, type Artboard, type Project, type SceneNode } fr
 import { addPlaceholderSound } from '../../src/lib/branded/sets/media/sounds';
 import { writeClickFlow } from '../../src/lib/click-flow';
 import { blankProject, type TutorialExample } from './kit';
-import { addPage, buttonLayer, textLayer, writeExampleAssets } from './_data-helpers';
+import { addPage, buttonLayer, textLayer } from './_data-helpers';
 
 /**
  * What + When clicked… writes for the recipes used here: a click event joined to the recipe's action, with the same settings
@@ -39,7 +39,6 @@ function build(): Project {
     { hz: 494, ms: 380, gap: 20, level: 0.45 },
     { hz: 392, ms: 600, gap: 200, level: 0.45 },
   ]);
-  writeExampleAssets('tut-sound', p);
 
   const title = textLayer(p, 'Title', 'Sound tour', 80, 150, 640, 44, 700);
   const intro = textLayer(p, 'Intro', 'Press Start to hear the music. It keeps playing on the next page.', 80, 230, 640, 20);

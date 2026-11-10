@@ -49,7 +49,7 @@ A worked out value can read other worked out values, so \`leftover\` follows bot
 2. In the **Input** section of the Properties panel, set **Type** to **range**. The box becomes a slider.
 3. Set **Min** to **0**, **Max** to **40** and **Step** to **1**.
 4. Beside **Variable**, press **Bind to a variable…** and choose \`hours\`. The slider jumps to 15. Dragging it now sets \`hours\`, and changing \`hours\` moves it: it is a two-way (**⇄ Both**) binding.
-5. Change its **Name** to **Hours slider**, and in the **Accessibility** section type a **Text alternative**: \`Hours of paid work a week\`. A slider has no words on it, so this is what a screen reader should say. (Right now the player puts an input field's text alternative on the box around it rather than on the slider itself, so a screen reader may not say it yet.)
+5. Change its **Name** to **Hours slider**, and in the **Accessibility** section type a **Text alternative**: \`Hours of paid work a week\`. A slider has no words on it, so this is what a screen reader should say. The player puts it on the layer around the slider, not on the slider itself, so a screen reader may not say it yet.
 6. Make two more sliders under it the same way:
    - **Pay slider**: **Min** 20, **Max** 40, **Step** 0.5, bound to \`pay\`;
    - **Rent slider**: **Min** 100, **Max** 500, **Step** 10, bound to \`rent\`.

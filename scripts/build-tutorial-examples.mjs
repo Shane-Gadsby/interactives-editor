@@ -19,6 +19,7 @@ let root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
 try {
 	let {tutorialExamples} = await server.ssrLoadModule('/scripts/tutorial-examples/kit.ts'),
 		{upgradeExample} = await server.ssrLoadModule('/scripts/examples-upgrade.ts'),
+		{writeExampleAssets} = await server.ssrLoadModule('/scripts/tutorial-examples/_data-helpers.ts'),
 		{makeColorResolver, resolveBackground, defaultTheme, hasTokens} = await server.ssrLoadModule('interactives-player'),
 		all = tutorialExamples(),
 		picked = only.length ? all.filter((t) => only.includes(t.key)) : everything ? all : all.filter((t) => !fs.existsSync(path.join(dir, t.key, 'project.json')))
@@ -51,6 +52,8 @@ try {
 
 	for (let t of picked) {
 		let p = t.build()
+		//files carried as data: addresses go out beside the project here, never in build(), which the tests run too
+		writeExampleAssets(t.key, p)
 		fs.mkdirSync(path.join(dir, t.key), {recursive: true})
 		fs.writeFileSync(path.join(dir, t.key, 'project.json'), JSON.stringify(p))
 		setEntry(entryFor(t, p))

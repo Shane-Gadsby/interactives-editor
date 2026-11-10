@@ -16,6 +16,8 @@ export const concept: Concept = {
 
 A timeline with neither, started by an interaction, still plays for everyone.
 
+![Timeline settings with Autoplay and Skip for less motion both ticked.](help/concept-reduced-motion-timeline.png)
+
 ## Where people get caught out
 
 - **"The learner never saw the hint."** If something only shows part-way through an animation (a label that fades in and out again, a caption that flies past), a viewer who gets the end pose never sees it. Put what matters in the end pose, or show it some other way too.
@@ -26,6 +28,8 @@ A timeline with neither, started by an interaction, still plays for everyone.
 ## How to tell what is going on
 
 - The **Accessibility** checker flags **Animation starts by itself** when timelines autoplay and the project doesn't respect reduced motion, and its **Fix** turns the setting on. It also flags **No way to pause moving content**.
+
+![The Accessibility tab with one probable finding, Animation starts by itself, saying the Timeline plays on its own and the project does not respect the viewer's reduced motion setting.](help/concept-reduced-motion-checker.png)
 - Open a timeline's settings (the gear on the Timeline bar) to see whether **Skip for less motion** is ticked.
 - With your device set to less motion, run the whole activity in Preview from start to finish and check nothing is missing.
 

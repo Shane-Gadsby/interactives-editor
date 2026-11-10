@@ -4,7 +4,7 @@
 import { createNode, uid, type Asset, type Project, type SceneNode } from 'interactives-player';
 import { lookDefaults } from '../../src/lib/themes';
 import { blankProject, type TutorialExample } from './kit';
-import { textLayer, writeExampleAssets } from './_data-helpers';
+import { textLayer } from './_data-helpers';
 
 /** The file the tutorial has you write and upload, word for word. */
 export const TIPS = {
@@ -31,7 +31,6 @@ function build(): Project {
   const json = JSON.stringify(TIPS, null, 2);
   const file: Asset = { id: uid('as'), name: 'tips.json', mime: 'application/json', size: json.length, src: `data:application/json;base64,${Buffer.from(json, 'utf8').toString('base64')}` };
   p.assets.push(file);
-  writeExampleAssets('tut-data-source', p);
   p.dataSources.push({ id: uid('ds'), name: 'tips', kind: 'json', source: 'asset', assetId: file.id });
 
   const title = textLayer(p, 'Heading', '{tips.title}', 40, 36, 720, 32, 700);

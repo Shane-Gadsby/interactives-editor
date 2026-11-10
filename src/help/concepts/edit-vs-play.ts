@@ -9,7 +9,7 @@ export const concept: Concept = {
     group: 'Concepts',
     summary: 'Nothing happens on the canvas when you click a button: it shows every page as it starts. Events, timers, scripts and changing variables only run in Preview.',
     keywords: 'concept canvas preview edit play run does nothing not working click button nothing happens hidden ghost starting value initial binding changes run mode',
-    body: `The canvas is where you build. It draws every page **as it is when it starts**: each variable at its starting value, each timeline at its first frame, each data source as first loaded. Nothing on it runs. Clicking a button on the canvas selects the button; it doesn't press it.
+    body: `The canvas is where you build. It draws every page **as it is when it starts**: each variable at its starting value, no timeline playing (the Timeline panel's **Design view**, unless you pick a timeline to look at), each data source as first loaded. Nothing on it runs. Clicking a button on the canvas selects the button; it doesn't press it.
 
 **Preview** (top right) is the project running, exactly as a learner gets it. Events fire, timers tick, scripts run and variables change.
 
@@ -26,6 +26,8 @@ export const concept: Concept = {
 - In Preview, the **Variables (live)** list on the left shows every variable as it changes, and you can set them by hand there.
 - The **Events** list under it records each event and the nodes it ran, and says why a click did nothing.
 - **Beside editor** in Preview's bar moves Preview up to the right, so the canvas and the **Interactions** graph stay in view. Nodes that ran light up green and the wires they followed pulse.
+
+![Beside editor on the lamp project: the canvas still shows the bulb off and Taps: 0, while Preview, with Variables (live) and the Events list, shows the bulb lit and Taps: 1.](help/concept-edit-vs-play-beside.png)
 
 **More:** [Preview](interface#preview), [Variables](variables), [Bindings](bindings).`,
   },

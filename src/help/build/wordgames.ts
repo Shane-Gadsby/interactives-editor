@@ -27,7 +27,7 @@ Building a word search from a blank page means a few dozen nodes and formulas, s
 
 ![The Games and puzzles row of the branded starters: Crossword, Word search, Arithmetic quiz and Guess the answer, each with Play and Use template.](help/tutorial-wordgames-starters.png)
 
-A checklist opens beside the project. You will do its main job in the next step, and can tick items off as you go.
+A **Checklist** tab opens in the bottom panel. You will do its main job in the next step, and can tick items off as you go.
 
 ### 2. Type your words
 
@@ -67,7 +67,7 @@ That joins the twelve rows into one run of 144 letters and makes an item for eac
 3. Select **Letter square**, the one layer inside **Grid**. It is copied 144 times. Its text layer, **Letter**, says \`{item.l}\`. Its **Data bindings** colour it: \`line.includes(index)\` for the squares being chosen, \`foundCells.includes(index)\` for words already found.
 4. **Grid** also has **Keyboard navigation** on: the whole grid is one stop for <kbd>Tab</kbd>, the arrow keys move between squares, and <kbd>Enter</kbd> chooses one.
 
-![Grid selected on Find the words: its Repeat (list) section with the Items formula, 144 items, Layout Grid and Cols 12, and Keyboard navigation in Grid mode.](help/tutorial-wordgames-grid-repeat.png)
+![The Repeat (list) section of Grid on Find the words: Items starts rows.join, currently 144 items, Layout Grid, Cols 12, and below it Keyboard navigation in Grid mode.](help/tutorial-wordgames-grid-repeat.png)
 
 To restyle the squares, restyle **Letter square** once: every copy follows.
 

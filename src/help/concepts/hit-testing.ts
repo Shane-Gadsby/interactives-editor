@@ -28,8 +28,12 @@ While the project plays, some layers let the pointer straight through to whateve
 ## How to tell what is going on
 
 - In Preview with **Beside editor**, a ring flashes round the layer each click landed on: green when the click started something, red when it started nothing. The ring is on the layer that actually took the click, which may not be the one you meant.
-- When a click starts nothing, the **Events** list says why under **Why did nothing happen?**: the click landed on empty space, nothing listens for a click on that layer (an upper layer may be in the way), or an **Only if** said no.
+- When a click starts nothing, the **Events** list says why under **Why did nothing happen?**: the click landed on empty space (a see-through button reads this way, because the click went straight past it), nothing listens for a click on that layer (an upper layer may be in the way), or an **Only if** said no.
 - A layer with a click event or a link says so in its **Interactions** section when it is see-through and can't be clicked while playing.
+
+![Preview beside the editor after a click on the Taps text: a red ring round it on the canvas, and the Events list saying Nothing listens for a click on Counter.](help/concept-hit-testing-why.png)
+
+![Preview with the Switch button at 50% opacity: clicking it does nothing, and the Events list says the click landed on empty space, not on a layer.](help/concept-hit-testing-see-through.png)
 
 **More:** [See-through layers don't take clicks](interactions#see-through-layers-don-t-take-clicks), [Which layer inside was hit](interactions#which-layer-inside-was-hit), [See what ran](interactions#see-what-ran), [Order](arrange#order).`,
   },

@@ -24,8 +24,14 @@ When it switches, the learner isn't sent back to the start. Variables stay, beca
 ## How to tell what is going on
 
 - Select a page and open **Responsive** in the Properties panel: it lists the members, their widths and the pairing report.
-- In the **Layers** panel the variants sit under their base with the range each is shown at, and on the canvas each member has a pill for the others.
+
+![The Responsive section of a page: Home narrow from 0 px, Home from 560 px, and the report saying 0 layers paired by name, Logo only in Home narrow and Box only in Home.](help/concept-responsive-variants-report.png)
+- In the **Layers** panel the variants are listed right after their base, each with the range it is shown at. On the canvas, a pill for each member sits above the page and the one you are on is highlighted: click another to go and edit it. The pills only show when the page is wide enough on screen, so zoom in if you can't see them.
+
+![The Layers panel with Home, 560 and wider, and Home narrow, 0 to 559, and above the Home page on the canvas two pills, Home narrow and Home.](help/concept-responsive-variants-set.png)
 - In Preview, drag the **Page width** slider under the top bar across a breakpoint and watch it switch while it runs.
+
+![The Preview's Page width slider at 420 px, past the 560 mark, with Showing Home narrow beside it.](help/concept-responsive-variants-width.png)
 
 **More:** [Responsive artboards](responsive), [How a set works](responsive#how-a-set-works), [What carries when it switches](responsive#what-carries-when-it-switches), [Instances (components)](instances).`,
   },

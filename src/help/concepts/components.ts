@@ -13,6 +13,8 @@ export const concept: Concept = {
 
 An instance is one layer. You can move it, size it, choose how the page fits its box (**Fit**), and give it **Inputs**: starting values for the source page's variables, by name, written as JSON such as \`{"label": "Next"}\`. Each instance runs its own copy of the page, with its own timelines and its own variables, so one copy can say *Next* while another says *Back*.
 
+![The Lamp page and, beside it, a page holding one instance of Lamp. The instance's Inputs say {"taps": 5}, so it shows Taps: 5 while the source page still shows Taps: 0.](help/concept-components-instance.png)
+
 A **library** shares components between projects. Placing one copies its page into your project as a read-only **library page**.
 
 ## Where people get caught out
@@ -21,7 +23,7 @@ A **library** shares components between projects. Placing one copies its page in
 - **"I changed one instance and the others didn't follow."** Size, position, Fit and Inputs are that instance's own. Only changes to the source page reach them all.
 - **"I want one copy to look different."** Give the source page a variable for what changes (the label, a colour, a level), bind it, and set it per copy in **Inputs**. A timeline can key an input too.
 - **"The library page won't let me edit it."** It is read-only so it can take updates. **Detach to edit** makes it a normal page and stops its updates. It asks before it does.
-- **"Changing a variable in one copy changed it in all of them."** That variable is marked shared: one value for the page and every instance inside it. Some imported animation files bring their variables in this way; there is no switch for it in the Variables list. Ordinary variables are one per copy.
+- **"Changing a variable in one copy changed it in all of them."** That variable has **Shared with instances** ticked (under **Options** on the variable in the Variables panel): one value for the page and every instance inside it. Imported animation files can bring their variables in this way. Untick it and each copy has its own again.
 
 ## How to tell what is going on
 

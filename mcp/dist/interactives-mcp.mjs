@@ -10460,7 +10460,7 @@ Three findings are about **Info**. A plain shape can be clicked with a mouse, bu
 
 All three findings go.
 
-![Info's Accessibility section: Role Button, Text alternative Show a fact about Mars, and Tab stop Always, with the line Reachable with Tab (set to always) under it.](help/tutorial-accessible-info-button.png)
+![Info's Accessibility section: Role Button, Text alternative Show a fact about Mars, and Tab stop Automatic, with the line Reachable with Tab (On pointer click). Enter and Space click it. under it.](help/tutorial-accessible-info-button.png)
 
 > When you can, use a real **Button** layer instead. It is a control already, so the keyboard, the name and the role all come for free.
 
@@ -10562,7 +10562,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 
 1. Press <kbd>F</kbd> and draw a frame under the title, 720 wide and about 440 high. Name it **Accordion**.
 2. In its **Auto layout** section press the **+** (**Add auto layout**). **Layout** is **Row or column** and **Direction** is **Column ↓**: its layers now stack top to bottom.
-3. Set **Gap** to **10**, set all four **Padding** boxes to **0**, and untick **Hug height**, so the frame keeps the height you drew.
+3. Set **Gap** to **10**, **Align** to **Stretch**, all four **Padding** boxes to **0**, and untick **Hug height**. The empty frame shrank to almost nothing when you added auto layout, so now type **440** in **H**, in the **Layer** section, to give it its height back.
 
 ## 3. One section
 
@@ -10576,9 +10576,9 @@ Auto layout puts the text under the header for you. Both are empty until the sec
 ## 4. Put the section in the accordion and repeat it
 
 1. In the **Layers** panel, drag the **Section** row onto the middle of the **Accordion** row. Accordion is outlined, and Section goes inside it.
-2. Select **Accordion**. In **Repeat (list)** tick **Repeat the first child for each item**, set **Items** to \`sections\` and **Layout** to **Column**.
+2. Select **Accordion**. In **Repeat (list)** tick **Repeat the first child for each item** and replace the sample list in **Items** with \`sections\`. Leave **Layout** on **Column**.
 
-Four sections appear, one under the other, each with its own title. The first is open: its text shows and its sign is a minus.
+Four sections appear, one under the other, each with its own title and text. The first has a minus sign, because \`open\` holds 0, and the others have a plus.
 
 ![The Accordion frame selected, with Section and its two texts inside it in the Layers panel, and its Auto layout section: Row or column, Column, Gap 10, Align Stretch, Padding 0 and Hug height unticked.](help/tutorial-accordion-layout.png)
 
@@ -10588,12 +10588,14 @@ Four sections appear, one under the other, each with its own title. The first is
 
 1. Select **Section text**. In **Data bindings** add **Visible**, choose **Formula**, press **Edit as formula** and type \`open.includes(index)\`.
 
-Only the first section shows its text now. A hidden layer takes no room in auto layout, so the closed sections shrink to their header, and the column closes up.
+Only the first section shows its text now (on the canvas the hidden text is a faint ghost, and it is gone in Preview). A hidden layer takes no room in auto layout, so the closed sections shrink to their header, and the column closes up.
+
+The line under the formula works it out for the first section (\`index\` 0).
 
 Now make the header open its section:
 
-1. Select **Section header**. In **Interactions** press **+ On click (empty)** and then **Show in graph**.
-2. Drag from the dot on the right of the **When clicked or hovered** node, type \`change\` in **Find a node…** and pick **Change a value or counter**.
+1. Select **Section header**. In **Interactions** press **+ On click (empty)**. The **Interactions** tab opens with a **When clicked or hovered** node for the header.
+2. Drag from the dot on the right of that node into empty space, type \`change\` in **Find a node…** and pick **Change a value or counter** (the second one in the list, after *Change a layer's setting*).
 3. Set **Variable** to **open**, **Do** to **Set to**, and **Value** to:
 
 \`\`\`
@@ -10607,18 +10609,18 @@ open.includes(event.index) ? [] : [event.index]
 The header is a text layer, so tell the keyboard and screen readers it is a button that opens something.
 
 1. With **Section header** selected, open **Accessibility** and set **Role** to **Button**. <kbd>Tab</kbd> now reaches each header and <kbd>Enter</kbd> clicks it.
-2. In **Data bindings**, add **Expanded (button role)** with the formula \`open.includes(index)\`. A screen reader says *expanded* or *collapsed*.
+2. In **Data bindings**, add **Expanded (button role)**, choose **Formula**, press **Edit as formula** and type \`open.includes(index)\`. A screen reader says *expanded* or *collapsed*.
 3. Add **Text alternative**, choose **Formula** and type \`item.title\`. The screen reader then says the title without the plus or minus sign.
 
 ## 7. Try it
 
 1. Press **Preview**.
-2. Open **Test yourself**. The first section closes, Test yourself opens, and the last section moves down to make room.
+2. Open **Test yourself**. The first section closes, Test yourself opens, and the ones below it move to make room.
 3. Open it again and it closes. Watch \`open\` in **Variables (live)** (part of **Debug** in Preview's bar).
 
-![Preview with Test yourself open under a minus sign, the other three closed under plus signs, and open reading [2] in the live variables.](help/tutorial-accordion-preview.png)
+![Preview with Test yourself open under a minus sign, the other three closed under plus signs, and open listing 2 in the live variables.](help/tutorial-accordion-preview.png)
 
-4. Use <kbd>Tab</kbd> and <kbd>Enter</kbd> to do the same with the keyboard.
+4. Use <kbd>Tab</kbd> and <kbd>Enter</kbd> to do the same with the keyboard. This needs the **Accessibility** button in Preview's bar to be on, which it is unless you have turned it off in Preferences.
 
 ## Go further: let several stay open
 
@@ -11262,7 +11264,7 @@ A shortcut presses the button from anywhere on the page, so the arrow keys run t
    - **Text alternative**: \`"Go to slide " + (index + 1)\`.
 4. In **Accessibility**, set **Role** to **Button**, so each dot is a tab stop.
 
-The line under each of those bindings warns *There is no value called index*. Take no notice: the editor doesn't yet know a repeated layer has \`index\`, and the dots work in Preview.
+The line under each of those bindings works it out for the first dot (\`index\` 0).
 
 5. Press **+ On click (empty)** and add the same two **Change a value or counter** nodes as for Next, with \`event.index + 1\` as the second **Value**. \`event.index\` is the dot that was clicked, counting from 0.
 
@@ -11605,9 +11607,11 @@ The words aren't the only thing a file can hold. Each card has a \`colour\` too.
 2. In the Properties panel find **Data bindings** and press **+ Add binding**. Type \`fill\` and choose **Fill colour**.
 3. Press **Formula** and type \`item.colour\`, then press <kbd>Enter</kbd>.
 
-Each card now takes its colour from its own line in the file. The binding may say *There is no value called item* and *item is not defined* under the formula. Inside a repeated layer that warning is wrong: the cards on the canvas still show their colours.
+Each card now takes its colour from its own line in the file. The line under the formula shows the first card's colour.
 
-![Card background selected, with a Fill colour binding set to the Formula item.colour, and the wrong warning that there is no value called item under it.](help/tutorial-data-source-binding.png) A **binding** ties any property to an expression in the same way: the position, the size, whether it shows.
+![Card background selected on the canvas, with a Fill colour binding set to the Formula item.colour, and under it currently #FFF4D6, the first card's colour.](help/tutorial-data-source-binding.png)
+
+A **binding** ties any property to an expression in the same way: the position, the size, whether it shows.
 
 ## 6. Change the words in the editor
 
@@ -11627,7 +11631,7 @@ This is the point of it: a new version is a new file, not an edit of every layer
 2. Open the **Assets** tab on the left and find **tips.json**.
 3. Press the arrow on it (its tooltip says **Replace with a new version of the file**) and pick \`tips-term2.json\`.
 
-![The Assets tab with tips.json, and the tooltip of its arrow button: Replace with a new version of the file.](help/tutorial-data-source-replace.png)
+![The Assets tab with tips.json, and the tooltip of its arrow button: Replace with a new version of the file. Everything that uses tips.json shows the new one.](help/tutorial-data-source-replace.png)
 
 The page shows the new words at once. Everything that used the old file now uses the new one, and one **Undo** puts the old one back.
 
@@ -11989,15 +11993,17 @@ A card is turned over when its place is in \`flipped\`. The formula for that is 
 2. Select **Card front** and do the same with \`!flipped.includes(index)\`. The \`!\` means *not*.
 3. Select **Card** and add a binding to **Fill colour**: **Formula**, \`flipped.includes(index) ? "#ffffff" : "#1f3a68"\`. A turned card is white, so the dark words on its back show.
 
+The line under each formula works it out for the first card (\`index\` 0).
+
 Every card shows its front now, because \`flipped\` is empty.
 
 ## 5. Turn a card over on a click
 
 1. With **Card** selected, open **Accessibility** and set **Role** to **Button**. The card is now a tab stop, and <kbd>Enter</kbd> or <kbd>Space</kbd> clicks it.
 2. Type \`Press Enter to turn the card over\` in **Description**.
-3. In **Data bindings**, add **Pressed (button, toggle)** with the formula \`flipped.includes(index)\`. A screen reader then says whether the card is turned.
-4. In the **Interactions** section press **+ On click (empty)**, then **Show in graph**.
-5. Drag from the dot on the right of the **When clicked or hovered** node into empty space. In **Find a node…** type \`change\` and pick **Change a value or counter**.
+3. In **Data bindings**, add **Pressed (button, toggle)**, choose **Formula**, press **Edit as formula** and type \`flipped.includes(index)\`. A screen reader then says whether the card is turned.
+4. In the **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens with a **When clicked or hovered** node for the card.
+5. Drag from the dot on the right of that node into empty space. In **Find a node…** type \`change\` and pick **Change a value or counter** (the second one in the list, after *Change a layer's setting*).
 6. Set **Variable** to **flipped**, **Do** to **Add to the list, or take out if it is there**, and **Value** to \`event.index\`.
 
 A click on any copy runs this one flow, and \`event.index\` is the place of the card that was clicked. If it isn't in \`flipped\` it goes in, and the card turns over; if it is, it comes out, and the card turns back.
@@ -12005,7 +12011,7 @@ A click on any copy runs this one flow, and \`event.index\` is the place of the 
 ## 6. Turn them all back
 
 1. Press <kbd>B</kbd> and draw a button under the cards. Set its **Label** to \`Turn all back\`.
-2. Press **+ On click (empty)** and **Show in graph**, drag from its dot and pick **Put values back to the start**.
+2. Press **+ On click (empty)**, drag from the dot on the new node and pick **Put values back to the start**.
 3. In its **Variables** list, tick **flipped**. It goes back to \`[]\`, so every card shows its front.
 
 ## 7. Try it
@@ -12015,7 +12021,7 @@ A click on any copy runs this one flow, and \`event.index\` is the place of the 
 3. Press <kbd>Tab</kbd> to reach a card and <kbd>Enter</kbd> to turn it.
 4. Watch \`flipped\` in **Variables (live)** on the left: it lists the places of the cards that are turned. It is part of **Debug** in Preview's bar; press **Debug** if you don't see it.
 
-![Preview with the first and fifth cards turned over to their meanings, and flipped reading [0,4] in the live variables.](help/tutorial-flipcards-preview.png)
+![Preview with the first and fifth cards turned over to their meanings, and flipped listing 0 and 4 in the live variables.](help/tutorial-flipcards-preview.png)
 
 5. Press **Turn all back**.
 
@@ -12078,7 +12084,7 @@ Each text box needs a variable to keep what is typed in it.
 3. In the tool bar, click **Web** to open that group and pick **Input field**. Drag a wide box under the prompt, about 110 high.
 4. In the Properties panel's **Input** section, set **Type** to **textarea** so it takes several lines, and write a **Placeholder** such as \`Describe what happened...\`
 5. Still in the **Input** section, press **Bind to a variable…** and pick **happened**. The row now says the value is bound **⇄ Both**: typing writes the variable, and the variable fills the box.
-6. In the **Accessibility** section, type \`What happened\` in **Text alternative**, so a screen reader says what the box is for. (Right now the player puts an input field's text alternative on the box around it rather than on the text box itself, so a screen reader reads the placeholder instead.)
+6. In the **Accessibility** section, type \`What happened\` in **Text alternative**, so a screen reader can say what the box is for. The player puts it on the layer around the text box, not on the box itself, so a screen reader may still read just the placeholder: make the placeholder say it too.
 7. Add a second prompt, \`What did you learn from it?\`, and a second text box bound to **learnt** the same way.
 
 ![The first text box selected on the Write page, with its Input section: Type textarea, the placeholder, and Value is bound ⇄ Both happened.](help/tutorial-journal-input.png)
@@ -12454,7 +12460,7 @@ It makes two face-down cards from every pair, both with the pair's number, and s
 5. Still on **Card**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **Formula** and type \`item.state == "down" ? "#f6c344" : item.state == "matched" ? "#bfe5c4" : "#ffffff"\`. Down cards are gold, matched ones green, turned ones white.
 6. Add one more binding: **Text alternative**, **Formula**, \`"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text)\`, so a screen reader hears more than a question mark.
 
-The line under these bindings warns *There is no value called item* (or *index*). Take no notice: the editor doesn't yet know a repeated layer has \`item\` and \`index\`, and the cards work in Preview.
+The line under each binding works it out for the first card, from the first item of the deal.
 
 7. Above the frame, add two text layers: \`Moves: {moves}\` and \`Pairs found: {matched} of {pairs.length}\`.
 
@@ -14054,7 +14060,7 @@ The class's answers live in a **Shared responses** data source. The Vote button 
 2. In the tool bar down the left, click **Web** to open that group and pick **Input field**. Drag a box under the question.
 3. In the **Input** section of the Properties panel, set **Type** to **select**. In **Options** type the answers, one per line: \`Bus\`, \`Train\`, \`Car\`, \`Bike\`, \`Walk\`.
 4. Beside **Variable**, press **Bind to a variable…** and choose **+ New variable…**. Call it \`choice\` and press **Create variable**. Whatever the learner picks is now in \`choice\`.
-5. Open the **Accessibility** section and type a **Text alternative**: \`How you usually get to campus\`. (Right now the player puts an input field's text alternative on the box around it rather than on the dropdown itself, so a screen reader may not say it yet.)
+5. Open the **Accessibility** section and type a **Text alternative**: \`How you usually get to campus\`. The player puts it on the layer around the dropdown, not on the dropdown itself, so a screen reader may not say it yet.
 6. Add a button under the dropdown with the **Label** **Vote** and the **Name** **Vote button**.
 
 ## 5. Send the vote
@@ -14085,7 +14091,7 @@ The Vote button needs four things in a row, so build it in the **Interactions** 
 4. Under the chart, add a text that counts the voters: \`{responses.people} people have voted so far.\` Anything in curly brackets is worked out as the page plays.
 5. Add a button with the **Label** **Change my vote**. Give it **+ When clicked…**, **Go to the previous page**.
 
-![The Results page with the chart selected: Kind Bar (sideways), Data responses.answers, Label key text and Value key count, and the five counted answers listed under Data.](help/tutorial-survey-chart-chart.png)
+![The Chart section of the results chart: Kind Bar (sideways), Data responses.answers, Label key text and Value key count, and the four counted answers listed under Data: Bus 2, Car 1, Train 1, Walk 1.](help/tutorial-survey-chart-chart.png)
 
 ## 7. Try it
 
@@ -14093,7 +14099,7 @@ The Vote button needs four things in a row, so build it in the **Interactions** 
 2. Press **Start**, pick **Bike** and press **Vote**. The results page shows your sample answers as the class, plus your vote for Bike.
 3. Press **Change my vote**, pick **Bus** and vote again. Bike drops out and Bus goes up by one: **Take back shared responses** did its job.
 
-![Preview on the Results page after voting Bike: a sideways bar chart of the class's answers with a count on each bar, 12 people have voted so far, and Change my vote.](help/tutorial-survey-chart-results.png)
+![Preview on the Results page after voting Bike: a sideways bar chart with Bus 2 and one each for Bike, Car, Train and Walk, a count on each bar, 6 people have voted so far, and Change my vote.](help/tutorial-survey-chart-results.png)
 
 Press <kbd>Esc</kbd> to close the Preview.
 
@@ -14108,7 +14114,7 @@ Set the data source up before you share. Its rules are fixed when the project is
 ## Make it yours
 
 - **Show at** holds an answer back until that many people have given it. Set it to 3 or so for a small class, so one person's vote never shows on its own.
-- An answer nobody has chosen is not in \`responses.answers\`, so it has no bar. To show every option, even at zero, see [Charts](charts) for writing the list out in **Data**.
+- An answer nobody has chosen has no bar, so the chart changes shape as votes come in. To keep a bar for every choice from the start, type them in the data source's **Poll options** (\`Bus\`, \`Train\`, \`Car\`, \`Bike\`, \`Walk\`): each one is always in \`responses.answers\`, in that order, with 0 until someone picks it. The finished example does this.
 - The data source's **What the class has said** list shows every answer by course, with **Hide**, **Remove** and **Clear this course**. Only the project's owner (or a power user) sees it.
 
 ## What you learned
@@ -14172,7 +14178,7 @@ Still in the **Video** section, under **Chapters**:
 
 The video's own controls list the chapters in browsers that show them. The buttons you make next read the same list.
 
-![Clip selected, with its Video section: Cue points at 30 (q1) and 70 (q2), both ticked Pause the video here, then Chapters at 0, 35 and 75 with their titles, and Captions with Import… under them.](help/tutorial-video-chapters-cues.png)
+![The Chapters and Captions parts of the Video section: Chapters at 0, 35 and 75 with their titles, and Captions with Import… under them.](help/tutorial-video-chapters-chapters.png)
 
 ## 5. Chapter buttons
 
@@ -14218,6 +14224,9 @@ Both cards fade to faint ghosts on the canvas, since \`question\` starts at 0. T
 1. Select **Clip**. In the **Video** section, under **Cue points**, press **Add a cue** twice.
 2. Set the first cue's **At** to **30** and **Name** to \`q1\`, and tick **Pause the video here**.
 3. Set the second to **70**, \`q2\`, and tick **Pause the video here**.
+
+![The Cue points part of the Video section: cues at 30 (q1) and 70 (q2), both ticked Pause the video here.](help/tutorial-video-chapters-cues.png)
+
 4. In **Data bindings** on **Clip**, press **+ Add binding** and pick **Hold paused (it will not play while true)**. Press **Formula**, then **Edit as formula**, and type \`question > 0\`. While a question is open, nothing starts the video, not even its own play button. (The formula pickers write the same thing: **Condition** **question**, **is more than**, **a number**, **0**.)
 
 ![The Clip's Hold paused (it will not play while true) binding: Formula, with the Condition question is more than 0, currently false.](help/tutorial-video-chapters-hold-paused.png)
@@ -14329,7 +14338,7 @@ A worked out value can read other worked out values, so \`leftover\` follows bot
 2. In the **Input** section of the Properties panel, set **Type** to **range**. The box becomes a slider.
 3. Set **Min** to **0**, **Max** to **40** and **Step** to **1**.
 4. Beside **Variable**, press **Bind to a variable…** and choose \`hours\`. The slider jumps to 15. Dragging it now sets \`hours\`, and changing \`hours\` moves it: it is a two-way (**⇄ Both**) binding.
-5. Change its **Name** to **Hours slider**, and in the **Accessibility** section type a **Text alternative**: \`Hours of paid work a week\`. A slider has no words on it, so this is what a screen reader should say. (Right now the player puts an input field's text alternative on the box around it rather than on the slider itself, so a screen reader may not say it yet.)
+5. Change its **Name** to **Hours slider**, and in the **Accessibility** section type a **Text alternative**: \`Hours of paid work a week\`. A slider has no words on it, so this is what a screen reader should say. The player puts it on the layer around the slider, not on the slider itself, so a screen reader may not say it yet.
 6. Make two more sliders under it the same way:
    - **Pay slider**: **Min** 20, **Max** 40, **Step** 0.5, bound to \`pay\`;
    - **Rent slider**: **Min** 100, **Max** 500, **Step** 10, bound to \`rent\`.
@@ -14422,7 +14431,7 @@ Building a word search from a blank page means a few dozen nodes and formulas, s
 
 ![The Games and puzzles row of the branded starters: Crossword, Word search, Arithmetic quiz and Guess the answer, each with Play and Use template.](help/tutorial-wordgames-starters.png)
 
-A checklist opens beside the project. You will do its main job in the next step, and can tick items off as you go.
+A **Checklist** tab opens in the bottom panel. You will do its main job in the next step, and can tick items off as you go.
 
 ### 2. Type your words
 
@@ -14462,7 +14471,7 @@ That joins the twelve rows into one run of 144 letters and makes an item for eac
 3. Select **Letter square**, the one layer inside **Grid**. It is copied 144 times. Its text layer, **Letter**, says \`{item.l}\`. Its **Data bindings** colour it: \`line.includes(index)\` for the squares being chosen, \`foundCells.includes(index)\` for words already found.
 4. **Grid** also has **Keyboard navigation** on: the whole grid is one stop for <kbd>Tab</kbd>, the arrow keys move between squares, and <kbd>Enter</kbd> chooses one.
 
-![Grid selected on Find the words: its Repeat (list) section with the Items formula, 144 items, Layout Grid and Cols 12, and Keyboard navigation in Grid mode.](help/tutorial-wordgames-grid-repeat.png)
+![The Repeat (list) section of Grid on Find the words: Items starts rows.join, currently 144 items, Layout Grid, Cols 12, and below it Keyboard navigation in Grid mode.](help/tutorial-wordgames-grid-repeat.png)
 
 To restyle the squares, restyle **Letter square** once: every copy follows.
 
@@ -14593,19 +14602,27 @@ const concept$m = {
 
 Buttons, inputs and links are real controls, so they already have a role and work from the keyboard. A shape, picture or group that you made clickable with *When clicked or hovered* doesn't, until its **Accessibility** section says so. With **Tab stop** left on *Automatic*, a layer with a click becomes a tab stop that Enter and Space click.
 
+![The Accessibility section of a clickable ellipse: Role None (plain shape), Text alternative Switch the lamp on or off, Tab stop Automatic, and the line Reachable with Tab (On pointer click). Enter and Space click it.](help/concept-a11y-names-section.png)
+
 ## Where people get caught out
 
-- **"The screen reader just says *button*."** The layer has no name. Give it a **Text alternative** that says what it does (*Next question*), not what it looks like (*green arrow*). Its words count as its name when it has text.
+- **"The screen reader just says *button*."** The layer has no name. Give it a **Text alternative** that says what it does (*Next question*), not what it looks like (*green arrow*). The checker calls this the ARIA label, and its finding goes away as soon as the layer has one. A layer's own words count as its name when it has text.
 - **"The screen reader reads out every flourish."** Set the **Role** of layers that are only decoration to *Decorative*, and they are skipped.
 - **"The drag task can't be done from the keyboard."** Layers made **draggable** (the Draggable section) get a keyboard way of their own: Space to pick up, the arrows to choose a drop zone, Space to drop. Older drag events, hover, press and release can't be done from a keyboard, so give those a click as well.
-- **"Tab jumps all over the page after I rearranged it."** Tab follows the layer order, not where things sit, so moving layers around on the page doesn't change it. Set the order in the **Tab order** section, or reorder the layers.
+- **"Tab jumps all over the page after I rearranged it."** Tab follows the layer order (the bottom of the Layers list first), not where things sit, so moving layers around on the page doesn't change it. Set the order in the **Tab order** section, or reorder the layers.
 - **"Focus is lost after the page changes."** Moving focus somewhere sensible isn't automatic. Use a *Focus layer* node.
 
 ## How to tell what is going on
 
-- The **Accessibility** checker (bottom panel) lists clickable layers with **No name for assistive technology**, layers that **Needs a mouse or touch** (no keyboard way), pictures with **No description** and more, page by page. Click a finding to select the layer.
-- With nothing selected, the **Tab order** section lists every tab stop on the page in the order Tab visits them.
-- In Preview, press <kbd>Tab</kbd> and watch the focus ring. Switch on **Screen reader** in Preview's bar to see a strip of what would be announced.
+- The **Accessibility** checker (bottom panel) lists, page by page, clickable layers with **No name for a screen reader**, layers marked **Only works with a mouse or touch** (no keyboard way), pictures with **Picture has no description** and more. Click a finding to read why it matters, and **Select layer** takes you to it.
+
+![The Accessibility checker with one problem: No name for a screen reader on the layer Bulb, with the explanation beside it.](help/concept-a11y-names-finding.png)
+
+- With nothing selected, the **Tab order** section lists every tab stop on the page in the order Tab visits them. Its arrows move a layer earlier or later, and **Reset to layer order** appears once you have.
+
+![The Tab order section with Switch moved above Bulb by its arrows, and the Reset to layer order button under the list.](help/concept-a11y-names-tab-order.png)
+
+- In Preview, press <kbd>Tab</kbd> and watch the focus ring. Roles, tab stops and the ring only work while **Accessibility** is on in Preview's bar. Switch on **Screen reader** there to see a strip of what Announce nodes and scripts would tell a screen reader.
 
 **More:** [Accessibility: roles and keyboard](accessibility), [Tab order](accessibility#tab-order), [Accessibility checker](accessibility-checker), [Drag and drop](drag-and-drop#keyboard-touch-and-screen-readers), and [Label the diagram](tutorial-label), which gives a picture a text alternative and tries the activity from the keyboard.`
   }
@@ -14625,20 +14642,22 @@ const concept$l = {
     keywords: "concept assets files picture image replace update new version import again duplicate two copies linked design file psd ai pdf update from file optimised copy editing copy export size big photo",
     body: `Every picture, sound, video, font and data file in a project is an **asset**, listed once in the **Assets** tab of the left panel. A layer, a fill, a **Play sound** node or a data source doesn't hold the file itself: it points at the asset. So one logo can be on twenty pages and still be one file.
 
-Design files (Photoshop, Illustrator, PDF, AutoCAD) are different. They aren't stored as assets: they become artboards, and they are listed under **Design files** at the top of the Assets tab, each with **Update…** to bring in a new version of the file.
+Design files (Photoshop, Illustrator, PDF, AutoCAD) are different. They aren't stored as assets: they become artboards, and they are listed under **Design files** at the top of the Assets tab, above the other files, each with **Update…** to bring in a new version of the file.
 
 ## Where people get caught out
 
 - **"I imported the new picture and now I have two."** Importing or dropping a file again always adds a new asset, and the layers still point at the old one. To swap a file, press the arrow on the asset in the Assets tab (its tooltip says **Replace with a new version of the file**), or **Replace file…** in an image or video layer's inspector. Everything that used it shows the new file, and one undo puts the old one back.
-- **"The same logo is in there three times."** **Find duplicate files** (under **Upload files**) finds files added more than once and merges them, so everything uses one copy.
+- **"The same logo is in there three times."** **Find duplicate files** (the link below the **Upload files** button, shown once there are two or more files) finds files added more than once and merges them, so everything uses one copy.
 - **"I changed the Photoshop file. Do I have to import it again?"** No. Press **Update…** beside it under **Design files**. What changed in the file comes in, and the edits you made in the editor are kept.
 - **"My photo looks fine, but is it slowing everything down?"** Big pictures (over about 2 MB, or 2560 px on the long side) get a lighter **editing copy** that the canvas draws instead, so editing stays quick. The original is kept at full size.
 - **"The exported file is huge."** With **Optimise output** on in the Project settings (it is on by default), the single HTML file and the share link carry smaller copies of big pictures. The project package and Preview always use the full-size originals.
 
 ## How to tell what is going on
 
-- The Assets tab's **Details** view lists each file's kind and size, says **unused** beside a file nothing refers to, and for a big picture shows its **Editing copy** and **Output** sizes.
+- The Assets tab's **Details** view lists each file's kind and size, says **unused** beside a file nothing refers to, and for a picture shows its **Editing copy** (big ones only) and **Output** sizes once those copies are made. A small picture says **Output: already small enough**.
 - The **Usage** tab lists what uses what, and can clear out the files nothing uses.
+
+![The Assets tab in the Details view: four small pictures, each saying Output: already small enough, and below them a 4.2 MB photo marked unused, with an Editing copy of 1.5 MB and an Output of 1.7 MB.](help/concept-assets-details.png)
 
 **More:** [The Assets panel](assets), [Replacing a file](assets#replacing-a-file), [Big pictures](assets#big-pictures), [Updating a design file](import#updating-a-design-file), [Optimised pictures](export#optimised-pictures), [Removing unused assets](usage#removing-unused-assets). The [data source tutorial](tutorial-data-source) and the [sound tutorial](tutorial-sound) both replace a file this way.`
   }
@@ -14662,24 +14681,28 @@ Each child says how big it is, in its **Layout item** section:
 
 - **Fixed**: its own width or height.
 - **Hug**: as big as what is inside it (a frame's children, a text's words).
-- **Fill**: takes a share of the room the frame has left.
+- **Fill**: takes a share of the room the frame has left. **Grow** sets how big a share: a child with Grow 2 gets twice what a child with Grow 1 gets.
 - **Percent**: a share of the frame's inner size.
 
 A frame can hug too: **Hug width** and **Hug height** make it grow and shrink with its children.
 
+![The Layers panel with Card A selected inside the Cards frame, and the canvas beside it: Card A, at the bottom of the list, is the first one in the row.](help/concept-auto-layout-order.png)
+
+![The Layout item section of a card in a row: Position In flow, W Fill, H Fixed, Grow 1.](help/concept-auto-layout-item.png)
+
 ## Where people get caught out
 
-- **"I drag a child and it jumps back."** Its x and y belong to the layout, so the frame puts it back. To change the order, move it up or down in the **Layers** panel. To place one child freely, set its **Position** to *Absolute* (pinned by insets from the frame's edges) or *Ignore* (keeps its own x and y and takes no room).
+- **"I drag a child and it jumps back."** Its x and y belong to the layout, so the frame puts it back. Typing a new X or Y in the Inspector does the same: the number stays in the field, but the layout still places the child. To change the order, move it up or down in the **Layers** panel. To place one child freely, set its **Position** to *Absolute* (pinned by insets from the frame's edges) or *Ignore* (keeps its own x and y and takes no room).
 - **"My text box won't grow."** A text grows only if its **Sizing** lets it: *Auto width* or *Auto height*, not *Fixed*. The frame around it has to grow too: a frame with a fixed height stays that height, so turn on **Hug height** on it.
 - **"Gap or padding?"** **Gap** is the space between children. **Padding** is the space between the frame's edges and the children. **Margin** (in Layout item) is extra space around one child.
-- **"I hid a layer and everything moved."** A hidden layer takes no room, so the others close up. That is on purpose.
+- **"I hid a layer and everything moved."** In Preview a hidden layer takes no room, so the others close up. That is on purpose. On the canvas a hidden layer stays as a faint ghost in its place, so the layout there doesn't move.
 - **"My layout settings aren't on the timeline."** They aren't keyframed. Animate a layer's size or position with a timeline, or turn on **Animate changes** on the frame so children glide when the layout changes while it plays.
 
 ## How to tell what is going on
 
 - Select the child and read its **Layout item** section: it says how it sits in its frame, and only shows the settings that kind of layout uses.
 - Select the frame and read its **Auto layout** section for direction, gap, padding and hugging.
-- The children are placed in layer order, so if the order looks wrong, the Layers panel is where to change it.
+- The children are placed in layer order, and the **bottom** of the list in the Layers panel goes first: in a row it is the leftmost, in a column the top. So a list that reads Card C, Card B, Card A from the top gives a row of A, B, C. If the order looks wrong, the Layers panel is where to change it.
 
 **More:** [Auto layout](auto-layout), [Child sizing](auto-layout#child-sizing), [Grids and stacks](auto-layout#grids-and-stacks), [Text](text), [Groups and frames](groups-frames).`
   }
@@ -14701,6 +14724,8 @@ const concept$j = {
 
 An instance is one layer. You can move it, size it, choose how the page fits its box (**Fit**), and give it **Inputs**: starting values for the source page's variables, by name, written as JSON such as \`{"label": "Next"}\`. Each instance runs its own copy of the page, with its own timelines and its own variables, so one copy can say *Next* while another says *Back*.
 
+![The Lamp page and, beside it, a page holding one instance of Lamp. The instance's Inputs say {"taps": 5}, so it shows Taps: 5 while the source page still shows Taps: 0.](help/concept-components-instance.png)
+
 A **library** shares components between projects. Placing one copies its page into your project as a read-only **library page**.
 
 ## Where people get caught out
@@ -14709,7 +14734,7 @@ A **library** shares components between projects. Placing one copies its page in
 - **"I changed one instance and the others didn't follow."** Size, position, Fit and Inputs are that instance's own. Only changes to the source page reach them all.
 - **"I want one copy to look different."** Give the source page a variable for what changes (the label, a colour, a level), bind it, and set it per copy in **Inputs**. A timeline can key an input too.
 - **"The library page won't let me edit it."** It is read-only so it can take updates. **Detach to edit** makes it a normal page and stops its updates. It asks before it does.
-- **"Changing a variable in one copy changed it in all of them."** That variable is marked shared: one value for the page and every instance inside it. Some imported animation files bring their variables in this way; there is no switch for it in the Variables list. Ordinary variables are one per copy.
+- **"Changing a variable in one copy changed it in all of them."** That variable has **Shared with instances** ticked (under **Options** on the variable in the Variables panel): one value for the page and every instance inside it. Imported animation files can bring their variables in this way. Untick it and each copy has its own again.
 
 ## How to tell what is going on
 
@@ -14734,9 +14759,11 @@ const concept$i = {
     keywords: "concept x y position coordinates relative parent group frame numbers changed moved into group off screen binding x event.x local world top left",
     body: `A layer's **X** and **Y** are its distance from the top left corner of its **parent**: the page for a layer at the top of the list, or the group or frame it sits in. A layer at X 20 inside a group at X 300 is 320 from the edge of the page.
 
+![Group 2 selected, at X 200 and Y 90 on the page, and below it its child Counter selected, at X 50 and Y 240: the Counter sits 250 across and 330 down on the page.](help/concept-coordinates-parent.png)
+
 ## Where people get caught out
 
-- **"I put a layer in a group and its numbers changed."** It didn't move on the page; its X and Y are now counted from the group's corner instead of the page's. Making a group, dragging a layer into one in **Layers**, or ungrouping all keep the layer where it was and change the numbers to match.
+- **"I put a layer in a group and its numbers changed."** It didn't move on the page; its X and Y are now counted from the group's corner instead of the page's. Making a group, dragging a layer into one in **Layers**, or ungrouping all keep the layer where it was and change the numbers to match. (Ungroup leaves a group that is rotated or scaled alone.)
 - **"My animation jumped after I grouped the layer."** Keyframes on X and Y are not changed when a layer moves into or out of a group, so they now count from the new parent's corner. Move the keys, or group the layer before you animate it.
 - **"I bound X and the layer went off the page."** A binding or a **Change a layer's setting** on X is measured from the parent too. \`event.x\` and \`event.y\` from a click or drag are measured on the page, so they only line up for a layer at the top of the list. For dragging, \`start + event.dx\` (how far the pointer has moved) works wherever the layer is.
 - **"I can't move a layer inside an auto layout frame."** That frame places its children, so X and Y stop being yours to set. See [Auto layout](auto-layout); a child set to **Ignore** keeps its own X and Y.
@@ -14764,7 +14791,7 @@ const concept$h = {
     group: "Concepts",
     summary: "Nothing happens on the canvas when you click a button: it shows every page as it starts. Events, timers, scripts and changing variables only run in Preview.",
     keywords: "concept canvas preview edit play run does nothing not working click button nothing happens hidden ghost starting value initial binding changes run mode",
-    body: `The canvas is where you build. It draws every page **as it is when it starts**: each variable at its starting value, each timeline at its first frame, each data source as first loaded. Nothing on it runs. Clicking a button on the canvas selects the button; it doesn't press it.
+    body: `The canvas is where you build. It draws every page **as it is when it starts**: each variable at its starting value, no timeline playing (the Timeline panel's **Design view**, unless you pick a timeline to look at), each data source as first loaded. Nothing on it runs. Clicking a button on the canvas selects the button; it doesn't press it.
 
 **Preview** (top right) is the project running, exactly as a learner gets it. Events fire, timers tick, scripts run and variables change.
 
@@ -14781,6 +14808,8 @@ const concept$h = {
 - In Preview, the **Variables (live)** list on the left shows every variable as it changes, and you can set them by hand there.
 - The **Events** list under it records each event and the nodes it ran, and says why a click did nothing.
 - **Beside editor** in Preview's bar moves Preview up to the right, so the canvas and the **Interactions** graph stay in view. Nodes that ran light up green and the wires they followed pulse.
+
+![Beside editor on the lamp project: the canvas still shows the bulb off and Taps: 0, while Preview, with Variables (live) and the Events list, shows the bulb lit and Taps: 1.](help/concept-edit-vs-play-beside.png)
 
 **More:** [Preview](interface#preview), [Variables](variables), [Bindings](bindings).`
   }
@@ -14904,8 +14933,12 @@ While the project plays, some layers let the pointer straight through to whateve
 ## How to tell what is going on
 
 - In Preview with **Beside editor**, a ring flashes round the layer each click landed on: green when the click started something, red when it started nothing. The ring is on the layer that actually took the click, which may not be the one you meant.
-- When a click starts nothing, the **Events** list says why under **Why did nothing happen?**: the click landed on empty space, nothing listens for a click on that layer (an upper layer may be in the way), or an **Only if** said no.
+- When a click starts nothing, the **Events** list says why under **Why did nothing happen?**: the click landed on empty space (a see-through button reads this way, because the click went straight past it), nothing listens for a click on that layer (an upper layer may be in the way), or an **Only if** said no.
 - A layer with a click event or a link says so in its **Interactions** section when it is see-through and can't be clicked while playing.
+
+![Preview beside the editor after a click on the Taps text: a red ring round it on the canvas, and the Events list saying Nothing listens for a click on Counter.](help/concept-hit-testing-why.png)
+
+![Preview with the Switch button at 50% opacity: clicking it does nothing, and the Events list says the click landed on empty space, not on a layer.](help/concept-hit-testing-see-through.png)
 
 **More:** [See-through layers don't take clicks](interactions#see-through-layers-don-t-take-clicks), [Which layer inside was hit](interactions#which-layer-inside-was-hit), [See what ran](interactions#see-what-ran), [Order](arrange#order).`
   }
@@ -14925,22 +14958,28 @@ const concept$d = {
     keywords: "concept save autosave no save button saved failed live editing collaborate two people same text revision history restore undo go back mistake bad change conflict 409 changed in another tab overwrite reload",
     body: `Every change you make is saved as you go. The label next to the project name says **Saved**, **Saving…** or **Save failed**, and <kbd>Ctrl</kbd>+<kbd>S</kbd> saves at once if you want to be sure.
 
-When other people you invited have the project open, the **Live** badge shows, their initials appear in the top bar, and their changes arrive on your canvas as they make them.
+When other people you invited have the project open, the **Live** badge shows, their initials appear in the top bar, and their changes arrive on your canvas as they make them. A second tab of your own on the same project counts as another person.
+
+![The top bar of a project with two tabs open: Saved, Live and a TU badge for the other tab, and on the canvas that tab's cursor labelled Test User and the dashed outline round the layer it has selected, which it has just renamed to Logo.](help/concept-live-revisions-live.png)
 
 The server also keeps **revisions**: a snapshot every few minutes while the project changes (the newest 100), plus any version you name. Those are the way back from a change you regret.
+
+![The Revision history dialog: a list of Autosave versions with the oldest, Copied from an example, picked, a picture of it, and the buttons Restore this version, Name it, Pin and Save a named version.](help/concept-live-revisions-history.png)
 
 ## Where people get caught out
 
 - **"Where is Save?"** You don't need one. Close the tab when the label says **Saved**.
-- **"I made a mess and undo isn't enough."** Open **Revision history** (the clock in the top bar), click a version to see a picture of it, and press **Restore this version**. What is there now is saved into the history first, so a restore can itself be undone the same way. Before a big change, **Save a named version…** pins a version that is never cleared out.
+- **"I made a mess and undo isn't enough."** Open **Revision history** (the clock in the top bar), click a version to see a picture of it, press **Restore this version** and confirm with **Restore**. What is there now is saved into the history first, as **Before restore**, so a restore can itself be undone the same way. The editor reloads the project when it is done. Before a big change, **Save a named version…** saves what is there now under a name and pins it, and **Pin** does the same for a version in the list: pinned versions are never cleared out.
 - **"Undo took back my change, but not hers."** Undo only undoes your own changes, never someone else's.
 - **"We were both typing in the same text box."** The project keeps one value for each setting, and when two people change the same one at the same moment, the later change wins. Split the work by layer or by page.
-- **"A red bar says the project was changed in another tab or by someone else."** The project was saved from somewhere that wasn't in the live session with you, such as a second tab, and the server refused to quietly write over it. **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Whichever you don't pick is lost, though the revision history may still have it.
+- **"A red bar says the project was changed in another tab or by someone else."** Two tabs on one project normally share one live session and just see each other's changes, so this is rare. You get it when a copy saves on its own, outside the live session, after the project has changed on the server. The server refused to quietly write over it. **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Whichever you don't pick is lost, though the revision history may still have it.
 
 ## How to tell what is going on
 
 - Hover **Save failed** for the reason. The editor keeps trying by itself, so keep the tab open until it says **Saved** again.
 - The **Live** badge says **Reconnecting** while the connection is down. Your changes are kept and sent when it's back.
+
+![The top bar with the label Saved and the badge Reconnecting.](help/concept-live-revisions-reconnecting.png)
 
 **More:** [Live editing and saving](live-editing), [Revision history](live-editing#revision-history), [When a save fails](live-editing#when-a-save-fails), [When two copies disagree](live-editing#when-two-copies-disagree), [Inviting people](live-editing#inviting-people). [Tutorial 5](tutorial-publish) restores a version and invites someone to edit with you.`
   }
@@ -14963,6 +15002,8 @@ const concept$c = {
 - A **note** (the **Note** tool, <kbd>S</kbd>) is a sticky note that is part of the project. It goes wherever the project goes: copies, templates, remixes, and everyone editing it live. It is for the people who **make** the project. Nobody who plays it ever sees it: not Preview, not a share link, not an export, and not the review page either.
 - A **comment** (the **Comment** tool, <kbd>C</kbd>) is a conversation pinned to a layer or a spot, kept on the server beside the project, not in it. It is for **reviewing**: replies, **Resolve**, **Assigned to**, @mentions and notices. Reviewers reach it through the review link; editors see it in the **Comments** tab.
 
+![A sticky note on the page with a pin numbered 1 beside the box, the notes eye button with its badge of 1 and the Comments tab with a badge of 1.](help/concept-notes-comments-canvas.png)
+
 ## Where people get caught out
 
 - **"The reviewer says there were no instructions."** You wrote them as notes, and notes are taken out of the review page. Leave reviewers a comment instead, or put the instructions in the message with the review link.
@@ -14974,6 +15015,8 @@ const concept$c = {
 
 - Notes are sticky cards with their text showing. Comments are numbered pins: grey with a tick once resolved, an amber ring when assigned to you.
 - The badge on the notes eye button counts the notes. The number on the **Comments** tab counts the open conversations.
+
+![The Comments tab: Open 1, Resolved 0 and All, a filter, and the one conversation, numbered 1 and pinned to Home, Box.](help/concept-notes-comments-tab.png)
 
 **More:** [Notes](notes), [Players never see notes](notes#players-never-see-notes), [Review comments](comments), [The review link](comments#the-review-link). [Tutorial 5](tutorial-publish) covers sharing for review.`
   }
@@ -15080,6 +15123,8 @@ const concept$9 = {
 
 A timeline with neither, started by an interaction, still plays for everyone.
 
+![Timeline settings with Autoplay and Skip for less motion both ticked.](help/concept-reduced-motion-timeline.png)
+
 ## Where people get caught out
 
 - **"The learner never saw the hint."** If something only shows part-way through an animation (a label that fades in and out again, a caption that flies past), a viewer who gets the end pose never sees it. Put what matters in the end pose, or show it some other way too.
@@ -15090,6 +15135,8 @@ A timeline with neither, started by an interaction, still plays for everyone.
 ## How to tell what is going on
 
 - The **Accessibility** checker flags **Animation starts by itself** when timelines autoplay and the project doesn't respect reduced motion, and its **Fix** turns the setting on. It also flags **No way to pause moving content**.
+
+![The Accessibility tab with one probable finding, Animation starts by itself, saying the Timeline plays on its own and the project does not respect the viewer's reduced motion setting.](help/concept-reduced-motion-checker.png)
 - Open a timeline's settings (the gear on the Timeline bar) to see whether **Skip for less motion** is ticked.
 - With your device set to less motion, run the whole activity in Preview from start to finish and check nothing is missing.
 
@@ -15113,7 +15160,7 @@ const concept$8 = {
 
 There is only one layer. The copies you see on the canvas and in Preview are drawn from it, so anything you change on the template, every copy gets. What makes the copies different is the item: inside the template, \`item\` is this copy's item and \`index\` is its position, counting from 0. A text layer reading \`{item.title}\` shows each item's own title.
 
-![One Card inside the Cards repeater in the Layers panel, and four cards on the canvas, each with its own title: the Card title layer is selected on the first copy.](help/concept-repeaters-one-template.png)
+![One Card inside the Cards repeater in the Layers panel, and four cards on the canvas, each with its own title: the Card layer is selected and its box sits on the first copy.](help/concept-repeaters-one-template.png)
 
 ## Where people get caught out
 
@@ -15129,7 +15176,7 @@ There is only one layer. The copies you see on the canvas and in Preview are dra
 
 ![The Repeat (list) section of a repeater: Repeat the first child for each item ticked, Items tips.cards, and the line under it saying currently 4 items.](help/concept-repeaters-items.png)
 
-- A text or binding in the template that reads \`item\` may show *There is no value called item* in the Properties panel. Inside a repeater that warning is wrong: the copies on the canvas show whether it works.
+- A text or binding in the template can read \`item\` and \`index\`. The line under a formula in the Properties panel works it out for the first copy.
 - In Preview, the **Events** list shows each click with the nodes it ran, and **Variables (live)** shows the list variable change as you click.
 - For keyboard users, **Keyboard navigation** on the repeater makes one copy the Tab stop and the arrow keys move between the rest.
 
@@ -15164,8 +15211,14 @@ When it switches, the learner isn't sent back to the start. Variables stay, beca
 ## How to tell what is going on
 
 - Select a page and open **Responsive** in the Properties panel: it lists the members, their widths and the pairing report.
-- In the **Layers** panel the variants sit under their base with the range each is shown at, and on the canvas each member has a pill for the others.
+
+![The Responsive section of a page: Home narrow from 0 px, Home from 560 px, and the report saying 0 layers paired by name, Logo only in Home narrow and Box only in Home.](help/concept-responsive-variants-report.png)
+- In the **Layers** panel the variants are listed right after their base, each with the range it is shown at. On the canvas, a pill for each member sits above the page and the one you are on is highlighted: click another to go and edit it. The pills only show when the page is wide enough on screen, so zoom in if you can't see them.
+
+![The Layers panel with Home, 560 and wider, and Home narrow, 0 to 559, and above the Home page on the canvas two pills, Home narrow and Home.](help/concept-responsive-variants-set.png)
 - In Preview, drag the **Page width** slider under the top bar across a breakpoint and watch it switch while it runs.
+
+![The Preview's Page width slider at 420 px, past the 560 mark, with Showing Home narrow beside it.](help/concept-responsive-variants-width.png)
 
 **More:** [Responsive artboards](responsive), [How a set works](responsive#how-a-set-works), [What carries when it switches](responsive#what-carries-when-it-switches), [Instances (components)](instances).`
   }
@@ -15267,12 +15320,16 @@ const concept$4 = {
 - **Export** makes **files**: a single HTML file, a project package, pictures, video and so on. A file is a copy of the project at the moment you downloaded it. Nothing you change afterwards reaches it.
 - **Share** holds **links and people**. Nothing under it downloads anything.
 
+![The Export menu: Single HTML file, Project package, Project JSON, the public interface reference and TypeScript definitions, Lottie, dotLottie, PNG and SVG pictures, and Video, GIF or frames.](help/concept-share-export-export.png)
+
 Share has four entries:
 
 - **Share…** asks **Where will people use it?** and gives you the one thing to copy for the answer: the embed code for a StudyDesk page (the **Link for StudyDesk**, which keeps each learner's results), the plain share link, the project name for the gradebook, or the file downloads.
 - **Invite to collaborate…** is for people who will edit it with you.
 - **Save as template…** is for people who will start their own project from it.
 - **Share for review…** is a link for reviewers to look and comment, not for learners.
+
+![The Share menu with its four entries: Share, Invite to collaborate, Save as template and Share for review, each with a line saying who it is for.](help/concept-share-export-share.png)
 
 ## Where people get caught out
 
@@ -15284,9 +15341,11 @@ Share has four entries:
 
 ## How to tell what is going on
 
-- **Share…** remembers your answer for the project in this browser, and says under the thing to copy what to do with it.
+- **Share…** remembers your answer for the project in this browser, and says under the thing to copy what to do with it. Until the link exists, the box under your answer offers **Create the link** instead.
+
+![The Share dialog: Nothing to look at before sharing, then Where will people use it? with five choices (StudyDesk page with results, StudyDesk page without, gradebook, anyone with a link, a file) and, under them, Create the link.](help/concept-share-export-where.png)
 - A line at the top of the dialog says whether there is anything to look at first, from [Before you share](before-you-share).
-- **Results…**, under **More ways to share**, shows how learners did. If it is empty, the learners aren't using the Link for StudyDesk.
+- **Results…**, under **More ways to share** once the link exists, shows how learners did. If it is empty, the learners aren't using the Link for StudyDesk.
 
 **More:** [Where will people use it?](export#where-will-people-use-it), [The Link for StudyDesk](export#the-link-for-studydesk), [Updating, reverting and turning off](export#updating-reverting-and-turning-off), [The review link](comments#the-review-link), [Exporting](export), [Results and progress](results). [Tutorial 5](tutorial-publish) walks through exporting, sharing and inviting people.`
   }
@@ -15324,10 +15383,14 @@ The finished interactive picks a theme for each viewer. By default it follows th
 ## How to tell what is going on
 
 - A colour that follows a token shows a named chip instead of a hex box. Hover it for its value in each theme.
-![The Themes tab: Showing set to the Gold theme, a column for each theme with its scheme, High contrast and Default boxes, and a row for each token with its colour in every theme.](help/concept-themes-tokens-themes-tab.png)
-
 - **Showing** in the **Themes** tab, and the theme box in the top bar, switch what the canvas draws, so you can look at Dark without leaving the editor. Preview has a theme box and a **Viewer** box that pretends dark mode or more contrast is on.
 - The [Accessibility checker](accessibility-checker) checks text contrast in every theme (a finding that starts "In Dark:" is about Dark), and warns **Theme colour on a fixed colour** for text that follows a token on a fixed background.
+
+![The Themes tab: Showing set to Light, a column for each of Light, Dark and High contrast with its scheme, High contrast and Default boxes, a row for each token with its colour in every theme, and the contrast check down the right.](help/concept-themes-tokens-themes-tab.png)
+
+When no colour in the project follows a token, switching the theme shows this line instead of changing anything.
+
+![The top bar with the theme box set to Dark, and under it the line Nothing here follows the theme: these colours are fixed, with a Link colours to tokens button.](help/concept-themes-tokens-fixed.png)
 
 **More:** [Themes and colour tokens](themes), [Using a token](themes#using-a-token), [When switching the theme changes nothing](themes#when-switching-the-theme-changes-nothing), [Contrast](themes#contrast), [How the finished interactive picks a theme](themes#how-the-finished-interactive-picks-a-theme).`
   }
@@ -15350,6 +15413,8 @@ const concept$2 = {
 There are two ways to look at a page. **Design view** shows the layers as they are, with no timeline applied. Pick a timeline in the list beside the Timeline and the canvas shows that timeline at the playhead instead.
 
 **Record** (the red dot) turns every change you make to an animatable property into a keyframe at the playhead. While it is on, a red bar across the top of the Properties panel says **Recording keyframes at …**.
+
+![The Timeline open with Record on: the red Recording keyframes at 0 ms bar over the Properties panel, the Box's X track with two keys and its Y track with the single key that changing Y just made, and the list of timelines saying Nothing plays it and Animates Box.](help/concept-timelines-recording.png)
 
 ## Where people get caught out
 

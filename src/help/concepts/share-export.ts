@@ -14,12 +14,16 @@ export const concept: Concept = {
 - **Export** makes **files**: a single HTML file, a project package, pictures, video and so on. A file is a copy of the project at the moment you downloaded it. Nothing you change afterwards reaches it.
 - **Share** holds **links and people**. Nothing under it downloads anything.
 
+![The Export menu: Single HTML file, Project package, Project JSON, the public interface reference and TypeScript definitions, Lottie, dotLottie, PNG and SVG pictures, and Video, GIF or frames.](help/concept-share-export-export.png)
+
 Share has four entries:
 
 - **Share…** asks **Where will people use it?** and gives you the one thing to copy for the answer: the embed code for a StudyDesk page (the **Link for StudyDesk**, which keeps each learner's results), the plain share link, the project name for the gradebook, or the file downloads.
 - **Invite to collaborate…** is for people who will edit it with you.
 - **Save as template…** is for people who will start their own project from it.
 - **Share for review…** is a link for reviewers to look and comment, not for learners.
+
+![The Share menu with its four entries: Share, Invite to collaborate, Save as template and Share for review, each with a line saying who it is for.](help/concept-share-export-share.png)
 
 ## Where people get caught out
 
@@ -31,9 +35,11 @@ Share has four entries:
 
 ## How to tell what is going on
 
-- **Share…** remembers your answer for the project in this browser, and says under the thing to copy what to do with it.
+- **Share…** remembers your answer for the project in this browser, and says under the thing to copy what to do with it. Until the link exists, the box under your answer offers **Create the link** instead.
+
+![The Share dialog: Nothing to look at before sharing, then Where will people use it? with five choices (StudyDesk page with results, StudyDesk page without, gradebook, anyone with a link, a file) and, under them, Create the link.](help/concept-share-export-where.png)
 - A line at the top of the dialog says whether there is anything to look at first, from [Before you share](before-you-share).
-- **Results…**, under **More ways to share**, shows how learners did. If it is empty, the learners aren't using the Link for StudyDesk.
+- **Results…**, under **More ways to share** once the link exists, shows how learners did. If it is empty, the learners aren't using the Link for StudyDesk.
 
 **More:** [Where will people use it?](export#where-will-people-use-it), [The Link for StudyDesk](export#the-link-for-studydesk), [Updating, reverting and turning off](export#updating-reverting-and-turning-off), [The review link](comments#the-review-link), [Exporting](export), [Results and progress](results). [Tutorial 5](tutorial-publish) walks through exporting, sharing and inviting people.`,
   },

@@ -38,7 +38,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 
 1. Press <kbd>F</kbd> and draw a frame under the title, 720 wide and about 440 high. Name it **Accordion**.
 2. In its **Auto layout** section press the **+** (**Add auto layout**). **Layout** is **Row or column** and **Direction** is **Column ↓**: its layers now stack top to bottom.
-3. Set **Gap** to **10**, set all four **Padding** boxes to **0**, and untick **Hug height**, so the frame keeps the height you drew.
+3. Set **Gap** to **10**, **Align** to **Stretch**, all four **Padding** boxes to **0**, and untick **Hug height**. The empty frame shrank to almost nothing when you added auto layout, so now type **440** in **H**, in the **Layer** section, to give it its height back.
 
 ## 3. One section
 
@@ -52,9 +52,9 @@ Auto layout puts the text under the header for you. Both are empty until the sec
 ## 4. Put the section in the accordion and repeat it
 
 1. In the **Layers** panel, drag the **Section** row onto the middle of the **Accordion** row. Accordion is outlined, and Section goes inside it.
-2. Select **Accordion**. In **Repeat (list)** tick **Repeat the first child for each item**, set **Items** to \`sections\` and **Layout** to **Column**.
+2. Select **Accordion**. In **Repeat (list)** tick **Repeat the first child for each item** and replace the sample list in **Items** with \`sections\`. Leave **Layout** on **Column**.
 
-Four sections appear, one under the other, each with its own title. The first is open: its text shows and its sign is a minus.
+Four sections appear, one under the other, each with its own title and text. The first has a minus sign, because \`open\` holds 0, and the others have a plus.
 
 ![The Accordion frame selected, with Section and its two texts inside it in the Layers panel, and its Auto layout section: Row or column, Column, Gap 10, Align Stretch, Padding 0 and Hug height unticked.](help/tutorial-accordion-layout.png)
 
@@ -64,12 +64,14 @@ Four sections appear, one under the other, each with its own title. The first is
 
 1. Select **Section text**. In **Data bindings** add **Visible**, choose **Formula**, press **Edit as formula** and type \`open.includes(index)\`.
 
-Only the first section shows its text now. A hidden layer takes no room in auto layout, so the closed sections shrink to their header, and the column closes up.
+Only the first section shows its text now (on the canvas the hidden text is a faint ghost, and it is gone in Preview). A hidden layer takes no room in auto layout, so the closed sections shrink to their header, and the column closes up.
+
+The line under the formula works it out for the first section (\`index\` 0).
 
 Now make the header open its section:
 
-1. Select **Section header**. In **Interactions** press **+ On click (empty)** and then **Show in graph**.
-2. Drag from the dot on the right of the **When clicked or hovered** node, type \`change\` in **Find a node…** and pick **Change a value or counter**.
+1. Select **Section header**. In **Interactions** press **+ On click (empty)**. The **Interactions** tab opens with a **When clicked or hovered** node for the header.
+2. Drag from the dot on the right of that node into empty space, type \`change\` in **Find a node…** and pick **Change a value or counter** (the second one in the list, after *Change a layer's setting*).
 3. Set **Variable** to **open**, **Do** to **Set to**, and **Value** to:
 
 \`\`\`
@@ -83,18 +85,18 @@ open.includes(event.index) ? [] : [event.index]
 The header is a text layer, so tell the keyboard and screen readers it is a button that opens something.
 
 1. With **Section header** selected, open **Accessibility** and set **Role** to **Button**. <kbd>Tab</kbd> now reaches each header and <kbd>Enter</kbd> clicks it.
-2. In **Data bindings**, add **Expanded (button role)** with the formula \`open.includes(index)\`. A screen reader says *expanded* or *collapsed*.
+2. In **Data bindings**, add **Expanded (button role)**, choose **Formula**, press **Edit as formula** and type \`open.includes(index)\`. A screen reader says *expanded* or *collapsed*.
 3. Add **Text alternative**, choose **Formula** and type \`item.title\`. The screen reader then says the title without the plus or minus sign.
 
 ## 7. Try it
 
 1. Press **Preview**.
-2. Open **Test yourself**. The first section closes, Test yourself opens, and the last section moves down to make room.
+2. Open **Test yourself**. The first section closes, Test yourself opens, and the ones below it move to make room.
 3. Open it again and it closes. Watch \`open\` in **Variables (live)** (part of **Debug** in Preview's bar).
 
-![Preview with Test yourself open under a minus sign, the other three closed under plus signs, and open reading [2] in the live variables.](help/tutorial-accordion-preview.png)
+![Preview with Test yourself open under a minus sign, the other three closed under plus signs, and open listing 2 in the live variables.](help/tutorial-accordion-preview.png)
 
-4. Use <kbd>Tab</kbd> and <kbd>Enter</kbd> to do the same with the keyboard.
+4. Use <kbd>Tab</kbd> and <kbd>Enter</kbd> to do the same with the keyboard. This needs the **Accessibility** button in Preview's bar to be on, which it is unless you have turned it off in Preferences.
 
 ## Go further: let several stay open
 

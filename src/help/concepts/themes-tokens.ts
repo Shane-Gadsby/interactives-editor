@@ -29,10 +29,14 @@ The finished interactive picks a theme for each viewer. By default it follows th
 ## How to tell what is going on
 
 - A colour that follows a token shows a named chip instead of a hex box. Hover it for its value in each theme.
-![The Themes tab: Showing set to the Gold theme, a column for each theme with its scheme, High contrast and Default boxes, and a row for each token with its colour in every theme.](help/concept-themes-tokens-themes-tab.png)
-
 - **Showing** in the **Themes** tab, and the theme box in the top bar, switch what the canvas draws, so you can look at Dark without leaving the editor. Preview has a theme box and a **Viewer** box that pretends dark mode or more contrast is on.
 - The [Accessibility checker](accessibility-checker) checks text contrast in every theme (a finding that starts "In Dark:" is about Dark), and warns **Theme colour on a fixed colour** for text that follows a token on a fixed background.
+
+![The Themes tab: Showing set to Light, a column for each of Light, Dark and High contrast with its scheme, High contrast and Default boxes, a row for each token with its colour in every theme, and the contrast check down the right.](help/concept-themes-tokens-themes-tab.png)
+
+When no colour in the project follows a token, switching the theme shows this line instead of changing anything.
+
+![The top bar with the theme box set to Dark, and under it the line Nothing here follows the theme: these colours are fixed, with a Link colours to tokens button.](help/concept-themes-tokens-fixed.png)
 
 **More:** [Themes and colour tokens](themes), [Using a token](themes#using-a-token), [When switching the theme changes nothing](themes#when-switching-the-theme-changes-nothing), [Contrast](themes#contrast), [How the finished interactive picks a theme](themes#how-the-finished-interactive-picks-a-theme).`,
   },

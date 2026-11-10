@@ -39,7 +39,7 @@ Each text box needs a variable to keep what is typed in it.
 3. In the tool bar, click **Web** to open that group and pick **Input field**. Drag a wide box under the prompt, about 110 high.
 4. In the Properties panel's **Input** section, set **Type** to **textarea** so it takes several lines, and write a **Placeholder** such as \`Describe what happened...\`
 5. Still in the **Input** section, press **Bind to a variable…** and pick **happened**. The row now says the value is bound **⇄ Both**: typing writes the variable, and the variable fills the box.
-6. In the **Accessibility** section, type \`What happened\` in **Text alternative**, so a screen reader says what the box is for. (Right now the player puts an input field's text alternative on the box around it rather than on the text box itself, so a screen reader reads the placeholder instead.)
+6. In the **Accessibility** section, type \`What happened\` in **Text alternative**, so a screen reader can say what the box is for. The player puts it on the layer around the text box, not on the box itself, so a screen reader may still read just the placeholder: make the placeholder say it too.
 7. Add a second prompt, \`What did you learn from it?\`, and a second text box bound to **learnt** the same way.
 
 ![The first text box selected on the Write page, with its Input section: Type textarea, the placeholder, and Value is bound ⇄ Both happened.](help/tutorial-journal-input.png)

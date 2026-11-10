@@ -66,15 +66,17 @@ A card is turned over when its place is in \`flipped\`. The formula for that is 
 2. Select **Card front** and do the same with \`!flipped.includes(index)\`. The \`!\` means *not*.
 3. Select **Card** and add a binding to **Fill colour**: **Formula**, \`flipped.includes(index) ? "#ffffff" : "#1f3a68"\`. A turned card is white, so the dark words on its back show.
 
+The line under each formula works it out for the first card (\`index\` 0).
+
 Every card shows its front now, because \`flipped\` is empty.
 
 ## 5. Turn a card over on a click
 
 1. With **Card** selected, open **Accessibility** and set **Role** to **Button**. The card is now a tab stop, and <kbd>Enter</kbd> or <kbd>Space</kbd> clicks it.
 2. Type \`Press Enter to turn the card over\` in **Description**.
-3. In **Data bindings**, add **Pressed (button, toggle)** with the formula \`flipped.includes(index)\`. A screen reader then says whether the card is turned.
-4. In the **Interactions** section press **+ On click (empty)**, then **Show in graph**.
-5. Drag from the dot on the right of the **When clicked or hovered** node into empty space. In **Find a node…** type \`change\` and pick **Change a value or counter**.
+3. In **Data bindings**, add **Pressed (button, toggle)**, choose **Formula**, press **Edit as formula** and type \`flipped.includes(index)\`. A screen reader then says whether the card is turned.
+4. In the **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens with a **When clicked or hovered** node for the card.
+5. Drag from the dot on the right of that node into empty space. In **Find a node…** type \`change\` and pick **Change a value or counter** (the second one in the list, after *Change a layer's setting*).
 6. Set **Variable** to **flipped**, **Do** to **Add to the list, or take out if it is there**, and **Value** to \`event.index\`.
 
 A click on any copy runs this one flow, and \`event.index\` is the place of the card that was clicked. If it isn't in \`flipped\` it goes in, and the card turns over; if it is, it comes out, and the card turns back.
@@ -82,7 +84,7 @@ A click on any copy runs this one flow, and \`event.index\` is the place of the 
 ## 6. Turn them all back
 
 1. Press <kbd>B</kbd> and draw a button under the cards. Set its **Label** to \`Turn all back\`.
-2. Press **+ On click (empty)** and **Show in graph**, drag from its dot and pick **Put values back to the start**.
+2. Press **+ On click (empty)**, drag from the dot on the new node and pick **Put values back to the start**.
 3. In its **Variables** list, tick **flipped**. It goes back to \`[]\`, so every card shows its front.
 
 ## 7. Try it
@@ -92,7 +94,7 @@ A click on any copy runs this one flow, and \`event.index\` is the place of the 
 3. Press <kbd>Tab</kbd> to reach a card and <kbd>Enter</kbd> to turn it.
 4. Watch \`flipped\` in **Variables (live)** on the left: it lists the places of the cards that are turned. It is part of **Debug** in Preview's bar; press **Debug** if you don't see it.
 
-![Preview with the first and fifth cards turned over to their meanings, and flipped reading [0,4] in the live variables.](help/tutorial-flipcards-preview.png)
+![Preview with the first and fifth cards turned over to their meanings, and flipped listing 0 and 4 in the live variables.](help/tutorial-flipcards-preview.png)
 
 5. Press **Turn all back**.
 

@@ -82,7 +82,7 @@ Three findings are about **Info**. A plain shape can be clicked with a mouse, bu
 
 All three findings go.
 
-![Info's Accessibility section: Role Button, Text alternative Show a fact about Mars, and Tab stop Always, with the line Reachable with Tab (set to always) under it.](help/tutorial-accessible-info-button.png)
+![Info's Accessibility section: Role Button, Text alternative Show a fact about Mars, and Tab stop Automatic, with the line Reachable with Tab (On pointer click). Enter and Space click it. under it.](help/tutorial-accessible-info-button.png)
 
 > When you can, use a real **Button** layer instead. It is a control already, so the keyboard, the name and the role all come for free.
 

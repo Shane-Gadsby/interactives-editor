@@ -52,7 +52,7 @@ The class's answers live in a **Shared responses** data source. The Vote button 
 2. In the tool bar down the left, click **Web** to open that group and pick **Input field**. Drag a box under the question.
 3. In the **Input** section of the Properties panel, set **Type** to **select**. In **Options** type the answers, one per line: \`Bus\`, \`Train\`, \`Car\`, \`Bike\`, \`Walk\`.
 4. Beside **Variable**, press **Bind to a variable…** and choose **+ New variable…**. Call it \`choice\` and press **Create variable**. Whatever the learner picks is now in \`choice\`.
-5. Open the **Accessibility** section and type a **Text alternative**: \`How you usually get to campus\`. (Right now the player puts an input field's text alternative on the box around it rather than on the dropdown itself, so a screen reader may not say it yet.)
+5. Open the **Accessibility** section and type a **Text alternative**: \`How you usually get to campus\`. The player puts it on the layer around the dropdown, not on the dropdown itself, so a screen reader may not say it yet.
 6. Add a button under the dropdown with the **Label** **Vote** and the **Name** **Vote button**.
 
 ## 5. Send the vote
@@ -83,7 +83,7 @@ The Vote button needs four things in a row, so build it in the **Interactions** 
 4. Under the chart, add a text that counts the voters: \`{responses.people} people have voted so far.\` Anything in curly brackets is worked out as the page plays.
 5. Add a button with the **Label** **Change my vote**. Give it **+ When clicked…**, **Go to the previous page**.
 
-![The Results page with the chart selected: Kind Bar (sideways), Data responses.answers, Label key text and Value key count, and the five counted answers listed under Data.](help/tutorial-survey-chart-chart.png)
+![The Chart section of the results chart: Kind Bar (sideways), Data responses.answers, Label key text and Value key count, and the four counted answers listed under Data: Bus 2, Car 1, Train 1, Walk 1.](help/tutorial-survey-chart-chart.png)
 
 ## 7. Try it
 
@@ -91,7 +91,7 @@ The Vote button needs four things in a row, so build it in the **Interactions** 
 2. Press **Start**, pick **Bike** and press **Vote**. The results page shows your sample answers as the class, plus your vote for Bike.
 3. Press **Change my vote**, pick **Bus** and vote again. Bike drops out and Bus goes up by one: **Take back shared responses** did its job.
 
-![Preview on the Results page after voting Bike: a sideways bar chart of the class's answers with a count on each bar, 12 people have voted so far, and Change my vote.](help/tutorial-survey-chart-results.png)
+![Preview on the Results page after voting Bike: a sideways bar chart with Bus 2 and one each for Bike, Car, Train and Walk, a count on each bar, 6 people have voted so far, and Change my vote.](help/tutorial-survey-chart-results.png)
 
 Press <kbd>Esc</kbd> to close the Preview.
 
@@ -106,7 +106,7 @@ Set the data source up before you share. Its rules are fixed when the project is
 ## Make it yours
 
 - **Show at** holds an answer back until that many people have given it. Set it to 3 or so for a small class, so one person's vote never shows on its own.
-- An answer nobody has chosen is not in \`responses.answers\`, so it has no bar. To show every option, even at zero, see [Charts](charts) for writing the list out in **Data**.
+- An answer nobody has chosen has no bar, so the chart changes shape as votes come in. To keep a bar for every choice from the start, type them in the data source's **Poll options** (\`Bus\`, \`Train\`, \`Car\`, \`Bike\`, \`Walk\`): each one is always in \`responses.answers\`, in that order, with 0 until someone picks it. The finished example does this.
 - The data source's **What the class has said** list shows every answer by course, with **Hide**, **Remove** and **Clear this course**. Only the project's owner (or a power user) sees it.
 
 ## What you learned

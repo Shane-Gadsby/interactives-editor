@@ -88,7 +88,7 @@ A shortcut presses the button from anywhere on the page, so the arrow keys run t
    - **Text alternative**: \`"Go to slide " + (index + 1)\`.
 4. In **Accessibility**, set **Role** to **Button**, so each dot is a tab stop.
 
-The line under each of those bindings warns *There is no value called index*. Take no notice: the editor doesn't yet know a repeated layer has \`index\`, and the dots work in Preview.
+The line under each of those bindings works it out for the first dot (\`index\` 0).
 
 5. Press **+ On click (empty)** and add the same two **Change a value or counter** nodes as for Next, with \`event.index + 1\` as the second **Value**. \`event.index\` is the dot that was clicked, counting from 0.
 

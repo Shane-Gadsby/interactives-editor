@@ -14,6 +14,8 @@ export const concept: Concept = {
 - A **note** (the **Note** tool, <kbd>S</kbd>) is a sticky note that is part of the project. It goes wherever the project goes: copies, templates, remixes, and everyone editing it live. It is for the people who **make** the project. Nobody who plays it ever sees it: not Preview, not a share link, not an export, and not the review page either.
 - A **comment** (the **Comment** tool, <kbd>C</kbd>) is a conversation pinned to a layer or a spot, kept on the server beside the project, not in it. It is for **reviewing**: replies, **Resolve**, **Assigned to**, @mentions and notices. Reviewers reach it through the review link; editors see it in the **Comments** tab.
 
+![A sticky note on the page with a pin numbered 1 beside the box, the notes eye button with its badge of 1 and the Comments tab with a badge of 1.](help/concept-notes-comments-canvas.png)
+
 ## Where people get caught out
 
 - **"The reviewer says there were no instructions."** You wrote them as notes, and notes are taken out of the review page. Leave reviewers a comment instead, or put the instructions in the message with the review link.
@@ -25,6 +27,8 @@ export const concept: Concept = {
 
 - Notes are sticky cards with their text showing. Comments are numbered pins: grey with a tick once resolved, an amber ring when assigned to you.
 - The badge on the notes eye button counts the notes. The number on the **Comments** tab counts the open conversations.
+
+![The Comments tab: Open 1, Resolved 0 and All, a filter, and the one conversation, numbered 1 and pinned to Home, Box.](help/concept-notes-comments-tab.png)
 
 **More:** [Notes](notes), [Players never see notes](notes#players-never-see-notes), [Review comments](comments), [The review link](comments#the-review-link). [Tutorial 5](tutorial-publish) covers sharing for review.`,
   },

@@ -15,6 +15,8 @@ There are two ways to look at a page. **Design view** shows the layers as they a
 
 **Record** (the red dot) turns every change you make to an animatable property into a keyframe at the playhead. While it is on, a red bar across the top of the Properties panel says **Recording keyframes at …**.
 
+![The Timeline open with Record on: the red Recording keyframes at 0 ms bar over the Properties panel, the Box's X track with two keys and its Y track with the single key that changing Y just made, and the list of timelines saying Nothing plays it and Animates Box.](help/concept-timelines-recording.png)
+
 ## Where people get caught out
 
 - **"I moved a box to tidy the page and now it slides."** Record was on, so the move became a key. Undo it, switch Record off, and do layout in **Design view**. Going back to Design view switches Record off for you.

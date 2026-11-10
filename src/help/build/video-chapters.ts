@@ -48,7 +48,7 @@ Still in the **Video** section, under **Chapters**:
 
 The video's own controls list the chapters in browsers that show them. The buttons you make next read the same list.
 
-![Clip selected, with its Video section: Cue points at 30 (q1) and 70 (q2), both ticked Pause the video here, then Chapters at 0, 35 and 75 with their titles, and Captions with Import… under them.](help/tutorial-video-chapters-cues.png)
+![The Chapters and Captions parts of the Video section: Chapters at 0, 35 and 75 with their titles, and Captions with Import… under them.](help/tutorial-video-chapters-chapters.png)
 
 ## 5. Chapter buttons
 
@@ -94,6 +94,9 @@ Both cards fade to faint ghosts on the canvas, since \`question\` starts at 0. T
 1. Select **Clip**. In the **Video** section, under **Cue points**, press **Add a cue** twice.
 2. Set the first cue's **At** to **30** and **Name** to \`q1\`, and tick **Pause the video here**.
 3. Set the second to **70**, \`q2\`, and tick **Pause the video here**.
+
+![The Cue points part of the Video section: cues at 30 (q1) and 70 (q2), both ticked Pause the video here.](help/tutorial-video-chapters-cues.png)
+
 4. In **Data bindings** on **Clip**, press **+ Add binding** and pick **Hold paused (it will not play while true)**. Press **Formula**, then **Edit as formula**, and type \`question > 0\`. While a question is open, nothing starts the video, not even its own play button. (The formula pickers write the same thing: **Condition** **question**, **is more than**, **a number**, **0**.)
 
 ![The Clip's Hold paused (it will not play while true) binding: Formula, with the Condition question is more than 0, currently false.](help/tutorial-video-chapters-hold-paused.png)

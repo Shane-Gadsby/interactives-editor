@@ -83,9 +83,11 @@ The words aren't the only thing a file can hold. Each card has a \`colour\` too.
 2. In the Properties panel find **Data bindings** and press **+ Add binding**. Type \`fill\` and choose **Fill colour**.
 3. Press **Formula** and type \`item.colour\`, then press <kbd>Enter</kbd>.
 
-Each card now takes its colour from its own line in the file. The binding may say *There is no value called item* and *item is not defined* under the formula. Inside a repeated layer that warning is wrong: the cards on the canvas still show their colours.
+Each card now takes its colour from its own line in the file. The line under the formula shows the first card's colour.
 
-![Card background selected, with a Fill colour binding set to the Formula item.colour, and the wrong warning that there is no value called item under it.](help/tutorial-data-source-binding.png) A **binding** ties any property to an expression in the same way: the position, the size, whether it shows.
+![Card background selected on the canvas, with a Fill colour binding set to the Formula item.colour, and under it currently #FFF4D6, the first card's colour.](help/tutorial-data-source-binding.png)
+
+A **binding** ties any property to an expression in the same way: the position, the size, whether it shows.
 
 ## 6. Change the words in the editor
 
@@ -105,7 +107,7 @@ This is the point of it: a new version is a new file, not an edit of every layer
 2. Open the **Assets** tab on the left and find **tips.json**.
 3. Press the arrow on it (its tooltip says **Replace with a new version of the file**) and pick \`tips-term2.json\`.
 
-![The Assets tab with tips.json, and the tooltip of its arrow button: Replace with a new version of the file.](help/tutorial-data-source-replace.png)
+![The Assets tab with tips.json, and the tooltip of its arrow button: Replace with a new version of the file. Everything that uses tips.json shows the new one.](help/tutorial-data-source-replace.png)
 
 The page shows the new words at once. Everything that used the old file now uses the new one, and one **Undo** puts the old one back.
 
