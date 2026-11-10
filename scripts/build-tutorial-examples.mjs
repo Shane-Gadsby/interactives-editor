@@ -9,6 +9,15 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {createServer} from 'vite'
+import {JSDOM} from 'jsdom'
+
+//Some modules the examples import touch the page as they load (a drag image, a measuring canvas), so give them one
+if (typeof document === 'undefined') {
+	let dom = new JSDOM('<!doctype html><html><body></body></html>', {url: 'http://localhost/'})
+	for (let k of ['window', 'document', 'navigator', 'HTMLElement', 'Element', 'Node', 'getComputedStyle', 'DOMParser', 'MutationObserver']) {
+		if (!(k in globalThis)) Object.defineProperty(globalThis, k, {value: k === 'window' ? dom.window : dom.window[k], configurable: true, writable: true})
+	}
+}
 
 let root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
 	dir = path.join(root, 'examples'),

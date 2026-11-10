@@ -10437,7 +10437,7 @@ You will build a lamp. A button switches it on and off, and a counter shows how 
 
 You can type a name in plain words too, such as **Lamp on**. Formulas need a name made of letters, digits and \`_\`, so the editor offers \`lampOn\` in a small **Name in formulas** box, and keeps your words as the label you see in lists. The names in this tutorial are already plain, so they are used as typed.
 
-![The Variables tab: lit is true/false and starts false, taps is a number and starts at 0.](help/variables-panel.png)
+![The Variables tab: lit is true/false and starts false, taps is a number and starts at 0, each with a small T button at the left of its name.](help/variables-panel.png)
 
 ## 2. Draw the lamp
 
@@ -10460,7 +10460,7 @@ lit ? "#ffd23f" : "#c9ced6"
 
 That says: if \`lit\` is true the colour is yellow, otherwise it is grey. While it is bound, the binding decides the fill: a colour picked by hand is replaced by the binding's.
 
-![The Data bindings section with a binding on fill.color. The + Convert… menu below changes the value before it is set.](help/bindings-section.png)
+![The Data bindings section with a binding on fill.color set to a formula, with a Pick a calculation link under it. The + Convert… menu below changes the value before it is set.](help/bindings-section.png)
 
 ## 4. Add the interaction
 
@@ -10822,7 +10822,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Study habits** as the name and press **Create project**.
 2. Add a title at the top with the **Text** tool: \`Four study habits\`.
-3. Open the **Variables** tab. Press **+ Add variable**, pick **List** and name it \`sections\`. Replace its \`[]\` with:
+3. Open the **Variables** tab. Press **+ Add variable**, pick **List** and name it \`sections\`. It shows as a table: press **JSON text** above it and replace the \`[]\` with:
 
 \`\`\`
 [
@@ -10833,7 +10833,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 ]
 \`\`\`
 
-4. Add another **List** called \`open\` and set it to \`[0]\`. It holds the places of the open sections, counting from 0, so the first section starts open. Use \`[]\` to start with everything closed.
+4. Add another **List** called \`open\`, press **JSON text** and set it to \`[0]\`. It holds the places of the open sections, counting from 0, so the first section starts open. Use \`[]\` to start with everything closed.
 
 ## 2. The frame that holds the sections
 
@@ -10993,9 +10993,9 @@ carbon dioxide
 /^(carbon\\s+dioxide|co2)$/i
 \`\`\`
 
-A line written between slashes is a pattern. This one accepts *carbon dioxide* or *CO2*: \`^\` and \`$\` mean the whole answer, \`|\` means or, \`\\s+\` is any number of spaces, and the \`i\` at the end ignores capitals. Keep the plain line first: it is what the learner is shown if the gap is revealed, and a pattern has nothing to show.
+A line written between slashes is a pattern. This one accepts *carbon dioxide* or *CO2*: \`^\` and \`$\` mean the whole answer, \`|\` means or, \`\\s+\` is any number of spaces, and the \`i\` at the end ignores capitals. Keep the plain line first: it is what the learner is shown if the gap is revealed, and a pattern has nothing to show. A **Shown as** box appears under any gap that has a pattern. Left empty it uses that plain line; if every line is a pattern, type the word to show there. Each gap also has a **Feedback if wrong (optional)** box for a line to add when that gap is wrong.
 
-![The canvas and the Question section: the prompt, then Blank 1 with three accepted answers, Blank 2 with 8.3 and a tolerance of 0.5, and Blank 3 with a plain line and a pattern.](help/tutorial-blanks-gaps.png)
+![The canvas and the Question section: the prompt, then Blank 1 with three accepted answers, Blank 2 with 8.3 and a tolerance of 0.5, and Blank 3 with a plain line, a pattern and a Shown as box.](help/tutorial-blanks-gaps.png)
 
 **Gap 4: capitals count.** Press **+ Add blank**. In **Blank 4** type \`The chemical symbol for sodium is\` and accept \`Na\`. Tick **Match case**, so *NA* and *na* are wrong.
 
@@ -11250,7 +11250,7 @@ The names matter: the choices go to pages by name, and the endings are picked by
 ## 2. A list for the path
 
 1. Open the **Variables** tab at the bottom and press **+ Add variable**. Pick **List**.
-2. In **Name** type \`taken\` and press <kbd>Tab</kbd>. Leave its value as \`[]\`, an empty list.
+2. In **Name** type \`taken\` and press <kbd>Tab</kbd>. Leave it empty (\`[]\`): a list with no rows yet.
 
 Every choice adds a few words to \`taken\`, so the list is the learner's path.
 
@@ -11391,7 +11391,7 @@ const tutorial$r = {
     title: "Use the UniSQ look and colour themes",
     group: "Build it",
     summary: "Give a page the UniSQ Purple colourway with theme tokens, see it in Light, Dark and High contrast, and know when to start from a branded starter pack instead.",
-    keywords: "tutorial brand branding unisq colourway purple gold theme themes token tokens colour picker light dark high contrast default branded starter pack logo themes tab",
+    keywords: "tutorial brand branding unisq colourway purple gold theme themes token tokens colour picker light dark high contrast default branded starter pack logo themes tab apply the unisq look existing project page master",
     body: `You will make a welcome page for a "Space week" in the UniSQ Purple colourway: a deep purple header with a gold bar under it, a card of text and a **Start** button. Every colour on it is a **token**, so the page also looks right for viewers who use dark mode or ask for more contrast. It takes about fifteen minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Use the UniSQ look and colour themes**. **Play** runs it and **Make my copy** gives you your own copy.
@@ -11409,6 +11409,8 @@ A new project already has these three themes, and every layer you add follows th
 ## 2. Add the UniSQ Purple colourway
 
 The UniSQ colourways are the colours of the branded starter packs: Gold, Purple, Blue, Green, Orange and Red.
+
+**Short cut:** in a project you already have, **Apply the UniSQ look…** in this tab (or <kbd>Ctrl</kbd>+<kbd>K</kbd>, then **UniSQ look**) does step 2 below in one go (it adds the colourway and makes it the default) and also gives every page the UniSQ logo and accent bar as a page master. It is described under **The look in one step** near the end. Doing it by hand here shows what it is made of.
 
 1. In the **Themes** tab, open **+ Colourway…** and pick **Purple: Deep purple with gold, the UniSQ dark slides.**
 2. A **Purple** column appears. The starter tokens have Purple's values in it (gold buttons), and new rows starting **brand/** have arrived: the gradient, the deep purple, the accent and the logo colours.
@@ -11460,6 +11462,16 @@ So detach a colour only when it really must stay the same in every theme.
 
 ![Preview with Theme: follow the viewer and Viewer: more contrast: the page in High contrast, white text on near black, with the purple header and gold bar.](help/tutorial-brand-preview.png)
 
+## The look in one step, for a project you already have
+
+The steps above build the look from tokens so you can see how it works. For a project that is already made, one command does the same and more:
+
+1. In the **Themes** tab open **Apply the UniSQ look…**, or in **Project** (in the Inspector, with a page selected), or press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type **UniSQ look**.
+2. Pick a colourway, for example **Purple**.
+3. A message says what it did: it added the Purple theme and the brand colours, made it the theme the project opens in, made a **Content master** with the gold accent bar and the logo, and set every page to use it.
+
+Your own layers stay where they are. Any that already use tokens follow the colourway; plain colours stay as they are. Press **Undo** on the message to take it all back. It does not lock the project like a starter pack does.
+
 ## The ready-made way: branded starter packs
 
 For the full UniSQ look (gradient title pages with the logo, white content pages with a footer line, deep purple section pages) start from a **branded starter pack** instead of a blank project:
@@ -11479,6 +11491,7 @@ In a branded project the logo and brand layers are locked, colours can only be t
 
 - Tokens name colours, and themes give them values. Layers that use tokens change with the theme; plain colours don't.
 - **+ Colourway…** in the **Themes** tab adds a UniSQ colourway, with its **brand/** tokens, and **Default** makes it the one the project opens in.
+- **Apply the UniSQ look…** does that for a project you already have, and gives its pages the logo and accent bar as a page master, in one undo step.
 - The colour picker's **Tokens** tab links a colour to a token.
 - **High contrast** and **Dark** are chosen by the viewer's own settings, so check them before you share.
 - Branded starter packs give you the whole UniSQ look, locked.
@@ -11518,7 +11531,7 @@ The idea that makes it simple: one number, \`slide\`, says which slide is showin
 ## 1. Make a project and the variables
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Research steps** as the name and press **Create project**.
-2. Open the **Variables** tab (down the bottom, beside **Interactions**). Press **+ Add variable** and pick **List**. It arrives called \`items\`: change its **Name** to \`slides\`, and replace the \`[]\` in its value box with:
+2. Open the **Variables** tab (down the bottom, beside **Interactions**). Press **+ Add variable** and pick **List**. It arrives called \`items\`: change its **Name** to \`slides\`. It shows as a table: press **JSON text** above it, and replace the \`[]\` in its box with:
 
 \`\`\`
 [
@@ -11544,7 +11557,7 @@ Each slide has a colour so you can see the slides change before you have picture
 4. Under that, add a text \`{slides[slide - 1].body}\` and name it **Slide caption**.
 5. Add a small text in the top left corner of the box: \`Slide {slide} of {slides.length}\`.
 
-![Slide picture selected on the canvas, and its Data bindings: Fill colour, In, Formula with the slide's colour from the list, currently #cfe8f7.](help/tutorial-carousel-binding.png)
+![Slide picture selected on the canvas, and its Data bindings: Fill colour, In, Formula with the slide's colour from the list and a Pick a calculation link under it, currently #cfe8f7.](help/tutorial-carousel-binding.png)
 
 \`slides[0]\` is the first item of a list, so \`slides[slide - 1]\` is the slide whose number is in \`slide\`. Change **slide** to 3 in the Variables tab and the page shows Take notes. Put it back to 1.
 
@@ -11556,7 +11569,7 @@ Each slide has a colour so you can see the slides change before you have picture
 
 The **Interactions** tab opens with the new flow framed. (If you switched that off in Preferences, press **Show in graph**.) It reads: *When clicked: go to the next slide (1 to slides.length, going round at the ends), then switch playing off*.
 
-![The Interactions graph: Next's When clicked or hovered node wired to Change a value or counter (slide, Next number in a range, 1 to slides.length, Go round to the other end), then to a second one switching playing off; Previous and the Dot have a pair of their own below it.](help/tutorial-carousel-next-graph.png)
+![The Interactions graph: Next's When clicked or hovered node wired to Change a value or counter that sets playing to false, then to one that sets slide to the next number in a range, 1 to slides.length, going round to the other end; Previous (previous number in a range) and the Dot (event.index + 1) have a pair of their own below it.](help/tutorial-carousel-next-graph.png)
 
 4. Draw another button at the bottom left called **Previous**, press **+ When clicked…** and choose **Go to the previous item…**, with the same answers. Add the same **+ then also…** that turns **playing** off.
 
@@ -11939,7 +11952,7 @@ The cards are a **repeater**: you design one card, and it is copied once for eac
 
 Four cards appear, two by two, each with its own tip. Inside a repeated layer, \`item\` is the item it was copied for, so \`{item.title}\` is that card's title. Change the card you drew (its size, its font) and every copy follows.
 
-![The Cards frame selected, with four cards two by two on the canvas, and its Repeat (list) section: Repeat for each a formula, Items tips.cards, currently 4 items, Layout Grid, Gap 16 and Cols 2.](help/tutorial-data-source-repeat.png)
+![The Cards frame selected, with four cards two by two on the canvas, and its Repeat (list) section: Repeat for each a formula, Items tips.cards, currently 4 items, Layout Grid, Gap 16, Cols 2 and Selection None.](help/tutorial-data-source-repeat.png)
 
 ## 5. A colour from the file
 
@@ -12032,7 +12045,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 ## 1. Make a project and the list of ideas
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Diagrams** as the name and press **Create project**. Rename the page **Mind map**.
-2. Open the **Variables** tab. Press **+ Add variable** and pick **List**. It arrives called \`items\`: rename it \`ideas\`, and replace the \`[]\` in its value box with:
+2. Open the **Variables** tab. Press **+ Add variable** and pick **List**. It arrives called \`items\`: rename it \`ideas\`. It shows as a table: press **JSON text** above it, and replace the \`[]\` in its box with:
 
 \`\`\`
 [
@@ -12052,7 +12065,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 Each idea has an \`id\`, its words in \`label\`, and the \`id\` of the idea it hangs off in \`parent\`. The one with no parent is the middle of the map.
 
 3. Add another **List** called \`folded\` and leave it as \`[]\`. It will hold the ids of the branches that are folded away.
-4. Add a third **List** called \`map\`. In its **Value** column, change **Starts as a value** to **Worked out**. The \`[]\` stays (it is what \`map\` falls back to if the formula fails); type this formula in the new box under it:
+4. Add a third **List** called \`map\`. In its **Value** column, change **Starts as a value** to **Worked out**. The empty table stays (it is what \`map\` falls back to if the formula fails); type this formula in the new box under it:
 
 \`\`\`
 mindMap(ideas, {width: 720, height: 440, nodeW: 112, gapX: 32, collapsed: folded})
@@ -12060,7 +12073,7 @@ mindMap(ideas, {width: 720, height: 440, nodeW: 112, gapX: 32, collapsed: folded
 
 5. Tick **Keep up to date** (it appears under the formula once there is one), so \`map\` is worked out again whenever \`ideas\` or \`folded\` changes.
 
-![The map variable: a List, Worked out, the empty list it falls back to, the mindMap formula under it, currently 10 items, and Keep up to date ticked.](help/tutorial-diagram-worked-out.png)
+![The map variable: a List, Worked out, the empty table it falls back to (No rows yet), the mindMap formula under it with a Pick a calculation link, currently 10 items, and Keep up to date ticked.](help/tutorial-diagram-worked-out.png)
 
 \`map\` is the same ideas with a place worked out for each: \`x\`, \`y\`, \`w\` and \`h\`, its \`depth\`, whether it is \`visible\`, and \`parentIndex\`, the place in the list of the idea it hangs off. The branches are spread either side of the middle, in a 720 by 440 area.
 
@@ -12348,7 +12361,7 @@ The two texts are empty for now. \`item\` is the card the copy is drawing, and t
 
 Six cards appear in two rows, each with its own term. That is the same **Card** layer drawn six times, so restyling it restyles them all. Inside a copy, \`item\` is that card's line from the list and \`index\` is its place, counting from 0.
 
-![The Cards group selected, with Repeat (list) ticked, Repeat for each set to List: cards, Layout Grid, Gap 20 and Cols 3, and the six cards on the canvas.](help/tutorial-flipcards-repeat.png)
+![The Cards group's Repeat (list) section: ticked, Repeat for each set to List: cards, currently 6 items, Layout Grid, Gap 20, Cols 3 and Selection None.](help/tutorial-flipcards-repeat.png)
 
 ## 4. Let a click turn a card over
 
@@ -12358,6 +12371,8 @@ Turn the repeater's own **Selection** on, and a card turns over when you click i
 2. A box asks for a name for the variable that remembers the pick. Type \`flipped\` and press **Create variable**. It is an ordinary list variable, and it will hold the places of the cards that are turned over: \`[0, 3]\` means the first and the fourth.
 
 Each card is now a checkbox that a screen reader says is checked or not, the arrow keys move between the cards, and \`flipped\` fills with the places of the cards turned over. Inside a copy, \`isSelected\` is true for a card that is turned.
+
+![The Repeat (list) section with Selection set to Several and Remember the pick in set to flipped, and the line saying that in the copies isSelected is true for a picked one.](help/tutorial-flipcards-selection.png)
 
 ## 5. Show one face at a time
 
@@ -12822,14 +12837,14 @@ The whole game lives in one list. Each card is an item with its words, which pai
 
 Open the **Variables** tab and add these, in this order, with **+ Add variable**. The name is saved when you press <kbd>Tab</kbd> or click away.
 
-1. **List**, named \`pairs\`. Replace its value with the six pairs:
+1. **List**, named \`pairs\`. It shows as a table: press **JSON text** above it and replace its value with the six pairs (or type them into the table):
 
 \`\`\`
 [{"a": "Cat", "b": "Kitten"}, {"a": "Dog", "b": "Puppy"}, {"a": "Cow", "b": "Calf"}, {"a": "Sheep", "b": "Lamb"}, {"a": "Horse", "b": "Foal"}, {"a": "Duck", "b": "Duckling"}]
 \`\`\`
 
 2. **Counter**, named \`seed\`. It stays at 0.
-3. **List**, named \`cards\`. In its **Value** column change **Starts as a value** to **Worked out**, and type this formula in the new box under the \`[]\`:
+3. **List**, named \`cards\`. In its **Value** column change **Starts as a value** to **Worked out**, and type this formula in the new box under the empty table:
 
 \`\`\`
 shuffle(pairs.flatMap((p, i) => [{text: p.a, pair: i, state: "down"}, {text: p.b, pair: i, state: "down"}]), seed)
@@ -12856,12 +12871,14 @@ It makes two face-down cards from every pair, both with the pair's number, and s
 
 \`item\` is the card each copy shows. Face down it says **?**; face up it shows its word.
 
-![Cards selected: on the canvas twelve gold cards in three rows of four, and its Repeat (list) section with Items cards, currently 12 items, Layout Grid, Gap 12 and Cols 4.](help/tutorial-memory-grid.png)
+![Cards selected: its Repeat (list) section with Repeat for each set to List: cards, currently 12 items, Layout Grid, Gap 12, Cols 4 and Selection None.](help/tutorial-memory-grid.png)
 
 5. Still on **Card**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **By value** and pick \`item.state\` from the list (it is the field of the item that says *down*, *up* or *matched*). Press **+ Add a value** twice: when it is \`down\` the fill is gold \`#f6c344\`, when it is \`matched\` it is green \`#bfe5c4\`. Press **Choose one** beside **Otherwise** and pick white: that is for a card turned up.
 6. Add one more binding: **Text alternative**, **Formula**, \`"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text)\`, so a screen reader hears more than a question mark.
 
 The line under each binding works it out for the first card, from the first item of the deal.
+
+![The Fill colour binding on Card: By value on item.state, with down giving gold, matched giving green and otherwise white, and the line below saying that at the start the fill is gold.](help/tutorial-memory-by-value.png)
 
 7. Above the frame, add two text layers: \`Moves: {moves}\` and \`Pairs found: {matched} of {pairs.length}\`.
 
@@ -12898,7 +12915,7 @@ Clicks are ignored while two cards are already up, and on a card that is not fac
 
 Press **Read as sentences** above the graph to check the whole flow in words.
 
-![Read as sentences: When Card is clicked, only if ups.length < 2 and the card is down, then change an item of the list cards, then check whether ups.length is 2, and the match and miss branches under it; below it the deal when the page is shown and the win when matched changes.](help/tutorial-memory-sentences.png)
+![Read as sentences: When Card is clicked, only if ups.length < 2 and the card is down, then change an item of the list cards, then check whether ups.length is 2, and the match and miss branches under it, each changing the items of the list cards where state is up; below it the deal when the page is shown and the win when matched changes.](help/tutorial-memory-sentences.png)
 
 The **Wait** is the timer that turns cards back. For that second both cards are up, so \`ups.length\` is 2 and the **Only if** from step 5 holds every other click.
 
@@ -13276,7 +13293,7 @@ planner >= explorer && planner >= collaborator ? "You are a Planner" : explorer 
 
 3. Tick **Keep up to date**.
 
-![The Variables tab: planner, explorer and collaborator as Number (counter, score) starting at 0, and result as Text, Worked out, with its formula, currently You are a Planner, and Keep up to date ticked.](help/tutorial-personality-variables.png)
+![The Variables tab: planner, explorer and collaborator as Number (counter, score) starting at 0, and result as Text, Worked out, with its formula, a Pick a calculation link under it, currently You are a Planner, and Keep up to date ticked.](help/tutorial-personality-variables.png)
 
 \`result\` is now the name of the result page with the highest tally. Ties go to the one asked about first: Planner, then Explorer.
 
@@ -13465,7 +13482,7 @@ Two ideas make it work. A **page master** draws the same panel on every page, so
 
 ## 2. The list of tasks done
 
-Open the **Variables** tab, press **+ Add variable** and pick **List**. Name it \`done\` and leave its value as \`[]\`.
+Open the **Variables** tab, press **+ Add variable** and pick **List**. Name it \`done\` and leave it empty (\`[]\`): a list with no rows yet.
 
 ## 3. Build the panel
 
@@ -13482,7 +13499,7 @@ Work on **Progress panel**. Keep everything in the top 85 pixels of the page, be
 
 With nothing done the bar is 0 wide; with all three it covers the track.
 
-![Bar fill selected on Progress panel, with Read actively above it already drawing the panel, and its Data bindings: Width, In, Formula, 260 * done.length / 3, currently 0.](help/tutorial-progress-bar-binding.png)
+![Bar fill selected on Progress panel, with Read actively above it already drawing the panel, and its Data bindings: Width, In, Formula, 260 * done.length / 3, a Pick a calculation link under it, currently 0.](help/tutorial-progress-bar-binding.png)
 
 5. Make the first badge on the right of the panel: a circle (<kbd>O</kbd>, hold <kbd>Shift</kbd>) about 44 across, a text layer with the letter \`P\` on top of it, and the word \`Planner\` in small text underneath. Select all three and press <kbd>Ctrl</kbd>+<kbd>G</kbd> to group them. Name the group **Planner badge**.
 6. On the group, press **+ Add binding** in **Data bindings**, pick **Opacity**, choose **Formula** and type:
@@ -13493,7 +13510,7 @@ done.includes("Planning") ? 1 : 0.25
 
 A binding's opacity runs from 0 to 1, so the badge shows faintly until *Planning* is in the list, then fully.
 
-![The Planner badge group's Opacity binding: In, Formula, done.includes("Planning") ? 1 : 0.25, currently 0.25.](help/tutorial-progress-badge-opacity.png)
+![The Planner badge group's Opacity binding: In, Formula, done.includes("Planning") ? 1 : 0.25, a Pick a calculation link under it, currently 0.25.](help/tutorial-progress-badge-opacity.png)
 
 7. Copy the group twice (<kbd>Ctrl</kbd>+<kbd>D</kbd>) and move the copies along. Make them **Reader badge** (\`R\`, \`Reader\`, \`"Reading"\` in its binding) and **Writer badge** (\`W\`, \`Writer\`, \`"Writing"\`).
 
@@ -13520,7 +13537,7 @@ On **Plan your week**:
 3. In its **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens on the new **When clicked or hovered** node.
 4. Drag from the **When clicked or hovered** node's dot into empty space, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **done**, **Do** to **Add to the list, or take out if it is there** and **Value** to \`"Planning"\` (with the quotes).
 
-![The graph for Plan your week: Mark as done's When clicked or hovered joined to Change a value or counter, with its settings: Variable done, Do Add to the list, or take out if it is there, Value "Planning". The master's Back and Next flows are not on this page.](help/tutorial-progress-toggle-node.png)
+![The graph for Plan your week: Mark as done's When clicked or hovered joined to Change a value or counter, with its settings: Variable done, Do Add to the list, or take out if it is there, Value "Planning". Above the graph a line says the page master's two flows run on this page, folded away.](help/tutorial-progress-toggle-node.png)
 
 One press adds *Planning* to the list, so the bar grows and the Planner badge lights up. A second press takes it out again, so the button works as a tick box.
 
@@ -14558,7 +14575,7 @@ The class's answers live in a **Shared responses** data source. The Vote button 
 2. Press **+ Shared responses**. A data source called \`responses\` appears in the list with a **shared** badge, and its settings open beside it.
 3. Leave **Who sees it** on **Everyone in this class**.
 4. Set **Answers each** to **1**, so one person has one vote.
-5. Set **Look again** to **5**. While the results page is open it asks for the class's answers every five seconds.
+5. Set **Look again** to **5**. While the results page is open it checks for the class's answers every five seconds, as a backup. On the StudyDesk learner page a new vote also shows up straight away.
 6. In **Sample answers**, type a few votes, one a line: \`Bus\`, \`Bus\`, \`Car\`, \`Walk\`, \`Train\`. Each line counts as one person. Only the canvas and Preview see them, so you can lay out the chart before anyone has voted.
 
 ![The Data tab: responses is selected with a shared badge, Who sees it is Everyone in this class, Answers each 1, Look again 5, and the counted answers show on the right.](help/tutorial-survey-chart-responses.png)
@@ -14627,7 +14644,7 @@ A real class only exists on the **StudyDesk learner page**: press **Share**, the
 
 Set the data source up before you share. Its rules are fixed when the project is shared, and **Update to the latest version** does not pick up a changed Shared responses source.
 
-**How live is it?** The chart is not instant. The page asks for the class's votes again every **Look again** seconds (5 here, never less than 2), so a new vote shows up within a few seconds of being made.
+**How live is it?** On the StudyDesk learner page the chart moves as votes come in: when anyone in the course votes, takes a vote back, or you hide or clear one, the page is told and asks for the new counts at once, within a second or so. If that live link cannot be made (a busy server, a network that blocks it), the page falls back to asking every **Look again** seconds (5 here, never less than 2), so a new vote still shows up within a few seconds.
 
 ## Make it yours
 
@@ -14868,7 +14885,7 @@ On the projects page press **New project**. Keep **Blank project**, type **Weekl
    - \`spending\`, worked out as \`rent + food\`;
    - \`leftover\`, worked out as \`income - spending\`.
 
-![The Variables tab: income is Worked out with the formula hours * pay, currently 420, and Keep up to date ticked; spending below it is Worked out as rent + food.](help/tutorial-whatif-worked-out.png)
+![The Variables tab: income is Worked out with the formula hours * pay, a Pick a calculation link under it, currently 420, and Keep up to date ticked; spending below it is Worked out as rent + food.](help/tutorial-whatif-worked-out.png)
 
 A worked out value can read other worked out values, so \`leftover\` follows both of the others.
 
@@ -14985,7 +15002,7 @@ A **Checklist** tab opens in the bottom panel. You will do its main job in the n
 ### 2. Type your words
 
 1. Open the **Variables** tab. The first row is \`words\`: a **List** of eight words.
-2. Replace its value with your own list and click away:
+2. The list shows as a table. Press **JSON text** above it, replace the value with your own list and click away:
 
 \`\`\`
 ["EVAPORATE", "CONDENSE", "CLOUD", "RAINFALL", "RIVER", "OCEAN", "VAPOUR", "RUNOFF"]
@@ -15457,7 +15474,7 @@ In a text layer, \`Score: {score} of {total}\` puts the values in among the word
 
 - **The line under every formula field.** Green says what it works out to right now (*currently 12*), with the starting values. A warning says what is wrong in a sentence, and for a mistyped name it offers a fix: *There is no value called scoer. Did you mean score?* with a **Use score** link that puts it right.
 
-![A Button label binding with the formula playng ? "Pause" : "Play" and, under it, There is no value called playng. Did you mean playing? Use playing.](help/concept-expressions-did-you-mean.png)
+![A Button label binding with the formula playng ? "Pause" : "Play" and, under it, the warning There is no value called playng. Did you mean playing? with a Use playing link, and the Pick a calculation link above it.](help/concept-expressions-did-you-mean.png)
 
 - **Suggestions as you type.** Start a name, or type a dot after one, and the list shows what is there, with each value.
 - **Conditions without typing.** A field that wants a yes or no offers pickers (**[score] [is at least] [5]**), which write the formula for you.
@@ -15743,7 +15760,7 @@ There is only one layer. The copies you see on the canvas and in Preview are dra
 
 - The line under **Repeat for each** says what the list is right now, with the starting values (*currently 6 items*), or what is wrong with it.
 
-![The Repeat (list) section of a repeater: Repeat the first child for each item ticked, Repeat for each set to A formula with tips.cards in the Items box, and the line under it saying currently 4 items.](help/concept-repeaters-items.png)
+![The Repeat (list) section of a repeater: Repeat the first child for each item ticked, Repeat for each set to A formula (advanced) with tips.cards in the Items box, the line under it saying currently 4 items, then Layout Grid, Gap 16, Cols 2, Fill order and Selection None.](help/concept-repeaters-items.png)
 
 - A text or binding in the template can read \`item\` and \`index\`. The line under a formula in the Properties panel works it out for the first copy.
 - In Preview, the **Events** list shows each click with the nodes it ran, and **Variables (live)** shows the list variable change as you click.
@@ -15863,7 +15880,7 @@ The **Random** node, a question's **Shuffle** and \`randInt\` take no seed. They
 
 - The line under a formula field says *changes each time it runs* for \`shuffle(list)\` with no seed and for \`randInt\`. With a seed it says what it works out to, which for a list is how many items (*currently 12 items*); **Variables (live)** in Preview shows the order itself.
 
-![The memory game's variables: seed, a Number starting at 0, and cards, a List worked out from shuffle(pairs.flatMap(...), seed), currently 12 items.](help/concept-seeds-random-seed.png)
+![The memory game's variables: seed, a Number starting at 0, and cards, a List worked out from shuffle(pairs.flatMap(...), seed), with a Pick a calculation link under the formula and currently 12 items.](help/concept-seeds-random-seed.png)
 
 - In Preview, **Variables (live)** shows \`seed\` and the shuffled list. Type a learner's seed into \`seed\` and press <kbd>Enter</kbd> to see their order.
 - **Restart** in Preview starts a new run: a new random seed, a new shuffle.
@@ -15891,7 +15908,7 @@ const concept$4 = {
 
 The first line of the Export menu, **Want a link instead of a file?**, opens **Share…** for you, so if a link or a StudyDesk embed code is what you were after you land in the right place.
 
-![The Export menu: Single HTML file, Project package, Project JSON, the public interface reference and TypeScript definitions, Lottie, dotLottie, PNG and SVG pictures, and Video, GIF or frames.](help/concept-share-export-export.png)
+![The Export menu: Want a link instead of a file? first, with a line saying Share… asks where people will use it, then Single HTML file, Project package, Project JSON, the public interface reference and TypeScript definitions, Lottie, dotLottie, PNG and SVG pictures, and Video, GIF or frames.](help/concept-share-export-export.png)
 
 Share has four entries:
 
@@ -16091,7 +16108,7 @@ Ask: **does it change while it runs?**
 - A field a binding sets has a small link mark after its label (**Set by a data binding**) and a dashed box. A typed value in it is replaced whenever the variable changes.
 - Under each binding, a grey line works it through with the starting values: *the formula is 1, Look up: no line for 1, so it stays 1*. If the layer looks wrong on the canvas, that line usually says why.
 
-![A Play button's Data bindings: Button label set by the formula playing ? "Pause" : "Play", currently Play, and Pressed (button, toggle) set straight from the variable playing; under each, a line saying what it is set to at the start.](help/concept-variables-data-bindings-bindings.png)
+![A Play button's Data bindings: Button label set by the formula playing ? "Pause" : "Play", with a Pick a calculation link under it and currently Play, and Pressed (button, toggle) set straight from the variable playing; under each, a line saying what it is set to at the start.](help/concept-variables-data-bindings-bindings.png)
 
 - Under each variable's name, the Variables tab says **used in 3 places** or **not used yet**. Click it to go to each place.
 - In Preview, **Variables (live)** shows every variable as it changes, and you can set one by hand to see what the bindings do with it.
@@ -16268,7 +16285,7 @@ See [Using this help](help) for the detail.
     keywords: "home new project start blank chooser copy clone import duplicate delete package ixp god mode power user folder folders tag tags search sort organise organize filter bin trash undelete restore recover deleted",
     body: `The projects page lists the projects you own. Each card shows a picture of the project's start page, its name, when it last changed, how many pages it has, its tags and a folder menu.
 
-![The projects page: the folder list on the left, the search box, sort menu and tag filter along the top, and a card for each project.](help/projects-page.png)
+![The projects page: Tutorials, Help, Import and New project at the top right, the folder list and the Bin on the left, the search box, sort menu and Thumbnails or Details switch along the top, and a card for each project.](help/projects-page.png)
 
 ## Making and opening projects
 
@@ -16539,7 +16556,7 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     group: "Getting started",
     summary: "Your own editor settings in one window, in pages: look, canvas and snapping, timeline, interactions, fonts, accessibility, keyboard shortcuts and sets of keys, and your workspace.",
     keywords: "settings options wheel tooltips preferences window pages tabs search reset",
-    body: `![The Preferences window, on the General page.](help/preferences.png)
+    body: `![The Preferences window, on the General page: Appearance, Help and hints, Notifications and a Tutorials section with Tutorial badges and cheers, Soft chime with the cheers and Reset tutorial progress.](help/preferences.png)
 
 Preferences are your own settings for the editor. Open **Preferences** from the gear in the top bar (or on the projects page), or press <kbd>?</kbd> to go straight to the **Keyboard shortcuts** page.
 
@@ -17282,6 +17299,8 @@ You do not have to type the braces. Put the cursor where the value should go and
 - **The page**: which page this is and how many there are.
 - **Questions**: the quiz score, total and percent, when the project has questions.
 - **This item of the repeat**, for a layer inside a [repeater](repeaters): the fields of the item (a list of people with \`name\` and \`age\` offers both) and its number.
+
+![A text layer's Text box holding Slide {slide} of {slides.length}, with a line under it saying it reads Slide 1 of 4, and the Insert value list open: a search box, Your variables with How many in slides, slide and playing, then The learner and course.](help/insert-value-menu.png)
 
 Pick one with the arrow keys and **Enter**, or click it. It goes in as \`{name}\` at the cursor, over any words you had selected, and the line under the box shows what the whole text says now. The same button is on a button's **Label** and on a connector's label.
 
@@ -18884,6 +18903,13 @@ Under the list there are three more things, all optional, and a plain click does
 
 The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the event, for building the flow by hand in the graph.
 
+### Describe it in words
+You do not have to find the right item in the list. Select the layer, press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type what you want in a plain sentence, such as **make this go to the results page**, **when clicked show the hint**, **play a sound when this is clicked**, **add 1 to score** or **after 5 seconds go to the next page**. The first row says what it understood. Press <kbd>Enter</kbd> and this same box opens already filled in: the thing to do, **It starts when**, and any **then also**, **only if** or **otherwise** you described. A note above the list says what it read from your words. Check it, change anything, and press **Add**.
+
+It matches fixed phrasings, not an AI service, and nothing you type leaves the editor. The names of your layers, pages, values, animations and sounds are looked up in the open project, in any case, with a plural or a small typo forgiven. Anything it could not find (a page called something you have not made) is listed in the note, and you choose it in the box. A part of the sentence it could not read is listed too and left out. If it cannot read the sentence at all, the palette says so and offers this box empty.
+
+It works for most of the list: pages, showing and hiding, a layer's colour, text, opacity or size, animations, sounds and music, video, adding to or taking from a number, setting a text or a switch, putting values back, saying something to a screen reader, opening a link and starting over. For **It starts when** it knows **after 5 seconds**, **when the page opens**, **when hovered**, **when score reaches 10**, **when I press space**, **when dropped on the bin** and **when the video reaches 10 seconds**. Join steps with **then**, **and** or a comma, add **only if score is at least 3**, and give **otherwise** what to do when it is not true. It needs a layer to attach the behaviour to, so select one first, or name it: **when the Start button is clicked, show the hint**.
+
 ### Counting what is done
 Choose **all of these are done** under **It starts when** and the thing you picked to happen runs once every layer you tick has been done. Or choose **Count what has been done…** from the list to get only the counting, with nothing to run at the end. Either way you answer three questions:
 - **Each counts as done when it is**: *clicked*, *opened (a pop-up or dialog layer)* or *answered (a question)*. Opened works for a frame with the **Dialog** setting and an **open value**. Answered works for a layer made into a question. Only layers that can be done that way are listed.
@@ -19069,6 +19095,8 @@ The **Restyle a part** buttons at the bottom of the Question section select a pa
 ## Looks
 
 The **Looks** part of the Question section sets how an item looks when it is **Right**, **Wrong**, **Missed** (the right answer, shown when it was left out) and **Picked** (chosen, before the answer is checked, for choice questions). Open one to change its **Fill**, **Border** and **Text** colour, from the picker or a [theme token](themes). Every option, item, chip and blank the kit made follows, so changing the green for Right is one change, not one per layer. **Back to the starter looks** puts them back.
+
+![The Looks part of a multiple choice question's Question section: four chips, Right in green, Wrong in red, Missed in orange and Picked in gold, each with an Aa sample, and the Back to the starter looks link.](help/question-looks.png)
 
 Under the surface each coloured layer has an ordinary [binding](bindings) on its fill, border or text colour, set **By value** on the item's state, with the layer's own colour as the *otherwise*. You can see and edit it in the Inspector like any other. A colour you change on one layer by hand stays when you change the looks later, and a layer you gave a formula of your own is left alone. Hotspot questions keep their own area colours, and questions made before Looks existed keep the formulas they were made with.
 
@@ -19500,7 +19528,7 @@ A question keeps its settings on its frame, and each part layer is marked as par
     title: "The command palette",
     group: "Getting started",
     summary: "Ctrl+K: type what you want to do, and do it, without hunting through menus.",
-    keywords: "command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share",
+    keywords: "command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share describe it sentence words plain behaviour",
     body: `Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
 
 ![The command palette searching for timeline: the New timeline and Open Timeline commands, then matching help pages.](help/command-palette.png)
@@ -19514,6 +19542,7 @@ Each row shows its **shortcut** if it has one (your own keys, if you changed the
 - **Selection**: duplicate, delete, group, ungroup, the four ordering commands, hide or show, lock, select all.
 - **Animate**: **Fade in**, **Slide in**, **Pop**, **Pulse**, **Shake**, **Fade out** on the selected layers (see [Animation presets](animation-presets)). They use the **When** and **Delay** chosen in the Animate section.
 - **Behaviours**: **When clicked: Go to the next page**, **Show a layer**, **Play a sound** and the other [behaviours](interactions) for the selected layer: it opens the behaviour dialog on that one.
+- **Describe it**: type a sentence, such as **when clicked show the hint** or **add 1 to score**, and the first row opens the behaviour dialog already filled in with what it understood, for you to check and **Add**. See [Describe it in words](interactions#describe-it-in-words).
 - **View**: zoom, grid, rulers, notes, bones, snapping and each snap target, page arrows.
 - **Tools**: pick any tool, with its key.
 - **Panels** and **Workspaces**: open any panel (Timeline, Interactions, Accessibility, Usage...) or switch to any workspace, built in or saved.
@@ -19652,6 +19681,8 @@ A list variable holds the items a [repeater](repeaters) draws. Pick it in the re
 
 The starting items are a **table** in the Variables tab: a row for each item and a column for each thing it holds (\`name\`, \`price\`). Type in a cell to change it, and use the **Row** and **Column** buttons above the table to add, copy, delete and move them. A cell can hold text, a number, yes or no, or nothing (the **Cell** choice above the table says which). A plain list of words or numbers is a table with one column, \`value\`. Give that column another name, or add a column, and the items become records with fields. Press **JSON text** over the table to see and type the same list as JSON, for example \`[{"name": "Ann"}, {"name": "Bo"}]\`, and **Table** to come back. A list with lists or groups inside its items has no table, only the text. Text that is not a JSON array makes an empty list.
 
+![The Variables tab with a List variable called pairs shown as a table: a Table and JSON text switch, Row and Column buttons, a Cell holds choice, and six rows of two columns, a and b, Cat and Kitten down to Duck and Duckling.](help/variables-list-table.png)
+
 A repeater with a **Selection** writes the copies people pick into a variable: a *Number* for one pick (the place of the copy, from 0, or -1 for none) or a *List* for several (the places picked). Read it like any other variable (see [Repeated lists](repeaters#selection)).
 
 Change the list while it runs with **Change a value or counter**. Its **Do** box has these list choices:
@@ -19732,6 +19763,8 @@ Press **+ Add variable** and pick what it is for: a **Counter** (a number that g
 ## Naming a variable
 Type the name in your own words, spaces and capitals included: **Quiz score**. Formulas need a short name with letters, digits and \`_\` only, so the editor offers one made from your words, \`quizScore\`, in a small **Name in formulas** box under the field. Leave it, or change it. Your words are kept as the variable's **label**.
 
+![A Variables tab row named Quiz score, with a small Name in formulas box under it holding quizScore, and its Options open below the value.](help/variables-labelled.png)
+
 Everywhere you pick a variable (the Variables tab, the pickers in the graph and the bindings, the sentences that say what an interaction does, **Insert value**, the live list in Preview) you see your words, with the formula name small beside them. Formulas, \`{braces}\` in text and scripts always use the formula name: \`Score: {quizScore}\`.
 
 A name that is already plain, like \`score\` or \`high_score\`, is used as typed and has no separate label. Change the words later and the formula name stays, so nothing that uses it breaks; change the **Name in formulas** and the project follows everywhere it is used, as renaming always did.
@@ -19754,7 +19787,7 @@ Under each name the table says **used in 3 places** (or **not used yet**). Click
 
 The bin asks first when the variable is used, naming the places, because they stop working once the name is gone. A variable nothing uses goes straight away, and the message at the bottom has an **Undo**.
 
-![The Variables tab.](help/variables-panel.png)`
+![The Variables tab: lit, a true/false switch, and taps, a number, each with a small T button at the left of its name that you can drag onto the page to show the value, a count of where it is used, and the + Add variable button.](help/variables-panel.png)`
   },
   {
     id: "expressions",
@@ -19818,6 +19851,8 @@ A formula that works out a number or some text can be picked instead of typed. U
 - **Join text and values together**: pieces of text and values, in the order you give them, made into one piece of text. A text piece "Score: " and the value \`score\` give *Score: 7*. Numbers joined this way stay text, so two scores do not add up.
 
 The box under the picker shows the formula it will write and what it works out to now. Nothing changes until you press **Use this calculation**, and **Cancel** leaves the formula as it was. The formula is ordinary text, so you can keep editing it by hand. When the formula already in the box is one of these, the picker opens filled in. When it is anything else (a formula with \`.filter\` in it, say) the picker says so and leaves it alone until you choose a calculation to replace it.
+
+![The Pick a calculation box opened under the formula hours * pay: Calculation set to Multiply two values, another value hours times another value pay, the line It writes hours * pay, currently 420, and Use this calculation and Cancel.](help/pick-a-calculation.png)
 
 ## Helpers
 Helpers are ready-made functions for common jobs: showing a number as text, mapping one range onto another, counting words, laying out a puzzle or a diagram. These work in every expression:
@@ -19904,9 +19939,11 @@ Each binding then says where its value comes from:
 - **Formula**: work the value out from variables, for example \`lives > 0\` for *Visible*, or \`progress * 3\` for *Width*. As you type it suggests your variables, \`context\`, \`self\` and the helpers (see [Expressions](expressions#suggestions-as-you-type)).
 - **By value**: a small table for "when this is that, the property is this". Pick what it depends on (a variable, or inside a [repeater](repeaters) a field of the item such as \`item.state\`, or **Write a formula…** for a condition), then give the result for each value it can have, using the property's own box: a colour picker for a colour, a number box for a number. A choice variable or a true/false one gets its lines for you; for anything else press **+ Add a value** and type the value. **Otherwise** is used for any value with no line of its own (leave it as *keeps the value as it is* to change nothing). It is the *Look up* converter underneath, so a binding made by hand that way opens as the table too.
 
+![The By value table on a card's Fill colour: item.state this item at the top, down giving gold #f6c344, matched giving green #bfe5c4, otherwise white, an Add a value button and the line that works it through for the first card.](help/bindings-by-value.png)
+
 Under the Variable and Formula views, **+ Convert…** changes the value on its way, and the grey line at the bottom works the whole thing through with every variable at its starting value: *value2 is 1 → Look up: no line for 1, so it stays 1 → Opacity is set to 1*. If a binding doesn't do what you expect, that line shows where it goes another way. Bindings are separated by a short rule; the bin removes one.
 
-![The Data bindings section: a binding on the fill colour, and the + Convert… menu.](help/bindings-section.png)
+![The Data bindings section: a binding on the fill colour set to a formula, with a Pick a calculation link under it, and the + Convert… menu.](help/bindings-section.png)
 
 Examples:
 
@@ -20318,6 +20355,14 @@ Projects made before this, and imported ones, have no themes until you add them 
 
 A project with no themes yet can start from one. High contrast is the one every project already has.
 
+## Apply the UniSQ look
+A project that did not start from a [branded starter pack](branded-starters) can still get the UniSQ look in one step. In the **Themes** tab (beside **+ Colourway…**), or in **Project** in the Inspector, open **Apply the UniSQ look…** and pick a colourway. Or press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type **UniSQ look**. It:
+- adds that colourway as a theme with the brand colours (as **+ Colourway…** does) and makes it the theme the project opens in;
+- makes a **Content master** (one for each page size) with the branded frame: the gold accent bar under the title and the UniSQ logo at the bottom left, painted with tokens so they follow the colourway;
+- sets every page that has no master to use it. A page that already has a master of its own keeps it.
+
+Your own layers are not moved or recoloured. A layer you coloured with a token follows the new colourway, and a plain colour stays as it is. The brand lock that a starter pack's project is held to is **not** switched on, so the project stays free to edit. A message says what it did, and **Undo** on it (or <kbd>Ctrl</kbd>+<kbd>Z</kbd>) takes all of it back in one step. If a layer of yours sits where the logo or accent bar goes, the message names the page. Pick another colourway later and only the theme the project opens in changes. The option is not shown for a project that already has the look from a starter pack: change its colourway in **Project**.
+
 ## The loading spinner
 When a project has to wait before its first page shows, a spinner appears after a quarter of a second. The waits are remembered progress or saved data coming from StudyDesk, a **Before activity loads** flow, and the first page's fonts. A quick start never shows it.
 
@@ -20414,6 +20459,9 @@ Tick **Map tokens from the page's CSS variables** and a token is read from a CSS
 The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` and \`color/button\` to \`--bs-primary\`, \`color/on-button\` to \`--bs-white\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other.
 
 A missing or odd variable leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
+
+## A project that did not start from a pack
+**Apply the UniSQ look…** (in the **Themes** tab, in **Project** settings, or in <kbd>Ctrl</kbd>+<kbd>K</kbd>) gives any other project the colourway and the frame: a theme, the brand tokens, a Content master with the logo and accent bar, and the pages set to use it. It does not lock anything. See [Themes and colour tokens](themes#apply-the-unisq-look).
 
 ## Branded projects
 A project made from a [branded starter pack](branded-starters) carries a theme for each UniSQ colourway (Gold, Purple, Blue, Green, Orange, Red) and High contrast. Its **Project** settings have a **Colourway** row that picks the default theme, and an option to let learners switch. Its layers can only use the project's tokens, so edit a colourway's colours here rather than typing a hex.
@@ -20618,7 +20666,7 @@ Put answers in with the **Add to shared responses** node (the answer is an expre
 This is one setting on the data source, **Who sees it**. To let the same project run either way, set **Switch with** to a text variable (a choice variable named \`whoSees\` with the options *Only me* and *Everyone in this class*, say): it takes who sees from the variable's value, so one setting in the project, or a button the learner presses, flips the whole page. A variable that says Only me, alone or private keeps answers private; one that says everyone, class or shared shows them to the class. Answers kept for Only me are stored apart from the class's, so switching a project to the class later never shows anyone what they kept to themselves.
 
 ## Where it runs
-The class lives on the server, and the server only knows who someone is on the **StudyDesk learner page** (**Share**, then **Link for StudyDesk**, see [Share link](export#share-link)). There each person's answers are kept under their signed-in account and course, and what the class sees is read every few seconds while the page is open.
+The class lives on the server, and the server only knows who someone is on the **StudyDesk learner page** (**Share**, then **Link for StudyDesk**, see [Share link](export#share-link)). There each person's answers are kept under their signed-in account and course, and what the class sees **updates live**: when anyone in the course adds an answer, takes one back, or you hide, remove or clear one, the page is told and reads the new counts at once (within a second or so). The page is only ever told that something changed, never what, and it reads the answers the same way as always, so nothing new is shown to anyone. If the live link cannot be made (a busy server, a network that blocks it), or while the page is open in a background tab, it checks every **Look again** seconds instead, and carries on from there when the link comes back.
 
 Anywhere else (an exported file, an ordinary share link, the page open on its own) there is no class. **Only me** still works, keeping the person's own answers in their browser. **Everyone in this class** answers \`ready: false\`, so the page can quietly show their own words. **Preview** pretends: the class is your sample answers plus whatever you add in the preview.
 
@@ -20628,7 +20676,7 @@ The rules are fixed when the project is shared. After you add or change a shared
 - **Longest answer** and **Answers each**: how long an answer may be (up to 120 characters) and how many different answers one person may have in (up to 50). The same answer twice from one person counts once.
 - **Show at**: an answer waits until this many people have given it, so one person's odd answer does not show on its own.
 - **Blocked words**: words and phrases nobody may add. Whole words only, so blocking *ass* leaves *class* alone. Words already in stop showing as soon as they are blocked and you share again.
-- **Look again**: how often the page asks what the class has added while it is open (at least 2 seconds, 0 reads once).
+- **Look again**: how often the page checks for what the class has added while it is open (at least 2 seconds). On the StudyDesk learner page the live link does the work and this is only the backup, checked a sixth as often while the link is up. 0 reads once, and then the live link is not used either.
 - **Poll options**: the answers a poll offers, one a line. Each is always in the list, in this order, with 0 until someone picks it, so a chart has a bar for every option from the start and keeps its shape as votes come in. Anything else people add comes after them.
 - **Sample answers**: for you only. The canvas and Preview show them as a class, so a page can be laid out with nobody in it. Learners never see them.
 
@@ -20742,6 +20790,8 @@ Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the
 - **Type my own items**, which opens the same table right here, with a row for each copy and a column for each thing it holds. Nothing else needs to exist: the items live on this layer. Inside the copies use \`{item.text}\` for a column called *text*, or \`{item}\` for a plain list of words or numbers,
 - **A formula (advanced)**, an expression that gives a list, like \`products.filter(p => p.inStock)\` or \`[1, 2, 3]\`. A list that is already a name or typed table is shown as one of the choices above.
 
+![A repeater's Repeat (list) section: the first child ticked, Repeat for each set to A formula (advanced) with tips.cards in Items and currently 4 items under it, Layout Grid, Gap 16, Cols 2, Fill order Rows first and Selection None.](help/concept-repeaters-items.png)
+
 The repeater redraws when the list changes, so a *Change a value or counter* node that adds to the list adds a row.
 
 Inside the copies, \`item\` is the current item and \`index\` is its position, counting from 0: \`{index + 1}. {item.name} - {item.price}\`. In a text or button label inside the copies, **Insert value** lists the item's fields (read from the first item) so you can pick one instead of typing it.
@@ -20764,6 +20814,8 @@ Set **Selection** under the repeater to let people pick copies without any nodes
 
 - **One at a time** keeps one pick: choosing a copy un-chooses the others (a choose-one picker, tabs, the open section of an accordion). The variable it writes holds the copy's number from 0, or -1 for none. Tick **Click again to clear** and a second click on the picked copy picks nothing.
 - **Several** switches each copy on and off (flip cards, a tick-list). The variable it writes is a *List* of the numbers picked.
+
+![The Repeat (list) section with Selection set to Several and Remember the pick in set to flipped, and the line In the copies, isSelected is true for a picked one.](help/concept-repeaters-selection.png)
 
 When you choose one, a box asks for a name for the variable (it suggests \`selectedIndex\` or \`selectedItems\`); you can pick another variable of the right kind later in **Remember the pick in**. It is an ordinary variable: read it in formulas and bindings, put it back to the start with *Put values back to the start*, or change it from a node.
 
@@ -21008,6 +21060,7 @@ The **Project** section holds the settings for the whole project, not one page. 
 | Setting | Meaning |
 |---|---|
 | Colourway | Branded starters only. The colour theme the project opens in, and whether learners can switch it. See [Branded starter packs](branded-starters#switching-colourway) |
+| UniSQ look | Every other project. **Apply the UniSQ look…** adds a colourway and the branded page frame to the pages. See [Themes and colour tokens](themes#apply-the-unisq-look) |
 | Name | The project's name, as on the projects page |
 | Page title | The title of the browser tab for the exported page |
 | Description | A note about the project, kept in the file |
@@ -21562,7 +21615,7 @@ Every field edits ordinary parts of the project, so **Undo** and **Redo** work, 
     keywords: "template starter checklist example remix copy duplicate update version save share quiz flip cards sorting branching story timeline intro review",
     body: `A **template** is a whole project saved so other people (or you) can start new projects from it. Nobody has to begin from a blank page, and a **checklist** walks whoever uses it through replacing the sample content, so a template's wording does not end up in front of learners. Everything is on the **Templates** tab of the projects page (next to **Projects**).
 
-![The Templates tab on the projects page: Mine, Shared, Built-in and Examples, with a card for each built-in starter.](help/templates-tab.png)
+![The Templates tab on the projects page, with the Tutorials button at the top right: Mine, Shared, Built-in and Examples, the search box and type filters, the colourways, and a card for each built-in starter.](help/templates-tab.png)
 
 ## The Templates tab
 - **Mine**: templates you saved. **Shared**: templates other people saved and let everyone use. **Built-in**: starters that come with Interactives. **Examples**: finished projects to play and copy (below).
@@ -21634,7 +21687,7 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
     title: "Branded starter packs",
     group: "Working together",
     summary: "UniSQ-branded ready-made activities in six colourways: what is locked and why, how to switch colourway, and every starter by set.",
-    keywords: "branded brand starter pack unisq colourway colourways theme logo locked open sans chrome template quiz switch colour gold purple blue green orange red",
+    keywords: "branded brand starter pack unisq colourway colourways theme logo locked open sans chrome template quiz switch colour gold purple blue green orange red apply the look existing project",
     body: () => {
       const ways = "Gold, Purple, Blue, Green, Orange and Red, from the UniSQ palette.";
       const list = "The list of starters is in the editor (Templates, Built-in).";
@@ -22179,6 +22232,8 @@ The button's tooltip names what it will open, and the drawer says "Help for Char
 
 ## Tutorials, badges and progress
 The **Tutorials** button on the projects page (next to **Help**) lists every tutorial as a card: the **Getting started** ones, the **Build it** ones by level and the **Concepts**. Each card has the finished project's picture, a line about it, how long it takes and where you are. **Start** (or **Carry on**) opens it in this help. **Open the finished example** plays the finished project, and **Make my copy** there gives you your own to pull apart. The search box at the top finds a tutorial by any word in its title or summary.
+
+![The Tutorials window over the projects page: a search box, 0 of 38 tutorials finished with a badge for each set, then the Getting started cards, each with a picture of the finished project, how long it takes, Start or Carry on, and Open the finished example.](help/tutorials-window.png)
 
 In a tutorial, each numbered step has a tick box beside its heading. Tick it when you have done the step. A short line says how many are left, and a strip under the title shows how many steps you have ticked. Tick the last one and you get a **badge card** in the corner of the screen with a quick burst of confetti. It clears itself after a few seconds, never stops you working, and **Esc** or its **x** puts it away at once. Did it without ticking along? **I have done all of this**, at the foot of the tutorial, counts the lot. **Start again** in the strip clears that one's ticks and badge. A concept has one button instead, **Mark as read**.
 
