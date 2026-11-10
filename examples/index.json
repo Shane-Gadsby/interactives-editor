@@ -309,6 +309,25 @@
 		}
 	},
 	{
+		"key": "tut-branching",
+		"title": "Branching scenario",
+		"description": "A group work dilemma with three choices, consequence pages that branch again and three endings picked by the score, with a path so far line and Start again: the Branching scenario tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"scenario",
+			"story",
+			"choices",
+			"score"
+		],
+		"artboards": 7,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
 		"key": "tut-mcq",
 		"title": "Multiple choice question",
 		"description": "One multiple choice question with two tries, a hint, feedback for each wrong answer and a result reported when it finishes: the Multiple choice tutorial's project.",
@@ -324,6 +343,103 @@
 			"width": 800,
 			"height": 600,
 			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-memory",
+		"title": "Memory card game",
+		"description": "Twelve cards dealt face down from six pairs: turn two, keep a match, watch a miss turn back, with a moves count and a Well done page: the Memory card game tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"game",
+			"memory",
+			"shuffle",
+			"variables"
+		],
+		"artboards": 2,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-personality",
+		"title": "Which one are you? quiz",
+		"description": "Three questions whose answers each add to two of three tallies, ending on the result page with the highest score: the \"Which one are you?\" tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"quiz",
+			"game",
+			"personality",
+			"variables",
+			"score"
+		],
+		"artboards": 6,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-progress",
+		"title": "Progress, badges and a page master",
+		"description": "A five-page tour where every page draws the same page master: a panel with a progress bar and three badges that light up as the learner marks each task done: the Progress and badges tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"progress",
+			"badges",
+			"page master",
+			"variables"
+		],
+		"artboards": 6,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-scene",
+		"title": "Animated scene with speech bubbles",
+		"description": "Sam runs in from the left, then a speech bubble pops up for each speaker, with a Skip button, lines announced to screen readers and a still version for less motion: the Animated scene tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"animation",
+			"story",
+			"timelines",
+			"accessibility"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-wordgames",
+		"title": "Word search and crossword",
+		"description": "The Word search and Crossword starters with their word lists changed to the water cycle: both grids are made from the lists, so changing the words changes the puzzles. The Word games tutorial's projects, side by side.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"game",
+			"puzzle",
+			"word search",
+			"crossword",
+			"variables"
+		],
+		"artboards": 8,
+		"preview": {
+			"width": 1024,
+			"height": 640,
+			"background": "#ffffff"
 		}
 	}
 ]
