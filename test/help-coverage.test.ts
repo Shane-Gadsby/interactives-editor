@@ -12,7 +12,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
   Rooms: [['rooms', 'A class chat in a few steps'], ['rooms', 'Moderating a room'], ['interactions', 'Send a message to a room'], ['data-sources', '+ Room']],
-  'Ask the Activity Designer': [['activity-designer', "can't see or change your project"]],
+  'Ask the Activity Designer': [['activity-designer', 'builds it in your open project'], ['activity-designer', 'Undo what the Activity Designer did'], ['activity-designer', 'reached its hourly limit']],
   'Live shared responses': [['shared-responses', 'updates live'], ['shared-responses', 'the backup']],
   'Describe it': [['interactions', 'Describe it in words'], ['command-palette', 'Describe it']],
   'Apply the UniSQ look': [['themes', 'Apply the UniSQ look'], ['themes', 'A project that did not start from a pack'], ['project-settings', 'UniSQ look'], ['tutorial-brand', 'The look in one step']],
