@@ -720,6 +720,17 @@ progress {
 :is(.inspector, .param-form, .key-editor) .keyed > .field:not(.check-field) {
   margin: 0;
 }
+/* a stacked field (label above, a text box under it) in a keyed row spans the whole row, as it does outside one: the subgrid
+   above would otherwise pin the box to the label's column. Its status line and Insert value row go under it, full width */
+:is(.inspector, .param-form, .key-editor) .keyed > .field.stacked:not(.check-field) {
+  grid-column: 1 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .keyed > .field.stacked:not(.check-field) > * {
+  grid-column: 1 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .keyed:has(> .field.stacked) > :is(.insert-value-row, .expr-status) {
+  grid-column: 1 / -1;
+}
 :is(.inspector, .param-form, .key-editor) .field > .field-label {
   grid-column: 1;
 }
@@ -1299,10 +1310,18 @@ progress {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-/* the Insert value button under a text field with {braces} in it */
+/* the Insert value button under a text field with {braces} in it: a line of its own under the field, never beside it */
 .insert-value-row {
   display: flex;
   margin: 2px 0 4px;
+}
+:is(.keyed, .field):has(> .insert-value-row) {
+  flex-wrap: wrap;
+}
+:is(.keyed, .field) > .insert-value-row {
+  flex: 0 0 100%;
+  grid-column: 1 / -1;
+  order: 10;
 }
 .search-picker.insert-value {
   flex: none;
