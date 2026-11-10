@@ -74,7 +74,7 @@ The cards are a **repeater**: you design one card, and it is copied once for eac
 
 Four cards appear, two by two, each with its own tip. Inside a repeated layer, \`item\` is the item it was copied for, so \`{item.title}\` is that card's title. Change the card you drew (its size, its font) and every copy follows.
 
-![The Cards frame selected, with four cards two by two on the canvas, and its Repeat (list) section: Repeat for each a formula, Items tips.cards, currently 4 items, Layout Grid, Gap 16 and Cols 2.](help/tutorial-data-source-repeat.png)
+![The Cards frame selected, with four cards two by two on the canvas, and its Repeat (list) section: Repeat for each a formula, Items tips.cards, currently 4 items, Layout Grid, Gap 16, Cols 2 and Selection None.](help/tutorial-data-source-repeat.png)
 
 ## 5. A colour from the file
 

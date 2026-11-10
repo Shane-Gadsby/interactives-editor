@@ -22,7 +22,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Study habits** as the name and press **Create project**.
 2. Add a title at the top with the **Text** tool: \`Four study habits\`.
-3. Open the **Variables** tab. Press **+ Add variable**, pick **List** and name it \`sections\`. Replace its \`[]\` with:
+3. Open the **Variables** tab. Press **+ Add variable**, pick **List** and name it \`sections\`. It shows as a table: press **JSON text** above it and replace the \`[]\` with:
 
 \`\`\`
 [
@@ -33,7 +33,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 ]
 \`\`\`
 
-4. Add another **List** called \`open\` and set it to \`[0]\`. It holds the places of the open sections, counting from 0, so the first section starts open. Use \`[]\` to start with everything closed.
+4. Add another **List** called \`open\`, press **JSON text** and set it to \`[0]\`. It holds the places of the open sections, counting from 0, so the first section starts open. Use \`[]\` to start with everything closed.
 
 ## 2. The frame that holds the sections
 

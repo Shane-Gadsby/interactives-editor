@@ -27,7 +27,7 @@ There is only one layer. The copies you see on the canvas and in Preview are dra
 
 - The line under **Repeat for each** says what the list is right now, with the starting values (*currently 6 items*), or what is wrong with it.
 
-![The Repeat (list) section of a repeater: Repeat the first child for each item ticked, Repeat for each set to A formula with tips.cards in the Items box, and the line under it saying currently 4 items.](help/concept-repeaters-items.png)
+![The Repeat (list) section of a repeater: Repeat the first child for each item ticked, Repeat for each set to A formula (advanced) with tips.cards in the Items box, the line under it saying currently 4 items, then Layout Grid, Gap 16, Cols 2, Fill order and Selection None.](help/concept-repeaters-items.png)
 
 - A text or binding in the template can read \`item\` and \`index\`. The line under a formula in the Properties panel works it out for the first copy.
 - In Preview, the **Events** list shows each click with the nodes it ran, and **Variables (live)** shows the list variable change as you click.

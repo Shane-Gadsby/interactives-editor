@@ -179,7 +179,7 @@ See [Using this help](help) for the detail.
     keywords: 'home new project start blank chooser copy clone import duplicate delete package ixp god mode power user folder folders tag tags search sort organise organize filter bin trash undelete restore recover deleted',
     body: `The projects page lists the projects you own. Each card shows a picture of the project's start page, its name, when it last changed, how many pages it has, its tags and a folder menu.
 
-![The projects page: the folder list on the left, the search box, sort menu and tag filter along the top, and a card for each project.](help/projects-page.png)
+![The projects page: Tutorials, Help, Import and New project at the top right, the folder list and the Bin on the left, the search box, sort menu and Thumbnails or Details switch along the top, and a card for each project.](help/projects-page.png)
 
 ## Making and opening projects
 
@@ -450,7 +450,7 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     group: 'Getting started',
     summary: 'Your own editor settings in one window, in pages: look, canvas and snapping, timeline, interactions, fonts, accessibility, keyboard shortcuts and sets of keys, and your workspace.',
     keywords: 'settings options wheel tooltips preferences window pages tabs search reset',
-    body: `![The Preferences window, on the General page.](help/preferences.png)
+    body: `![The Preferences window, on the General page: Appearance, Help and hints, Notifications and a Tutorials section with Tutorial badges and cheers, Soft chime with the cheers and Reset tutorial progress.](help/preferences.png)
 
 Preferences are your own settings for the editor. Open **Preferences** from the gear in the top bar (or on the projects page), or press <kbd>?</kbd> to go straight to the **Keyboard shortcuts** page.
 
@@ -1194,6 +1194,8 @@ You do not have to type the braces. Put the cursor where the value should go and
 - **The page**: which page this is and how many there are.
 - **Questions**: the quiz score, total and percent, when the project has questions.
 - **This item of the repeat**, for a layer inside a [repeater](repeaters): the fields of the item (a list of people with \`name\` and \`age\` offers both) and its number.
+
+![A text layer's Text box holding Slide {slide} of {slides.length}, with a line under it saying it reads Slide 1 of 4, and the Insert value list open: a search box, Your variables with How many in slides, slide and playing, then The learner and course.](help/insert-value-menu.png)
 
 Pick one with the arrow keys and **Enter**, or click it. It goes in as \`{name}\` at the cursor, over any words you had selected, and the line under the box shows what the whole text says now. The same button is on a button's **Label** and on a connector's label.
 
@@ -2999,6 +3001,8 @@ The **Restyle a part** buttons at the bottom of the Question section select a pa
 
 The **Looks** part of the Question section sets how an item looks when it is **Right**, **Wrong**, **Missed** (the right answer, shown when it was left out) and **Picked** (chosen, before the answer is checked, for choice questions). Open one to change its **Fill**, **Border** and **Text** colour, from the picker or a [theme token](themes). Every option, item, chip and blank the kit made follows, so changing the green for Right is one change, not one per layer. **Back to the starter looks** puts them back.
 
+![The Looks part of a multiple choice question's Question section: four chips, Right in green, Wrong in red, Missed in orange and Picked in gold, each with an Aa sample, and the Back to the starter looks link.](help/question-looks.png)
+
 Under the surface each coloured layer has an ordinary [binding](bindings) on its fill, border or text colour, set **By value** on the item's state, with the layer's own colour as the *otherwise*. You can see and edit it in the Inspector like any other. A colour you change on one layer by hand stays when you change the looks later, and a layer you gave a formula of your own is left alone. Hotspot questions keep their own area colours, and questions made before Looks existed keep the formulas they were made with.
 
 ## How a question behaves
@@ -3582,6 +3586,8 @@ A list variable holds the items a [repeater](repeaters) draws. Pick it in the re
 
 The starting items are a **table** in the Variables tab: a row for each item and a column for each thing it holds (\`name\`, \`price\`). Type in a cell to change it, and use the **Row** and **Column** buttons above the table to add, copy, delete and move them. A cell can hold text, a number, yes or no, or nothing (the **Cell** choice above the table says which). A plain list of words or numbers is a table with one column, \`value\`. Give that column another name, or add a column, and the items become records with fields. Press **JSON text** over the table to see and type the same list as JSON, for example \`[{"name": "Ann"}, {"name": "Bo"}]\`, and **Table** to come back. A list with lists or groups inside its items has no table, only the text. Text that is not a JSON array makes an empty list.
 
+![The Variables tab with a List variable called pairs shown as a table: a Table and JSON text switch, Row and Column buttons, a Cell holds choice, and six rows of two columns, a and b, Cat and Kitten down to Duck and Duckling.](help/variables-list-table.png)
+
 A repeater with a **Selection** writes the copies people pick into a variable: a *Number* for one pick (the place of the copy, from 0, or -1 for none) or a *List* for several (the places picked). Read it like any other variable (see [Repeated lists](repeaters#selection)).
 
 Change the list while it runs with **Change a value or counter**. Its **Do** box has these list choices:
@@ -3662,6 +3668,8 @@ Press **+ Add variable** and pick what it is for: a **Counter** (a number that g
 ## Naming a variable
 Type the name in your own words, spaces and capitals included: **Quiz score**. Formulas need a short name with letters, digits and \`_\` only, so the editor offers one made from your words, \`quizScore\`, in a small **Name in formulas** box under the field. Leave it, or change it. Your words are kept as the variable's **label**.
 
+![A Variables tab row named Quiz score, with a small Name in formulas box under it holding quizScore, and its Options open below the value.](help/variables-labelled.png)
+
 Everywhere you pick a variable (the Variables tab, the pickers in the graph and the bindings, the sentences that say what an interaction does, **Insert value**, the live list in Preview) you see your words, with the formula name small beside them. Formulas, \`{braces}\` in text and scripts always use the formula name: \`Score: {quizScore}\`.
 
 A name that is already plain, like \`score\` or \`high_score\`, is used as typed and has no separate label. Change the words later and the formula name stays, so nothing that uses it breaks; change the **Name in formulas** and the project follows everywhere it is used, as renaming always did.
@@ -3684,7 +3692,7 @@ Under each name the table says **used in 3 places** (or **not used yet**). Click
 
 The bin asks first when the variable is used, naming the places, because they stop working once the name is gone. A variable nothing uses goes straight away, and the message at the bottom has an **Undo**.
 
-![The Variables tab.](help/variables-panel.png)`,
+![The Variables tab: lit, a true/false switch, and taps, a number, each with a small T button at the left of its name that you can drag onto the page to show the value, a count of where it is used, and the + Add variable button.](help/variables-panel.png)`,
   },
   {
     id: 'expressions',
@@ -3748,6 +3756,8 @@ A formula that works out a number or some text can be picked instead of typed. U
 - **Join text and values together**: pieces of text and values, in the order you give them, made into one piece of text. A text piece "Score: " and the value \`score\` give *Score: 7*. Numbers joined this way stay text, so two scores do not add up.
 
 The box under the picker shows the formula it will write and what it works out to now. Nothing changes until you press **Use this calculation**, and **Cancel** leaves the formula as it was. The formula is ordinary text, so you can keep editing it by hand. When the formula already in the box is one of these, the picker opens filled in. When it is anything else (a formula with \`.filter\` in it, say) the picker says so and leaves it alone until you choose a calculation to replace it.
+
+![The Pick a calculation box opened under the formula hours * pay: Calculation set to Multiply two values, another value hours times another value pay, the line It writes hours * pay, currently 420, and Use this calculation and Cancel.](help/pick-a-calculation.png)
 
 ## Helpers
 Helpers are ready-made functions for common jobs: showing a number as text, mapping one range onto another, counting words, laying out a puzzle or a diagram. These work in every expression:
@@ -3834,9 +3844,11 @@ Each binding then says where its value comes from:
 - **Formula**: work the value out from variables, for example \`lives > 0\` for *Visible*, or \`progress * 3\` for *Width*. As you type it suggests your variables, \`context\`, \`self\` and the helpers (see [Expressions](expressions#suggestions-as-you-type)).
 - **By value**: a small table for "when this is that, the property is this". Pick what it depends on (a variable, or inside a [repeater](repeaters) a field of the item such as \`item.state\`, or **Write a formula…** for a condition), then give the result for each value it can have, using the property's own box: a colour picker for a colour, a number box for a number. A choice variable or a true/false one gets its lines for you; for anything else press **+ Add a value** and type the value. **Otherwise** is used for any value with no line of its own (leave it as *keeps the value as it is* to change nothing). It is the *Look up* converter underneath, so a binding made by hand that way opens as the table too.
 
+![The By value table on a card's Fill colour: item.state this item at the top, down giving gold #f6c344, matched giving green #bfe5c4, otherwise white, an Add a value button and the line that works it through for the first card.](help/bindings-by-value.png)
+
 Under the Variable and Formula views, **+ Convert…** changes the value on its way, and the grey line at the bottom works the whole thing through with every variable at its starting value: *value2 is 1 → Look up: no line for 1, so it stays 1 → Opacity is set to 1*. If a binding doesn't do what you expect, that line shows where it goes another way. Bindings are separated by a short rule; the bin removes one.
 
-![The Data bindings section: a binding on the fill colour, and the + Convert… menu.](help/bindings-section.png)
+![The Data bindings section: a binding on the fill colour set to a formula, with a Pick a calculation link under it, and the + Convert… menu.](help/bindings-section.png)
 
 Examples:
 
@@ -4685,6 +4697,8 @@ Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the
 - **Type my own items**, which opens the same table right here, with a row for each copy and a column for each thing it holds. Nothing else needs to exist: the items live on this layer. Inside the copies use \`{item.text}\` for a column called *text*, or \`{item}\` for a plain list of words or numbers,
 - **A formula (advanced)**, an expression that gives a list, like \`products.filter(p => p.inStock)\` or \`[1, 2, 3]\`. A list that is already a name or typed table is shown as one of the choices above.
 
+![A repeater's Repeat (list) section: the first child ticked, Repeat for each set to A formula (advanced) with tips.cards in Items and currently 4 items under it, Layout Grid, Gap 16, Cols 2, Fill order Rows first and Selection None.](help/concept-repeaters-items.png)
+
 The repeater redraws when the list changes, so a *Change a value or counter* node that adds to the list adds a row.
 
 Inside the copies, \`item\` is the current item and \`index\` is its position, counting from 0: \`{index + 1}. {item.name} - {item.price}\`. In a text or button label inside the copies, **Insert value** lists the item's fields (read from the first item) so you can pick one instead of typing it.
@@ -4707,6 +4721,8 @@ Set **Selection** under the repeater to let people pick copies without any nodes
 
 - **One at a time** keeps one pick: choosing a copy un-chooses the others (a choose-one picker, tabs, the open section of an accordion). The variable it writes holds the copy's number from 0, or -1 for none. Tick **Click again to clear** and a second click on the picked copy picks nothing.
 - **Several** switches each copy on and off (flip cards, a tick-list). The variable it writes is a *List* of the numbers picked.
+
+![The Repeat (list) section with Selection set to Several and Remember the pick in set to flipped, and the line In the copies, isSelected is true for a picked one.](help/concept-repeaters-selection.png)
 
 When you choose one, a box asks for a name for the variable (it suggests \`selectedIndex\` or \`selectedItems\`); you can pick another variable of the right kind later in **Remember the pick in**. It is an ordinary variable: read it in formulas and bindings, put it back to the start with *Put values back to the start*, or change it from a node.
 
@@ -5509,7 +5525,7 @@ Every field edits ordinary parts of the project, so **Undo** and **Redo** work, 
     keywords: 'template starter checklist example remix copy duplicate update version save share quiz flip cards sorting branching story timeline intro review',
     body: `A **template** is a whole project saved so other people (or you) can start new projects from it. Nobody has to begin from a blank page, and a **checklist** walks whoever uses it through replacing the sample content, so a template's wording does not end up in front of learners. Everything is on the **Templates** tab of the projects page (next to **Projects**).
 
-![The Templates tab on the projects page: Mine, Shared, Built-in and Examples, with a card for each built-in starter.](help/templates-tab.png)
+![The Templates tab on the projects page, with the Tutorials button at the top right: Mine, Shared, Built-in and Examples, the search box and type filters, the colourways, and a card for each built-in starter.](help/templates-tab.png)
 
 ## The Templates tab
 - **Mine**: templates you saved. **Shared**: templates other people saved and let everyone use. **Built-in**: starters that come with Interactives. **Examples**: finished projects to play and copy (below).
@@ -6136,6 +6152,8 @@ The button's tooltip names what it will open, and the drawer says "Help for Char
 
 ## Tutorials, badges and progress
 The **Tutorials** button on the projects page (next to **Help**) lists every tutorial as a card: the **Getting started** ones, the **Build it** ones by level and the **Concepts**. Each card has the finished project's picture, a line about it, how long it takes and where you are. **Start** (or **Carry on**) opens it in this help. **Open the finished example** plays the finished project, and **Make my copy** there gives you your own to pull apart. The search box at the top finds a tutorial by any word in its title or summary.
+
+![The Tutorials window over the projects page: a search box, 0 of 38 tutorials finished with a badge for each set, then the Getting started cards, each with a picture of the finished project, how long it takes, Start or Carry on, and Open the finished example.](help/tutorials-window.png)
 
 In a tutorial, each numbered step has a tick box beside its heading. Tick it when you have done the step. A short line says how many are left, and a strip under the title shows how many steps you have ticked. Tick the last one and you get a **badge card** in the corner of the screen with a quick burst of confetti. It clears itself after a few seconds, never stops you working, and **Esc** or its **x** puts it away at once. Did it without ticking along? **I have done all of this**, at the foot of the tutorial, counts the lot. **Start again** in the strip clears that one's ticks and badge. A concept has one button instead, **Mark as read**.
 

@@ -21,7 +21,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 ## 1. Make a project and the list of ideas
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Diagrams** as the name and press **Create project**. Rename the page **Mind map**.
-2. Open the **Variables** tab. Press **+ Add variable** and pick **List**. It arrives called \`items\`: rename it \`ideas\`, and replace the \`[]\` in its value box with:
+2. Open the **Variables** tab. Press **+ Add variable** and pick **List**. It arrives called \`items\`: rename it \`ideas\`. It shows as a table: press **JSON text** above it, and replace the \`[]\` in its box with:
 
 \`\`\`
 [
@@ -41,7 +41,7 @@ Do [Flip cards from a list](tutorial-flipcards) first if you haven't used a repe
 Each idea has an \`id\`, its words in \`label\`, and the \`id\` of the idea it hangs off in \`parent\`. The one with no parent is the middle of the map.
 
 3. Add another **List** called \`folded\` and leave it as \`[]\`. It will hold the ids of the branches that are folded away.
-4. Add a third **List** called \`map\`. In its **Value** column, change **Starts as a value** to **Worked out**. The \`[]\` stays (it is what \`map\` falls back to if the formula fails); type this formula in the new box under it:
+4. Add a third **List** called \`map\`. In its **Value** column, change **Starts as a value** to **Worked out**. The empty table stays (it is what \`map\` falls back to if the formula fails); type this formula in the new box under it:
 
 \`\`\`
 mindMap(ideas, {width: 720, height: 440, nodeW: 112, gapX: 32, collapsed: folded})
@@ -49,7 +49,7 @@ mindMap(ideas, {width: 720, height: 440, nodeW: 112, gapX: 32, collapsed: folded
 
 5. Tick **Keep up to date** (it appears under the formula once there is one), so \`map\` is worked out again whenever \`ideas\` or \`folded\` changes.
 
-![The map variable: a List, Worked out, the empty list it falls back to, the mindMap formula under it, currently 10 items, and Keep up to date ticked.](help/tutorial-diagram-worked-out.png)
+![The map variable: a List, Worked out, the empty table it falls back to (No rows yet), the mindMap formula under it with a Pick a calculation link, currently 10 items, and Keep up to date ticked.](help/tutorial-diagram-worked-out.png)
 
 \`map\` is the same ideas with a place worked out for each: \`x\`, \`y\`, \`w\` and \`h\`, its \`depth\`, whether it is \`visible\`, and \`parentIndex\`, the place in the list of the idea it hangs off. The branches are spread either side of the middle, in a 720 by 440 area.
 

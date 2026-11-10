@@ -27,7 +27,7 @@ Two ideas make it work. A **page master** draws the same panel on every page, so
 
 ## 2. The list of tasks done
 
-Open the **Variables** tab, press **+ Add variable** and pick **List**. Name it \`done\` and leave its value as \`[]\`.
+Open the **Variables** tab, press **+ Add variable** and pick **List**. Name it \`done\` and leave it empty (\`[]\`): a list with no rows yet.
 
 ## 3. Build the panel
 
@@ -44,7 +44,7 @@ Work on **Progress panel**. Keep everything in the top 85 pixels of the page, be
 
 With nothing done the bar is 0 wide; with all three it covers the track.
 
-![Bar fill selected on Progress panel, with Read actively above it already drawing the panel, and its Data bindings: Width, In, Formula, 260 * done.length / 3, currently 0.](help/tutorial-progress-bar-binding.png)
+![Bar fill selected on Progress panel, with Read actively above it already drawing the panel, and its Data bindings: Width, In, Formula, 260 * done.length / 3, a Pick a calculation link under it, currently 0.](help/tutorial-progress-bar-binding.png)
 
 5. Make the first badge on the right of the panel: a circle (<kbd>O</kbd>, hold <kbd>Shift</kbd>) about 44 across, a text layer with the letter \`P\` on top of it, and the word \`Planner\` in small text underneath. Select all three and press <kbd>Ctrl</kbd>+<kbd>G</kbd> to group them. Name the group **Planner badge**.
 6. On the group, press **+ Add binding** in **Data bindings**, pick **Opacity**, choose **Formula** and type:
@@ -55,7 +55,7 @@ done.includes("Planning") ? 1 : 0.25
 
 A binding's opacity runs from 0 to 1, so the badge shows faintly until *Planning* is in the list, then fully.
 
-![The Planner badge group's Opacity binding: In, Formula, done.includes("Planning") ? 1 : 0.25, currently 0.25.](help/tutorial-progress-badge-opacity.png)
+![The Planner badge group's Opacity binding: In, Formula, done.includes("Planning") ? 1 : 0.25, a Pick a calculation link under it, currently 0.25.](help/tutorial-progress-badge-opacity.png)
 
 7. Copy the group twice (<kbd>Ctrl</kbd>+<kbd>D</kbd>) and move the copies along. Make them **Reader badge** (\`R\`, \`Reader\`, \`"Reading"\` in its binding) and **Writer badge** (\`W\`, \`Writer\`, \`"Writing"\`).
 
@@ -82,7 +82,7 @@ On **Plan your week**:
 3. In its **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens on the new **When clicked or hovered** node.
 4. Drag from the **When clicked or hovered** node's dot into empty space, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **done**, **Do** to **Add to the list, or take out if it is there** and **Value** to \`"Planning"\` (with the quotes).
 
-![The graph for Plan your week: Mark as done's When clicked or hovered joined to Change a value or counter, with its settings: Variable done, Do Add to the list, or take out if it is there, Value "Planning". The master's Back and Next flows are not on this page.](help/tutorial-progress-toggle-node.png)
+![The graph for Plan your week: Mark as done's When clicked or hovered joined to Change a value or counter, with its settings: Variable done, Do Add to the list, or take out if it is there, Value "Planning". Above the graph a line says the page master's two flows run on this page, folded away.](help/tutorial-progress-toggle-node.png)
 
 One press adds *Planning* to the list, so the bar grows and the Planner badge lights up. A second press takes it out again, so the button works as a tick box.
 

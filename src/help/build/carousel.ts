@@ -21,7 +21,7 @@ The idea that makes it simple: one number, \`slide\`, says which slide is showin
 ## 1. Make a project and the variables
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Research steps** as the name and press **Create project**.
-2. Open the **Variables** tab (down the bottom, beside **Interactions**). Press **+ Add variable** and pick **List**. It arrives called \`items\`: change its **Name** to \`slides\`, and replace the \`[]\` in its value box with:
+2. Open the **Variables** tab (down the bottom, beside **Interactions**). Press **+ Add variable** and pick **List**. It arrives called \`items\`: change its **Name** to \`slides\`. It shows as a table: press **JSON text** above it, and replace the \`[]\` in its box with:
 
 \`\`\`
 [
@@ -47,7 +47,7 @@ Each slide has a colour so you can see the slides change before you have picture
 4. Under that, add a text \`{slides[slide - 1].body}\` and name it **Slide caption**.
 5. Add a small text in the top left corner of the box: \`Slide {slide} of {slides.length}\`.
 
-![Slide picture selected on the canvas, and its Data bindings: Fill colour, In, Formula with the slide's colour from the list, currently #cfe8f7.](help/tutorial-carousel-binding.png)
+![Slide picture selected on the canvas, and its Data bindings: Fill colour, In, Formula with the slide's colour from the list and a Pick a calculation link under it, currently #cfe8f7.](help/tutorial-carousel-binding.png)
 
 \`slides[0]\` is the first item of a list, so \`slides[slide - 1]\` is the slide whose number is in \`slide\`. Change **slide** to 3 in the Variables tab and the page shows Take notes. Put it back to 1.
 
@@ -59,7 +59,7 @@ Each slide has a colour so you can see the slides change before you have picture
 
 The **Interactions** tab opens with the new flow framed. (If you switched that off in Preferences, press **Show in graph**.) It reads: *When clicked: go to the next slide (1 to slides.length, going round at the ends), then switch playing off*.
 
-![The Interactions graph: Next's When clicked or hovered node wired to Change a value or counter (slide, Next number in a range, 1 to slides.length, Go round to the other end), then to a second one switching playing off; Previous and the Dot have a pair of their own below it.](help/tutorial-carousel-next-graph.png)
+![The Interactions graph: Next's When clicked or hovered node wired to Change a value or counter that sets playing to false, then to one that sets slide to the next number in a range, 1 to slides.length, going round to the other end; Previous (previous number in a range) and the Dot (event.index + 1) have a pair of their own below it.](help/tutorial-carousel-next-graph.png)
 
 4. Draw another button at the bottom left called **Previous**, press **+ When clicked…** and choose **Go to the previous item…**, with the same answers. Add the same **+ then also…** that turns **playing** off.
 

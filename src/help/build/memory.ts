@@ -27,14 +27,14 @@ The whole game lives in one list. Each card is an item with its words, which pai
 
 Open the **Variables** tab and add these, in this order, with **+ Add variable**. The name is saved when you press <kbd>Tab</kbd> or click away.
 
-1. **List**, named \`pairs\`. Replace its value with the six pairs:
+1. **List**, named \`pairs\`. It shows as a table: press **JSON text** above it and replace its value with the six pairs (or type them into the table):
 
 \`\`\`
 [{"a": "Cat", "b": "Kitten"}, {"a": "Dog", "b": "Puppy"}, {"a": "Cow", "b": "Calf"}, {"a": "Sheep", "b": "Lamb"}, {"a": "Horse", "b": "Foal"}, {"a": "Duck", "b": "Duckling"}]
 \`\`\`
 
 2. **Counter**, named \`seed\`. It stays at 0.
-3. **List**, named \`cards\`. In its **Value** column change **Starts as a value** to **Worked out**, and type this formula in the new box under the \`[]\`:
+3. **List**, named \`cards\`. In its **Value** column change **Starts as a value** to **Worked out**, and type this formula in the new box under the empty table:
 
 \`\`\`
 shuffle(pairs.flatMap((p, i) => [{text: p.a, pair: i, state: "down"}, {text: p.b, pair: i, state: "down"}]), seed)
@@ -61,12 +61,14 @@ It makes two face-down cards from every pair, both with the pair's number, and s
 
 \`item\` is the card each copy shows. Face down it says **?**; face up it shows its word.
 
-![Cards selected: on the canvas twelve gold cards in three rows of four, and its Repeat (list) section with Items cards, currently 12 items, Layout Grid, Gap 12 and Cols 4.](help/tutorial-memory-grid.png)
+![Cards selected: its Repeat (list) section with Repeat for each set to List: cards, currently 12 items, Layout Grid, Gap 12, Cols 4 and Selection None.](help/tutorial-memory-grid.png)
 
 5. Still on **Card**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **By value** and pick \`item.state\` from the list (it is the field of the item that says *down*, *up* or *matched*). Press **+ Add a value** twice: when it is \`down\` the fill is gold \`#f6c344\`, when it is \`matched\` it is green \`#bfe5c4\`. Press **Choose one** beside **Otherwise** and pick white: that is for a card turned up.
 6. Add one more binding: **Text alternative**, **Formula**, \`"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text)\`, so a screen reader hears more than a question mark.
 
 The line under each binding works it out for the first card, from the first item of the deal.
+
+![The Fill colour binding on Card: By value on item.state, with down giving gold, matched giving green and otherwise white, and the line below saying that at the start the fill is gold.](help/tutorial-memory-by-value.png)
 
 7. Above the frame, add two text layers: \`Moves: {moves}\` and \`Pairs found: {matched} of {pairs.length}\`.
 
@@ -103,7 +105,7 @@ Clicks are ignored while two cards are already up, and on a card that is not fac
 
 Press **Read as sentences** above the graph to check the whole flow in words.
 
-![Read as sentences: When Card is clicked, only if ups.length < 2 and the card is down, then change an item of the list cards, then check whether ups.length is 2, and the match and miss branches under it; below it the deal when the page is shown and the win when matched changes.](help/tutorial-memory-sentences.png)
+![Read as sentences: When Card is clicked, only if ups.length < 2 and the card is down, then change an item of the list cards, then check whether ups.length is 2, and the match and miss branches under it, each changing the items of the list cards where state is up; below it the deal when the page is shown and the win when matched changes.](help/tutorial-memory-sentences.png)
 
 The **Wait** is the timer that turns cards back. For that second both cards are up, so \`ups.length\` is 2 and the **Only if** from step 5 holds every other click.
 

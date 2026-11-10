@@ -35,7 +35,7 @@ The names matter: the choices go to pages by name, and the endings are picked by
 ## 2. A list for the path
 
 1. Open the **Variables** tab at the bottom and press **+ Add variable**. Pick **List**.
-2. In **Name** type \`taken\` and press <kbd>Tab</kbd>. Leave its value as \`[]\`, an empty list.
+2. In **Name** type \`taken\` and press <kbd>Tab</kbd>. Leave it empty (\`[]\`): a list with no rows yet.
 
 Every choice adds a few words to \`taken\`, so the list is the learner's path.
 
