@@ -68,6 +68,7 @@ import { artboardChoices } from '../lib/variants-edit';
 import { nodeMenuItems } from '../lib/node-menu';
 import { GraphPalette } from './GraphPalette';
 import { FlowSentences } from './FlowSentences';
+import { MasterFlows } from './MasterFlows';
 import { stepArtboard } from './ArtboardPicker';
 import { CONTEXT_ORDER, commandFor, keyHints, matches, withKey } from '../lib/keymap';
 import { GraphNoteForm, GraphNoteNode, resizing as noteResizing, type GraphNoteData } from './GraphNoteNode';
@@ -1186,6 +1187,9 @@ export function LogicGraph() {
           <button type="button" role="radio" aria-checked={s.view === 'sentences'} className={`seg-btn${s.view === 'sentences' ? ' on' : ''}`} title="Read everything on this page as plain sentences" onClick={() => store().set({ logicView: 'sentences' })}>
             Read as sentences
           </button>
+        </div>
+        <div className="master-flows-slot">
+          <MasterFlows ab={ab} project={s.project} />
         </div>
         {s.view === 'sentences' ? (
           <FlowSentences ab={ab} project={s.project} picked={s.sel} />

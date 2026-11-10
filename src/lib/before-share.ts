@@ -107,7 +107,8 @@ export function deadButtons(project: Project): ShareItem[] {
   const out: ShareItem[] = [];
   for (const { ab, node, chain } of layers(project)) {
     if (node.type !== 'button' || node.disabled || node.visible === false) continue;
-    if (wild.has(ab.id) || wired.has(node.id) || chain.some((id) => wired.has(id))) continue;
+    //(a page also hears the pointer events of its master's graph)
+    if (wild.has(ab.id) || (ab.master && wild.has(ab.master)) || wired.has(node.id) || chain.some((id) => wired.has(id))) continue;
     out.push({ key: `dead:${node.id}`, name: node.label?.trim() ? `${node.name} (“${node.label.trim()}”)` : node.name, where: `on ${ab.name}`, artboardId: ab.id, nodeId: node.id });
   }
   return out;

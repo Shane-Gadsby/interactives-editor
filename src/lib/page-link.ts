@@ -1,7 +1,7 @@
 //Link a layer to a page without opening the graph. A link is the ordinary thing the graph would hold: an On pointer click on the
 //layer wired to a Go to artboard node that names the page. These helpers find that pair, change the page it names (or add it, or
 //take it away), and read every page-to-page route in a project for the arrows drawn between pages on the canvas.
-import { DEFAULT_TRANSITION_MS, neighbourPage, pageInfo, setBase, type Artboard, type LogicNode, type Project } from 'interactives-player';
+import { DEFAULT_TRANSITION_MS, masterOf, neighbourPage, pageInfo, setBase, type Artboard, type LogicNode, type Project } from 'interactives-player';
 import { appendStep, writeClickFlow } from './click-flow';
 
 type Logic = Pick<Artboard, 'logic'>;
@@ -120,25 +120,31 @@ export interface PageRoute {
 export function pageRoutes(project: Project): PageRoute[] {
 	const out = new Map<string, PageRoute>();
 	for (const ab of project.artboards) {
-		if (ab.canvasHidden || ab.variantOf || !ab.logic.nodes.length) continue;
+		if (ab.canvasHidden || ab.variantOf) continue;
+		//A page also makes the jumps its page master's buttons make (they run on it), named by the master's layers
+		const master = masterOf(project.artboards, ab);
+		const sources = [ab, ...(master ? [master] : [])].filter((a) => a.logic.nodes.length);
+		if (!sources.length) continue;
 		const from = setBase(project.artboards, ab).id;
 		const mine = pageInfo(project, ab).list.includes(setBase(project.artboards, ab));
-		for (const n of ab.logic.nodes) {
-			if (n.kind !== 'action.artboard') continue;
-			const mode = String(n.params.to ?? 'picked');
-			let to: string | undefined;
-			let order = false;
-			if (mode === 'picked') to = typeof n.params.artboard === 'string' ? setBase(project.artboards, project.artboards.find((a) => a.id === n.params.artboard) ?? ab).id : undefined;
-			else if ((mode === 'next' || mode === 'previous') && mine) {
-				to = neighbourPage(project, ab, mode === 'next' ? 1 : -1)?.id;
-				order = true;
+		for (const src of sources) {
+			for (const n of src.logic.nodes) {
+				if (n.kind !== 'action.artboard') continue;
+				const mode = String(n.params.to ?? 'picked');
+				let to: string | undefined;
+				let order = false;
+				if (mode === 'picked') to = typeof n.params.artboard === 'string' ? setBase(project.artboards, project.artboards.find((a) => a.id === n.params.artboard) ?? ab).id : undefined;
+				else if ((mode === 'next' || mode === 'previous') && mine) {
+					to = neighbourPage(project, ab, mode === 'next' ? 1 : -1)?.id;
+					order = true;
+				}
+				if (!to || to === from || !project.artboards.some((a) => a.id === to)) continue;
+				const key = `${from}>${to}`;
+				const r = out.get(key) ?? { from, to, via: [], order };
+				r.order = r.order && order;
+				for (const name of startedBy(src, n)) if (!r.via.includes(name)) r.via.push(name);
+				out.set(key, r);
 			}
-			if (!to || to === from || !project.artboards.some((a) => a.id === to)) continue;
-			const key = `${from}>${to}`;
-			const r = out.get(key) ?? { from, to, via: [], order };
-			r.order = r.order && order;
-			for (const name of startedBy(ab, n)) if (!r.via.includes(name)) r.via.push(name);
-			out.set(key, r);
 		}
 	}
 	return [...out.values()];
