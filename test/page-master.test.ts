@@ -174,6 +174,18 @@ describe('master actions', () => {
     expect(get().artboards.find((a) => a.name === 'Page')!.masterSlots).toBeUndefined();
   });
 
+  it('keeps a page\'s slot text through Master None and back (Use for all other pages)', () => {
+    const { s, id, get } = make();
+    s.setMasterOf([id('Page')], id('Master'));
+    s.setMasterSlot(id('Page'), 'pageTitle', 'One');
+    s.setMasterOf([id('Page')], null);
+    expect(get().artboards.find((a) => a.name === 'Page')!.master).toBeUndefined();
+    s.setMasterOf([id('Page'), id('Page 2')], id('Master'));
+    const page = get().artboards.find((a) => a.name === 'Page')!;
+    const under = withMaster(get().artboards, page)[0] as unknown as { children: SceneNode[] };
+    expect((under.children.find((n) => n.name === 'Title') as { text: string }).text).toBe('One');
+  });
+
   it('moves a layer between under and over on the master', () => {
     const { s, get } = make();
     const m = get().artboards.find((a) => a.name === 'Master')!;

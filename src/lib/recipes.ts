@@ -1,4 +1,4 @@
-import { defaultParams, DEFAULT_TRANSITION_MS, isPageTransition, uid, walk, type Artboard, type LogicEdge, type LogicNode, type Project, type Variable } from 'interactives-player';
+import { defaultParams, DEFAULT_TRANSITION_MS, isPageTransition, uid, walk, type Artboard, type LogicEdge, type LogicNode, type Project, type Script, type Variable } from 'interactives-player';
 import { assetKind } from './assets';
 import { buildFlow, flowSentence } from './flow-describe';
 import { writeClickFlow } from './click-flow';
@@ -15,7 +15,7 @@ export type Trigger = 'click' | 'pointerenter';
 
 export const TRIGGER_WORDS: Record<Trigger, string> = { click: 'clicked', pointerenter: 'hovered over' };
 
-export type NeedKind = 'layer' | 'page' | 'timeline' | 'sound' | 'link' | 'counter' | 'switch' | 'transition' | 'speed';
+export type NeedKind = 'layer' | 'page' | 'timeline' | 'sound' | 'link' | 'counter' | 'switch' | 'transition' | 'speed' | 'video' | 'seconds' | 'script';
 
 export interface Need {
   key: string;
@@ -158,6 +158,30 @@ export const RECIPES: Recipe[] = [
     action: () => ({ kind: 'action.stopSound', params: { ...defaultParams('action.stopSound') } }),
   },
   {
+    id: 'sound-toggle',
+    label: 'Turn the sound off or on',
+    hint: 'Mutes every sound and video, or brings the sound back. The viewer\'s browser remembers the choice.',
+    group: 'Motion and sound',
+    needs: [],
+    action: () => ({ kind: 'action.captions', params: { ...defaultParams('action.captions'), op: 'soundToggle' } }),
+  },
+  {
+    id: 'video-toggle',
+    label: 'Play or pause a video',
+    hint: 'Plays the video if it is paused, pauses it if it is playing.',
+    group: 'Motion and sound',
+    needs: [{ key: 'video', kind: 'video', label: 'Which video' }],
+    action: (a, ctx) => ({ kind: 'action.video', params: { ...defaultParams('action.video'), target: videoOf(a, ctx), op: 'toggle' } }),
+  },
+  {
+    id: 'video-seek',
+    label: 'Jump a video to a time…',
+    hint: 'Goes to a moment in the video, like a chapter button.',
+    group: 'Motion and sound',
+    needs: [{ key: 'video', kind: 'video', label: 'Which video' }, { key: 'seconds', kind: 'seconds', label: 'Seconds in' }],
+    action: (a, ctx) => ({ kind: 'action.video', params: { ...defaultParams('action.video'), target: videoOf(a, ctx), op: 'seek', seconds: String(a.seconds ?? '0').trim() || '0' } }),
+  },
+  {
     id: 'counter',
     label: 'Add 1 to a counter',
     hint: 'Counts how many times it happens, in a number you can show or test.',
@@ -182,6 +206,14 @@ export const RECIPES: Recipe[] = [
     action: (a) => ({ kind: 'action.url', params: { ...defaultParams('action.url'), url: JSON.stringify(a.link ?? ''), target: '_blank' } }),
   },
   {
+    id: 'script',
+    label: 'Run a script',
+    hint: 'Runs one of the project\'s scripts, or a new one to write in the Scripts tab. event says what was clicked.',
+    group: 'Other',
+    needs: [{ key: 'script', kind: 'script', label: 'Which script' }],
+    action: (a) => ({ kind: 'action.script', params: { ...defaultParams('action.script'), script: a.script ?? '' } }),
+  },
+  {
     id: 'start-over',
     label: 'Start over',
     hint: 'Clears everything the learner did and goes back to the first page.',
@@ -194,6 +226,17 @@ export const RECIPES: Recipe[] = [
 export const RECIPE_BY_ID: Record<string, Recipe> = Object.fromEntries(RECIPES.map((r) => [r.id, r]));
 
 const layerOf = (a: Answers, ctx: RecipeCtx): string => (!a.layer || a.layer === THIS_LAYER ? ctx.layerId : a.layer);
+const videoOf = (a: Answers, ctx: RecipeCtx): string => (!a.video || a.video === THIS_LAYER ? ctx.layerId : a.video);
+
+/** Video layers on the page, to pick which one a button controls. */
+export function videoChoices(ab: Artboard): { id: string; name: string }[] {
+  const out: { id: string; name: string }[] = [];
+  walk(ab.children, (n) => void (n.type === 'video' && out.push({ id: n.id, name: n.name })));
+  return out;
+}
+
+//What a new script made by Run a script starts as
+export const CLICK_SCRIPT = `// Runs when the layer is clicked. event says what happened, ix is the player.\nix.log('clicked', event);\n`;
 
 // ---------------------------------------------------------------- choices
 
@@ -222,6 +265,7 @@ const NEW_NAME: Record<'counter' | 'switch', string> = { counter: 'count', switc
 export function unavailable(recipe: Recipe, ctx: RecipeCtx): string | null {
   if (recipe.id === 'page-pick' && !otherPages(ctx).length) return 'There is no other page to go to yet.';
   if (recipe.id === 'animation' && !ctx.ab.timelines.length) return 'This page has no timelines yet. Make one in the Timeline tab first.';
+  if (recipe.needs.some((n) => n.kind === 'video') && !videoChoices(ctx.ab).length) return 'This page has no video layer yet. Add one from Insert > Video first.';
   return null;
 }
 
@@ -241,6 +285,9 @@ export function defaultAnswers(recipe: Recipe, ctx: RecipeCtx): Answers {
     else if (n.kind === 'switch') out[n.key] = first(switchChoices(ctx.project))?.id ?? NEW_PREFIX + NEW_NAME.switch;
     else if (n.kind === 'transition') out[n.key] = 'fade';
     else if (n.kind === 'speed') out[n.key] = String(DEFAULT_TRANSITION_MS);
+    else if (n.kind === 'video') out[n.key] = videoChoices(ctx.ab).some((v) => v.id === ctx.layerId) ? THIS_LAYER : (first(videoChoices(ctx.ab))?.id ?? '');
+    else if (n.kind === 'seconds') out[n.key] = '0';
+    else if (n.kind === 'script') out[n.key] = first(ctx.project.scripts.filter((x) => !x.runOnStart))?.id ?? NEW_PREFIX + 'onClick';
     else out[n.key] = '';
   }
   return out;
@@ -252,7 +299,7 @@ export function incomplete(recipe: Recipe, a: Answers): string | null {
     const v = (a[n.key] ?? '').trim();
     if (n.kind === 'transition' || n.kind === 'speed') continue;
     if (!v) return `Choose ${n.label.toLowerCase()}.`;
-    if ((n.kind === 'counter' || n.kind === 'switch') && v.startsWith(NEW_PREFIX) && !v.slice(NEW_PREFIX.length).trim()) return `Name the ${n.kind}.`;
+    if ((n.kind === 'counter' || n.kind === 'switch' || n.kind === 'script') && v.startsWith(NEW_PREFIX) && !v.slice(NEW_PREFIX.length).trim()) return `Name the ${n.kind}.`;
     if (n.kind === 'link' && !/^(https?:\/\/|mailto:|\/)/i.test(v)) return 'A web address starts with https://';
   }
   return null;
@@ -265,6 +312,8 @@ export interface Behaviour {
   edges: LogicEdge[];
   /** Variables the behaviour needs that did not exist yet. */
   variables: Variable[];
+  /** A script made for it (Run a script with a new one). */
+  scripts: Script[];
   /** Layer settings to change as part of it (the thing a show recipe reveals starts hidden). */
   patches: { id: string; props: Record<string, unknown> }[];
   eventId: string;
@@ -285,7 +334,16 @@ export function buildBehaviour(ctx: RecipeCtx, recipeId: string, trigger: Trigge
   const a: Answers = { ...answers };
   const variables: Variable[] = [];
   const taken = ctx.project.variables.map((v) => v.name);
+  const scripts: Script[] = [];
   for (const n of recipe.needs) {
+    if (n.kind === 'script' && (a[n.key] ?? '').startsWith(NEW_PREFIX)) {
+      const names = ctx.project.scripts.map((x) => x.name);
+      const name = uniqueIdentifier(names, a[n.key].slice(NEW_PREFIX.length).trim() || 'onClick');
+      const sc: Script = { id: makeId('sc'), name, code: CLICK_SCRIPT, runOnStart: false };
+      scripts.push(sc);
+      a[n.key] = sc.id;
+      continue;
+    }
     if ((n.kind === 'counter' || n.kind === 'switch') && (a[n.key] ?? '').startsWith(NEW_PREFIX)) {
       const name = identifier(a[n.key].slice(NEW_PREFIX.length), taken, NEW_NAME[n.kind]);
       taken.push(name);
@@ -308,8 +366,8 @@ export function buildBehaviour(ctx: RecipeCtx, recipeId: string, trigger: Trigge
     if (layer && target !== ctx.layerId && !layer.hidden) patches.push({ id: target, props: { visible: false } });
   }
   const shown: Artboard = { ...ctx.ab, logic: { ...ctx.ab.logic, nodes: [event, action], edges } };
-  const project: Project = { ...ctx.project, variables: [...ctx.project.variables, ...variables] };
-  return { nodes: [event, action], edges, variables, patches, eventId: event.id, actionId: action.id, sentence: flowSentence(buildFlow(event, { ab: shown, project, self: ctx.layerId })) };
+  const project: Project = { ...ctx.project, variables: [...ctx.project.variables, ...variables], scripts: [...ctx.project.scripts, ...scripts] };
+  return { nodes: [event, action], edges, variables, scripts, patches, eventId: event.id, actionId: action.id, sentence: flowSentence(buildFlow(event, { ab: shown, project, self: ctx.layerId })) };
 }
 
 /** What `applyBehaviour` made, so the graph knows what to frame. */
@@ -330,6 +388,7 @@ export function applyBehaviour(update: (recipe: (d: Project) => void) => void, a
     if (!ab) return;
     wrote = true;
     for (const v of b.variables) d.variables.push(v);
+    for (const sc of b.scripts ?? []) d.scripts.push(sc);
     ab.logic.nodes.push(...b.nodes);
     ab.logic.edges.push(...b.edges);
     for (const p of b.patches) {

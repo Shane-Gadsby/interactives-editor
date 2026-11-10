@@ -41,6 +41,32 @@ describe('buildBehaviour', () => {
     }
   });
 
+  it('mutes, controls a video, and runs a script, making the script when it is new', () => {
+    const f = fixture();
+    const film = createNode('video', { name: 'Film', x: 200, y: 10, width: 320, height: 180 } as never);
+    f.home.children.push(film);
+    const ctx = ctxOf(f);
+    expect(buildBehaviour(ctx, 'sound-toggle', 'click', {}, mk).nodes[1]).toMatchObject({ kind: 'action.captions', params: { op: 'soundToggle' } });
+    const seek = buildBehaviour(ctx, 'video-seek', 'click', { ...defaultAnswers(RECIPE_BY_ID['video-seek'], ctx), seconds: '75' }, mk);
+    expect(seek.nodes[1]).toMatchObject({ kind: 'action.video', params: { target: film.id, op: 'seek', seconds: '75' } });
+    expect(buildBehaviour({ ...ctx, layerId: film.id }, 'video-toggle', 'click', defaultAnswers(RECIPE_BY_ID['video-toggle'], { ...ctx, layerId: film.id }), mk).nodes[1].params).toMatchObject({ target: film.id, op: 'toggle' });
+    const fresh = buildBehaviour(ctx, 'script', 'click', defaultAnswers(RECIPE_BY_ID.script, ctx), mk);
+    expect(fresh.scripts).toEqual([{ id: expect.any(String), name: 'onClick', code: expect.stringContaining('clicked'), runOnStart: false }]);
+    expect(fresh.nodes[1]).toMatchObject({ kind: 'action.script', params: { script: fresh.scripts[0].id } });
+    const store = new EditorStore(f.p);
+    applyBehaviour((r) => store.update(r), f.home.id, fresh);
+    expect(store.get().project.scripts.map((x) => x.name)).toEqual(['onClick']);
+    const g = fixture();
+    g.p.scripts.push({ id: 'sc-old', name: 'Score', code: '', runOnStart: false });
+    expect(defaultAnswers(RECIPE_BY_ID.script, ctxOf(g)).script).toBe('sc-old');
+    expect(incomplete(RECIPE_BY_ID.script, { script: 'new:' })).toBe('Name the script.');
+  });
+
+  it('cannot control a video on a page that has none', () => {
+    const f = fixture();
+    expect(unavailable(RECIPE_BY_ID['video-toggle'], ctxOf(f))).toMatch(/no video layer/);
+  });
+
   it('writes the settings each recipe promises', () => {
     const f = fixture();
     const ctx = ctxOf(f);

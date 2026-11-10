@@ -318,7 +318,7 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
     });
     store().toastUndo(`Deleted the variable "${v.name}".`, mark);
   };
-  const optionsOpen = !!(v.persist || v.userData || v.live);
+  const optionsOpen = !!(v.persist || v.userData || v.live || v.shared);
   return (
     <tr>
       <td>
@@ -444,6 +444,12 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
             onChange={(x) => setVar(v.id, { userData: x ? true : undefined })}
           />
           <SectionBlurb text="Saves the value for each person on the server, so it follows them to another device." name="user data" help={['variables', 'save-as-user-data']} />
+          <CheckField
+            label="Shared with instances"
+            title="One value for this page and every instance of a component inside it, so changing it in one copy changes it in all of them. Off: each instance has its own. Imported Rive view models come in shared."
+            value={!!v.shared}
+            onChange={(x) => setVar(v.id, { shared: x ? true : undefined })}
+          />
         </details>
       </td>
       <td>

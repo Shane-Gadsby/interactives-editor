@@ -482,6 +482,8 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
     const paint = buildPaintList(project, ab);
     const inter = interactionsOf(ab);
     const area = Math.max(1, ab.width * ab.height);
+    //What the player makes a tab stop (a button role or a click, unless Tab stop says Never), so the checker agrees with it
+    const stops = a11yContext(ab);
 
     const walkAll = (list: SceneNode[], fn: (n: SceneNode) => void) => {
       for (const n of list) {
@@ -503,7 +505,7 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
 
       // ---- Keyboard: can the thing be done without a pointer
       if (ptr && !native) {
-        const operable = sem.focusable && OPERABLE_ROLES.has(sem.role);
+        const operable = (sem.focusable || isTabStop(n, stops)) && OPERABLE_ROLES.has(sem.role);
         const keyDoes = (kind: PointerKind) => {
           const runs = ptr.runs.get(kind) ?? new Set<string>();
           // (a shortcut is a key that clicks the layer, so it does the layer's click)

@@ -97,7 +97,7 @@ If the button now sits below the bottom of the page, select the page (click **Ho
 
 ## 9. Read the pairing report
 
-Select either page and look at the bottom of its **Responsive** section. It has a line for moving between the two, **Home ⇄ Home narrow**, and under it how many layers were **paired by name**, then **nothing left over**.
+Select either page and look at the bottom of its **Responsive** section. It has a line for moving between the two, such as **Home ⇄ Home narrow**, and under it how many layers were **paired by name**, then **nothing left over**.
 
 When a viewer's page changes width while they are using it, the player swaps pages and carries over what they did, matching layers and timelines **by name**. That is why the card texts have their own names. Rename **Mars text** to **Text** on one page only and the report lists it as only in one of them, so anything an interaction changed on it would be lost in the swap. Put the name back.
 

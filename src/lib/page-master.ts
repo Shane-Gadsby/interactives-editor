@@ -42,10 +42,9 @@ export function withMasterCached(artboards: Artboard[], page: Artboard, nodes: S
 export function setMaster(d: Project, pageId: string, masterId: string | null): boolean {
   const page = d.artboards.find((a) => a.id === pageId);
   if (!page) return false;
+  //None keeps the page's slot text and hidden names, so a master given back later picks them up again
   if (!masterId) {
     delete page.master;
-    delete page.masterHide;
-    delete page.masterSlots;
     return true;
   }
   const m = d.artboards.find((a) => a.id === masterId);

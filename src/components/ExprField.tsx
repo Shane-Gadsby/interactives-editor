@@ -12,12 +12,12 @@ import { useRowSearch } from '../lib/prop-search';
  * Names an expression field sees only here, given once by whatever holds the fields: a binding's layer is `self`
  * for every formula in it. Fields add their own on top (a converter's `value`).
  */
-export const ExprLocals = createContext<{ locals?: string[]; self?: SceneNode }>({});
+export const ExprLocals = createContext<{ locals?: string[]; self?: SceneNode; values?: Record<string, unknown> }>({});
 
 const NAV_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'Home', 'End']);
 
 /** What the suggestions know about the open project, worked out only when a suggestion is asked for. */
-function envFor(locals: string[], self: SceneNode | undefined): SuggestEnv | null {
+function envFor(locals: string[], self: SceneNode | undefined, values?: Record<string, unknown>): SuggestEnv | null {
   const st = maybeStore()?.get();
   if (!st) return null;
   const project = st.project;
@@ -45,13 +45,13 @@ function envFor(locals: string[], self: SceneNode | undefined): SuggestEnv | nul
       return out;
     },
     locals,
-    localValues: self ? { self: layerScope(self) } : undefined,
+    localValues: self || values ? { ...values, ...(self ? { self: layerScope(self) } : {}) } : undefined,
   };
 }
 
 /** What the formula checker knows about the open project; the scope is only built if the formula gets as far as being worked out. */
-function checkEnvFor(locals: string[], self: SceneNode | undefined): CheckEnv | null {
-  const env = envFor(locals, self);
+function checkEnvFor(locals: string[], self: SceneNode | undefined, values?: Record<string, unknown>): CheckEnv | null {
+  const env = envFor(locals, self, values);
   if (!env) return null;
   return { variables: env.project.variables, dataNames: env.project.dataSources.map((d) => d.name), locals, localValues: env.localValues, scope: env.scope };
 }
@@ -60,7 +60,7 @@ function checkEnvFor(locals: string[], self: SceneNode | undefined): CheckEnv | 
  * What a formula says right now, or what is wrong with it, for the line under a field. Checked a moment after typing stops, and
  * again when the project's variables or data change, not on every edit to a layer (working a formula out builds the whole scope).
  */
-export function useFormulaStatus(text: string, locals: string[], self: SceneNode | undefined, template?: boolean): FormulaStatus {
+export function useFormulaStatus(text: string, locals: string[], self: SceneNode | undefined, template?: boolean, values?: Record<string, unknown>): FormulaStatus {
   const [status, setStatus] = useState<FormulaStatus>({ kind: 'empty' });
   const st = maybeStore()?.get();
   const vars = st?.project.variables;
@@ -69,12 +69,12 @@ export function useFormulaStatus(text: string, locals: string[], self: SceneNode
   useEffect(() => {
     if (!text.trim()) return setStatus((s) => (s.kind === 'empty' ? s : { kind: 'empty' }));
     const t = setTimeout(() => {
-      const env = checkEnvFor(locals, self);
+      const env = checkEnvFor(locals, self, values);
       setStatus(env ? (template ? checkTemplate(text, env) : checkFormula(text, env)) : { kind: 'empty' });
     }, 180);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, vars, data, key, self?.id, template]);
+  }, [text, vars, data, key, self?.id, template, values]);
   return status;
 }
 
@@ -198,7 +198,7 @@ export function ExprField({
   const names = useMemo(() => [...new Set([...(ctx.locals ?? []), ...(ctx.self ? ['self'] : []), ...(locals ?? [])])], [ctx.locals, ctx.self, locals]);
 
   const refresh = (node: HTMLInputElement | HTMLTextAreaElement) => {
-    const env = envFor(names, ctx.self);
+    const env = envFor(names, ctx.self, ctx.values);
     const caret = node.selectionStart ?? node.value.length;
     setSug(env ? suggest(node.value, caret, env, template) : null);
     setActive(0);
@@ -225,7 +225,7 @@ export function ExprField({
     onChange(fixed);
     onInput?.(fixed);
   };
-  const status = useFormulaStatus(shown, names, ctx.self, template);
+  const status = useFormulaStatus(shown, names, ctx.self, template, ctx.values);
   const props = {
     ref: el as React.Ref<HTMLInputElement & HTMLTextAreaElement>,
     value: shown,

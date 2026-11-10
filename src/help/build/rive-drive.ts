@@ -67,12 +67,14 @@ A warning under **X value** may say *There is no value called handle*. Ignore it
 
 Press <kbd>T</kbd> for the **Text** tool, click above the animation and type \`Press Play or pause, or drag the knob to scrub\`.
 
+An imported page has no background, so Preview would show its dark backdrop through everything and your dark text would vanish. Click the page's name above it on the canvas, set **Background** to **Solid** and type \`#ffffff\` in the colour box beside it.
+
 ## 7. Try it
 
 1. Press **Preview** at the top right. Nothing moves.
 2. Press **Play or pause**. It plays; press it again and it stops where it is.
 3. Drag the knob slowly along the track. The animation follows your hand, forwards and backwards.
-4. Press <kbd>Tab</kbd> until the knob is focused, press <kbd>Space</kbd> to pick it up, move it with the arrow keys and press <kbd>Space</kbd> again to drop it: the keyboard scrubs it too. With **Screen reader** on in Preview's bar, the strip under the preview says what is happening, using the **Name read out** you typed.
+4. Press <kbd>Tab</kbd> until the knob is focused, press <kbd>Space</kbd> to pick it up, move it with the arrow keys and press <kbd>Space</kbd> again to drop it: the keyboard scrubs it too. Press **Screen reader off** in Preview's bar to turn it on, and a strip under the preview says what is happening, using the **Name read out** you typed.
 
 ![Preview after scrubbing with the keyboard: the knob part way along the track, the ball part way down, and the Screen reader strip saying Scrub the bounce dropped.](help/tutorial-rive-drive-preview.png)
 

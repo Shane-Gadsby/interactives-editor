@@ -62,7 +62,7 @@ You didn't pick a colour for the text or the button. They follow **color/text**,
 ## 5. See why tokens matter
 
 1. Select the **Due** text. Its **Colour** is a chip saying **color/text**. Press the **×** on the chip (**Detach from the token**). It looks the same, but it is a plain colour now: a hex box is back where the chip was, and the **Themes** tab says **1 colour not following a theme**.
-2. Switch the theme box in the top bar to **High contrast**. The page goes black, the header and card change, and the **Due** text stays dark grey on black, nearly invisible.
+2. Switch the theme box in the top bar to **High contrast**. The page goes near black and the **Due** text stays dark grey on it, nearly invisible. The purple header and the gold bar stay as they are, since those tokens have the same colour in every theme.
 3. Open the **Accessibility** tab: it lists **Low text contrast** for **Due** twice, once starting **In Dark:** and once **In High contrast:**, since the plain grey fails in both.
 
 ![High contrast on the canvas with Due's colour detached to a plain grey, and the Accessibility tab listing Low text contrast for Due twice.](help/tutorial-brand-high-contrast.png)

@@ -85,7 +85,7 @@ The list under **+ When clicked…** has no mute, so this one is built in the gr
 
 ## 9. Try it
 
-1. Press **Preview** at the top right. With **From the start artboard** chosen in its bar it starts on **Home**. Press **Start**: the music starts and the **Sounds** page shows.
+1. Press **Preview** at the top right. With **From the start artboard** chosen in its bar it starts on **Home**. Press **Start**: the music starts and the **Sounds** page shows. Press **Debug** in the bar if you want the events listed under the page.
 
 ![Preview on the Sounds page after pressing Start, with Ding, Sound on or off, Stop the music and Back, and the Debug events list showing Play sound and Go to artboard.](help/tutorial-sound-preview.png)
 

@@ -1661,7 +1661,7 @@ A page that embeds the player can listen for the switch: \`player.on('variantcha
 4. To change the shared layers, click **Edit master** on any page. The master's own layers are read-only on a page: clicking where one is selects the page, not the master's layer.
 
 ## On a page
-- **Master**: the artboard drawn under this page, or **None**.
+- **Master**: the artboard drawn under this page, or **None**. A page set to None keeps its slot text and hidden layers, so they are back if it gets a master again.
 - **Show these master layers on this page**: untick a layer to leave it off this page only (matched by the layer's name, at any depth). Name the layers clearly in the master.
 - **Text slots**: put \`{pageTitle}\` (any name) in a text layer of the master and the page's **Text slots** list gets a field for it. What you type is what that page says. A slot with nothing typed shows the project variable of that name, if there is one. What you type can use \`{variable}\` itself.
 - **Detach** copies the master's layers into the page as ordinary, editable layers and stops using the master.
@@ -1673,7 +1673,7 @@ A page that embeds the player can listen for the switch: \`player.on('variantcha
 
 ## What a master layer is
 - **Read-only and decorative.** Master layers are hidden from screen readers, are never tab stops, and the pointer goes through them to the page. A layer with a **Role** or an **Accessible name** (a logo with alt text) stays in the reading order. The master's layers come first (under) or last (over) in a page's reading order.
-- **Shapes, paths, text, pictures, groups and frames only.** Buttons, inputs, links, video, embeds, instances, script layers and shaders are left out. A master has no interactions or timelines of its own that run on a page, so **On click** on a master layer does nothing: put interactive things on the page.
+- **Shapes, paths, text, pictures, progress bars, groups and frames only.** Buttons, inputs, links, video, embeds, instances, script layers and shaders are left out. A master has no interactions or timelines of its own that run on a page, so **On click** on a master layer does nothing: put interactive things on the page.
 - **Bindings still work**, so a progress bar or a title bound to a variable is fine in a master.
 - **Names and ids never clash.** The master's layers can't be targeted from a page's graph, timeline or script, and a page layer with the same name is never confused with one.
 - **Responsive sets**: every member is an artboard of its own, so give each its own master of the right size. A master is drawn at its own coordinates.
@@ -1967,7 +1967,7 @@ Iris, Zoom in, Star, Diamond, Heart and Clock start from **Opens from**: **The c
 
 **Speed** says how long the change takes: **Slow** (600 ms), **Medium** (300 ms), **Fast** (150 ms) or **Custom**, which shows a box for the milliseconds. It sits beside the look and is left out for Instant. Medium is what every page change already had, so nothing in an existing project plays differently. The Inspector's sentences say it too, as in "go to the next page (iris, slow)".
 
-With **Respect reduced motion** ticked in the [Project settings](project-settings), a learner whose device asks for less motion gets an instant change instead. It is off in a new project.
+With **Respect reduced motion** ticked in the [Project settings](project-settings), a learner whose device asks for less motion gets an instant change instead. It is on in a new project; a project made before November 2026 keeps whatever it had.
 
 In a script, \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer named Door, and a point is \`{ x: 25, y: 50, percent: true }\`. See [Scripts](scripts).
 
@@ -2710,8 +2710,11 @@ A short list asks what should happen:
 - **Go to the next page**, **Go to the previous page**, **Go to a page…** (you pick which). Each of the page ones also asks **How the page changes** (a fade unless you choose) and its **Speed** (Medium unless you choose Slow, Fast or Custom).
 - **Show a layer**, **Hide a layer**, **Show or hide a layer**: this layer or another. Showing a layer other than this one also sets it to start hidden, so there is something to show.
 - **Play an animation** (a timeline of this page) and **Play a sound**.
+- **Turn the sound off or on**: mutes every sound and video, or brings the sound back. The viewer's browser remembers it.
+- **Play or pause a video** and **Jump a video to a time…** (seconds from the start, so 75 is 1:15): this video, or another on the page.
 - **Add 1 to a counter** and **Switch something on or off**: pick a number or an on/off variable you already have, or name a new one in plain words and it is made for you.
 - **Open a link** and **Start over**.
+- **Run a script**: one of the project's scripts, or **A new script…**, which is made in the Scripts tab ready to write. \`event\` says what was clicked.
 
 Pick one, answer the question it asks (the line at the bottom reads back what it will do), and press **Add**. It is added in one step, so one undo takes it all back, including a new variable or the layer set to start hidden. A behaviour is just a **When clicked or hovered** event joined to an action (and the variable it needs), the same nodes you would have drawn: select the new node in the graph to change anything about it. Nothing special marks them, and nothing hidden runs.
 
@@ -2871,7 +2874,7 @@ Click **Add question** and pick a type. A card appears with a prompt, the answer
 | Multiple response | ticks any number | exactly the right ones are ticked |
 | True or false | picks True or False | it matches the statement |
 | Fill in the blank | types into one or more inputs | each blank matches an accepted answer |
-| Put in order | moves items up and down | every item is in its place |
+| Put in order | moves or drags items up and down | every item is in its place |
 | Matching (drag and drop) | drags each term onto its definition | every term is in its own slot (and no extra term is in one) |
 | Categorise (drag into groups) | drags each item into a group box | every item is in the group it belongs to |
 | Hotspot (click the right place) | clicks an area of a picture | the picked area is marked right (or all of the right ones) |
@@ -2949,12 +2952,14 @@ The learner types into one or more inputs. Write the accepted answers one per li
 - Case and extra spaces are ignored unless you tick **Match case**.
 - A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses.
 - A line written \`/colou?r/i\` is a pattern.
+- **Feedback if wrong** is said after the question's own *Wrong* line whenever that blank is wrong, so you can say what went wrong in it (*Give the units*). Several wrong blanks say theirs in order.
+- **Shown as** appears when a blank accepts a pattern. It is what **Show the right answer when finished wrong** puts in the blank. Left empty it shows the first accepted answer that isn't a pattern, and a blank with only patterns shows nothing (the question's checks say so).
 - **Add blank** adds another input in the look of the last one.
 - Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).
 
 ### Put in order
 
-List the items in the **right** order. The learner sees them shuffled (the first deal is never already right) and moves them up and down.
+List the items in the **right** order. The learner sees them shuffled (the first deal is never already right) and moves them up and down, with each item's arrow buttons or the keyboard, or by dragging an item to its place.
 
 Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
 
@@ -3540,9 +3545,10 @@ Variable names must be letters, digits and \`_\` so expressions can use them. Th
 Next to the type, **Starts as a value** is the number, text or switch the project starts with. **Worked out** is for a variable that is calculated, such as a crossword grid: it shows a box for the formula (for example \`crossword(words, 10)\`), and the value stays as what it falls back to if the formula fails. **Keep up to date** (for a formula) works it out again whenever something it reads changes.
 
 ## Options on a variable
-**Options** is folded away until something in it is on. It holds two switches, each with a sentence saying what it does:
+**Options** is folded away until something in it is on. It holds three switches, each with a sentence saying what it does:
 - **Remember** keeps the value between visits (for a score, a saved choice or a name). It is kept in the learner's record when the project is played from the Link for StudyDesk, otherwise in their browser. See [Results and progress](results).
 - **Save as user data** keeps it on the server for each person (see above).
+- **Shared with instances**: one value for this page and every [instance](components) of a component inside it, so changing it in one copy changes it in all of them. Off, each instance has its own. Variables from an imported Rive view model come in with it on.
 
 ## Where a variable is used
 Under each name the table says **used in 3 places** (or **not used yet**). Click it to list the places (layers, expressions, interactions, scripts), and click one to go there.
@@ -4403,6 +4409,7 @@ The rules are fixed when the project is shared. After you add or change a shared
 - **Show at**: an answer waits until this many people have given it, so one person's odd answer does not show on its own.
 - **Blocked words**: words and phrases nobody may add. Whole words only, so blocking *ass* leaves *class* alone. Words already in stop showing as soon as they are blocked and you share again.
 - **Look again**: how often the page asks what the class has added while it is open (at least 2 seconds, 0 reads once).
+- **Poll options**: the answers a poll offers, one a line. Each is always in the list, in this order, with 0 until someone picks it, so a chart has a bar for every option from the start and keeps its shape as votes come in. Anything else people add comes after them.
 - **Sample answers**: for you only. The canvas and Preview show them as a class, so a page can be laid out with nobody in it. Learners never see them.
 
 ## Moderating

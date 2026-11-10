@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { DEFAULT_TRANSITION_MS, PAGE_TRANSITIONS, speedOf, TRANSITION_SPEEDS } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { pickNewAsset } from '../lib/quick-add';
-import { RECIPES, RECIPE_BY_ID, NEW_PREFIX, THIS_LAYER, TRIGGER_WORDS, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, incomplete, layerChoices, otherPages, switchChoices, unavailable, type Answers, type Need, type Recipe, type RecipeCtx, type Trigger } from '../lib/recipes';
+import { RECIPES, RECIPE_BY_ID, NEW_PREFIX, THIS_LAYER, TRIGGER_WORDS, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, incomplete, layerChoices, otherPages, switchChoices, unavailable, videoChoices, type Answers, type Need, type Recipe, type RecipeCtx, type Trigger } from '../lib/recipes';
 import { TextField } from './ui';
 import { track } from '../lib/analytics';
 import { revealAdded, revealedWithin } from '../lib/graph-reveal';
@@ -280,6 +280,22 @@ function NeedField({ need, ctx, answers, onAnswer }: { need: Need; ctx: RecipeCt
     }
     case 'link':
       return <TextField label={need.label} value={v} placeholder="https://example.com" onChange={onAnswer} />;
+    case 'video': {
+      const videos = videoChoices(ctx.ab);
+      const mine = videos.find((x) => x.id === ctx.layerId);
+      return sel(v, [...(mine ? [{ value: THIS_LAYER, label: `This video (${mine.name})` }] : []), ...videos.filter((x) => x.id !== ctx.layerId).map((x) => ({ value: x.id, label: x.name }))], onAnswer);
+    }
+    case 'seconds':
+      return <TextField label={need.label} value={v} placeholder="0" title="Seconds from the start: 75 is 1:15. A formula works too (chapter * 60)" onChange={onAnswer} />;
+    case 'script': {
+      const isNew = v.startsWith(NEW_PREFIX);
+      return (
+        <>
+          {sel(isNew ? NEW_VALUE : v, [...ctx.project.scripts.map((x) => ({ value: x.id, label: x.runOnStart ? `${x.name} (also runs at the start)` : x.name })), { value: NEW_VALUE, label: 'A new script…' }], (x) => onAnswer(x === NEW_VALUE ? NEW_PREFIX + 'onClick' : x))}
+          {isNew && <TextField label="Name the script" value={v.slice(NEW_PREFIX.length)} onChange={(x) => onAnswer(NEW_PREFIX + x)} title="It is made in the Scripts tab, ready to write" />}
+        </>
+      );
+    }
     case 'counter':
     case 'switch': {
       const existing = need.kind === 'counter' ? counterChoices(ctx.project) : switchChoices(ctx.project);

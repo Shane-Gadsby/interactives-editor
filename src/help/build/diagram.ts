@@ -63,7 +63,7 @@ All ten boxes are on top of each other for now. Tell each copy where it goes:
 4. Select **Idea** (inside **Ideas**). In **Data bindings** add four bindings, each a **Formula**: **X** \`item.x\`, **Y** \`item.y\`, **Width** \`item.w\`, **Height** \`item.h\`.
 5. Select the text inside it and bind its **Width** to \`item.w\` and **Height** to \`item.h\`, so the words stay centred in a box of any size.
 
-The line under these bindings warns *There is no value called item*. Take no notice: the editor doesn't yet know a repeated layer has \`item\`, and the canvas shows the boxes in place.
+The line under each binding works it out for the first box, from the first item in the list.
 
 The map spreads out: the middle idea with four branches round it. The positions count from the corner where you drew the box.
 
@@ -130,7 +130,7 @@ and \`links\`, where \`label\` is the answer that takes you along it:
    - \`outs\`: \`arrows.filter(l => l.from == current && l.b >= 0)\`, the links out of the step the learner is on.
 5. Go back to **Mind map**, select **Ideas** and **Lines** together, press <kbd>Ctrl</kbd>+<kbd>C</kbd>, select the **Flowchart** page and press <kbd>Ctrl</kbd>+<kbd>V</kbd>. Rename them **Steps** and **Arrows**.
 6. Change the **Items** of **Steps** to \`chart\` and of **Arrows** to \`arrows\`.
-7. Select the connector inside **Arrows**. Set **Which copy** to \`item.a\` for **Start** and \`item.b\` for **End**, **Route** to **Elbow (right angles)**, and under **Ends** set **End** to **Arrow**. For the Yes and No on the decision's arrows, leave the label's **Text** empty and add a binding in **Data bindings** instead: **Button label** (it is a connector's label too), **Formula**, \`item.label ?? ""\`. Typing \`{item.label}\` into **Text** doesn't work yet: a connector's own text can't see \`item\`, so the editor says *There is no value called item* and the words show as typed.
+7. Select the connector inside **Arrows**. Set **Which copy** to \`item.a\` for **Start** and \`item.b\` for **End**, **Route** to **Elbow (right angles)**, and under **Ends** set **End** to **Arrow**. For the Yes and No on the decision's arrows, type \`{item.label ?? ""}\` in the label's **Text**. Each arrow's label reads its own item, and an arrow with no label in the list shows none.
 8. Select the box inside **Steps**. Remove the **Visible** binding and change **Fill colour** to \`item.id == current ? "#ffd54f" : "#ffffff"\`: the step you are on is yellow. Set its **Role** back to **None (plain shape)**, and bind **Current (true, or page, step, location)** to \`item.id == current ? "step" : false\`.
 
 Now the panel that walks the learner through it, to the right of the chart:

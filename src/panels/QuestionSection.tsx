@@ -10,6 +10,7 @@ import {
   MAX_PAIRS,
   QUESTION_KINDS,
   americanForms,
+  blankWord,
   isMultiple,
   newQuestion,
   questionProblems,
@@ -279,6 +280,16 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
                 rows={2}
                 onChange={(v) => setBlank(i, { answers: v.split('\n') }, `blank-answers-${i}`)}
               />
+              <TextField value={b.feedback ?? ''} placeholder="Feedback if wrong (optional)" title="Said after the Wrong feedback when this blank is wrong" onChange={(v) => setBlank(i, { feedback: v || undefined }, `blank-fb-${i}`)} />
+              {q.reveal && q.answerBy !== 'drag' && b.answers.some((x) => /^\/.+\/[a-z]*$/.test(x.trim())) && (
+                <TextField
+                  label="Shown as"
+                  title="What showing the right answer puts in this blank. Left empty it shows the first accepted answer that isn't a pattern"
+                  value={b.shownAs ?? ''}
+                  placeholder={blankWord(b) || 'Needed: the answers are all patterns'}
+                  onChange={(v) => setBlank(i, { shownAs: v || undefined }, `blank-shown-${i}`)}
+                />
+              )}
               <Row>
                 <CheckField label="Match case" value={!!b.caseSensitive} onChange={(v) => setBlank(i, { caseSensitive: v || undefined })} />
                 {!b.spelling && <NumberField label="± Tolerance" title="How far off a number answer may be" value={b.tolerance ?? 0} min={0} step={0.1} onChange={(v) => setBlank(i, { tolerance: v > 0 ? v : undefined }, `blank-tol-${i}`)} />}

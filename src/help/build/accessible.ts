@@ -76,7 +76,7 @@ Three findings are about **Info**. A plain shape can be clicked with a mouse, bu
 
 1. Click **Only works with a mouse or touch**. **Info** is selected.
 2. In its **Accessibility** section, set **Role** to **Button**. Enter and Space now click it.
-3. Set **Tab stop** to **Always**. (The line under it already says it is reachable with Tab, but the checker only counts a shape as keyboard-ready when this says **Always**.)
+3. Leave **Tab stop** on **Automatic**. A Button role is reachable with Tab, the line under it says so, and the checker counts it.
 4. Type \`Show a fact about Mars\` in **Text alternative**. That is its name: say what it does, not what it looks like.
 5. In the **Layer** section, set **W** and **H** to 32. Small targets are hard to hit for anyone with a shaky hand or a big thumb, and 24 by 24 is the least the guidelines ask for.
 

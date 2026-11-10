@@ -92,7 +92,7 @@ export function ConditionField({
   }, [variables, project?.dataSources, names]);
   const withCurrent = (current: string): PickerOption[] => (current && !options.some((o) => o.value === current) ? [{ value: current, label: current }, ...options] : options);
 
-  const status = useFormulaStatus(value, names, ctx.self);
+  const status = useFormulaStatus(value, names, ctx.self, false, ctx.values);
 
   if (mode === 'text') {
     return (

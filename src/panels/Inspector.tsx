@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { matches } from '../lib/keymap';
 import { PropRow, PropSearchProvider, PropSearchStore } from '../lib/prop-search';
 import { PropSearchBox } from './PropSearchBox';
@@ -63,7 +63,8 @@ import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { getArtboard, isIdentifier, locate } from '../store/doc';
 import { ColourwayRow } from './ColourwayRow';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, TrackField, UnitField } from '../components/ui';
-import { ExprField } from '../components/ExprField';
+import { ExprField, ExprLocals } from '../components/ExprField';
+import { repeatLocals } from '../lib/repeat-locals';
 import { openBehaviours } from '../components/BehaviourDialog';
 import { revealAdded } from '../lib/graph-reveal';
 import { flowSentence, flowsForLayer } from '../lib/flow-describe';
@@ -152,6 +153,9 @@ export function Inspector() {
     store.setQuery(q.trim());
   };
   const ab = getArtboard(s.project, s.activeArtboardId);
+  //A layer in a repeater's template: its formulas know item and index, with the first copy's values
+  const one = s.selection.length === 1 ? s.selection[0] : '';
+  const repeated = useMemo(() => (ab && one ? repeatLocals(s.project, ab, one) : null), [s.project, ab, one]);
   if (!ab) return <aside className="inspector" />;
   const nodes = s.selection.map((id) => locate(ab, id)?.node).filter(Boolean) as SceneNode[];
   const pickedAbs = pickedArtboardIds(s);
@@ -177,7 +181,11 @@ export function Inspector() {
         <PropSearchBox store={store} query={query} setQuery={setQuery} inputRef={box} />
         {s.recording && s.timelineShown && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
         <SectionOrderScope.Provider value={orderScope}>
-          {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : (
+          {nodes.length ? (
+            <ExprLocals.Provider value={repeated ?? {}}>
+              <NodeInspector nodes={nodes} ab={ab} project={s.project} />
+            </ExprLocals.Provider>
+          ) : (
             // several artboards selected: what applies to all of them, instead of the active one's own settings
             pickedAbs.length > 1 ? <ArtboardsSelection ids={pickedAbs} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />
           )}

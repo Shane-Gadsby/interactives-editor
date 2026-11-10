@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useContext, useState } from 'react';
 import { PropRow } from '../lib/prop-search';
 import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, layerOwnProps, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { findArtboardOf, isIdentifier } from '../store/doc';
@@ -84,11 +84,13 @@ export function bindableProps(node: SceneNode, project: Project): { prop: string
  * kept equal, whichever changed.
  */
 export function BindingsSection({ node, project, set }: { node: SceneNode; project: Project; set: (patch: Record<string, unknown>, coalesce?: string) => void }) {
+  //item and index from the Inspector when the layer is in a repeater, with self on top
+  const outer = useContext(ExprLocals);
   const bindings = node.bindings ?? {};
   const converters = node.converters ?? {};
   const modes = node.bindingModes ?? {};
   // data, enums, artboard, layer() and self, so a formula that reads them works out in the grey line the way it will play
-  const base = { ...previewScope(project, findArtboardOf(project, node.id)), self: layerScope(node) };
+  const base = { ...previewScope(project, findArtboardOf(project, node.id)), ...outer.values, self: layerScope(node) };
   const entries = Object.entries(bindings);
   const update = (next: Record<string, string>, conv: Record<string, Converter[]> = converters, m: Record<string, BindingMode> = modes) => {
     const keep = Object.fromEntries(Object.entries(conv).filter(([k, list]) => k in next && list.length && (m[k] ?? 'in') === 'in'));
@@ -125,7 +127,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
       {entries.length === 0 && (
         <SectionBlurb text="Nothing is bound yet. A binding ties a property to a variable: in, out or both ways." name="Data bindings" help={['bindings', 'which-way-in-out-or-both']} />
       )}
-      <ExprLocals.Provider value={{ self: node }}>
+      <ExprLocals.Provider value={{ ...outer, self: node }}>
       {entries.map(([p, expr], i) => (
         <Fragment key={p}>
           {i > 0 && <hr className="item-sep" />}

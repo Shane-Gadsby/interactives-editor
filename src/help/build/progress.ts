@@ -58,7 +58,7 @@ A binding's opacity runs from 0 to 1, so the badge shows faintly until *Planning
 
 7. Copy the group twice (<kbd>Ctrl</kbd>+<kbd>D</kbd>) and move the copies along. Make them **Reader badge** (\`R\`, \`Reader\`, \`"Reading"\` in its binding) and **Writer badge** (\`W\`, \`Writer\`, \`"Writing"\`).
 
-> Why rectangles and not the **Progress bar** tool? A master only draws shapes, paths, text, pictures, groups and frames, and a **Progress bar** layer is left out of it. On an ordinary page, use the **Progress bar** tool: see [Progress bars](progress-bars).
+> The bar here is two rectangles so you can see a binding set a width. A **Progress bar** layer works on a master too, and gives a screen reader its value: see [Progress bars](progress-bars).
 
 ## 4. Make it the master of every page
 

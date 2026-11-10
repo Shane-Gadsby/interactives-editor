@@ -18,7 +18,7 @@ function build(): Project {
   const master = page(p, 'Slide master');
   master.children.push(
     createNode('rect', { name: 'Accent bar', x: 0, y: 0, width: 800, height: 12, fill: solid(C.navy) }),
-    text('Slide title', '{slideTitle}', 40, 36, 720, { fontSize: 30, fontWeight: 700 }),
+    text('Slide title', '{slideTitle}', 40, 36, 720, { fontSize: 30, fontWeight: 700, role: 'heading', headingLevel: 1 } as never),
     text('Footer', 'Study skills', 40, 574, 300, { fontSize: 13, color: C.muted }),
   );
   markMaster(p, master.id, true);

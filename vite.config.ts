@@ -1,10 +1,11 @@
-import { defineConfig } from 'vite';
+import { defineConfig, normalizePath } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
-const playerDir = fileURLToPath(new URL('../interactives-player', import.meta.url));
+//Forward slashes on Windows too: alias replacements with backslashes lose the ?raw on the player bundle under npm run dev
+const playerDir = normalizePath(fileURLToPath(new URL('../interactives-player', import.meta.url)));
 
 // The version (package.json) and build id (the editor and player commits it was built from), shown in Preferences and help
 const version = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version as string;

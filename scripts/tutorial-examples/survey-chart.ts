@@ -38,7 +38,7 @@ function build(): Project {
   //The answer the dropdown holds, and the shared source that counts everyone's
   const choice = { id: uid('v'), name: 'choice', type: 'string' as const, initial: '' };
   p.variables.push(choice);
-  const ds = { id: uid('ds'), name: 'responses', kind: 'json' as const, source: 'shared' as const, shared: cleanSharedSettings({ perPerson: 1, refresh: 5, sample: SAMPLE }) };
+  const ds = { id: uid('ds'), name: 'responses', kind: 'json' as const, source: 'shared' as const, shared: cleanSharedSettings({ perPerson: 1, refresh: 5, sample: SAMPLE, options: OPTIONS }) };
   p.dataSources.push(ds);
 
   // ---- Home: what it is, and that votes are anonymous
