@@ -2,6 +2,7 @@
 //swapped for FakeDb. `app.listen` is captured instead of binding port 3048, then the app is served on a random port
 //so tests can talk to it with fetch. Nothing here needs a database, a session manager or haproxy.
 import http from 'node:http';
+import { EventEmitter } from 'node:events';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -19,6 +20,8 @@ const req = createRequire(import.meta.url);
 export interface User {
   username: string;
   fullName?: string;
+  /** What a room shows for the person when it goes by first names. */
+  firstName?: string;
   power?: boolean;
   /** The course the session is launched from (activity.courseLabel). */
   course?: string;
@@ -50,7 +53,7 @@ export interface Stream {
   close(): void;
 }
 
-const sessionHeader = (u: User | null | undefined) => (u ? JSON.stringify({ user: { username: u.username, fullName: u.fullName ?? u.username, userID: 1 }, access: { power: !!u.power }, activity: u.course ? { courseLabel: u.course, courseCode: u.course.split('_')[0], lmsURL: 'https://lms.example' } : {} }) : undefined);
+export const sessionHeader = (u: User | null | undefined) => (u ? JSON.stringify({ user: { username: u.username, fullName: u.fullName ?? u.username, ...(u.firstName ? { firstName: u.firstName } : {}), userID: 1 }, access: { power: !!u.power }, activity: u.course ? { courseLabel: u.course, courseCode: u.course.split('_')[0], lmsURL: 'https://lms.example' } : {} }) : undefined);
 
 export async function startServer(): Promise<Harness> {
   const storage = fs.mkdtempSync(path.join(os.tmpdir(), 'ix-storage-'));
@@ -61,6 +64,8 @@ export async function startServer(): Promise<Harness> {
   const realExpress = req('express');
   let captured: any = null;
   let listened: () => void = () => {};
+  // app.listen's return value: the server code hangs its 'upgrade' listener (rooms, a WebSocket) on it, and the real server below hands its upgrades on
+  const fakeServer = new EventEmitter();
   const listening = new Promise<void>((r) => (listened = r));
 
   const wrapped: any = function (...args: unknown[]) {
@@ -69,7 +74,7 @@ export async function startServer(): Promise<Harness> {
       captured = app;
       cb?.();
       listened();
-      return {};
+      return fakeServer;
     };
     return app;
   };
@@ -83,7 +88,10 @@ export async function startServer(): Promise<Harness> {
     '../suite-libs/session-check': (options: { tool?: string } = {}) => (rq: any, _rs: any, next: () => void) => {
       const h = rq.get('x-test-session');
       const only = rq.get('x-test-tool');
-      rq.sessionData = h && !(only && options.tool && options.tool !== only) ? JSON.parse(h) : null;
+      // a WebSocket hello carries the session in the body of its first message, where the stand-in request puts it in x-session-id
+      const sid = rq.get('x-session-id');
+      const raw = h || (typeof sid === 'string' && sid.startsWith('{') ? sid : undefined);
+      rq.sessionData = raw && !(only && options.tool && options.tool !== only) ? JSON.parse(raw) : null;
       next();
     },
     '../suite-libs/cache-headers': {
@@ -117,6 +125,7 @@ export async function startServer(): Promise<Harness> {
   }
 
   const server = http.createServer(captured);
+  server.on('upgrade', (...args) => fakeServer.emit('upgrade', ...args));
   // fetch reuses kept-alive sockets, and with Node's 5 s idle timeout a busy full run (the Windows box) reused one just as the
   // server closed it: ECONNRESET. Close() still ends them all
   server.keepAliveTimeout = 120_000;
