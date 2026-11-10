@@ -309,6 +309,101 @@
 		}
 	},
 	{
+		"key": "tut-accordion",
+		"title": "Accordion from data",
+		"description": "Four sections drawn by one repeated section over a list, each opening while the rest move down, one open at a time: the Accordion tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"accordion",
+			"repeater",
+			"auto layout",
+			"keyboard friendly"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-carousel",
+		"title": "Image slider (carousel)",
+		"description": "Four slides drawn from a list by one number, with Previous, Next, a dot for each slide, the arrow keys and an autoplay that pauses: the carousel tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"carousel",
+			"slider",
+			"timer",
+			"keyboard friendly"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-compare",
+		"title": "Before and after compare",
+		"description": "Two stacked pictures with a divider handle you drag, or move with the keyboard, to show more of one or the other: the Before and after tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"compare",
+			"drag",
+			"binding",
+			"keyboard friendly"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-diagram",
+		"title": "Mind map and flowchart from data",
+		"description": "A mind map whose branches fold on a click, and a flowchart you follow one answer at a time, each drawn from lists by one repeated box and one repeated line: the diagrams tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"diagram",
+			"mind map",
+			"flowchart",
+			"connectors"
+		],
+		"artboards": 2,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-flipcards",
+		"title": "Flip cards from a list",
+		"description": "Six term and meaning cards drawn by one repeated card over a list, each turned over by a click or Enter: the Flip cards tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"cards",
+			"repeater",
+			"list",
+			"keyboard friendly"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
 		"key": "tut-mcq",
 		"title": "Multiple choice question",
 		"description": "One multiple choice question with two tries, a hint, feedback for each wrong answer and a result reported when it finishes: the Multiple choice tutorial's project.",
@@ -318,6 +413,44 @@
 			"question",
 			"quiz",
 			"score"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-presentation",
+		"title": "Course presentation",
+		"description": "Four slides on one page master with a title slot, a check your understanding question, and Back, Next and the page number added by Page navigation with a slide transition: the presentation tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"slides",
+			"page master",
+			"navigation",
+			"question"
+		],
+		"artboards": 5,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-reveal",
+		"title": "Click to reveal: image hotspots",
+		"description": "A picture with three numbered points that each open a dialog, closed by a button or Esc, and turn green once visited: the Click to reveal tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"reveal",
+			"hotspots",
+			"dialog",
+			"keyboard friendly"
 		],
 		"artboards": 1,
 		"preview": {
