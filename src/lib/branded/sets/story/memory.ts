@@ -64,8 +64,13 @@ function build(colourway: Colourway) {
     stroke: stroke(L.primary, 3),
     bindings: {
       ariaLabel: '"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text + (item.state == "matched" ? ", matched" : ""))',
-      'fill.color': `item.state == "down" ? "${L.button}" : item.state == "matched" ? "${L.successSurface}" : "${L.background}"`,
-      'stroke.paint.color': `item.state == "matched" ? "${L.success}" : item.state == "up" ? "${L.primary}" : "${L.primary}"`,
+      'fill.color': 'item.state',
+      'stroke.paint.color': 'item.state',
+    },
+    //By value on the card's state: the Inspector shows each as a small table
+    converters: {
+      'fill.color': [{ type: 'map', map: { down: L.button, matched: L.successSurface }, fallback: L.background }],
+      'stroke.paint.color': [{ type: 'map', map: { matched: L.success }, fallback: L.primary }],
     },
     children: [back, face],
   });

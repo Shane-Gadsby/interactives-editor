@@ -2720,6 +2720,12 @@ A **group** is a labelled frame around nodes that belong together ("Score", "Int
 - Double-click the title to rename it (or **Rename…** in its right-click menu). **Colour** gives it one of a few tints.
 - <kbd>Del</kbd> on a group with nodes inside asks: **Just the group** (the frame goes, the nodes stay where they are) or **Group and N nodes** (everything goes, in one undo step). An empty group just goes. Its right-click menu has **Ungroup (keep the nodes)** and **Delete group and N nodes** too, and **Copy** and **Duplicate** for the group with its nodes.
 
+## Question blocks
+Each question you add with the question kit makes a handful of nodes in the graph (reset when the page starts, choose an option, check, hint and so on). So your own flows are easy to find, the graph shows them as **one block per question**, named after the question, with how many nodes it holds. Click the block (or press <kbd>Enter</kbd> on it) to open it and see the nodes; the small **Fold** tab above them folds them back. A connection from one of the question's nodes to something of yours is drawn to the block, so it is still clear where your flow starts.
+- The nodes are ordinary ones. Opening shows them exactly as they were, and a node you pick from somewhere else (an error, the sentences) opens its question for you.
+- The button under the zoom buttons opens every block, or folds them all again.
+- Folded nodes are not selected by *Select all*, so a Delete never reaches nodes you can't see. Which blocks are open is only how the graph is drawn: it is not saved with the project, and everything starts folded.
+
 ## Behaviours: "When this is clicked…"
 The quick way to make a layer do something, with no graph to draw. Select a layer and, in the Inspector's **Interactions** section, press **+ When clicked…** (or **+ When hovered…**), or right-click it and choose **Add interaction**, then **When clicked…**.
 
@@ -2910,9 +2916,15 @@ Every layer is yours: recolour it, change the font, move things around, swap a r
 
 The **Restyle a part** buttons at the bottom of the Question section select a part for you. Selecting any part shows a note saying it belongs to the question.
 
+## Looks
+
+The **Looks** part of the Question section sets how an item looks when it is **Right**, **Wrong**, **Missed** (the right answer, shown when it was left out) and **Picked** (chosen, before the answer is checked, for choice questions). Open one to change its **Fill**, **Border** and **Text** colour, from the picker or a [theme token](themes). Every option, item, chip and blank the kit made follows, so changing the green for Right is one change, not one per layer. **Back to the starter looks** puts them back.
+
+Under the surface each coloured layer has an ordinary [binding](bindings) on its fill, border or text colour, set **By value** on the item's state, with the layer's own colour as the *otherwise*. You can see and edit it in the Inspector like any other. A colour you change on one layer by hand stays when you change the looks later, and a layer you gave a formula of your own is left alone. Hotspot questions keep their own area colours, and questions made before Looks existed keep the formulas they were made with.
+
 ## How a question behaves
 
-The behaviour is a handful of nodes in the **Interactions** tab, each a row of an event and what it runs. *When the page is shown* runs **Reset question**. A click on an option runs **Choose option**. A click on Check answer runs **Check answer**. Add your own nodes after them.
+The behaviour is a handful of nodes in the **Interactions** tab, each a row of an event and what it runs. *When the page is shown* runs **Reset question**. A click on an option runs **Choose option**. A click on Check answer runs **Check answer**. Add your own nodes after them. The graph folds these into one block per question so your own nodes stand out: click the block to open it (see [Question blocks](interactions#question-blocks)).
 
 **Check answer** has three outputs: *right*, *wrong* and *finished* (once the question is locked, because it is right or out of tries). So "when it is right, play the confetti animation" is one wire.
 
@@ -3723,8 +3735,9 @@ In the **Data bindings** section of the Inspector, press **+ Add binding** (or t
 Each binding then says where its value comes from:
 - **Variable**: pick a variable from the list (search it by name), or **+ New variable…** at the bottom of the list to make one. The property takes that variable's value as it is.
 - **Formula**: work the value out from variables, for example \`lives > 0\` for *Visible*, or \`progress * 3\` for *Width*. As you type it suggests your variables, \`context\`, \`self\` and the helpers (see [Expressions](expressions#suggestions-as-you-type)).
+- **By value**: a small table for "when this is that, the property is this". Pick what it depends on (a variable, or inside a [repeater](repeaters) a field of the item such as \`item.state\`, or **Write a formula…** for a condition), then give the result for each value it can have, using the property's own box: a colour picker for a colour, a number box for a number. A choice variable or a true/false one gets its lines for you; for anything else press **+ Add a value** and type the value. **Otherwise** is used for any value with no line of its own (leave it as *keeps the value as it is* to change nothing). It is the *Look up* converter underneath, so a binding made by hand that way opens as the table too.
 
-Under it, **+ Convert…** changes the value on its way, and the grey line at the bottom works the whole thing through with every variable at its starting value: *value2 is 1 → Look up: no line for 1, so it stays 1 → Opacity is set to 1*. If a binding doesn't do what you expect, that line shows where it goes another way. Bindings are separated by a short rule; the bin removes one.
+Under the Variable and Formula views, **+ Convert…** changes the value on its way, and the grey line at the bottom works the whole thing through with every variable at its starting value: *value2 is 1 → Look up: no line for 1, so it stays 1 → Opacity is set to 1*. If a binding doesn't do what you expect, that line shows where it goes another way. Bindings are separated by a short rule; the bin removes one.
 
 ![The Data bindings section: a binding on the fill colour, and the + Convert… menu.](help/bindings-section.png)
 
@@ -3764,14 +3777,14 @@ Under a binding, the **+ Convert…** menu changes its value before it is set. T
 | Round | Round, floor or ceil to some decimals |
 | Invert (not) | true/false flipped (a number becomes 1 - x) |
 | Remap range | One range onto another, optionally kept inside it: 0-1 to 0-100 |
-| Look up | A value to anything else. Bound to a **choice** variable, it lists every option for you to fill in. *Otherwise* is used for values not listed |
+| Look up | A value to anything else. Bound to a **choice** variable, it lists every option for you to fill in. *Otherwise* is used for values not listed. When it is the only converter, the binding shows as the **By value** table |
 | To number / text / true/false | Change the type |
 | Seconds to m:ss | A number of seconds as a clock, \`95\` becomes \`1:35\` |
 | Expression | Any [expression](expressions), with \`value\` as the incoming value |
 
 Anything a converter does can also be written straight into the expression with the helpers (\`fmt\`, \`remap\`, \`lookup\`…), which is what to use in text \`{slots}\`.
 
-Choices and lists work with bindings like any other value: bind a fill colour to a choice through a *Look up* converter, a text layer to \`people.length + " people"\`, or a [repeater](repeaters) to a list variable. Importing a Rive file turns its data bindings on layers into bindings with converters, and its view models into shared variables (see [Importing](import)).`,
+Choices and lists work with bindings like any other value: bind a fill colour to a choice with **By value**, a text layer to \`people.length + " people"\`, or a [repeater](repeaters) to a list variable. Importing a Rive file turns its data bindings on layers into bindings with converters, and its view models into shared variables (see [Importing](import)).`,
   },
   {
     id: 'scripts',

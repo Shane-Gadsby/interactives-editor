@@ -62,7 +62,7 @@ It makes two face-down cards from every pair, both with the pair's number, and s
 
 ![Cards selected: on the canvas twelve gold cards in three rows of four, and its Repeat (list) section with Items cards, currently 12 items, Layout Grid, Gap 12 and Cols 4.](help/tutorial-memory-grid.png)
 
-5. Still on **Card**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **Formula** and type \`item.state == "down" ? "#f6c344" : item.state == "matched" ? "#bfe5c4" : "#ffffff"\`. Down cards are gold, matched ones green, turned ones white.
+5. Still on **Card**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **By value** and pick \`item.state\` from the list (it is the field of the item that says *down*, *up* or *matched*). Press **+ Add a value** twice: when it is \`down\` the fill is gold \`#f6c344\`, when it is \`matched\` it is green \`#bfe5c4\`. Press **Choose one** beside **Otherwise** and pick white: that is for a card turned up.
 6. Add one more binding: **Text alternative**, **Formula**, \`"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text)\`, so a screen reader hears more than a question mark.
 
 The line under each binding works it out for the first card, from the first item of the deal.

@@ -1,4 +1,4 @@
-/*! built from the player's marking sources 81c96cebf25ef919b04a */
+/*! built from the player's marking sources 5434f9e8060c9e589f85 */
 const MAX_PATTERN = 300;
 const MAX_UNBOUNDED = 3;
 const MAX_WORK = 65536;
@@ -1211,6 +1211,7 @@ const QUESTION_KINDS = [
   { value: "categorise", label: "Categorise (drag into groups)", hint: "Drag each item into the group it belongs to" },
   { value: "hotspot", label: "Hotspot (click the right place)", hint: "Click the right place on a picture" }
 ];
+const LOOK_STATES = ["right", "wrong", "missed", "picked"];
 const MAX_OPTIONS = 30;
 const MAX_BLANKS = 8;
 const MAX_PAIRS = 8;
@@ -1397,6 +1398,7 @@ function normaliseQuestion(raw) {
     ...raw.numberKeys === true ? { numberKeys: true } : {},
     ...raw.keep === true ? { keep: true } : {},
     ...raw.hideReset === true ? { hideReset: true } : {},
+    ...cleanLooks(raw.looks) ? { looks: cleanLooks(raw.looks) } : {},
     ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
@@ -1408,6 +1410,18 @@ function normaliseQuestion(raw) {
     ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}
   };
 }
+const cleanLooks = (v) => {
+  if (!isObj(v)) return void 0;
+  const out = {};
+  for (const state of LOOK_STATES) {
+    const l = v[state];
+    if (!isObj(l)) continue;
+    const look = {};
+    for (const slot of ["fill", "line", "text"]) if (typeof l[slot] === "string" && l[slot].length <= 200) look[slot] = l[slot];
+    if (Object.keys(look).length) out[state] = look;
+  }
+  return Object.keys(out).length ? out : void 0;
+};
 function shuffled(list, rng, fixed = () => false) {
   const out = list.slice();
   const free = out.map((_x, i) => i).filter((i) => !fixed(out[i]));

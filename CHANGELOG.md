@@ -2,6 +2,12 @@
 
 ## Unreleased: Symposium 3
 
+- **Counting and adding up lists without code**: formulas can count and total lists without arrow functions: \`count(list, "state", "done")\`, \`where(...)\`, \`positions(...)\`, \`sum(list, "price")\` and \`pluck(list, "name")\`, with comparisons too (\`count(products, "price", ">", 5)\`). Change a value or counter has a new choice, Change list items where a field is a value, that changes every matching item in one step. The memory game uses both now.
+- **Insert value**: text, button labels and connector labels have an Insert value button. Pick a variable, a data field, the learner's name, the page number or, inside a repeat, one of the item's fields, and it puts the {...} in at the cursor.
+- **Pick a calculation**: under value formulas, build a sum, percentage, count, total, larger or smaller, rounded number, one-thing-or-another or joined text from pickers. It writes the formula only when you press Use this calculation, and leaves formulas it doesn't recognise alone.
+- **By value**: a binding can be set By value, a small table of "when this is that, the property is this", with a colour picker for colours and an Otherwise line. It works on variables, on an item's fields inside a repeater, and on conditions.
+- **Question looks**: questions have Looks for Right, Wrong, Missed and Picked (fill, border, text). Change the green for Right once and every option follows. Existing questions keep working as they were.
+- **Question blocks in the graph**: in the Interactions graph each question's own nodes fold into one block you can open, so your own flows stand out.
 - **See what a binding sets**: a field that a data binding sets has a small link mark after its label and a dashed box, so you can see why a value you type doesn't stick.
 - **Master layers on the canvas**: with a page selected, the layers it gets from its page master are outlined and tagged with the master's name.
 - **Timeline clashes**: the list of timelines warns when two timelines animate the same property of the same layer, and says which one wins if they play together.

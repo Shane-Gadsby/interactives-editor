@@ -520,7 +520,7 @@ const SPECS = [
     label: "Set variable",
     category: "action",
     summary: "Sets, adds to, toggles, resets or changes the list of a variable.",
-    details: "A live variable (worked out from its formula) cannot be set.",
+    details: "Change list items where a field is a value changes every item that matches in one step. A live variable (worked out from its formula) cannot be set.",
     group: "Variables",
     outputs: OUT,
     hasInput: true,
@@ -540,7 +540,8 @@ const SPECS = [
           { value: "reset", label: "Back to its starting value" },
           { value: "toggleItem", label: "Add to list, or take out if there (value)" },
           { value: "removeValue", label: "Remove from list (value)" },
-          { value: "setItem", label: "Change one list item" }
+          { value: "setItem", label: "Change one list item" },
+          { value: "changeWhere", label: "Change list items where a field is a value" }
         ],
         default: "set"
       },
@@ -554,11 +555,28 @@ const SPECS = [
         help: "Which item to change (0 is the first). Left empty it is event.index, the item the event came from (a repeater copy that was clicked, a drag that landed on one)."
       },
       {
+        key: "whereField",
+        label: "Items where this field",
+        type: "text",
+        default: "",
+        showIf: { key: "op", values: ["changeWhere"] },
+        help: "The field to look at in each item, like state. Dots reach inside (owner.name). Empty looks at the item itself (for a list of words or numbers). With this and the next box both empty, every item changes."
+      },
+      {
+        key: "whereValue",
+        label: "Is",
+        type: "expr",
+        default: "",
+        placeholder: '"up"',
+        showIf: { key: "op", values: ["changeWhere"] },
+        help: 'The value it has to be, like "up" (words go in quotes) or 3. Every item that matches is changed.'
+      },
+      {
         key: "field",
         label: "Field",
         type: "text",
         default: "",
-        showIf: { key: "op", values: ["setItem"] },
+        showIf: { key: "op", values: ["setItem", "changeWhere"] },
         help: "Optional. Change only this field of the item and keep the rest (for items that are objects). Empty replaces the whole item."
       },
       {
@@ -566,8 +584,8 @@ const SPECS = [
         label: "Value",
         type: "expr",
         default: "0",
-        showIf: { key: "op", values: ["set", "add", "push", "remove", "toggleItem", "removeValue", "setItem"] },
-        help: 'Expression, e.g. 1, "hi", score * 2. For a list: the item to append ({name: "Ann"}), the position to remove (0 is the first), the value to add or take out, or what to put in the item (item and index are available: item.count + 1).'
+        showIf: { key: "op", values: ["set", "add", "push", "remove", "toggleItem", "removeValue", "setItem", "changeWhere"] },
+        help: 'Expression, e.g. 1, "hi", score * 2. For a list: the item to append ({name: "Ann"}), the position to remove (0 is the first), the value to add or take out, or what to put in the item or items (item and index are available: item.count + 1).'
       },
       {
         key: "over",
@@ -3268,6 +3286,7 @@ const QUESTION_KINDS = [
   { value: "categorise", label: "Categorise (drag into groups)", hint: "Drag each item into the group it belongs to" },
   { value: "hotspot", label: "Hotspot (click the right place)", hint: "Click the right place on a picture" }
 ];
+const LOOK_STATES = ["right", "wrong", "missed", "picked"];
 const MAX_OPTIONS = 30;
 const MAX_BLANKS = 8;
 const MAX_PAIRS = 8;
@@ -3453,6 +3472,7 @@ function normaliseQuestion(raw) {
     ...raw.numberKeys === true ? { numberKeys: true } : {},
     ...raw.keep === true ? { keep: true } : {},
     ...raw.hideReset === true ? { hideReset: true } : {},
+    ...cleanLooks(raw.looks) ? { looks: cleanLooks(raw.looks) } : {},
     ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
@@ -3464,6 +3484,18 @@ function normaliseQuestion(raw) {
     ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}
   };
 }
+const cleanLooks = (v) => {
+  if (!isObj$5(v)) return void 0;
+  const out = {};
+  for (const state of LOOK_STATES) {
+    const l = v[state];
+    if (!isObj$5(l)) continue;
+    const look = {};
+    for (const slot of ["fill", "line", "text"]) if (typeof l[slot] === "string" && l[slot].length <= 200) look[slot] = l[slot];
+    if (Object.keys(look).length) out[state] = look;
+  }
+  return Object.keys(out).length ? out : void 0;
+};
 const isObj$4 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isNum$2 = (v) => typeof v === "number" && Number.isFinite(v);
 function cleanCues(v) {
@@ -5022,9 +5054,9 @@ const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const num$2 = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
 const MAX_ITEMS = 200;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-const asList = (v) => Array.isArray(v) ? v.slice(0, MAX_ITEMS) : [];
+const asList$1 = (v) => Array.isArray(v) ? v.slice(0, MAX_ITEMS) : [];
 function mindMap(nodes, opts2 = {}) {
-  const list = asList(nodes);
+  const list = asList$1(nodes);
   const o = isObj(opts2) ? opts2 : {};
   const W2 = Math.max(100, num$2(o.width, 928));
   const H = Math.max(60, num$2(o.height, 400));
@@ -5241,7 +5273,7 @@ function mindMap(nodes, opts2 = {}) {
 function mindMapNextId(nodes) {
   let top = 0;
   const used = /* @__PURE__ */ new Set();
-  for (const x of asList(nodes)) {
+  for (const x of asList$1(nodes)) {
     if (!isObj(x)) continue;
     const id = String(x.id ?? "");
     used.add(id);
@@ -5253,8 +5285,8 @@ function mindMapNextId(nodes) {
   return `n${k}`;
 }
 function mindMapEdit(nodes, op, at, arg) {
-  const list = asList(nodes).filter(isObj).map((x) => ({ ...x }));
-  const raw = asList(nodes);
+  const list = asList$1(nodes).filter(isObj).map((x) => ({ ...x }));
+  const raw = asList$1(nodes);
   const pos = (k) => {
     const i2 = Math.floor(Number(k));
     if (!Number.isFinite(i2) || i2 < 0 || i2 >= raw.length || !isObj(raw[i2])) return -1;
@@ -5332,7 +5364,7 @@ function mindMapEdit(nodes, op, at, arg) {
   }
 }
 function mindMapOutline(nodes, opts2 = {}) {
-  const list = asList(nodes).filter(isObj);
+  const list = asList$1(nodes).filter(isObj);
   const o = isObj(opts2) ? opts2 : {};
   const field = typeof o.field === "string" && o.field ? o.field : "label";
   const more = typeof o.detail === "string" && o.detail ? o.detail : "";
@@ -5357,7 +5389,7 @@ function mindMapOutline(nodes, opts2 = {}) {
 }
 const escapeXml = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 function mindMapSvg(placed, opts2 = {}) {
-  const list = asList(placed).filter(isObj);
+  const list = asList$1(placed).filter(isObj);
   const o = isObj(opts2) ? opts2 : {};
   const W2 = Math.max(50, num$2(o.width, 928));
   const H = Math.max(50, num$2(o.height, 400));
@@ -5398,13 +5430,13 @@ const kindOf = (s) => {
   return k === "start" || k === "end" || k === "decision" || k === "io" ? k : "process";
 };
 function flowLinks(steps2, links, opts2 = {}) {
-  const st = asList(steps2);
+  const st = asList$1(steps2);
   const horizontal = isObj(opts2) && opts2.direction === "right";
   const ids = /* @__PURE__ */ new Map();
   st.forEach((s, i) => {
     if (isObj(s) && !ids.has(String(s.id ?? ""))) ids.set(String(s.id ?? ""), i);
   });
-  const lk = asList(links).map((l) => isObj(l) ? l : {});
+  const lk = asList$1(links).map((l) => isObj(l) ? l : {});
   const edges = lk.map((l) => ({ a: ids.get(String(l.from ?? "")) ?? -1, b: ids.get(String(l.to ?? "")) ?? -1 }));
   const { back } = flowLayers(st, edges);
   const placed = flowChart(steps2, links, { direction: horizontal ? "right" : "down" });
@@ -5434,8 +5466,8 @@ function flowLinks(steps2, links, opts2 = {}) {
   });
 }
 function flowOutline(steps2, links) {
-  const st = asList(steps2);
-  const lk = asList(links).filter(isObj);
+  const st = asList$1(steps2);
+  const lk = asList$1(links).filter(isObj);
   const idx = /* @__PURE__ */ new Map();
   st.forEach((s, i) => {
     if (isObj(s) && !idx.has(String(s.id ?? ""))) idx.set(String(s.id ?? ""), i);
@@ -5533,7 +5565,7 @@ function spread(want, sep) {
   return out.map((q, i) => q + off[i]);
 }
 function flowChart(steps2, links, opts2 = {}) {
-  const st = asList(steps2);
+  const st = asList$1(steps2);
   const o = isObj(opts2) ? opts2 : {};
   const W2 = Math.max(100, num$2(o.width, 600));
   const H = Math.max(100, num$2(o.height, 440));
@@ -5549,7 +5581,7 @@ function flowChart(steps2, links, opts2 = {}) {
   st.forEach((s, i) => {
     if (isObj(s) && !ids.has(String(s.id ?? ""))) ids.set(String(s.id ?? ""), i);
   });
-  const edges = asList(links).map((l) => {
+  const edges = asList$1(links).map((l) => {
     const x = isObj(l) ? l : {};
     return { a: ids.get(String(x.from ?? "")) ?? -1, b: ids.get(String(x.to ?? "")) ?? -1 };
   });
@@ -5862,9 +5894,9 @@ function layoutCloud(input, width, height, options) {
   const tOf = (w) => top === low ? 0.5 : (w - low) / (top - low);
   const grow = (t2) => scale === "linear" ? t2 : scale === "log" ? Math.log1p(t2 * 9) / Math.log(10) : Math.sqrt(t2);
   const sizes = rows.map((r2) => top === low ? (minSize + maxSize) / 2 : minSize + (maxSize - minSize) * grow(tOf(r2.weight)));
-  const area = (k2) => rows.reduce((sum, r2, i) => {
+  const area = (k2) => rows.reduce((sum2, r2, i) => {
     const b = wordBox(r2.text, Math.max(FLOOR, Math.round(sizes[i] * k2)));
-    return sum + (b.w + gap) * (b.h + gap);
+    return sum2 + (b.w + gap) * (b.h + gap);
   }, 0);
   let k = Math.min(grow1, Math.sqrt(0.5 * W2 * H / Math.max(1, area(1))));
   let spots = [];
@@ -6124,6 +6156,78 @@ const round = (v) => Math.round(v * 10) / 10;
 function monthYear(t2) {
   const m = Math.min(11, Math.max(0, Math.floor((t2 - Math.floor(t2)) * 12 + 1e-9)));
   return `${MONTHS[m]} ${yearText(Math.floor(t2 + 1e-9))}`;
+}
+class ListHelperError extends Error {
+}
+const BLOCKED$1 = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+const OPS = ["==", "!=", ">", ">=", "<", "<=", "contains"];
+function fieldOf(item, field) {
+  if (field === "" || field === void 0 || field === null) return item;
+  let cur = item;
+  for (const key of String(field).split(".")) {
+    if (cur === null || typeof cur !== "object" || BLOCKED$1.has(key) || !Object.prototype.hasOwnProperty.call(cur, key)) return void 0;
+    cur = cur[key];
+  }
+  return cur;
+}
+function compare(a, op, b) {
+  switch (op) {
+    case "==":
+      return a == b;
+    case "!=":
+      return a != b;
+    case ">":
+      return a > b;
+    case ">=":
+      return a >= b;
+    case "<":
+      return a < b;
+    case "<=":
+      return a <= b;
+    case "contains":
+      if (typeof a === "string") return a.toLowerCase().includes(String(b).toLowerCase());
+      return Array.isArray(a) && a.some((x) => x == b);
+    default:
+      throw new ListHelperError(`"${op}" is not a comparison; use one of ${OPS.join(" ")}`);
+  }
+}
+function matcher(rest) {
+  if (rest.length === 0) return null;
+  if (rest.length === 1) return (item) => item == rest[0];
+  if (rest.length === 2) return (item) => fieldOf(item, rest[0]) == rest[1];
+  const op = String(rest[1]);
+  if (!OPS.includes(op)) throw new ListHelperError(`"${op}" is not a comparison; use one of ${OPS.join(" ")}`);
+  return (item) => compare(fieldOf(item, rest[0]), op, rest[2]);
+}
+const asList = (list) => Array.isArray(list) ? list : [];
+function count(list, ...rest) {
+  const l = asList(list);
+  const m = matcher(rest);
+  return m ? l.filter(m).length : l.length;
+}
+function where(list, ...rest) {
+  const l = asList(list);
+  const m = matcher(rest);
+  return m ? l.filter(m) : l.slice();
+}
+function positions(list, ...rest) {
+  const m = matcher(rest);
+  const out = [];
+  asList(list).forEach((item, i) => {
+    if (!m || m(item)) out.push(i);
+  });
+  return out;
+}
+function sum(list, field) {
+  let total = 0;
+  for (const item of asList(list)) {
+    const n = Number(fieldOf(item, field));
+    if (Number.isFinite(n)) total += n;
+  }
+  return total;
+}
+function pluck(list, field) {
+  return asList(list).map((item) => fieldOf(item, field));
 }
 class ExprError extends Error {
 }
@@ -7401,8 +7505,26 @@ const FORMULA_HELPERS = {
   /** Whether a list (or text) has every one of the items, ignoring capitals. */
   includesAll: (list, items) => hasEach(list, items, true),
   /** Whether a list (or text) has at least one of the items, ignoring capitals. */
-  includesAny: (list, items) => hasEach(list, items, false)
+  includesAny: (list, items) => hasEach(list, items, false),
+  /** How many items a list has, or how many match: count(list), count(list, value), count(list, field, value), count(list, field, ">", value). */
+  count: (list, ...rest) => listHelper(() => count(list, ...rest)),
+  /** The items that match, same arguments as count. */
+  where: (list, ...rest) => listHelper(() => where(list, ...rest)),
+  /** The positions (0 is the first) of the items that match, same arguments as count. */
+  positions: (list, ...rest) => listHelper(() => positions(list, ...rest)),
+  /** A list of numbers added up, or one field of each item: sum(list), sum(list, field). */
+  sum: (list, field) => sum(list, field),
+  /** One field of every item as a list: pluck(list, field). */
+  pluck: (list, field) => pluck(list, field)
 };
+function listHelper(run2) {
+  try {
+    return run2();
+  } catch (e) {
+    if (e instanceof ListHelperError) throw new ExprError(e.message);
+    throw e;
+  }
+}
 const cache = /* @__PURE__ */ new Map();
 function compile(src) {
   let hit = cache.get(src);
@@ -7668,41 +7790,41 @@ function renameCodeText(text, from, to) {
   return text.replace(re, (m, viaVars, dot) => viaVars ? `${viaVars}${to}` : dot ? m : to);
 }
 function eachText(p, visit) {
-  const field = (o, k, kind, where) => {
+  const field = (o, k, kind, where2) => {
     const v = o[k];
-    if (typeof v === "string" && v) visit(kind, () => o[k], (s) => o[k] = s, where);
+    if (typeof v === "string" && v) visit(kind, () => o[k], (s) => o[k] = s, where2);
   };
   for (const v of p.variables) field(v, "formula", "expr", `Variable ${v.name}`);
   for (const s of p.scripts) field(s, "code", "code", `Script ${s.name}`);
   for (const ab of p.artboards) {
     const walk2 = (list) => {
       for (const n of list) {
-        const where = `${n.name} on ${ab.name}`;
+        const where2 = `${n.name} on ${ab.name}`;
         const any = n;
-        if (n.type === "draw") field(n, "code", "code", where);
+        if (n.type === "draw") field(n, "code", "code", where2);
         if (n.type === "chart") {
-          field(n, "data", "expr", where);
-          field(n, "prefix", "template", where);
-          field(n, "suffix", "template", where);
+          field(n, "data", "expr", where2);
+          field(n, "prefix", "template", where2);
+          field(n, "suffix", "template", where2);
         }
         if (n.type === "connector") {
-          for (const e of [n.from, n.to]) if (e && typeof e.layer === "object" && e.layer) field(e.layer, "index", "expr", where);
-          field(n, "label", "template", where);
+          for (const e of [n.from, n.to]) if (e && typeof e.layer === "object" && e.layer) field(e.layer, "index", "expr", where2);
+          field(n, "label", "template", where2);
         }
-        if (n.type === "progress") field(n, "valueText", "template", where);
-        if (n.bindings) for (const k of Object.keys(n.bindings)) field(n.bindings, k, "expr", where);
+        if (n.type === "progress") field(n, "valueText", "template", where2);
+        if (n.bindings) for (const k of Object.keys(n.bindings)) field(n.bindings, k, "expr", where2);
         if (n.converters) {
-          for (const list2 of Object.values(n.converters)) for (const c2 of list2 ?? []) if (c2.type === "expr") field(c2, "expr", "expr", where);
+          for (const list2 of Object.values(n.converters)) for (const c2 of list2 ?? []) if (c2.type === "expr") field(c2, "expr", "expr", where2);
         }
-        if (isContainer(n) && n.repeat) field(n.repeat, "items", "expr", where);
-        if (n.type === "text" || n.type === "link") field(n, "text", "template", where);
+        if (isContainer(n) && n.repeat) field(n.repeat, "items", "expr", where2);
+        if (n.type === "text" || n.type === "link") field(n, "text", "template", where2);
         if (n.type === "text") for (const r2 of n.runs ?? []) {
-          field(r2, "text", "template", where);
-          if (r2.link) field(r2.link, "url", "template", where);
+          field(r2, "text", "template", where2);
+          if (r2.link) field(r2.link, "url", "template", where2);
         }
-        if (n.type === "button") field(n, "label", "template", where);
-        if (n.type === "link") field(n, "href", "template", where);
-        if (any.link && typeof any.link === "object") field(any.link, "url", "template", where);
+        if (n.type === "button") field(n, "label", "template", where2);
+        if (n.type === "link") field(n, "href", "template", where2);
+        if (any.link && typeof any.link === "object") field(any.link, "url", "template", where2);
         if (isContainer(n)) walk2(n.children);
       }
     };
@@ -8762,9 +8884,9 @@ function requireReact_development() {
             return children;
           }
           var result2 = [];
-          var count = 0;
+          var count2 = 0;
           mapIntoArray(children, result2, "", "", function(child) {
-            return func.call(context, child, count++);
+            return func.call(context, child, count2++);
           });
           return result2;
         }
@@ -9039,7 +9161,7 @@ function requireReact_development() {
           }
           return false;
         }
-        function memo2(type, compare) {
+        function memo2(type, compare2) {
           {
             if (!isValidElementType(type)) {
               error("memo: The first argument must be a component. Instead received: %s", type === null ? "null" : typeof type);
@@ -9048,7 +9170,7 @@ function requireReact_development() {
           var elementType = {
             $$typeof: REACT_MEMO_TYPE,
             type,
-            compare: compare === void 0 ? null : compare
+            compare: compare2 === void 0 ? null : compare2
           };
           {
             var ownName;
@@ -10227,7 +10349,7 @@ The section now reads: **When clicked: switch lit on or off** and **When clicked
 ## Go further: more than two states
 
 - Make a variable called \`mode\` with **Type** **Choice** and the options \`off, on, broken\`. A choice shows as a dropdown wherever you set it.
-- Bind the bulb's fill through a **Look up** converter (use **+ Convert…** under the binding): it lists every option for you to give a colour.
+- Bind the bulb's fill to \`mode\` and choose **By value** under the binding: it lists every option for you to give a colour.
 - Use a **Check a condition** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **Check a condition** has a **true** and a **false** output.
 - Tick **Remember** (under **Options**) on a variable in the Variables tab to remember its value in the visitor's browser between visits.
 
@@ -12437,8 +12559,8 @@ shuffle(pairs.flatMap((p, i) => [{text: p.a, pair: i, state: "down"}, {text: p.b
 It makes two face-down cards from every pair, both with the pair's number, and shuffles all twelve. \`shuffle(list, seed)\` gives the same order for the same seed, so changing \`seed\` deals a new order and you can always get a deal back to test it.
 
 4. **Counter**, named \`moves\`.
-5. **List**, named \`ups\`. **Worked out**, with \`cards.map((c, i) => c.state == "up" ? i : -1).filter(i => i >= 0)\`, and tick **Keep up to date**. It is the positions of the cards that are face up right now.
-6. **Counter**, named \`matched\`. **Worked out**, with \`cards.filter(c => c.state == "matched").length / 2\`, and tick **Keep up to date**. It is how many pairs are found.
+5. **List**, named \`ups\`. **Worked out**, with \`positions(cards, "state", "up")\`, and tick **Keep up to date**. \`positions(list, field, value)\` gives the places of the items that match, so this is the positions of the cards that are face up right now.
+6. **Counter**, named \`matched\`. **Worked out**, with \`count(cards, "state", "matched") / 2\`, and tick **Keep up to date**. \`count(list, field, value)\` says how many items match, and each pair is two cards, so this is how many pairs are found.
 
 \`ups\` and \`matched\` are never set by hand. They follow \`cards\`, so the game state is all in one list.
 
@@ -12457,7 +12579,7 @@ It makes two face-down cards from every pair, both with the pair's number, and s
 
 ![Cards selected: on the canvas twelve gold cards in three rows of four, and its Repeat (list) section with Items cards, currently 12 items, Layout Grid, Gap 12 and Cols 4.](help/tutorial-memory-grid.png)
 
-5. Still on **Card**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **Formula** and type \`item.state == "down" ? "#f6c344" : item.state == "matched" ? "#bfe5c4" : "#ffffff"\`. Down cards are gold, matched ones green, turned ones white.
+5. Still on **Card**, open **Data bindings** and press **+ Add binding**. Pick **Fill colour**, choose **By value** and pick \`item.state\` from the list (it is the field of the item that says *down*, *up* or *matched*). Press **+ Add a value** twice: when it is \`down\` the fill is gold \`#f6c344\`, when it is \`matched\` it is green \`#bfe5c4\`. Press **Choose one** beside **Otherwise** and pick white: that is for a card turned up.
 6. Add one more binding: **Text alternative**, **Formula**, \`"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text)\`, so a screen reader hears more than a question mark.
 
 The line under each binding works it out for the first card, from the first item of the deal.
@@ -12492,17 +12614,8 @@ Clicks are ignored while two cards are already up, and on a card that is not fac
 1. Drag from that node, find **Check a condition** and set **Condition** to \`ups.length == 2\`. Its **true** output runs when this was the second card up.
 2. Drag from **true**, find **Change a value or counter**: **Variable** **moves**, **Do** **Add to it**, **Value** \`1\`. Two cards turned is one move.
 3. Drag from that node, find **Check a condition** and set **Condition** to \`cards[ups[0]].pair == cards[ups[1]].pair\`: the two cards up belong to the same pair.
-4. From its **true** output, add **Change a value or counter**: **Variable** **cards**, **Do** **Set to**, **Value**:
-
-\`\`\`
-cards.map(c => c.state == "up" ? {...c, state: "matched"} : c)
-\`\`\`
-
-5. From its **false** output, add **Wait** with **Milliseconds** \`1000\`. Then, after the **Wait**, add **Change a value or counter**: **Variable** **cards**, **Do** **Set to**, **Value**:
-
-\`\`\`
-cards.map(c => c.state == "up" ? {...c, state: "down"} : c)
-\`\`\`
+4. From its **true** output, add **Change a value or counter**: **Variable** **cards**, **Do** **Change list items where a field is a value**, **Items where this field** \`state\`, **Is** \`"up"\`, **Field** \`state\`, **Value** \`"matched"\`. Every card that is face up becomes matched in one step.
+5. From its **false** output, add **Wait** with **Milliseconds** \`1000\`. Then, after the **Wait**, add **Change a value or counter** with the same settings, but **Value** \`"down"\`: every card that is face up turns back.
 
 Press **Read as sentences** above the graph to check the whole flow in words.
 
@@ -12538,7 +12651,8 @@ The **Wait** is the timer that turns cards back. For that second both cards are 
 - One **List** variable can hold a whole game's state, with **Worked out** variables that follow it.
 - \`shuffle(list, seed)\` deals the same order for the same seed, and **Put values back to the start** deals again.
 - A repeater shows a list with one layer, and one click flow serves every copy through \`event.index\`.
-- **Change one list item** turns one card; **Only if** and **Wait** make the two-card turn.
+- **Change one list item** turns one card, and **Change list items where a field is a value** changes every card that matches; **Only if** and **Wait** make the two-card turn.
+- \`count\` and \`positions\` read a list without an arrow function: \`count(cards, "state", "matched")\`.
 
 **Next:** [Word search and crossword from a word list](tutorial-wordgames) builds bigger grids from a list. More in [Repeated lists](repeaters), [Variables](variables#lists) and [Expressions](expressions#helpers).`
   }
@@ -13388,7 +13502,7 @@ The **Variables (live)** list on the left shows \`seen1\`, \`seen2\` and \`seen3
 ## Make it yours
 
 - **More points.** Copy a point and a dialog, add a \`seen4\` switch, and wire them the same way.
-- **A progress line.** A text that says \`{[seen1, seen2, seen3].filter(s => s).length} of 3 explored\` counts as the learner goes.
+- **A progress line.** A text that says \`{count([seen1, seen2, seen3], true)} of 3 explored\` counts as the learner goes.
 - **Ready-made.** The **Image hotspots** starter (Templates, **Explore and reveal**) does all of this with one dialog for every point, reading its words from a list. Its points are one frame, so adding a point is copying a layer.
 
 ## What you learned
@@ -14322,7 +14436,7 @@ On the projects page press **New project**. Keep **Blank project**, type **Weekl
 ## 3. The worked out values
 
 1. Add one more **Counter** and call it \`income\`.
-2. In its **Value** column, change **Starts as a value** to **Worked out**. A formula box appears. Type \`hours * pay\` and press <kbd>Enter</kbd>.
+2. In its **Value** column, change **Starts as a value** to **Worked out**. A formula box appears. Type \`hours * pay\` and press <kbd>Enter</kbd>. (Prefer pickers? Press **Pick a calculation** under the box, choose **Multiply two values**, pick \`hours\` and \`pay\` and press **Use this calculation**. It writes the same formula.)
 3. Tick **Keep up to date**. Now \`income\` is worked out again every time \`hours\` or \`pay\` changes, not only at the start. It is read only: nothing can set it by hand.
 4. Add two more the same way:
    - \`spending\`, worked out as \`rent + food\`;
@@ -16708,6 +16822,16 @@ Things to know:
 ## Live values in text
 Anything in braces is an [expression](expressions): \`Score: {score}\`, \`{name.toUpperCase()}\`, \`{items.length} items\`. Write \`{{\` for a literal brace.
 
+You do not have to type the braces. Put the cursor where the value should go and press **Insert value** under the **Text** box. A list opens with a box to search it, and each choice says what it is right now (\`score\`, number, 7). The choices are:
+- **Your variables**, and how many items each list has.
+- **Data**: how many rows a data source has, and the fields of its first row.
+- **The learner and course**: their first name, the course title and code, the study period and year. They show a sample name in the editor and the real one when it plays.
+- **The page**: which page this is and how many there are.
+- **Questions**: the quiz score, total and percent, when the project has questions.
+- **This item of the repeat**, for a layer inside a [repeater](repeaters): the fields of the item (a list of people with \`name\` and \`age\` offers both) and its number.
+
+Pick one with the arrow keys and **Enter**, or click it. It goes in as \`{name}\` at the cursor, over any words you had selected, and the line under the box shows what the whole text says now. The same button is on a button's **Label** and on a connector's label.
+
 To animate a text layer one letter, word or line at a time (typewriter, wave), see [Text modifiers](text-modifiers).`
   },
   {
@@ -18227,6 +18351,12 @@ A **group** is a labelled frame around nodes that belong together ("Score", "Int
 - Double-click the title to rename it (or **Rename…** in its right-click menu). **Colour** gives it one of a few tints.
 - <kbd>Del</kbd> on a group with nodes inside asks: **Just the group** (the frame goes, the nodes stay where they are) or **Group and N nodes** (everything goes, in one undo step). An empty group just goes. Its right-click menu has **Ungroup (keep the nodes)** and **Delete group and N nodes** too, and **Copy** and **Duplicate** for the group with its nodes.
 
+## Question blocks
+Each question you add with the question kit makes a handful of nodes in the graph (reset when the page starts, choose an option, check, hint and so on). So your own flows are easy to find, the graph shows them as **one block per question**, named after the question, with how many nodes it holds. Click the block (or press <kbd>Enter</kbd> on it) to open it and see the nodes; the small **Fold** tab above them folds them back. A connection from one of the question's nodes to something of yours is drawn to the block, so it is still clear where your flow starts.
+- The nodes are ordinary ones. Opening shows them exactly as they were, and a node you pick from somewhere else (an error, the sentences) opens its question for you.
+- The button under the zoom buttons opens every block, or folds them all again.
+- Folded nodes are not selected by *Select all*, so a Delete never reaches nodes you can't see. Which blocks are open is only how the graph is drawn: it is not saved with the project, and everything starts folded.
+
 ## Behaviours: "When this is clicked…"
 The quick way to make a layer do something, with no graph to draw. Select a layer and, in the Inspector's **Interactions** section, press **+ When clicked…** (or **+ When hovered…**), or right-click it and choose **Add interaction**, then **When clicked…**.
 
@@ -18412,9 +18542,15 @@ Every layer is yours: recolour it, change the font, move things around, swap a r
 
 The **Restyle a part** buttons at the bottom of the Question section select a part for you. Selecting any part shows a note saying it belongs to the question.
 
+## Looks
+
+The **Looks** part of the Question section sets how an item looks when it is **Right**, **Wrong**, **Missed** (the right answer, shown when it was left out) and **Picked** (chosen, before the answer is checked, for choice questions). Open one to change its **Fill**, **Border** and **Text** colour, from the picker or a [theme token](themes). Every option, item, chip and blank the kit made follows, so changing the green for Right is one change, not one per layer. **Back to the starter looks** puts them back.
+
+Under the surface each coloured layer has an ordinary [binding](bindings) on its fill, border or text colour, set **By value** on the item's state, with the layer's own colour as the *otherwise*. You can see and edit it in the Inspector like any other. A colour you change on one layer by hand stays when you change the looks later, and a layer you gave a formula of your own is left alone. Hotspot questions keep their own area colours, and questions made before Looks existed keep the formulas they were made with.
+
 ## How a question behaves
 
-The behaviour is a handful of nodes in the **Interactions** tab, each a row of an event and what it runs. *When the page is shown* runs **Reset question**. A click on an option runs **Choose option**. A click on Check answer runs **Check answer**. Add your own nodes after them.
+The behaviour is a handful of nodes in the **Interactions** tab, each a row of an event and what it runs. *When the page is shown* runs **Reset question**. A click on an option runs **Choose option**. A click on Check answer runs **Check answer**. Add your own nodes after them. The graph folds these into one block per question so your own nodes stand out: click the block to open it (see [Question blocks](interactions#question-blocks)).
 
 **Check answer** has three outputs: *right*, *wrong* and *finished* (once the question is locked, because it is right or out of tries). So "when it is right, play the confetti animation" is one wire.
 
@@ -18997,6 +19133,7 @@ Change the list while it runs with **Change a value or counter**. Its **Do** box
 - *Add to the list, or take out if it is there* works as a tick-list: it adds the value, or removes it when it is already in.
 - *Remove from the list (by value)* takes out every item equal to the value. Objects are compared by what they hold.
 - *Change one list item* changes the item at a position you give. Left empty, the position is \`event.index\`, the item the event came from. An optional **Field** changes only that field of an object item. The new value can read \`item\` (what is there now) and \`index\`, for example \`item.count + 1\`. A position that is not in the list changes nothing.
+- *Change list items where a field is a value* changes every item that matches, in one step. Type the field to look at (**Items where this field**, like \`state\`) and the value it has to be (**Is**, like \`"up"\`), then the **Field** to change and its new **Value**. A memory game turns every face-up card to matched with *Items where this field* \`state\`, *Is* \`"up"\`, *Field* \`state\`, *Value* \`"matched"\`. Leave both *where* boxes empty to change every item.
 
 In scripts use \`ix.toggleItem('picked', 'b')\`, \`ix.removeValue('picked', 'b')\` and \`ix.setItem('cards', 2, 'down', 'state')\`, or assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`.
 
@@ -19026,7 +19163,9 @@ Use one for anything you would otherwise paste the same long expression for in s
 - a band: \`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\`;
 - a list filtered by another variable.
 
-\`wordCount\`, \`band\`, \`clock\`, \`shuffle\`, \`randInt\`, \`includesAll\` and \`includesAny\` are formula helpers made for this: see [Expressions](expressions#helpers). To show seconds as \`1:35\`, use \`clock(seconds)\` in a formula, or the **Seconds to m:ss** [converter](bindings#converters) on a binding.
+Press **Pick a calculation** under the formula box to build a sum, a percentage, a count or a total from pickers (see [Expressions](expressions#calculations-without-typing)).
+
+\`wordCount\`, \`band\`, \`clock\`, \`shuffle\`, \`randInt\`, \`includesAll\`, \`includesAny\`, \`count\`, \`where\`, \`positions\`, \`sum\` and \`pluck\` are formula helpers made for this: see [Expressions](expressions#helpers). To show seconds as \`1:35\`, use \`clock(seconds)\` in a formula, or the **Seconds to m:ss** [converter](bindings#converters) on a binding.
 
 - A live variable is **read only**. *Change a value or counter*, scripts, inputs and the page cannot change it (they are told so in the console), and the Usage tab lists a *Change a value or counter* or *Put values back to the start* node that names one under **Broken**. Untick it to set it by hand again.
 - Live variables can read each other, in any order in the list. If they read each other in a circle (or one reads itself) they stay at their starting value and the Variables tab and **Usage** say so.
@@ -19081,7 +19220,7 @@ The bin asks first when the variable is used, naming the places, because they st
     title: "Expressions",
     group: "Interactivity",
     summary: "Short JavaScript formulas in text, bindings and node settings.",
-    keywords: "expression formula javascript template braces condition ternary math",
+    keywords: "expression formula javascript template braces condition ternary math pick calculation picker percentage total count round join sum add",
     body: `An expression is a short formula that works out a value: a total, a piece of text, a yes or no. You write them in text, bindings and node settings, in a safe subset of JavaScript. Your variables and data sources are available by name.
 
 \`\`\`
@@ -19089,7 +19228,7 @@ score + 1
 name.toUpperCase()
 lives > 0 ? "Play again" : "Game over"
 Math.round(progress * 100) + "%"
-products.filter(p => p.inStock).length
+count(products, "inStock", true)
 \`\`\`
 
 ## Where they go
@@ -19126,6 +19265,19 @@ The check uses the same scope as the suggestions, and the values are the project
 ## Conditions without typing
 You don't have to write a yes/no condition as a formula. A field that asks for one (see [Interactions](interactions)) offers pickers instead of a text box: **[value] [is at least] [5]**, with **+ and** and **+ or** for more rows, and **Edit as formula** for the text. The pickers write an ordinary formula, so anything you built with them can be edited by typing, and a formula they cannot show opens as text.
 
+## Calculations without typing
+A formula that works out a number or some text can be picked instead of typed. Under a **Worked out** variable's formula, a **Data bindings** formula and the **Value** of **Change a value or counter**, press **Pick a calculation**. A menu offers plain templates, and each one is filled in with pickers:
+- **Add two values**, **Take one value from another**, **Multiply two values**, **Divide one value by another**: \`score + 1\`.
+- **What percentage one value is of another**: \`total > 0 ? Math.round(score / total * 100) : 0\`. A whole of 0 gives 0 instead of a broken number.
+- **How many items in a list match**: pick the list, then *Every item*, or *Only the items that match* with the field to look at, how to compare and the value, for example \`count(cards, "state", "matched")\`. The field box offers the fields the list's first item has.
+- **The total of a number in each list item**: \`sum(prices, "amount")\`.
+- **The larger of two values**, **The smaller of two values**: \`Math.max(score, 0)\`.
+- **Round a number** to a number of decimal places: \`Math.round(price * 100) / 100\`.
+- **One thing if a condition holds, otherwise another**: choose the condition with the same pickers as an **Only if**, then what it is when true and when not: \`score >= 5 ? "Pass" : "Try again"\`.
+- **Join text and values together**: pieces of text and values, in the order you give them, made into one piece of text. A text piece "Score: " and the value \`score\` give *Score: 7*. Numbers joined this way stay text, so two scores do not add up.
+
+The box under the picker shows the formula it will write and what it works out to now. Nothing changes until you press **Use this calculation**, and **Cancel** leaves the formula as it was. The formula is ordinary text, so you can keep editing it by hand. When the formula already in the box is one of these, the picker opens filled in. When it is anything else (a formula with \`.filter\` in it, say) the picker says so and leaves it alone until you choose a calculation to replace it.
+
 ## Helpers
 Helpers are ready-made functions for common jobs: showing a number as text, mapping one range onto another, counting words, laying out a puzzle or a diagram. These work in every expression:
 
@@ -19151,6 +19303,12 @@ Helpers are ready-made functions for common jobs: showing a number as text, mapp
 | \`clock(seconds)\` | Seconds as \`m:ss\` (\`h:mm:ss\` from an hour): \`clock(95)\` is \`1:35\` |
 | \`shuffle(list, seed)\` | The list in a new order. Give a seed (a number) to get the same order every time |
 | \`randInt(a, b)\` | A whole number from \`a\` to \`b\`, both included. \`randInt(6)\` is 0 to 6 |
+| \`count(list)\`, \`count(list, field, value)\` | How many items a list has, or how many match: \`count(tasks)\`, \`count(tasks, "state", "done")\`. For a list of plain words or numbers leave the field out: \`count(answers, "yes")\` |
+| \`count(list, field, ">", value)\` | The same with a comparison instead of an exact match. The comparisons are \`"=="\`, \`"!="\`, \`">"\`, \`">="\`, \`"<"\`, \`"<="\` and \`"contains"\`: \`count(products, "price", ">", 5)\` |
+| \`where(list, field, value)\` | The items that match, as a list. It takes the same arguments as \`count\`: \`where(products, "inStock", true)\` |
+| \`positions(list, field, value)\` | The positions of the items that match (0 is the first): \`positions(cards, "state", "up")\` |
+| \`sum(list, field)\` | The numbers added up, from one field of each item or (\`sum(scores)\`) a plain list of numbers. Anything that is not a number counts as 0 |
+| \`pluck(list, field)\` | One field of every item as a list: \`pluck(people, "name")\`. A field can reach inside with dots: \`"owner.name"\` |
 | \`includesAll(list, items)\`, \`includesAny(list, items)\` | Whether the list (or text) has every one of the items, or at least one, ignoring capitals: \`includesAny(answer, ["cat", "kitten"])\` |
 | \`enums.name\` | The options of a choice variable |
 | \`instanceInput(layer, name)\` | The current value of a variable inside an [instance](instances) layer (by name or id) |
@@ -19165,7 +19323,7 @@ This is exactly what an expression can contain. Expressions are read by a small 
 - **Operators**: \`+ - * / % **\`, \`== != === !==\`, \`< > <= >=\`, \`&& || ??\`, \`!\`, \`typeof\`, \`in\`, \`a ? b : c\`, bit operators, and \`,\` inside brackets.
 - **Looking inside**: \`a.b\`, \`a[b]\` and \`a?.b\`. Only the values you put there are readable: your variables, data, \`artboard\`, \`self\`, what \`layer()\` gives and \`item\`, \`event\`, \`value\`; \`__proto__\`, \`constructor\` and \`prototype\` never are.
 - **Calls**: the helpers above, \`Math.*\`, \`Number\`, \`String\`, \`Boolean\`, \`parseInt\`, \`parseFloat\`, \`isNaN\`, \`JSON.parse/stringify\`, \`Object.keys/values/entries\`, \`Array.isArray/from\`, \`Date.now()\` and \`new Date(…)\`, and the usual methods of text (\`slice\`, \`split\`, \`replace\`, \`padStart\`, \`toUpperCase\`…), numbers (\`toFixed\`, \`toLocaleString\`…), lists (\`map\`, \`filter\`, \`find\`, \`some\`, \`every\`, \`reduce\`, \`join\`, \`includes\`, \`slice\`, \`sort\`…) and dates.
-- **Arrow functions** for those list methods: \`x => x * 2\`, \`(a, b) => a + b\`. They take plain names and an expression, not a block.
+- **Arrow functions** for those list methods: \`x => x * 2\`, \`(a, b) => a + b\`. They take plain names and an expression, not a block. Most of the time you do not need one: \`count\`, \`where\`, \`sum\` and \`pluck\` cover counting, picking and adding up a list without it.
 
 These don't: assignment (\`=\`, \`++\`), statements, \`function\`, \`this\`, loops, \`window\`, \`document\`, \`fetch\`, \`eval\`, and list methods that change a list in place (\`push\`, \`splice\`; \`sort\` and \`reverse\` give a sorted copy and leave the list alone). A slot that can't be read or fails is left as written in text and gives nothing elsewhere. Very large lists or text, and expressions that run for very long, are cut off.
 
@@ -19203,8 +19361,9 @@ In the **Data bindings** section of the Inspector, press **+ Add binding** (or t
 Each binding then says where its value comes from:
 - **Variable**: pick a variable from the list (search it by name), or **+ New variable…** at the bottom of the list to make one. The property takes that variable's value as it is.
 - **Formula**: work the value out from variables, for example \`lives > 0\` for *Visible*, or \`progress * 3\` for *Width*. As you type it suggests your variables, \`context\`, \`self\` and the helpers (see [Expressions](expressions#suggestions-as-you-type)).
+- **By value**: a small table for "when this is that, the property is this". Pick what it depends on (a variable, or inside a [repeater](repeaters) a field of the item such as \`item.state\`, or **Write a formula…** for a condition), then give the result for each value it can have, using the property's own box: a colour picker for a colour, a number box for a number. A choice variable or a true/false one gets its lines for you; for anything else press **+ Add a value** and type the value. **Otherwise** is used for any value with no line of its own (leave it as *keeps the value as it is* to change nothing). It is the *Look up* converter underneath, so a binding made by hand that way opens as the table too.
 
-Under it, **+ Convert…** changes the value on its way, and the grey line at the bottom works the whole thing through with every variable at its starting value: *value2 is 1 → Look up: no line for 1, so it stays 1 → Opacity is set to 1*. If a binding doesn't do what you expect, that line shows where it goes another way. Bindings are separated by a short rule; the bin removes one.
+Under the Variable and Formula views, **+ Convert…** changes the value on its way, and the grey line at the bottom works the whole thing through with every variable at its starting value: *value2 is 1 → Look up: no line for 1, so it stays 1 → Opacity is set to 1*. If a binding doesn't do what you expect, that line shows where it goes another way. Bindings are separated by a short rule; the bin removes one.
 
 ![The Data bindings section: a binding on the fill colour, and the + Convert… menu.](help/bindings-section.png)
 
@@ -19244,14 +19403,14 @@ Under a binding, the **+ Convert…** menu changes its value before it is set. T
 | Round | Round, floor or ceil to some decimals |
 | Invert (not) | true/false flipped (a number becomes 1 - x) |
 | Remap range | One range onto another, optionally kept inside it: 0-1 to 0-100 |
-| Look up | A value to anything else. Bound to a **choice** variable, it lists every option for you to fill in. *Otherwise* is used for values not listed |
+| Look up | A value to anything else. Bound to a **choice** variable, it lists every option for you to fill in. *Otherwise* is used for values not listed. When it is the only converter, the binding shows as the **By value** table |
 | To number / text / true/false | Change the type |
 | Seconds to m:ss | A number of seconds as a clock, \`95\` becomes \`1:35\` |
 | Expression | Any [expression](expressions), with \`value\` as the incoming value |
 
 Anything a converter does can also be written straight into the expression with the helpers (\`fmt\`, \`remap\`, \`lookup\`…), which is what to use in text \`{slots}\`.
 
-Choices and lists work with bindings like any other value: bind a fill colour to a choice through a *Look up* converter, a text layer to \`people.length + " people"\`, or a [repeater](repeaters) to a list variable. Importing a Rive file turns its data bindings on layers into bindings with converters, and its view models into shared variables (see [Importing](import)).`
+Choices and lists work with bindings like any other value: bind a fill colour to a choice with **By value**, a text layer to \`people.length + " people"\`, or a [repeater](repeaters) to a list variable. Importing a Rive file turns its data bindings on layers into bindings with converters, and its view models into shared variables (see [Importing](import)).`
   },
   {
     id: "scripts",
@@ -20036,7 +20195,7 @@ Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the
 
 **Items** can be a [data source](data-sources) or a *List* [variable](variables). The repeater redraws when the list changes, so a *Change a value or counter* node that adds to the list adds a row.
 
-Inside the copies, \`item\` is the current item and \`index\` is its position, counting from 0: \`{index + 1}. {item.name} - {item.price}\`.
+Inside the copies, \`item\` is the current item and \`index\` is its position, counting from 0: \`{index + 1}. {item.name} - {item.price}\`. In a text or button label inside the copies, **Insert value** lists the item's fields (read from the first item) so you can pick one instead of typing it.
 
 ## Layout
 **Layout** places the copies: vertical, horizontal, grid (with columns), or none (when the frame uses [auto layout](auto-layout), which is usually best).
@@ -21719,12 +21878,12 @@ function applyChanges(p0, changes) {
   };
   const resolveRefs = (o) => typeof o === "string" ? ref(o) : Array.isArray(o) ? o.map(resolveRefs) : o && typeof o === "object" ? Object.fromEntries(Object.entries(o).map(([k, v]) => [k, resolveRefs(v)])) : o;
   for (const [i, c2] of changes.entries()) {
-    const where = `change ${i + 1} (${c2.op})`;
+    const where2 = `change ${i + 1} (${c2.op})`;
     const key = typeof c2.ref === "string" ? c2.ref : void 0;
     switch (c2.op) {
       case "set_props": {
         const loc = locate(p, ref(c2.id));
-        if (!loc) throw new Error(`${where}: no layer ${String(c2.id)}`);
+        if (!loc) throw new Error(`${where2}: no layer ${String(c2.id)}`);
         const props = resolveRefs(c2.props);
         for (const [k, v] of Object.entries(props)) {
           if (k === "id" || k === "type" || k === "children") continue;
@@ -21744,7 +21903,7 @@ function applyChanges(p0, changes) {
         let list = ab.children;
         if (c2.parent_id) {
           const parent = locate(p, ref(c2.parent_id));
-          if (!parent || !isContainer(parent.node)) throw new Error(`${where}: parent ${String(c2.parent_id)} is not a group or frame`);
+          if (!parent || !isContainer(parent.node)) throw new Error(`${where2}: parent ${String(c2.parent_id)} is not a group or frame`);
           list = parent.node.children;
         }
         const index = typeof c2.index === "number" ? Math.max(0, Math.min(list.length, c2.index)) : list.length;
@@ -21756,7 +21915,7 @@ function applyChanges(p0, changes) {
       case "delete": {
         const id = ref(c2.id);
         const loc = locate(p, id);
-        if (!loc) throw new Error(`${where}: no layer ${id}`);
+        if (!loc) throw new Error(`${where2}: no layer ${id}`);
         const list = loc.parent && isContainer(loc.parent) ? loc.parent.children : loc.ab.children;
         list.splice(list.indexOf(loc.node), 1);
         break;
@@ -21764,13 +21923,13 @@ function applyChanges(p0, changes) {
       case "move": {
         const id = ref(c2.id);
         const loc = locate(p, id);
-        if (!loc) throw new Error(`${where}: no layer ${id}`);
+        if (!loc) throw new Error(`${where2}: no layer ${id}`);
         const from = loc.parent && isContainer(loc.parent) ? loc.parent.children : loc.ab.children;
         from.splice(from.indexOf(loc.node), 1);
         let to = c2.artboard_id ? findAb(c2.artboard_id).children : loc.ab.children;
         if (c2.parent_id) {
           const parent = locate(p, ref(c2.parent_id));
-          if (!parent || !isContainer(parent.node)) throw new Error(`${where}: parent is not a group or frame`);
+          if (!parent || !isContainer(parent.node)) throw new Error(`${where2}: parent is not a group or frame`);
           to = parent.node.children;
         }
         to.splice(typeof c2.index === "number" ? c2.index : to.length, 0, loc.node);
@@ -21801,18 +21960,18 @@ function applyChanges(p0, changes) {
         if (c2.live && v.formula) v.live = true;
         if (c2.user_data && !v.live) v.userData = true;
         if (c2.persist) v.persist = true;
-        if (p.variables.some((x) => x.name === v.name)) throw new Error(`${where}: a variable called ${v.name} already exists`);
+        if (p.variables.some((x) => x.name === v.name)) throw new Error(`${where2}: a variable called ${v.name} already exists`);
         p.variables.push(v);
         if (key) created[key] = v.id;
         break;
       }
       case "set_variable": {
         const v = p.variables.find((x) => x.id === ref(c2.id) || x.name === c2.id);
-        if (!v) throw new Error(`${where}: no variable ${String(c2.id)}`);
+        if (!v) throw new Error(`${where2}: no variable ${String(c2.id)}`);
         const { name, ...rest } = resolveRefs(c2.props ?? {});
         if (typeof name === "string" && name.trim() && name.trim() !== v.name) {
           const to = name.trim();
-          if (!IDENT_RE.test(to) || p.variables.some((x) => x.id !== v.id && x.name === to) || p.dataSources.some((d) => d.name === to)) throw new Error(`${where}: can't rename to ${to}`);
+          if (!IDENT_RE.test(to) || p.variables.some((x) => x.id !== v.id && x.name === to) || p.dataSources.some((d) => d.name === to)) throw new Error(`${where2}: can't rename to ${to}`);
           renameVariable(p, v.id, to);
         }
         Object.assign(v, rest, { id: v.id, name: v.name });
@@ -21820,10 +21979,10 @@ function applyChanges(p0, changes) {
       }
       case "rename_variable": {
         const v = p.variables.find((x) => x.id === ref(c2.id) || x.name === c2.id);
-        if (!v) throw new Error(`${where}: no variable ${String(c2.id)}`);
+        if (!v) throw new Error(`${where2}: no variable ${String(c2.id)}`);
         const to = String(c2.name ?? "").trim();
-        if (!IDENT_RE.test(to)) throw new Error(`${where}: ${to || "an empty name"} is not a variable name (letters, digits and _, not starting with a digit)`);
-        if (p.variables.some((x) => x.id !== v.id && x.name === to) || p.dataSources.some((d) => d.name === to)) throw new Error(`${where}: something is already called ${to}`);
+        if (!IDENT_RE.test(to)) throw new Error(`${where2}: ${to || "an empty name"} is not a variable name (letters, digits and _, not starting with a digit)`);
+        if (p.variables.some((x) => x.id !== v.id && x.name === to) || p.dataSources.some((d) => d.name === to)) throw new Error(`${where2}: something is already called ${to}`);
         renameVariable(p, v.id, to, { scripts: c2.scripts !== false });
         break;
       }
@@ -21855,7 +22014,7 @@ function applyChanges(p0, changes) {
         const baseY = 40 + Math.max(0, ...ab.logic.nodes.map((n) => n.y));
         nodes.forEach((n, j) => {
           const def = CATALOG.find((d) => d.kind === n.kind);
-          if (!def) throw new Error(`${where}: unknown node kind ${n.kind} (see read_reference "interactions")`);
+          if (!def) throw new Error(`${where2}: unknown node kind ${n.kind} (see read_reference "interactions")`);
           const id = uid("lg");
           if (n.ref) localIds[n.ref] = id;
           if (n.ref) created[n.ref] = id;
@@ -21884,7 +22043,7 @@ function applyChanges(p0, changes) {
       }
       case "set_script": {
         const sc = p.scripts.find((x) => x.id === ref(c2.id) || x.name === c2.id);
-        if (!sc) throw new Error(`${where}: no script ${String(c2.id)}`);
+        if (!sc) throw new Error(`${where2}: no script ${String(c2.id)}`);
         if (typeof c2.code === "string") sc.code = c2.code;
         if (typeof c2.name === "string") sc.name = c2.name;
         if (typeof c2.run_on_start === "boolean") sc.runOnStart = c2.run_on_start;
@@ -21893,7 +22052,7 @@ function applyChanges(p0, changes) {
       case "add_note": {
         const ab = c2.artboard_id ? findAb(c2.artboard_id) : null;
         const layer = c2.layer_id && ab ? locate(p, ref(c2.layer_id)) : null;
-        if (c2.layer_id && (!layer || layer.ab !== ab)) throw new Error(`${where}: no layer ${String(c2.layer_id)} on that artboard`);
+        if (c2.layer_id && (!layer || layer.ab !== ab)) throw new Error(`${where2}: no layer ${String(c2.layer_id)} on that artboard`);
         const at = { x: typeof c2.x === "number" ? c2.x : layer ? layer.node.x + layer.node.width + 12 : 0, y: typeof c2.y === "number" ? c2.y : layer ? layer.node.y : 0 };
         const note = makeNote({ ...at, w: typeof c2.w === "number" ? c2.w : void 0, h: typeof c2.h === "number" ? c2.h : void 0, text: String(c2.text ?? ""), colour: NOTE_COLOURS.includes(c2.colour) ? c2.colour : void 0, author: typeof c2.author === "string" && c2.author ? c2.author : `${ctx().agent} (AI)`, created: (/* @__PURE__ */ new Date()).toISOString() });
         if (layer) note.anchor = { layerId: layer.node.id, lx: Math.round((at.x - layer.node.x) * 10) / 10, ly: Math.round((at.y - layer.node.y) * 10) / 10 };
@@ -21905,7 +22064,7 @@ function applyChanges(p0, changes) {
       case "add_graph_note": {
         const ab = findAb(c2.artboard_id);
         const host = c2.node_id ? graphOrigin(ab, ref(c2.node_id)) : void 0;
-        if (c2.node_id && !host) throw new Error(`${where}: no node or group ${String(c2.node_id)} on ${ab.name}`);
+        if (c2.node_id && !host) throw new Error(`${where2}: no node or group ${String(c2.node_id)} on ${ab.name}`);
         const at = { x: typeof c2.x === "number" ? c2.x : host ? host.x : 0, y: typeof c2.y === "number" ? c2.y : host ? host.y - 130 : 0 };
         const note = makeNote({ ...at, w: typeof c2.w === "number" ? c2.w : 220, h: typeof c2.h === "number" ? c2.h : 110, text: String(c2.text ?? ""), colour: NOTE_COLOURS.includes(c2.colour) ? c2.colour : void 0, author: typeof c2.author === "string" && c2.author ? c2.author : `${ctx().agent} (AI)`, created: (/* @__PURE__ */ new Date()).toISOString() });
         if (host) note.anchor = { layerId: ref(c2.node_id), lx: Math.round((at.x - host.x) * 10) / 10, ly: Math.round((at.y - host.y) * 10) / 10 };
@@ -21915,7 +22074,7 @@ function applyChanges(p0, changes) {
       }
       case "set_note": {
         const found = findNote(p, ref(c2.id));
-        if (!found) throw new Error(`${where}: no note ${String(c2.id)}`);
+        if (!found) throw new Error(`${where2}: no note ${String(c2.id)}`);
         const n = found.note;
         if (found.graph) {
           for (const k of ["x", "y", "w", "h"]) if (typeof c2[k] === "number") n[k] = c2[k];
@@ -21924,7 +22083,7 @@ function applyChanges(p0, changes) {
           if (c2.anchor_id === null) delete n.anchor;
           else if (typeof c2.anchor_id === "string") {
             const host = graphOrigin(found.ab, ref(c2.anchor_id));
-            if (!host) throw new Error(`${where}: no node or group ${c2.anchor_id} on that note's graph`);
+            if (!host) throw new Error(`${where2}: no node or group ${c2.anchor_id} on that note's graph`);
             n.anchor = { layerId: ref(c2.anchor_id), lx: Math.round((n.x - host.x) * 10) / 10, ly: Math.round((n.y - host.y) * 10) / 10 };
           }
           break;
@@ -21935,14 +22094,14 @@ function applyChanges(p0, changes) {
         if (c2.layer_id === null) delete n.anchor;
         else if (typeof c2.layer_id === "string") {
           const layer = locate(p, ref(c2.layer_id));
-          if (!layer || layer.ab !== found.ab) throw new Error(`${where}: no layer ${c2.layer_id} on that note's artboard`);
+          if (!layer || layer.ab !== found.ab) throw new Error(`${where2}: no layer ${c2.layer_id} on that note's artboard`);
           n.anchor = { layerId: layer.node.id, lx: Math.round((n.x - layer.node.x) * 10) / 10, ly: Math.round((n.y - layer.node.y) * 10) / 10 };
         }
         break;
       }
       case "delete_note": {
         const found = findNote(p, ref(c2.id));
-        if (!found) throw new Error(`${where}: no note ${String(c2.id)}`);
+        if (!found) throw new Error(`${where2}: no note ${String(c2.id)}`);
         found.list.splice(found.list.indexOf(found.note), 1);
         if (!found.list.length) {
           if (found.graph) delete found.ab.logic.notes;
@@ -21952,7 +22111,7 @@ function applyChanges(p0, changes) {
         break;
       }
       default:
-        throw new Error(`${where}: unknown op "${c2.op}"`);
+        throw new Error(`${where2}: unknown op "${c2.op}"`);
     }
   }
   if (p.notes) {

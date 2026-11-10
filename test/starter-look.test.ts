@@ -225,8 +225,11 @@ describe('the question kit', () => {
     expect(used.length).toBeGreaterThan(20);
     expect(used.every((r) => ids.has(r))).toBe(true);
     const id = (name: string) => `token:${p.themes!.tokens.find((t) => t.name === name)!.id}`;
-    const bindings = strings(p.artboards[0]).filter((s) => s.includes('item.state'));
-    expect(bindings.some((s) => s.includes(id('color/success-surface')) && s.includes(id('color/error-surface')))).toBe(true);
+    //the right and wrong colours are the question's looks (a lookup on the item's state), held as the tokens
+    const all = strings(p.artboards[0]);
+    expect(all.some((s) => s.includes('item.state'))).toBe(true);
+    expect(all).toContain(id('color/success-surface'));
+    expect(all).toContain(id('color/error-surface'));
     // no leftover raw hex colours in the question's own layers (the hotspot picture is not part of these two)
     expect(strings(p.artboards[0].children).filter((s) => /^#[0-9a-f]{6}$/i.test(s))).toEqual([]);
   });

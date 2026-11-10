@@ -205,7 +205,7 @@ The section now reads: **When clicked: switch lit on or off** and **When clicked
 ## Go further: more than two states
 
 - Make a variable called \`mode\` with **Type** **Choice** and the options \`off, on, broken\`. A choice shows as a dropdown wherever you set it.
-- Bind the bulb's fill through a **Look up** converter (use **+ Convert…** under the binding): it lists every option for you to give a colour.
+- Bind the bulb's fill to \`mode\` and choose **By value** under the binding: it lists every option for you to give a colour.
 - Use a **Check a condition** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **Check a condition** has a **true** and a **false** output.
 - Tick **Remember** (under **Options**) on a variable in the Variables tab to remember its value in the visitor's browser between visits.
 

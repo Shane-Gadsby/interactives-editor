@@ -13754,3 +13754,138 @@ body.reorder-active .ix-tooltip {
     transform: scale(1.35);
   }
 }
+
+/* Bindings: the By value table */
+.by-value {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.by-value-when {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.by-value-row {
+  padding-left: 8px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.by-value-if,
+.by-value-then {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.by-value-if > :is(.select-field, .text-field),
+.by-value-then > :is(.select-field, .text-field, .number-field, .color-field) {
+  flex: 1;
+  min-width: 0;
+}
+.by-value-word {
+  flex: none;
+  min-width: 56px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.by-value-row.otherwise {
+  border-left-style: dashed;
+}
+.by-value-add {
+  align-self: flex-start;
+}
+
+/* Question section: the Looks row */
+.q-looks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.q-look > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.q-look > summary:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+.q-look-sample {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 22px;
+  border: 2px solid;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.q-looks .link-btn {
+  align-self: flex-start;
+}
+
+/* Interactions graph: a question's kit nodes folded into one block */
+.ix-kit-block {
+  min-width: 200px;
+  max-width: 260px;
+  background: var(--panel-2);
+  border: 1px dashed var(--line-2);
+  border-radius: 8px;
+  font-size: 11.5px;
+  color: var(--text);
+  position: relative;
+}
+.ix-kit-block.ran {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 18%, var(--panel-2));
+}
+.ix-kit-open {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ix-kit-open:hover {
+  background: color-mix(in srgb, var(--primary-bg) 14%, transparent);
+}
+.ix-kit-open:focus-visible,
+.ix-kit-tab:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+.ix-kit-hint {
+  margin-top: 2px;
+  font-weight: 600;
+  text-decoration: underline;
+}
+.ix-kit-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px dashed var(--line-2);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.ix-kit-tab:hover {
+  background: color-mix(in srgb, var(--primary-bg) 14%, var(--panel-2));
+}
