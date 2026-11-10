@@ -29,39 +29,32 @@ On the projects page press **New project**. Keep **Blank project**, type **Which
    - \`Browse the course sites to see what looks interesting\`
    - \`Message people in my course to see who is studying what\`
 
-The first answer on every page will lean to Planner, the second to Explorer, the third to Collaborator. Keeping that order is what lets you copy the page in step 5.
+The first answer on every page will lean to Planner, the second to Explorer, the third to Collaborator. Keeping that order is what lets you copy the page in step 4.
 
-## 3. Three tallies
+## 3. Points to two tallies, then the next page
 
-Each answer makes one counter as you wire it.
+Each answer gives 2 points to one tally and 1 to another, then goes on to the next page. An answer that fits Planner best might also fit Collaborator a little. It is one **+ When clicked…**, with the steps one after another, and each tally is made as you name it.
 
-1. Select **Answer 1**. In its **Interactions** section press **+ When clicked…** and choose **Add 1 to a counter**. Under **Which counter** pick **A new counter…** and name it \`planner\`. Press **Add**.
-2. Do the same for **Answer 2** with a new counter named \`explorer\`, and **Answer 3** with \`collaborator\`.
-
-The **Variables** tab now has the three counters, each starting at 0.
-
-## 4. Points to two tallies, then the next page
-
-An answer that fits Planner best might also fit Collaborator a little. So each answer gives 2 points to one tally and 1 to another.
-
-1. Under **Answer 1**'s sentence press **Show in graph**. Click its **Change a value or counter** node and change **Value** to \`2\`.
-2. Drag from the node's dot into empty space, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **collaborator**, **Do** to **Add to it** and **Value** to \`1\`.
-3. Drag from that node into empty space and pick **Go to a page**. Set **Go to** to **Next page**.
-4. Do the same for the other two answers:
+1. Select **Answer 1**. In its **Interactions** section press **+ When clicked…** and choose **Change a number…**. Under **Which number** pick **A new number…** and name it \`planner\`. Set **Amount** to \`2\`.
+2. Press **+ then also…**. The new row starts as **Change a number…** too. Under **Which number** pick **A new number…**, name it \`collaborator\` and leave **Amount** on \`1\`.
+3. Press **+ then also…** again and change that row to **Go to the next page**. Press **Add**.
+4. Do the same for the other two answers. Now **Which number** lists the tallies you have made, and **Explorer** is the only new one:
 
 | Answer | 2 points to | 1 point to |
 |---|---|---|
 | Answer 1 | planner | collaborator |
-| Answer 2 | explorer | planner |
+| Answer 2 | explorer (new) | planner |
 | Answer 3 | collaborator | explorer |
 
-Press **Read as sentences** above the graph: each answer should read as two counters and a page change.
+The **Variables** tab now has the three tallies, each starting at 0.
+
+Press **Read as sentences** above the graph: each answer should read as two changes to a number and a page change.
 
 ![Read as sentences on Question 3: When Answer 1 is clicked, then add 2 to planner, then add 1 to collaborator, then go to the page a formula names, and the same pattern for Answer 2 and Answer 3.](help/tutorial-personality-sentences.png)
 
-This picture is of **Question 3** once step 8 is done, so its last line says *the page a formula names*; on **Question 1** it says *go to the next page*.
+This picture is of **Question 3** once step 7 is done, so its last line says *the page a formula names*; on **Question 1** it says *go to the next page*.
 
-## 5. Copy the page for the other questions
+## 4. Copy the page for the other questions
 
 1. Right-click the name **Question 1** above the page on the canvas and choose **Duplicate**. The copy, **Question 2**, has the same layers and the same interactions, already joined to its own buttons.
 
@@ -77,7 +70,7 @@ This picture is of **Question 3** once step 8 is done, so its last line says *th
 
 Remember the line at the top: \`Question 2 of 3\` and \`Question 3 of 3\`.
 
-## 6. The result pages
+## 5. The result pages
 
 1. Press **+ Add page** at the bottom of the **Layers** panel three times, and name the pages \`You are a Planner\`, \`You are an Explorer\` and \`You are a Collaborator\`.
 2. On each one, add the page's name as a title, a line or two about that style, and a text layer saying:
@@ -90,7 +83,7 @@ Your points: Planner {planner}, Explorer {explorer}, Collaborator {collaborator}
 
 Ideas for the words: a Planner likes a clear schedule; an Explorer follows their curiosity; a Collaborator learns by talking things through.
 
-## 7. Pick the highest
+## 6. Pick the highest
 
 1. In the **Variables** tab press **+ Add variable**, pick **Text** and name it \`result\`.
 2. In its **Value** column change **Starts as a value** to **Worked out**, and type this in the formula box that appears:
@@ -105,11 +98,11 @@ planner >= explorer && planner >= collaborator ? "You are a Planner" : explorer 
 
 \`result\` is now the name of the result page with the highest tally. Ties go to the one asked about first: Planner, then Explorer.
 
-## 8. Send the last answers to the result
+## 7. Send the last answers to the result
 
 On **Question 3**, open the **Interactions** tab. Each answer's last node is a **Go to a page** set to **Next page**. For all three, set **Go to** to **One named by an expression** and type \`result\` in **Page name or id**.
 
-## 9. Try it
+## 8. Try it
 
 1. Select **Question 1** and press **Preview**.
 2. Pick the first answer every time. You land on **You are a Planner**, with 6 Planner points and 3 Collaborator points.

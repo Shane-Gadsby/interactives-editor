@@ -67,6 +67,8 @@ export const PLAIN_OPTION: Record<string, string> = {
   'action.setVariable.op.remove': 'Remove from the list (by position)',
   'action.setVariable.op.toggleItem': 'Add to the list, or take out if it is there',
   'action.setVariable.op.removeValue': 'Remove from the list (by value)',
+  'action.setVariable.op.next': 'Go to the next number in a range',
+  'action.setVariable.op.previous': 'Go to the previous number in a range',
 };
 
 /** The query as typed and with artboard and page swapped, so each finds what is worded the other way. */

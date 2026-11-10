@@ -2732,14 +2732,26 @@ The quick way to make a layer do something, with no graph to draw. Select a laye
 A short list asks what should happen:
 - **Go to the next page**, **Go to the previous page**, **Go to a page…** (you pick which). Each of the page ones also asks **How the page changes** (a fade unless you choose) and its **Speed** (Medium unless you choose Slow, Fast or Custom).
 - **Show a layer**, **Hide a layer**, **Show or hide a layer**: this layer or another. Showing a layer other than this one also sets it to start hidden, so there is something to show.
+- **Show only one of a set…**: for tabs. Pick the layer to show and tick the layers to hide, and it hides each of those, then shows the one. Put one of these on each tab, each showing its own panel.
+- **Change a layer’s look…**: pick a layer (this one or another) and what to change: its **Colour**, its **Text**, its **Opacity** or its **Size** (a width, a height, or both). The colour, number and text boxes are the Inspector's own, so nothing is a formula. For a text layer the colour is its text colour.
 - **Play an animation** (a timeline of this page) and **Play a sound**.
 - **Turn the sound off or on**: mutes every sound and video, or brings the sound back. The viewer's browser remembers it.
 - **Play or pause a video** and **Jump a video to a time…** (seconds from the start, so 75 is 1:15): this video, or another on the page.
-- **Add 1 to a counter** and **Switch something on or off**: pick a number or an on/off variable you already have, or name a new one in plain words and it is made for you.
+- **Change a number…**: pick a number you already have, or name a new one in plain words and it is made for you, then **Add to it**, **Take away from it** or **Set it to** an **Amount**. The amount can be a formula (\`score * 2\`). It is what **Add 1 to a counter** used to be, so \`1\` is the start.
+- **Go to the next item…** and **Go to the previous item…**: for a slideshow or carousel. They move a number on by one, and after the last go back to the first (or stop there, as you choose). **The first one is** says whether you count from 1 or 0, and **How many items** is as many as one of your lists has, or a number you type.
+- **Set a text or choice…**: puts a piece of text in a text variable, or picks one of a choice variable's choices.
+- **Switch something on or off**: **Flip it each time**, or **Turn it on**, or **Turn it off**, for a yes/no variable you have or a new one.
+- **Put values back to the start…**: tick the numbers, text and switches to put back to where they began. Nothing else changes (**Start over** is the one that does everything).
+- **Say something to screen readers**: a short message a screen reader reads out. Nothing shows on screen.
 - **Open a link** and **Start over**.
 - **Run a script**: one of the project's scripts, or **A new script…**, which is made in the Scripts tab ready to write. \`event\` says what was clicked.
 
 Pick one, answer the question it asks (the line at the bottom reads back what it will do), and press **Add**. It is added in one step, so one undo takes it all back, including a new variable or the layer set to start hidden. A behaviour is just a **When clicked or hovered** event joined to an action (and the variable it needs), the same nodes you would have drawn: select the new node in the graph to change anything about it. Nothing special marks them, and nothing hidden runs.
+
+Under the list there are three more things, all optional, and a plain click does what it always did if you leave them alone:
+- **It starts when** says what sets it off. It starts on **clicked** (or **hovered over**, from **+ When hovered…**). The others are **the page is shown**, **some seconds have passed** (it asks how many, and it runs once), **a value reaches something** (pick the value and how it is compared, such as **score is at least 10**: it runs each time the value changes while that is true), **dropped on something** (pick the drop zone, or any; the layer has to be draggable), **a key is pressed** (pick it from the list, or type another) and **a video reaches a time** (pick the video and the second; it adds a cue point to the video and uses it). Each one writes the event node the graph already has.
+- **+ then also…** adds another thing to do straight after, as many as you like. Each row has the same list of things and asks its own questions, and **Remove** takes it out again. They run one after another, joined in the graph the way you would have joined them.
+- **+ only if…** makes it happen only when something is true, with the same condition pickers as the graph (a value, **is at least**, a number...). It is written as the event's own **Only if**. Once it is on, **+ otherwise…** says what to do when it is not true; that one is written as a **Check a condition** with a **true** way and a **false** way. **Remove Only if** takes both out.
 
 The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the event, for building the flow by hand in the graph.
 
@@ -3510,6 +3522,9 @@ Change the list while it runs with **Change a value or counter**. Its **Do** box
 - *Change list items where a field is a value* changes every item that matches, in one step. Type the field to look at (**Items where this field**, like \`state\`) and the value it has to be (**Is**, like \`"up"\`), then the **Field** to change and its new **Value**. A memory game turns every face-up card to matched with *Items where this field* \`state\`, *Is* \`"up"\`, *Field* \`state\`, *Value* \`"matched"\`. Leave both *where* boxes empty to change every item.
 
 In scripts use \`ix.toggleItem('picked', 'b')\`, \`ix.removeValue('picked', 'b')\` and \`ix.setItem('cards', 2, 'down', 'state')\`, or assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`.
+
+## Next and previous in a range
+For a slideshow, a carousel or a set of tabs, **Change a value or counter** has two more **Do** choices: *Go to the next number in a range* and *Go to the previous number in a range*. **First number** and **Last number** say where the range is (1 and \`slides.length\` for a list of slides counted from 1; 0 and \`slides.length - 1\` counted from 0), and **At the ends** says whether going past the last one *goes round to the other end* or *stops there*. It replaces a formula like \`slide >= slides.length ? 1 : slide + 1\` that you would otherwise type twice. **+ When clicked…** has it as **Go to the next item…** and **Go to the previous item…**. With **Last number** empty there is no top end: next just counts up.
 
 ## Easing a number to a new value
 **Change a value or counter** can make a number run up (or down) to its new value instead of jumping. Use it for a score that counts up, or a bar that fills. It has two settings when **Do** is *Set to* or *Add to it* on a number:

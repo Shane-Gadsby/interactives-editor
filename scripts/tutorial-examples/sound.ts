@@ -1,6 +1,6 @@
 //The sound tutorial's finished project: a Start button that starts the soundtrack and goes on, then a page with a sound effect,
 //a sound on/off button, Stop the music and Back. Every flow is what + When clicked… writes (the recipes), except the sound
-//button, which is the empty click event and a Captions and sound node, the way the tutorial builds it in the graph
+//button, which is the empty click event and a Captions and sound node, the way the tutorial builds it with + When clicked…
 import { DEFAULT_TRANSITION_MS, type Artboard, type Project, type SceneNode } from 'interactives-player';
 import { addPlaceholderSound } from '../../src/lib/branded/sets/media/sounds';
 import { writeClickFlow } from '../../src/lib/click-flow';
@@ -56,7 +56,7 @@ function build(): Project {
   const back = buttonLayer(p, 'Back button', 'Back', 80, 480, 160);
   page.children.push(heading, line, dingButton, soundButton, stopButton, back);
   whenClicked(page, dingButton, 'sound', { sound: ding });
-  //+ On click (empty), then Captions and sound from the graph, Do: Sound: flip
+  //+ When clicked… Turn the sound off or on: a Captions and sound node, Do: Sound: flip
   writeClickFlow(page, soundButton.id, [{ kind: 'action.captions', params: { op: 'soundToggle' } }]);
   whenClicked(page, stopButton, 'soundtrack-stop');
   whenClicked(page, back, 'page-previous');

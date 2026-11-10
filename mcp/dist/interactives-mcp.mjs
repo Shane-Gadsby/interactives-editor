@@ -519,8 +519,8 @@ const SPECS = [
     kind: "action.setVariable",
     label: "Set variable",
     category: "action",
-    summary: "Sets, adds to, toggles, resets or changes the list of a variable.",
-    details: "Change list items where a field is a value changes every item that matches in one step. A live variable (worked out from its formula) cannot be set.",
+    summary: "Sets, adds to, toggles, steps through a range, resets or changes the list of a variable.",
+    details: "Change list items where a field is a value changes every item that matches in one step. A live variable (worked out from its formula) cannot be set. Next and Previous move a number on by one between First and Last, and go round to the other end (or stop) past either: for slides, cards and tabs.",
     group: "Variables",
     outputs: OUT,
     hasInput: true,
@@ -541,9 +541,40 @@ const SPECS = [
           { value: "toggleItem", label: "Add to list, or take out if there (value)" },
           { value: "removeValue", label: "Remove from list (value)" },
           { value: "setItem", label: "Change one list item" },
-          { value: "changeWhere", label: "Change list items where a field is a value" }
+          { value: "changeWhere", label: "Change list items where a field is a value" },
+          { value: "next", label: "Next number in a range" },
+          { value: "previous", label: "Previous number in a range" }
         ],
         default: "set"
+      },
+      {
+        key: "first",
+        label: "First number",
+        type: "expr",
+        default: "0",
+        showIf: { key: "op", values: ["next", "previous"] },
+        help: "The lowest number it goes to: 0 or 1 for a list of slides, cards or tabs."
+      },
+      {
+        key: "last",
+        label: "Last number",
+        type: "expr",
+        default: "",
+        placeholder: "e.g. slides.length",
+        showIf: { key: "op", values: ["next", "previous"] },
+        help: "The highest number it goes to. For a list that counts from 1 that is its length (slides.length); counting from 0 it is slides.length - 1. Empty means no top end."
+      },
+      {
+        key: "ends",
+        label: "At the ends",
+        type: "select",
+        options: [
+          { value: "round", label: "Go round to the other end" },
+          { value: "stop", label: "Stop at the end" }
+        ],
+        default: "round",
+        showIf: { key: "op", values: ["next", "previous"] },
+        help: "Past the last number: go round to the first (and the other way), or stay where it is."
       },
       {
         key: "index",
@@ -10121,7 +10152,9 @@ const PLAIN_OPTION = {
   "action.setVariable.op.push": "Add to the end of the list",
   "action.setVariable.op.remove": "Remove from the list (by position)",
   "action.setVariable.op.toggleItem": "Add to the list, or take out if it is there",
-  "action.setVariable.op.removeValue": "Remove from the list (by value)"
+  "action.setVariable.op.removeValue": "Remove from the list (by value)",
+  "action.setVariable.op.next": "Go to the next number in a range",
+  "action.setVariable.op.previous": "Go to the previous number in a range"
 };
 const technicalWording = () => !!prefs().technicalWording;
 function optionLabel(kind, key, option, technical = technicalWording()) {
@@ -10241,7 +10274,7 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 2. A short list of things that can happen opens. Choose **Play an animation**, then pick your timeline under **Which animation**. The line at the bottom reads back what it will do: *When clicked: play “Timeline”*.
 3. Press **Add**. The **Interactions** graph opens at the bottom, zoomed in on the two new nodes (more on them in step 4), and the section now says it in a sentence: **When clicked: play “Timeline”.** (If you would rather the view stayed put, untick **Show new interactions in the graph** in [Preferences](preferences#interactions).)
 
-That is the whole interaction. The same list can go to another page, show or hide a layer, play a sound, open a link, add 1 to a counter or switch something on or off. Every one is added to the **Interactions** graph as ordinary nodes, so you can always take it further.
+That is the whole interaction. The same list can go to another page, show or hide a layer, play a sound, open a link, change a number or switch something on or off. Every one is added to the **Interactions** graph as ordinary nodes, so you can always take it further.
 
 > A shortcut: right-click a layer, choose **Add interaction**, then **When clicked…**.
 
@@ -10334,7 +10367,7 @@ That says: if \`lit\` is true the colour is yellow, otherwise it is grey. While 
 
 1. Select the **Switch** button. In its **Interactions** section press **+ When clicked…**.
 2. Choose **Switch something on or off** and, under **Which switch**, pick **lit**. Press **Add**.
-3. Press **+ When clicked…** again. Choose **Add 1 to a counter** and pick **taps**. Press **Add**.
+3. Press **+ When clicked…** again. Choose **Change a number…**, pick **taps** and press **Add** (it adds 1).
 
 The section now reads: **When clicked: switch lit on or off** and **When clicked: add 1 to taps**. Two flows start from the same click, and both run. (In the graph they are a **When clicked or hovered** joined to a **Change a value or counter** each, with **Do** on **Flip on or off** and on **Add to it**.)
 
@@ -11091,18 +11124,17 @@ The part in braces is an expression. While \`taken\` is empty it says *just star
 
 ## 4. Wire the first choice
 
-1. Select **Choice 1**. In its **Interactions** section press **+ When clicked…** and choose **Add 1 to a counter**.
-2. Under **Which counter** pick **A new counter…**, and in **Name the counter** type \`score\`. Press **Add**. This makes the \`score\` variable for you.
+1. Select **Choice 1**. In its **Interactions** section press **+ When clicked…** and choose **Change a number…**.
+2. Under **Which number** pick **A new number…**, and in **Name the number** type \`score\`. Leave **What to do** on **Add to it** and set **Amount** to \`3\`: this choice is worth three points. Press **Add**. This makes the \`score\` variable for you.
 
-![The When Choice 1 is clicked dialog: Pages, Layers, Motion and sound, Counting and switches and Other, with Add 1 to a counter picked and Which counter below it.](help/tutorial-branching-when-clicked.png)
+![The When Choice 1 is clicked dialog: Pages, Layers, Motion and sound, Counting and switches and Other, with Change a number picked, and Which number, What to do and Amount below it.](help/tutorial-branching-when-clicked.png)
 
 3. The **Interactions** tab opens by itself on two nodes: **When clicked or hovered** and **Change a value or counter**. (If it doesn't, press **Show in graph** under the sentence in the Properties panel.)
-4. Click the **Change a value or counter** node and change **Value** from \`1\` to \`3\`. This choice is worth three points.
-5. Drag from the small dot on the right edge of that node into empty space and let go. In the menu, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set it up:
+4. Drag from the small dot on the right edge of that node into empty space and let go. In the menu, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set it up:
    - **Variable**: **taken**
    - **Do**: **Add to the end of the list**
    - **Value**: \`"Asked Sam"\` (with the quotes: it is text)
-6. Drag from the new node's dot into empty space again, find **Go to a page** and pick it. Leave **Go to** on **A chosen page** and set **Page** to **Sam replies**.
+5. Drag from the new node's dot into empty space again, find **Go to a page** and pick it. Leave **Go to** on **A chosen page** and set **Page** to **Sam replies**.
 
 That is one choice: click, add 3 to \`score\`, add *Asked Sam* to \`taken\`, go to **Sam replies**.
 
@@ -11110,9 +11142,9 @@ That is one choice: click, add 3 to \`score\`, add *Asked Sam* to \`taken\`, go 
 
 ## 5. Wire the other two choices
 
-Do the same for **Choice 2** and **Choice 3**. From now on **Which counter** already says **score**, so just press **Add**.
+Do the same for **Choice 2** and **Choice 3**. From now on **Which number** already says **score**, so set **Amount** and press **Add**.
 
-| Button | Value (points) | Words for the path | Page |
+| Button | Amount (points) | Words for the path | Page |
 |---|---|---|---|
 | Choice 2 | \`0\` | \`"Wrote it yourself"\` | Wednesday night |
 | Choice 3 | \`2\` | \`"Emailed the lecturer"\` | The lecturer replies |
@@ -11351,23 +11383,16 @@ Each slide has a colour so you can see the slides change before you have picture
 ## 3. Previous and Next
 
 1. Press <kbd>B</kbd> and draw a button at the bottom right. Set its **Label** to \`Next\` and its **Name** to **Next**.
-2. Press **+ On click (empty)**. The **Interactions** tab opens with the new **When clicked or hovered** node framed. (If you switched that off in Preferences, press **Show in graph**.)
-3. Drag from the dot on the right of the **When clicked or hovered** node into empty space. Type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **playing**, **Do** to **Set to** and **Value** to \`false\`. Moving by hand stops the autoplay.
-4. Drag from that node's dot and add another **Change a value or counter**: **Variable** **slide**, **Do** **Set to**, **Value**:
+2. Press **+ When clicked…** and choose **Go to the next item…**. **Which number** is **slide**, **The first one is** **Number 1**, **How many items** is **As many as the list slides has**, and **After the last** is **Go round to the other end**. Those are what it starts as, so there is nothing to change.
+3. Press **+ then also…**. Change the new row to **Switch something on or off**, pick **playing** and set **What to do** to **Turn it off**. Moving by hand stops the autoplay. Press **Add**.
 
-\`\`\`
-slide >= slides.length ? 1 : slide + 1
-\`\`\`
+The **Interactions** tab opens with the new flow framed. (If you switched that off in Preferences, press **Show in graph**.) It reads: *When clicked: go to the next slide (1 to slides.length, going round at the ends), then switch playing off*.
 
-That is: on the last slide go back to 1, otherwise add 1.
+![The Interactions graph: Next's When clicked or hovered node wired to Change a value or counter (slide, Next number in a range, 1 to slides.length, Go round to the other end), then to a second one switching playing off; Previous and the Dot have a pair of their own below it.](help/tutorial-carousel-next-graph.png)
 
-![The Interactions graph: Next's When clicked or hovered node wired to Change a value or counter (playing, Set to, false), then to a second one setting slide; Previous and the Dot have the same pair below it.](help/tutorial-carousel-next-graph.png)
+4. Draw another button at the bottom left called **Previous**, press **+ When clicked…** and choose **Go to the previous item…**, with the same answers. Add the same **+ then also…** that turns **playing** off.
 
-5. Draw another button at the bottom left called **Previous**, and build the same two nodes, with this **Value** for the second one:
-
-\`\`\`
-slide <= 1 ? slides.length : slide - 1
-\`\`\`
+The wrap round at the ends is one setting of one node (**Do** is **Go to the next number in a range**, with a **First number** and a **Last number**), not a formula you type twice.
 
 ## 4. The arrow keys
 
@@ -11388,7 +11413,7 @@ A shortcut presses the button from anywhere on the page, so the arrow keys run t
 
 The line under each of those bindings works it out for the first dot (\`index\` 0).
 
-5. Press **+ On click (empty)** and add the same two **Change a value or counter** nodes as for Next, with \`event.index + 1\` as the second **Value**. \`event.index\` is the dot that was clicked, counting from 0.
+5. Press **+ When clicked…** and choose **Change a number…**. Pick **slide**, set **What to do** to **Set it to** and **Amount** to \`event.index + 1\`. \`event.index\` is the dot that was clicked, counting from 0. Press **+ then also…** and turn **playing** off as you did for Next.
 
 ## 6. Autoplay that pauses
 
@@ -11401,7 +11426,7 @@ The line under each of those bindings works it out for the first dot (\`index\` 
 playing && !reducedMotion
 \`\`\`
 
-5. Drag from its dot and add **Change a value or counter**: **Variable** **slide**, **Do** **Set to**, and the same **Value** as Next.
+5. Drag from its dot and add **Change a value or counter**: **Variable** **slide**, **Do** **Go to the next number in a range**, **First number** \`1\` and **Last number** \`slides.length\`. It is the same node Next wrote, so it goes round at the end too.
 
 Once you leave the formula box, **Only while** shows it as two rows you could also have built with **+ Add a condition**: **playing** **is on (true)** and **reducedMotion** **is off (false)**.
 
@@ -11412,7 +11437,7 @@ Once you leave the formula box, **Only while** shows it as two rows you could al
 ## 7. Try it
 
 1. Press **Preview**.
-2. Press **Next** four times. The fourth press wraps back to slide 1. Press a dot to jump.
+2. Press **Next** four times. The fourth press goes round to slide 1. Press a dot to jump.
 3. Click an empty part of the page and use the left and right arrow keys.
 4. Press **Play**. The slides move every four seconds and the button says **Pause**. Press **Next**: the autoplay stops.
 
@@ -11427,6 +11452,7 @@ Once you leave the formula box, **Only while** shows it as two rows you could al
 ## What you learned
 
 - One number variable holds the whole state, and bindings read the current item with \`slides[slide - 1]\`.
+- **Go to the next item…** goes round a list's slides with no formula, and **+ then also…** puts a second thing in the same click.
 - A button's **Shortcut** gives it a key without any nodes.
 - **When a timer goes off** with **Only while** runs only when it should, and \`reducedMotion\` respects people who ask for less movement.
 
@@ -12904,39 +12930,32 @@ On the projects page press **New project**. Keep **Blank project**, type **Which
    - \`Browse the course sites to see what looks interesting\`
    - \`Message people in my course to see who is studying what\`
 
-The first answer on every page will lean to Planner, the second to Explorer, the third to Collaborator. Keeping that order is what lets you copy the page in step 5.
+The first answer on every page will lean to Planner, the second to Explorer, the third to Collaborator. Keeping that order is what lets you copy the page in step 4.
 
-## 3. Three tallies
+## 3. Points to two tallies, then the next page
 
-Each answer makes one counter as you wire it.
+Each answer gives 2 points to one tally and 1 to another, then goes on to the next page. An answer that fits Planner best might also fit Collaborator a little. It is one **+ When clicked…**, with the steps one after another, and each tally is made as you name it.
 
-1. Select **Answer 1**. In its **Interactions** section press **+ When clicked…** and choose **Add 1 to a counter**. Under **Which counter** pick **A new counter…** and name it \`planner\`. Press **Add**.
-2. Do the same for **Answer 2** with a new counter named \`explorer\`, and **Answer 3** with \`collaborator\`.
-
-The **Variables** tab now has the three counters, each starting at 0.
-
-## 4. Points to two tallies, then the next page
-
-An answer that fits Planner best might also fit Collaborator a little. So each answer gives 2 points to one tally and 1 to another.
-
-1. Under **Answer 1**'s sentence press **Show in graph**. Click its **Change a value or counter** node and change **Value** to \`2\`.
-2. Drag from the node's dot into empty space, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **collaborator**, **Do** to **Add to it** and **Value** to \`1\`.
-3. Drag from that node into empty space and pick **Go to a page**. Set **Go to** to **Next page**.
-4. Do the same for the other two answers:
+1. Select **Answer 1**. In its **Interactions** section press **+ When clicked…** and choose **Change a number…**. Under **Which number** pick **A new number…** and name it \`planner\`. Set **Amount** to \`2\`.
+2. Press **+ then also…**. The new row starts as **Change a number…** too. Under **Which number** pick **A new number…**, name it \`collaborator\` and leave **Amount** on \`1\`.
+3. Press **+ then also…** again and change that row to **Go to the next page**. Press **Add**.
+4. Do the same for the other two answers. Now **Which number** lists the tallies you have made, and **Explorer** is the only new one:
 
 | Answer | 2 points to | 1 point to |
 |---|---|---|
 | Answer 1 | planner | collaborator |
-| Answer 2 | explorer | planner |
+| Answer 2 | explorer (new) | planner |
 | Answer 3 | collaborator | explorer |
 
-Press **Read as sentences** above the graph: each answer should read as two counters and a page change.
+The **Variables** tab now has the three tallies, each starting at 0.
+
+Press **Read as sentences** above the graph: each answer should read as two changes to a number and a page change.
 
 ![Read as sentences on Question 3: When Answer 1 is clicked, then add 2 to planner, then add 1 to collaborator, then go to the page a formula names, and the same pattern for Answer 2 and Answer 3.](help/tutorial-personality-sentences.png)
 
-This picture is of **Question 3** once step 8 is done, so its last line says *the page a formula names*; on **Question 1** it says *go to the next page*.
+This picture is of **Question 3** once step 7 is done, so its last line says *the page a formula names*; on **Question 1** it says *go to the next page*.
 
-## 5. Copy the page for the other questions
+## 4. Copy the page for the other questions
 
 1. Right-click the name **Question 1** above the page on the canvas and choose **Duplicate**. The copy, **Question 2**, has the same layers and the same interactions, already joined to its own buttons.
 
@@ -12952,7 +12971,7 @@ This picture is of **Question 3** once step 8 is done, so its last line says *th
 
 Remember the line at the top: \`Question 2 of 3\` and \`Question 3 of 3\`.
 
-## 6. The result pages
+## 5. The result pages
 
 1. Press **+ Add page** at the bottom of the **Layers** panel three times, and name the pages \`You are a Planner\`, \`You are an Explorer\` and \`You are a Collaborator\`.
 2. On each one, add the page's name as a title, a line or two about that style, and a text layer saying:
@@ -12965,7 +12984,7 @@ Your points: Planner {planner}, Explorer {explorer}, Collaborator {collaborator}
 
 Ideas for the words: a Planner likes a clear schedule; an Explorer follows their curiosity; a Collaborator learns by talking things through.
 
-## 7. Pick the highest
+## 6. Pick the highest
 
 1. In the **Variables** tab press **+ Add variable**, pick **Text** and name it \`result\`.
 2. In its **Value** column change **Starts as a value** to **Worked out**, and type this in the formula box that appears:
@@ -12980,11 +12999,11 @@ planner >= explorer && planner >= collaborator ? "You are a Planner" : explorer 
 
 \`result\` is now the name of the result page with the highest tally. Ties go to the one asked about first: Planner, then Explorer.
 
-## 8. Send the last answers to the result
+## 7. Send the last answers to the result
 
 On **Question 3**, open the **Interactions** tab. Each answer's last node is a **Go to a page** set to **Next page**. For all three, set **Go to** to **One named by an expression** and type \`result\` in **Page name or id**.
 
-## 9. Try it
+## 8. Try it
 
 1. Select **Question 1** and press **Preview**.
 2. Pick the first answer every time. You land on **You are a Planner**, with 6 Planner points and 3 Collaborator points.
@@ -13781,7 +13800,7 @@ Most of what people reach for a script to do already has a node, a binding or a 
 | You want to | Use instead |
 |---|---|
 | Show, hide or move something when it is clicked | **+ When clicked…** in the layer's **Interactions** section |
-| Count clicks, tries or points | **Add 1 to a counter**, or a **Change a value or counter** node |
+| Count clicks, tries or points | **Change a number…**, or a **Change a value or counter** node |
 | Mark a question and give feedback | **Add question** (see [Questions and quizzes](question-kit)) |
 | Put a number or a name into some words | \`{braces}\` in the text, or a [binding](bindings) with a formula |
 | Pick something at random | \`randInt\` or \`Math.random()\` in an [expression](expressions) |
@@ -14074,13 +14093,11 @@ Going back to **Home** and pressing **Start** again does not start a second copy
 
 ## 8. A sound on or off button
 
-The list under **+ When clicked…** has no mute, so this one is built in the graph. It takes one node.
+It is one more choice on **+ When clicked…**.
 
 1. Draw a button beside **Ding**. **Label**: **Sound on or off**, **Name**: **Sound button**.
-2. In its **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens at the bottom with a new **When clicked or hovered** node, set to this button, with nothing joined to it.
-3. Find the small dot on the right edge of that node. Drag from it into empty space and let go. A menu opens, headed **Add and connect**.
-4. Type \`sound\` in **Find a node…** and choose **Captions and sound**. It appears where you let go, already joined.
-5. Click the new node. In its settings on the right, set **Do** to **Sound: flip**.
+2. Press **+ When clicked…**, choose **Turn the sound off or on** and press **Add**. The **Interactions** tab opens at the bottom on the new flow: a **When clicked or hovered** node set to this button, joined to a **Captions and sound** node.
+3. Click the new **Captions and sound** node. In its settings on the right, **Do** is **Sound: flip**.
 
 ![The Interactions graph for the Sounds page: Sound button's click joined to a Captions and sound node set to Sound: flip, with its settings on the right, and the Ding and Stop buttons' nodes below.](help/tutorial-sound-flip.png)
 
@@ -14113,7 +14130,7 @@ Press <kbd>Esc</kbd> to close the Preview.
 - **+ When clicked…** has **Play a sound**, **Play music that carries on across pages** and **Stop the music**, and each makes ordinary nodes in the graph.
 - A **soundtrack** keeps playing from page to page, and starting it again does not make a second copy.
 - **Stop sound** ends it with a fade.
-- A **Captions and sound** node set to **Sound: flip** is your own mute button.
+- **Turn the sound off or on** is your own mute button: a **Captions and sound** node set to **Sound: flip**.
 
 **Next:** everything the **Play sound** node can do (speed, a sound from a list item, what is playing now) is in [Sound](captions#sound) and [Soundtrack music](captions#soundtrack-music). Sound that follows an animation, with captions, is in [Narration, captions and transcript](captions).`
   }
@@ -15156,6 +15173,8 @@ const concept$b = {
 - **Check a condition** is a node inside a flow. The flow has already started, and it carries on down **true** or **false**. Use it when both answers lead somewhere, such as right and wrong feedback.
 
 Both take a formula, or the pickers (**[score] [is at least] [5]**). A formula that can't be worked out counts as false.
+
+You don't have to choose between them in **+ When clicked…**. **+ only if…** there writes an **Only if** on the event, and adding **+ otherwise…** to it writes a **Check a condition** with **true** and **false** ways instead.
 
 ## Where people get caught out
 
@@ -18363,14 +18382,26 @@ The quick way to make a layer do something, with no graph to draw. Select a laye
 A short list asks what should happen:
 - **Go to the next page**, **Go to the previous page**, **Go to a page…** (you pick which). Each of the page ones also asks **How the page changes** (a fade unless you choose) and its **Speed** (Medium unless you choose Slow, Fast or Custom).
 - **Show a layer**, **Hide a layer**, **Show or hide a layer**: this layer or another. Showing a layer other than this one also sets it to start hidden, so there is something to show.
+- **Show only one of a set…**: for tabs. Pick the layer to show and tick the layers to hide, and it hides each of those, then shows the one. Put one of these on each tab, each showing its own panel.
+- **Change a layer’s look…**: pick a layer (this one or another) and what to change: its **Colour**, its **Text**, its **Opacity** or its **Size** (a width, a height, or both). The colour, number and text boxes are the Inspector's own, so nothing is a formula. For a text layer the colour is its text colour.
 - **Play an animation** (a timeline of this page) and **Play a sound**.
 - **Turn the sound off or on**: mutes every sound and video, or brings the sound back. The viewer's browser remembers it.
 - **Play or pause a video** and **Jump a video to a time…** (seconds from the start, so 75 is 1:15): this video, or another on the page.
-- **Add 1 to a counter** and **Switch something on or off**: pick a number or an on/off variable you already have, or name a new one in plain words and it is made for you.
+- **Change a number…**: pick a number you already have, or name a new one in plain words and it is made for you, then **Add to it**, **Take away from it** or **Set it to** an **Amount**. The amount can be a formula (\`score * 2\`). It is what **Add 1 to a counter** used to be, so \`1\` is the start.
+- **Go to the next item…** and **Go to the previous item…**: for a slideshow or carousel. They move a number on by one, and after the last go back to the first (or stop there, as you choose). **The first one is** says whether you count from 1 or 0, and **How many items** is as many as one of your lists has, or a number you type.
+- **Set a text or choice…**: puts a piece of text in a text variable, or picks one of a choice variable's choices.
+- **Switch something on or off**: **Flip it each time**, or **Turn it on**, or **Turn it off**, for a yes/no variable you have or a new one.
+- **Put values back to the start…**: tick the numbers, text and switches to put back to where they began. Nothing else changes (**Start over** is the one that does everything).
+- **Say something to screen readers**: a short message a screen reader reads out. Nothing shows on screen.
 - **Open a link** and **Start over**.
 - **Run a script**: one of the project's scripts, or **A new script…**, which is made in the Scripts tab ready to write. \`event\` says what was clicked.
 
 Pick one, answer the question it asks (the line at the bottom reads back what it will do), and press **Add**. It is added in one step, so one undo takes it all back, including a new variable or the layer set to start hidden. A behaviour is just a **When clicked or hovered** event joined to an action (and the variable it needs), the same nodes you would have drawn: select the new node in the graph to change anything about it. Nothing special marks them, and nothing hidden runs.
+
+Under the list there are three more things, all optional, and a plain click does what it always did if you leave them alone:
+- **It starts when** says what sets it off. It starts on **clicked** (or **hovered over**, from **+ When hovered…**). The others are **the page is shown**, **some seconds have passed** (it asks how many, and it runs once), **a value reaches something** (pick the value and how it is compared, such as **score is at least 10**: it runs each time the value changes while that is true), **dropped on something** (pick the drop zone, or any; the layer has to be draggable), **a key is pressed** (pick it from the list, or type another) and **a video reaches a time** (pick the video and the second; it adds a cue point to the video and uses it). Each one writes the event node the graph already has.
+- **+ then also…** adds another thing to do straight after, as many as you like. Each row has the same list of things and asks its own questions, and **Remove** takes it out again. They run one after another, joined in the graph the way you would have joined them.
+- **+ only if…** makes it happen only when something is true, with the same condition pickers as the graph (a value, **is at least**, a number...). It is written as the event's own **Only if**. Once it is on, **+ otherwise…** says what to do when it is not true; that one is written as a **Check a condition** with a **true** way and a **false** way. **Remove Only if** takes both out.
 
 The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the event, for building the flow by hand in the graph.
 
@@ -19136,6 +19167,9 @@ Change the list while it runs with **Change a value or counter**. Its **Do** box
 - *Change list items where a field is a value* changes every item that matches, in one step. Type the field to look at (**Items where this field**, like \`state\`) and the value it has to be (**Is**, like \`"up"\`), then the **Field** to change and its new **Value**. A memory game turns every face-up card to matched with *Items where this field* \`state\`, *Is* \`"up"\`, *Field* \`state\`, *Value* \`"matched"\`. Leave both *where* boxes empty to change every item.
 
 In scripts use \`ix.toggleItem('picked', 'b')\`, \`ix.removeValue('picked', 'b')\` and \`ix.setItem('cards', 2, 'down', 'state')\`, or assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`.
+
+## Next and previous in a range
+For a slideshow, a carousel or a set of tabs, **Change a value or counter** has two more **Do** choices: *Go to the next number in a range* and *Go to the previous number in a range*. **First number** and **Last number** say where the range is (1 and \`slides.length\` for a list of slides counted from 1; 0 and \`slides.length - 1\` counted from 0), and **At the ends** says whether going past the last one *goes round to the other end* or *stops there*. It replaces a formula like \`slide >= slides.length ? 1 : slide + 1\` that you would otherwise type twice. **+ When clicked…** has it as **Go to the next item…** and **Go to the previous item…**. With **Last number** empty there is no top end: next just counts up.
 
 ## Easing a number to a new value
 **Change a value or counter** can make a number run up (or down) to its new value instead of jumping. Use it for a score that counts up, or a bar that fills. It has two settings when **Do** is *Set to* or *Add to it* on a number:

@@ -71,13 +71,11 @@ Going back to **Home** and pressing **Start** again does not start a second copy
 
 ## 8. A sound on or off button
 
-The list under **+ When clicked…** has no mute, so this one is built in the graph. It takes one node.
+It is one more choice on **+ When clicked…**.
 
 1. Draw a button beside **Ding**. **Label**: **Sound on or off**, **Name**: **Sound button**.
-2. In its **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens at the bottom with a new **When clicked or hovered** node, set to this button, with nothing joined to it.
-3. Find the small dot on the right edge of that node. Drag from it into empty space and let go. A menu opens, headed **Add and connect**.
-4. Type \`sound\` in **Find a node…** and choose **Captions and sound**. It appears where you let go, already joined.
-5. Click the new node. In its settings on the right, set **Do** to **Sound: flip**.
+2. Press **+ When clicked…**, choose **Turn the sound off or on** and press **Add**. The **Interactions** tab opens at the bottom on the new flow: a **When clicked or hovered** node set to this button, joined to a **Captions and sound** node.
+3. Click the new **Captions and sound** node. In its settings on the right, **Do** is **Sound: flip**.
 
 ![The Interactions graph for the Sounds page: Sound button's click joined to a Captions and sound node set to Sound: flip, with its settings on the right, and the Ding and Stop buttons' nodes below.](help/tutorial-sound-flip.png)
 
@@ -110,7 +108,7 @@ Press <kbd>Esc</kbd> to close the Preview.
 - **+ When clicked…** has **Play a sound**, **Play music that carries on across pages** and **Stop the music**, and each makes ordinary nodes in the graph.
 - A **soundtrack** keeps playing from page to page, and starting it again does not make a second copy.
 - **Stop sound** ends it with a fade.
-- A **Captions and sound** node set to **Sound: flip** is your own mute button.
+- **Turn the sound off or on** is your own mute button: a **Captions and sound** node set to **Sound: flip**.
 
 **Next:** everything the **Play sound** node can do (speed, a sound from a list item, what is playing now) is in [Sound](captions#sound) and [Soundtrack music](captions#soundtrack-music). Sound that follows an animation, with captions, is in [Narration, captions and transcript](captions).`,
   },

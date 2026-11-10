@@ -58,18 +58,17 @@ The part in braces is an expression. While \`taken\` is empty it says *just star
 
 ## 4. Wire the first choice
 
-1. Select **Choice 1**. In its **Interactions** section press **+ When clicked…** and choose **Add 1 to a counter**.
-2. Under **Which counter** pick **A new counter…**, and in **Name the counter** type \`score\`. Press **Add**. This makes the \`score\` variable for you.
+1. Select **Choice 1**. In its **Interactions** section press **+ When clicked…** and choose **Change a number…**.
+2. Under **Which number** pick **A new number…**, and in **Name the number** type \`score\`. Leave **What to do** on **Add to it** and set **Amount** to \`3\`: this choice is worth three points. Press **Add**. This makes the \`score\` variable for you.
 
-![The When Choice 1 is clicked dialog: Pages, Layers, Motion and sound, Counting and switches and Other, with Add 1 to a counter picked and Which counter below it.](help/tutorial-branching-when-clicked.png)
+![The When Choice 1 is clicked dialog: Pages, Layers, Motion and sound, Counting and switches and Other, with Change a number picked, and Which number, What to do and Amount below it.](help/tutorial-branching-when-clicked.png)
 
 3. The **Interactions** tab opens by itself on two nodes: **When clicked or hovered** and **Change a value or counter**. (If it doesn't, press **Show in graph** under the sentence in the Properties panel.)
-4. Click the **Change a value or counter** node and change **Value** from \`1\` to \`3\`. This choice is worth three points.
-5. Drag from the small dot on the right edge of that node into empty space and let go. In the menu, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set it up:
+4. Drag from the small dot on the right edge of that node into empty space and let go. In the menu, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set it up:
    - **Variable**: **taken**
    - **Do**: **Add to the end of the list**
    - **Value**: \`"Asked Sam"\` (with the quotes: it is text)
-6. Drag from the new node's dot into empty space again, find **Go to a page** and pick it. Leave **Go to** on **A chosen page** and set **Page** to **Sam replies**.
+5. Drag from the new node's dot into empty space again, find **Go to a page** and pick it. Leave **Go to** on **A chosen page** and set **Page** to **Sam replies**.
 
 That is one choice: click, add 3 to \`score\`, add *Asked Sam* to \`taken\`, go to **Sam replies**.
 
@@ -77,9 +76,9 @@ That is one choice: click, add 3 to \`score\`, add *Asked Sam* to \`taken\`, go 
 
 ## 5. Wire the other two choices
 
-Do the same for **Choice 2** and **Choice 3**. From now on **Which counter** already says **score**, so just press **Add**.
+Do the same for **Choice 2** and **Choice 3**. From now on **Which number** already says **score**, so set **Amount** and press **Add**.
 
-| Button | Value (points) | Words for the path | Page |
+| Button | Amount (points) | Words for the path | Page |
 |---|---|---|---|
 | Choice 2 | \`0\` | \`"Wrote it yourself"\` | Wednesday night |
 | Choice 3 | \`2\` | \`"Emailed the lecturer"\` | The lecturer replies |

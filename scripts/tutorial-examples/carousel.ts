@@ -1,5 +1,6 @@
 //The carousel tutorial's finished project: one slide drawn from a list by a number variable, Previous, Next, dots, arrow keys and an autoplay that pauses
-import { createNode, type Project } from 'interactives-player';
+import { createNode, type Project, type Variable } from 'interactives-player';
+import type { FlowStep } from '../../src/lib/click-flow';
 import { blankProject, type TutorialExample } from './kit';
 import { C, bind, change, clickFlow, eventFlow, solid, text, variable, whenClicked } from './_content-helpers';
 
@@ -10,8 +11,8 @@ const SLIDES = [
   { title: 'Draft and review', body: 'Write a first version, then check it against the task and the criteria.', colour: '#e6dcf5' },
 ];
 
-const NEXT = 'slide >= slides.length ? 1 : slide + 1';
-const PREVIOUS = 'slide <= 1 ? slides.length : slide - 1';
+//Next and Previous number in a range: from 1 to the length of the list, going round at both ends
+const stepSlide = (v: Variable, op: 'next' | 'previous'): FlowStep => ({ kind: 'action.setVariable', params: { variable: v.id, op, first: '1', last: 'slides.length', ends: 'round' } });
 
 function build(): Project {
   const p = blankProject('Research steps');
@@ -38,11 +39,11 @@ function build(): Project {
   const dots = createNode('group', { name: 'Dots', x: 260, y: 533, width: 18, height: 18, repeat: { items: 'slides', layout: 'horizontal', gap: 14, columns: 1 }, children: [dot] } as never);
   ab.children.push(prev, dots, play, next);
 
-  clickFlow(ab, next, [change(playing, 'false'), change(slide, NEXT)]);
-  clickFlow(ab, prev, [change(playing, 'false'), change(slide, PREVIOUS)]);
+  clickFlow(ab, next, [change(playing, 'false'), stepSlide(slide, 'next')]);
+  clickFlow(ab, prev, [change(playing, 'false'), stepSlide(slide, 'previous')]);
   clickFlow(ab, dot, [change(playing, 'false'), change(slide, 'event.index + 1')]);
   whenClicked(ab, play, 'switch', playing);
-  eventFlow(ab, 'event.timer', { ms: '4000', repeat: true, while: 'playing && !reducedMotion' }, [change(slide, NEXT)]);
+  eventFlow(ab, 'event.timer', { ms: '4000', repeat: true, while: 'playing && !reducedMotion' }, [stepSlide(slide, 'next')]);
   return p;
 }
 
@@ -58,7 +59,7 @@ export const example: TutorialExample = {
     { text: '**The timer runs only while playing and not reducedMotion,** so it never starts for someone who asked for less movement. Previous, Next and the dots set playing to false first.', colour: 'sky' },
   ],
   graphNotes: [
-    { at: 0, text: '**Next, Previous and the dots each stop the autoplay, then move slide.** Next and Previous wrap round at the ends. The arrow keys are the Shortcut of each button, so they need no nodes.' },
+    { at: 0, text: '**Next, Previous and the dots each stop the autoplay, then move slide.** Next and Previous use **Next number in a range**, from 1 to the length of the list, and go round at the ends. The arrow keys are the Shortcut of each button, so they need no nodes.' },
     { at: 11, text: '**When a timer goes off every 4000 ms,** but Only while playing and not reducedMotion. Play flips playing on and off, and its label and Pressed state follow it.', colour: 'sky' },
   ],
 };

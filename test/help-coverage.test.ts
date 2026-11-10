@@ -11,6 +11,9 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'More in + When clicked…': [['interactions', 'Show only one of a set'], ['interactions', 'Put values back to the start'], ['interactions', '+ then also']],
+  'More ways to start': [['interactions', 'It starts when'], ['concept-only-if', '+ otherwise']],
+  'Next and previous without formulas': [['variables', 'Next and previous in a range']],
   'Counting and adding up lists without code': [['expressions', 'count(list, field, value)'], ['expressions', 'positions(list, field, value)'], ['expressions', 'pluck(list, field)'], ['variables', 'Change list items where a field is a value']],
   'Insert value': [['text', 'Insert value']],
   'Pick a calculation': [['expressions', 'Calculations without typing'], ['expressions', 'Pick a calculation']],
