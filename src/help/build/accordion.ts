@@ -64,7 +64,7 @@ Four sections appear, one under the other, each with its own title and text. The
 
 1. Select **Section text**. In **Data bindings** add **Visible**, choose **Formula**, press **Edit as formula** and type \`open.includes(index)\`.
 
-Only the first section shows its text now (on the canvas the hidden text is a faint ghost, and it is gone in Preview). A hidden layer takes no room in auto layout, so the closed sections shrink to their header, and the column closes up.
+Only the first section shows its text now (a hidden layer takes no room in auto layout, so the closed sections shrink to their header and the column closes up, on the canvas as in Preview). To edit a hidden text, pick it in the **Layers** panel.
 
 The line under the formula works it out for the first section (\`index\` 0).
 

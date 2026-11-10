@@ -15,10 +15,11 @@ export const concept: Concept = {
 
 ## Where people get caught out
 
-- **"I put a layer in a group and its numbers changed."** It didn't move on the page; its X and Y are now counted from the group's corner instead of the page's. Making a group, dragging a layer into one in **Layers**, or ungrouping all keep the layer where it was and change the numbers to match. (Ungroup leaves a group that is rotated or scaled alone.)
+- **"I put a layer in a group and its numbers changed."** It didn't move on the page; its X and Y are now counted from the group's corner instead of the page's. Making a group, dragging a layer into one in **Layers**, or ungrouping all keep the layer where it was and change the numbers to match.
+- **"I changed a layer's X inside a group and the group's X changed instead."** A group is as big as the layers in it, so it moves to stay around them. Put a layer at X 20 and the group's X moves 20 to the right, while the layer's own X goes back to 0 (it is counted from the group's corner, and the group's corner moved). The layer is where you put it on the page. To keep a group still, turn off **Size to contents** on it. (Ungroup leaves a group that is rotated or scaled alone.)
 - **"My animation jumped after I grouped the layer."** Keyframes on X and Y are not changed when a layer moves into or out of a group, so they now count from the new parent's corner. Move the keys, or group the layer before you animate it.
 - **"I bound X and the layer went off the page."** A binding or a **Change a layer's setting** on X is measured from the parent too. \`event.x\` and \`event.y\` from a click or drag are measured on the page, so they only line up for a layer at the top of the list. For dragging, \`start + event.dx\` (how far the pointer has moved) works wherever the layer is.
-- **"I can't move a layer inside an auto layout frame."** That frame places its children, so X and Y stop being yours to set. See [Auto layout](auto-layout); a child set to **Ignore** keeps its own X and Y.
+- **"I can't move a layer inside an auto layout frame."** That frame places its children, so their X and Y are greyed out in the Inspector (they show where the layout put the child). Set the child's **Position** to **Ignore** in Layout item and they are yours again. See [Auto layout](auto-layout).
 - **"I want a layer to keep to the bottom right as the frame changes size."** In an auto layout frame, set the child's **Position** to **Absolute** and give it an **Inset** from the edges you want.
 
 ## How to tell what is going on
