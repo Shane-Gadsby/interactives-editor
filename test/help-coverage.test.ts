@@ -11,6 +11,12 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Buttons on page masters': [['page-master', 'Buttons and clicks on a master'], ['page-master', 'Edit the master'], ['page-navigation', 'Add to this master'], ['concept-pages-masters', 'From the page master']],
+  'Lists as tables': [['repeaters', 'Type my own items'], ['variables', 'JSON text']],
+  'Picking in a repeater': [['repeaters', 'Selection'], ['repeaters', 'isSelected'], ['concept-repeaters', 'Selection']],
+  'Duplicate with what it does': [['interactions', 'Copying a layer with what it does'], ['interactions', 'Duplicate layer only']],
+  'Variables in your own words': [['variables', 'Naming a variable'], ['variables', 'Name in formulas']],
+  'Drag a value onto the page': [['variables', 'Show a variable on the page'], ['text', 'Drag a value onto the page'], ['data-sources', 'Show a field on the page']],
   'Read changes aloud': [['accessibility', 'Read changes aloud']],
   'Say it': [['accessibility', 'Say it']],
   'When all of these are done': [['interactions', 'all of these are done'], ['interactions', 'Count what has been done'], ['interactions', 'Counting what is done']],

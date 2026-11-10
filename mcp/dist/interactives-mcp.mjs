@@ -3794,6 +3794,17 @@ function sanitizeNode(raw, seen) {
   if (isObj$1(n.converters)) for (const [k, list] of Object.entries(n.converters)) n.converters[k] = objs(list).filter((c2) => isStr(c2.type));
   if ("constraints" in n) n.constraints = objs(n.constraints).filter((c2) => isStr(c2.type));
   if ("repeat" in n && !(isObj$1(n.repeat) && isStr(n.repeat.items))) delete n.repeat;
+  if (isObj$1(n.repeat) && "select" in n.repeat) {
+    const s = n.repeat.select;
+    if (isObj$1(s) && (s.mode === "one" || s.mode === "several") && isStr(s.variable) && s.variable) {
+      const out = { mode: s.mode, variable: s.variable };
+      if (typeof s.toggle === "boolean") out.toggle = s.toggle;
+      n.repeat = { ...n.repeat, select: out };
+    } else {
+      const { select: _gone, ...rest } = n.repeat;
+      n.repeat = rest;
+    }
+  }
   if ("question" in n) {
     const qn = normaliseQuestion(n.question);
     if (qn && raw.type === "frame") n.question = qn;
@@ -10410,7 +10421,7 @@ You will build a lamp. A button switches it on and off, and a counter shows how 
 3. In **Name** type \`lit\`, then press <kbd>Tab</kbd> (the name is saved when you leave the field). The **Type** is already **True/false (switch)**. Leave the starting value unticked (false).
 4. Press **+ Add variable** again and pick **Counter**. Name it \`taps\`. The **Type** is **Number (counter, score)** with the starting value 0.
 
-Names can only use letters, digits and \`_\`, and can't start with a digit. That is so they work inside expressions.
+You can type a name in plain words too, such as **Lamp on**. Formulas need a name made of letters, digits and \`_\`, so the editor offers \`lampOn\` in a small **Name in formulas** box, and keeps your words as the label you see in lists. The names in this tutorial are already plain, so they are used as typed.
 
 ![The Variables tab: lit is true/false and starts false, taps is a number and starts at 0.](help/variables-panel.png)
 
@@ -10812,7 +10823,7 @@ Auto layout puts the text under the header for you. Both are empty until the sec
 ## 4. Put the section in the accordion and repeat it
 
 1. In the **Layers** panel, drag the **Section** row onto the middle of the **Accordion** row. Accordion is outlined, and Section goes inside it.
-2. Select **Accordion**. In **Repeat (list)** tick **Repeat the first child for each item** and replace the sample list in **Items** with \`sections\`. Leave **Layout** on **Column**.
+2. Select **Accordion**. In **Repeat (list)** tick **Repeat the first child for each item** and set **Repeat for each** to **List: sections**. Leave **Layout** on **Column**.
 
 Four sections appear, one under the other, each with its own title and text. The first has a minus sign, because \`open\` holds 0, and the others have a plus.
 
@@ -10867,7 +10878,7 @@ Change the **Value** in step 5 to \`event.index\` and **Do** to **Add to the lis
 Tabs show one section's text at a time under a row of titles. They read the same \`sections\` list.
 
 1. Add a **Counter** variable called \`tab\`, starting at 0.
-2. Make a button with the **Label** \`{item.title}\`, select it, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and give the group **Repeat (list)** with **Items** \`sections\` and **Layout** **Row**. One button per section appears in a row.
+2. Make a button with the **Label** \`{item.title}\`, select it, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and give the group **Repeat (list)** with **Repeat for each** set to **List: sections** and **Layout** **Row**. One button per section appears in a row.
 3. On the button, press **+ On click (empty)** and add **Change a value or counter**: **Variable** \`tab\`, **Do** **Set to**, **Value** \`event.index\`.
 4. Bind the button's **Current (true, or page, step, location)** to \`tab == index\`, and its **Fill colour** to \`tab == index ? "#ffd54f" : "#e8eefc"\`, so the open tab looks and reads as the current one.
 5. Under the row, add a text \`{sections[tab].body}\`. It shows the open tab's text.
@@ -11495,7 +11506,7 @@ A shortcut presses the button from anywhere on the page, so the arrow keys run t
 ## 5. A dot for each slide
 
 1. Press <kbd>O</kbd> for the **Ellipse** tool and draw a small circle between Previous and Next, 18 by 18. Name it **Dot**.
-2. Select it and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Name the group **Dots**. In its **Repeat (list)** tick **Repeat the first child for each item**, set **Items** to \`slides\`, **Layout** to **Row** and **Gap** to **14**. Four dots appear.
+2. Select it and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Name the group **Dots**. In its **Repeat (list)** tick **Repeat the first child for each item**, set **Repeat for each** to **List: slides**, **Layout** to **Row** and **Gap** to **14**. Four dots appear.
 3. Select **Dot** again and add three bindings in **Data bindings**, each a **Formula**:
    - **Fill colour**: \`slide == index + 1 ? "#1f3a68" : "#c9ced6"\`. The current slide's dot is dark.
    - **Current (true, or page, step, location)**: \`slide == index + 1\`. A screen reader says which dot is current.
@@ -11840,12 +11851,12 @@ The cards are a **repeater**: you design one card, and it is copied once for eac
 4. Click under it and type \`{item.text}\`. Name it **Card text**. Make it a little narrower than the rectangle so long lines wrap inside it.
 5. In the **Layers** panel, click **Card background**, then <kbd>Shift</kbd>+click **Card text**, so all three are selected. Press <kbd>Ctrl</kbd>+<kbd>G</kbd> to group them, and name the group **Card**. It is now the only layer inside **Cards**.
 6. Select the **Cards** frame. In the Properties panel open **Repeat (list)** and tick **Repeat the first child for each item**.
-7. Change **Items** to \`tips.cards\` and press <kbd>Enter</kbd>. (It starts as \`tips\`, the whole file, which is not a list.)
+7. Set **Repeat for each** to **A formula (advanced)**, change **Items** to \`tips.cards\` and press <kbd>Enter</kbd>. (It starts as **Data: tips**, the whole file, which is not a list.)
 8. Set **Layout** to **Grid**, **Cols** to **2** and **Gap** to **16**.
 
 Four cards appear, two by two, each with its own tip. Inside a repeated layer, \`item\` is the item it was copied for, so \`{item.title}\` is that card's title. Change the card you drew (its size, its font) and every copy follows.
 
-![The Cards frame selected, with four cards two by two on the canvas, and its Repeat (list) section: Items tips.cards, currently 4 items, Layout Grid, Gap 16 and Cols 2.](help/tutorial-data-source-repeat.png)
+![The Cards frame selected, with four cards two by two on the canvas, and its Repeat (list) section: Repeat for each a formula, Items tips.cards, currently 4 items, Layout Grid, Gap 16 and Cols 2.](help/tutorial-data-source-repeat.png)
 
 ## 5. A colour from the file
 
@@ -11889,7 +11900,7 @@ Press **Preview** at the top right. The page plays with the words from the file,
 
 ## Go further
 
-- **A spreadsheet instead.** Save a sheet as CSV (first row the column names: \`title,text,colour\`) and add it with **+ From file**. A CSV becomes a list of rows, so **Items** is the source's name on its own, such as \`cards\`.
+- **A spreadsheet instead.** Save a sheet as CSV (first row the column names: \`title,text,colour\`) and add it with **+ From file**. A CSV becomes a list of rows, so **Repeat for each** is just that source, such as **Data: cards**.
 - **More than one page.** Every page can read the same source. A second page could show \`{tips.cards[0].text}\` large, for a tip of the week.
 - **A file somebody else keeps up to date.** **+ From URL** reads the file from a web address each time the project opens. See [Data sources](data-sources).
 
@@ -11964,7 +11975,7 @@ mindMap(ideas, {width: 720, height: 440, nodeW: 112, gapX: 32, collapsed: folded
 
 1. Press <kbd>F</kbd> and draw a small frame where the top left corner of the map should be, under a title: **X** 40, **Y** 120, **W** 130, **H** 44. Name it **Idea**, give it a pale fill (\`#e8eefc\`), a dark **Stroke** and a **Radius** of 10.
 2. Press <kbd>T</kbd>, click inside it and type \`{item.label}\`. Set **Sizing** to **Fixed**, **Align** center and **V-align** middle.
-3. Select **Idea** and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Name the group **Ideas**. In **Repeat (list)** tick **Repeat the first child for each item**, set **Items** to \`map\` and **Layout** to **Free (bind x/y)**.
+3. Select **Idea** and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. Name the group **Ideas**. In **Repeat (list)** tick **Repeat the first child for each item**, set **Repeat for each** to **List: map** and **Layout** to **Free (bind x/y)**.
 
 All ten boxes are on top of each other for now. Tell each copy where it goes:
 
@@ -11985,7 +11996,7 @@ The map spreads out: the middle idea with four branches round it. The positions 
 
 ![The Connector section of Line: Route Curved, Start on layer Idea with Which copy item.parentIndex, End on layer Idea with Which copy index, and both Ends Plain.](help/tutorial-diagram-connector.png)
 
-4. With the connector selected, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and name the group **Lines**. In **Repeat (list)**, tick it, set **Items** to \`map\` and **Layout** to **Free (bind x/y)**.
+4. With the connector selected, press <kbd>Ctrl</kbd>+<kbd>G</kbd> and name the group **Lines**. In **Repeat (list)**, tick it, set **Repeat for each** to **List: map** and **Layout** to **Free (bind x/y)**.
 5. In the **Layers** panel, drag **Lines** below **Ideas**, so the lines go under the boxes.
 
 There is now one line for each idea, from its parent to it. The middle idea has no parent (its \`parentIndex\` is -1), so it gets no line.
@@ -12037,14 +12048,14 @@ and \`links\`, where \`label\` is the answer that takes you along it:
    - \`arrows\`: \`flowLinks(steps, links)\`, every link with \`a\` and \`b\`, the places of the steps it joins.
    - \`outs\`: \`arrows.filter(l => l.from == current && l.b >= 0)\`, the links out of the step the learner is on.
 5. Go back to **Mind map**, select **Ideas** and **Lines** together, press <kbd>Ctrl</kbd>+<kbd>C</kbd>, select the **Flowchart** page and press <kbd>Ctrl</kbd>+<kbd>V</kbd>. Rename them **Steps** and **Arrows**.
-6. Change the **Items** of **Steps** to \`chart\` and of **Arrows** to \`arrows\`.
+6. Change **Repeat for each** of **Steps** to **List: chart** and of **Arrows** to **List: arrows**.
 7. Select the connector inside **Arrows**. Set **Which copy** to \`item.a\` for **Start** and \`item.b\` for **End**, **Route** to **Elbow (right angles)**, and under **Ends** set **End** to **Arrow**. For the Yes and No on the decision's arrows, type \`{item.label ?? ""}\` in the label's **Text**. Each arrow's label reads its own item, and an arrow with no label in the list shows none.
 8. Select the box inside **Steps**. Remove the **Visible** binding and change **Fill colour** to \`item.id == current ? "#ffd54f" : "#ffffff"\`: the step you are on is yellow. Set its **Role** back to **None (plain shape)**, and bind **Current (true, or page, step, location)** to \`item.id == current ? "step" : false\`.
 
 Now the panel that walks the learner through it, to the right of the chart:
 
 9. A text \`{steps.find(s => s.id == current).label}\`, large and bold. It says where you are.
-10. A button with the **Label** \`{item.label || "Continue"}\`. Select it, press <kbd>Ctrl</kbd>+<kbd>G</kbd>, and give the group **Repeat (list)** with **Items** \`outs\` and **Layout** **Column**. At the start there is one button, **Continue**. At the decision there are two, **Yes** and **No**.
+10. A button with the **Label** \`{item.label || "Continue"}\`. Select it, press <kbd>Ctrl</kbd>+<kbd>G</kbd>, and give the group **Repeat (list)** with **Repeat for each** set to **List: outs** and **Layout** **Column**. At the start there is one button, **Continue**. At the decision there are two, **Yes** and **No**.
 11. On that button, **+ On click (empty)** and **Change a value or counter**: **Variable** **current**, **Do** **Set to**, **Value** \`outs[event.index].to\`.
 12. A **Start again** button with **Change a value or counter** setting **current** to \`"s1"\`.
 
@@ -12185,34 +12196,31 @@ const tutorial$k = {
     title: "Flip cards from a list",
     group: "Build it",
     summary: "Term and meaning cards that turn over on a click or Enter, all drawn by one card layer from one list, so adding a card is adding a line.",
-    keywords: "tutorial flip cards flashcards card term meaning definition front back turn over list repeater repeat item index event.index grid keyboard enter pressed toggle reset",
+    keywords: "tutorial flip cards flashcards card term meaning definition front back turn over list table repeater repeat item index selection several isSelected grid keyboard enter checkbox toggle reset",
     body: `You will make six cards with a term on the front and its meaning on the back. Selecting a card, or pressing <kbd>Enter</kbd> on it, turns it over. You build **one** card and a list of words, and the editor draws a card for every line of the list. It takes about fifteen minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Flip cards from a list**. **Play** runs it and **Make my copy** gives you your own copy.
 
-You will meet a **List** variable, a **repeater** that draws one layer once per item, \`item\` and \`index\` inside it, and \`event.index\`, which says which copy was clicked.
+You will meet a **List** variable shown as a table, a **repeater** that draws one layer once per item, \`item\` inside it, and the repeater's **Selection**, which keeps track of which cards are turned over without any nodes.
 
 ## 1. Make a project and write the cards
 
 1. On the projects page press **New project**. Keep **Blank project**, type **Key terms** as the name and press **Create project**.
 2. Press <kbd>T</kbd> and click near the top left of the page. Type \`Key terms\` and press <kbd>Escape</kbd>.
 3. Open the **Variables** tab at the bottom. Press **+ Add variable** and pick **List**. Name it \`cards\`.
-4. Its value is a box of text that holds the items. Replace \`[]\` with this, one card per line:
+4. Its starting value is shown as a table: one row for each item and one column for each thing an item holds. It starts empty, so there is only a \`value\` column. Click the \`value\` heading, type \`front\` and press <kbd>Enter</kbd>. Press **Column**, **Add**, then click the new heading and name it \`back\`.
+5. Press **Row**, **Add** six times. Fill each row in, a card to a row:
 
-\`\`\`
-[
-  {"front": "Plagiarism", "back": "Presenting someone else's words or ideas as your own."},
-  {"front": "Paraphrase", "back": "Putting an idea in your own words. You still cite the source."},
-  {"front": "Citation", "back": "A short note in your text that points to the full reference."},
-  {"front": "Reference list", "back": "The full details of every source you cited, at the end."},
-  {"front": "Collusion", "back": "Working with others on work that must be your own."},
-  {"front": "Common knowledge", "back": "Facts that are widely known and easy to check."}
-]
-\`\`\`
+| front | back |
+| --- | --- |
+| Plagiarism | Presenting someone else's words or ideas as your own. |
+| Paraphrase | Putting an idea in your own words. You still cite the source. |
+| Citation | A short note in your text that points to the full reference. |
+| Reference list | The full details of every source you cited, at the end. |
+| Collusion | Working with others on work that must be your own. |
+| Common knowledge | Facts that are widely known and easy to check. |
 
-Each card is a pair of braces with a \`front\` and a \`back\`. Keep the quotes and the commas between cards: if the text isn't a proper list, a red line under the box says so, and the list starts empty.
-
-5. Press **+ Add variable** again, pick **List** and name it \`flipped\`. Leave it as \`[]\`. It will hold the places of the cards that are turned over: \`[0, 3]\` means the first and the fourth.
+Prefer typing? Press **JSON text** above the table to see the same list as text, and **Table** to come back. Each card there is a pair of braces with a \`front\` and a \`back\`.
 
 ## 2. Draw one card
 
@@ -12227,40 +12235,37 @@ The two texts are empty for now. \`item\` is the card the copy is drawing, and t
 
 1. Select **Card** and press <kbd>Ctrl</kbd>+<kbd>G</kbd>. It goes into a new group. Name the group **Cards**.
 2. With **Cards** selected, open the **Repeat (list)** section and tick **Repeat the first child for each item**.
-3. Set **Items** to \`cards\`, **Layout** to **Grid**, **Cols** to **3** and **Gap** to **20**.
+3. Set **Repeat for each** to **List: cards**, **Layout** to **Grid**, **Cols** to **3** and **Gap** to **20**.
 
 Six cards appear in two rows, each with its own term. That is the same **Card** layer drawn six times, so restyling it restyles them all. Inside a copy, \`item\` is that card's line from the list and \`index\` is its place, counting from 0.
 
-![The Cards group selected, with Repeat (list) ticked, Items set to cards (currently 6 items), Layout Grid, Gap 20 and Cols 3, and the six cards on the canvas.](help/tutorial-flipcards-repeat.png)
+![The Cards group selected, with Repeat (list) ticked, Repeat for each set to List: cards, Layout Grid, Gap 20 and Cols 3, and the six cards on the canvas.](help/tutorial-flipcards-repeat.png)
 
-## 4. Show one face at a time
+## 4. Let a click turn a card over
 
-A card is turned over when its place is in \`flipped\`. The formula for that is \`flipped.includes(index)\`.
+Turn the repeater's own **Selection** on, and a card turns over when you click it, or press <kbd>Enter</kbd> or <kbd>Space</kbd> on it. There is nothing to wire.
 
-1. Select **Card back** (in the **Layers** panel, inside **Card**). In **Data bindings** press **+ Add binding** and pick **Visible**. Choose **Formula**, press **Edit as formula**, and type \`flipped.includes(index)\`.
-2. Select **Card front** and do the same with \`!flipped.includes(index)\`. The \`!\` means *not*.
-3. Select **Card** and add a binding to **Fill colour**: **Formula**, \`flipped.includes(index) ? "#ffffff" : "#1f3a68"\`. A turned card is white, so the dark words on its back show.
+1. With **Cards** selected, in **Repeat (list)** set **Selection** to **Several**.
+2. A box asks for a name for the variable that remembers the pick. Type \`flipped\` and press **Create variable**. It is an ordinary list variable, and it will hold the places of the cards that are turned over: \`[0, 3]\` means the first and the fourth.
 
-The line under each formula works it out for the first card (\`index\` 0).
+Each card is now a checkbox that a screen reader says is checked or not, the arrow keys move between the cards, and \`flipped\` fills with the places of the cards turned over. Inside a copy, \`isSelected\` is true for a card that is turned.
 
-Every card shows its front now, because \`flipped\` is empty.
+## 5. Show one face at a time
 
-## 5. Turn a card over on a click
+1. Select **Card back** (in the **Layers** panel, inside **Card**). In **Data bindings** press **+ Add binding** and pick **Visible**. Choose **Formula**, press **Edit as formula**, and type \`isSelected\`.
+2. Select **Card front** and do the same with \`!isSelected\`. The \`!\` means *not*.
+3. Select **Card** and add a binding to **Fill colour**: **Formula**, \`isSelected ? "#ffffff" : "#1f3a68"\`. A turned card is white, so the dark words on its back show.
+4. Select **Card**, open **Accessibility** and type \`Press Enter to turn the card over\` in **Description**.
 
-1. With **Card** selected, open **Accessibility** and set **Role** to **Button**. The card is now a tab stop, and <kbd>Enter</kbd> or <kbd>Space</kbd> clicks it.
-2. Type \`Press Enter to turn the card over\` in **Description**.
-3. In **Data bindings**, add **Pressed (button, toggle)**, choose **Formula**, press **Edit as formula** and type \`flipped.includes(index)\`. A screen reader then says whether the card is turned.
-4. In the **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens with a **When clicked or hovered** node for the card.
-5. Drag from the dot on the right of that node into empty space. In **Find a node…** type \`change\` and pick **Change a value or counter** (the second one in the list, after *Change a layer's setting*).
-6. Set **Variable** to **flipped**, **Do** to **Add to the list, or take out if it is there**, and **Value** to \`event.index\`.
+The line under each formula works it out for the first card.
 
-A click on any copy runs this one flow, and \`event.index\` is the place of the card that was clicked. If it isn't in \`flipped\` it goes in, and the card turns over; if it is, it comes out, and the card turns back.
+Every card shows its front now, because nothing is selected yet. (You could also pick the **By value** source for these bindings and fill in a small table for true and false.)
 
 ## 6. Turn them all back
 
 1. Press <kbd>B</kbd> and draw a button under the cards. Set its **Label** to \`Turn all back\`.
 2. Press **+ On click (empty)**, drag from the dot on the new node and pick **Put values back to the start**.
-3. In its **Variables** list, tick **flipped**. It goes back to \`[]\`, so every card shows its front.
+3. In its **Variables** list, tick **flipped**. It goes back to \`[]\`, so no card is selected and every card shows its front.
 
 ## 7. Try it
 
@@ -12275,16 +12280,17 @@ A click on any copy runs this one flow, and \`event.index\` is the place of the 
 
 ## Make it yours
 
-- **Add a card.** Add a line to \`cards\` in the Variables tab. A seventh card appears in the grid: there is nothing to copy or wire. Make sure the button under the grid still has room.
+- **Add a card.** Add a row to \`cards\` in the Variables tab. A seventh card appears in the grid: there is nothing to copy or wire. Make sure the button under the grid still has room.
 - **A picture on the front.** Lay a picture over **Card front** inside **Card**, and give it the same **Visible** binding.
+- **Only one turned at a time.** Set **Selection** to **One at a time** instead, and tick **Click again to clear** so a second click turns the card back. The variable then holds one number, or -1 for none.
 - **Turning motion.** The faces swap at once, the same as in the starter. A timeline can't turn just one copy, because every copy is the same layer.
 - **Ready-made.** The **Flip and dialog cards** starter (Templates, **Explore and reveal**) has these cards plus a page that steps through them one at a time. A starter has a **Fill in** tab where the cards are rows of a form, so nobody has to type braces and quotes (see [Fill in this starter](fill-in-starter)).
 
 ## What you learned
 
-- A **List** variable holds the content, and a group's **Repeat (list)** draws its first child once per item.
-- Inside the copies, \`item\` is the item and \`index\` its place. In a click, \`event.index\` says which copy was clicked.
-- **Add to the list, or take out if it is there** keeps one list of which cards are turned, and bindings on **Visible** show the right face.
+- A **List** variable holds the content, and you can edit it as a table. A group's **Repeat (list)** draws its first child once per item.
+- Inside the copies, \`item\` is the item and \`index\` its place.
+- **Selection** on the repeater lets people pick copies with a click, Enter or Space. It writes the picked places to a variable, gives each copy \`isSelected\`, and needs no nodes.
 
 **Next:** [Accordion and tabs from data](tutorial-accordion). More on lists in [Repeated lists](repeaters) and [Variables](variables#lists).`
   },
@@ -12292,8 +12298,8 @@ A click on any copy runs this one flow, and \`event.index\` is the place of the 
     1: { check: variables(["cards", "list"], ["flipped", "list"]), show: ["add-variable", "panel-variables"] },
     2: { check: all(layers("frame"), textHas("{item.front}"), textHas("{item.back}")), show: "tool-frame" },
     3: { check: repeats("cards"), show: "panel-inspector" },
-    4: { check: all(bound("text", "visible", "flipped"), bound("frame", "fill", "flipped")), show: "panel-inspector" },
-    5: { check: clickThen("frame", "action.setVariable", setsVariable("flipped")), show: "add-empty-click" },
+    4: { check: (c2) => allNodes(c2.project).some((n) => n.repeat?.select?.mode === "several"), show: "panel-inspector" },
+    5: { check: all(bound("text", "visible", "isSelected"), bound("frame", "fill", "isSelected")), show: "panel-inspector" },
     6: { check: clickThen("button", "action.resetVariables"), show: "tool-button" },
     7: { check: saw("previewed"), show: "preview" }
   }
@@ -12711,7 +12717,7 @@ It makes two face-down cards from every pair, both with the pair's number, and s
 
 1. On **Memory**, press <kbd>F</kbd> and drag a frame across most of the page, below the top. Name it **Cards**.
 2. Press <kbd>B</kbd> and drag a button inside the frame, about 170 by 100. A layer you draw over a frame goes into it. Name the button **Card**.
-3. Select **Cards**. In its **Repeat (list)** section tick **Repeat the first child for each item**. Set **Items** to \`cards\`, **Layout** to **Grid**, **Cols** to \`4\` and **Gap** to \`12\`. Twelve cards appear in three rows of four.
+3. Select **Cards**. In its **Repeat (list)** section tick **Repeat the first child for each item**. Set **Repeat for each** to **List: cards**, **Layout** to **Grid**, **Cols** to \`4\` and **Gap** to \`12\`. Twelve cards appear in three rows of four.
 4. Select **Card** and set its **Label** to:
 
 \`\`\`
@@ -13156,9 +13162,9 @@ const tutorial$c = {
     id: "tutorial-presentation",
     title: "A course presentation",
     group: "Build it",
-    summary: "Four slides that share a page master, a check your understanding question, and Back, Next and the page number added in one go, with a slide transition.",
-    keywords: "tutorial presentation slides slide deck powerpoint lecture page master text slot back next page number navigation transition slide left question check your understanding branded look",
-    body: `You will make a short slide deck: a welcome slide, a content slide, a check your understanding question and a thank you slide. A **page master** gives every slide the same bar, title position and footer, and **Page navigation** adds Back, Next and *Page 2 of 4* to all of them at once, with a slide transition. It takes about fifteen minutes.
+    summary: "Four slides that share a page master, a check your understanding question, and Back, Next and the page number added once, on the master, with a slide transition.",
+    keywords: "tutorial presentation slides slide deck powerpoint lecture page master master buttons text slot back next page number navigation transition slide left question check your understanding branded look",
+    body: `You will make a short slide deck: a welcome slide, a content slide, a check your understanding question and a thank you slide. A **page master** gives every slide the same bar, title position and footer, and **Page navigation** puts Back, Next and *Page 2 of 4* on that master once, so every slide has them, with a slide transition. It takes about fifteen minutes.
 
 **Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Course presentation**. **Play** runs it and **Make my copy** gives you your own copy.
 
@@ -13176,7 +13182,7 @@ Each slide is a page of the project. The order of the pages in the **Layers** pa
 On **Slide master**:
 
 1. Press <kbd>R</kbd> and draw a thin bar across the very top: **X** 0, **Y** 0, **W** 800, **H** 12. Give it a dark blue fill. Name it **Accent bar**.
-2. Press <kbd>T</kbd> and click near the top left, under the bar. Type \`{slideTitle}\` and press <kbd>Escape</kbd>. Make it **Size** 30, **Weight** 700, and name it **Slide title**. The braces make it a *text slot*: each slide fills in its own words. In its **Accessibility** section set **Role** to **Heading**: a master's layers are hidden from screen readers unless they have a role or a name of their own, and this one is each slide's title.
+2. Press <kbd>T</kbd> and click near the top left, under the bar. Type \`{slideTitle}\` and press <kbd>Escape</kbd>. Make it **Size** 30, **Weight** 700, and name it **Slide title**. The braces make it a *text slot*: each slide fills in its own words. In its **Accessibility** section set **Role** to **Heading**: a master's pictures and shapes are hidden from screen readers unless they have a role or a name of their own, and this one is each slide's title. (Buttons and links on a master are not hidden: they work on every slide.)
 3. Add a small text at the very bottom left, \`Study skills\`, **Size** 13. Name it **Footer**. Keep it below about **Y** 570, clear of the buttons that go along the bottom later.
 4. Select the page itself (click its name above it) and open the **Page master** section. Press **Make this a master**.
 5. The section now says how many pages draw it and lists them. Press **Use for all other pages**.
@@ -13211,16 +13217,20 @@ To change the bar or the footer later, change it once on **Slide master** (or pr
 
 ## 5. Back, Next and the page number
 
-1. Select the **Welcome** page and open **Page navigation** in the Properties panel.
+Back and Next go on the master, once. Every slide that draws the master gets them.
+
+1. Select **Slide master** (click its name above it on the canvas) and open **Page navigation** in the Properties panel.
 2. Choose the style **Back and Next**.
 3. Set **How the page changes** to **Slide left**, and **Speed** to **Medium**.
-4. Press **Add to all 4 pages**. (**Add to this page** does just the one, and **Remove** takes them off again.)
+4. Press **Add to this master**.
 
-![Page navigation with Back and Next picked, How the page changes set to Slide left, Speed Medium, and the buttons Add to this page, Add to all 4 pages and Remove.](help/tutorial-presentation-navigation.png)
+![Page navigation on Slide master with Back and Next picked, How the page changes set to Slide left, Speed Medium, and the buttons Add to this master and Remove.](help/tutorial-presentation-navigation.png)
 
-Every slide now has **Back** on the left, **Next** on the right and *Page 1 of 4* between them. Back is hidden on the first slide and Next on the last. The master isn't counted: it is not a slide.
+Every slide now has **Back** on the left, **Next** on the right and *Page 1 of 4* between them, drawn over its own layers. Back is hidden on the first slide and Next on the last. The master isn't counted: it is not a slide.
 
-Nothing here is hidden. Each button is an ordinary button with a **Go to a page** node in the **Interactions** tab, set to the next or previous page with the transition you chose. They follow the page order, so a slide you add or move later needs no rewiring (press **Add to all** again to give a new slide its buttons).
+Nothing here is hidden. Each button is an ordinary button on the master, with a **Go to a page** node in the master's **Interactions** tab, set to the next or previous page with the transition you chose. They follow the page order, so a slide you add or move later needs no rewiring, and no slide needs a button of its own. Open a slide's **Interactions** tab and you will see the master's flows listed there, read only, with **Edit the master** to change them.
+
+Because the buttons are drawn over the slide, a keyboard user reaches them last: Tab goes through the slide's own controls, then Back, then Next.
 
 ## 6. Try it
 
@@ -13234,15 +13244,16 @@ Learners whose device asks for less motion get an instant change instead of the 
 
 ## Make it yours
 
-- **The arrow keys.** Select a **Next button** and type \`ArrowRight\` in **Shortcut** (in **Accessibility**), and \`ArrowLeft\` on the **Back button**. Do it on each slide. The welcome text already promises it.
-- **Another transition.** Pick another look in **How the page changes** and press **Add to all** again: the buttons are replaced in the new style.
+- **The arrow keys.** On **Slide master**, select the **Next button** and type \`ArrowRight\` in **Shortcut** (in **Accessibility**), and \`ArrowLeft\` on the **Back button**. Once is enough: every slide follows. The welcome text already promises it.
+- **Another transition.** On **Slide master**, pick another look in **How the page changes** and press **Add to this master** again: the buttons are replaced in the new style.
+- **A slide without the buttons.** On that slide, untick **Next button** and **Back button** under **Show these master layers on this page** in the **Page master** section.
 - **More slides.** Add a page, pick **Slide master** as its **Master**, fill in its slot, and drag its row into place in the **Layers** panel.
 - **The branded look.** The **Course presentation** starter (Templates, **Stories and presentations**) is eight slides with the university's look, an Acknowledgement of Country slide and a question slide, ready to fill in.
 
 ## What you learned
 
 - A **page master** holds what every slide shares, drawn under each page. A \`{name}\` in its text is a slot each page fills in.
-- **Page navigation** adds Back, Next and the page number to every page in one go, following the page order.
+- A **button on a master** works on every slide that draws it, and its **Go to a page** flow runs on whichever slide is showing. **Page navigation** adds Back, Next and the page number to the master once, following the page order.
 - **How the page changes** sets the transition, and people who ask for less motion get none.
 
 **Next:** [Mind maps and flowcharts from data](tutorial-diagram). More on [Page masters](page-master), [Page navigation](page-navigation) and [How the page changes](links-cursors#how-the-page-changes).`
@@ -13317,7 +13328,7 @@ A binding's opacity runs from 0 to 1, so the badge shows faintly until *Planning
 1. Right-click **Progress panel** (its name above the page, or its row in the **Layers** panel) and choose **Make this a master**.
 2. With it selected, open the **Page master** section of the Properties panel and press **Use for all other pages**.
 
-Every page now shows the panel under its own layers. The panel's layers can't be clicked or changed on a page: **Edit master** in a page's **Page master** section takes you back to **Progress panel** to change them.
+Every page now shows the panel under its own layers. The panel's layers can't be moved or changed on a page: **Edit master** in a page's **Page master** section takes you back to **Progress panel** to change them. Buttons on a master do work on every page, as you will see in step 7.
 
 ## 5. A task page
 
@@ -13333,13 +13344,13 @@ On **Plan your week**:
 3. In its **Interactions** section press **+ On click (empty)**. The **Interactions** tab opens on the new **When clicked or hovered** node.
 4. Drag from the **When clicked or hovered** node's dot into empty space, type \`change\` in **Find a node…** and pick **Change a value or counter**. Set **Variable** to **done**, **Do** to **Add to the list, or take out if it is there** and **Value** to \`"Planning"\` (with the quotes).
 
-![The graph for Plan your week: Mark as done's When clicked or hovered joined to Change a value or counter, with its settings: Variable done, Do Add to the list, or take out if it is there, Value "Planning". Back and Next have their own Go to a page rows.](help/tutorial-progress-toggle-node.png)
+![The graph for Plan your week: Mark as done's When clicked or hovered joined to Change a value or counter, with its settings: Variable done, Do Add to the list, or take out if it is there, Value "Planning". The master's Back and Next flows are not on this page.](help/tutorial-progress-toggle-node.png)
 
 One press adds *Planning* to the list, so the bar grows and the Planner badge lights up. A second press takes it out again, so the button works as a tick box.
 
 ## 6. The other two tasks
 
-Build **Read actively** and **Write a draft** the same way. Copy the heading, tip and button from **Plan your week** if you like, but each button needs its own click: copying a layer doesn't copy its interactions.
+Build **Read actively** and **Write a draft** the same way. Copy the heading, tip and button from **Plan your week** if you like, but each button needs its own click: **Copy** and **Paste** onto another page bring the layer without what it does. (<kbd>Ctrl</kbd>+<kbd>D</kbd> on the same page does copy the click too, pointed at the copy.)
 
 | Page | Tip | The task's name (in the label and the Value) |
 |---|---|---|
@@ -13350,7 +13361,7 @@ Build **Read actively** and **Write a draft** the same way. Copy the heading, ti
 
 1. On **Welcome**, add a title and a line such as \`Three short tips. Try each one, press Mark as done, and earn its badge in the panel at the top.\`
 2. On **All done**, add a title and \`You earned {done.length} of 3 badges.\`
-3. Select **Welcome**, open **Page navigation** in the Properties panel, choose **Back and Next** and press **Add to all 5 pages**. The master is left out, so it never becomes a stop on the way.
+3. Select **Progress panel** (the master), open **Page navigation** in the Properties panel, choose **Back and Next** and press **Add to this master**. Back and Next go on the master once, so all five pages have them and none needs its own. The master is not a page, so it never becomes a stop on the way.
 
 ## 8. Try it
 
@@ -13366,11 +13377,11 @@ Build **Read actively** and **Write a draft** the same way. Copy the heading, ti
 - **Remember it.** In the Variables tab, open **Options** under \`done\` and tick **Remember**. A learner who comes back finds their badges still lit.
 - **Different badges.** A badge can read anything: \`done.length == 3\` for a gold star at the end, or a score from a quiz.
 - **Leave it off a page.** On **Welcome**, untick a layer under **Show these master layers on this page** in the **Page master** section.
-- **Screen readers.** Master layers are decorative, so a screen reader doesn't read the panel. The **Mark as done** label says the state on each page, and **All done** says the count.
+- **Screen readers.** The panel's shapes and text are decorative on a page, so a screen reader doesn't read them (Back and Next are real buttons, so it does). The **Mark as done** label says the state on each page, and **All done** says the count.
 
 ## What you learned
 
-- A **page master** holds what every page shares, and its bindings still follow the variables.
+- A **page master** holds what every page shares, and its bindings still follow the variables. Its buttons work on every page too: Back and Next are wired once, on the master.
 - A **List** variable and **Add to the list, or take out if it is there** make a tick list.
 - Variables belong to the project, so state set on one page shows on every page.
 - **Width** and **Opacity** bindings turn a list into a bar and badges.
@@ -13581,35 +13592,36 @@ Now tell the editor it is a dialog. Select **Dialog 1** again (click its row in 
 
 ![Dialog 1 selected, with the Dialog section ticked: This frame is a dialog, Modal, Close on Escape, Return focus and Scrim, and Initial focus on Automatic (first tab stop).](help/tutorial-reveal-dialog.png)
 
-## 4. Copy the dialog for the other points
-
-1. Select **Dialog 1** and press <kbd>Ctrl</kbd>+<kbd>D</kbd> twice. You now have three dialogs on top of each other. That is fine: only one will ever show at a time.
-2. Rename the copies **Dialog 2** and **Dialog 3**.
-3. In the **Layers** panel, open **Dialog 2** and select its heading. Change the words in the **Text** box of the Properties panel to \`Condensation\`. Select its text and change it to \`High up the air is cooler. The vapour turns back into tiny drops of water, which gather as clouds.\` Set the dialog's **Text alternative** to \`Condensation\`.
-4. Do the same for **Dialog 3**: \`Precipitation\`, with \`When the drops in a cloud grow heavy enough they fall as rain, hail or snow.\`
-
-Then select **Point 1** and press <kbd>Ctrl</kbd>+<kbd>D</kbd> twice for the other points. Name them **Point 2** and **Point 3**, set their **Label** to \`2\` and \`3\`, drag each onto its place on the picture (a cloud, then the rain), and change their **Text alternative** to \`Point 2: Condensation\` and \`Point 3: Precipitation\`.
-
-The points have to sit **below** the dialogs in the **Layers** panel, or they would show through an open dialog. Drag their rows down if they are not.
-
-## 5. Close buttons hide their dialog
+## 4. The Close button hides the dialog
 
 1. In the **Layers** panel, open **Dialog 1** and select its **Close** button.
 2. In its **Interactions** section press **+ When clicked…**.
 3. Choose **Hide a layer** (under **Layers**), and under **Which layer** pick **Dialog 1**. Press **Add**. The section reads *When clicked: hide Dialog 1*.
-4. Do the same for the **Close** buttons in **Dialog 2** and **Dialog 3**, each hiding its own dialog.
 
 <kbd>Esc</kbd> needs nothing more. A dialog with no **Open variable** hides itself when <kbd>Esc</kbd> is pressed.
 
-## 6. Points show their dialog
+## 5. The point shows its dialog
 
 1. Select **Point 1** and press **+ When clicked…**.
 2. Choose **Show a layer**, and under **Which layer** pick **Dialog 1**. Press **Add**.
-3. Do the same for **Point 2** (showing **Dialog 2**) and **Point 3** (showing **Dialog 3**).
 
 ![The When Point 1 is clicked dialog: Show a layer picked under Layers, Which layer set to Dialog 1 (hidden), and the line It will do this: When clicked: show Dialog 1.](help/tutorial-reveal-when-clicked.png)
 
-**Show a layer** hides the dialog for you when you add it, because a layer that is already showing can't be shown. The dialogs now look faint on the canvas: hidden layers show as ghosts while you edit, so you can still find them.
+**Show a layer** hides the dialog for you when you add it, because a layer that is already showing can't be shown. The dialog now looks faint on the canvas: hidden layers show as ghosts while you edit, so you can still find them.
+
+## 6. Copy the point and its dialog for the other points
+
+One point and one dialog are wired, so copy the pair. A copy of a layer brings what it does: the click that shows or hides something is copied too, and points at the copy.
+
+1. In the **Layers** panel select **Point 1**, then <kbd>Ctrl</kbd>+click **Dialog 1** to add it, and press <kbd>Ctrl</kbd>+<kbd>D</kbd>. The copies are selected, so press <kbd>Ctrl</kbd>+<kbd>D</kbd> once more. You now have three points and three dialogs, and the dialogs sit on top of each other. That is fine: only one will ever show at a time.
+2. Rename the copies **Point 2**, **Point 3**, **Dialog 2** and **Dialog 3**. **Point 2** shows **Dialog 2** and its **Close** hides **Dialog 2**, with nothing for you to wire. Select a point and press **Show in graph** under its sentence if you want to see it.
+3. Set the labels of the points to \`2\` and \`3\`, drag each onto its place on the picture (a cloud, then the rain), and change their **Text alternative** to \`Point 2: Condensation\` and \`Point 3: Precipitation\`.
+4. In the **Layers** panel, open **Dialog 2** and select its heading. Change the words in the **Text** box of the Properties panel to \`Condensation\`. Select its text and change it to \`High up the air is cooler. The vapour turns back into tiny drops of water, which gather as clouds.\` Set the dialog's **Text alternative** to \`Condensation\`.
+5. Do the same for **Dialog 3**: \`Precipitation\`, with \`When the drops in a cloud grow heavy enough they fall as rain, hail or snow.\`
+
+The points have to sit **below** the dialogs in the **Layers** panel, or they would show through an open dialog. Drag their rows down if they are not.
+
+> Want only the layer, without what it does? Use **Duplicate layer only** in the right-click menu, or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>.
 
 ## 7. Colour the points you have opened
 
@@ -13628,7 +13640,7 @@ seen1 ? "#a5d6a7" : "#ffd54f"
 The point is yellow until \`seen1\` is true, then green.
 
 6. Press **+ Add binding** again, pick **Accessible description**, choose **Formula** and type \`seen1 ? "Already explored" : ""\`. A screen reader now says so too, since the colour alone tells it nothing.
-7. Repeat steps 2 to 6 for **Point 2** with \`seen2\` and **Point 3** with \`seen3\`.
+7. Repeat steps 2 to 6 for **Point 2** with \`seen2\` and **Point 3** with \`seen3\`. These interactions and bindings were added after the copying, so each point needs its own.
 
 ## 8. Try it
 
@@ -13646,7 +13658,7 @@ The **Variables (live)** list on the left shows \`seen1\`, \`seen2\` and \`seen3
 
 ## Make it yours
 
-- **More points.** Copy a point and a dialog, add a \`seen4\` switch, and wire them the same way.
+- **More points.** Select a point and its dialog and press <kbd>Ctrl</kbd>+<kbd>D</kbd>: the clicks come with them. Then add a \`seen4\` switch and the **Change a value or counter** step and bindings for it.
 - **A progress line.** A text that says \`{count([seen1, seen2, seen3], true)} of 3 explored\` counts as the learner goes.
 - **Know when every point is done.** Select **Point 1**, press **+ When clicked…**, choose **Count what has been done…**, tick the three points and name it \`explored\`. It keeps \`exploredCount\` and \`exploredTotal\` for a line such as \`{exploredCount} of {exploredTotal} explored\`. Or choose a thing to happen, such as **Show a layer** on a well-done message, and set **It starts when** to **all of these are done**.
 - **Ready-made.** The **Image hotspots** starter (Templates, **Explore and reveal**) does all of this with one dialog for every point, reading its words from a list. Its points are one frame, so adding a point is copying a layer.
@@ -14729,7 +14741,7 @@ Find \`rows\` in the **Variables** tab. It says **Worked out**, its formula is \
 ### 4. A repeater in a grid
 
 1. On **Find the words**, select **Grid** in the **Layers** panel.
-2. Open its **Repeat (list)** section. **Items** is:
+2. Open its **Repeat (list)** section. **Repeat for each** is **A formula (advanced)**, and **Items** is:
 
 \`\`\`
 rows.join("").split("").map((l, i) => ({l, i}))
@@ -14802,7 +14814,7 @@ Press **Preview**, then **Start**. Drag across a word: it turns green and is str
 
 ### 10. The grid and the typing
 
-1. Select **Grid**. Its **Repeat (list)** has **Items** \`cells\`, **Layout** **Grid**, **Cols** \`10\`. Its one child, **Square**, has a **Visible** binding, \`item.ch != ""\`, so squares with no letter are hidden.
+1. Select **Grid**. Its **Repeat (list)** has **Repeat for each** set to **List: cells**, **Layout** **Grid**, **Cols** \`10\`. Its one child, **Square**, has a **Visible** binding, \`item.ch != ""\`, so squares with no letter are hidden.
 2. In the **Interactions** tab, the **When a key is pressed** node with the **Note** *Type a letter* runs for any key on a square. A **Check a condition** lets only letters through, then **Change a value or counter** writes the letter into \`cells\` and moves the chosen square along the word.
 3. **Check letters** marks every typed letter right or wrong; **Reveal word** and **Reveal all** fill letters in. The live \`done\` is true once every square holds its answer, and its **When a value changes** says so.
 
@@ -15135,7 +15147,7 @@ const concept$f = {
     group: "Concepts",
     summary: "Bindings, conditions and the {slots} in text take small formulas, not plain words: quotes around text, == to compare, lists counted from 0.",
     keywords: "concept formula expression braces curly text slot quotes equals == = index zero typo nothing shows blank cheat sheet",
-    body: `Wherever a field works a value out (a binding, a condition, the value of a **Change a value or counter** node, **Repeat → Items**, and anything in \`{braces}\` in a text layer), it takes a small **formula**, not plain words. Your variables and data sources are there by name.
+    body: `Wherever a field works a value out (a binding, a condition, the value of a **Change a value or counter** node, **Repeat → Items** (the formula choice of **Repeat for each**), and anything in \`{braces}\` in a text layer), it takes a small **formula**, not plain words. Your variables and data sources are there by name.
 
 A few you will use all the time:
 
@@ -15350,7 +15362,7 @@ const concept$a = {
 
 One page is the **start page**: the one the player shows first. Its name has **▸ start** after it on the canvas, and a **start** badge in the **Layers** panel. **Make start page** (in the Inspector or the right-click menu) moves it.
 
-A **page master** is a page that holds what other pages share, such as a logo, an accent bar or a footer. A page that uses it draws the master's layers under its own (or over them, for the layers the master says so). The layers live in one place only, so a change to the master changes every page that uses it.
+A **page master** is a page that holds what other pages share, such as a logo, an accent bar or a footer. A page that uses it draws the master's layers under its own (or over them, for the layers the master says so). The layers live in one place only, so a change to the master changes every page that uses it. A master's buttons work on every page, and what they do is wired once on the master: Back and Next, a menu, a Help button.
 
 ## Where people get caught out
 
@@ -15358,7 +15370,7 @@ A **page master** is a page that holds what other pages share, such as a logo, a
 - **"I changed the logo on one page and the others didn't change."** That logo was copied onto each page, so each copy is its own layer. Move the shared layers into a master (see [Page masters](page-master)) and they change together.
 - **"My Next button goes to the wrong page."** **Next page** and **Previous page** follow the order of the **Layers** panel, not where the pages sit on the canvas. A page in a page group only steps through its own group. Drag the pages into order in Layers; **Tidy up pages** then lays the canvas out in that order too.
 - **"That page off to the side is part of the project."** Every artboard is a page, even one you only used to try something out. Next and Previous step onto it if it is in the list. Delete it, or move it out of the way of the order.
-- **"The click on my master layer does nothing."** A master has no interactions or timelines that run on a page, and its layers let the pointer through. Put buttons and anything clickable on the page itself.
+- **"The click on my master layer does nothing."** Check three things. A picture or shape on a master only takes clicks when the master's own **Interactions** has a **When clicked** for it (a button always does). The **When clicked** has to be on the *master* (select the master and open its Interactions tab), not on a page. And the page must not have left the layer off: look under **Show these master layers on this page**. A click on a master's button runs on the page that is showing, so **Next page** goes to the page after it.
 - **"Preview opened on the wrong page."** The dropdown in Preview's bar says **From the start artboard** or **From this artboard**. The learner always gets the start page.
 
 ## How to tell what is going on
@@ -15369,6 +15381,7 @@ A **page master** is a page that holds what other pages share, such as a logo, a
 
 - On the canvas, with a page selected, the layers it gets from its master are outlined with a dashed line, under a tag that says **From page master** and the master's name. That is how you tell a master's layer from the page's own: the page's own layers get the usual selection box when you click them.
 - With a page selected, its **Page master** section says which master it draws and lists the master's layers, so you can leave one off this page.
+- A page's **Interactions** tab lists the flows it gets from its master, read only, under **From the page master**. **Edit the master** opens it to change them.
 
 ![The Page master section of a page: Master set to Content master, Edit master and Detach, and a ticked box for each master layer to show on this page.](help/concept-pages-masters-section.png)
 
@@ -15429,8 +15442,8 @@ const concept$8 = {
     title: "A repeater is one layer drawn many times",
     group: "Concepts",
     summary: "A repeater draws its first child once for each item in a list. There is one template, not many layers, and item, index and event.index say which row is which.",
-    keywords: "concept repeater repeat list copies template item index event.index which one clicked all change own event per item state cards rows",
-    body: `A repeater is a group or frame with **Repeat the first child for each item** ticked (in its **Repeat (list)** section). Its first child is the **template**, and it is drawn once for each item in **Items**: a card per question, a row per product.
+    keywords: "concept repeater repeat list copies template item index event.index which one clicked all change own event per item state cards rows selection selected isSelected pick one several table type my own items",
+    body: `A repeater is a group or frame with **Repeat the first child for each item** ticked (in its **Repeat (list)** section). Its first child is the **template**, and it is drawn once for each item in **Repeat for each**: a card per question, a row per product. Pick a list variable or a data source there, or choose **Type my own items** and type them into a table.
 
 There is only one layer. The copies you see on the canvas and in Preview are drawn from it, so anything you change on the template, every copy gets. What makes the copies different is the item: inside the template, \`item\` is this copy's item and \`index\` is its position, counting from 0. A text layer reading \`{item.title}\` shows each item's own title.
 
@@ -15440,15 +15453,15 @@ There is only one layer. The copies you see on the canvas and in Preview are dra
 
 - **"I changed one card and they all changed."** There is one card. To make one look different, make the difference come from its item: a binding on Fill colour like \`item.done ? "#2e7d32" : "#ffffff"\`, or a Visible binding on \`index == 0\`.
 - **"I want each card to have its own click."** Give the template one **When clicked or hovered** event. It fires for whichever copy was clicked, with \`event.index\` saying which. \`questions[event.index]\` is that copy's item, and a **Check a condition** on \`event.index == 2\` picks out one copy.
-- **"How do I remember which ones were flipped?"** Keep it in the list. Make **Items** a *List* variable, and use **Change a value or counter** with **Change one list item**: left empty, its position is \`event.index\`, and **Field** changes one field of the item (\`flipped\`, to \`!item.flipped\`). The copy redraws from its item.
-- **"My list has 6 items but I only see one."** Items has to give a list. A formula that fails gives an empty list, so check the line under **Items**.
+- **"How do I remember which ones were flipped, or picked?"** Set **Selection** on the repeater to **Several** (or **One at a time**). A click or Enter on a copy picks it, the places picked go into a variable, and each copy has \`isSelected\` to bind a look to. No nodes. For anything beyond picking, use **Change a value or counter** with **Change one list item**: left empty, its position is \`event.index\`, and **Field** changes one field of the item (\`flipped\`, to \`!item.flipped\`). The copy redraws from its item.
+- **"My list has 6 items but I only see one."** The items have to be a list. A formula that fails gives an empty list, so check the line under **Repeat for each**.
 - **"The first item is number 0."** \`index\` counts from 0. Show \`{index + 1}\` to a learner.
 
 ## How to tell what is going on
 
-- The line under **Items** says what the list is right now, with the starting values (*currently 6 items*), or what is wrong with it.
+- The line under **Repeat for each** says what the list is right now, with the starting values (*currently 6 items*), or what is wrong with it.
 
-![The Repeat (list) section of a repeater: Repeat the first child for each item ticked, Items tips.cards, and the line under it saying currently 4 items.](help/concept-repeaters-items.png)
+![The Repeat (list) section of a repeater: Repeat the first child for each item ticked, Repeat for each set to A formula with tips.cards in the Items box, and the line under it saying currently 4 items.](help/concept-repeaters-items.png)
 
 - A text or binding in the template can read \`item\` and \`index\`. The line under a formula in the Properties panel works it out for the first copy.
 - In Preview, the **Events** list shows each click with the nodes it ran, and **Variables (live)** shows the list variable change as you click.
@@ -16476,7 +16489,8 @@ The same letter can mean different things in different places, because a key loo
 |---|---|
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> (<kbd>Ctrl</kbd>+<kbd>Y</kbd>) | Undo / redo |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd> | Copy / cut / paste (pasting image files inserts them). After clicking in the timeline they copy and paste the selected keys, see [Copy, snap and stagger keys](timelines#copy-snap-and-stagger-keys) |
-| <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate |
+| <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate. A copy of a layer brings its interactions, pointed at the copy. See [Copying a layer with what it does](interactions#copying-a-layer-with-what-it-does) |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> | Duplicate layer only, without its interactions |
 | <kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> | Group / ungroup |
 | <kbd>Ctrl</kbd>+<kbd>A</kbd> | Select all on the page |
 | <kbd>Delete</kbd> / <kbd>Backspace</kbd> | Delete the selection (or the selected keyframes) |
@@ -16690,7 +16704,7 @@ The same keys work on the page rows: <kbd>Ctrl</kbd>+click adds a page to the se
 A named **page group** is a folder row above its pages, which sit one step in under it. Click the arrow to fold it, click the row to select its pages and double-click to rename it. Right-click it for **Select all in group**, **Rename group…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete**. Folding only changes this panel: the pages stay on the canvas inside a dashed frame with the group's name. See [Pages](artboards#page-groups).
 
 ### Copying with Alt
-Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag a row, and a **copy** goes where the line is while the original stays. This works for layers, groups, pages and page groups. The pointer shows a **+** while Alt is down, and the first few plain drags carry a reminder. On the canvas, <kbd>Alt</kbd>-drag a layer or a group the same way.
+Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag a row, and a **copy** goes where the line is while the original stays. This works for layers, groups, pages and page groups. The pointer shows a **+** while Alt is down, and the first few plain drags carry a reminder. On the canvas, <kbd>Alt</kbd>-drag a layer or a group the same way. A copied layer brings its interactions, as **Duplicate** does.
 
 ### Reordering
 - Drag a row to reorder. A line shows where the layer will land, and how far it is indented shows which list it joins.
@@ -16737,7 +16751,7 @@ Select layers and drag them on the canvas. If you let go over a **different page
 - Interactions in the old artboard that used them will need fixing. The [Usage](usage) tab's **Broken** list shows exactly which.
 
 ## Right-click menus
-- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**When clicked…**, **When hovered…**, or an empty **On click** or **On hover** event) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
+- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Duplicate layer only**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**When clicked…**, **When hovered…**, or an empty **On click** or **On hover** event) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
 - **A page**: **New** (a menu of layers to add where you clicked), **Paste**, **Insert component here…**, **Make start page**, **Duplicate artboard**, **Zoom to page**, **Fit page to its layers** and **Delete artboard**. See [Instances](instances) and [Pages](artboards#fit-page-to-selection).
 - **Empty canvas**: **New page here**, **Paste**, **Tidy up pages**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`
   },
@@ -16914,7 +16928,7 @@ Depth can be animated: look for the diamond next to a field. See [Animatable pro
     title: "Text",
     group: "Design",
     summary: "Text layers, fonts, sizing and live values in text.",
-    keywords: "font typography type size weight align template variables google fonts upload rich text runs bold italic underline selection range several styles",
+    keywords: "drag variable value data field drop onto page insert font typography type size weight align template variables google fonts upload rich text runs bold italic underline selection range several styles",
     body: `Use the **Text** tool (<kbd>T</kbd>): click for text that grows as you type, or drag a box for wrapping text. Double-click text to edit it, and <kbd>Escape</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to finish.
 
 - **Sizing**: *Auto width* (one line, grows sideways), *Auto height* (fixed width, wraps and grows down) or *Fixed* (you set both). With *Fixed*, **Overflow** says what happens to lines that don't fit: *Show* them anyway, *Clip* them at the box, or cut the last line that fits with an *Ellipsis …*. Untick **Wrap lines** to keep the lines as written (long ones run on, or are clipped or cut by the overflow setting).
@@ -16988,6 +17002,15 @@ You do not have to type the braces. Put the cursor where the value should go and
 - **This item of the repeat**, for a layer inside a [repeater](repeaters): the fields of the item (a list of people with \`name\` and \`age\` offers both) and its number.
 
 Pick one with the arrow keys and **Enter**, or click it. It goes in as \`{name}\` at the cursor, over any words you had selected, and the line under the box shows what the whole text says now. The same button is on a button's **Label** and on a connector's label.
+
+## Drag a value onto the page
+You can also drag a value to where it should show. In the **Variables** tab, each variable has a small text-icon handle (its name reads **Show it on the page**) beside its name. In the **Data** tab, each field of a data source has the same handle. Drag it onto the page:
+- **Onto a text layer**: it is added to the end of that text as \`{name}\`, with a space before it, and the text keeps its styling. Dropping \`score\` on *Your score:* gives *Your score: {score}*.
+- **Anywhere else on a page**: a new text layer is made there that shows it, named after the value. A list variable shows how many items it holds, and a data field shows the first row's value.
+
+A line beside the pointer says which of the two letting go will do, and the page is outlined when it is a new text. **Undo** takes it back in one step.
+
+Without a mouse, select a text layer and press the handle: the value is added to that text. With no text layer selected it makes a new text near the top left of the open page. **Insert value** above is the way to put a value in at the cursor.
 
 To animate a text layer one letter, word or line at a time (typewriter, wave), see [Text modifiers](text-modifiers).`
   },
@@ -17458,8 +17481,8 @@ A page that embeds the player can listen for the switch: \`player.on('variantcha
     title: "Page masters",
     group: "Design",
     summary: "One artboard holds what every page shares (logo, accent bar, footer); pages draw it under their own layers. Change it once and every page follows.",
-    keywords: "master page template chrome logo footer header shared background brand repeat layers slide master text slot hide",
-    body: `Pages in a deck repeat the same things: a logo, an accent bar, a footer line. Copying them onto every page makes every project bigger, and a change means editing every page. A **page master** is an artboard that holds those layers once. A page that uses it draws the master's layers under its own, in the same renderer (it is not an [instance](instances), so there is no nested player). Edit the master and every page changes at once, while you work and in the player.
+    keywords: "master page template chrome logo footer header shared background brand repeat layers slide master text slot hide button buttons click back next navigation menu interactions timeline once every page tab order reading order",
+    body: `Pages in a deck repeat the same things: a logo, an accent bar, a footer line, Back and Next buttons. Copying them onto every page makes every project bigger, and a change means editing every page. A **page master** is an artboard that holds those layers once. A page that uses it draws the master's layers under its own, in the same renderer (it is not an [instance](instances), so there is no nested player). Edit the master and every page changes at once, while you work and in the player.
 
 ## Quick start
 1. Build an artboard with the shared layers: the logo, the bar, the footer. It does not need a background; the page keeps its own.
@@ -17471,18 +17494,35 @@ A page that embeds the player can listen for the switch: \`player.on('variantcha
 - **Master**: the artboard drawn under this page, or **None**. A page set to None keeps its slot text and hidden layers, so they are back if it gets a master again.
 - **Show these master layers on this page**: untick a layer to leave it off this page only (matched by the layer's name, at any depth). Name the layers clearly in the master.
 - **Text slots**: put \`{pageTitle}\` (any name) in a text layer of the master and the page's **Text slots** list gets a field for it. What you type is what that page says. A slot with nothing typed shows the project variable of that name, if there is one. What you type can use \`{variable}\` itself.
-- **Detach** copies the master's layers into the page as ordinary, editable layers and stops using the master.
+- **Detach** copies the master's layers into the page as ordinary, editable layers, with the master's flows and animations that run on pages (pointed at the new copies), and stops using the master.
 
 ## On the master
 - **Draw over the pages**: tick the top-level layers that should sit over the pages' own layers (a corner fold, a footer bar). Everything else goes under.
 - The list of pages that use it. A master that pages use can't be turned back into an ordinary artboard until they stop. Deleting a master takes it off its pages (Undo brings it back).
 - A master can't have a master of its own, and a page that is a master can't use one.
 
+## Buttons and clicks on a master
+A master's buttons work on every page that draws it, and what they do is wired once, on the master.
+
+1. On the master, add a button (or a link, or any layer you want clickable) and name it.
+2. With the button selected, add **When clicked** in its **Interactions** section, then add what should happen: **Go to a page** (Next page or Previous page), **Change a value or counter**, **Show / hide**, **Control an animation**. These run on whichever page is showing, so Next on the master goes to the page after the one the learner is on.
+3. Or select the master and use **Page navigation** to put Back, Next and the page number on it in one go.
+
+What works from a master:
+- **Events**: When clicked or hovered (not dragging), When a key is pressed, When focused, When the page is shown (*On start*), Every so often (timer), When a value changes, When an animation ends or reaches a marker, and When a message arrives. Drag, step, video, data and load events are about one page, so they do nothing from a master.
+- **Actions**: all of them, acting on the page that is showing. A **Show / hide**, **Set property** or **Control an animation** reaches the master's own layers and animations. A formula or script that finds a layer by name looks on the page, not the master.
+- **Animations** on a master move the master's layers. They start again on each page (an animation set to play automatically plays when the page appears) and stop when the learner leaves it. Sound, captions and descriptions on a master's animation are left out: put them on the page.
+- **Keys**: a *When a key is pressed* on the master with nothing picked listens on every page, so one arrow key flow serves the whole deck. A **Shortcut** on a master button works on every page too.
+- **Leaving it off a page**: untick a master layer under **Show these master layers on this page** and that page does not draw it, and the flows that listen to it do nothing there.
+- **On the page** the Interactions tab lists the master's flows, read only, under **From the page master**, with **Edit the master** to change them. On the master the same tab edits its flows, and says how many pages they run on and which events do nothing.
+
 ## What a master layer is
-- **Read-only and decorative.** Master layers are hidden from screen readers, are never tab stops, and the pointer goes through them to the page. A layer with a **Role** or an **Accessible name** (a logo with alt text) stays in the reading order. The master's layers come first (under) or last (over) in a page's reading order.
-- **Shapes, paths, text, pictures, progress bars, groups and frames only.** Buttons, inputs, links, video, embeds, instances, script layers and shaders are left out. A master has no interactions or timelines of its own that run on a page, so **On click** on a master layer does nothing: put interactive things on the page.
+- **Decorative unless it is a control.** A picture, shape or piece of text on a master is hidden from screen readers, is never a tab stop, and the pointer goes through it to the page. A layer with a **Role** or an **Accessible name** (a logo with alt text) stays in the reading order.
+- **Controls are real.** A button, a link, a layer with a link, or any layer the master's flows listen to for clicks, keys or focus takes the pointer, is a tab stop, keeps its role, label and cursor, and works from the keyboard like it does on a page.
+- **Reading and tab order.** The master's layers that sit under the page come first on the page, and the ones that sit over it come last. So a Back and Next that are drawn over the page (tick them under **Draw over the pages**, which **Page navigation** does for you) are the last stops, after the page's own controls. A page's own Tab order numbers don't move a master's controls: the ones under the page still come first and the ones over it last.
+- **Shapes, paths, text, pictures, progress bars, groups and frames only, and buttons and links as controls.** Inputs, video, embeds, instances, script layers and shaders are left out of a master, since they are heavy or hold their own state. Put those on the page.
 - **Bindings still work**, so a progress bar or a title bound to a variable is fine in a master.
-- **Names and ids never clash.** The master's layers can't be targeted from a page's graph, timeline or script, and a page layer with the same name is never confused with one.
+- **Names and ids never clash.** The master's layers can't be targeted from a page's graph, timeline or script (only from the master's own), and a page layer with the same name is never confused with one.
 - **Responsive sets**: every member is an artboard of its own, so give each its own master of the right size. A master is drawn at its own coordinates.
 
 ## Everywhere else
@@ -17794,7 +17834,7 @@ In a script, \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer nam
     group: "Interactivity",
     summary: "Back, Next, the page number, page dots and a progress bar along the bottom of your pages, in one click.",
     keywords: "next back previous page number progress bar dots navigation buttons pages 3 of 8 bottom bar go to next artboard generate",
-    body: `Every piece with more than one page needs **Next** and **Back**, and often "Page 3 of 8". Select a page and open **Page navigation** in the properties panel (or select several pages and open it there), pick a style and press **Add to this page**, **Add to these pages** or **Add to all pages**.
+    body: `Every piece with more than one page needs **Next** and **Back**, and often "Page 3 of 8". Select a page and open **Page navigation** in the properties panel (or select several pages and open it there), pick a style and press **Add to this page**, **Add to these pages** or **Add to all pages**. If your pages share a [page master](page-master), select the master instead and press **Add to this master**: one set of buttons for every page that draws it.
 
 - **Back and Next**: Back on the left, Next (the main button) on the right and *Page 3 of 8* between them.
 - **Next only**: just a Next button on the right.
@@ -17806,13 +17846,13 @@ It all goes along the bottom of the page, in a bottom bar. Back is hidden on the
 
 Nothing is hidden: you get ordinary buttons, text, a progress bar and the clicks and **Go to a page** nodes in **Interactions**, all of which you can restyle, move or rewire. They are tagged, so adding navigation again with another style swaps the old one for the new (and **Remove** takes it away). A page that already has its own Next or Back button is left alone, and the message says which.
 
-Page dots are drawn for the number of pages there are now: press **Add** again after adding or removing pages to refresh them.
+Page dots are drawn for the number of pages there are now: press **Add** again after adding or removing pages to refresh them. On a master there is no single page to mark, so dots become *Page 3 of 8*.
 
 ## How the page changes
 **How the page changes**, above the buttons, is the look Back and Next use (a fade unless you choose another), and **Speed** under it is how long that takes. Both are written into the **Go to a page** nodes, where you can change them afterwards. The looks and speeds are listed in [How the page changes](links-cursors#how-the-page-changes).
 
 ## Where it goes
-Buttons go on the page itself. A [page master](page-master) can hold the logo and the footer but not buttons, so the master is not where this goes.`
+Buttons can go on the page itself, or once on a [page master](page-master) so every page that draws it has them. On a master they are drawn over the pages, so a keyboard user reaches them after the page's own controls, and their flows run from the master on whichever page is showing. If a page already has navigation of its own, adding it to its master too shows two sets: the message names those pages, and **Remove** on them keeps just the master's.`
   },
   {
     id: "moving-the-view",
@@ -18405,11 +18445,20 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
     title: "Interactions",
     group: "Interactivity",
     summary: "The node graph: events start a flow, actions do things, logic chooses the way.",
-    keywords: "interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing behaviour recipe when clicked hovered show hide next page sound counter switch sentences read explain condition picker only if turn off remove",
+    keywords: "duplicate copy layer with interactions behaviour ctrl d duplicate layer only interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing behaviour recipe when clicked hovered show hide next page sound counter switch sentences read explain condition picker only if turn off remove",
     body: `Open the **Interactions** tab. Each page has its own graph. The nodes are named for what happens (*When clicked or hovered*, *Play or stop an animation*); hover one to see the technical name it has in the file (*On pointer*, *Control timeline*), which is also in the [node reference](interaction-nodes) and what search finds. Preferences has a **Technical wording** switch if you would rather see those.
 
 ## Room for the graph
 The bottom panel is a short strip, so opening **Interactions** (from a layer's **+ When clicked…**, one of its interaction chips, or the tab itself) lifts the panel to a comfortable height, and puts it back when you move to another tab. It only does that when the panel is still at its normal height: one you sized yourself is left alone. Drag the top edge of the panel while the graph is open and that height is remembered for next time (in this browser).
+
+## Copying a layer with what it does
+A copy of a layer brings its interactions. <kbd>Ctrl</kbd>+<kbd>D</kbd>, **Duplicate** in the menus and an <kbd>Alt</kbd>-drag copy (on the canvas or in the Layers list) copy the *When clicked or hovered* events (and the other events with a layer setting, such as a drop) that point at the layer, pointed at the copy. What follows them is copied too, and a step that works on the copied layers works on their copies: copy a **Close** button and its dialog together, and the new button hides the new dialog.
+
+What is shared stays shared. A step that only touches a layer you did not copy is not copied: the copy's flow joins the original step, so a copied button still shows the same **Feedback** layer. Steps that name no layer, such as **Change a value or counter**, are copied with the flow, so the copy does the same thing. The copies appear in the graph as ordinary nodes under the others, and it all undoes as one step. A message says how many interactions came with the copy.
+
+Want the layer on its own? Use **Duplicate layer only** in the right-click menu, the command palette, or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>.
+
+Things a copy does not bring: animation timelines (a copy is not on the original's timeline), a question's wiring (a copied question makes its own), and anything that finds a layer by its name in a formula or script. **Copy** and **Paste** put only the layer on the page; to copy a button to another page with its click, build the click again there.
 
 ## See-through layers don't take clicks
 While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
@@ -19291,7 +19340,7 @@ Ordering, categorise and hotspot questions are not pasted (add them from the Add
     title: "Variables",
     group: "Interactivity",
     summary: "Named values (number, text, true/false, colour, choice) shared by the whole project.",
-    keywords: "variable state value number string boolean color enum choice options input rename",
+    keywords: "label friendly name quiz score spaces capitals identifier name in formulas variable state value number string boolean color enum choice options input rename",
     body: `A variable is a named value the activity remembers while it runs: a score, a name, whether a panel is open. Use variables when something on one page has to change something else, on the same page or another. They belong to the project, so every page sees the same values.
 
 Add them in the **Variables** tab. Each has a name, a type and a starting value.
@@ -19312,12 +19361,16 @@ A name that another variable or a data source already has is refused. A question
 | True/false | \`true\` or \`false\` |
 | Colour | \`#ffb448\` |
 | Choice | One of a list of options you define, like \`easy\`, \`medium\`, \`hard\` |
-| List | Items, usually objects: \`[{"name": "Ann"}, {"name": "Bo"}]\` |
+| List | Items, usually a row of fields each: a table with a column for \`name\`, a row for Ann and a row for Bo |
 
 Choice variables show as a dropdown wherever you set them, so you can't type a value that isn't on the list. In expressions, \`enums.difficulty\` is the list of that choice's options, so \`enums.difficulty.indexOf(difficulty)\` is its position. A solo group's **active child** can be bound straight to a choice whose options are the children's names.
 
 ## Lists
-A list variable holds the items a [repeater](repeaters) draws. Put its name in **Repeat → Items**, and \`item\` and \`index\` are the current one. The starting items are JSON text in the Variables tab. Text that is not a JSON array makes an empty list.
+A list variable holds the items a [repeater](repeaters) draws. Pick it in the repeater's **Repeat for each**, and \`item\` and \`index\` are the current one.
+
+The starting items are a **table** in the Variables tab: a row for each item and a column for each thing it holds (\`name\`, \`price\`). Type in a cell to change it, and use the **Row** and **Column** buttons above the table to add, copy, delete and move them. A cell can hold text, a number, yes or no, or nothing (the **Cell** choice above the table says which). A plain list of words or numbers is a table with one column, \`value\`. Give that column another name, or add a column, and the items become records with fields. Press **JSON text** over the table to see and type the same list as JSON, for example \`[{"name": "Ann"}, {"name": "Bo"}]\`, and **Table** to come back. A list with lists or groups inside its items has no table, only the text. Text that is not a JSON array makes an empty list.
+
+A repeater with a **Selection** writes the copies people pick into a variable: a *Number* for one pick (the place of the copy, from 0, or -1 for none) or a *List* for several (the places picked). Read it like any other variable (see [Repeated lists](repeaters#selection)).
 
 Change the list while it runs with **Change a value or counter**. Its **Do** box has these list choices:
 - *Add to the end of the list* adds an item (\`{name: "Cy"}\`).
@@ -19394,9 +19447,19 @@ One project can start with different values in different courses (a due date, a 
 ## Adding a variable
 Press **+ Add variable** and pick what it is for: a **Counter** (a number that goes up and down), a **Switch (on or off)**, **Text**, a **Score** (a running total, remembered between visits), a **List**, a **Choice** or a **Colour**. Each one is an ordinary variable of that type with a name you can change, so the table still shows the type and starting value. See [Tutorial 3](tutorial-state-machine) for a worked example.
 
-Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field.
+## Naming a variable
+Type the name in your own words, spaces and capitals included: **Quiz score**. Formulas need a short name with letters, digits and \`_\` only, so the editor offers one made from your words, \`quizScore\`, in a small **Name in formulas** box under the field. Leave it, or change it. Your words are kept as the variable's **label**.
+
+Everywhere you pick a variable (the Variables tab, the pickers in the graph and the bindings, the sentences that say what an interaction does, **Insert value**, the live list in Preview) you see your words, with the formula name small beside them. Formulas, \`{braces}\` in text and scripts always use the formula name: \`Score: {quizScore}\`.
+
+A name that is already plain, like \`score\` or \`high_score\`, is used as typed and has no separate label. Change the words later and the formula name stays, so nothing that uses it breaks; change the **Name in formulas** and the project follows everywhere it is used, as renaming always did.
+
+The name is saved when you leave the field. If there is nothing to build a name from (only symbols, say) or the **Name in formulas** is not valid, the field stays as a draft with a message and the project keeps the last good name until you fix it.
 
 Next to the type, **Starts as a value** is the number, text or switch the project starts with. **Worked out** is for a variable that is calculated, such as a crossword grid: it shows a box for the formula (for example \`crossword(words, 10)\`), and the value stays as what it falls back to if the formula fails. **Keep up to date** (for a formula) works it out again whenever something it reads changes.
+
+## Show a variable on the page
+The text-icon handle beside a variable's name puts it on the page: drag it onto a text layer to add it to that text, or onto an empty part of a page to make a text that shows it. Press the handle instead of dragging to add it to the selected text layer. See [Live values in text](text#drag-a-value-onto-the-page).
 
 ## Options on a variable
 **Options** is folded away until something in it is on. It holds three switches, each with a sentence saying what it does:
@@ -19432,7 +19495,7 @@ You can write an expression in four places:
 - **Text**: anything in \`{braces}\`.
 - **Bindings**: a property's value. See [Bindings](bindings).
 - **Node settings** marked *expr*, such as the value of **Change a value or counter** or the condition of **Check a condition**.
-- **Repeat → Items**: the list to repeat over.
+- **Repeat → Repeat for each**: the list to repeat over (a list variable, a data source, items you type, or a formula).
 
 In repeated copies, \`item\` and \`index\` are the current list item and its position. In interactions, \`event\` describes what fired.
 
@@ -20158,7 +20221,7 @@ Test with a keyboard, a screen reader and your own eyes as well.`
     title: "Data sources",
     group: "Data",
     summary: "JSON, CSV, TSV or text from an uploaded file or a URL, used by name.",
-    keywords: "data json csv tsv text url fetch api spreadsheet refresh cors",
+    keywords: "drag field show on page text data json csv tsv text url fetch api spreadsheet refresh cors",
     body: `A **data source** is a file or web address of information that your project reads by name: a list of products, quiz questions, a table of results. Open the **Data** tab and add a source **From file** (upload) or **From URL** (fetched by the player).
 
 - **Format**: JSON, CSV or TSV (first row is the column names), or plain text. CSV and TSV become a list of rows, with numbers and true/false converted.
@@ -20166,11 +20229,14 @@ Test with a keyboard, a screen reader and your own eyes as well.`
 - **Refresh** (URLs): fetch again every n seconds; 0 loads once.
 - The right-hand side shows the file and lets you change it: see **Editing a data file** below. For any source it also lists the field names you can use.
 
-Use a source by its **name** anywhere expressions go: \`{products.length} products\`, a binding \`products[0].price\`, or **Repeat → Items** \`products\`. Scripts read \`ix.data.products\`.
+Use a source by its **name** anywhere expressions go: \`{products.length} products\`, a binding \`products[0].price\`, or **Repeat → Repeat for each** **Data: products**. Scripts read \`ix.data.products\`.
 
 **Load data** reloads a source (optionally from a different URL), and **When data has loaded** fires when it arrives. The host page can push data with \`player.setData('products', [...])\`.
 
 **+ Shared responses** adds a different kind of source: answers the people playing add, counted for the class or kept for each person. See [Shared responses](shared-responses).
+
+## Show a field on the page
+Under a loaded source the **item fields** (or **fields**, for one object) are listed with the same text-icon handle as a variable. Drag one onto the page to show its value, or press it to add it to the selected text layer. For a list the value is the first row's (\`products[0].name\`); put it inside a [repeater](repeaters) when each row should show its own. See [Live values in text](text#drag-a-value-onto-the-page).
 
 ## Editing a data file
 A source **From: Uploaded file** can be edited right there, in up to four views: **Form**, **Table**, **Tree** and **Raw text**. Which ones you get depends on the file. They show the same text, so a change in one shows in the others.
@@ -20383,13 +20449,18 @@ Only the course, the learner's first name and display name, and whether they are
     title: "Repeated lists",
     group: "Data",
     summary: "Copy a layer once per item in a list, with item and index in scope.",
-    keywords: "repeat repeater list loop for each item index grid table",
+    keywords: "repeat repeater list loop for each item index grid table type my own items selection select pick one several isSelected checkbox radio selected",
     body: `A **repeater** copies one layout once for each item in a list: a row for every product, a card for every question. Add an item to the list and a new copy appears.
 
 ## Turn it on
-Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the first child for each item**. Its **first child** is then copied once per item in **Items**. Items is an expression that gives a list, like \`products\` or \`[1, 2, 3]\`.
+Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the first child for each item**. Its **first child** is then copied once per item in **Items**. **Repeat for each** is where the items come from. Pick one of:
 
-**Items** can be a [data source](data-sources) or a *List* [variable](variables). The repeater redraws when the list changes, so a *Change a value or counter* node that adds to the list adds a row.
+- a **List** [variable](variables), so the items are the table in the Variables tab,
+- a [data source](data-sources),
+- **Type my own items**, which opens the same table right here, with a row for each copy and a column for each thing it holds. Nothing else needs to exist: the items live on this layer. Inside the copies use \`{item.text}\` for a column called *text*, or \`{item}\` for a plain list of words or numbers,
+- **A formula (advanced)**, an expression that gives a list, like \`products.filter(p => p.inStock)\` or \`[1, 2, 3]\`. A list that is already a name or typed table is shown as one of the choices above.
+
+The repeater redraws when the list changes, so a *Change a value or counter* node that adds to the list adds a row.
 
 Inside the copies, \`item\` is the current item and \`index\` is its position, counting from 0: \`{index + 1}. {item.name} - {item.price}\`. In a text or button label inside the copies, **Insert value** lists the item's fields (read from the first item) so you can pick one instead of typing it.
 
@@ -20406,8 +20477,20 @@ A height or width you bind on the template layer still wins. Only copies whose t
 ## Instances in a repeater
 Instances in a repeater can take their [inputs](instances) from the item. Select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
 
+## Selection
+Set **Selection** under the repeater to let people pick copies without any nodes:
+
+- **One at a time** keeps one pick: choosing a copy un-chooses the others (a choose-one picker, tabs, the open section of an accordion). The variable it writes holds the copy's number from 0, or -1 for none. Tick **Click again to clear** and a second click on the picked copy picks nothing.
+- **Several** switches each copy on and off (flip cards, a tick-list). The variable it writes is a *List* of the numbers picked.
+
+When you choose one, a box asks for a name for the variable (it suggests \`selectedIndex\` or \`selectedItems\`); you can pick another variable of the right kind later in **Remember the pick in**. It is an ordinary variable: read it in formulas and bindings, put it back to the start with *Put values back to the start*, or change it from a node.
+
+Inside the copies, \`isSelected\` is true for a picked copy, so a binding on Fill colour can be \`isSelected ? "#ffffff" : "#1f3a68"\`. If the items are records, \`item.selected\` says the same. **By value** offers \`isSelected\` as something to base a table on, with a row for true and one for false. Outside the copies, \`index == selectedIndex\` or \`selectedItems.includes(index)\` do the same job.
+
+A click, <kbd>Enter</kbd> or <kbd>Space</kbd> on a copy picks it, and the arrow keys, <kbd>Home</kbd> and <kbd>End</kbd> move between the copies. The copies are radio buttons (one) or checkboxes (several) and say whether they are checked to a screen reader, and the repeater is a radio group for one. If the layer you repeat already has its own **Role** or **Checked** setting, that is kept. The click is also an ordinary click, so a **When clicked or hovered** event on the same layer still runs, after the pick is written.
+
 ## Clicks and the keyboard
-Clicks on a copy fire **When clicked or hovered** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked.
+Clicks on a copy fire **When clicked or hovered** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked. For keeping track of which were clicked, **Selection** above does it for you.
 
 For lists a keyboard user moves through, tick **Keyboard navigation** under the repeater. One copy is the Tab stop and the arrow keys move between the rest (see [Accessibility](accessibility#keyboard-navigation)).`
   },
@@ -21714,8 +21797,8 @@ The property is probably bound: the binding sets it again straight away. Look in
 **My text shows \`{score}\` instead of the number.**
 The variable needs to exist with exactly that name (it's case sensitive). Make it in the **Variables** tab. To show a real brace, write \`{{\`. See [Variables](variables).
 
-**It says "Use letters, digits and _ only".**
-Variable and data source names are used inside expressions, so they can't contain spaces or dashes. Try \`high_score\`. A variable whose name is empty or not valid is not saved: it stays in the field as a draft, with this message, and the project keeps the last good name until you fix it.
+**It says "Formulas need a name with letters, digits and _ only".**
+Formulas use a variable's **Name in formulas**, so that one can't contain spaces or dashes. Type your own words in the name field (**Quiz score**) and the editor offers \`quizScore\`; if you changed that box to something with a space or a dash, try \`high_score\`. Data source names must be plain like this too. A name that is empty or not valid is not saved: it stays in the field as a draft, with the message, and the project keeps the last good name until you fix it.
 
 **A script does nothing.**
 Open **Preview** and look at the **Events** list for an error message. Scripts in the sandbox can only use \`ix\`, timers and \`console\`. See [Scripts](scripts).
@@ -22364,7 +22447,7 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n") + "\nOn a progress layer only: " + layerOwnProps(createNode("progress")).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join("; ") + "\nOn a connector layer only: " + layerOwnProps(createNode("connector")).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join("; ");
   if (topic === "layers") {
     const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "progress", "chart", "connector", "bone"];
-    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, depth (parallax, percent -100 to 100: while playing the layer shifts against the pointer, more the nearer it is; 0 is still; settings.parallax on the project {range px for depth 100, default 40; tilt true to follow a phone tilt too} sets how far), link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, ariaExpanded, ariaPressed (a toggle button: true/false), ariaCurrent (true, or page|step|location|date|time: the current tab, page or step), liveRegion (a text layer read aloud by screen readers when its words change: polite|assertive), decorative (hide from assistive tech), focusable (tab stop override), tabOrder, shortcut (a key that clicks the layer, e.g. "r", "1", "Ctrl+Enter"), className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it). Buttons and inputs take disabled (bindable) and disabledOpacity (0-1, default 0.5, how dimmed they look while disabled). A frame can be a dialog: dialog {modal (default true), scrim (a solid paint over the artboard behind it), closeOnEscape (default true), closeOnOutsideClick, initialFocus (layer id), returnFocus (default true), openVariable (variable id: the frame shows while it is on, Escape turns it off)}. A frame or group can carry keyNav {mode: list|grid|radio, orientation: vertical|horizontal|both, columns (grid on a container; a grid repeater uses its own), wrap, indexVariable (variable id, number from 0; setting it moves focus too when it is inside), countHidden (hidden copies keep their numbers and are stepped over)}: one item is the Tab stop and the arrows, Home and End move between a repeater\'s copies or a container\'s children; radio mode also selects (clicks) the item it lands on.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
+    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, depth (parallax, percent -100 to 100: while playing the layer shifts against the pointer, more the nearer it is; 0 is still; settings.parallax on the project {range px for depth 100, default 40; tilt true to follow a phone tilt too} sets how far), link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, ariaExpanded, ariaPressed (a toggle button: true/false), ariaCurrent (true, or page|step|location|date|time: the current tab, page or step), liveRegion (a text layer read aloud by screen readers when its words change: polite|assertive), decorative (hide from assistive tech), focusable (tab stop override), tabOrder, shortcut (a key that clicks the layer, e.g. "r", "1", "Ctrl+Enter"), className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it). Buttons and inputs take disabled (bindable) and disabledOpacity (0-1, default 0.5, how dimmed they look while disabled). A frame can be a dialog: dialog {modal (default true), scrim (a solid paint over the artboard behind it), closeOnEscape (default true), closeOnOutsideClick, initialFocus (layer id), returnFocus (default true), openVariable (variable id: the frame shows while it is on, Escape turns it off)}. A repeater (frame or group with repeat {items, layout, gap, columns}) can carry repeat.select {mode: one|several, variable (variable id: a number from 0, -1 for none, when one; a list of numbers when several), toggle (one only: clicking the picked copy clears it)}: a click, Space or Enter on a copy picks it with no nodes, each copy sees isSelected (and item.selected on record items), copies become radios or checkboxes with aria-checked, arrows move between them. A frame or group can carry keyNav {mode: list|grid|radio, orientation: vertical|horizontal|both, columns (grid on a container; a grid repeater uses its own), wrap, indexVariable (variable id, number from 0; setting it moves focus too when it is inside), countHidden (hidden copies keep their numbers and are stepped over)}: one item is the Tab stop and the arrows, Home and End move between a repeater\'s copies or a container\'s children; radio mode also selects (clicks) the item it lands on.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
 Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
 Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nProgress bars (type "progress"): a track with a bar filling it. Fields: value, max (both take bindings; value is animatable, so a timeline track or Animate property can fill it), fill/stroke (the track, any paints), barFill (the bar\'s paint), cornerRadius, orientation (horizontal | vertical), reverse (grow from the right or the top), semantics (progressbar | meter | none: the role and aria-valuenow/min/max/valuetext it carries; bars made for a screen reader need ariaLabel), valueText (a text template: {value}, {max}, {percent} and variables). Colours may be theme token references.\nPictures (type "image"): assetId, fit (cover | contain | fill) and an optional crop {x, y, zoom} that moves and zooms the picture inside its frame without touching the file: zoom is 1 to 20 (2 shows the middle quarter), x and y are fractions of the frame\'s width and height the picture is moved by (0.1 is a tenth to the right), and the frame clips the rest. Leave crop off for the picture as fit draws it. A new picture wants an ariaLabel saying what it shows (or decorative: true).\nCharts (type "chart"): a column | bar | line | pie | donut chart drawn from data, an expression for a list: numbers, objects (label from labelKey, number from valueKey; blank guesses), [label, value] pairs, or one object. Fields: kind, data, labelKey, valueKey, colors (tokens or colours handed out in turn; varyColors for one each on bar, column and line), color (labels and axes), fontFamily, fontSize, min/max (fixed axis ends, null fits the data), gridlines, axisLabels, valueLabels, legend, hole (donut, 0.1-0.95), animate, table (a hidden data table for screen readers), decimals, prefix, suffix ({variable} slots work in both). An object item with hidden: true (or the field hiddenKey names) is a placeholder: a dashed empty mark with a ?, read out as hidden, kept out of the auto axis unless it also has a number. Clicks, presses, hovers and focus on a mark give event.index (the item\'s position) to On pointer and On focus nodes. Give it an ariaLabel.\nConnectors (type "connector"): a line or arrow joining two layers that follows them, so you never position it. Fields: from and to, each {layer: layerId | {repeat: templateLayerId, index: "expression"} | "" for a loose point, side?: auto|top|right|bottom|left, offset?: px along the side, x?/y? for a loose point (in the connector\'s parent)}; route: straight | elbow | curved; stroke (the line: {paint, width, dash?, ...}, paints may be tokens); startCap/endCap: none | arrow | dot; capSize (0 = from the stroke width); gap (px short of each layer); cornerRadius (elbow corners and the label chip); label (text, {variable} slots work), labelAt (0-1 along the line), color (label text), fill (label background), fontFamily, fontSize, fontWeight. x, y, width, height and rotation are ignored (the box is worked out from the route; leave them 0). It is hidden while either layer is hidden or missing. To connect repeated layers: the repeater\'s template (its first child) has an id, copy i is id~i; put the connector in a repeater of its own over a list of links and use from.layer {repeat: templateId, index: "item.from"}. Decorative (hidden from screen readers) unless ariaLabel is set, so give the page a text alternative (a nested list) for what it shows. Stroke trimEnd animates a draw-in.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t22) => `- ${t22}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t22)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }

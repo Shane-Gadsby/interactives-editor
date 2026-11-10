@@ -1,5 +1,5 @@
 import type { BuildTutorial } from './index';
-import { bound, clickThen, layers, repeats, saw, setsVariable, textHas, variables, all } from '../../lib/tutorial-checks';
+import { allNodes, bound, clickThen, layers, repeats, saw, textHas, variables, all } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 31,
@@ -113,8 +113,8 @@ Every card shows its front now, because nothing is selected yet. (You could also
     1: { check: variables(['cards', 'list'], ['flipped', 'list']), show: ['add-variable', 'panel-variables'] },
     2: { check: all(layers('frame'), textHas('{item.front}'), textHas('{item.back}')), show: 'tool-frame' },
     3: { check: repeats('cards'), show: 'panel-inspector' },
-    4: { check: all(bound('text', 'visible', 'flipped'), bound('frame', 'fill', 'flipped')), show: 'panel-inspector' },
-    5: { check: clickThen('frame', 'action.setVariable', setsVariable('flipped')), show: 'add-empty-click' },
+    4: { check: (c) => allNodes(c.project).some((n) => (n as { repeat?: { select?: { mode?: string } } }).repeat?.select?.mode === 'several'), show: 'panel-inspector' },
+    5: { check: all(bound('text', 'visible', 'isSelected'), bound('frame', 'fill', 'isSelected')), show: 'panel-inspector' },
     6: { check: clickThen('button', 'action.resetVariables'), show: 'tool-button' },
     7: { check: saw('previewed'), show: 'preview' },
   },
