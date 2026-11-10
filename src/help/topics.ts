@@ -5869,7 +5869,8 @@ ${
 - Your **Undo** only undoes your own changes. To roll back an agent's work, use the [revision history](live-editing#revision-history) (a snapshot is kept every few minutes while the project changes). A snapshot that has an agent's changes in it says so, for example **Autosave (edited with Claude (AI))**, so you can find the version from before it started. **Save a named version…** there first is the surest way back.
 - The agent can only open projects its session can open.
 - An agent that goes quiet for two hours is disconnected and leaves any project it was in. Its client reconnects by itself the next time it is used.
-- The people who run the server can switch agent access off altogether. Then connecting says **AI agent access is turned off on this server**, and that is not something you can change from the editor.`;
+- The people who run the server can switch agent access off altogether. Then connecting says **AI agent access is turned off on this server**, and that is not something you can change from the editor.
+- Every tool an agent runs is written to the project's audit log (who, which agent, which tool), which power users can read. An agent that sends a great many requests in a minute is asked to wait (**Too many requests**) and can carry on after that.`;
     },
   },
 

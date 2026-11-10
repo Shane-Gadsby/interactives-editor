@@ -4701,6 +4701,32 @@ router.use('/mcp', (req, res, next) => {
 	res.status(503).json({jsonrpc: '2.0', id: null, error: {code: -32000, message: 'AI agent access is turned off on this server'}})
 })
 
+//Who the caller is, for the audit and the limits: the bearer is the same session id, so hand it to the suite's own
+//session check the way a browser would send it. Optional: a call with no session gets what a signed out browser gets
+router.use('/mcp', (req, res, next) => {
+	let sid = mcpSessionID(req)
+	if (sid && !req.get('x-session-id')) req.headers['x-session-id'] = sid
+	next()
+}, sessionCheck({optional: true, tool: 'interactives'}))
+
+//Limits per caller and per address, a minute at a time (INTERACTIVES_MCP_PER_MIN, INTERACTIVES_MCP_IP_PER_MIN). An agent
+//working normally makes a few calls a second at most; anything past this is a loop, or someone hammering the box
+let mcpWindow = {start: 0, counts: new Map()}
+const mcpLimited = (req) => {
+	let now = Date.now()
+	if (now - mcpWindow.start >= 60 * 1000) mcpWindow = {start: now, counts: new Map()}
+	let me = whoIs(req),
+		keys = [[`ip:${req.ip}`, Number(process.env.INTERACTIVES_MCP_IP_PER_MIN) || 600]]
+	if (me?.username) keys.push([`u:${me.username}`, Number(process.env.INTERACTIVES_MCP_PER_MIN) || 240])
+	let over = false
+	for (let [k, max] of keys) {
+		let n = (mcpWindow.counts.get(k) || 0) + 1
+		mcpWindow.counts.set(k, n)
+		if (n > max) over = true
+	}
+	return over ? Math.ceil((mcpWindow.start + 60 * 1000 - now) / 1000) : 0
+}
+
 router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, res) => {
 	//A browser page on some other site has no business driving this (DNS rebinding and friends). Agents send no Origin
 	let origin = req.get('origin'),
@@ -4713,6 +4739,11 @@ router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, 
 	}
 	if (origin && originHost !== req.get('host')) {
 		return res.status(403).json({jsonrpc: '2.0', id: null, error: {code: -32000, message: 'Origin not allowed'}})
+	}
+
+	let wait = mcpLimited(req)
+	if (wait) {
+		return res.set('Retry-After', String(wait)).status(429).json({jsonrpc: '2.0', id: req.body?.id ?? null, error: {code: -32000, message: `Too many requests, try again in ${wait} s`}})
 	}
 
 	let mcp = await loadMCP(),
@@ -4758,6 +4789,12 @@ router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, 
 	}
 
 	let reply = await mcp.runAs(conn.ctx, () => mcp.respond(msg))
+	//Every tool an agent runs goes in the audit log: who, which agent, which tool and project, and whether it worked
+	if (msg.method === 'tools/call') {
+		let args = msg.params?.arguments || {},
+			project = [args.project_id, args.projectId, args.project].find((x) => typeof x === 'string' && validID(x)) || null
+		audit(req, 'agent-tool', project, {agent: conn.ctx.agent, tool: String(msg.params?.name || '').slice(0, 60), ok: !reply?.error && !reply?.result?.isError})
+	}
 	if (!reply) return res.status(202).end()
 	res.json(reply)
 })

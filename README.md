@@ -234,6 +234,8 @@ Access works like this:
 | `INTERACTIVES_BRAND_GROUP` | unset | an si-admin group whose members may publish and mark brand kits, as well as power users |
 | `SUITE_SESSION_ENFORCE` | unset | `1` to refuse instead of log |
 | `INTERACTIVES_MCP` | on | `off` turns AI agent access off: `/mcp` answers 503 and `?agent=` can't join live rooms (restart to apply) |
+| `INTERACTIVES_MCP_PER_MIN` | 240 | Requests a minute one person's agents may send to `/mcp` before getting 429 (with Retry-After) |
+| `INTERACTIVES_MCP_IP_PER_MIN` | 600 | The same, per address |
 | `INTERACTIVES_PUBLIC_URL` | derived from the request | the public origin (`https://host`), used for the LTI 1.3 launch and login addresses |
 | `LTI13_PLATFORMS` | unset | optional JSON array of LTI 1.3 platform registrations (same fields as the admin api, plus `id`) |
 | `LTI13_ALLOW_HTTP` | unset | `1` allows http platform urls, for a development LMS only |
