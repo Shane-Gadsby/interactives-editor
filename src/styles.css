@@ -11914,7 +11914,7 @@ button.flow-text:focus-visible {
 
 /* the behaviour chooser */
 .modal.dialog.behaviour-dialog {
-  width: min(560px, 94vw);
+  width: min(780px, 96vw);
 }
 .recipe-list,
 .recipe-list ul {
@@ -11922,11 +11922,18 @@ button.flow-text:focus-visible {
   margin: 0;
   padding: 0;
 }
-/* the groups sit two across, so the list, the question it asks and the answer all fit without scrolling */
+/* the groups flow three across, so the list, the question it asks and the answer all fit without scrolling */
 .recipe-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 14px;
+  column-count: 3;
+  column-gap: 14px;
+}
+.recipe-group-item {
+  break-inside: avoid;
+}
+@media (max-width: 640px) {
+  .recipe-list {
+    column-count: 1;
+  }
 }
 .recipe-group {
   font-size: 11px;
@@ -11944,7 +11951,7 @@ button.flow-text:focus-visible {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 4px;
-  padding: 4px 9px;
+  padding: 3px 8px;
   margin: 2px 0;
   cursor: pointer;
 }
@@ -11988,6 +11995,52 @@ button.flow-text:focus-visible {
   border: 1px solid var(--line-2);
   border-radius: 4px;
   padding: 5px 8px;
+}
+/* trigger, more steps, Only if and Otherwise: below the choice, quiet until used */
+.behaviour-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.behaviour-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.behaviour-step-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.behaviour-step-head .dialog-field {
+  flex: 1;
+}
+.behaviour-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.check-list {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  margin: 0;
+  padding: 4px 8px;
+  max-height: 9em;
+  overflow: auto;
+}
+.check-list legend {
+  color: var(--muted);
+  padding: 0 4px;
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* the condition picker */

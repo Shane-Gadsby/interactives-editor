@@ -179,8 +179,12 @@ export function eventPhrase(n: LogicNode, c: Names, self?: string): string {
       return `While ${subject()} is being dragged`;
     case 'event.dragOver':
       return `When ${subject()} is dragged ${p.type === 'leave' ? 'off' : 'over'} a drop zone`;
-    case 'event.drop':
-      return `When ${subject()} is dropped${p.result === 'rejected' ? ' where it does not belong' : p.result === 'accepted' ? ' where it belongs' : ''}`;
+    case 'event.drop': {
+      const where = p.result === 'rejected' ? ' where it does not belong' : p.result === 'accepted' ? ' where it belongs' : '';
+      //with a draggable layer picked the sentence is about it: "When this is dropped on Bin"
+      if (p.layer) return `When ${self && p.layer === self ? 'this layer' : c.layer(p.layer)} is dropped${p.target && p.result !== 'missed' ? ` on ${c.layer(p.target)}` : where}`;
+      return `When ${subject()} is dropped${where}`;
+    }
     case 'event.dragEnd':
       return `When ${subject()} is let go`;
     case 'event.dataLoaded':
@@ -208,8 +212,19 @@ function setVariable(p: P, c: Names): string {
   //an easing time on a number: only worded when it is not 0
   const over = (op === 'set' || op === 'add') && String(p.over ?? '').trim() && String(p.over).trim() !== '0' ? ` over ${secs(p.over)}` : '';
   switch (op) {
-    case 'add':
+    case 'add': {
+      //Change a number's Take away writes an Add of a minus number: it reads as taking it off
+      const minus = /^-\s*(\d+(?:\.\d+)?|\(.+\))$/.exec(String(p.value ?? '').trim());
+      if (minus) return `take ${minus[1].replace(/^\((.+)\)$/, '$1')} off ${v}${over}`;
       return `add ${val(p.value)} to ${v}${over}`;
+    }
+    case 'next':
+    case 'previous': {
+      const first = String(p.first ?? '').trim() || '0';
+      const last = String(p.last ?? '').trim();
+      const range = last ? ` (${first} to ${last}, ${p.ends === 'stop' ? 'stopping at the ends' : 'going round at the ends'})` : '';
+      return `go to the ${op} ${v}${range}`;
+    }
     case 'toggle':
       return `switch ${v} on or off`;
     case 'push':
@@ -535,7 +550,7 @@ const eventsFirst = (a: LogicNode, b: LogicNode) => a.y - b.y || a.x - b.x;
 /** The flows that start on a layer (events whose layer is this one), top to bottom as the graph has them. */
 export function flowsForLayer(ctx: FlowCtx, layerId: string, opts?: FlowOptions): Flow[] {
   return ctx.ab.logic.nodes
-    .filter((n) => n.kind.startsWith('event.') && n.params.target === layerId)
+    .filter((n) => n.kind.startsWith('event.') && (n.params.target === layerId || (n.kind === 'event.drop' && n.params.layer === layerId)))
     .sort(eventsFirst)
     .map((e) => buildFlow(e, { ...ctx, self: layerId }, opts));
 }

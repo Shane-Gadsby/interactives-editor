@@ -182,7 +182,7 @@ describe('BehaviourDialog', () => {
   it('lists what can happen in plain words, grouped, with the first one ready', () => {
     open();
     expect(q('#behaviour-title')!.textContent).toBe('When “Next button” is clicked…');
-    expect(radios().map((r) => r.querySelector('.recipe-name')!.textContent)).toEqual(['Go to the next page', 'Go to the previous page', 'Go to a page…', 'Show a layer', 'Hide a layer', 'Show or hide a layer', 'Move the view to a layer…', 'Show the whole page again', 'Play an animation', 'Play a sound', 'Play music that carries on across pages', 'Stop the music', 'Turn the sound off or on', 'Play or pause a video', 'Jump a video to a time…', 'Add 1 to a counter', 'Switch something on or off', 'Open a link', 'Run a script', 'Start over']);
+    expect(radios().map((r) => r.querySelector('.recipe-name')!.textContent)).toEqual(['Go to the next page', 'Go to the previous page', 'Go to a page…', 'Show a layer', 'Hide a layer', 'Show or hide a layer', 'Show only one of a set…', 'Change a layer’s look…', 'Move the view to a layer…', 'Show the whole page again', 'Play an animation', 'Play a sound', 'Play music that carries on across pages', 'Stop the music', 'Turn the sound off or on', 'Play or pause a video', 'Jump a video to a time…', 'Change a number…', 'Go to the next item…', 'Go to the previous item…', 'Set a text or choice…', 'Switch something on or off', 'Put values back to the start…', 'Say something to screen readers', 'Open a link', 'Run a script', 'Start over']);
     expect(radios()[0].getAttribute('aria-checked')).toBe('true');
     expect(q('.behaviour-preview')!.textContent).toBe('It will do this: When clicked: go to the next page.');
     expect(q('[role=dialog]')!.getAttribute('aria-modal')).toBe('true');
@@ -261,7 +261,7 @@ describe('BehaviourDialog', () => {
   it('a counter can be a new one named in plain words', () => {
     const sc = open('pointerenter');
     expect(q('#behaviour-title')!.textContent).toBe('When “Next button” is hovered over…');
-    choose('Add 1 to a counter');
+    choose('Change a number…');
     const select = q('.behaviour-dialog select') as HTMLSelectElement;
     expect(select.value).toBe('vs');
     set(select, '__new__');
@@ -305,6 +305,200 @@ describe('BehaviourDialog', () => {
     key('Escape', radios()[0]);
     expect(q('.behaviour-dialog')).toBeNull();
     expect(sc.s.get().project.artboards[0].logic.nodes).toHaveLength(2);
+  });
+});
+
+describe('BehaviourDialog: more steps, other triggers, Only if and Otherwise', () => {
+  const open = () => {
+    const sc = scene();
+    act(() => root.render(<BehaviourHost />));
+    act(() => openBehaviours({ abId: sc.ab.id, layerId: sc.btn.id, trigger: 'click' }));
+    return sc;
+  };
+  const radios = () => qa('[role=radio]', q('.behaviour-dialog')!);
+  const choose = (label: string) => click(radios().find((r) => r.querySelector('.recipe-name')?.textContent === label));
+  const dlg = () => q('.behaviour-dialog')!;
+  const selects = () => qa('select', dlg()) as HTMLSelectElement[];
+  const selectWith = (value: string) => selects().find((x) => [...x.options].some((o) => o.value === value))!;
+  const preview = () => q('.behaviour-preview')!.textContent;
+
+  it('starts on clicked, with every other trigger one choice away', () => {
+    open();
+    const when = selectWith('timer');
+    expect(when.value).toBe('click');
+    expect([...when.options].map((o) => o.textContent)).toEqual(['“Next button” is clicked', '“Next button” is hovered over', 'the page is shown', 'some seconds have passed', 'a value reaches something', '“Next button” is dropped on something', 'a key is pressed', 'a video reaches a time (not yet)']);
+    expect([...when.options].find((o) => o.value === 'video')!.disabled).toBe(true);
+    expect(preview()).toBe('It will do this: When clicked: go to the next page.');
+  });
+
+  it('after some seconds asks how many, changes the heading, and writes a timer', () => {
+    const sc = open();
+    set(selectWith('timer'), 'timer');
+    expect(q('#behaviour-title')!.textContent).toBe('When some seconds have passed…');
+    const secs = qa('input', dlg()).find((i) => (i as HTMLInputElement).value === '5') as HTMLInputElement;
+    set(secs, '3');
+    expect(preview()).toBe('It will do this: After 3 s: go to the next page.');
+    set(secs, '0');
+    expect(preview()).toBe('Say how many seconds, as a number.');
+    expect((byText('Add') as HTMLButtonElement).disabled).toBe(true);
+    set(secs, '3');
+    click(byText('Add'));
+    expect(sc.s.get().project.artboards[0].logic.nodes[0]).toMatchObject({ kind: 'event.timer', params: { ms: '3000', repeat: false } });
+  });
+
+  it('a value reaches something: asks which value, how, and what', () => {
+    const sc = open();
+    set(selectWith('value'), 'value');
+    const watch = selectWith('vs');
+    expect(watch.value).toBe('vs');
+    expect([...selectWith('atleast').options].map((o) => o.textContent)).toEqual(['is at least', 'is at most', 'is more than', 'is less than', 'is']);
+    set(qa('input', dlg()).find((i) => (i as HTMLInputElement).value === '1') as HTMLInputElement, '9');
+    expect(preview()).toBe('It will do this: When score changes, only if score is at least 9: go to the next page.');
+    //a yes/no value is asked if it is on, with nothing to type
+    set(watch, 'vd');
+    expect([...selectWith('true').options].map((o) => o.textContent)).toEqual(['is on (true)', 'is off (false)']);
+    expect(preview()).toBe('It will do this: When done changes, only if done is on: go to the next page.');
+    click(byText('Add'));
+    expect(sc.s.get().project.artboards[0].logic.nodes[0].params).toMatchObject({ variable: 'vd', onlyIf: 'done' });
+  });
+
+  it('+ then also adds a row with its own questions, and both steps are written', () => {
+    const sc = open();
+    choose('Change a number…');
+    click(byText('+ then also…'));
+    const row = q('.behaviour-step')!;
+    expect(row.getAttribute('aria-label')).toBe('Then');
+    //the second step starts as a number change too, and can be any recipe
+    const kind = qa('select', row)[0] as HTMLSelectElement;
+    expect(kind.value).toBe('counter');
+    set(kind, 'announce');
+    set(qa('input', row)[0] as HTMLInputElement, 'Counted');
+    expect(preview()).toBe('It will do this: When clicked: add 1 to score, then tell screen readers “Counted”.');
+    click(byText('Add'));
+    const ab = sc.s.get().project.artboards[0];
+    expect(ab.logic.nodes.map((n) => n.kind)).toEqual(['event.pointer', 'action.setVariable', 'action.announce']);
+    expect(ab.logic.edges).toHaveLength(2);
+  });
+
+  it('a step can be taken out again, and a step with something missing keeps Add off', () => {
+    open();
+    click(byText('+ then also…'));
+    click(byText('+ then also…'));
+    expect(qa('.behaviour-step')).toHaveLength(2);
+    set(qa('select', q('.behaviour-step')!)[0] as HTMLSelectElement, 'announce');
+    expect(preview()).toBe('Write what to say.');
+    expect((byText('Add') as HTMLButtonElement).disabled).toBe(true);
+    click(qa('button', q('.behaviour-step')!).find((b) => b.textContent === 'Remove')!);
+    expect(qa('.behaviour-step')).toHaveLength(1);
+    expect((byText('Add') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('+ only if uses the condition picker and writes an Only if on the event', () => {
+    const sc = open();
+    click(byText('+ only if…'));
+    expect(q('.behaviour-only .cond')!.getAttribute('aria-label')).toBe('Only if');
+    expect((q('.cond-op', dlg()) as HTMLSelectElement).value).toBe('atleast');
+    set(q('input.cond-val', dlg()) as HTMLInputElement, '3');
+    expect(preview()).toBe('It will do this: When clicked, only if score is at least 3: go to the next page.');
+    click(byText('Add'));
+    expect(sc.s.get().project.artboards[0].logic.nodes[0].params.onlyIf).toBe('score >= 3');
+  });
+
+  it('+ otherwise makes a Check a condition with both ways, and Remove Only if takes both out', () => {
+    const sc = open();
+    choose('Say something to screen readers');
+    const mainWords = () => qa('input', dlg()).find((i) => !i.closest('.behaviour-step') && !i.closest('.behaviour-only') && (i as HTMLInputElement).type !== 'checkbox') as HTMLInputElement;
+    set(mainWords(), 'Yes');
+    click(byText('+ only if…'));
+    expect(byText('+ only if…')).toBeUndefined();
+    click(byText('+ otherwise…'));
+    expect(q('.behaviour-step')!.getAttribute('aria-label')).toBe('Otherwise');
+    expect(byText('+ otherwise…')).toBeUndefined();
+    //the Otherwise starts as a number change; make it a message
+    set(qa('select', q('.behaviour-step')!)[0] as HTMLSelectElement, 'announce');
+    expect(preview()).toBe('Write what to say.');
+    set(qa('input', q('.behaviour-step')!)[0] as HTMLInputElement, 'No');
+    expect(preview()).toBe('It will do this: When clicked: check whether score is at least 1 (if so: tell screen readers “Yes”; if not: tell screen readers “No”).');
+    click(byText('Add'));
+    const ab = sc.s.get().project.artboards[0];
+    expect(ab.logic.nodes.map((n) => n.kind)).toEqual(['event.pointer', 'logic.if', 'action.announce', 'action.announce']);
+    expect(ab.logic.edges.map((e) => e.fromPort)).toEqual(['out', 'true', 'false']);
+  });
+
+  it('Remove Only if takes the Otherwise out with it', () => {
+    open();
+    click(byText('+ only if…'));
+    click(byText('+ otherwise…'));
+    click(byText('Remove Only if'));
+    expect(q('.behaviour-step')).toBeNull();
+    expect(q('.behaviour-only')).toBeNull();
+    expect(byText('+ only if…')).toBeTruthy();
+    expect(byText('+ otherwise…')).toBeUndefined();
+    expect(preview()).toBe('It will do this: When clicked: go to the next page.');
+  });
+
+  it('Change a number asks which number, what to do and how much', () => {
+    const sc = open();
+    choose('Change a number…');
+    expect(selects()[0].value).toBe('vs');
+    set(selectWith('subtract'), 'subtract');
+    set(qa('input', dlg()).find((i) => (i as HTMLInputElement).value === '1') as HTMLInputElement, '5');
+    expect(preview()).toBe('It will do this: When clicked: take 5 off score.');
+    click(byText('Add'));
+    expect(sc.s.get().project.artboards[0].logic.nodes[1].params).toMatchObject({ variable: 'vs', op: 'add', value: '-5' });
+  });
+
+  it('Go to the next item asks how many, where it starts and what happens after the last', () => {
+    const sc = open();
+    choose('Go to the next item…');
+    expect(preview()).toBe('It will do this: When clicked: go to the next score (1 to 3, going round at the ends).');
+    set(selectWith('stop'), 'stop');
+    set(selectWith('0'), '0');
+    expect(preview()).toBe('It will do this: When clicked: go to the next score (0 to 2, stopping at the ends).');
+    click(byText('Add'));
+    expect(sc.s.get().project.artboards[0].logic.nodes[1].params).toMatchObject({ op: 'next', first: '0', last: '2', ends: 'stop' });
+  });
+
+  it('Show only one of a set: tick the layers, Enter on a tick box does not add', () => {
+    const sc = open();
+    choose('Show only one of a set…');
+    expect(preview()).toBe('Tick the layers to hide.');
+    const boxes = qa('input[type=checkbox]', dlg()) as HTMLInputElement[];
+    expect(boxes).toHaveLength(1);
+    click(boxes[0]);
+    act(() => void boxes[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
+    expect(q('.behaviour-dialog')).toBeTruthy();
+    expect(preview()).toBe('It will do this: When clicked: show Hint text.');
+    click(byText('Add'));
+    expect(sc.s.get().project.artboards[0].logic.nodes.map((n) => n.kind)).toEqual(['event.pointer', 'action.visibility']);
+  });
+
+  it('Change a layer’s look: colour, text, opacity and size each ask for their own widget', () => {
+    const sc = open();
+    choose('Change a layer’s look…');
+    expect(qa('.color-field', dlg())).toHaveLength(1);
+    set(selectWith('opacity'), 'opacity');
+    expect(qa('.color-field', dlg())).toHaveLength(0);
+    set(qa('input', dlg()).find((i) => (i as HTMLInputElement).value === '50') as HTMLInputElement, '40');
+    expect(preview()).toBe('It will do this: When clicked: set Next button’s opacity to 0.4.');
+    set(selectWith('size'), 'size');
+    expect(preview()).toBe('Give a width or a height.');
+    set(qa('input', dlg()).find((i) => (i as HTMLInputElement).placeholder === 'leave as it is') as HTMLInputElement, '240');
+    click(byText('Add'));
+    expect(sc.s.get().project.artboards[0].logic.nodes[1]).toMatchObject({ kind: 'action.setProperty', params: { prop: 'width', value: '240' } });
+  });
+
+  it('a key and a drop zone are asked for in plain words', () => {
+    const sc = open();
+    set(selectWith('key'), 'key');
+    expect([...selectWith('ArrowLeft').options].map((o) => o.textContent)).toContain('Left arrow');
+    set(selectWith('ArrowLeft'), 'ArrowLeft');
+    expect(preview()).toBe('It will do this: When ArrowLeft is pressed: go to the next page.');
+    set(selectWith('__other__'), '__other__');
+    expect(preview()).toBe('Choose which key.');
+    set(qa('input', dlg()).find((i) => (i as HTMLInputElement).placeholder === 'a, 5, F2...') as HTMLInputElement, 'q');
+    click(byText('Add'));
+    expect(sc.s.get().project.artboards[0].logic.nodes[0].params).toMatchObject({ key: 'q', type: 'keydown' });
   });
 });
 
