@@ -13372,3 +13372,35 @@ body.reorder-active .ix-tooltip {
 .by-value-add {
   align-self: flex-start;
 }
+
+/* Question section: the Looks row */
+.q-looks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.q-look > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.q-look > summary:focus-visible {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: 2px;
+}
+.q-look-sample {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 22px;
+  border: 2px solid;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.q-looks .link-btn {
+  align-self: flex-start;
+}

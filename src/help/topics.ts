@@ -2893,6 +2893,12 @@ Every layer is yours: recolour it, change the font, move things around, swap a r
 
 The **Restyle a part** buttons at the bottom of the Question section select a part for you. Selecting any part shows a note saying it belongs to the question.
 
+## Looks
+
+The **Looks** part of the Question section sets how an item looks when it is **Right**, **Wrong**, **Missed** (the right answer, shown when it was left out) and **Picked** (chosen, before the answer is checked, for choice questions). Open one to change its **Fill**, **Border** and **Text** colour, from the picker or a [theme token](themes). Every option, item, chip and blank the kit made follows, so changing the green for Right is one change, not one per layer. **Back to the starter looks** puts them back.
+
+Under the surface each coloured layer has an ordinary [binding](bindings) on its fill, border or text colour, set **By value** on the item's state, with the layer's own colour as the *otherwise*. You can see and edit it in the Inspector like any other. A colour you change on one layer by hand stays when you change the looks later, and a layer you gave a formula of your own is left alone. Hotspot questions keep their own area colours, and questions made before Looks existed keep the formulas they were made with.
+
 ## How a question behaves
 
 The behaviour is a handful of nodes in the **Interactions** tab, each a row of an event and what it runs. *When the page is shown* runs **Reset question**. A click on an option runs **Choose option**. A click on Check answer runs **Check answer**. Add your own nodes after them.

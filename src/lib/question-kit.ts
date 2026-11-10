@@ -19,13 +19,18 @@ import {
   uid,
   varName,
   walk,
+  LOOK_KEYS,
+  LOOK_STATES,
   type Artboard,
+  type Converter,
   type ContainerNode,
   type FrameNode,
   type LogicNode,
   type Project,
+  type LookState,
   type Question,
   type QuestionKind,
+  type QuestionLook,
   type QuestionOption,
   type QuestionPair,
   type SceneNode,
@@ -110,8 +115,92 @@ export function sharedPrefix(p: Project, frame: FrameNode): FrameNode[] {
 // ---------------------------------------------------------------------------------------------------------------------
 //Layers
 
-const STATE_FILL = (c: string) => `item.state == "correct" ? "${L.successSurface}" : item.state == "wrong" ? "${L.errorSurface}" : item.state == "missed" ? "${L.warningSurface}" : ${c}`;
-const STATE_LINE = (c: string) => `item.state == "correct" ? "${L.success}" : item.state == "wrong" ? "${L.error}" : item.state == "missed" ? "${L.warning}" : ${c}`;
+//Looks: what an item's fill, border and text are for Right, Wrong, Missed and Picked. The kit does not write a ternary per
+//layer for them. A layer's colour binding is the item's state (a formula) and a Look up (a map) from state to colour, with the
+//layer's own colour as the otherwise, so the By value table in the Inspector shows it. The Looks row on the question changes
+//these colours (applyLooks) and the layers follow.
+export type LookSlot = 'fill' | 'line' | 'text';
+type Looks = Record<LookState, Required<QuestionLook>>;
+export const LOOK_SLOTS: LookSlot[] = ['fill', 'line', 'text'];
+const SLOT_PROP: Record<LookSlot, string> = { fill: 'fill.color', line: 'stroke.paint.color', text: 'color' };
+const PROP_SLOT: Record<string, LookSlot> = { 'fill.color': 'fill', 'stroke.paint.color': 'line', color: 'text' };
+
+/** The starter looks: the green, red and amber surfaces and lines the kit has always used, the muted pick, and the text colour. */
+export function defaultLooks(l: Record<string, string> = L): Looks {
+  return {
+    right: { fill: l.successSurface, line: l.success, text: l.text },
+    wrong: { fill: l.errorSurface, line: l.error, text: l.text },
+    missed: { fill: l.warningSurface, line: l.warning, text: l.text },
+    picked: { fill: l.surfaceMuted, line: l.primary, text: l.text },
+  };
+}
+
+/** A question's looks as the kit uses them: what it has set, and the starter looks for the rest. */
+export function effectiveLooks(q: Pick<Question, 'looks'> | null | undefined, l: Record<string, string> = L): Looks {
+  const d = defaultLooks(l);
+  const out = defaultLooks(l);
+  for (const s of LOOK_STATES) for (const slot of LOOK_SLOTS) out[s][slot] = q?.looks?.[s]?.[slot] ?? d[s][slot];
+  return out;
+}
+
+//The looks the layers being made now are given. Set with L, when a question is added or synced.
+let LK = effectiveLooks(undefined);
+const setLook = (q: Question | null | undefined, themes: Project['themes']) => {
+  L = lookFor(themes);
+  LK = effectiveLooks(q);
+};
+
+//How a layer reaches the item it is about: the repeater's own `item`, or one row of the items by position (which may not exist yet)
+const reach = (ref: string) => (ref === 'item' ? ref : `${ref}?`);
+//A chosen item has no state until the answer is checked: it is Picked then
+const lookKey = (ref: string, picked: boolean) => (picked ? `${reach(ref)}.state || (${reach(ref)}.selected ? "picked" : "")` : `${reach(ref)}.state`);
+
+/**
+ * The bindings and converters that colour a layer by its item's state: for each slot given, the item's state looked up in
+ * the looks, with the slot's own colour for any other state. `states` says which looks it answers to (a dragged chip has no
+ * Picked, a blank's box no Missed).
+ */
+function lookBindings(ref: string, normal: Partial<Record<LookSlot, string>>, states: LookState[] = ['right', 'wrong', 'missed'], picked = false) {
+  const bindings: Record<string, string> = {};
+  const converters: Record<string, Converter[]> = {};
+  for (const slot of LOOK_SLOTS) {
+    const own = normal[slot];
+    if (own === undefined) continue;
+    const prop = SLOT_PROP[slot];
+    bindings[prop] = lookKey(ref, picked);
+    const map: Record<string, string> = {};
+    for (const s of states) map[LOOK_KEYS[s]] = LK[s][slot];
+    converters[prop] = [{ type: 'map', map, fallback: own }];
+  }
+  return { bindings, converters };
+}
+
+//Does this binding name an item's state, the way lookBindings writes it
+const STATE_BINDING = /\.state( \|\| \(.+\.selected \? "picked" : ""\))?$/;
+
+/**
+ * The question's looks changed from `before` to `after`: bring the layers along. Only a colour that is still the old look's is
+ * changed, so a colour an author picked by hand on one layer stays. Layers with formulas of their own are left alone.
+ */
+export function applyLooks(frame: ContainerNode, before: Looks, after: Looks): number {
+  let changed = 0;
+  walk(frame.children, (n) => {
+    for (const [prop, slot] of Object.entries(PROP_SLOT)) {
+      const list = n.converters?.[prop];
+      const c = list?.length === 1 ? list[0] : undefined;
+      if (c?.type !== 'map' || !STATE_BINDING.test(n.bindings?.[prop] ?? '')) continue;
+      for (const s of LOOK_STATES) {
+        const key = LOOK_KEYS[s];
+        if (key in c.map && c.map[key] === before[s][slot] && before[s][slot] !== after[s][slot]) {
+          c.map[key] = after[s][slot];
+          changed++;
+        }
+      }
+    }
+  });
+  return changed;
+}
+
 const STATE_WORDS = '{item.state == "correct" ? "✓ Right" : item.state == "wrong" ? "✗ Wrong" : item.state == "missed" ? "← Right answer" : ""}';
 const STATE_DESCRIPTION = 'item.state == "correct" ? "Right" : item.state == "wrong" ? "Wrong" : item.state == "missed" ? "This was the right answer" : ""';
 
@@ -132,6 +221,14 @@ function button(name: string, part: string, label: string, primary: boolean, bin
   });
 }
 
+const ALL_LOOKS: LookState[] = ['right', 'wrong', 'missed', 'picked'];
+
+//The option layer's own bindings (the aria ones) with its fill and border following the looks
+function optionLooks(normal: Partial<Record<LookSlot, string>>, own: Record<string, string>, picked: boolean) {
+  const l = lookBindings('item', normal, picked ? ALL_LOOKS : undefined, picked);
+  return { bindings: { ...own, ...l.bindings }, converters: l.converters };
+}
+
 function optionTemplate(style: Style): SceneNode {
   const base = { height: 52, fill: solid(L.background), cornerRadius: 10, clip: false };
   if (style === 'order') {
@@ -141,10 +238,10 @@ function optionTemplate(style: Style): SceneNode {
       questionPart: 'option',
       stroke: stroke(L.border),
       layout: { ...row(12), padding: { top: 10, right: 12, bottom: 10, left: 16 } },
-      bindings: { 'fill.color': STATE_FILL(`"${L.background}"`), 'stroke.paint.color': STATE_LINE(`"${L.border}"`), ariaDescription: STATE_DESCRIPTION },
+      ...optionLooks({ fill: L.background, line: L.border }, { ariaDescription: STATE_DESCRIPTION }, false),
       children: [
         text('Number', 'optionNumber', '{item.number}.', { width: 28, color: L.muted, fontWeight: 600, decorative: true }),
-        text('Label', 'optionLabel', '{item.text}', { layoutItem: { width: 'fill' } }),
+        text('Label', 'optionLabel', '{item.text}', { layoutItem: { width: 'fill' }, ...lookBindings('item', { text: L.text }) }),
         text('Result', 'optionState', STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L.muted, autoSize: 'width', width: 90, decorative: true }),
         createNode('button', { name: 'Move up', questionPart: 'moveUp', label: '↑', width: 40, height: 36, fill: solid(L.surfaceMuted), color: L.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
         createNode('button', { name: 'Move down', questionPart: 'moveDown', label: '↓', width: 40, height: 36, fill: solid(L.surfaceMuted), color: L.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } }),
@@ -161,16 +258,10 @@ function optionTemplate(style: Style): SceneNode {
     focusable: true,
     stroke: stroke(L.border),
     layout: { ...row(12), padding: { top: 12, right: 16, bottom: 12, left: 16 } },
-    bindings: {
-      ariaChecked: 'item.selected',
-      ariaLabel: 'item.text',
-      ariaDescription: STATE_DESCRIPTION,
-      'fill.color': STATE_FILL(`item.selected ? "${L.surfaceMuted}" : "${L.background}"`),
-      'stroke.paint.color': STATE_LINE(`item.selected ? "${L.primary}" : "${L.border}"`),
-    },
+    ...optionLooks({ fill: L.background, line: L.border }, { ariaChecked: 'item.selected', ariaLabel: 'item.text', ariaDescription: STATE_DESCRIPTION }, true),
     children: [
       checkbox ? createNode('rect', { ...markerBase, cornerRadius: 5 }) : createNode('ellipse', markerBase),
-      text('Label', 'optionLabel', '{item.text}', { layoutItem: { width: 'fill' }, decorative: true }),
+      text('Label', 'optionLabel', '{item.text}', { layoutItem: { width: 'fill' }, decorative: true, ...lookBindings('item', { text: L.text }, ALL_LOOKS, true) }),
       text('Result', 'optionState', STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L.muted, autoSize: 'width', width: 110, decorative: true }),
     ],
   });
@@ -195,6 +286,7 @@ function optionsBody(q: Question, style: Style): SceneNode {
 function blankRow(q: Question, i: number, blankVar: string): SceneNode {
   const items = varName(q, 'items');
   const at = `${items}[${i}]`;
+  const line = lookBindings(at, { line: L.border }, ['right', 'wrong']);
   return createNode('frame', {
     name: `Blank ${i + 1}`,
     questionPart: 'blankRow',
@@ -214,7 +306,8 @@ function blankRow(q: Question, i: number, blankVar: string): SceneNode {
         width: 280,
         height: 44,
         bindingModes: { value: 'both' },
-        bindings: { value: blankVar, 'stroke.paint.color': `${at}?.state == "correct" ? "${L.success}" : ${at}?.state == "wrong" ? "${L.error}" : "${L.border}"`, ariaLabel: `${at}?.label || "Answer"` },
+        converters: line.converters,
+        bindings: { value: blankVar, ...line.bindings, ariaLabel: `${at}?.label || "Answer"` },
       }),
       text('Blank answer', 'blankAnswer', `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: L.warning, bindings: { visible: `!!${at}?.answer` } }),
     ],
@@ -251,8 +344,6 @@ const itemAt = (q: Question, i: number) => `${varName(q, 'items')}[${i}]`;
 const stateFor = (ref: string) => {
   const r = `${ref}?`;
   return {
-    fill: (c: string) => `${r}.state == "correct" ? "${L.successSurface}" : ${r}.state == "wrong" ? "${L.errorSurface}" : ${r}.state == "missed" ? "${L.warningSurface}" : ${c}`,
-    line: (c: string) => `${r}.state == "correct" ? "${L.success}" : ${r}.state == "wrong" ? "${L.error}" : ${r}.state == "missed" ? "${L.warning}" : ${c}`,
     description: (right: string, wrong: string) => `${r}.state == "correct" ? "Right" : ${r}.state == "wrong" ? ${wrong} : ${r}.state == "missed" ? ${right} : ""`,
   };
 };
@@ -274,7 +365,6 @@ export function dealOrder(n: number, seed: string): number[] {
 /** A draggable word chip: a matching term or extra, a categorise item, a fill the blanks word. `text` is what it shows. */
 function chip(q: Question, o: { name: string; part: string; id: string; word: string; tag: string; index: number; x: number; y: number; w?: number; h?: number; marks?: boolean }): SceneNode {
   const at = itemAt(q, o.index);
-  const st = stateFor(at);
   return createNode('frame', {
     name: o.name,
     questionPart: `${o.part}:${o.id}`,
@@ -290,13 +380,12 @@ function chip(q: Question, o: { name: string; part: string; id: string; word: st
     ariaLabel: o.word,
     draggable: { tags: [o.tag], onMiss: 'return', label: o.word },
     shadow: { x: 0, y: 2, blur: 6, spread: 0, color: 'rgba(0,0,0,0.15)' },
-    bindings: o.marks ? { 'fill.color': st.fill(`"${L.background}"`), 'stroke.paint.color': st.line(`"${L.border}"`) } : undefined,
-    children: [text(`${o.name} text`, `${o.part}Text`, o.marks ? `{${at}?.state == "correct" ? "✓ " : ${at}?.state == "wrong" ? "✗ " : ""}{${at}?.text}` : o.word, { layoutItem: { width: 'fill' }, decorative: true })],
+    ...(o.marks ? lookBindings(at, { fill: L.background, line: L.border }) : {}),
+    children: [text(`${o.name} text`, `${o.part}Text`, o.marks ? `{${at}?.state == "correct" ? "✓ " : ${at}?.state == "wrong" ? "✗ " : ""}{${at}?.text}` : o.word, { layoutItem: { width: 'fill' }, decorative: true, ...(o.marks ? lookBindings(at, { text: L.text }) : {}) })],
   });
 }
 
 function matchTerm(q: Question, p: { id: string; term: string }, i: number, slot: number, name = `Term ${i + 1}`): SceneNode {
-  const st = stateFor(itemAt(q, i));
   return createNode('frame', {
     name,
     questionPart: `matchTerm:${p.id}`,
@@ -312,14 +401,15 @@ function matchTerm(q: Question, p: { id: string; term: string }, i: number, slot
     ariaLabel: p.term,
     draggable: { tags: [termTag(q)], onMiss: 'return', label: p.term },
     shadow: { x: 0, y: 2, blur: 6, spread: 0, color: 'rgba(0,0,0,0.15)' },
-    bindings: { 'fill.color': st.fill(`"${L.background}"`), 'stroke.paint.color': st.line(`"${L.border}"`) },
-    children: [text('Term text', 'matchTermText', `{${itemAt(q, i)}?.text}`, { layoutItem: { width: 'fill' }, decorative: true })],
+    ...lookBindings(itemAt(q, i), { fill: L.background, line: L.border }),
+    children: [text('Term text', 'matchTermText', `{${itemAt(q, i)}?.text}`, { layoutItem: { width: 'fill' }, decorative: true, ...lookBindings(itemAt(q, i), { text: L.text }) })],
   });
 }
 
 function matchRow(q: Question, p: QuestionPair, i: number): SceneNode {
   const at = itemAt(q, i);
   const st = stateFor(at);
+  const line = lookBindings(at, { line: L.border });
   return createNode('frame', {
     name: `Match ${i + 1}`,
     questionPart: `matchRow:${p.id}`,
@@ -347,7 +437,8 @@ function matchRow(q: Question, p: QuestionPair, i: number): SceneNode {
             cornerRadius: 10,
             clip: false,
             dropZone: { accepts: [termTag(q)], capacity: 1, whenFull: 'swap', snap: 'center', label: p.match },
-            bindings: { 'stroke.paint.color': st.line(`"${L.border}"`), ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) },
+            converters: line.converters,
+            bindings: { ...line.bindings, ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) },
           }),
         ],
       }),
@@ -570,6 +661,7 @@ const bankWords = (q: Question) => [
 function dragBlankRow(q: Question, b: { id: string; label: string }, i: number): SceneNode {
   const at = itemAt(q, i);
   const st = stateFor(at);
+  const line = lookBindings(at, { line: L.border });
   return createNode('frame', {
     name: `Blank ${i + 1}`,
     questionPart: `blankRow:${b.id}`,
@@ -590,7 +682,8 @@ function dragBlankRow(q: Question, b: { id: string; label: string }, i: number):
         clip: false,
         dropZone: { accepts: [wordTag(q)], capacity: 1, whenFull: 'swap', snap: 'center', label: b.label || `Blank ${i + 1}` },
         ariaLabel: b.label || `Blank ${i + 1}`,
-        bindings: { 'stroke.paint.color': st.line(`"${L.border}"`), ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) },
+        converters: line.converters,
+        bindings: { ...line.bindings, ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) },
       }),
       text('Blank answer', 'blankAnswer', `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: L.warning, bindings: { visible: `!!${at}?.answer` } }),
     ],
@@ -1298,7 +1391,7 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
   const frame = loc?.node;
   if (!ab || !frame || frame.type !== 'frame' || !frame.question) return;
   const q = frame.question;
-  L = lookFor(d.themes);
+  setLook(frame.question, d.themes);
   if (before && before.prefix !== q.prefix) {
     //Rename in place when nobody else keeps variables under the old prefix (a copy that is being made independent leaves
     //its original alone); the new variables are created below
@@ -1341,6 +1434,8 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
       reset.bindings = { ...(reset.bindings ?? {}), visible: resetVisible(q, gateOf(d, q, reset.bindings?.visible)) };
     }
   }
+  //Changed looks: the layers that still carry the old colours take the new ones
+  if (before && JSON.stringify(before.looks ?? null) !== JSON.stringify(q.looks ?? null)) applyLooks(frame as FrameNode, effectiveLooks(before), effectiveLooks(q));
   syncListen(ab, frame as FrameNode, q);
   syncKeysHint(frame as FrameNode, q);
   ensureGraph(d, ab, frame as FrameNode, q);
@@ -1434,7 +1529,7 @@ export function setKitOptions(d: Project, abId: string, frameId: string, o: KitO
   const frame = ab && locate(ab, frameId)?.node;
   if (!ab || !frame || frame.type !== 'frame' || !frame.question) return;
   const q = frame.question;
-  L = lookFor(d.themes);
+  setLook(q, d.themes);
   const parts = partsOf(frame);
   const gate = (name: string | undefined) => {
     if (name && !d.variables.some((v) => v.name === name && v.type === 'boolean')) throw new Error(`kit option: no boolean variable ${name}`);
@@ -1506,8 +1601,9 @@ function promptRow(ab: Artboard, frame: ContainerNode): FrameNode | null {
 export function addQuestion(d: Project, abId: string, kind: QuestionKind, opts: { parentId?: string | null; at?: { x: number; y: number } } & KitOptions = {}): string | null {
   const ab = d.artboards.find((a) => a.id === abId);
   if (!ab) return null;
-  L = lookFor(d.themes);
   const q = newQuestion(kind, freePrefix(d));
+  q.looks = defaultLooks(lookFor(d.themes));
+  setLook(q, d.themes);
   ensureVariables(d, q);
   const blankVars = q.blanks.map((_, i) => varName(q, `blank${i + 1}`));
   const at = opts.at ?? { x: Math.max(0, (ab.width - 640) / 2), y: 40 };

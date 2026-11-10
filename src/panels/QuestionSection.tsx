@@ -17,6 +17,7 @@ import {
   questionVars,
   serverMarkingProblem,
   type Artboard,
+  type LookState,
   type FrameNode,
   type Project,
   type Question,
@@ -30,13 +31,14 @@ import {
   type SceneNode,
 } from 'interactives-player';
 import { store } from '../store/store';
-import { CheckField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
+import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
 import { ExprField } from '../components/ExprField';
 import { syncPractice } from '../lib/voice';
 import { VoiceSection } from './VoiceSection';
 import { GuardSection } from './GuardSection';
-import { growAreas, makeIndependent, partOf, partsOf, setAreaShape, setQuestionSettings, shapeOfArea, sharedPrefix, type AreaShape } from '../lib/question-kit';
+import { LOOK_SLOTS, effectiveLooks, type LookSlot, growAreas, makeIndependent, partOf, partsOf, setAreaShape, setQuestionSettings, shapeOfArea, sharedPrefix, type AreaShape } from '../lib/question-kit';
 import { SectionBlurb } from '../components/SectionBlurb';
+import { linked, useThemeState } from '../components/TokenPicker';
 
 const PART_LABELS: [string, string][] = [
   ['prompt', 'Prompt'],
@@ -468,6 +470,8 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         </div>
       )}
 
+      {q.kind !== 'hotspot' && <QuestionLooks q={q} apply={apply} />}
+
       <div className="q-sub">Marking</div>
       <div>
         <Row>
@@ -614,6 +618,50 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
 }
 
 /** Wrong choices mixed in on purpose: terms that match nothing, or words in the word bank that fit no blank. */
+const LOOK_ROWS: { state: LookState; label: string; tip: string }[] = [
+  { state: 'right', label: 'Right', tip: 'An item that is right once the answer is checked' },
+  { state: 'wrong', label: 'Wrong', tip: 'An item the learner got wrong once the answer is checked' },
+  { state: 'missed', label: 'Missed', tip: 'The right answer, shown when the learner missed it' },
+  { state: 'picked', label: 'Picked', tip: 'An option the learner has chosen, before the answer is checked' },
+];
+const SLOT_LABEL = { fill: 'Fill', line: 'Border', text: 'Text' } as const;
+
+/** What an item looks like when it is right, wrong, missed or picked. The kit's layers follow these, so there is no formula to edit per layer. */
+function QuestionLooks({ q, apply }: { q: Question; apply: (patch: Partial<Question>, key?: string) => void }) {
+  const looks = effectiveLooks(q);
+  const ts = useThemeState();
+  //a colour that follows a theme token is shown as the colour it is in the theme being edited
+  const shown = (v: string) => linked(ts, v)?.shown ?? v;
+  const choice = q.kind === 'single' || q.kind === 'multiple' || q.kind === 'truefalse';
+  const set = (state: LookState, slot: LookSlot, v: string) => apply({ looks: { ...q.looks, [state]: { ...q.looks?.[state], [slot]: v } } }, `looks-${state}-${slot}`);
+  return (
+    <>
+      <div className="q-sub">Looks</div>
+      <SectionBlurb text="How an item's fill, border and text look when it is right, wrong, missed or picked. Layers the kit made follow these." name="looks" help={['question-kit', 'looks']} />
+      <div className="q-looks">
+        {LOOK_ROWS.filter((r) => r.state !== 'picked' || choice).map((r) => (
+          <details className="q-look" key={r.state}>
+            <summary title={r.tip}>
+              <span className="q-look-sample" style={{ background: shown(looks[r.state].fill), borderColor: shown(looks[r.state].line), color: shown(looks[r.state].text) }} aria-hidden="true">
+                Aa
+              </span>
+              <strong>{r.label}</strong>
+            </summary>
+            {LOOK_SLOTS.map((slot) => (
+              <ColorField key={slot} label={SLOT_LABEL[slot]} tokens title={`${SLOT_LABEL[slot]} colour of an item that is ${r.label.toLowerCase()}`} value={looks[r.state][slot]} onChange={(v) => set(r.state, slot, v)} />
+            ))}
+          </details>
+        ))}
+        {q.looks && (
+          <button type="button" className="link-btn" title="Go back to the starter colours for Right, Wrong, Missed and Picked" onClick={() => apply({ looks: undefined })}>
+            Back to the starter looks
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
 function ExtrasList({ label, noun, extras, setExtra, apply }: { label: string; noun: string; extras: QuestionExtra[]; setExtra: (i: number, patch: Partial<QuestionExtra>, key?: string) => void; apply: (patch: Partial<Question>, key?: string) => void }) {
   const next = () => {
     let n = extras.length + 1;
