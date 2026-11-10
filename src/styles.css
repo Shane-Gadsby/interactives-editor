@@ -13328,3 +13328,47 @@ body.reorder-active .ix-tooltip {
 .reorder-landed {
   box-shadow: inset 3px 0 0 var(--primary-bg);
 }
+
+/* Bindings: the By value table */
+.by-value {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.by-value-when {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.by-value-row {
+  padding-left: 8px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.by-value-if,
+.by-value-then {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.by-value-if > :is(.select-field, .text-field),
+.by-value-then > :is(.select-field, .text-field, .number-field, .color-field) {
+  flex: 1;
+  min-width: 0;
+}
+.by-value-word {
+  flex: none;
+  min-width: 56px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.by-value-row.otherwise {
+  border-left-style: dashed;
+}
+.by-value-add {
+  align-self: flex-start;
+}

@@ -5,6 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { createNode, createProject, type Project, type SceneNode } from 'interactives-player';
 import { BindingsSection, bindableProps } from '../src/panels/BindingsSection';
 import { Section } from '../src/components/ui';
+import { ExprLocals } from '../src/components/ExprField';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -27,15 +28,20 @@ const type = (input: HTMLInputElement, text: string) =>
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
-function setup(node: SceneNode, vars: Project['variables']) {
+function setup(node: SceneNode, vars: Project['variables'], repeat: { locals?: string[]; values?: Record<string, unknown> } = {}) {
   const p = createProject('T');
   p.variables = vars;
   let current = node;
+  const view = () => (
+    <ExprLocals.Provider value={repeat}>
+      <BindingsSection node={current} project={p} set={set} />
+    </ExprLocals.Provider>
+  );
   const set = vi.fn((patch: Record<string, unknown>) => {
     current = { ...current, ...patch } as SceneNode;
-    act(() => root!.render(<BindingsSection node={current} project={p} set={set} />));
+    act(() => root!.render(view()));
   });
-  mount(<BindingsSection node={current} project={p} set={set} />);
+  mount(view());
   return { set, get: () => current };
 }
 
@@ -61,10 +67,11 @@ describe('Data bindings section', () => {
     expect(document.querySelector('.binding-trace')?.textContent).toBe('At the start: score is 3 → Opacity is set to 3');
   });
 
-  it('shows a formula as a formula, and works a look-up through so a missing line is plain to see', () => {
+  it('shows a binding that is only a look-up as the By value table, and works it through so a missing line is plain to see', () => {
     const node = createNode('rect', { id: 'r1', bindings: { opacity: 'value2 * 1' }, converters: { opacity: [{ type: 'map', map: { true: 'Open', false: 'Closed' } }] } });
     setup(node, [{ id: 'v', name: 'value2', type: 'number', initial: 1 }]);
-    expect(document.querySelector('.binding-source .seg-btn.on')?.textContent).toBe('Formula');
+    expect(document.querySelector('.binding-source .seg-btn.on')?.textContent).toBe('By value');
+    expect(document.querySelectorAll('.by-value-row:not(.otherwise)').length).toBe(2);
     expect(document.querySelector('.binding-trace')?.textContent).toMatch(/Look up: no line for 1, so it stays 1/);
   });
 
@@ -90,6 +97,48 @@ describe('Data bindings section', () => {
     expect(props).toEqual(expect.arrayContaining(['x', 'opacity', 'autoplay', 'loop', 'src', 'media.time', 'media.playing', 'media.duration']));
     expect(props).not.toContain('id');
     expect(bindableProps(v, project).find((p) => p.prop === 'media.duration')?.readOnly).toBe(true);
+  });
+
+  it('By value: switching a choice variable to a table gives it a row per option, and editing a row writes a Look up', () => {
+    const { get } = setup(createNode('rect', { id: 'r1', fill: { type: 'solid', color: '#123456' }, bindings: { 'fill.color': 'mood' } }), [{ id: 'm', name: 'mood', type: 'enum', initial: 'happy', options: ['happy', 'sad'] }]);
+    const by = [...document.querySelectorAll<HTMLButtonElement>('.binding-source .seg-btn')].find((b) => b.textContent === 'By value')!;
+    click(by);
+    expect(get().bindings).toEqual({ 'fill.color': 'mood' });
+    expect(get().converters).toEqual({ 'fill.color': [{ type: 'map', map: { happy: '#123456', sad: '#123456' } }] });
+    expect(document.querySelectorAll('.by-value-row:not(.otherwise)').length).toBe(2);
+    // the result is the property's own widget: a colour field
+    expect(document.querySelectorAll('.by-value-row .color-field').length).toBe(2);
+    // the otherwise row starts as keep the value, and Choose one gives it a colour
+    expect(document.querySelector('.by-value-row.otherwise')?.textContent).toMatch(/keeps the value/);
+    click([...document.querySelectorAll<HTMLButtonElement>('.by-value-row.otherwise .link-btn')][0]);
+    expect((get().converters!['fill.color'][0] as { fallback?: string }).fallback).toBe('#123456');
+    // and it comes back as a table when the section is opened again
+    expect([...document.querySelectorAll('.binding-source .seg-btn.on')].map((b) => b.textContent)).toEqual(['By value']);
+  });
+
+  it('By value: inside a repeater the item fields are offered, and picking one keeps the table', () => {
+    const { get } = setup(createNode('rect', { id: 'r1', bindings: { opacity: '' } }), [], { locals: ['item', 'index'], values: { item: { state: 'wrong', selected: false }, index: 0 } });
+    click([...document.querySelectorAll<HTMLButtonElement>('.binding-source .seg-btn')].find((b) => b.textContent === 'By value'));
+    click(document.querySelector('.by-value-when .search-picker'));
+    const opts = [...document.querySelectorAll('.search-pop-list li')].map((o) => o.textContent);
+    expect(opts).toEqual(expect.arrayContaining(['item.statethis item', 'item.selectedthis item', 'indexits place in the list', 'Write a formula…']));
+    click([...document.querySelectorAll('.search-pop-list li')].find((o) => o.textContent?.startsWith('item.state')));
+    expect(get().bindings).toEqual({ opacity: 'item.state' });
+    // free text: Add a value makes a row to type the value into, and the result starts as the property's value
+    click(document.querySelector('.by-value-add'));
+    expect(get().converters).toEqual({ opacity: [{ type: 'map', map: { 'new value': 1 } }] });
+    const key = document.querySelector<HTMLInputElement>('.by-value-if input')!;
+    act(() => void key.focus());
+    type(key, 'wrong');
+    act(() => void key.blur());
+    expect(get().converters).toEqual({ opacity: [{ type: 'map', map: { wrong: 1 } }] });
+  });
+
+  it('By value: leaving the table for Variable takes the Look up away', () => {
+    const { get } = setup(createNode('rect', { id: 'r1', bindings: { opacity: 'score' }, converters: { opacity: [{ type: 'map', map: { 1: 0.5 } }] } }), [{ id: 's', name: 'score', type: 'number', initial: 1 }]);
+    click([...document.querySelectorAll<HTMLButtonElement>('.binding-source .seg-btn')].find((b) => b.textContent === 'Variable'));
+    expect(get().bindings).toEqual({ opacity: 'score' });
+    expect(get().converters).toBeUndefined();
   });
 
   it('puts a rule between bindings, and removes one with its bin', () => {

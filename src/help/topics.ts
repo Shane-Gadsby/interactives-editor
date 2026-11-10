@@ -3684,8 +3684,9 @@ In the **Data bindings** section of the Inspector, press **+ Add binding** (or t
 Each binding then says where its value comes from:
 - **Variable**: pick a variable from the list (search it by name), or **+ New variable…** at the bottom of the list to make one. The property takes that variable's value as it is.
 - **Formula**: work the value out from variables, for example \`lives > 0\` for *Visible*, or \`progress * 3\` for *Width*. As you type it suggests your variables, \`context\`, \`self\` and the helpers (see [Expressions](expressions#suggestions-as-you-type)).
+- **By value**: a small table for "when this is that, the property is this". Pick what it depends on (a variable, or inside a [repeater](repeaters) a field of the item such as \`item.state\`, or **Write a formula…** for a condition), then give the result for each value it can have, using the property's own box: a colour picker for a colour, a number box for a number. A choice variable or a true/false one gets its lines for you; for anything else press **+ Add a value** and type the value. **Otherwise** is used for any value with no line of its own (leave it as *keeps the value as it is* to change nothing). It is the *Look up* converter underneath, so a binding made by hand that way opens as the table too.
 
-Under it, **+ Convert…** changes the value on its way, and the grey line at the bottom works the whole thing through with every variable at its starting value: *value2 is 1 → Look up: no line for 1, so it stays 1 → Opacity is set to 1*. If a binding doesn't do what you expect, that line shows where it goes another way. Bindings are separated by a short rule; the bin removes one.
+Under the Variable and Formula views, **+ Convert…** changes the value on its way, and the grey line at the bottom works the whole thing through with every variable at its starting value: *value2 is 1 → Look up: no line for 1, so it stays 1 → Opacity is set to 1*. If a binding doesn't do what you expect, that line shows where it goes another way. Bindings are separated by a short rule; the bin removes one.
 
 ![The Data bindings section: a binding on the fill colour, and the + Convert… menu.](help/bindings-section.png)
 
@@ -3725,14 +3726,14 @@ Under a binding, the **+ Convert…** menu changes its value before it is set. T
 | Round | Round, floor or ceil to some decimals |
 | Invert (not) | true/false flipped (a number becomes 1 - x) |
 | Remap range | One range onto another, optionally kept inside it: 0-1 to 0-100 |
-| Look up | A value to anything else. Bound to a **choice** variable, it lists every option for you to fill in. *Otherwise* is used for values not listed |
+| Look up | A value to anything else. Bound to a **choice** variable, it lists every option for you to fill in. *Otherwise* is used for values not listed. When it is the only converter, the binding shows as the **By value** table |
 | To number / text / true/false | Change the type |
 | Seconds to m:ss | A number of seconds as a clock, \`95\` becomes \`1:35\` |
 | Expression | Any [expression](expressions), with \`value\` as the incoming value |
 
 Anything a converter does can also be written straight into the expression with the helpers (\`fmt\`, \`remap\`, \`lookup\`…), which is what to use in text \`{slots}\`.
 
-Choices and lists work with bindings like any other value: bind a fill colour to a choice through a *Look up* converter, a text layer to \`people.length + " people"\`, or a [repeater](repeaters) to a list variable. Importing a Rive file turns its data bindings on layers into bindings with converters, and its view models into shared variables (see [Importing](import)).`,
+Choices and lists work with bindings like any other value: bind a fill colour to a choice with **By value**, a text layer to \`people.length + " people"\`, or a [repeater](repeaters) to a list variable. Importing a Rive file turns its data bindings on layers into bindings with converters, and its view models into shared variables (see [Importing](import)).`,
   },
   {
     id: 'scripts',
