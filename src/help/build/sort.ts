@@ -1,0 +1,93 @@
+import type { BuildTutorial } from './index';
+
+export const tutorial: BuildTutorial = {
+  order: 22,
+  level: 'intermediate',
+  minutes: 12,
+  example: 'tut-sort',
+  topic: {
+    id: 'tutorial-sort',
+    title: 'Sort into groups',
+    group: 'Build it',
+    summary: 'Six cards to drag into two labelled groups, each drop answered as it lands, then all of them checked together with a count of how many are right.',
+    keywords: 'tutorial sort sorting categorise categorize groups group boxes drag drop cards items belongs in drop feedback right wrong count part marks renewable energy',
+    body: `You will make a sorting activity: six energy sources to drag into two groups, **Renewable** and **Non-renewable**. Each group box holds as many cards as you drop in it. As each card lands the learner is told whether it fits, and **Check answer** then marks all of them together and says how many are right. It takes about twelve minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Sort into groups**. **Play** runs it and **Make my copy** gives you your own copy.
+
+If you haven't made a question before, [Drag and drop matching](tutorial-drag-match) is a gentler start. This one works the same way, except a box holds several cards.
+
+## 1. Make a project
+
+On the projects page press **New project**. Keep **Blank project**, type **Energy sort** as the name and press **Create project**.
+
+## 2. Add the question
+
+1. In the tool bar down the left, open the **Web** group (click **Web** if it is folded).
+2. Click **Add question** and pick **Categorise (drag into groups)**.
+
+A card called **Question 1** appears with two group boxes, **Mammals** and **Birds**, and four animals under them to drag. It is selected and the **Question** section is open in the Properties panel.
+
+## 3. Name the groups
+
+1. Replace the **Prompt** with \`Drag each energy source into the group it belongs to.\`
+2. The groups are listed first, one box each. Change **Mammals** to \`Renewable\` and **Birds** to \`Non-renewable\`. The headings in the boxes change as you type.
+
+**+ Add group** adds another box (up to six). With three groups the boxes share the width of the card.
+
+## 4. Write the cards
+
+Under the groups is one entry for each card: its words, and **Belongs in**, the group it is right in.
+
+1. Change the four cards to \`Solar\`, \`Wind\`, \`Coal\` and \`Oil\`. The first two already belong in **Renewable** and the last two in **Non-renewable**, because the animals they replace did.
+2. Press **+ Add item** and type \`Hydro\`. A new card belongs in the first group, which is right for Hydro.
+3. Press **+ Add item** again and type \`Natural gas\`. Set its **Belongs in** to **Non-renewable**.
+4. Under each card is **Feedback if put in the wrong group (optional)**. Give the two that are easiest to get wrong a reason:
+   - Hydro: \`Hydro runs on flowing water, which rain keeps topping up.\`
+   - Natural gas: \`Natural gas took millions of years to form, so once it is burnt it is gone.\`
+
+The new cards appear under the boxes as you add them.
+
+## 5. Answer each drop as it lands
+
+Tick **Say right or wrong as each item is dropped**.
+
+Now each drop answers straight away, in the feedback line and to screen readers: *Solar goes in Renewable. Right.* A card dropped in the wrong group says its own feedback from step 4, or *Coal does not go in Renewable. Try another group.* if it has none. This does not use a try, and the learner can still move the card. **Check answer** is what marks the activity.
+
+Leave it unticked when the sort is a test and the learner should find out only at the end.
+
+## 6. Marking, hints and feedback
+
+1. Under **Marking**, set **Points** to **6** and **Tries** to **2**. **Part marks** is already ticked, so each card in the right group is worth one point.
+2. In **Hints**, replace the sample with \`Ask: will it run out if we keep using it?\`
+3. Change the feedback lines:
+   - **Right**: \`All six are in the right group. Well done!\`
+   - **Wrong**: \`Not yet. Think about which ones can run out.\`
+   - **Partly right**: \`Some are right, but not all. Move a few and check again.\`
+   - **Out of tries**: \`Out of tries. Where each one goes is listed below.\`
+
+The question adds the count to the feedback by itself, such as *4 of 6 in the right group*, and the reason of a card that ended up in the wrong group.
+
+## 7. Try it
+
+1. Press **Preview** at the top right.
+2. Drag **Solar** into **Renewable**: the feedback says it is right. Drag **Natural gas** into **Renewable**: its own reason shows.
+3. Put the rest where they belong, leave Natural gas where it is, and press **Check answer**. It says *Some are right* with *5 of 6 in the right group*.
+4. Check once more without moving it. That was the last try: the question finishes, the cards are marked ✓ or ✗ and stop moving, and a line under the cards says where Natural gas goes.
+5. Try it with the keyboard: <kbd>Tab</kbd> to a card, <kbd>Space</kbd> to pick it up, the arrow keys to choose a group and <kbd>Space</kbd> to drop it.
+
+**Try again** puts the cards back. Press <kbd>Esc</kbd> to close the Preview.
+
+## Go further
+
+Open the **Interactions** tab. There is one **Item dropped in a group** node for each group, made when you ticked the box in step 5. It has a *right* and a *wrong* output, so you can add your own steps after it: a sound for a right drop, or a **Set variable** that adds 1 to a \`misses\` variable on *wrong*, to say on a results page how many wrong drops it took. The **Sort into groups** starter (**Templates**, **Built-in**) counts wrong drops that way.
+
+## What you learned
+
+- A group box is a drop zone with no limit, so it holds any number of cards, and every box takes every card. Whether it is right is for **Check answer** to say.
+- **Belongs in** sets the right group, and a card's own feedback explains a wrong one.
+- **Say right or wrong as each item is dropped** answers each drop without using a try, through an **Item dropped in a group** node per group.
+
+**Next:** put the steps of a process in order in [Put the steps in order](tutorial-order). More about categorise questions is in [Questions and quizzes](question-kit), and about drop zones in [Drag and drop](drag-and-drop).`,
+  },
+};

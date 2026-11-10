@@ -325,5 +325,100 @@
 			"height": 600,
 			"background": "#fefefe"
 		}
+	},
+	{
+		"key": "tut-blanks",
+		"title": "Fill in the blanks",
+		"description": "Four gaps to type into: alternatives, a near number, a pattern and a case that counts, with part marks and a tip for one gap: the Fill in the blanks tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"question",
+			"quiz",
+			"blanks",
+			"typing"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-drag-match",
+		"title": "Drag and drop matching",
+		"description": "Drag each country onto its capital, with a country that fits nowhere, three tries, part marks and Try again: the Drag and drop matching tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"question",
+			"quiz",
+			"drag",
+			"matching"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-label",
+		"title": "Label the diagram",
+		"description": "Four labels to drag onto the parts of a plant, and one that belongs nowhere, checked spot by spot: the Label the diagram tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"question",
+			"quiz",
+			"drag",
+			"diagram"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-order",
+		"title": "Put the steps in order",
+		"description": "Six steps for making a cup of tea, dealt shuffled and moved up and down with buttons that work from the keyboard, with part marks: the Put the steps in order tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"question",
+			"quiz",
+			"ordering",
+			"sequence"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
+	},
+	{
+		"key": "tut-sort",
+		"title": "Sort into groups",
+		"description": "Six energy sources to drag into Renewable and Non-renewable, with each drop answered as it lands and a count of how many are right: the Sort into groups tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"question",
+			"quiz",
+			"drag",
+			"categorise"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#fefefe"
+		}
 	}
 ]
