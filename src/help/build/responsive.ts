@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, artboardNodes, layerNamed, layerWhere, named, renamed, saw } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 60,
@@ -126,5 +127,17 @@ When a viewer's page changes width while they are using it, the player swaps pag
 - Layers and timelines pair **by name** across the set, and the pairing report says what would not carry.
 
 **Next:** every auto layout setting is in [Auto layout](auto-layout), and how a set switches and what it keeps is in [Responsive artboards](responsive). To check the page for keyboard users and screen readers, do [Check and fix accessibility](tutorial-accessible).`,
+  },
+  guide: {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: layerWhere('frame', (n) => /^content$/i.test(n.name) && !!n.layout), show: ['tool-frame', 'panel-inspector'] },
+    3: { check: layerWhere('text', (n) => /^title$/i.test(n.name) && n.layoutItem?.width === 'fill'), show: ['tool-text', 'panel-inspector'] },
+    4: { check: layerWhere('frame', (n) => /^cards$/i.test(n.name) && (n.layout?.grid?.columns.length ?? 0) >= 3), show: ['tool-frame', 'panel-inspector'] },
+    5: { check: layerWhere('frame', (n) => /^mercury$/i.test(n.name) && !!n.layout), show: ['tool-frame', 'panel-layers'] },
+    6: { check: all(named(/^venus$/i), named(/^mars$/i), layerNamed('button', /^next$/i)), show: ['tool-button', 'panel-layers'] },
+    7: { check: (c) => c.project.artboards.some((a) => !!a.variantOf), show: 'panel-inspector' },
+    8: { check: (c) => c.project.artboards.some((a) => !!a.variantOf && artboardNodes(a).some((n) => n.type === 'frame' && /^cards$/i.test(n.name) && n.layout?.grid?.columns.length === 1)), show: 'panel-inspector' },
+    9: { show: 'panel-inspector' },
+    10: { check: saw('previewed'), show: 'preview' },
   },
 };

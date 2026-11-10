@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, layerNamed, question, renamed, saw } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 20,
@@ -113,5 +114,13 @@ When the question finishes, it marks each gap on its own: the box of a right gap
 - **Part marks** give a share for each right gap. Once the question finishes, \`q1_items\` tells you how each gap went, so a binding can react to one gap.
 
 **Next:** more about every question type is in [Questions and quizzes](question-kit). Patterns are explained in [Expressions](expressions#patterns-regular-expressions), and the **Text patterns** example (**Templates**, **Examples**) has more to try. Bindings are explained in [Bindings](bindings). For a question answered by dragging, try [Drag and drop matching](tutorial-drag-match).`,
+  },
+  guide: {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: question('blank'), show: 'add-question' },
+    3: { check: question('blank', (q) => q.blanks.length >= 4 && q.blanks.some((b) => (b.tolerance ?? 0) > 0) && q.blanks.some((b) => b.answers.some((a) => /^\/.+\/[a-z]*$/.test(a))) && q.blanks.some((b) => b.caseSensitive) && !q.blanks.some((b) => /capital of France/i.test(b.label))), show: 'panel-inspector' },
+    4: { check: question('blank', (q) => q.hints.length >= 2 && q.attempts > 0 && q.points > 1 && q.feedbackPartial.trim() !== ''), show: 'panel-inspector' },
+    5: { check: all(layerNamed('text', /gap 3 tip/i), bound('text', 'visible', 'wrong')), show: ['tool-text', 'panel-layers'] },
+    6: { check: saw('previewed'), show: 'preview' },
   },
 };

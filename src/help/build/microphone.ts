@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, clickThen, layerWhere, layers, nodesOfKind, renamed, saw, textHas, variables } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 56,
@@ -116,5 +117,15 @@ To try your real microphone, share the project with **In a StudyDesk page, and k
 - **Play recording** plays the take back; \`recordings.talk\` tells bindings what it is doing.
 
 **Next:** every microphone, camera and photo node is in [Microphone, camera and photos](sensors), with what learners see and what the page needs. More on the timer: [Interaction node reference](interaction-nodes).`,
+  },
+  guide: {
+    1: { check: all(renamed, (c) => c.project.settings?.sensors?.microphone === true && (c.project.settings.sensors.purpose ?? '').trim() !== '' && c.project.settings.sensors.maxSeconds === 90), show: ['project-name', 'panel-inspector'] },
+    2: { check: variables(['left', 'number'], ['confidence', 'number']), show: ['add-variable', 'panel-variables'] },
+    3: { check: all(layers('button', 2), textHas('{left}'), textHas('{mediaMessage}')), show: ['tool-text', 'tool-button'] },
+    4: { check: all(bound('button', 'label', 'recordings.talk'), clickThen('button', 'action.recordStart')), show: ['add-empty-click', 'panel-logic'] },
+    5: { check: all(nodesOfKind('action.clock', 3), nodesOfKind('action.recordStop')), show: 'panel-logic' },
+    6: { check: all(bound('button', 'visible', 'hasRecording'), clickThen('button', 'action.recordPlay')), show: ['add-empty-click', 'panel-logic'] },
+    7: { check: all(layerWhere('input', (n) => n.inputType === 'range'), bound('input', 'value', 'confidence')), show: ['tool-input', 'panel-inspector'] },
+    8: { check: saw('previewed'), show: 'preview' },
   },
 };

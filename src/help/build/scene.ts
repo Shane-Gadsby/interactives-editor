@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, clickThen, layerNamed, layerWhere, named, nodesOfKind, pageNamed, renamed, saw, timelineWhere } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 44,
@@ -124,5 +125,17 @@ For those viewers both timelines now jump straight to their last pose: Sam is al
 - **Skip for less motion** gives viewers who ask for less motion the finished pose, and markers with **Announce** read the lines aloud.
 
 **Next:** more on keys, markers and timeline settings in [Timelines and keyframes](timelines), and on screen readers and less motion in [Accessibility](accessibility). Back to the list: [Build it](build-it).`,
+  },
+  guide: {
+    1: { check: all(renamed, pageNamed(/scene/i)), show: ['project-name', 'panel-inspector'] },
+    2: { check: layerWhere('group', (n) => /^set$/i.test(n.name)), show: ['tool-rect', 'panel-layers'] },
+    3: { check: all(named(/^alex$/i), named(/^sam$/i)), show: ['tool-ellipse', 'panel-layers'] },
+    4: { check: all(named(/alex bubble/i), named(/sam bubble/i), layerNamed('button', /skip/i)), show: ['tool-text', 'tool-button'] },
+    5: { check: timelineWhere((t) => /run in/i.test(t.name) && t.autoplay && t.tracks.some((tr) => tr.keys.length >= 2)), show: ['timeline-new', 'panel-timeline'] },
+    6: { check: timelineWhere((t) => /talk/i.test(t.name) && t.autoplay && t.tracks.filter((tr) => tr.keys.length >= 2).length >= 2), show: ['timeline-new', 'panel-timeline'] },
+    7: { check: all(nodesOfKind('event.timelineMarker', 2), nodesOfKind('action.announce', 2)), show: 'panel-logic' },
+    8: { check: all(clickThen('button', 'action.timeline', (n) => n.params.op === 'seek'), nodesOfKind('action.timeline', 2), nodesOfKind('action.announce', 3)), show: 'add-when-clicked' },
+    9: { check: timelineWhere((t) => t.calm === true, 2), show: ['timeline-new', 'panel-timeline'] },
+    10: { check: saw('previewed'), show: 'preview' },
   },
 };

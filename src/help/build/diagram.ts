@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, clickThen, layerWhere, pageNamed, renamed, repeats, saw, setsVariable, variableWhere, variables } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 36,
@@ -164,5 +165,13 @@ The copy of the mind map's click came with nothing joined to it on this page: in
 - A **Connector** in a repeater joins two copies by their places in the list, with **Which copy**. You edit the data, never the boxes.
 
 **Next:** back to [Build it](build-it) for the other tutorials. More on [Connectors](connectors), [Repeated lists](repeaters) and worked out variables in [Variables](variables#worked-out-from-a-formula).`,
+  },
+  guide: {
+    1: { check: all(renamed, pageNamed(/mind map/i), variables(['ideas', 'list'], ['folded', 'list']), variableWhere('map', (v) => !!v.formula && !!v.live)), show: ['project-name', 'add-variable', 'panel-variables'] },
+    2: { check: all(repeats('map'), bound('frame', 'x', 'item.x'), bound('frame', 'width', 'item.w')), show: ['tool-frame', 'panel-inspector'] },
+    3: { check: layerWhere('connector', (n) => JSON.stringify(n).includes('parentIndex')), show: ['tool-connector', 'panel-inspector'] },
+    4: { check: all(bound('frame', 'visible', 'item.visible'), layerWhere('frame', (n) => n.role === 'button'), clickThen('frame', 'action.setVariable', setsVariable('folded'))), show: ['add-empty-click', 'panel-inspector'] },
+    5: { check: all(pageNamed(/flowchart/i), variables(['steps', 'list'], ['links', 'list'], ['current', 'string'], ['chart', 'list'], ['arrows', 'list'], ['outs', 'list']), repeats('outs'), clickThen('button', 'action.setVariable', setsVariable('current'), 2)), show: ['add-page', 'panel-variables'] },
+    6: { check: saw('previewed'), show: 'preview' },
   },
 };

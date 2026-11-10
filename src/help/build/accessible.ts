@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, allNodes, layerNamed, layerWhere, layers, named, renamed, saw, timelineWhere, timelines } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 61,
@@ -140,5 +141,21 @@ The checker looks at every theme for text that uses tokens, so a title that pass
 - **Respect reduced motion**, **Play once** and the **Tab order** section deal with motion and focus.
 
 **Next:** every check is explained in [Accessibility checker](accessibility-checker), and roles, Tab order and dialogs in [Accessibility: roles and keyboard](accessibility). To restyle a project with themes and tokens, do [Use the UniSQ look and colour themes](tutorial-brand).`,
+  },
+  guide: {
+    1: { check: all(renamed, named(/^title$/i), layers('image'), layerNamed('button', /^next$/i), layerNamed('ellipse', /^info$/i), timelines()), show: ['project-name', 'tool-text'] },
+    2: { show: 'panel-a11y' },
+    3: { check: layerWhere('text', (n) => /^title$/i.test(n.name) && n.role === 'heading'), show: ['panel-a11y', 'panel-inspector'] },
+    4: { check: layerWhere('image', (n) => (n.ariaLabel ?? '').trim().length > 10), show: 'panel-a11y' },
+    5: { check: layerWhere('ellipse', (n) => /^info$/i.test(n.name) && n.role === 'button' && (n.ariaLabel ?? '').trim() !== '' && n.width >= 24 && n.height >= 24), show: ['panel-a11y', 'panel-inspector'] },
+    6: { check: all(timelineWhere((t) => t.loop === 'once' && t.autoplay), (c) => c.project.settings?.reducedMotion === true), show: ['panel-a11y', 'panel-timeline'] },
+    7: { check: (c) => {
+      const find = (re: RegExp) => allNodes(c.project).find((n) => re.test(n.name));
+      const info = find(/^info$/i);
+      const next = find(/^next$/i);
+      return info?.tabOrder !== undefined && next?.tabOrder !== undefined && info.tabOrder < next.tabOrder;
+    }, show: 'panel-inspector' },
+    8: { show: 'panel-themes' },
+    9: { check: saw('previewed'), show: 'preview' },
   },
 };

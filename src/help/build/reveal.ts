@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, clickThen, layerWhere, layers, renamed, saw, variables, allNodes } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 30,
@@ -135,5 +136,15 @@ The **Variables (live)** list on the left shows \`seen1\`, \`seen2\` and \`seen3
 - A switch variable and a **Fill colour** binding give a visited style, and a bound description says it out loud.
 
 **Next:** [Flip cards from a list](tutorial-flipcards). More on dialogs in [Accessibility](accessibility#dialogs), and on the nodes in [Interactions](interactions).`,
+  },
+  guide: {
+    1: { check: all(renamed, layers('text', 2)), show: ['project-name', 'tool-text'] },
+    2: { check: layerWhere('button', (n) => /^point \d/i.test(n.name) && (n.ariaLabel ?? '').trim() !== ''), show: ['tool-button', 'panel-inspector'] },
+    3: { check: layerWhere('frame', (n) => !!n.dialog && (n.ariaLabel ?? '').trim() !== ''), show: ['tool-frame', 'panel-inspector'] },
+    4: { check: (c) => allNodes(c.project).filter((n) => n.type === 'frame' && !!n.dialog).length >= 3 && allNodes(c.project).filter((n) => n.type === 'button' && /^point \d/i.test(n.name)).length >= 3, show: 'panel-layers' },
+    5: { check: clickThen('button', 'action.visibility', (n) => n.params.op === 'hide', 3), show: 'add-when-clicked' },
+    6: { check: clickThen('button', 'action.visibility', (n) => n.params.op === 'show', 3), show: 'add-when-clicked' },
+    7: { check: all(variables(['seen1', 'boolean'], ['seen2', 'boolean'], ['seen3', 'boolean']), bound('button', 'fill', 'seen'), clickThen('button', 'action.setVariable', undefined, 3)), show: ['add-variable', 'panel-variables'] },
+    8: { check: saw('previewed'), show: 'preview' },
   },
 };

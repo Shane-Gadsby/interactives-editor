@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, layerWhere, layersWhere, renamed, saw, textHas, variableWhere } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 52,
@@ -109,5 +110,14 @@ The **Variables (live)** list on the left of the Preview shows all seven values 
 - A **Chart** can read a list written out in its **Data**, and redraws as the variables change.
 
 **Next:** more about worked out values is in [Variables](variables), and every helper like **fmt** is in [Expressions](expressions). Chart settings are in [Charts](charts). To chart what a whole class says, try [A poll with a live chart](tutorial-survey-chart).`,
+  },
+  guide: {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: all(variableWhere('hours', (v) => Number(v.initial) === 15), variableWhere('pay', (v) => Number(v.initial) === 28), variableWhere('rent', (v) => Number(v.initial) === 220), variableWhere('food', (v) => Number(v.initial) === 150)), show: ['add-variable', 'panel-variables'] },
+    3: { check: all(variableWhere('income', (v) => !!v.formula && !!v.live), variableWhere('spending', (v) => !!v.formula && !!v.live), variableWhere('leftover', (v) => !!v.formula && !!v.live)), show: ['add-variable', 'panel-variables'] },
+    4: { check: all(layersWhere('input', (n) => n.inputType === 'range', 3), bound('input', 'value', 'hours'), bound('input', 'value', 'pay'), bound('input', 'value', 'rent')), show: ['tool-input', 'panel-inspector'] },
+    5: { check: all(textHas('{hours}'), textHas('fmt(pay'), textHas('{leftover')), show: 'tool-text' },
+    6: { check: layerWhere('chart', (n) => n.data.includes('income') && n.data.includes('leftover')), show: ['tool-chart', 'panel-inspector'] },
+    7: { check: saw('previewed'), show: 'preview' },
   },
 };

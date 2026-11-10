@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, bound, renamed, saw, textHas, variableWhere } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 54,
@@ -95,5 +96,13 @@ To use it for real, give learners the **Link for StudyDesk** from [Share link](e
 - **Per-course values** start variables differently in each course, so one project serves several.
 
 **Next:** every context field and the rules for per-course values are in [Course and learner context](course-context). Formulas in text and bindings are in [Expressions](expressions) and [Bindings](bindings). For data that comes from a file, see [Data sources](data-sources).`,
+  },
+  guide: {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: all(textHas('context.firstName'), textHas('context.courseCode')), show: 'tool-text' },
+    3: { show: 'panel-data' },
+    4: { check: all(variableWhere('assignment', (v) => v.type === 'string'), variableWhere('dueWeek', (v) => v.type === 'number'), textHas('{assignment}'), (c) => (c.project.courseValues?.length ?? 0) >= 2), show: ['panel-variables', 'panel-data'] },
+    5: { check: bound('text', 'visible', 'context.isStaff'), show: 'panel-inspector' },
+    6: { check: saw('previewed'), show: 'preview' },
   },
 };

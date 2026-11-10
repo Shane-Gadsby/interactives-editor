@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { question, renamed, saw } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 21,
@@ -91,5 +92,13 @@ The terms and slots are ordinary layers. The **Restyle a part** buttons at the b
 - **Tries**, **Part marks** and **Try again** come with the question, and **Try again** puts every term back.
 
 **Next:** put the slots on a picture in [Label the diagram](tutorial-label), or let a box hold several items in [Sort into groups](tutorial-sort). How dragging works on any layer is in [Drag and drop](drag-and-drop).`,
+  },
+  guide: {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: question('matching'), show: 'add-question' },
+    3: { check: question('matching', (q) => q.pairs.length >= 4 && !q.pairs.some((p) => /^(France|Japan|Egypt|Peru)$/.test(p.term))), show: 'panel-inspector' },
+    4: { check: question('matching', (q) => (q.extras ?? []).some((x) => x.text.trim() !== '')), show: 'panel-inspector' },
+    5: { check: question('matching', (q) => q.attempts > 0 && q.points > 1 && q.feedbackPartial.trim() !== '' && !q.hints.some((h) => /Egypt/.test(h))), show: 'panel-inspector' },
+    6: { check: saw('previewed'), show: 'preview' },
   },
 };

@@ -1,4 +1,5 @@
 import type { BuildTutorial } from './index';
+import { all, renamed, saw, variableWhere } from '../../lib/tutorial-checks';
 
 export const tutorial: BuildTutorial = {
   order: 45,
@@ -153,5 +154,18 @@ Press **Preview** and **Start**. Click a clue, type the answer, and press **Chec
 - Checking reads those live variables, so every way of choosing shares one check.
 
 **Next:** [Repeated lists](repeaters), [Expressions](expressions#helpers) for the puzzle helpers, and [Branded starter packs](branded-starters) for the other games. A smaller game built from scratch: [A memory card game](tutorial-memory).`,
+  },
+  guide: {
+    1: { check: all(renamed, variableWhere('rows', (v) => /wordSearch\(/.test(v.formula ?? ''))), show: 'project-name' },
+    2: { check: variableWhere('words', (v) => String(v.initial).includes('EVAPORATE')), show: ['panel-variables'] },
+    3: { show: 'panel-variables' },
+    4: { show: 'panel-layers' },
+    5: { show: 'panel-logic' },
+    6: { show: 'panel-logic' },
+    7: { check: all(saw('previewed'), variableWhere('rows', (v) => /wordSearch\(/.test(v.formula ?? ''))), show: 'preview' },
+    8: { check: (c) => !!c.project.variables?.some((v) => /^(words|clues)$/.test(v.name) && String(v.initial).includes('"answer"') && String(v.initial).includes('EVAPORATE')), show: 'panel-variables' },
+    9: { show: 'panel-variables' },
+    10: { show: 'panel-layers' },
+    11: { check: all(saw('previewed'), variableWhere('entries', (v) => /crossword\(/.test(v.formula ?? ''))), show: 'preview' },
   },
 };
