@@ -48,6 +48,7 @@ export const Icons = {
   themes: P('M12 3a9 9 0 100 18 9 9 0 000-18zM12 3v18M12 8h4M12 12h5M12 16h3'),
   info: P('M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v6M12 7.5v.01'),
   copy: P('M8 8h12v12H8zM16 8V4H4v12h4'),
+  book: P('M4 5a2 2 0 012-2h13v15H6a2 2 0 00-2 2zM4 20a2 2 0 012-2h13v3H6a2 2 0 01-2-1M8 7h7'),
   home: P('M3 11l9-8 9 8M5 9v11h14V9'),
   download: P('M12 4v12M7 11l5 5 5-5M4 20h16'),
   upload: P('M12 20V8M7 13l5-5 5 5M4 4h16'),

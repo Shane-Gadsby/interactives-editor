@@ -40,6 +40,8 @@ export const BUILD_IT_OVERVIEW: HelpTopic = {
     const lines = [
       `Each tutorial builds one kind of activity from a blank project, one step at a time. Do [Tutorial 1](tutorial-first-animation) and [Tutorial 2](tutorial-first-interaction) first if you haven't used the editor before.`,
       '',
+      `**Prefer cards?** The **Tutorials** button on the projects page lists all of these with their pictures, how long each takes, and your progress and badges. See [Tutorials, badges and progress](help#tutorials-badges-and-progress).`,
+      '',
       `**Just want to look?** Every tutorial's finished project is on the projects page: open **Templates**, and under **Examples** find **Build it**. **Play** runs it, and **Make my copy** gives you your own copy to pull apart.`,
     ];
     for (const level of LEVELS) {

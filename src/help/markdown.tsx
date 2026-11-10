@@ -1,4 +1,5 @@
 import { Fragment, useState, type ReactNode } from 'react';
+import { stepNumber } from '../lib/tutorial-progress';
 
 /**
  * A small Markdown subset for the help pages: # headings, paragraphs, - and 1. lists, ``` code blocks,
@@ -6,8 +7,14 @@ import { Fragment, useState, type ReactNode } from 'react';
  * short clips on a line of their own: `![What it shows](help/name.png)` or `![What it shows](help/name.mp4)`. The files live in
  * `public/help/` (Vite copies them to `dist/help/`). A clip plays muted and looping with controls; the alt text is the caption.
  */
-export function Markdown({ text, onLink }: { text: string; onLink: (href: string) => void }) {
-  return <>{blocks(text, onLink)}</>;
+export function Markdown({ text, onLink, steps }: { text: string; onLink: (href: string) => void; steps?: StepTicks }) {
+  return <>{blocks(text, onLink, steps)}</>;
+}
+
+/** Tutorials only: a tick box on each numbered step heading (`## 3. Draw the box`), and which are ticked. */
+export interface StepTicks {
+  done: ReadonlySet<number>;
+  onTick: (n: number, on: boolean) => void;
 }
 
 const MEDIA = /^!\[([^\]]*)\]\(([^)\s]+)\)\s*$/;
@@ -43,7 +50,7 @@ export function slug(s: string): string {
     .replace(/^-|-$/g, '');
 }
 
-function blocks(text: string, onLink: (href: string) => void): ReactNode[] {
+function blocks(text: string, onLink: (href: string) => void, steps?: StepTicks): ReactNode[] {
   const lines = text.replace(/\r/g, '').split('\n');
   const out: ReactNode[] = [];
   let i = 0;
@@ -65,9 +72,14 @@ function blocks(text: string, onLink: (href: string) => void): ReactNode[] {
     if (h) {
       const level = h[1].length + 1;
       const Tag = `h${Math.min(5, level)}` as 'h2';
+      const n = steps ? stepNumber(h[2], h[1].length) : null;
+      const ticked = n !== null && steps!.done.has(n);
       out.push(
-        <Tag key={k++} id={slug(h[2])}>
-          {inl(h[2])}
+        <Tag key={k++} id={slug(h[2])} className={n !== null ? `help-step${ticked ? ' step-done' : ''}` : undefined}>
+          {n !== null && (
+            <input type="checkbox" className="step-tick" checked={ticked} aria-label={`Step ${n} done`} title={ticked ? `Step ${n} is ticked. Click to untick it` : `Tick this when you have done step ${n}`} onChange={(e) => steps!.onTick(n, e.target.checked)} />
+          )}
+          {n !== null ? <span>{inl(h[2])}</span> : inl(h[2])}
         </Tag>,
       );
       i++;
