@@ -412,6 +412,7 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
           <ExprField
             value={v.formula ?? ''}
             commitOnBlur
+            calc
             title="A formula that works this variable out from the ones above it each time the project starts, instead of using the value above, for example crossword(words, 10) or wordSearch(words, 12). The value above is what it falls back to if the formula fails. The preview on the canvas follows it too."
             placeholder="Or work it out: e.g. crossword(words, 10)"
             onChange={(x) => setVar(v.id, x.trim() ? { formula: x } : { formula: undefined, live: undefined }, `var-formula-${v.id}`)}

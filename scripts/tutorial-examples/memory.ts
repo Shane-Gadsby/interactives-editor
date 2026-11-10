@@ -14,8 +14,8 @@ export const PAIRS = [
 ];
 
 export const DEAL = 'shuffle(pairs.flatMap((p, i) => [{text: p.a, pair: i, state: "down"}, {text: p.b, pair: i, state: "down"}]), seed)';
-const TURN_BACK = 'cards.map(c => c.state == "up" ? {...c, state: "down"} : c)';
-const KEEP = 'cards.map(c => c.state == "up" ? {...c, state: "matched"} : c)';
+//Change list items where: every card whose state is "up" gets this state
+const turnUp = (state: string) => ({ op: 'changeWhere', whereField: 'state', whereValue: '"up"', field: 'state', value: `"${state}"` });
 
 function build(): Project {
   const p = blankProject('Animal pairs', 'Memory');
@@ -27,8 +27,8 @@ function build(): Project {
   const seed = addVariable(p, 'counter', 'seed');
   const cards = addVariable(p, 'list', 'cards', { formula: DEAL });
   const moves = addVariable(p, 'counter', 'moves');
-  addVariable(p, 'list', 'ups', { formula: 'cards.map((c, i) => c.state == "up" ? i : -1).filter(i => i >= 0)', live: true });
-  const matched = addVariable(p, 'counter', 'matched', { formula: 'cards.filter(c => c.state == "matched").length / 2', live: true });
+  addVariable(p, 'list', 'ups', { formula: 'positions(cards, "state", "up")', live: true });
+  const matched = addVariable(p, 'counter', 'matched', { formula: 'count(cards, "state", "matched") / 2', live: true });
 
   //The board: a frame repeating one Card button over the cards, four to a row
   board.children.push(words(p, 'Moves', 'Moves: {moves}', 60, 40, 200, { fontSize: 22, fontWeight: 700, height: 30 }));
@@ -52,9 +52,9 @@ function build(): Project {
   const second = after(board, turned, 'logic.if', { condition: 'ups.length == 2' });
   const count = after(board, second, 'action.setVariable', { variable: moves.id, op: 'add', value: '1' }, 'true');
   const same = after(board, count, 'logic.if', { condition: 'cards[ups[0]].pair == cards[ups[1]].pair' });
-  after(board, same, 'action.setVariable', { variable: cards.id, op: 'set', value: KEEP }, 'true');
+  after(board, same, 'action.setVariable', { variable: cards.id, ...turnUp('matched') }, 'true');
   const wait = after(board, same, 'action.delay', { ms: '1000' }, 'false');
-  after(board, wait, 'action.setVariable', { variable: cards.id, op: 'set', value: TURN_BACK });
+  after(board, wait, 'action.setVariable', { variable: cards.id, ...turnUp('down') });
 
   //Every pair found: a moment to see the last one, then the Well done page
   const all = event(board, 'event.variable', { variable: matched.id, onlyIf: 'matched == pairs.length' });

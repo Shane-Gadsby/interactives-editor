@@ -68,6 +68,8 @@ describe('describeNode', () => {
     expect(t('action.setVariable', { variable: 'vs', op: 'add', value: '1' })).toBe('add 1 to score');
     expect(t('action.setVariable', { variable: 'vs', op: 'set', value: '"x"' })).toBe('set score to “x”');
     expect(t('action.setVariable', { variable: 'vs', op: 'toggle' })).toBe('switch score on or off');
+    expect(t('action.setVariable', { variable: 'vs', op: 'changeWhere', whereField: 'state', whereValue: '"up"', field: 'state', value: '"matched"' })).toBe('change the items of the list score where state is “up”');
+    expect(t('action.setVariable', { variable: 'vs', op: 'changeWhere', whereField: '', whereValue: '', value: '0' })).toBe('change every item of the list score');
     expect(t('action.setVariable', { variable: 'vs', op: 'set', value: '1', over: '250' })).toBe('set score to 1 over 0.25 s');
     expect(t('action.setVariable', { variable: 'vs', op: 'add', value: '1', over: '1000' })).toBe('add 1 to score over 1 s');
     expect(t('action.setVariable', { variable: 'vs', op: 'set', value: '1', over: '0' })).toBe('set score to 1');

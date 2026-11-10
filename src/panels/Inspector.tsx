@@ -1479,7 +1479,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           <SectionBlurb
             text={
               <>
-                Insert variables with <code>{'{name}'}</code>, or any expression like <code>{'{score * 10}'}</code>.
+                Press <b>Insert value</b> to put a variable in, or type <code>{'{name}'}</code>, or any expression like <code>{'{score * 10}'}</code>.
               </>
             }
             name="live values in text"
