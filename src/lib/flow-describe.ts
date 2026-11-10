@@ -1,4 +1,4 @@
-import { ANIMATABLE_PROPS, CATALOG_BY_KIND, defaultParams, PAGE_TRANSITIONS, speedOf, TIMED_TRANSITIONS, TRANSITION_SPEEDS, walk, type Artboard, type LogicEdge, type LogicNode, type Project } from 'interactives-player';
+import { variableLabel, ANIMATABLE_PROPS, CATALOG_BY_KIND, defaultParams, PAGE_TRANSITIONS, speedOf, TIMED_TRANSITIONS, TRANSITION_SPEEDS, walk, type Artboard, type LogicEdge, type LogicNode, type Project } from 'interactives-player';
 import { conditionWords } from './condition';
 import { nodeLabel, optionLabel, pw } from './plain-words';
 
@@ -75,7 +75,9 @@ class Names {
     return id ? ((this.ab.blends ?? []).find((b) => b.id === id)?.name ?? 'a blend that is missing') : 'a blend';
   }
   variable(id: unknown): string {
-    return id ? (this.project.variables.find((v) => v.id === id)?.name ?? 'a variable that is missing') : 'a variable';
+    if (!id) return 'a variable';
+    const v = this.project.variables.find((x) => x.id === id);
+    return v ? variableLabel(v) : 'a variable that is missing';
   }
   page(id: unknown): string {
     return id ? (this.project.artboards.find((a) => a.id === id)?.name ?? 'a page that is missing') : 'a page';

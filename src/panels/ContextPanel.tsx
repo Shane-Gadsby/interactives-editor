@@ -1,4 +1,4 @@
-import { CONTEXT_FIELDS, courseMatches, sampleContextFor, uid, type ContextValues, type CourseValueRow, type Variable } from 'interactives-player';
+import { CONTEXT_FIELDS, courseMatches, sampleContextFor, uid, type ContextValues, type CourseValueRow, type Variable, variableLabelAndName } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { Icons } from '../components/icons';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
@@ -128,7 +128,7 @@ function CourseRow({ row, variables, matches, setRows }: { row: CourseValueRow; 
         <SelectField<string>
           value=""
           title="Pick a variable to give a different starting value for this course"
-          options={[{ value: '', label: 'Set a variable…' }, ...unset.map((v) => ({ value: v.id, label: v.name }))]}
+          options={[{ value: '', label: 'Set a variable…' }, ...unset.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))]}
           onChange={(id) => {
             const v = byId.get(id);
             if (v) edit((r) => void (r.values[id] = v.initial));

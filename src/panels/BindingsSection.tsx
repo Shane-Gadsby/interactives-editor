@@ -1,6 +1,7 @@
+import { variableOption } from '../lib/friendly-names';
 import { Fragment, useContext, useState } from 'react';
 import { PropRow, propKey } from '../lib/prop-search';
-import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, getPath, layerOwnProps, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
+import { variableLabel, ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, getPath, layerOwnProps, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { findArtboardOf, isIdentifier } from '../store/doc';
 import { previewScope } from '../lib/data';
 import { IconButton, Section } from '../components/ui';
@@ -244,7 +245,7 @@ function BindingItem({
   const [source, setSource] = useState<'variable' | 'formula' | 'value'>(isByValue(list) ? 'value' : plain ? 'variable' : 'formula');
   const formula = source === 'formula';
   const t = trace(expr, list, variables, base);
-  const varOptions: PickerOption[] = variables.filter((v) => isIdentifier(v.name)).map((v) => ({ value: v.name, label: v.name, hint: v.type }));
+  const varOptions: PickerOption[] = variables.filter((v) => isIdentifier(v.name)).map((v) => variableOption(v, v.type));
   return (
     <div className="binding">
       <div className="binding-head">
@@ -374,8 +375,8 @@ function SyncedSource({ label, prop, kind, mode, expr, variables, varOptions, on
         {!v
           ? 'Pick the variable to tie it to.'
           : mode === 'out'
-            ? <>Whenever <strong>{label}</strong> changes, <strong>{v.name}</strong> is set to it. Setting {v.name} doesn't change {label}.</>
-            : <>At the start <strong>{label}</strong> takes <strong>{v.name}</strong> ({show(startValue(v))}). After that, change either and the other follows.</>}
+            ? <>Whenever <strong>{label}</strong> changes, <strong>{variableLabel(v)}</strong> is set to it. Setting {variableLabel(v)} doesn't change {label}.</>
+            : <>At the start <strong>{label}</strong> takes <strong>{variableLabel(v)}</strong> ({show(startValue(v))}). After that, change either and the other follows.</>}
       </div>
     </>
   );

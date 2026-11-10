@@ -58,35 +58,36 @@ Now tell the editor it is a dialog. Select **Dialog 1** again (click its row in 
 
 ![Dialog 1 selected, with the Dialog section ticked: This frame is a dialog, Modal, Close on Escape, Return focus and Scrim, and Initial focus on Automatic (first tab stop).](help/tutorial-reveal-dialog.png)
 
-## 4. Copy the dialog for the other points
-
-1. Select **Dialog 1** and press <kbd>Ctrl</kbd>+<kbd>D</kbd> twice. You now have three dialogs on top of each other. That is fine: only one will ever show at a time.
-2. Rename the copies **Dialog 2** and **Dialog 3**.
-3. In the **Layers** panel, open **Dialog 2** and select its heading. Change the words in the **Text** box of the Properties panel to \`Condensation\`. Select its text and change it to \`High up the air is cooler. The vapour turns back into tiny drops of water, which gather as clouds.\` Set the dialog's **Text alternative** to \`Condensation\`.
-4. Do the same for **Dialog 3**: \`Precipitation\`, with \`When the drops in a cloud grow heavy enough they fall as rain, hail or snow.\`
-
-Then select **Point 1** and press <kbd>Ctrl</kbd>+<kbd>D</kbd> twice for the other points. Name them **Point 2** and **Point 3**, set their **Label** to \`2\` and \`3\`, drag each onto its place on the picture (a cloud, then the rain), and change their **Text alternative** to \`Point 2: Condensation\` and \`Point 3: Precipitation\`.
-
-The points have to sit **below** the dialogs in the **Layers** panel, or they would show through an open dialog. Drag their rows down if they are not.
-
-## 5. Close buttons hide their dialog
+## 4. The Close button hides the dialog
 
 1. In the **Layers** panel, open **Dialog 1** and select its **Close** button.
 2. In its **Interactions** section press **+ When clicked…**.
 3. Choose **Hide a layer** (under **Layers**), and under **Which layer** pick **Dialog 1**. Press **Add**. The section reads *When clicked: hide Dialog 1*.
-4. Do the same for the **Close** buttons in **Dialog 2** and **Dialog 3**, each hiding its own dialog.
 
 <kbd>Esc</kbd> needs nothing more. A dialog with no **Open variable** hides itself when <kbd>Esc</kbd> is pressed.
 
-## 6. Points show their dialog
+## 5. The point shows its dialog
 
 1. Select **Point 1** and press **+ When clicked…**.
 2. Choose **Show a layer**, and under **Which layer** pick **Dialog 1**. Press **Add**.
-3. Do the same for **Point 2** (showing **Dialog 2**) and **Point 3** (showing **Dialog 3**).
 
 ![The When Point 1 is clicked dialog: Show a layer picked under Layers, Which layer set to Dialog 1 (hidden), and the line It will do this: When clicked: show Dialog 1.](help/tutorial-reveal-when-clicked.png)
 
-**Show a layer** hides the dialog for you when you add it, because a layer that is already showing can't be shown. The dialogs now look faint on the canvas: hidden layers show as ghosts while you edit, so you can still find them.
+**Show a layer** hides the dialog for you when you add it, because a layer that is already showing can't be shown. The dialog now looks faint on the canvas: hidden layers show as ghosts while you edit, so you can still find them.
+
+## 6. Copy the point and its dialog for the other points
+
+One point and one dialog are wired, so copy the pair. A copy of a layer brings what it does: the click that shows or hides something is copied too, and points at the copy.
+
+1. In the **Layers** panel select **Point 1**, then <kbd>Ctrl</kbd>+click **Dialog 1** to add it, and press <kbd>Ctrl</kbd>+<kbd>D</kbd>. The copies are selected, so press <kbd>Ctrl</kbd>+<kbd>D</kbd> once more. You now have three points and three dialogs, and the dialogs sit on top of each other. That is fine: only one will ever show at a time.
+2. Rename the copies **Point 2**, **Point 3**, **Dialog 2** and **Dialog 3**. **Point 2** shows **Dialog 2** and its **Close** hides **Dialog 2**, with nothing for you to wire. Select a point and press **Show in graph** under its sentence if you want to see it.
+3. Set the labels of the points to \`2\` and \`3\`, drag each onto its place on the picture (a cloud, then the rain), and change their **Text alternative** to \`Point 2: Condensation\` and \`Point 3: Precipitation\`.
+4. In the **Layers** panel, open **Dialog 2** and select its heading. Change the words in the **Text** box of the Properties panel to \`Condensation\`. Select its text and change it to \`High up the air is cooler. The vapour turns back into tiny drops of water, which gather as clouds.\` Set the dialog's **Text alternative** to \`Condensation\`.
+5. Do the same for **Dialog 3**: \`Precipitation\`, with \`When the drops in a cloud grow heavy enough they fall as rain, hail or snow.\`
+
+The points have to sit **below** the dialogs in the **Layers** panel, or they would show through an open dialog. Drag their rows down if they are not.
+
+> Want only the layer, without what it does? Use **Duplicate layer only** in the right-click menu, or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>.
 
 ## 7. Colour the points you have opened
 
@@ -105,7 +106,7 @@ seen1 ? "#a5d6a7" : "#ffd54f"
 The point is yellow until \`seen1\` is true, then green.
 
 6. Press **+ Add binding** again, pick **Accessible description**, choose **Formula** and type \`seen1 ? "Already explored" : ""\`. A screen reader now says so too, since the colour alone tells it nothing.
-7. Repeat steps 2 to 6 for **Point 2** with \`seen2\` and **Point 3** with \`seen3\`.
+7. Repeat steps 2 to 6 for **Point 2** with \`seen2\` and **Point 3** with \`seen3\`. These interactions and bindings were added after the copying, so each point needs its own.
 
 ## 8. Try it
 
@@ -123,7 +124,7 @@ The **Variables (live)** list on the left shows \`seen1\`, \`seen2\` and \`seen3
 
 ## Make it yours
 
-- **More points.** Copy a point and a dialog, add a \`seen4\` switch, and wire them the same way.
+- **More points.** Select a point and its dialog and press <kbd>Ctrl</kbd>+<kbd>D</kbd>: the clicks come with them. Then add a \`seen4\` switch and the **Change a value or counter** step and bindings for it.
 - **A progress line.** A text that says \`{count([seen1, seen2, seen3], true)} of 3 explored\` counts as the learner goes.
 - **Know when every point is done.** Select **Point 1**, press **+ When clicked…**, choose **Count what has been done…**, tick the three points and name it \`explored\`. It keeps \`exploredCount\` and \`exploredTotal\` for a line such as \`{exploredCount} of {exploredTotal} explored\`. Or choose a thing to happen, such as **Show a layer** on a well-done message, and set **It starts when** to **all of these are done**.
 - **Ready-made.** The **Image hotspots** starter (Templates, **Explore and reveal**) does all of this with one dialog for every point, reading its words from a list. Its points are one frame, so adding a point is copying a layer.

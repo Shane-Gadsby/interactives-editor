@@ -1,3 +1,4 @@
+import { variableLabelAndName } from 'interactives-player';
 import { useState } from 'react';
 import {
   MAX_BLANKS,
@@ -763,7 +764,7 @@ function QuestionBank({ q, project, apply }: { q: Question; project: Project; ap
               label="Or a list variable"
               title="Use a list variable as the rows (a list of objects with the same columns as a data row). Handy for a set of questions the project builds itself, such as the ones missed"
               value=""
-              options={[{ value: '', label: 'Pick a list variable' }, ...project.variables.filter((v) => v.type === 'list' && !/_(items|bankSeen|setOrder|setLog|missed)$/.test(v.name)).map((v) => ({ value: v.name, label: v.name }))]}
+              options={[{ value: '', label: 'Pick a list variable' }, ...project.variables.filter((v) => v.type === 'list' && !/_(items|bankSeen|setOrder|setLog|missed)$/.test(v.name)).map((v) => ({ value: v.name, label: variableLabelAndName(v) }))]}
               onChange={(v) => v && apply({ bank: { ...q.bank!, items: v } })}
             />
           )}

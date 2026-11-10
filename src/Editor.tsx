@@ -1499,9 +1499,15 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
               <div className="field-label block">Variables (live)</div>
               {project.variables.length > 8 && <input className="debug-filter" placeholder="Filter variables…" value={varFilter} onChange={(e) => setVarFilter(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />}
               {Object.keys(vars).length === 0 && <p className="muted small">This project has no variables.</p>}
-              {project.variables.filter((v) => !varFilter || v.name.toLowerCase().includes(varFilter.toLowerCase())).map((v) => (
-                <label key={v.id} className="preview-var" title={`${v.name}: change it in the running preview`}>
-                  <span className="mono">{v.name}</span>
+              {project.variables.filter((v) => !varFilter || `${v.name} ${v.label ?? ''}`.toLowerCase().includes(varFilter.toLowerCase())).map((v) => (
+                <label key={v.id} className="preview-var" title={`${v.label ? `${v.label} (${v.name})` : v.name}: change it in the running preview`}>
+                  {v.label?.trim() && v.label.trim() !== v.name ? (
+                    <span>
+                      {v.label} <small className="mono muted">{v.name}</small>
+                    </span>
+                  ) : (
+                    <span className="mono">{v.name}</span>
+                  )}
                   {v.type === 'boolean' ? (
                     <input type="checkbox" checked={!!vars[v.name]} onChange={(e) => post(v.name, e.target.checked)} />
                   ) : v.type === 'enum' ? (

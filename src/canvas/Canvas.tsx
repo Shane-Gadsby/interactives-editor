@@ -90,6 +90,7 @@ import { confirmDialog } from '../components/dialogs';
 import { openBehaviours } from '../components/BehaviourDialog';
 import { addInteraction } from '../lib/interaction-add';
 import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
+import { VALUE_DRAG, endValueDrag, getDraggedValue, placeValue, readValueDrag, textLayerAt } from '../lib/value-drag';
 import { rangeLabel } from '../lib/variants-edit';
 import { ANIM_PRESETS, animOptions } from '../lib/animate-presets';
 import { boneEndAt, boneFromDrag, boneGlyphs } from '../lib/rig';
@@ -1545,6 +1546,16 @@ export function Canvas() {
       if (ab) insertComponent(page, ab.id, local(ab, w));
       return;
     }
+    // A variable or data field dragged from its panel: added to the text it lands on, or a new text that shows it
+    const value = readValueDrag(e.dataTransfer);
+    if (value) {
+      endValueDrag();
+      hintAt(null, 0, 0);
+      const w = toWorld(e.clientX, e.clientY);
+      const ab = abAt(w);
+      if (ab) placeValue(ab.id, local(ab, w), value);
+      return;
+    }
     // A component dragged from the Libraries panel
     const comp = e.dataTransfer.getData(COMPONENT_DRAG);
     if (comp) {
@@ -2211,6 +2222,7 @@ export function Canvas() {
         { label: 'Copy', hint: keyHints('copy'), onClick: () => copySelection() },
         paste,
         { label: 'Duplicate', hint: keyHints('duplicate'), onClick: () => s2.duplicateSelection() },
+        { label: 'Duplicate layer only', hint: keyHints('duplicate-layer'), onClick: () => s2.duplicateSelection(10, { behaviour: false }) },
         { label: 'Delete', hint: keyHints('delete'), danger: true, onClick: () => s2.deleteSelection() },
         { separator: true },
         {
@@ -2394,9 +2406,23 @@ export function Canvas() {
           e.dataTransfer.dropEffect = ok ? 'copy' : 'none';
           setDropHost((cur) => (ok ? (cur === over!.id ? cur : over!.id) : cur ? null : cur));
         }
+        // A variable or data field: say what letting go would do
+        if (e.dataTransfer.types.includes(VALUE_DRAG)) {
+          const w = toWorld(e.clientX, e.clientY);
+          const over = abAt(w);
+          const ok = !!over && !over.library;
+          const v = getDraggedValue();
+          const on = ok ? textLayerAt(over!.id, local(over!, w)) : null;
+          e.dataTransfer.dropEffect = ok ? 'copy' : 'none';
+          setDropHost((cur) => (ok && !on ? (cur === over!.id ? cur : over!.id) : cur ? null : cur));
+          hintAt(ok && v ? (on ? `Let go to add ${v.label} to “${on.name}”` : `Let go to make a text that shows ${v.label}`) : null, e.clientX, e.clientY);
+        }
       }}
       onDragLeave={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropHost(null);
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setDropHost(null);
+          hintAt(null, 0, 0);
+        }
       }}
       onDrop={onDrop}
       onContextMenu={openMenu}

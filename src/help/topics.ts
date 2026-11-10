@@ -682,7 +682,8 @@ The same letter can mean different things in different places, because a key loo
 |---|---|
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> (<kbd>Ctrl</kbd>+<kbd>Y</kbd>) | Undo / redo |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd> | Copy / cut / paste (pasting image files inserts them). After clicking in the timeline they copy and paste the selected keys, see [Copy, snap and stagger keys](timelines#copy-snap-and-stagger-keys) |
-| <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate |
+| <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate. A copy of a layer brings its interactions, pointed at the copy. See [Copying a layer with what it does](interactions#copying-a-layer-with-what-it-does) |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> | Duplicate layer only, without its interactions |
 | <kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> | Group / ungroup |
 | <kbd>Ctrl</kbd>+<kbd>A</kbd> | Select all on the page |
 | <kbd>Delete</kbd> / <kbd>Backspace</kbd> | Delete the selection (or the selected keyframes) |
@@ -897,7 +898,7 @@ The same keys work on the page rows: <kbd>Ctrl</kbd>+click adds a page to the se
 A named **page group** is a folder row above its pages, which sit one step in under it. Click the arrow to fold it, click the row to select its pages and double-click to rename it. Right-click it for **Select all in group**, **Rename group…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete**. Folding only changes this panel: the pages stay on the canvas inside a dashed frame with the group's name. See [Pages](artboards#page-groups).
 
 ### Copying with Alt
-Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag a row, and a **copy** goes where the line is while the original stays. This works for layers, groups, pages and page groups. The pointer shows a **+** while Alt is down, and the first few plain drags carry a reminder. On the canvas, <kbd>Alt</kbd>-drag a layer or a group the same way.
+Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag a row, and a **copy** goes where the line is while the original stays. This works for layers, groups, pages and page groups. The pointer shows a **+** while Alt is down, and the first few plain drags carry a reminder. On the canvas, <kbd>Alt</kbd>-drag a layer or a group the same way. A copied layer brings its interactions, as **Duplicate** does.
 
 ### Reordering
 - Drag a row to reorder. A line shows where the layer will land, and how far it is indented shows which list it joins.
@@ -944,7 +945,7 @@ Select layers and drag them on the canvas. If you let go over a **different page
 - Interactions in the old artboard that used them will need fixing. The [Usage](usage) tab's **Broken** list shows exactly which.
 
 ## Right-click menus
-- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**When clicked…**, **When hovered…**, or an empty **On click** or **On hover** event) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
+- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Duplicate layer only**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**When clicked…**, **When hovered…**, or an empty **On click** or **On hover** event) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
 - **A page**: **New** (a menu of layers to add where you clicked), **Paste**, **Insert component here…**, **Make start page**, **Duplicate artboard**, **Zoom to page**, **Fit page to its layers** and **Delete artboard**. See [Instances](instances) and [Pages](artboards#fit-page-to-selection).
 - **Empty canvas**: **New page here**, **Paste**, **Tidy up pages**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`,
   },
@@ -1121,7 +1122,7 @@ Depth can be animated: look for the diamond next to a field. See [Animatable pro
     title: 'Text',
     group: 'Design',
     summary: 'Text layers, fonts, sizing and live values in text.',
-    keywords: 'font typography type size weight align template variables google fonts upload rich text runs bold italic underline selection range several styles',
+    keywords: 'drag variable value data field drop onto page insert font typography type size weight align template variables google fonts upload rich text runs bold italic underline selection range several styles',
     body: `Use the **Text** tool (<kbd>T</kbd>): click for text that grows as you type, or drag a box for wrapping text. Double-click text to edit it, and <kbd>Escape</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to finish.
 
 - **Sizing**: *Auto width* (one line, grows sideways), *Auto height* (fixed width, wraps and grows down) or *Fixed* (you set both). With *Fixed*, **Overflow** says what happens to lines that don't fit: *Show* them anyway, *Clip* them at the box, or cut the last line that fits with an *Ellipsis …*. Untick **Wrap lines** to keep the lines as written (long ones run on, or are clipped or cut by the overflow setting).
@@ -1195,6 +1196,15 @@ You do not have to type the braces. Put the cursor where the value should go and
 - **This item of the repeat**, for a layer inside a [repeater](repeaters): the fields of the item (a list of people with \`name\` and \`age\` offers both) and its number.
 
 Pick one with the arrow keys and **Enter**, or click it. It goes in as \`{name}\` at the cursor, over any words you had selected, and the line under the box shows what the whole text says now. The same button is on a button's **Label** and on a connector's label.
+
+## Drag a value onto the page
+You can also drag a value to where it should show. In the **Variables** tab, each variable has a small text-icon handle (its name reads **Show it on the page**) beside its name. In the **Data** tab, each field of a data source has the same handle. Drag it onto the page:
+- **Onto a text layer**: it is added to the end of that text as \`{name}\`, with a space before it, and the text keeps its styling. Dropping \`score\` on *Your score:* gives *Your score: {score}*.
+- **Anywhere else on a page**: a new text layer is made there that shows it, named after the value. A list variable shows how many items it holds, and a data field shows the first row's value.
+
+A line beside the pointer says which of the two letting go will do, and the page is outlined when it is a new text. **Undo** takes it back in one step.
+
+Without a mouse, select a text layer and press the handle: the value is added to that text. With no text layer selected it makes a new text near the top left of the open page. **Insert value** above is the way to put a value in at the cursor.
 
 To animate a text layer one letter, word or line at a time (typewriter, wave), see [Text modifiers](text-modifiers).`,
   },
@@ -2634,11 +2644,20 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
     title: 'Interactions',
     group: 'Interactivity',
     summary: 'The node graph: events start a flow, actions do things, logic chooses the way.',
-    keywords: 'interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing behaviour recipe when clicked hovered show hide next page sound counter switch sentences read explain condition picker only if turn off remove',
+    keywords: 'duplicate copy layer with interactions behaviour ctrl d duplicate layer only interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing behaviour recipe when clicked hovered show hide next page sound counter switch sentences read explain condition picker only if turn off remove',
     body: `Open the **Interactions** tab. Each page has its own graph. The nodes are named for what happens (*When clicked or hovered*, *Play or stop an animation*); hover one to see the technical name it has in the file (*On pointer*, *Control timeline*), which is also in the [node reference](interaction-nodes) and what search finds. Preferences has a **Technical wording** switch if you would rather see those.
 
 ## Room for the graph
 The bottom panel is a short strip, so opening **Interactions** (from a layer's **+ When clicked…**, one of its interaction chips, or the tab itself) lifts the panel to a comfortable height, and puts it back when you move to another tab. It only does that when the panel is still at its normal height: one you sized yourself is left alone. Drag the top edge of the panel while the graph is open and that height is remembered for next time (in this browser).
+
+## Copying a layer with what it does
+A copy of a layer brings its interactions. <kbd>Ctrl</kbd>+<kbd>D</kbd>, **Duplicate** in the menus and an <kbd>Alt</kbd>-drag copy (on the canvas or in the Layers list) copy the *When clicked or hovered* events (and the other events with a layer setting, such as a drop) that point at the layer, pointed at the copy. What follows them is copied too, and a step that works on the copied layers works on their copies: copy a **Close** button and its dialog together, and the new button hides the new dialog.
+
+What is shared stays shared. A step that only touches a layer you did not copy is not copied: the copy's flow joins the original step, so a copied button still shows the same **Feedback** layer. Steps that name no layer, such as **Change a value or counter**, are copied with the flow, so the copy does the same thing. The copies appear in the graph as ordinary nodes under the others, and it all undoes as one step. A message says how many interactions came with the copy.
+
+Want the layer on its own? Use **Duplicate layer only** in the right-click menu, the command palette, or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>.
+
+Things a copy does not bring: animation timelines (a copy is not on the original's timeline), a question's wiring (a copied question makes its own), and anything that finds a layer by its name in a formula or script. **Copy** and **Paste** put only the layer on the page; to copy a button to another page with its click, build the click again there.
 
 ## See-through layers don't take clicks
 While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
@@ -3525,7 +3544,7 @@ Ordering, categorise and hotspot questions are not pasted (add them from the Add
     title: 'Variables',
     group: 'Interactivity',
     summary: 'Named values (number, text, true/false, colour, choice) shared by the whole project.',
-    keywords: 'variable state value number string boolean color enum choice options input rename',
+    keywords: 'label friendly name quiz score spaces capitals identifier name in formulas variable state value number string boolean color enum choice options input rename',
     body: `A variable is a named value the activity remembers while it runs: a score, a name, whether a panel is open. Use variables when something on one page has to change something else, on the same page or another. They belong to the project, so every page sees the same values.
 
 Add them in the **Variables** tab. Each has a name, a type and a starting value.
@@ -3632,9 +3651,19 @@ One project can start with different values in different courses (a due date, a 
 ## Adding a variable
 Press **+ Add variable** and pick what it is for: a **Counter** (a number that goes up and down), a **Switch (on or off)**, **Text**, a **Score** (a running total, remembered between visits), a **List**, a **Choice** or a **Colour**. Each one is an ordinary variable of that type with a name you can change, so the table still shows the type and starting value. See [Tutorial 3](tutorial-state-machine) for a worked example.
 
-Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field.
+## Naming a variable
+Type the name in your own words, spaces and capitals included: **Quiz score**. Formulas need a short name with letters, digits and \`_\` only, so the editor offers one made from your words, \`quizScore\`, in a small **Name in formulas** box under the field. Leave it, or change it. Your words are kept as the variable's **label**.
+
+Everywhere you pick a variable (the Variables tab, the pickers in the graph and the bindings, the sentences that say what an interaction does, **Insert value**, the live list in Preview) you see your words, with the formula name small beside them. Formulas, \`{braces}\` in text and scripts always use the formula name: \`Score: {quizScore}\`.
+
+A name that is already plain, like \`score\` or \`high_score\`, is used as typed and has no separate label. Change the words later and the formula name stays, so nothing that uses it breaks; change the **Name in formulas** and the project follows everywhere it is used, as renaming always did.
+
+The name is saved when you leave the field. If there is nothing to build a name from (only symbols, say) or the **Name in formulas** is not valid, the field stays as a draft with a message and the project keeps the last good name until you fix it.
 
 Next to the type, **Starts as a value** is the number, text or switch the project starts with. **Worked out** is for a variable that is calculated, such as a crossword grid: it shows a box for the formula (for example \`crossword(words, 10)\`), and the value stays as what it falls back to if the formula fails. **Keep up to date** (for a formula) works it out again whenever something it reads changes.
+
+## Show a variable on the page
+The text-icon handle beside a variable's name puts it on the page: drag it onto a text layer to add it to that text, or onto an empty part of a page to make a text that shows it. Press the handle instead of dragging to add it to the selected text layer. See [Live values in text](text#drag-a-value-onto-the-page).
 
 ## Options on a variable
 **Options** is folded away until something in it is on. It holds three switches, each with a sentence saying what it does:
@@ -4398,7 +4427,7 @@ Test with a keyboard, a screen reader and your own eyes as well.`,
     title: 'Data sources',
     group: 'Data',
     summary: 'JSON, CSV, TSV or text from an uploaded file or a URL, used by name.',
-    keywords: 'data json csv tsv text url fetch api spreadsheet refresh cors',
+    keywords: 'drag field show on page text data json csv tsv text url fetch api spreadsheet refresh cors',
     body: `A **data source** is a file or web address of information that your project reads by name: a list of products, quiz questions, a table of results. Open the **Data** tab and add a source **From file** (upload) or **From URL** (fetched by the player).
 
 - **Format**: JSON, CSV or TSV (first row is the column names), or plain text. CSV and TSV become a list of rows, with numbers and true/false converted.
@@ -4411,6 +4440,9 @@ Use a source by its **name** anywhere expressions go: \`{products.length} produc
 **Load data** reloads a source (optionally from a different URL), and **When data has loaded** fires when it arrives. The host page can push data with \`player.setData('products', [...])\`.
 
 **+ Shared responses** adds a different kind of source: answers the people playing add, counted for the class or kept for each person. See [Shared responses](shared-responses).
+
+## Show a field on the page
+Under a loaded source the **item fields** (or **fields**, for one object) are listed with the same text-icon handle as a variable. Drag one onto the page to show its value, or press it to add it to the selected text layer. For a list the value is the first row's (\`products[0].name\`); put it inside a [repeater](repeaters) when each row should show its own. See [Live values in text](text#drag-a-value-onto-the-page).
 
 ## Editing a data file
 A source **From: Uploaded file** can be edited right there, in up to four views: **Form**, **Table**, **Tree** and **Raw text**. Which ones you get depends on the file. They show the same text, so a change in one shows in the others.
@@ -5984,8 +6016,8 @@ The property is probably bound: the binding sets it again straight away. Look in
 **My text shows \`{score}\` instead of the number.**
 The variable needs to exist with exactly that name (it's case sensitive). Make it in the **Variables** tab. To show a real brace, write \`{{\`. See [Variables](variables).
 
-**It says "Use letters, digits and _ only".**
-Variable and data source names are used inside expressions, so they can't contain spaces or dashes. Try \`high_score\`. A variable whose name is empty or not valid is not saved: it stays in the field as a draft, with this message, and the project keeps the last good name until you fix it.
+**It says "Formulas need a name with letters, digits and _ only".**
+Formulas use a variable's **Name in formulas**, so that one can't contain spaces or dashes. Type your own words in the name field (**Quiz score**) and the editor offers \`quizScore\`; if you changed that box to something with a space or a dash, try \`high_score\`. Data source names must be plain like this too. A name that is empty or not valid is not saved: it stays in the field as a draft, with the message, and the project keeps the last good name until you fix it.
 
 **A script does nothing.**
 Open **Preview** and look at the **Events** list for an error message. Scripts in the sandbox can only use \`ix\`, timers and \`console\`. See [Scripts](scripts).

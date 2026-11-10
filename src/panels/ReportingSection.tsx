@@ -1,3 +1,4 @@
+import { variableLabelAndName } from 'interactives-player';
 import { useState } from 'react';
 import { artboardChoices } from '../lib/variants-edit';
 import type { Project, ReportingSettings } from 'interactives-player';
@@ -68,7 +69,7 @@ export function ReportingSection({ project }: { project: Project }) {
         label="Score variable"
         title="The number variable that holds the learner's score. Report result sends its value"
         value={r.scoreVariable ?? ''}
-        options={[{ value: '', label: 'No score' }, ...numbers.map((v) => ({ value: v.id, label: v.name }))]}
+        options={[{ value: '', label: 'No score' }, ...numbers.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))]}
         onChange={(v) => set({ scoreVariable: v, ...(v ? {} : { passMark: undefined, maxScore: undefined }) })}
       />}
       {fromQuestions && (
@@ -100,7 +101,7 @@ export function ReportingSection({ project }: { project: Project }) {
           label="Variable"
           title="Turning this true/false variable on completes the project"
           value={r.completionVariable ?? ''}
-          options={[{ value: '', label: 'Choose a variable' }, ...booleans.map((v) => ({ value: v.id, label: v.name }))]}
+          options={[{ value: '', label: 'Choose a variable' }, ...booleans.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))]}
           onChange={(v) => set({ completionVariable: v })}
         />
       )}

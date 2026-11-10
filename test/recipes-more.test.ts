@@ -71,7 +71,7 @@ describe('Set a text or choice', () => {
     //a value that is not one of the choices is the first choice
     expect(buildBehaviour(ctx, 'text-set', 'click', { textvar: 'vc', textvalue: 'nonsense' }, mk).nodes[1].params.value).toBe('"easy"');
     const fresh = buildBehaviour(ctx, 'text-set', 'click', { textvar: 'new:Chosen topic', textvalue: 'Maths' }, mk);
-    expect(fresh.variables).toEqual([{ id: expect.any(String), name: 'Chosen_topic', type: 'string', initial: '' }]);
+    expect(fresh.variables).toEqual([{ id: expect.any(String), name: 'chosenTopic', label: 'Chosen topic', type: 'string', initial: '' }]);
     expect(fresh.nodes[1].params).toMatchObject({ variable: fresh.variables[0].id, value: '"Maths"' });
     //the first text variable is the one it starts on, and a choice starts on its first option
     expect(defaultAnswers(RECIPE_BY_ID['text-set'], ctx).textvar).toBe('vt');

@@ -1,3 +1,4 @@
+import { variableOption } from '../lib/friendly-names';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { matches } from '../lib/keymap';
 import { BoundProvider, PropRow, PropSearchProvider, PropSearchStore } from '../lib/prop-search';
@@ -58,6 +59,7 @@ import {
   uid,
   walk,
   shownAmount,
+  variableLabelAndName,
 } from 'interactives-player';
 import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { getArtboard, isIdentifier, locate } from '../store/doc';
@@ -1308,7 +1310,7 @@ function InputValue({ nodes, project, set }: { nodes: SceneNode[]; project: Proj
     const { value: _c, ...converters } = n.converters ?? {};
     set({ bindings: Object.keys(bindings).length ? bindings : undefined, bindingModes: Object.keys(modes).length ? modes : undefined, converters: Object.keys(converters).length ? converters : undefined }, `bind-${n.id}`);
   };
-  const options: PickerOption[] = project.variables.filter((v) => isIdentifier(v.name)).map((v) => ({ value: v.name, label: v.name, hint: v.type }));
+  const options: PickerOption[] = project.variables.filter((v) => isIdentifier(v.name)).map((v) => variableOption(v, v.type));
   const label = mode === 'both' ? '⇄ Both' : mode === 'out' ? 'Out →' : '← In';
   return (
     <>
@@ -2679,7 +2681,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
     );
   const tls = [{ value: '', label: 'Choose timeline…' }, ...ab.timelines.map((t) => ({ value: t.id, label: t.name }))];
   const numberVars = project.variables.filter((v) => v.type === 'number');
-  const vars = (empty: string) => [{ value: '', label: empty }, ...numberVars.map((v) => ({ value: v.id, label: v.name }))];
+  const vars = (empty: string) => [{ value: '', label: empty }, ...numberVars.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))];
   return (
     <Section
       help="blends"

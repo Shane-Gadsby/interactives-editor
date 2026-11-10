@@ -181,6 +181,7 @@ const MENUS: Record<string, Record<string, string>> = {
     'Edit text': 'enter',
     Delete: 'delete',
     Duplicate: 'duplicate',
+    'Duplicate layer only': 'duplicate-layer',
     'Empty On click event': 'behaviour.empty-click',
     'Empty On hover event': 'behaviour.empty-hover',
     'Fit page to its layers': 'fit-page-layers',

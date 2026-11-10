@@ -32,6 +32,8 @@ import {
   uid,
   isContainer,
   isLive,
+  variableLabel,
+  variableLabelAndName,
   walk,
   type Artboard,
   type LogicGroup,
@@ -47,6 +49,8 @@ import { getArtboard } from '../store/doc';
 import { CheckField, NumberField, SelectField, SpeedField, TextField } from '../components/ui';
 import { ConditionField } from '../components/ConditionField';
 import { ExprField } from '../components/ExprField';
+
+const vLabel = (v: Parameters<typeof variableLabel>[0] | undefined) => (v ? variableLabel(v) : undefined);
 
 /** Names an expression in a graph node sees on top of the project's. */
 const GRAPH_LOCALS = ['event', 'ix'];
@@ -255,8 +259,8 @@ export function summarize(n: LogicNode, ab: Artboard, project: Project): string 
     if (p.type === 'node') text = names.get(text) ?? '(missing layer)';
     else if (p.type === 'timeline') text = ab.timelines.find((t) => t.id === v)?.name ?? '(missing timeline)';
     else if (p.type === 'blend') text = ab.blends?.find((b) => b.id === v)?.name ?? '(missing blend)';
-    else if (p.type === 'variable') text = project.variables.find((x) => x.id === v)?.name ?? '(missing variable)';
-    else if (p.type === 'variables') text = (Array.isArray(v) ? v : []).map((id) => project.variables.find((x) => x.id === id)?.name ?? '(missing variable)').join(', ');
+    else if (p.type === 'variable') text = vLabel(project.variables.find((x) => x.id === v)) ?? '(missing variable)';
+    else if (p.type === 'variables') text = (Array.isArray(v) ? v : []).map((id) => vLabel(project.variables.find((x) => x.id === id)) ?? '(missing variable)').join(', ');
     else if (p.type === 'artboard') text = project.artboards.find((x) => x.id === v)?.name ?? '(missing artboard)';
     else if (p.type === 'script') text = project.scripts.find((x) => x.id === v)?.name ?? '(missing script)';
     else if (p.type === 'data') text = project.dataSources.find((x) => x.id === v)?.name ?? '(missing data)';
@@ -1336,10 +1340,10 @@ export function ParamForm({ node, ab, project, onChange, onNote }: { node: Logic
         const dead = node.kind === 'action.setVariable' && !!chosenVar && isLive(chosenVar);
         return (
           <div key={p.key}>
-            {pick(project.variables.map((x) => ({ value: x.id, label: node.kind === 'action.setVariable' && isLive(x) ? `${x.name} (live, read only)` : x.name })), project.variables.length ? 'Choose variable…' : 'No variables yet', [addVariableOption()], { variableType: 'number' })}
+            {pick(project.variables.map((x) => ({ value: x.id, label: node.kind === 'action.setVariable' && isLive(x) ? `${variableLabelAndName(x)} (live, read only)` : variableLabelAndName(x) })), project.variables.length ? 'Choose variable…' : 'No variables yet', [addVariableOption()], { variableType: 'number' })}
             {dead && (
               <div className="error small" role="status">
-                {chosenVar!.name} is a live variable: it is worked out from its formula, so this node does nothing to it. Turn off Keep up to date in the Variables tab to set it by hand.
+                {variableLabel(chosenVar!)} is a live variable: it is worked out from its formula, so this node does nothing to it. Turn off Keep up to date in the Variables tab to set it by hand.
               </div>
             )}
           </div>
@@ -1366,7 +1370,7 @@ export function ParamForm({ node, ab, project, onChange, onNote }: { node: Logic
               project.variables.map((x) => (
                 <CheckField
                   key={x.id}
-                  label={node.kind === 'action.resetVariables' && isLive(x) ? `${x.name} (live, left alone)` : x.name}
+                  label={node.kind === 'action.resetVariables' && isLive(x) ? `${variableLabelAndName(x)} (live, left alone)` : variableLabelAndName(x)}
                   value={chosen.includes(x.id)}
                   disabled={node.kind === 'action.resetVariables' && isLive(x)}
                   onChange={(on) => set(p.key, on ? [...chosen, x.id] : chosen.filter((id) => id !== x.id))}
