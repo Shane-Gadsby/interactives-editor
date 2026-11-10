@@ -295,7 +295,7 @@ export function VariablesPanel() {
   };
   return (
     <div className="variables">
-      <table className="var-table">
+      <table className="var-table var-main">
         <thead>
           <tr>
             <th>Name</th>

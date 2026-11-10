@@ -13057,6 +13057,32 @@ button.flow-text:focus-visible {
   width: 210px;
 }
 
+/* The Variables tab: a wide list table or a long textarea scrolls inside its own Value cell instead of
+   widening the table and squeezing Name and Type. Fixed layout, so the columns are what they say. */
+.var-main {
+  table-layout: fixed;
+  min-width: 620px;
+}
+.var-main th:nth-child(1) {
+  width: 190px;
+}
+.var-main th:nth-child(2) {
+  width: 170px;
+}
+.var-main td:nth-child(3) {
+  min-width: 0;
+  overflow-x: auto;
+}
+.var-main td:nth-child(3) textarea,
+.var-main td:nth-child(3) input[type='text'] {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.var-main td:nth-child(3) .list-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 /* Fill in this starter: the content of a starter as a plain form */
 .fillin {
   display: flex;
