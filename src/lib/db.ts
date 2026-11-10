@@ -575,6 +575,44 @@ export const hideSharedAnswer = (projectId: string, source: string, course: stri
 export const removeSharedAnswers = (projectId: string, source: string, course: string, text?: string) =>
   call<{ ok: boolean; people: number }>(`projects/${encodeURIComponent(projectId)}/shared/${encodeURIComponent(source)}/answers`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ course, ...(text ? { text } : {}) }) });
 
+/** One message in a room, as the people who moderate it see it (the one place who sent it is shown). */
+export interface RoomMessageRow {
+  id: string;
+  /** The name the others see: the made-up seat, or the first name. */
+  seat: string;
+  /** Who sent it. Only moderators are ever told. */
+  username: string;
+  text: string;
+  /** Milliseconds. */
+  at: number;
+  hidden: boolean;
+  hiddenBy: string | null;
+}
+
+export interface RoomCourse {
+  /** The course label, empty for people with no course. */
+  course: string;
+  /** How many people have the room open right now. */
+  here: number;
+  /** The latest messages, newest first, hidden ones included. */
+  messages: RoomMessageRow[];
+}
+
+export interface RoomSourceInfo {
+  /** The data source's id. */
+  source: string;
+  name: string;
+  declared: { names: 'seat' | 'first'; show: number; blocked: string[] };
+  courses: RoomCourse[];
+}
+
+/** What each course has said in each room of a project (GET projects/:id/rooms). The owner, a collaborator or a power user. */
+export const getRoomMessages = (projectId: string) => call<{ sources: RoomSourceInfo[] }>(`projects/${encodeURIComponent(projectId)}/rooms`);
+
+/** Hide a message from everybody in its room (they hear it at once), or show it again. */
+export const hideRoomMessage = (projectId: string, source: string, id: string, hidden: boolean) =>
+  call<{ ok: boolean; hidden: boolean }>(`projects/${encodeURIComponent(projectId)}/rooms/${encodeURIComponent(source)}/messages/${encodeURIComponent(id)}/hidden`, json({ hidden }));
+
 // ---------------------------------------------------------------- learner insights
 
 /** What learners did in a project, as counts (`GET /api/projects/:id/insights`). Nobody is named: totals and numbers of different learners. */
