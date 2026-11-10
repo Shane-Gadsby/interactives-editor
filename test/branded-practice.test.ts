@@ -680,8 +680,9 @@ describe('practice starters', () => {
         expect(new Set(cards.map((c) => c.sound)).size).toBe(4);
         const { player } = await open(p);
         await clickOn(player, p, P, 'Play model');
-        //one button: while the model is playing it says Stop, and pressing it stops
-        await vi.waitFor(() => (player.step(50), expect(textOf(layer(p, P, 'Play model').id)).toBe('Stop')));
+        //one button: while the model is playing it says Stop, and pressing it stops (5 s: the clip starting took over the
+        //default 1 s on the Windows box)
+        await vi.waitFor(() => (player.step(50), expect(textOf(layer(p, P, 'Play model').id)).toBe('Stop')), { timeout: 5000 });
         await clickOn(player, p, P, 'Play model');
         await vi.waitFor(() => (player.step(50), expect(textOf(layer(p, P, 'Play model').id)).toBe('Play model')));
         expect(heard[0].paused).toBe(true);

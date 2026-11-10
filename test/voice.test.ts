@@ -199,7 +199,8 @@ describe('the voice service', () => {
     for (const f of [...MODEL.files, 'voices-extra.bin']) fs.writeFileSync(path.join(top, f), f === 'lexicon-gb-en.txt' ? LEXICON : `file ${f}`);
     fs.writeFileSync(path.join(top, 'espeak-ng-data', 'big'), 'not needed');
     const archive = path.join(tmp('archive'), 'm.tar.bz2');
-    execFileSync('tar', ['-cjf', archive, '-C', src, MODEL.id]);
+    // the bare name from its own folder: GNU tar (Git's, first on the Windows PATH) reads C:\... as a host called C
+    execFileSync('tar', ['-cjf', path.basename(archive), '-C', src, MODEL.id], { cwd: path.dirname(archive) });
     const bytes = fs.readFileSync(archive);
     const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
     const storageDir = tmp('storage');

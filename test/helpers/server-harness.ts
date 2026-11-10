@@ -117,6 +117,10 @@ export async function startServer(): Promise<Harness> {
   }
 
   const server = http.createServer(captured);
+  // fetch reuses kept-alive sockets, and with Node's 5 s idle timeout a busy full run (the Windows box) reused one just as the
+  // server closed it: ECONNRESET. Close() still ends them all
+  server.keepAliveTimeout = 120_000;
+  server.headersTimeout = 125_000;
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}/interactives`;
   const open = new Set<AbortController>();

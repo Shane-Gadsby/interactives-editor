@@ -98,7 +98,8 @@ function scan(): { found: Found[]; opens: { file: string; line: number; topic: s
   for (const dir of SCAN) {
     for (const f of walk(dir)) {
       if (/PrefsModal|ShortcutsModal/.test(f)) continue;
-      const file = relative(ROOT, f);
+      //forward slashes so the EXCEPTIONS keys match on Windows too
+      const file = relative(ROOT, f).split('\\').join('/');
       const sf = ts.createSourceFile(f, readFileSync(f, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
       const lineOf = (n: ts.Node) => sf.getLineAndCharacterOfPosition(n.getStart()).line + 1;
       const visit = (n: ts.Node) => {

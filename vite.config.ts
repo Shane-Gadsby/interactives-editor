@@ -47,5 +47,6 @@ export default defineConfig({
     },
   },
   build: { target: 'es2020', chunkSizeWarningLimit: 2000 },
-  test: { environment: 'jsdom', setupFiles: ['test/setup.ts'] },
+  // 20 s: the full run is much slower per test on the Windows box than alone, and 5 s timed out sound tests there
+  test: { environment: 'jsdom', setupFiles: ['test/setup.ts'], testTimeout: 20000 },
 });

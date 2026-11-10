@@ -250,7 +250,8 @@ module.exports = (opts) => {
 	let runTar = (archive, into) =>
 		new Promise((resolve, reject) => {
 			let top = MODEL.id,
-				p = spawn('tar', ['-xjf', archive, '-C', into, '--strip-components=1', ...MODEL.files.map((f) => `${top}/${f}`)], {stdio: ['ignore', 'ignore', 'pipe']}),
+				//archive by its bare name from its own folder, since GNU tar reads C:\... in -f as a host called C
+				p = spawn('tar', ['-xjf', path.basename(archive), '-C', into, '--strip-components=1', ...MODEL.files.map((f) => `${top}/${f}`)], {cwd: path.dirname(archive), stdio: ['ignore', 'ignore', 'pipe']}),
 				err = ''
 
 			p.stderr.on('data', (d) => (err += d))
