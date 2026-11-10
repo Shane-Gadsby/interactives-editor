@@ -2129,6 +2129,16 @@ function normalizeModifier(raw) {
   if (isNum$3(r2.seed)) m.seed = r2.seed;
   return m;
 }
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = a + 1831565813 >>> 0;
+    let t2 = a;
+    t2 = Math.imul(t2 ^ t2 >>> 15, t2 | 1);
+    t2 ^= t2 + Math.imul(t2 ^ t2 >>> 7, t2 | 61);
+    return ((t2 ^ t2 >>> 14) >>> 0) / 4294967296;
+  };
+}
 const MAX_PATTERN = 300;
 const MAX_UNBOUNDED = 3;
 const MAX_WORK = 65536;
@@ -3395,7 +3405,9 @@ function normaliseQuestion(raw) {
     ...b.caseSensitive === true ? { caseSensitive: true } : {},
     ...b.spelling === true ? { spelling: true } : {},
     ...b.spelling === true && b.usSpelling === true ? { usSpelling: true } : {},
-    ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {}
+    ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {},
+    ...str$1(b.feedback).trim() ? { feedback: str$1(b.feedback) } : {},
+    ...str$1(b.shownAs).trim() ? { shownAs: str$1(b.shownAs) } : {}
   }));
   const pairs = list(raw.pairs, MAX_PAIRS).map((pr, i) => ({ id: str$1(pr.id) || `p${i + 1}`, term: str$1(pr.term), match: str$1(pr.match) }));
   const extras = list(raw.extras, MAX_EXTRAS).map((x, i) => ({ id: str$1(x.id) || `x${i + 1}`, text: str$1(x.text) }));
@@ -7368,8 +7380,7 @@ const FORMULA_HELPERS = {
   /** The list in a new order. With a seed the order is the same every time. */
   shuffle(list, seed) {
     const out = Array.isArray(list) ? list.slice() : typeof list === "string" ? Array.from(list) : [];
-    let a = typeof seed === "number" && Number.isFinite(seed) ? (seed | 0) >>> 0 : 0;
-    const rnd = typeof seed === "number" ? () => (a = a + 1831565813 >>> 0, (Math.imul(a ^ a >>> 15, 1 | a) ^ a >>> 7) >>> 0) / 4294967296 : Math.random;
+    const rnd = typeof seed === "number" ? mulberry32(Number.isFinite(seed) ? seed | 0 : 0) : Math.random;
     for (let i = out.length - 1; i > 0; i--) {
       const j = Math.floor(rnd() * (i + 1));
       [out[i], out[j]] = [out[j], out[i]];
@@ -10443,7 +10454,7 @@ Three findings are about **Info**. A plain shape can be clicked with a mouse, bu
 
 1. Click **Only works with a mouse or touch**. **Info** is selected.
 2. In its **Accessibility** section, set **Role** to **Button**. Enter and Space now click it.
-3. Set **Tab stop** to **Always**. (The line under it already says it is reachable with Tab, but the checker only counts a shape as keyboard-ready when this says **Always**.)
+3. Leave **Tab stop** on **Automatic**. A Button role is reachable with Tab, the line under it says so, and the checker counts it.
 4. Type \`Show a fact about Mars\` in **Text alternative**. That is its name: say what it does, not what it looks like.
 5. In the **Layer** section, set **W** and **H** to 32. Small targets are hard to hit for anyone with a shaky hand or a big thumb, and 24 by 24 is the least the guidelines ask for.
 
@@ -11116,7 +11127,7 @@ You didn't pick a colour for the text or the button. They follow **color/text**,
 ## 5. See why tokens matter
 
 1. Select the **Due** text. Its **Colour** is a chip saying **color/text**. Press the **×** on the chip (**Detach from the token**). It looks the same, but it is a plain colour now: a hex box is back where the chip was, and the **Themes** tab says **1 colour not following a theme**.
-2. Switch the theme box in the top bar to **High contrast**. The page goes black, the header and card change, and the **Due** text stays dark grey on black, nearly invisible.
+2. Switch the theme box in the top bar to **High contrast**. The page goes near black and the **Due** text stays dark grey on it, nearly invisible. The purple header and the gold bar stay as they are, since those tokens have the same colour in every theme.
 3. Open the **Accessibility** tab: it lists **Low text contrast** for **Due** twice, once starting **In Dark:** and once **In High contrast:**, since the plain grey fails in both.
 
 ![High contrast on the canvas with Due's colour detached to a plain grey, and the Accessibility tab listing Low text contrast for Due twice.](help/tutorial-brand-high-contrast.png)
@@ -11708,7 +11719,7 @@ All ten boxes are on top of each other for now. Tell each copy where it goes:
 4. Select **Idea** (inside **Ideas**). In **Data bindings** add four bindings, each a **Formula**: **X** \`item.x\`, **Y** \`item.y\`, **Width** \`item.w\`, **Height** \`item.h\`.
 5. Select the text inside it and bind its **Width** to \`item.w\` and **Height** to \`item.h\`, so the words stay centred in a box of any size.
 
-The line under these bindings warns *There is no value called item*. Take no notice: the editor doesn't yet know a repeated layer has \`item\`, and the canvas shows the boxes in place.
+The line under each binding works it out for the first box, from the first item in the list.
 
 The map spreads out: the middle idea with four branches round it. The positions count from the corner where you drew the box.
 
@@ -11775,7 +11786,7 @@ and \`links\`, where \`label\` is the answer that takes you along it:
    - \`outs\`: \`arrows.filter(l => l.from == current && l.b >= 0)\`, the links out of the step the learner is on.
 5. Go back to **Mind map**, select **Ideas** and **Lines** together, press <kbd>Ctrl</kbd>+<kbd>C</kbd>, select the **Flowchart** page and press <kbd>Ctrl</kbd>+<kbd>V</kbd>. Rename them **Steps** and **Arrows**.
 6. Change the **Items** of **Steps** to \`chart\` and of **Arrows** to \`arrows\`.
-7. Select the connector inside **Arrows**. Set **Which copy** to \`item.a\` for **Start** and \`item.b\` for **End**, **Route** to **Elbow (right angles)**, and under **Ends** set **End** to **Arrow**. For the Yes and No on the decision's arrows, leave the label's **Text** empty and add a binding in **Data bindings** instead: **Button label** (it is a connector's label too), **Formula**, \`item.label ?? ""\`. Typing \`{item.label}\` into **Text** doesn't work yet: a connector's own text can't see \`item\`, so the editor says *There is no value called item* and the words show as typed.
+7. Select the connector inside **Arrows**. Set **Which copy** to \`item.a\` for **Start** and \`item.b\` for **End**, **Route** to **Elbow (right angles)**, and under **Ends** set **End** to **Arrow**. For the Yes and No on the decision's arrows, type \`{item.label ?? ""}\` in the label's **Text**. Each arrow's label reads its own item, and an arrow with no label in the list shows none.
 8. Select the box inside **Steps**. Remove the **Visible** binding and change **Fill colour** to \`item.id == current ? "#ffd54f" : "#ffffff"\`: the step you are on is yellow. Set its **Role** back to **None (plain shape)**, and bind **Current (true, or page, step, location)** to \`item.id == current ? "step" : false\`.
 
 Now the panel that walks the learner through it, to the right of the chart:
@@ -13043,7 +13054,7 @@ A binding's opacity runs from 0 to 1, so the badge shows faintly until *Planning
 
 7. Copy the group twice (<kbd>Ctrl</kbd>+<kbd>D</kbd>) and move the copies along. Make them **Reader badge** (\`R\`, \`Reader\`, \`"Reading"\` in its binding) and **Writer badge** (\`W\`, \`Writer\`, \`"Writing"\`).
 
-> Why rectangles and not the **Progress bar** tool? A master only draws shapes, paths, text, pictures, groups and frames, and a **Progress bar** layer is left out of it. On an ordinary page, use the **Progress bar** tool: see [Progress bars](progress-bars).
+> The bar here is two rectangles so you can see a binding set a width. A **Progress bar** layer works on a master too, and gives a screen reader its value: see [Progress bars](progress-bars).
 
 ## 4. Make it the master of every page
 
@@ -13212,7 +13223,7 @@ If the button now sits below the bottom of the page, select the page (click **Ho
 
 ## 9. Read the pairing report
 
-Select either page and look at the bottom of its **Responsive** section. It has a line for moving between the two, **Home ⇄ Home narrow**, and under it how many layers were **paired by name**, then **nothing left over**.
+Select either page and look at the bottom of its **Responsive** section. It has a line for moving between the two, such as **Home ⇄ Home narrow**, and under it how many layers were **paired by name**, then **nothing left over**.
 
 When a viewer's page changes width while they are using it, the player swaps pages and carries over what they did, matching layers and timelines **by name**. That is why the card texts have their own names. Rename **Mars text** to **Text** on one page only and the report lists it as only in one of them, so anything an interaction changed on it would be lost in the swap. Put the name back.
 
@@ -13454,12 +13465,14 @@ A warning under **X value** may say *There is no value called handle*. Ignore it
 
 Press <kbd>T</kbd> for the **Text** tool, click above the animation and type \`Press Play or pause, or drag the knob to scrub\`.
 
+An imported page has no background, so Preview would show its dark backdrop through everything and your dark text would vanish. Click the page's name above it on the canvas, set **Background** to **Solid** and type \`#ffffff\` in the colour box beside it.
+
 ## 7. Try it
 
 1. Press **Preview** at the top right. Nothing moves.
 2. Press **Play or pause**. It plays; press it again and it stops where it is.
 3. Drag the knob slowly along the track. The animation follows your hand, forwards and backwards.
-4. Press <kbd>Tab</kbd> until the knob is focused, press <kbd>Space</kbd> to pick it up, move it with the arrow keys and press <kbd>Space</kbd> again to drop it: the keyboard scrubs it too. With **Screen reader** on in Preview's bar, the strip under the preview says what is happening, using the **Name read out** you typed.
+4. Press <kbd>Tab</kbd> until the knob is focused, press <kbd>Space</kbd> to pick it up, move it with the arrow keys and press <kbd>Space</kbd> again to drop it: the keyboard scrubs it too. Press **Screen reader off** in Preview's bar to turn it on, and a strip under the preview says what is happening, using the **Name read out** you typed.
 
 ![Preview after scrubbing with the keyboard: the knob part way along the track, the ball part way down, and the Screen reader strip saying Scrub the bounce dropped.](help/tutorial-rive-drive-preview.png)
 
@@ -13955,7 +13968,7 @@ The list under **+ When clicked…** has no mute, so this one is built in the gr
 
 ## 9. Try it
 
-1. Press **Preview** at the top right. With **From the start artboard** chosen in its bar it starts on **Home**. Press **Start**: the music starts and the **Sounds** page shows.
+1. Press **Preview** at the top right. With **From the start artboard** chosen in its bar it starts on **Home**. Press **Start**: the music starts and the **Sounds** page shows. Press **Debug** in the bar if you want the events listed under the page.
 
 ![Preview on the Sounds page after pressing Start, with Ding, Sound on or off, Stop the music and Back, and the Debug events list showing Play sound and Go to artboard.](help/tutorial-sound-preview.png)
 
@@ -17099,7 +17112,7 @@ A page that embeds the player can listen for the switch: \`player.on('variantcha
 4. To change the shared layers, click **Edit master** on any page. The master's own layers are read-only on a page: clicking where one is selects the page, not the master's layer.
 
 ## On a page
-- **Master**: the artboard drawn under this page, or **None**.
+- **Master**: the artboard drawn under this page, or **None**. A page set to None keeps its slot text and hidden layers, so they are back if it gets a master again.
 - **Show these master layers on this page**: untick a layer to leave it off this page only (matched by the layer's name, at any depth). Name the layers clearly in the master.
 - **Text slots**: put \`{pageTitle}\` (any name) in a text layer of the master and the page's **Text slots** list gets a field for it. What you type is what that page says. A slot with nothing typed shows the project variable of that name, if there is one. What you type can use \`{variable}\` itself.
 - **Detach** copies the master's layers into the page as ordinary, editable layers and stops using the master.
@@ -17111,7 +17124,7 @@ A page that embeds the player can listen for the switch: \`player.on('variantcha
 
 ## What a master layer is
 - **Read-only and decorative.** Master layers are hidden from screen readers, are never tab stops, and the pointer goes through them to the page. A layer with a **Role** or an **Accessible name** (a logo with alt text) stays in the reading order. The master's layers come first (under) or last (over) in a page's reading order.
-- **Shapes, paths, text, pictures, groups and frames only.** Buttons, inputs, links, video, embeds, instances, script layers and shaders are left out. A master has no interactions or timelines of its own that run on a page, so **On click** on a master layer does nothing: put interactive things on the page.
+- **Shapes, paths, text, pictures, progress bars, groups and frames only.** Buttons, inputs, links, video, embeds, instances, script layers and shaders are left out. A master has no interactions or timelines of its own that run on a page, so **On click** on a master layer does nothing: put interactive things on the page.
 - **Bindings still work**, so a progress bar or a title bound to a variable is fine in a master.
 - **Names and ids never clash.** The master's layers can't be targeted from a page's graph, timeline or script, and a page layer with the same name is never confused with one.
 - **Responsive sets**: every member is an artboard of its own, so give each its own master of the right size. A master is drawn at its own coordinates.
@@ -17403,7 +17416,7 @@ Iris, Zoom in, Star, Diamond, Heart and Clock start from **Opens from**: **The c
 
 **Speed** says how long the change takes: **Slow** (600 ms), **Medium** (300 ms), **Fast** (150 ms) or **Custom**, which shows a box for the milliseconds. It sits beside the look and is left out for Instant. Medium is what every page change already had, so nothing in an existing project plays differently. The Inspector's sentences say it too, as in "go to the next page (iris, slow)".
 
-With **Respect reduced motion** ticked in the [Project settings](project-settings), a learner whose device asks for less motion gets an instant change instead. It is off in a new project.
+With **Respect reduced motion** ticked in the [Project settings](project-settings), a learner whose device asks for less motion gets an instant change instead. It is on in a new project; a project made before November 2026 keeps whatever it had.
 
 In a script, \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer named Door, and a point is \`{ x: 25, y: 50, percent: true }\`. See [Scripts](scripts).
 
@@ -18143,8 +18156,11 @@ A short list asks what should happen:
 - **Go to the next page**, **Go to the previous page**, **Go to a page…** (you pick which). Each of the page ones also asks **How the page changes** (a fade unless you choose) and its **Speed** (Medium unless you choose Slow, Fast or Custom).
 - **Show a layer**, **Hide a layer**, **Show or hide a layer**: this layer or another. Showing a layer other than this one also sets it to start hidden, so there is something to show.
 - **Play an animation** (a timeline of this page) and **Play a sound**.
+- **Turn the sound off or on**: mutes every sound and video, or brings the sound back. The viewer's browser remembers it.
+- **Play or pause a video** and **Jump a video to a time…** (seconds from the start, so 75 is 1:15): this video, or another on the page.
 - **Add 1 to a counter** and **Switch something on or off**: pick a number or an on/off variable you already have, or name a new one in plain words and it is made for you.
 - **Open a link** and **Start over**.
+- **Run a script**: one of the project's scripts, or **A new script…**, which is made in the Scripts tab ready to write. \`event\` says what was clicked.
 
 Pick one, answer the question it asks (the line at the bottom reads back what it will do), and press **Add**. It is added in one step, so one undo takes it all back, including a new variable or the layer set to start hidden. A behaviour is just a **When clicked or hovered** event joined to an action (and the variable it needs), the same nodes you would have drawn: select the new node in the graph to change anything about it. Nothing special marks them, and nothing hidden runs.
 
@@ -18299,7 +18315,7 @@ Click **Add question** and pick a type. A card appears with a prompt, the answer
 | Multiple response | ticks any number | exactly the right ones are ticked |
 | True or false | picks True or False | it matches the statement |
 | Fill in the blank | types into one or more inputs | each blank matches an accepted answer |
-| Put in order | moves items up and down | every item is in its place |
+| Put in order | moves or drags items up and down | every item is in its place |
 | Matching (drag and drop) | drags each term onto its definition | every term is in its own slot (and no extra term is in one) |
 | Categorise (drag into groups) | drags each item into a group box | every item is in the group it belongs to |
 | Hotspot (click the right place) | clicks an area of a picture | the picked area is marked right (or all of the right ones) |
@@ -18377,12 +18393,14 @@ The learner types into one or more inputs. Write the accepted answers one per li
 - Case and extra spaces are ignored unless you tick **Match case**.
 - A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses.
 - A line written \`/colou?r/i\` is a pattern.
+- **Feedback if wrong** is said after the question's own *Wrong* line whenever that blank is wrong, so you can say what went wrong in it (*Give the units*). Several wrong blanks say theirs in order.
+- **Shown as** appears when a blank accepts a pattern. It is what **Show the right answer when finished wrong** puts in the blank. Left empty it shows the first accepted answer that isn't a pattern, and a blank with only patterns shows nothing (the question's checks say so).
 - **Add blank** adds another input in the look of the last one.
 - Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).
 
 ### Put in order
 
-List the items in the **right** order. The learner sees them shuffled (the first deal is never already right) and moves them up and down.
+List the items in the **right** order. The learner sees them shuffled (the first deal is never already right) and moves them up and down, with each item's arrow buttons or the keyboard, or by dragging an item to its place.
 
 Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
 
@@ -18968,9 +18986,10 @@ Variable names must be letters, digits and \`_\` so expressions can use them. Th
 Next to the type, **Starts as a value** is the number, text or switch the project starts with. **Worked out** is for a variable that is calculated, such as a crossword grid: it shows a box for the formula (for example \`crossword(words, 10)\`), and the value stays as what it falls back to if the formula fails. **Keep up to date** (for a formula) works it out again whenever something it reads changes.
 
 ## Options on a variable
-**Options** is folded away until something in it is on. It holds two switches, each with a sentence saying what it does:
+**Options** is folded away until something in it is on. It holds three switches, each with a sentence saying what it does:
 - **Remember** keeps the value between visits (for a score, a saved choice or a name). It is kept in the learner's record when the project is played from the Link for StudyDesk, otherwise in their browser. See [Results and progress](results).
 - **Save as user data** keeps it on the server for each person (see above).
+- **Shared with instances**: one value for this page and every [instance](instances) of a component inside it, so changing it in one copy changes it in all of them. Off, each instance has its own. Variables from an imported Rive view model come in with it on.
 
 ## Where a variable is used
 Under each name the table says **used in 3 places** (or **not used yet**). Click it to list the places (layers, expressions, interactions, scripts), and click one to go there.
@@ -19829,6 +19848,7 @@ The rules are fixed when the project is shared. After you add or change a shared
 - **Show at**: an answer waits until this many people have given it, so one person's odd answer does not show on its own.
 - **Blocked words**: words and phrases nobody may add. Whole words only, so blocking *ass* leaves *class* alone. Words already in stop showing as soon as they are blocked and you share again.
 - **Look again**: how often the page asks what the class has added while it is open (at least 2 seconds, 0 reads once).
+- **Poll options**: the answers a poll offers, one a line. Each is always in the list, in this order, with 0 until someone picks it, so a chart has a bar for every option from the start and keeps its shape as votes come in. Anything else people add comes after them.
 - **Sample answers**: for you only. The canvas and Preview show them as a class, so a page can be laid out with nobody in it. Learners never see them.
 
 ## Moderating

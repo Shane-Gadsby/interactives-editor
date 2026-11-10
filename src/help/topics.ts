@@ -3548,7 +3548,7 @@ Next to the type, **Starts as a value** is the number, text or switch the projec
 **Options** is folded away until something in it is on. It holds three switches, each with a sentence saying what it does:
 - **Remember** keeps the value between visits (for a score, a saved choice or a name). It is kept in the learner's record when the project is played from the Link for StudyDesk, otherwise in their browser. See [Results and progress](results).
 - **Save as user data** keeps it on the server for each person (see above).
-- **Shared with instances**: one value for this page and every [instance](components) of a component inside it, so changing it in one copy changes it in all of them. Off, each instance has its own. Variables from an imported Rive view model come in with it on.
+- **Shared with instances**: one value for this page and every [instance](instances) of a component inside it, so changing it in one copy changes it in all of them. Off, each instance has its own. Variables from an imported Rive view model come in with it on.
 
 ## Where a variable is used
 Under each name the table says **used in 3 places** (or **not used yet**). Click it to list the places (layers, expressions, interactions, scripts), and click one to go there.

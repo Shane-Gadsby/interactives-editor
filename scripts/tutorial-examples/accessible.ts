@@ -4,6 +4,7 @@
 import type { Project } from 'interactives-player';
 import { drawn, svgAsset, timeline, token, whenClickedShow } from './_design-helpers';
 import { blankProject, type TutorialExample } from './kit';
+import { writeExampleAssets } from './_data-helpers';
 
 const MARS = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#0b0b1a"/><circle cx="100" cy="100" r="78" fill="#c1440e"/><circle cx="72" cy="78" r="14" fill="#a3380c"/><circle cx="128" cy="122" r="20" fill="#a3380c"/><circle cx="118" cy="66" r="8" fill="#d9662f"/><ellipse cx="100" cy="30" rx="26" ry="8" fill="#f4e9e1"/></svg>`;
 
@@ -40,6 +41,7 @@ function build(): Project {
   find('Next').tabOrder = 2;
   ab.timelines[0].loop = 'once';
   p.settings.reducedMotion = true;
+  writeExampleAssets('tut-accessible', p);
   return p;
 }
 

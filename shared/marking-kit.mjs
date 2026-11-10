@@ -1,4 +1,4 @@
-/*! built from the player's marking sources 7ad5a43f8b34e87789f9 */
+/*! built from the player's marking sources 81c96cebf25ef919b04a */
 const MAX_PATTERN = 300;
 const MAX_UNBOUNDED = 3;
 const MAX_WORK = 65536;
@@ -1349,7 +1349,9 @@ function normaliseQuestion(raw) {
     ...b.caseSensitive === true ? { caseSensitive: true } : {},
     ...b.spelling === true ? { spelling: true } : {},
     ...b.spelling === true && b.usSpelling === true ? { usSpelling: true } : {},
-    ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {}
+    ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {},
+    ...str(b.feedback).trim() ? { feedback: str(b.feedback) } : {},
+    ...str(b.shownAs).trim() ? { shownAs: str(b.shownAs) } : {}
   }));
   const pairs = list(raw.pairs, MAX_PAIRS).map((pr, i) => ({ id: str(pr.id) || `p${i + 1}`, term: str(pr.term), match: str(pr.match) }));
   const extras = list(raw.extras, MAX_EXTRAS).map((x, i) => ({ id: str(x.id) || `x${i + 1}`, text: str(x.text) }));
@@ -1616,7 +1618,8 @@ function markAnswer(q, a, prior) {
   const part = !grade.correct && grade.fraction > 0 && q.feedbackPartial.trim();
   const generic = grade.correct ? q.feedbackCorrect : outOfTries && q.feedbackOutOfTries.trim() ? q.feedbackOutOfTries : part ? q.feedbackPartial : q.feedbackIncorrect;
   const wrongCard = q.kind === "categorise" ? (q.cards ?? []).find((c) => grade.states[c.id] === "wrong" && c.feedback?.trim()) : void 0;
-  const extra = wrongCard ? wrongCard.feedback.trim() : chosen.map((o) => o.feedback?.trim()).filter(Boolean)[0] ?? "";
+  const wrongBlanks = q.kind === "blank" ? q.blanks.filter((b) => grade.states[b.id] === "wrong").map((b) => b.feedback?.trim()).filter(Boolean).join(" ") : "";
+  const extra = wrongCard ? wrongCard.feedback.trim() : wrongBlanks || (chosen.map((o) => o.feedback?.trim()).filter(Boolean)[0] ?? "");
   const count = q.kind === "matching" && !grade.correct ? `${placedPairs} of ${q.pairs.length} matched correctly.` : q.kind === "categorise" && !grade.correct ? `${placedPairs} of ${(q.cards ?? []).length} in the right group.` : "";
   const reveal = locked && q.reveal && !grade.correct;
   const m = {
@@ -1637,7 +1640,7 @@ function markAnswer(q, a, prior) {
   if (q.kind === "blank" && reveal) {
     m.answers = {};
     q.blanks.forEach((b) => {
-      if (grade.states[b.id] === "wrong") m.answers[b.id] = b.answers.find((x) => !/^\/.+\/[a-z]*$/.test(x.trim())) ?? "";
+      if (grade.states[b.id] === "wrong") m.answers[b.id] = b.shownAs?.trim() || (b.answers.find((x) => !/^\/.+\/[a-z]*$/.test(x.trim())) ?? "");
     });
   }
   if (q.kind === "categorise" && reveal) {

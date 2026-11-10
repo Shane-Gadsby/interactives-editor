@@ -11,6 +11,13 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Drag to put things in order': [['question-kit', 'by dragging an item to its place']],
+  'Feedback for each blank': [['question-kit', 'Feedback if wrong'], ['question-kit', '**Shown as** appears']],
+  'Polls keep their shape': [['shared-responses', 'Poll options']],
+  'More one-click behaviours': [['interactions', 'Turn the sound off or on'], ['interactions', 'Jump a video to a time'], ['interactions', 'Run a script']],
+  'Shared with instances': [['variables', 'Shared with instances']],
+  'New projects respect reduced motion': [['links-cursors', 'It is on in a new project']],
+  Fixes: [['page-master', 'progress bars, groups and frames only'], ['page-master', 'keeps its slot text']],
   'Guides, reworked': [['canvas', 'one endless dashed line'], ['canvas', 'Attach new guides to the page'], ['canvas', 'Rounding while you drag'], ['shortcuts', 'Keys you hold while dragging']],
   'Credits on every starter': [['attributions', 'A Credits button of your own'], ['branded-starters', 'button in a corner']],
   'Smaller saves and a faster first load': [['interface', 'sent squeezed']],
