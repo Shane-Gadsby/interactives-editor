@@ -3429,6 +3429,22 @@ A question keeps its settings on its frame, and each part layer is marked as par
 `,
   },
   {
+    id: 'activity-designer',
+    title: 'Ask the Activity Designer',
+    group: 'Getting started',
+    summary: "UniSQ's Copilot agent in a panel beside the canvas, for ideas and how-to while you build.",
+    keywords: 'copilot ai chat assistant agent activity designer ask help ideas microsoft copilot studio chatbot',
+    body: `The speech bubble button at the top right of the editor opens **Ask the Activity Designer**, UniSQ's own Copilot agent, in a panel down the right. Ask it for ideas ("what would make a good activity for teaching the water cycle?") or how to do something ("how do I make a drag and drop that checks the answers?").
+
+- It's told your project's name, but it **can't see or change your project**, so describe what you have and follow its steps yourself.
+- Press <kbd>Enter</kbd> to send, <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line. When it offers choices as buttons, click one to answer.
+- Closing the panel keeps the conversation; open it again to carry on. **New chat** starts afresh.
+- Drag the panel's left edge (or focus it and use the arrow keys) to make it wider or narrower.
+- Check what it suggests: it can be wrong, and these help pages are the final word on how the editor works.
+
+The conversation goes to Microsoft under UniSQ's Copilot Studio agreement. The button only shows on servers where the agent is set up.`,
+  },
+  {
     id: 'command-palette',
     title: 'The command palette',
     group: 'Getting started',

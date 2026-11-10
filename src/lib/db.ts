@@ -48,6 +48,8 @@ export interface SessionInfo {
   power: boolean;
   /** May publish and mark brand kits (a power user, or in the server's brand group); also the brand lock override in the editor. */
   brand?: boolean;
+  /** The box has the Activity Designer (Copilot Studio agent) set up, so the editor shows its button. */
+  copilot?: boolean;
 }
 
 /** A request the server answered with an error (status 0: it was never reached). */
@@ -120,6 +122,11 @@ export function liveSeqOf(id: string): number {
 
 export function session(): Promise<SessionInfo> {
   return call<SessionInfo>('session');
+}
+
+/** A Direct Line token for one Activity Designer conversation, from the server (which holds the agent's secret). */
+export function copilotToken(): Promise<{ token: string; conversationId: string; expiresIn: number; userId: string }> {
+  return call('copilot/token', { method: 'POST' });
 }
 
 export async function listProjects(all = false): Promise<ProjectMeta[]> {

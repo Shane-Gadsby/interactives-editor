@@ -240,6 +240,8 @@ Access works like this:
 | `SUITE_SESSION_ENFORCE` | unset | `1` to refuse instead of log |
 | `INTERACTIVES_MCP` | on | `off` turns AI agent access off: `/mcp` answers 503 and `?agent=` can't join live rooms (restart to apply) |
 | `INTERACTIVES_MCP_PER_MIN` | 240 | Requests a minute one person's agents may send to `/mcp` before getting 429 (with Retry-After) |
+| `INTERACTIVES_COPILOT_SECRET1`, `INTERACTIVES_COPILOT_SECRET2` | unset | The Activity Designer agent's web channel secrets (Copilot Studio: Settings, Security, Web channel security; the agent's owner has them). The server swaps one for a Direct Line token per chat; the browser never sees it. Unset, the **Ask the Activity Designer** button isn't shown |
+| `INTERACTIVES_COPILOT` | on | `off` takes the Activity Designer button away even with a secret set |
 | `INTERACTIVES_MCP_IP_PER_MIN` | 600 | The same, per address |
 | `INTERACTIVES_PUBLIC_URL` | derived from the request | the public origin (`https://host`), used for the LTI 1.3 launch and login addresses |
 | `LTI13_PLATFORMS` | unset | optional JSON array of LTI 1.3 platform registrations (same fields as the admin api, plus `id`) |

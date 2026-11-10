@@ -585,9 +585,49 @@ router.put('/api/prefs', express.json({limit: '512kb'}), async (req, res) => {
 	res.json({user, prefs: clean})
 })
 
+//Ask the Activity Designer: UniSQ's Copilot Studio agent, talked to over Direct Line from a panel in the editor. The
+//agent's web channel secret stays here (INTERACTIVES_COPILOT_SECRET1, or ..._SECRET2 while rotating, both from the
+//agent's Settings, Security, Web channel security; ask whoever owns the agent) and each staff member gets a token for
+//one conversation at a time. No secret, or INTERACTIVES_COPILOT=off, and the button isn't shown
+const copilotSecret = () => /^(off|0|false|no)$/i.test(process.env.INTERACTIVES_COPILOT || '') ? null : (process.env.INTERACTIVES_COPILOT_SECRET1 || process.env.INTERACTIVES_COPILOT_SECRET2 || null),
+	copilotTokens = new Map()
+
 //Who the editor's talking to, for the projects list and the owner badge
 router.get('/api/session', (req, res) => {
-	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req)})
+	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req), copilot: !!copilotSecret()})
+})
+
+//A Direct Line token for the Activity Designer, as this person (their username hashed, so Microsoft's logs don't carry
+//it, and their name so the agent can greet them). 20 a minute each is far more than opening the panel ever needs
+router.post('/api/copilot/token', async (req, res) => {
+	let secret = copilotSecret(),
+		me = whoIs(req)
+	if (!secret) return res.status(404).json({error: 'The Activity Designer is switched off here'})
+	let key = me?.username || req.ip,
+		now = Date.now(),
+		hits = (copilotTokens.get(key) || []).filter(t => now - t < 60000)
+	if (hits.length >= 20) return res.status(429).json({error: 'Too many chats started in a minute, try again shortly'})
+	hits.push(now)
+	copilotTokens.set(key, hits)
+	if (copilotTokens.size > 5000) copilotTokens.clear()
+	let id = 'dl_ix-' + crypto.createHash('sha256').update(String(me?.username || 'guest')).digest('hex').slice(0, 24)
+	try {
+		let r = await fetch('https://directline.botframework.com/v3/directline/tokens/generate', {
+			method: 'POST',
+			headers: {Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json'},
+			body: JSON.stringify({user: {id, name: me?.name || 'Staff member'}}),
+			signal: AbortSignal.timeout(10000)
+		})
+		if (!r.ok) {
+			console.warn('copilot token', r.status)
+			return res.status(502).json({error: 'The Activity Designer could not be reached'})
+		}
+		let d = await r.json()
+		res.json({token: d.token, conversationId: d.conversationId, expiresIn: d.expires_in, userId: id})
+	} catch (e) {
+		console.warn('copilot token', e.message)
+		res.status(502).json({error: 'The Activity Designer could not be reached'})
+	}
 })
 
 //The projects list, mine only (owned or invited to). ?all=1 gets everyone's, but only for power users (god mode),
