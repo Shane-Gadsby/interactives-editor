@@ -20,6 +20,7 @@ import { installTimelineKeys } from './lib/timeline-keys';
 import { CommandPalette } from './components/CommandPalette';
 import { ComponentPicker } from './components/ComponentPicker';
 import { BeforeYouShareModal } from './components/BeforeShare';
+import { ExportShareHint } from './components/ShareWhere';
 import { checkBeforeShare } from './lib/before-share';
 import { openPalette } from './lib/command-palette';
 import { APP_ACTION_EVENT, type AppAction } from './lib/app-actions';
@@ -751,6 +752,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         </button>
         {menu && (
           <div className="menu" onMouseLeave={() => setMenu(false)}>
+            <ExportShareHint onShare={() => (setMenu(false), gated('share', () => setShareOpen(true)))} />
             <button onClick={() => (setMenu(false), gated('export', () => void run(checked(() => downloadStandalone(st.get().project)))))}>
               Single HTML file
               <span className="muted small">Player, project and assets in one file</span>

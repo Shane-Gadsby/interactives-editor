@@ -2206,6 +2206,13 @@ body.dock-dragging * {
 .menu button:hover {
   background: var(--line);
 }
+/* The Share pointer at the top of the Export menu, set apart from the file entries below it */
+.menu .menu-share-hint {
+  border-bottom: 1px solid var(--line-2);
+  border-radius: 6px 6px 0 0;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
 .toolbar {
   grid-area: tools;
   display: flex;
