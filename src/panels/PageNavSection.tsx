@@ -49,7 +49,7 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 				))}
 			</div>
 			</Row>
-			<SelectField label="How the page changes" title="The look of the change when Back or Next is clicked. Learners who prefer reduced motion always get an instant change" value={look} options={PAGE_TRANSITIONS} onChange={setLook} />
+			<SelectField label="How the page changes" title="The look of the change when Back or Next is clicked. With Respect reduced motion on (Project settings), learners who prefer reduced motion get an instant change" value={look} options={PAGE_TRANSITIONS} onChange={setLook} />
 			{TIMED_TRANSITIONS.includes(look) && <SpeedField title="How long the page change takes when Back or Next is clicked" value={speed} onChange={setSpeed} />}
 			<Row k="Add navigation" words={['add', 'remove', 'all pages', 'page navigation', 'generate']} className="row-actions">
 				<button type="button" className="btn primary" disabled={!targets.length} onClick={() => run(targets)} title="Add the chosen navigation along the bottom of the page. A page that already has it gets this style instead">

@@ -182,7 +182,7 @@ A *binding* keeps a property up to date with an expression.
 lit ? "#ffd23f" : "#c9ced6"
 \`\`\`
 
-That says: if \`lit\` is true the colour is yellow, otherwise it is grey. The fill now shows a link icon and can't be edited by hand while it is bound.
+That says: if \`lit\` is true the colour is yellow, otherwise it is grey. While it is bound, the binding decides the fill: a colour picked by hand is replaced by the binding's.
 
 ![The Data bindings section with a binding on fill.color. The + Convert… menu below changes the value before it is set.](help/bindings-section.png)
 
