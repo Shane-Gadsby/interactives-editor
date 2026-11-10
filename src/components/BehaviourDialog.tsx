@@ -487,6 +487,7 @@ function NeedField({ need, ctx, answers, onAnswer, onAnswers, recipeId }: { need
       return <TextField label={need.label} value={v} placeholder="Some text" onChange={onAnswer} />;
     }
     case 'words':
+      if (need.key === 'say') return <TextField label={need.label} value={v} placeholder="e.g. Slide {slide} of 5" title="Words a screen reader says once it has changed. Put a value in curly brackets to say it: Score {score}. Leave empty to say nothing" onChange={onAnswer} />;
       return <TextField label={need.label} value={v} onChange={onAnswer} />;
     case 'lookwhat':
       return sel(v || 'colour', [{ value: 'colour', label: 'Colour' }, { value: 'text', label: 'Text' }, { value: 'opacity', label: 'Opacity (how see-through)' }, { value: 'size', label: 'Size' }], onAnswer);

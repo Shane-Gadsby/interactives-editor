@@ -99,6 +99,10 @@ export const THIS_LAYER = '__self__';
 
 const first = <T,>(xs: T[]): T | undefined => xs[0];
 
+/** The optional Say it box on the recipes that change a value: words a screen reader says once it has changed, with {slots} for values. */
+const SAY: Need = { key: 'say', kind: 'words', label: 'Say it (optional)', optional: true };
+const sayParam = (a: Answers): Record<string, unknown> => ((a.say ?? '').trim() ? { say: a.say.trim() } : {});
+
 /** How the page changes: asked for by the page recipes, and always optional (the usual fade when left alone). */
 const HOW: Need = { key: 'transition', kind: 'transition', label: 'How the page changes' };
 /** How long it takes: asked with the look, and only when there is a look to time (Instant has no length). Answered in ms. */
@@ -285,12 +289,13 @@ export const RECIPES: Recipe[] = [
       { key: 'counter', kind: 'counter', label: 'Which number' },
       { key: 'numhow', kind: 'numhow', label: 'What to do' },
       { key: 'amount', kind: 'amount', label: 'Amount' },
+      SAY,
     ],
     action: (a) => {
       const how = a.numhow ?? 'add';
       const amount = (a.amount ?? '1').trim() || '1';
       const value = how === 'subtract' ? (/^\d+(\.\d+)?$/.test(amount) ? `-${amount}` : `-(${amount})`) : amount;
-      return { kind: 'action.setVariable', params: { ...defaultParams('action.setVariable'), variable: a.counter ?? '', op: how === 'set' ? 'set' : 'add', value } };
+      return { kind: 'action.setVariable', params: { ...defaultParams('action.setVariable'), variable: a.counter ?? '', op: how === 'set' ? 'set' : 'add', value, ...sayParam(a) } };
     },
   },
   {
@@ -303,6 +308,7 @@ export const RECIPES: Recipe[] = [
       { key: 'startat', kind: 'startat', label: 'The first one is' },
       { key: 'last', kind: 'last', label: 'How many items' },
       { key: 'ends', kind: 'ends', label: 'After the last' },
+      SAY,
     ],
     action: (a, ctx) => ({ kind: 'action.setVariable', params: roundParams(a, ctx, 'next') }),
   },
@@ -316,6 +322,7 @@ export const RECIPES: Recipe[] = [
       { key: 'startat', kind: 'startat', label: 'The first one is' },
       { key: 'last', kind: 'last', label: 'How many items' },
       { key: 'ends', kind: 'ends', label: 'Before the first' },
+      SAY,
     ],
     action: (a, ctx) => ({ kind: 'action.setVariable', params: roundParams(a, ctx, 'previous') }),
   },
@@ -338,10 +345,11 @@ export const RECIPES: Recipe[] = [
     needs: [
       { key: 'switch', kind: 'switch', label: 'Which switch' },
       { key: 'how', kind: 'switchhow', label: 'What to do' },
+      SAY,
     ],
     action: (a) => {
       const how = a.how ?? 'flip';
-      return { kind: 'action.setVariable', params: { ...defaultParams('action.setVariable'), variable: a.switch ?? '', ...(how === 'on' || how === 'off' ? { op: 'set', value: how === 'on' ? 'true' : 'false' } : { op: 'toggle', value: '' }) } };
+      return { kind: 'action.setVariable', params: { ...defaultParams('action.setVariable'), variable: a.switch ?? '', ...(how === 'on' || how === 'off' ? { op: 'set', value: how === 'on' ? 'true' : 'false' } : { op: 'toggle', value: '' }), ...sayParam(a) } };
     },
   },
   {
@@ -475,7 +483,7 @@ function roundParams(a: Answers, ctx: RecipeCtx, op: 'next' | 'previous'): Recor
     last = from === '0' ? `${name}.length - 1` : `${name}.length`;
   } else if (/^\d+$/.test(raw)) last = String(from === '0' ? Math.max(0, Number(raw) - 1) : Number(raw));
   else last = from === '0' ? `(${raw || '1'}) - 1` : raw;
-  return { ...defaultParams('action.setVariable'), variable: a.counter ?? '', op, first: from, last, ends: a.ends === 'stop' ? 'stop' : 'round' };
+  return { ...defaultParams('action.setVariable'), variable: a.counter ?? '', op, first: from, last, ends: a.ends === 'stop' ? 'stop' : 'round', ...sayParam(a) };
 }
 
 // ---------------------------------------------------------------- triggers

@@ -13,6 +13,7 @@
 import { CATALOG_BY_KIND, makeNote, uid, type Artboard, type LogicEdge, type LogicGroup, type LogicNode, type Note, type Project, type SceneNode, type Variable, type VariableType } from 'interactives-player';
 import { tidyGraph, type TidyEdge, type TidyGroup, type TidyNode, type TidyNote } from '../graph-tidy';
 import { graphNotePlace, noteHeightFor } from '../graph-notes-core';
+import { foldAnnounces } from './say-it';
 import { button, edge, gnode, stroke, type BrandedCtx } from './kit';
 
 // ------------------------------------------------------------------ variables
@@ -370,5 +371,7 @@ export function graphNote(ab: Artboard, spec: GraphNoteSpec): Note {
 
 /** Graph tidy on every artboard of a project. */
 export function finishGraphs(project: Project): void {
+  //an Announce straight after a Set variable is the Set variable's own Say it box (before the tidy, so the graph is laid out without it)
+  for (const ab of project.artboards) foldAnnounces(ab);
   for (const ab of project.artboards) tidyBoardGraph(ab);
 }
