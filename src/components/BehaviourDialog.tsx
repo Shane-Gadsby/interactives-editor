@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DEFAULT_TRANSITION_MS, PAGE_TRANSITIONS, speedOf, TRANSITION_SPEEDS, variableLabelAndName } from 'interactives-player';
-import { store, useEditor } from '../store/store';
+import { onCurrentStore, store, useEditor } from '../store/store';
 import { pickNewAsset } from '../lib/quick-add';
 import { DONE_HOWS, doneHowOf, doneLayers } from '../lib/all-done';
 import { RECIPES, RECIPE_BY_ID, KEY_CHOICES, NEW_PREFIX, THIS_LAYER, TRIGGERS, TRIGGER_BY_ID, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, defaultTriggerAnswers, findLayer, incomplete, joinSet, layerChoices, listChoices, lookColour, otherPages, reachOps, resettable, seedCondition, splitSet, switchChoices, textChoices, triggerIncomplete, triggerLabel, triggerUnavailable, unavailable, videoChoices, zoneChoices, type Answers, type Need, type Recipe, type RecipeCtx, type Step, type Trigger } from '../lib/recipes';
@@ -45,7 +45,12 @@ export function BehaviourHost() {
   useEffect(() => {
     const l = () => bump((n) => n + 1);
     listeners.add(l);
-    return () => void listeners.delete(l);
+    //Another project opened (or none): a dialog for the last one's layer must not stay up, or Add would write there
+    const off = onCurrentStore(() => closeBehaviours());
+    return () => {
+      listeners.delete(l);
+      off();
+    };
   }, []);
   return request ? <BehaviourDialog key={`${request.abId}:${request.layerId}:${request.trigger}`} req={request} /> : null;
 }

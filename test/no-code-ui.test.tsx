@@ -179,6 +179,13 @@ describe('BehaviourDialog', () => {
   const radios = () => qa('[role=radio]', q('.behaviour-dialog')!);
   const choose = (label: string) => click(radios().find((r) => r.querySelector('.recipe-name')?.textContent === label));
 
+  it('closes when another project opens, so Add never writes to the wrong one', () => {
+    open();
+    expect(q('.behaviour-dialog')).toBeTruthy();
+    act(() => setCurrentStore(null));
+    expect(q('.behaviour-dialog')).toBeNull();
+  });
+
   it('lists what can happen in plain words, grouped, with the first one ready', () => {
     open();
     expect(q('#behaviour-title')!.textContent).toBe('When “Next button” is clicked…');
