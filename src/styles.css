@@ -2528,10 +2528,12 @@ body.col-resizing * {
 .master-tag {
   fill: var(--text);
   font-size: 10.5px;
-  paint-order: stroke;
-  stroke: var(--bg);
-  stroke-width: 4px;
-  stroke-linejoin: round;
+}
+.master-tag-chip {
+  fill: var(--panel);
+  stroke: var(--logic);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
 }
 .focus-outline {
   fill: none;

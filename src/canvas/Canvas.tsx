@@ -1746,11 +1746,18 @@ export function Canvas() {
           <rect key={`master-box-${b.id}`} className="master-outline" x={o.x} y={o.y} width={b.width * zoom} height={b.height * zoom} />,
         );
         if (i === 0) {
+          // A chip above the page's top right corner, level with the page's own name: never over the page's content
           const label = `From page master: ${fromMaster.master}`;
+          const top = toS(active, { x: 0, y: 0 });
+          const w = Math.round(label.length * 6 + 12);
+          const right = top.x + active.width * zoom;
           overlay.push(
-            <text key="master-tag" className="master-tag" x={o.x + 3} y={Math.max(o.y - 4, 10)} pointerEvents="none">
-              {label}
-            </text>,
+            <g key="master-tag" pointerEvents="none">
+              <rect className="master-tag-chip" x={right - w} y={top.y - 24} width={w} height={19} rx={5} />
+              <text className="master-tag" x={right - w + 6} y={top.y - 10}>
+                {label}
+              </text>
+            </g>,
           );
         }
       });
