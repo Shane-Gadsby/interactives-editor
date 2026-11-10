@@ -692,7 +692,7 @@
 	{
 		"key": "tut-presentation",
 		"title": "Course presentation",
-		"description": "Four slides on one page master with a title slot, a check your understanding question, and Back, Next and the page number added by Page navigation with a slide transition: the presentation tutorial's project.",
+		"description": "Four slides on one page master with a title slot, a check your understanding question, and Back, Next and the page number added once to the master by Page navigation with a slide transition: the presentation tutorial's project.",
 		"group": "Build it",
 		"tags": [
 			"tutorial",

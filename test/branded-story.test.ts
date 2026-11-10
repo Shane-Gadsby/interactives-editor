@@ -136,14 +136,23 @@ describe('branded story starters', () => {
 
   describe('course presentation', () => {
     const project = () => projectFromBrandedStarter(STORY[1], COLOURWAYS[0]);
+    //the slide bar lives on each page's master: the id of its copy on a page is prefixed
+    const masterOf = (p: Project, page: string) => p.artboards.find((a) => a.id === board(p, page).master)!;
+    const bar = (p: Project, page: string, name: string) => byName(masterOf(p, page), name);
+    const barId = (p: Project, page: string, name: string) => `ixm~${bar(p, page, name)!.id}`;
 
     it('has eight slides in the template order, each with its slide bar', () => {
       const p = project();
       expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['Slide 1: Title', 'Slide 2: Acknowledgement of Country', 'Slide 3: Section', 'Slide 4: Content', 'Slide 5: Content', 'Slide 6: Question', 'Slide 7: Summary', 'Slide 8: End']);
       p.artboards.filter((a) => !a.isMaster).forEach((a, i) => {
-        expect((byName(a, 'Slide counter') as TextNode).text).toBe('Slide {pageNumber} of {pageCount}');
-        expect(!!byName(a, 'Back')).toBe(i > 0);
+        //on the page's master, not the page: wired once for every slide that draws it
+        expect(byName(a, 'Slide counter')).toBeUndefined();
+        expect(byName(a, 'Next')).toBeUndefined();
+        expect((bar(p, a.name, 'Slide counter') as TextNode).text).toBe('Slide {pageNumber} of {pageCount}');
+        expect(!!bar(p, a.name, 'Back')).toBe(i > 0);
       });
+      //the slides share masters, so there are far fewer bars than slides
+      expect(p.artboards.filter((a) => a.isMaster && byName(a, 'Slide counter'))).toHaveLength(4);
       expect((byName(p.artboards[1], 'Acknowledgement text') as TextNode).text).toContain('Traditional Custodians');
     });
 
@@ -151,10 +160,10 @@ describe('branded story starters', () => {
       const p = project();
       const player = play(p);
       await settle(player, 100);
-      await click(layer(p, 'Slide 1: Title', 'Next').id);
+      await click(barId(p, 'Slide 1: Title', 'Next'));
       await settle(player);
       expect(player.artboard.name).toBe('Slide 2: Acknowledgement of Country');
-      await click(layer(p, 'Slide 2: Acknowledgement of Country', 'Next').id);
+      await click(barId(p, 'Slide 2: Acknowledgement of Country', 'Next'));
       await settle(player);
       expect(player.artboard.name).toBe('Slide 3: Section');
       await press('ArrowRight');
@@ -163,17 +172,17 @@ describe('branded story starters', () => {
       await press('ArrowLeft');
       await settle(player);
       expect(player.artboard.name).toBe('Slide 3: Section');
-      await click(layer(p, 'Slide 3: Section', 'Back').id);
+      await click(barId(p, 'Slide 3: Section', 'Back'));
       await settle(player);
       expect(player.artboard.name).toBe('Slide 2: Acknowledgement of Country');
       //the last slide has no Next, only Start again
       player.goTo('Slide 8: End');
       await settle(player);
-      expect(byName(p.artboards[7], 'Next')).toBeUndefined();
+      expect(bar(p, 'Slide 8: End', 'Next')).toBeUndefined();
       await press('ArrowRight');
       await settle(player);
       expect(player.artboard.name).toBe('Slide 8: End');
-      await click(layer(p, 'Slide 8: End', 'Start again').id);
+      await click(barId(p, 'Slide 8: End', 'Start again'));
       await settle(player);
       expect(player.artboard.name).toBe('Slide 1: Title');
       player.destroy();
@@ -198,7 +207,7 @@ describe('branded story starters', () => {
       await click(part('check').id);
       expect(player.getVariable(`${pre}_correct`)).toBe(true);
       //and Next still moves on from it
-      await click(layer(p, 'Slide 6: Question', 'Next').id);
+      await click(barId(p, 'Slide 6: Question', 'Next'));
       await settle(player);
       expect(player.artboard.name).toBe('Slide 7: Summary');
       player.destroy();

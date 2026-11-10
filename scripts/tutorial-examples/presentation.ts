@@ -1,4 +1,4 @@
-//The course presentation tutorial's finished project: four slides on one page master, a question slide, and Back and Next added by Page navigation with a slide transition
+//The course presentation tutorial's finished project: four slides on one page master, a question slide, and Back and Next added once to the master by Page navigation with a slide transition
 import { createNode, type Project } from 'interactives-player';
 import { addQuestion, setQuestionSettings } from '../../src/lib/question-kit';
 import { addPageNavigation } from '../../src/lib/page-nav';
@@ -44,8 +44,8 @@ function build(): Project {
     feedbackCorrect: 'Yes. The task sheet and criteria say what to do and how it will be marked.',
   });
 
-  //Page navigation, Back and Next, Slide left, added to all four slides at once (the master is not a slide, so it is left out)
-  addPageNavigation(p, slides.map((s) => s.id), 'back-next', 'slideLeft', 300);
+  //Page navigation, Back and Next, Slide left, added once to the master: every slide draws it over its own layers, and the master is not counted as a slide
+  addPageNavigation(p, [master.id], 'back-next', 'slideLeft', 300);
   return p;
 }
 
@@ -53,12 +53,15 @@ export const example: TutorialExample = {
   key: 'tut-presentation',
   topic: 'tutorial-presentation',
   title: 'Course presentation',
-  description: 'Four slides on one page master with a title slot, a check your understanding question, and Back, Next and the page number added by Page navigation with a slide transition: the presentation tutorial\'s project.',
+  description: 'Four slides on one page master with a title slot, a check your understanding question, and Back, Next and the page number added once to the master by Page navigation with a slide transition: the presentation tutorial\'s project.',
   tags: ['slides', 'page master', 'navigation', 'question'],
   build,
   notes: [
     { page: 4, text: '**Every slide draws Slide master under its own layers.** Its title is a text slot: each slide types its own in the Page master section. Change the bar or footer once, on the master.' },
-    { page: 4, text: '**Back, Next and Page 2 of 4 came from Page navigation,** Add to all 4 pages, with Slide left as How the page changes. They follow the page order, so a new slide needs no rewiring.', colour: 'sky' },
+    { page: 4, text: '**Back, Next and Page 2 of 4 came from Page navigation,** Add to this master, with Slide left as How the page changes. They sit on the master, so every slide has them and a new slide needs no rewiring.', colour: 'sky' },
   ],
-  graphNotes: [{ page: 2, at: 0, text: '**Add question wired this slide\'s question,** and Page navigation added the Back and Next flows at the bottom. Change the question in its Question section, not here.' }],
+  graphNotes: [
+    { page: 2, at: 0, text: '**Add question wired this slide\'s question.** Change the question in its Question section, not here. Back and Next are not on this page: they are wired once, on Slide master.' },
+    { page: 4, at: 0, text: '**Back and Next are wired here, once.** Each is a click on a master button that goes to the previous or next page, and it runs on whichever slide is showing.' },
+  ],
 };

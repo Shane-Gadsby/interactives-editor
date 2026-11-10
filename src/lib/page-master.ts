@@ -2,7 +2,7 @@
 // extractMaster, which turns the chrome repeated on a project's pages (logo, accent bar, footer) into masters. The runtime
 // side (what a master layer is on a page, text slots, hiding by name) is the player's master.ts.
 import { current, isDraft } from 'immer';
-import { cloneWithNewIds, masterLayers, masterOf, MASTER_PREFIX, createArtboard, walk, withMaster, type Artboard, type Project, type SceneNode } from 'interactives-player';
+import { CATALOG_BY_KIND, cloneWithNewIds, masterLayers, masterOf, masterParts, MASTER_PREFIX, createArtboard, uid, walk, withMaster, type Artboard, type LogicNode, type Project, type SceneNode } from 'interactives-player';
 
 // ------------------------------------------------------------------ drawing
 
@@ -79,16 +79,21 @@ export function markMaster(d: Project, id: string, on: boolean): void {
   }
 }
 
-/** Take the page off its master and put the master's layers in the page as ordinary, editable layers (fresh ids, hidden names left out, slots filled). */
+/**
+ * Take the page off its master and put the master's layers in the page as ordinary, editable layers (fresh ids, hidden names left out,
+ * slots filled). The master's flows and timelines that run on pages come along, pointed at the new layers, below the page's own flows.
+ */
 export function detachMaster(d: Project, pageId: string): boolean {
   const page = d.artboards.find((a) => a.id === pageId);
   if (!page || !masterOf(d.artboards, page)) return false;
   const master = masterOf(d.artboards, page)!;
   // immer drafts can't be copied by structuredClone, so the layers are read from the plain document
   const plain = (isDraft(d) ? current(d) : d) as Project;
-  const { under, over } = masterLayers(plain.artboards, plain.artboards.find((a) => a.id === pageId)!);
+  const parts = masterParts(plain.artboards, plain.artboards.find((a) => a.id === pageId)!);
+  const { under, over } = parts;
   const original = new Map<string, SceneNode>();
   walk(master.children, (n) => void original.set(MASTER_PREFIX + n.id, n));
+  const idMap = new Map<string, string>();
   // The player marks its copies decorative and locked to keep them out of the way: here they come back as the master had them
   const place = (list: SceneNode[]) =>
     list.map((copy) => {
@@ -99,9 +104,39 @@ export function detachMaster(d: Project, pageId: string): boolean {
         if (was?.locked === undefined) delete k.locked;
         else k.locked = was.locked;
       });
-      return cloneWithNewIds(copy);
+      return cloneWithNewIds(copy, idMap);
     });
   page.children = [...place(under), ...page.children, ...place(over)] as typeof page.children;
+  // The flows and timelines, with fresh ids and the layers they name pointing at the new copies. A flow that listens to a layer the page left off is dropped.
+  const tlMap = new Map(parts.timelines.map((t) => [t.id, uid('tl')]));
+  const nodeMap = new Map(parts.logic.nodes.map((n) => [n.id, uid('l')]));
+  const below = page.logic.nodes.reduce((y, n) => Math.max(y, n.y + 140), 0);
+  const nodes: LogicNode[] = [];
+  for (const n of parts.logic.nodes) {
+    const params = structuredClone(n.params);
+    let lost = false;
+    for (const def of CATALOG_BY_KIND[n.kind]?.params ?? []) {
+      const v = params[def.key];
+      if (typeof v !== 'string' || !v) continue;
+      if (def.type === 'node') {
+        const to = idMap.get(v);
+        if (to) params[def.key] = to;
+        else {
+          params[def.key] = '';
+          if (n.kind.startsWith('event.')) lost = true;
+        }
+      } else if (def.type === 'timeline' && tlMap.has(v)) params[def.key] = tlMap.get(v);
+    }
+    if (lost) nodeMap.delete(n.id);
+    else nodes.push({ ...n, id: nodeMap.get(n.id)!, y: n.y + below, params });
+  }
+  page.logic.nodes.push(...nodes);
+  for (const e of parts.logic.edges) {
+    if (nodeMap.has(e.from) && nodeMap.has(e.to)) page.logic.edges.push({ ...e, id: uid('e'), from: nodeMap.get(e.from)!, to: nodeMap.get(e.to)! });
+  }
+  for (const t of parts.timelines) {
+    page.timelines.push({ ...t, id: tlMap.get(t.id)!, tracks: t.tracks.map((k) => ({ ...k, id: uid('tr'), nodeId: idMap.get(k.nodeId) ?? k.nodeId })) });
+  }
   delete page.master;
   delete page.masterHide;
   delete page.masterSlots;

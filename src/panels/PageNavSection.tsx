@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { DEFAULT_TRANSITION_MS, PAGE_TRANSITIONS, TIMED_TRANSITIONS, type Project } from 'interactives-player';
 import { Row, Section, SelectField, SpeedField } from '../components/ui';
 import { store } from '../store/store';
-import { addPageNavigation, hasOwnNavigation, NAV_STYLES, navPages, removePageNav, PAGE_NAV_TAG, type NavResult, type NavStyle } from '../lib/page-nav';
+import { addPageNavigation, hasOwnNavigation, NAV_STYLES, navMasters, navPages, removePageNav, PAGE_NAV_TAG, type NavResult, type NavStyle } from '../lib/page-nav';
 import { SectionBlurb } from '../components/SectionBlurb';
 
 const hasNav = (project: Project, ids: string[]) =>
@@ -19,7 +19,10 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 	const [speed, setSpeed] = useState(DEFAULT_TRANSITION_MS);
 	const [said, setSaid] = useState<NavResult | { removed: number } | null>(null);
 	const everyone = navPages(project).map((a) => a.id);
-	const targets = ids.filter((id) => everyone.includes(id));
+	const masters = navMasters(project).map((a) => a.id);
+	const targets = ids.filter((id) => everyone.includes(id) || masters.includes(id));
+	//(a master is every page that draws it: one set of buttons for all of them)
+	const onMaster = targets.length > 0 && targets.every((id) => masters.includes(id));
 	const run = (to: string[]) => {
 		let res: NavResult = { added: [], skipped: [] };
 		store().update((d) => {
@@ -34,7 +37,7 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 		});
 		setSaid({ removed: n });
 	};
-	if (!everyone.length) return null;
+	if (!everyone.length && !masters.length) return null;
 	const own = project.artboards.filter((a) => targets.includes(a.id) && hasOwnNavigation(a)).length;
 	return (
 		<Section help="page-navigation" title="Page navigation" defaultOpen={everyone.length > 1}>
@@ -52,10 +55,10 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 			<SelectField label="How the page changes" title="The look of the change when Back or Next is clicked. With Respect reduced motion on (Project settings), learners who prefer reduced motion get an instant change" value={look} options={PAGE_TRANSITIONS} onChange={setLook} />
 			{TIMED_TRANSITIONS.includes(look) && <SpeedField title="How long the page change takes when Back or Next is clicked" value={speed} onChange={setSpeed} />}
 			<Row k="Add navigation" words={['add', 'remove', 'all pages', 'page navigation', 'generate']} className="row-actions">
-				<button type="button" className="btn primary" disabled={!targets.length} onClick={() => run(targets)} title="Add the chosen navigation along the bottom of the page. A page that already has it gets this style instead">
-					{targets.length > 1 ? `Add to these ${targets.length} pages` : 'Add to this page'}
+				<button type="button" className="btn primary" disabled={!targets.length} onClick={() => run(targets)} title={onMaster ? 'Add the chosen navigation once, over every page that uses this master. It goes last in the reading order, after the page\'s own layers' : 'Add the chosen navigation along the bottom of the page. A page that already has it gets this style instead'}>
+					{onMaster ? (targets.length > 1 ? `Add to these ${targets.length} masters` : 'Add to this master') : targets.length > 1 ? `Add to these ${targets.length} pages` : 'Add to this page'}
 				</button>
-				{everyone.length > targets.length && (
+				{!onMaster && everyone.length > targets.length && (
 					<button type="button" className="btn" onClick={() => run(everyone)} title="Add it to every page of the project">
 						Add to all {everyone.length} pages
 					</button>
@@ -73,7 +76,7 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 						? said.removed
 							? `Removed it from ${said.removed} page${said.removed === 1 ? '' : 's'}.`
 							: 'Nothing to remove.'
-						: `${said.added.length ? `Added to ${said.added.length} page${said.added.length === 1 ? '' : 's'}.` : 'Nothing added.'}${said.skipped.length ? ` Left alone: ${said.skipped.map((s) => `${s.page} (${s.why})`).join(', ')}.` : ''}`}
+						: `${said.added.length ? (onMaster ? `Added to the master. Every page that uses it shows it.` : `Added to ${said.added.length} page${said.added.length === 1 ? '' : 's'}.`) : 'Nothing added.'}${said.doubled?.length ? ` ${said.doubled.join(', ')} ${said.doubled.length === 1 ? 'has' : 'have'} navigation of ${said.doubled.length === 1 ? 'its' : 'their'} own too: press Remove on ${said.doubled.length === 1 ? 'it' : 'them'} to keep just the master's.` : ''}${said.skipped.length ? ` Left alone: ${said.skipped.map((s) => `${s.page} (${s.why})`).join(', ')}.` : ''}`}
 				</p>
 			)}
 		</Section>

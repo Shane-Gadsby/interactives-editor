@@ -239,3 +239,99 @@ describe('page navigation in the editor and in the player', () => {
     host.remove();
   });
 });
+
+describe('page navigation on a page master', () => {
+  /** Three pages that draw one master. */
+  function deck(): Project {
+    const p = book(3);
+    const m = createArtboard({ id: 'm', name: 'Slide master', width: 800, height: 500, isMaster: true });
+    p.artboards.push(m);
+    for (const a of p.artboards) if (a.id !== 'm') a.master = 'm';
+    return p;
+  }
+  const master = (p: Project) => p.artboards.find((a) => a.id === 'm')!;
+
+  it('puts Back, Next and the counter on the master, drawn over the pages, and nothing on the pages', () => {
+    const p = deck();
+    const r = addPageNavigation(p, ['m'], 'back-next', 'slideLeft', 300);
+    expect(r.added).toEqual(['Slide master']);
+    expect(names(master(p))).toEqual(['Back button', 'Next button', 'Page counter']);
+    for (const a of p.artboards.filter((x) => x.id !== 'm')) expect(a.children).toEqual([]);
+    //over the pages, so a screen reader and Tab reach them after the page's own layers
+    expect(master(p).masterOver).toEqual(master(p).children.map((c) => c.id));
+    const go = master(p).logic.nodes.filter((n) => n.kind === 'action.artboard');
+    expect(go.map((n) => n.params.to).sort()).toEqual(['next', 'previous']);
+    expect(go.every((n) => n.params.transition === 'slideLeft' && n.params.duration === 300)).toBe(true);
+  });
+
+  it('dots become the page number on a master (it cannot mark which page it is on)', () => {
+    const p = deck();
+    addPageNavigation(p, ['m'], 'dots');
+    expect(names(master(p))).toEqual(['Back button', 'Next button', 'Page counter']);
+  });
+
+  it('adding again swaps it, and remove takes the layers, flows and over list away', () => {
+    const p = deck();
+    addPageNavigation(p, ['m'], 'back-next');
+    addPageNavigation(p, ['m'], 'next');
+    expect(names(master(p))).toEqual(['Next button']);
+    expect(master(p).masterOver).toHaveLength(1);
+    expect(removePageNav(master(p))).toBe(true);
+    expect(master(p).children).toEqual([]);
+    expect(master(p).masterOver).toBeUndefined();
+    expect(master(p).logic.nodes).toEqual([]);
+  });
+
+  it('says which pages that draw the master also have navigation of their own', () => {
+    const p = deck();
+    addPageNavigation(p, ['p2'], 'back-next');
+    const r = addPageNavigation(p, ['m'], 'back-next');
+    expect(r.doubled).toEqual(['Page 2']);
+  });
+
+  it('a page that uses the master is still a page: Add to all leaves the master out', () => {
+    const p = deck();
+    const r = addPageNavigation(p, all(p).filter((id) => id !== 'm'), 'back-next');
+    expect(r.added).toEqual(['Page 1', 'Page 2', 'Page 3']);
+    expect(master(p).children).toEqual([]);
+  });
+
+  it('plays: Next on the master goes to the next page, Back is hidden on the first and Next on the last', async () => {
+    const p = deck();
+    addPageNavigation(p, ['m'], 'back-next', 'none', 0);
+    document.body.innerHTML = '<div id="stage" style="width:800px;height:500px"></div>';
+    const player = new Player(document.getElementById('stage')!, p, { loadData: false });
+    const button = (id: string) => document.querySelector<HTMLElement>(`[data-ix-id="ixm~${id}"] button`)!;
+    const back = master(p).children.find((c) => c.name === 'Back button')!.id;
+    const next = master(p).children.find((c) => c.name === 'Next button')!.id;
+    expect(player.artboard.name).toBe('Page 1');
+    player.step(0);
+    expect(document.querySelector<HTMLElement>(`[data-ix-id="ixm~${back}"]`)!.style.display).toBe('none');
+    button(next).click();
+    expect(player.artboard.name).toBe('Page 2');
+    button(next).click();
+    expect(player.artboard.name).toBe('Page 3');
+    button(back).click();
+    expect(player.artboard.name).toBe('Page 2');
+    player.destroy();
+  });
+
+  it('the section says Add to this master and reports it', async () => {
+    const { PageNavSection } = await import('../src/panels/PageNavSection');
+    const p = deck();
+    const store = new EditorStore(p);
+    setCurrentStore(store);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    act(() => root.render(<PageNavSection ids={['m']} project={store.get().project} />));
+    const add = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Add to this master')!;
+    expect(add).toBeTruthy();
+    expect([...host.querySelectorAll('button')].some((b) => /^Add to all/.test(b.textContent ?? ''))).toBe(false);
+    act(() => add.click());
+    expect(names(store.get().project.artboards.find((a) => a.id === 'm')!)).toEqual(['Back button', 'Next button', 'Page counter']);
+    expect(host.querySelector('[role="status"]')!.textContent).toContain('Added to the master. Every page that uses it shows it.');
+    act(() => root.unmount());
+    host.remove();
+  });
+});

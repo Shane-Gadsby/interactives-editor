@@ -256,3 +256,20 @@ describe('the Go to page section of the Inspector', () => {
     host.remove();
   });
 });
+
+describe('page routes from a page master', () => {
+  it('a page makes the jumps its master\'s buttons make, named by the master\'s layers, and nothing leads nowhere', async () => {
+    const { unreachablePages } = await import('../src/lib/before-share');
+    const p = book();
+    const m = createArtboard({ id: 'm', name: 'Chrome', width: 400, height: 300, isMaster: true, canvasX: 0, canvasY: 400 });
+    m.children.push(createNode('button', { id: 'nx', name: 'Next', x: 300, y: 250, width: 80, height: 30 }));
+    writeClickFlow(m, 'nx', [{ kind: 'action.artboard', params: { to: 'next', transition: 'none', duration: 0 } }], 'click', 'Next page');
+    p.artboards.push(m);
+    for (const a of p.artboards) if (a.id !== 'm') a.master = 'm';
+    const routes = pageRoutes(p).filter((r) => r.from !== 'm');
+    expect(routes.map((r) => `${r.from}>${r.to}`).sort()).toEqual(['a>b', 'b>c']);
+    expect(routes.every((r) => r.order && r.via.includes('Next'))).toBe(true);
+    //every page after the first is reached through the master's Next
+    expect(unreachablePages(p)).toEqual([]);
+  });
+});

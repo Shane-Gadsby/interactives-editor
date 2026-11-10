@@ -14040,3 +14040,37 @@ body.reorder-active .ix-tooltip {
 .ix-kit-tab:hover {
   background: color-mix(in srgb, var(--primary-bg) 14%, var(--panel-2));
 }
+
+/* the page master's flows on the Interactions tab */
+.master-flows-slot {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  z-index: 5;
+  max-width: calc(100% - 230px);
+}
+.master-flows-slot:empty {
+  display: none;
+}
+.master-flows {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 12px;
+}
+.master-flows.note {
+  padding: 4px 8px;
+}
+.master-flows > summary {
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.master-flows > summary:focus-visible {
+  outline: var(--focus-outline);
+  box-shadow: var(--focus-halo);
+}
+.master-flows-body {
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+}

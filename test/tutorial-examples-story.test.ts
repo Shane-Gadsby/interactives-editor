@@ -142,6 +142,20 @@ describe('Stories and games tutorial examples', () => {
     player.destroy();
   });
 
+  it('progress: Back and Next are wired once on the Progress panel master and move through the pages', async () => {
+    const { p, player } = await play('tut-progress', 'Welcome');
+    const panel = p.artboards.find((a) => a.name === 'Progress panel')!;
+    expect(panel.logic.nodes.filter((n) => n.kind === 'action.artboard').map((n) => n.params.to).sort()).toEqual(['next', 'previous']);
+    const next = panel.children.find((n) => n.name === 'Next button')!;
+    el(`ixm~${next.id}`).querySelector('button')!.click();
+    for (let i = 0; i < 4; i++) {
+      player.step(100);
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    expect(player.artboard.name).toBe('Plan your week');
+    player.destroy();
+  });
+
   it('scene: the bubbles start hidden and Skip jumps both timelines to the end', async () => {
     const { player, named } = await play('tut-scene');
     const sam = el(named('Sam bubble').id);

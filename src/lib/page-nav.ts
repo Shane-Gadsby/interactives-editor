@@ -4,7 +4,10 @@
 //bottom bar is Back on the left, Next (the primary one) on the right and the counter, dots or bar between. All of it is ordinary
 //layers, bindings and graph nodes the author can edit; the layers carry the tag `page-nav` so adding again with another style swaps
 //them. A page that already has its own Next or Back button (a starter's) is left alone and reported.
-import { createNode, DEFAULT_TRANSITION_MS, LIGHT_LOOK, pageInfo, type Artboard, type LookKey, type Project, type SceneNode } from 'interactives-player';
+//On a page master the same thing is made once for every page that draws it: the layers go over the pages (so they come last in the
+//reading order and Tab order) and their clicks run from the master's own graph on whichever page is showing. Page dots need to
+//know which page they are on, so a master gets the page number in their place.
+import { createNode, DEFAULT_TRANSITION_MS, LIGHT_LOOK, isMasterArtboard, pageInfo, type Artboard, type LookKey, type Project, type SceneNode } from 'interactives-player';
 import { button, contentBox, solid, stroke, text, type BrandedCtx } from './branded/kit';
 import { progressBar } from './branded/parts';
 import { bind } from './branded/graph-kit';
@@ -70,6 +73,11 @@ export function removePageNav(page: Artboard): boolean {
 		}
 	};
 	strip(page.children);
+	//(a master listed them as drawn over its pages)
+	if (page.masterOver) {
+		page.masterOver = page.masterOver.filter((id) => !ids.has(id));
+		if (!page.masterOver.length) delete page.masterOver;
+	}
 	//The events on those layers, and everything that only they reach
 	const gone = new Set(page.logic.nodes.filter((n) => typeof n.params.target === 'string' && ids.has(n.params.target)).map((n) => n.id));
 	for (let grew = true; grew; ) {
@@ -94,8 +102,10 @@ export function hasOwnNavigation(page: Artboard): boolean {
 }
 
 export interface NavResult {
-	/** Pages that got the navigation. */
+	/** Pages (or masters) that got the navigation. */
 	added: string[];
+	/** On a master: pages that draw it and already have navigation of their own, so they show two sets. */
+	doubled?: string[];
 	/** Pages left alone, with why. */
 	skipped: { page: string; why: string }[];
 }
@@ -104,6 +114,14 @@ export interface NavResult {
 export function navPages(project: Project): Artboard[] {
 	return project.artboards.filter((a) => !a.variantOf && !a.canvasHidden && !a.isMaster && !a.library && !project.artboards.some((m) => m.master === a.id));
 }
+
+/** The page masters navigation can go on: ones some page uses, or that are kept as masters (not library copies). */
+export function navMasters(project: Project): Artboard[] {
+	return project.artboards.filter((a) => !a.library && !a.variantOf && isMasterArtboard(project.artboards, a));
+}
+
+/** Whether a page has navigation of its own (this generator's or a starter's), apart from what its master draws. */
+const hasNavOnPage = (page: Artboard) => allNodes(page.children).some(hasTag) || hasOwnNavigation(page);
 
 /**
  * Put the navigation on the pages named (a plain project or an immer draft). A page that has had it before gets it again in this
@@ -116,9 +134,10 @@ export function addPageNavigation(project: Project, pageIds: string[], style: Na
 	const parts = PARTS[style];
 	const ctx = paletteOf(project);
 	const result: NavResult = { added: [], skipped: [] };
-	const pages = navPages(project).filter((a) => pageIds.includes(a.id));
+	const pages = [...navPages(project), ...navMasters(project)].filter((a) => pageIds.includes(a.id));
 	if (!parts) return result;
 	for (const page of pages) {
+		const onMaster = isMasterArtboard(project.artboards, page);
 		const mine = allNodes(page.children).some(hasTag);
 		if (!mine && hasOwnNavigation(page)) {
 			result.skipped.push({ page: page.name, why: 'it already has its own Next or Back button' });
@@ -143,7 +162,9 @@ export function addPageNavigation(project: Project, pageIds: string[], style: Na
 		if (parts.back) layers.push((back = tag(bind(button(ctx, 'Back button', 'Back', box.x, y, w, false), { visible: 'pageNumber > 1' }))));
 		if (parts.next) layers.push((next = tag(bind(button(ctx, 'Next button', 'Next', box.x + box.width - w, y, w), { visible: 'pageNumber < pageCount' }))));
 		let counter = parts.counter;
-		if (parts.dots) {
+		//(a master is every page, so it can't mark which one it is on: it counts instead)
+		if (parts.dots && onMaster) counter = true;
+		else if (parts.dots) {
 			const n = info.list.length;
 			const here = info.index;
 			const size = n * 20 <= room ? 10 : 8;
@@ -172,8 +193,13 @@ export function addPageNavigation(project: Project, pageIds: string[], style: Na
 		if (counter) layers.push(tag(text(ctx, 'Page counter', 'Page {pageNumber} of {pageCount}', from, y + 11, room, { fontSize: 15, color: ctx.L.muted, align: 'center' })));
 		if (parts.bar) layers.push(tag(progressBar(ctx, 'Page progress', box.x, y - 22, box.width, { value: 'pageNumber', max: 'pageCount', label: 'Progress through the pages', height: 8 })));
 		page.children.push(...layers);
+		if (onMaster) page.masterOver = [...(page.masterOver ?? []), ...layers.map((n) => n.id)];
 		if (next) writeClickFlow(page, next.id, [{ kind: 'action.artboard', params: { to: 'next', transition, duration } }], 'click', 'Next page');
 		if (back) writeClickFlow(page, back.id, [{ kind: 'action.artboard', params: { to: 'previous', transition, duration } }], 'click', 'Previous page');
+		if (onMaster) {
+			const twice = project.artboards.filter((a) => a.master === page.id && hasNavOnPage(a)).map((a) => a.name);
+			if (twice.length) (result.doubled ??= []).push(...twice);
+		}
 		result.added.push(page.name);
 	}
 	return result;
