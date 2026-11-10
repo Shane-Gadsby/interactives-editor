@@ -13387,7 +13387,7 @@ body.reorder-active .ix-tooltip {
   padding: 2px 0;
 }
 .q-look > summary:focus-visible {
-  outline: 2px solid var(--primary-bg);
+  outline: var(--focus-outline);
   outline-offset: 2px;
 }
 .q-look-sample {
@@ -13440,7 +13440,7 @@ body.reorder-active .ix-tooltip {
 }
 .ix-kit-open:focus-visible,
 .ix-kit-tab:focus-visible {
-  outline: 2px solid var(--primary-bg);
+  outline: var(--focus-outline);
   outline-offset: 2px;
 }
 .ix-kit-hint {
