@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { matches } from '../lib/keymap';
-import { PropRow, PropSearchProvider, PropSearchStore } from '../lib/prop-search';
+import { BoundProvider, PropRow, PropSearchProvider, PropSearchStore } from '../lib/prop-search';
 import { PropSearchBox } from './PropSearchBox';
 import { SectionOrderScope } from '../lib/section-order';
 import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
@@ -109,7 +109,7 @@ import { PageLinkSection } from './PageLinkSection';
 import { PageNavSection } from './PageNavSection';
 import { StepsSection } from './StepsSection';
 import { blendExample } from '../lib/blend-example';
-import { BindingsSection as BindingsSectionView } from './BindingsSection';
+import { BindingsSection as BindingsSectionView, boundFieldKeys } from './BindingsSection';
 import { AnimateSection } from './AnimateSection';
 import { TEXT_PRESETS } from '../lib/text-modifiers';
 import { applyDrawTemplate } from '../lib/draw-templates';
@@ -159,6 +159,8 @@ export function Inspector() {
   if (!ab) return <aside className="inspector" />;
   const nodes = s.selection.map((id) => locate(ab, id)?.node).filter(Boolean) as SceneNode[];
   const pickedAbs = pickedArtboardIds(s);
+  //fields a binding sets get a marker (one layer only, several selected means the fields show mixed values anyway)
+  const bound = nodes.length === 1 ? boundFieldKeys(nodes[0], s.project) : null;
   // each kind of panel keeps its own section order: a layer's by its type (a rectangle, some text, ...), the page's, several pages'
   const orderScope = nodes.length ? (nodes.every((x) => x.type === nodes[0].type) ? `layer:${nodes[0].type}` : 'layers') : pickedAbs.length > 1 ? 'pages' : 'page';
   // "/" or Ctrl+F anywhere in the panel (outside a field you're typing in) goes to the search; Esc clears it
@@ -183,7 +185,9 @@ export function Inspector() {
         <SectionOrderScope.Provider value={orderScope}>
           {nodes.length ? (
             <ExprLocals.Provider value={repeated ?? {}}>
-              <NodeInspector nodes={nodes} ab={ab} project={s.project} />
+              <BoundProvider value={bound}>
+                <NodeInspector nodes={nodes} ab={ab} project={s.project} />
+              </BoundProvider>
             </ExprLocals.Provider>
           ) : (
             // several artboards selected: what applies to all of them, instead of the active one's own settings

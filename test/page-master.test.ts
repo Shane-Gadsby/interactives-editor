@@ -5,7 +5,7 @@ import { EditorStore, setCurrentStore } from '../src/store/store';
 import { brandedPage, brandedProject, contentBox, text } from '../src/lib/branded/kit';
 import { COLOURWAYS } from '../src/lib/branded/looks';
 import { brandLookViolation } from '../src/lib/branded/lock';
-import { detachMaster, extractMaster, markMaster, setMaster, withMasterCached } from '../src/lib/page-master';
+import { detachMaster, extractMaster, markMaster, masterOutlines, setMaster, withMasterCached } from '../src/lib/page-master';
 import { analyzeUsage } from '../src/lib/dependencies';
 import { applyTemplateUpdate } from '../src/lib/templates';
 import { baselineOf, partsOf } from '../shared/template.mjs';
@@ -376,3 +376,19 @@ describe('format', () => {
 });
 
 beforeEach(() => void 0);
+
+describe('master outlines for the canvas', () => {
+  it('lists the boxes of the master layers a page draws, minus the ones it leaves off, and nothing for a page without a master', () => {
+    const p = deck(2);
+    extractMaster(p, CHROME);
+    const page = word1(p);
+    const out = masterOutlines(p.artboards, page)!;
+    expect(out.master).toBe(contentMaster(p).name);
+    expect(out.boxes.length).toBeGreaterThan(0);
+    expect(out.boxes.every((b) => b.id.startsWith('ixm~') && b.width > 0)).toBe(true);
+    const first = out.boxes[0].name;
+    page.masterHide = [first];
+    expect(masterOutlines(p.artboards, page)!.boxes.some((b) => b.name === first)).toBe(false);
+    expect(masterOutlines(p.artboards, contentMaster(p))).toBeNull();
+  });
+});

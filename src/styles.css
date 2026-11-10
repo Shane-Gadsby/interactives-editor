@@ -413,6 +413,21 @@ div.cm-editor.cm-focused {
   white-space: nowrap;
   flex: none;
 }
+.bound-mark {
+  display: inline-flex;
+  vertical-align: -1px;
+  margin-left: 4px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  color: var(--text);
+  background: var(--bg);
+}
+.field.is-bound input:not([type='checkbox']):not([type='color']),
+.field.is-bound select,
+.field.is-bound textarea {
+  border-style: dashed;
+}
 .field-label.block {
   display: block;
   margin: 6px 0 3px;
@@ -2457,6 +2472,21 @@ body.col-resizing * {
   stroke-width: 1;
   opacity: 0.8;
   filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
+}
+.master-outline {
+  fill: none;
+  stroke: var(--logic);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 3;
+  pointer-events: none;
+}
+.master-tag {
+  fill: var(--text);
+  font-size: 10.5px;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 4px;
+  stroke-linejoin: round;
 }
 .focus-outline {
   fill: none;

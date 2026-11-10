@@ -36,6 +36,15 @@ export function withMasterCached(artboards: Artboard[], page: Artboard, nodes: S
   return [...under, ...nodes, ...over];
 }
 
+/** The boxes of the layers a page gets from its master (the ones not left off this page), with the master's name, for the canvas to outline. */
+export function masterOutlines(artboards: Artboard[], page: Artboard): { master: string; boxes: { id: string; name: string; x: number; y: number; width: number; height: number }[] } | null {
+  const m = masterOf(artboards, page);
+  if (!m) return null;
+  const { under, over } = masterLayers(artboards, page);
+  const boxes = [...under, ...over].map((n) => ({ id: n.id, name: n.name, x: n.x, y: n.y, width: n.width, height: n.height }));
+  return boxes.length ? { master: m.name, boxes } : null;
+}
+
 // ------------------------------------------------------------------ actions (recipes for EditorStore.update)
 
 /** Use `masterId` as this page's master (null: none). Not itself, and not a page that has a master of its own. */
