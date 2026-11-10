@@ -1,8 +1,10 @@
 //Writes the Build it tutorials' finished projects into examples/ (see scripts/tutorial-examples/kit.ts). Usage:
-//  node scripts/build-tutorial-examples.mjs [key ...]
+//  node scripts/build-tutorial-examples.mjs [key ...] [--all]
 //Each one is built from its module, written to examples/<key>/project.json with its line in index.json (group Build it),
-//then put through the examples upgrade like every other example (graph tidy, notes). Run with no keys to rebuild all of
-//them, which also puts their index lines back in order. The card picture (thumb.jpg) is made separately, see examples/README.md.
+//then put through the examples upgrade like every other example (graph tidy, notes). Name the keys to rebuild those. With
+//no keys it builds only the ones that have no project.json yet and puts every Build it line in index.json back in order,
+//which is what to run after merging branches that each added one. --all rebuilds every one (ids and dates come out new
+//each time, so that rewrites every file). The card picture (thumb.jpg) is made separately, see examples/README.md.
 import fs from 'node:fs'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
@@ -10,7 +12,8 @@ import {createServer} from 'vite'
 
 let root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
 	dir = path.join(root, 'examples'),
-	only = process.argv.slice(2),
+	only = process.argv.slice(2).filter((a) => !a.startsWith('--')),
+	everything = process.argv.includes('--all'),
 	server = await createServer({root, appType: 'custom', server: {middlewareMode: true, hmr: false, watch: null}, logLevel: 'error', optimizeDeps: {noDiscovery: true}})
 
 try {
@@ -18,7 +21,7 @@ try {
 		{upgradeExample} = await server.ssrLoadModule('/scripts/examples-upgrade.ts'),
 		{makeColorResolver, resolveBackground, defaultTheme, hasTokens} = await server.ssrLoadModule('interactives-player'),
 		all = tutorialExamples(),
-		picked = only.length ? all.filter((t) => only.includes(t.key)) : all
+		picked = only.length ? all.filter((t) => only.includes(t.key)) : everything ? all : all.filter((t) => !fs.existsSync(path.join(dir, t.key, 'project.json')))
 
 	for (let k of only) if (!all.some((t) => t.key === k)) throw new Error(`no tutorial example called "${k}"`)
 
