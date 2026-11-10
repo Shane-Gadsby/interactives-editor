@@ -43,9 +43,9 @@ const put = (id: string, p: unknown, user: User | null = ann, extra: Record<stri
 
 describe('session and headers', () => {
   it('says who you are and whether you are a power user', async () => {
-    expect((await h.call('GET', '/api/session', { user: ann })).json).toEqual({ user: { username: 'ann', userID: 1, name: 'Ann A' }, power: false, brand: false, copilot: false });
+    expect((await h.call('GET', '/api/session', { user: ann })).json).toEqual({ user: { username: 'ann', userID: 1, name: 'Ann A' }, power: false, brand: false, designer: false });
     expect((await h.call('GET', '/api/session', { user: pat })).json.power).toBe(true);
-    expect((await h.call('GET', '/api/session')).json).toEqual({ user: null, power: false, brand: false, copilot: false });
+    expect((await h.call('GET', '/api/session')).json).toEqual({ user: null, power: false, brand: false, designer: false });
   });
 
   it('never lets an api response be sniffed into a page, and never caches it', async () => {

@@ -587,49 +587,14 @@ router.put('/api/prefs', express.json({limit: '512kb'}), async (req, res) => {
 	res.json({user, prefs: clean})
 })
 
-//Ask the Activity Designer: UniSQ's Copilot Studio agent, talked to over Direct Line from a panel in the editor. The
-//agent's web channel secret stays here (INTERACTIVES_COPILOT_SECRET1, or ..._SECRET2 while rotating, both from the
-//agent's Settings, Security, Web channel security; ask whoever owns the agent) and each staff member gets a token for
-//one conversation at a time. No secret, or INTERACTIVES_COPILOT=off, and the button isn't shown
-const copilotSecret = () => /^(off|0|false|no)$/i.test(process.env.INTERACTIVES_COPILOT || '') ? null : (process.env.INTERACTIVES_COPILOT_SECRET1 || process.env.INTERACTIVES_COPILOT_SECRET2 || null),
-	copilotTokens = new Map()
+//Ask the Activity Designer: a Cogniti agent that builds in the open project (designer.js, and the /api/designer routes
+//further down by the MCP ones). COGNITI_TOKEN is the one secret, an api token from a Cogniti account (its API tokens
+//page; whoever holds that account grants it). Without one, or with INTERACTIVES_DESIGNER=off, the button isn't shown
+const designer = require('./designer')
 
 //Who the editor's talking to, for the projects list and the owner badge
 router.get('/api/session', (req, res) => {
-	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req), copilot: !!copilotSecret()})
-})
-
-//A Direct Line token for the Activity Designer, as this person (their username hashed, so Microsoft's logs don't carry
-//it, and their name so the agent can greet them). 20 a minute each is far more than opening the panel ever needs
-router.post('/api/copilot/token', async (req, res) => {
-	let secret = copilotSecret(),
-		me = whoIs(req)
-	if (!secret) return res.status(404).json({error: 'The Activity Designer is switched off here'})
-	let key = me?.username || req.ip,
-		now = Date.now(),
-		hits = (copilotTokens.get(key) || []).filter(t => now - t < 60000)
-	if (hits.length >= 20) return res.status(429).json({error: 'Too many chats started in a minute, try again shortly'})
-	hits.push(now)
-	copilotTokens.set(key, hits)
-	if (copilotTokens.size > 5000) copilotTokens.clear()
-	let id = 'dl_ix-' + crypto.createHash('sha256').update(String(me?.username || 'guest')).digest('hex').slice(0, 24)
-	try {
-		let r = await fetch('https://directline.botframework.com/v3/directline/tokens/generate', {
-			method: 'POST',
-			headers: {Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json'},
-			body: JSON.stringify({user: {id, name: me?.name || 'Staff member'}}),
-			signal: AbortSignal.timeout(10000)
-		})
-		if (!r.ok) {
-			console.warn('copilot token', r.status)
-			return res.status(502).json({error: 'The Activity Designer could not be reached'})
-		}
-		let d = await r.json()
-		res.json({token: d.token, conversationId: d.conversationId, expiresIn: d.expires_in, userId: id})
-	} catch (e) {
-		console.warn('copilot token', e.message)
-		res.status(502).json({error: 'The Activity Designer could not be reached'})
-	}
+	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req), designer: designer.settings().on})
 })
 
 //The projects list, mine only (owned or invited to). ?all=1 gets everyone's, but only for power users (god mode),
@@ -5569,6 +5534,133 @@ router.delete('/api/projects/:id/results', async (req, res) => {
 	res.json({ok: true, deleted: result.deletedCount})
 })
 
+//The Activity Designer's chat (the tools it runs are the MCP ones below, which are only called when a request comes in). The panel posts {projectId, conversation?, message} and gets progress back as lines of
+//json as it happens: status (plain words about what it's doing), changed (it has changed the project, here's the restore
+//point to undo with), reply, error and done (with the chat's handle). The Cogniti conversation and its history stay in
+//here per person and project, so the browser holds nothing but the handle. The agent runs the MCP tools in this process
+//as the person (same session, same audit rows, shows in the live session as "Activity Designer (AI)") instead of
+//calling /mcp over the network. Only someone who can change the project gets to use it
+let designerChats = new Map(),
+	designerRunning = new Set(),
+	DESIGNER_IDLE_MS = 2 * 60 * 60 * 1000
+
+setInterval(() => {
+	let now = Date.now()
+	for (let [k, c] of designerChats) {
+		if (now - c.used > DESIGNER_IDLE_MS) designerChats.delete(k)
+	}
+}, 10 * 60 * 1000).unref()
+
+const designerKey = (req, id) => `${whoIs(req)?.username || 'guest'}|${id}`
+
+router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res) => {
+	let cfg = designer.settings(),
+		me = whoIs(req)
+	if (!cfg.on) return res.status(404).json({error: 'The Activity Designer is switched off here'})
+	if (!me?.username && enforcing()) return res.status(401).json({error: 'Sign in to use the Activity Designer'})
+
+	let id = req.body?.projectId,
+		message = typeof req.body?.message === 'string' ? req.body.message.trim() : ''
+	if (!validID(id)) return res.status(400).json({error: 'Bad id'})
+	if (!message) return res.status(400).json({error: 'Say what you would like built'})
+	if (message.length > 4000) return res.status(413).json({error: 'That is too long for one message. Try a shorter request, then add to it'})
+
+	let doc = await projects.findOne({_id: id})
+	if (!doc) return res.status(404).json({error: 'No such project'})
+	if (!mayChange(req, res, doc)) return
+
+	let who = me?.username || 'guest'
+	if (designerRunning.has(who)) return res.status(409).json({error: 'The Activity Designer is still working on your last request. Wait for it to finish.'})
+	designerRunning.add(who)
+
+	res.status(200).set({'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no'})
+	res.flushHeaders()
+	let ctl = new AbortController(),
+		emit = (e) => {
+			if (!res.writableEnded && !res.destroyed) res.write(JSON.stringify(e) + '\n')
+		}
+	//The browser went (closed the tab, or Stop): finish the tool that's running and no more
+	res.on('close', () => {
+		if (!res.writableFinished) ctl.abort()
+	})
+
+	let key = designerKey(req, id),
+		state = designerChats.get(key),
+		ctx = {base: `http://127.0.0.1:${port}/${appName}`, sessionId: mcpSessionID(req), agent: 'Activity Designer', sessions: new Map()},
+		mcp = null,
+		result = {outcome: 'error', rounds: 0, changed: false}
+
+	try {
+		//The same chat carries on only when the panel hands back its handle; no handle is a new chat
+		if (!state || !req.body.conversation || state.chatId !== req.body.conversation || Date.now() - state.used > DESIGNER_IDLE_MS) {
+			state = {chatId: crypto.randomBytes(9).toString('base64url'), conversation: null, history: [], used: Date.now()}
+		}
+		designerChats.set(key, state)
+		if (designerChats.size > 1000) designerChats.delete(designerChats.keys().next().value)
+
+		mcp = await loadMCP()
+		let callTool = async (name, args) => {
+			if (mcpLimited(req)) return {error: true, text: 'Error: too many requests just now. Wait a few seconds and try again.'}
+			let msg = {jsonrpc: '2.0', id: 1, method: 'tools/call', params: {name, arguments: args}},
+				reply = await mcp.runAs(ctx, () => mcp.respond(msg))
+			mcpAudit(req, ctx, msg, reply)
+			if (reply?.error) return {error: true, text: `Error: ${reply.error.message}`}
+			return {error: !!reply?.result?.isError, text: (reply?.result?.content || []).map((c) => c.text).join('\n')}
+		}
+
+		result = await designer.run({
+			cogniti: designer.cogniti(cfg),
+			tools: mcp.TOOLS.map(({name, description, inputSchema}) => ({name, description, inputSchema})),
+			guide: designer.buildGuide(mcp),
+			callTool,
+			join: async () => {
+				let out = await callTool('join_session', {project_id: id})
+				if (out.error) throw new Error(out.text)
+				return out.text
+			},
+			//A named revision of how the project is right now (the room saved first), which "Undo" restores
+			beforeEdit: async () => {
+				let now = await projects.findOne({_id: id}),
+					room = rooms.get(id)
+				if (room) await persist(room)
+				let current = room ? JSON.stringify(room.doc) : await store.get(now)
+				return snapshot(id, current, room ? room.rev : now.rev, whoIs(req), 'Before the Activity Designer', true, {name: 'Before the Activity Designer'})
+			},
+			emit,
+			signal: ctl.signal,
+		}, {
+			projectId: id,
+			projectName: String(doc.name || 'Untitled project').slice(0, 200),
+			firstName: String(req.sessionData?.user?.firstName || req.sessionData?.user?.firstname || (me?.name || '').split(' ')[0] || '').slice(0, 40),
+			message,
+			state,
+		})
+	}
+	catch (err) {
+		console.trace(`${appName}: designer failed`, err)
+		emit({type: 'error', text: 'Something went wrong in the Activity Designer. Try again in a minute.'})
+	}
+	finally {
+		if (mcp) mcp.closeContext(ctx)
+		designerRunning.delete(who)
+	}
+
+	//A run that didn't end in a plain reply leaves the agent's side of the chat half done, so the next one starts clean
+	if (result.outcome === 'replied') state.used = Date.now()
+	else designerChats.delete(key)
+	//Who, which project, how it went. Never what was said
+	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed})
+	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null})
+	res.end()
+})
+
+//New chat: forget the conversation for this person and project
+router.post('/api/designer/reset', express.json({limit: '1kb'}), (req, res) => {
+	if (!validID(req.body?.projectId)) return res.status(400).json({error: 'Bad id'})
+	designerChats.delete(designerKey(req, req.body.projectId))
+	res.json({ok: true})
+})
+
 router.use('/api', (req, res) => {
 	res.status(404).json({error: 'No such api route'})
 })
@@ -5683,6 +5775,15 @@ const mcpLimited = (req) => {
 	return over ? Math.ceil((mcpWindow.start + 60 * 1000 - now) / 1000) : 0
 }
 
+//Every tool an agent runs goes in the audit log: who, which agent, which tool and project, and whether it worked. The
+//Activity Designer's in-process calls (further down) go through the same one
+const mcpAudit = (req, ctx, msg, reply) => {
+	if (msg.method !== 'tools/call') return
+	let args = msg.params?.arguments || {},
+		project = [args.project_id, args.projectId, args.project].find((x) => typeof x === 'string' && validID(x)) || null
+	audit(req, 'agent-tool', project, {agent: ctx.agent, tool: String(msg.params?.name || '').slice(0, 60), ok: !reply?.error && !reply?.result?.isError})
+}
+
 router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, res) => {
 	//A browser page on some other site has no business driving this (DNS rebinding and friends). Agents send no Origin
 	let origin = req.get('origin'),
@@ -5745,12 +5846,7 @@ router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, 
 	}
 
 	let reply = await mcp.runAs(conn.ctx, () => mcp.respond(msg))
-	//Every tool an agent runs goes in the audit log: who, which agent, which tool and project, and whether it worked
-	if (msg.method === 'tools/call') {
-		let args = msg.params?.arguments || {},
-			project = [args.project_id, args.projectId, args.project].find((x) => typeof x === 'string' && validID(x)) || null
-		audit(req, 'agent-tool', project, {agent: conn.ctx.agent, tool: String(msg.params?.name || '').slice(0, 60), ok: !reply?.error && !reply?.result?.isError})
-	}
+	mcpAudit(req, conn.ctx, msg, reply)
 	if (!reply) return res.status(202).end()
 	res.json(reply)
 })
