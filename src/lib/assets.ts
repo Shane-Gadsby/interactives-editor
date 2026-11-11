@@ -102,16 +102,7 @@ class AssetUrls {
 
 export const assetUrls = new AssetUrls();
 
-export type AssetKind = 'image' | 'video' | 'audio' | 'font' | 'data' | 'other';
-
-export function assetKind(mime: string, name = ''): AssetKind {
-  if (mime.startsWith('image/')) return 'image';
-  if (mime.startsWith('video/')) return 'video';
-  if (mime.startsWith('audio/')) return 'audio';
-  if (mime.startsWith('font/') || /\.(woff2?|ttf|otf)$/i.test(name)) return 'font';
-  if (/json|csv|tab-separated|text\/plain/.test(mime) || /\.(json|csv|tsv|txt)$/i.test(name)) return 'data';
-  return 'other';
-}
+export { assetKind, type AssetKind } from './asset-kind';
 
 const MAX_ASSET_BYTES = 50 * 1024 * 1024;
 

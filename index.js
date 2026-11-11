@@ -70,6 +70,7 @@ let port = Number(process.env.PORT) || 3048,
 	projects,
 	revisions,
 	prefs,
+	designerTokens,
 	libraries,
 	templates,
 	userData,
@@ -5534,15 +5535,20 @@ router.delete('/api/projects/:id/results', async (req, res) => {
 	res.json({ok: true, deleted: result.deletedCount})
 })
 
-//The Activity Designer's chat (the tools it runs are the MCP ones below, which are only called when a request comes in). The panel posts {projectId, conversation?, message} and gets progress back as lines of
-//json as it happens: status (plain words about what it's doing), changed (it has changed the project, here's the restore
-//point to undo with), reply, error and done (with the chat's handle). The Cogniti conversation and its history stay in
-//here per person and project, so the browser holds nothing but the handle. The agent runs the MCP tools in this process
-//as the person (same session, same audit rows, shows in the live session as "Activity Designer (AI)") instead of
-//calling /mcp over the network. Only someone who can change the project gets to use it
+//The Activity Designer's chat. The panel posts {projectId, artboardId?, conversation?, message} and gets progress back as
+//lines of json as it happens: status (plain words about what it's doing), changed (it has changed the project, here's the
+//restore point to undo with), reply, error and done (with the chat's handle and what's left of their shared allowance). The
+//Cogniti conversation and its history stay in here per person and project, so the browser holds nothing but the handle.
+//Each request costs one Cogniti message (designer.js): the agent answers with a blueprint, which mcp.buildBlueprint compiles
+//with the editor's own code and sends to the live room as the person (same session, same audit rows, shows in the live
+//session as "Activity Designer (AI)"). Only someone who can change the project gets to use it
 let designerChats = new Map(),
 	designerRunning = new Set(),
-	DESIGNER_IDLE_MS = 2 * 60 * 60 * 1000
+	DESIGNER_IDLE_MS = 2 * 60 * 60 * 1000,
+	//Who has made how many requests this hour on the shared token. Rebuilt when INTERACTIVES_DESIGNER_PER_HOUR changes
+	designerShared = {perHour: -1, q: null},
+	//How often a person may try a token of their own an hour (each try asks Cogniti)
+	designerTokenTries = null
 
 setInterval(() => {
 	let now = Date.now()
@@ -5552,6 +5558,87 @@ setInterval(() => {
 }, 10 * 60 * 1000).unref()
 
 const designerKey = (req, id) => `${whoIs(req)?.username || 'guest'}|${id}`
+
+const sharedQuota = () => {
+	let n = designer.settings().perHour
+	if (!designerShared.q || designerShared.perHour !== n) {
+		designerShared = {perHour: n, q: designer.quota(n)}
+	}
+
+	return designerShared.q
+}
+
+//A person's own Cogniti token, opened. Null when they haven't added one (or it can't be opened: the key changed)
+const ownDesignerToken = async (username) => {
+	if (!username || !designerTokens) {
+		return null
+	}
+
+	let row = await designerTokens.findOne({_id: username})
+	return row ? designer.openToken(row, username, designer.secretKey(storageDir)) : null
+}
+
+//What the panel and Preferences are told about allowances. Never the token, not even its end
+const designerStatus = async (req) => {
+	let cfg = designer.settings(),
+		me = whoIs(req),
+		row = me?.username && designerTokens ? await designerTokens.findOne({_id: me.username}, {projection: {added: 1, ends: 1}}) : null
+	return {
+		on: cfg.on,
+		mine: row ? {connected: true, added: row.added, ends: row.ends || null} : null,
+		//only people on the shared token have a share to count
+		shared: row ? null : sharedQuota().status(me?.username || 'guest'),
+	}
+}
+
+router.get('/api/designer/status', async (req, res) => {
+	if (!whoIs(req)?.username && enforcing()) {
+		return res.status(401).json({error: 'Sign in to use the Activity Designer'})
+	}
+
+	res.json(await designerStatus(req))
+})
+
+//Use my own Cogniti allowance: a personal token, checked once against Cogniti, then kept encrypted (AES-256-GCM, designer.js)
+router.put('/api/designer/token', express.json({limit: '4kb'}), async (req, res) => {
+	let cfg = designer.settings(),
+		me = whoIs(req)
+	if (!cfg.on) return res.status(404).json({error: 'The Activity Designer is switched off here'})
+	if (!me?.username) return res.status(401).json({error: 'Sign in to add your own Cogniti token'})
+
+	let token = typeof req.body?.token === 'string' ? req.body.token.trim() : '',
+		ends = typeof req.body?.ends === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.body.ends) && !Number.isNaN(Date.parse(req.body.ends)) ? new Date(`${req.body.ends}T00:00:00Z`) : null
+	if (!token || token.length < 8 || token.length > 2000 || /\s/.test(token)) {
+		return res.status(400).json({error: 'That does not look like a Cogniti API token. Copy the whole token from Cogniti and paste it in.'})
+	}
+
+	designerTokenTries ||= designer.quota(10)
+	if (!designerTokenTries.take(me.username)) return res.status(429).json({error: 'Too many tries. Wait a little while and try again.'})
+
+	let access = await designer.cogniti({...cfg, token}).checkAccess()
+	if (!access.ok) {
+		let why = {
+			refused: "Cogniti didn't accept that token. Check you copied all of it, and that it hasn't ended.",
+			notShared: "That token works, but your Cogniti account can't chat with the Activity Designer yet. Ask the Toolbox team to share it with you, then try again.",
+			unreachable: 'Cogniti could not be reached just now to check the token. Try again in a minute.',
+		}[access.why]
+		return res.status(access.why === 'unreachable' ? 502 : 400).json({error: why, why: access.why})
+	}
+
+	let added = new Date()
+	await designerTokens.updateOne({_id: me.username}, {$set: {...designer.sealToken(token, me.username, designer.secretKey(storageDir)), added, ends}}, {upsert: true})
+	audit(req, 'designer-token-set', null, {ends})
+	res.json({ok: true, mine: {connected: true, added, ends}})
+})
+
+router.delete('/api/designer/token', async (req, res) => {
+	let me = whoIs(req)
+	if (!me?.username) return res.status(401).json({error: 'Sign in first'})
+
+	let had = await designerTokens.deleteOne({_id: me.username})
+	if (had?.deletedCount !== 0) audit(req, 'designer-token-removed', null, {})
+	res.json({ok: true})
+})
 
 router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res) => {
 	let cfg = designer.settings(),
@@ -5571,6 +5658,19 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 
 	let who = me?.username || 'guest'
 	if (designerRunning.has(who)) return res.status(409).json({error: 'The Activity Designer is still working on your last request. Wait for it to finish.'})
+
+	//Their own token when they've added one; otherwise the shared one, and a fair share of it an hour
+	let own = await ownDesignerToken(me?.username),
+		shared = sharedQuota()
+	if (own) {
+		cfg = {...cfg, token: own, own: true}
+	}
+	else if (!shared.take(who)) {
+		let s = shared.status(who),
+			mins = Math.max(1, Math.ceil(s.resetsIn / 60))
+		return res.status(429).json({error: `You have used your ${s.limit} shared Activity Designer requests for this hour. The next one comes back in about ${mins} ${mins === 1 ? 'minute' : 'minutes'}. You can use your own Cogniti allowance instead.`, kind: 'quota', quota: s})
+	}
+
 	designerRunning.add(who)
 
 	res.status(200).set({'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no'})
@@ -5579,13 +5679,13 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 		emit = (e) => {
 			if (!res.writableEnded && !res.destroyed) res.write(JSON.stringify(e) + '\n')
 		}
-	//A Cogniti round can sit quiet for a minute or more (the first one reads the whole guide), and haproxy cuts a
-	//response that says nothing for its timeout server (25s on dev, 120s on test and prod). So a blank line every
-	//10s keeps it open, and the panel skips blank lines
+	//A Cogniti message can sit quiet for a minute or more, and haproxy cuts a response that says nothing for its
+	//timeout server (25s on dev, 120s on test and prod). So a blank line every 10s keeps it open, and the panel skips
+	//blank lines. INTERACTIVES_DESIGNER_BEAT_MS changes the 10s (the test uses a short one)
 	let beat = setInterval(() => {
 		if (!res.writableEnded && !res.destroyed) res.write('\n')
-	}, 10000)
-	//The browser went (closed the tab, or Stop): finish the tool that's running and no more
+	}, Number(process.env.INTERACTIVES_DESIGNER_BEAT_MS) || 10000)
+	//The browser went (closed the tab, or Stop): finish what's running and no more
 	res.on('close', () => {
 		clearInterval(beat)
 		if (!res.writableFinished) ctl.abort()
@@ -5595,6 +5695,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 		state = designerChats.get(key),
 		ctx = {base: `http://127.0.0.1:${port}/${appName}`, sessionId: mcpSessionID(req), agent: 'Activity Designer', sessions: new Map()},
 		mcp = null,
+		artboardId = typeof req.body.artboardId === 'string' ? req.body.artboardId.slice(0, 100) : '',
 		result = {outcome: 'error', rounds: 0, changed: false}
 
 	try {
@@ -5617,13 +5718,28 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 
 		result = await designer.run({
 			cogniti: designer.cogniti(cfg),
-			tools: mcp.TOOLS.map(({name, description, inputSchema}) => ({name, description, inputSchema})),
-			guide: designer.buildGuide(mcp),
-			callTool,
-			join: async () => {
-				let out = await callTool('join_session', {project_id: id})
-				if (out.error) throw new Error(out.text)
-				return out.text
+			spec: designer.buildSpec(mcp.rawReference()),
+			//Where things stand: joins the live session (people there and the outline of every page), then the open page in full
+			context: async () => {
+				//each part is cut on its own, so a big page can't push out the rest
+				let clip = (t, n) => t.length > n ? t.slice(0, n) + '\n...(cut to fit)' : t,
+					joined = await callTool('join_session', {project_id: id})
+				if (joined.error) throw new Error(joined.text)
+				let parts = [`# Where things stand\n${clip(joined.text, 6500)}`]
+				if (artboardId) {
+					let page = await callTool('get_overview', {project_id: id, artboard_id: artboardId}),
+						graph = await callTool('get_interactions', {project_id: id, artboard_id: artboardId})
+					if (!page.error) parts.push(`# The open page in full\n${clip(page.text, 6500)}`)
+					if (!graph.error) parts.push(`# Its interactions\n${clip(graph.text, 3000)}`)
+				}
+
+				return parts.join('\n\n')
+			},
+			//The agent's blueprint, built in the open project as one batch to the live room
+			build: async (blueprint, known) => {
+				let out = await mcp.runAs(ctx, () => mcp.buildBlueprint(id, blueprint, {artboardId, known: known || undefined}))
+				mcpAudit(req, ctx, {method: 'tools/call', params: {name: 'designer_build', arguments: {project_id: id}}}, {})
+				return out
 			},
 			//A named revision of how the project is right now (the room saved first), which "Undo" restores
 			beforeEdit: async () => {
@@ -5653,12 +5769,15 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 		designerRunning.delete(who)
 	}
 
+	//A request that never got a message to Cogniti didn't use any of the shared allowance
+	if (!own && !result.rounds) shared.refund(who)
+
 	//A run that didn't end in a plain reply leaves the agent's side of the chat half done, so the next one starts clean
 	if (result.outcome === 'replied') state.used = Date.now()
 	else designerChats.delete(key)
 	//Who, which project, how it went. Never what was said
-	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed})
-	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null})
+	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own})
+	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null, quota: own ? null : shared.status(who)})
 	res.end()
 })
 
@@ -5906,6 +6025,7 @@ client.connect()
 		projects = db.collection('projects')
 		revisions = db.collection('revisions')
 		prefs = db.collection('prefs')
+		designerTokens = db.collection('designer-tokens')
 		libraries = db.collection('libraries')
 		templates = db.collection('templates')
 		commentRows = db.collection('comments')

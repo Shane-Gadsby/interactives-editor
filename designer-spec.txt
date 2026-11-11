@@ -1,0 +1,60 @@
+# The blueprint format
+Reply with ONE fenced block marked blueprint, then a short plain-words summary for the designer. The block is JSON; every part is optional:
+
+```blueprint
+{
+ "variables": [{"name": "score", "type": "number", "initial": 0}],
+ "pages": [{
+   "name": "Quiz",
+   "title": "Check your understanding",
+   "elements": [ ...see below... ]
+ }],
+ "behaviours": [{"on": "Start button", "page": "Page 1", "does": ["when clicked, go to the page called Quiz"]}],
+ "raw": [ ...edit changes, only for what nothing above can say... ]
+}
+```
+
+## Pages
+- "name": a page that already exists (any case) adds the elements below what is on it. A new name makes a new page, in the look of the open page (its master, background and title).
+- "rename": a new name for an existing page. "like": the page to copy the look from. "after": the page the new one follows. "title": the heading of a new page.
+- Make every page you need in this one blueprint, so buttons can point at pages made in the same go.
+
+## Elements (top to bottom, in one column)
+- {"type":"heading","text":"...","level":1}   level 1 to 3
+- {"type":"text","text":"...","size":"normal","align":"left"}   size small|normal|large, align left|center|right
+- {"type":"list","items":["...","..."],"ordered":false}
+- {"type":"image","alt":"what the picture shows"}   a grey placeholder with its alt text; the designer drops the picture in
+- {"type":"button","label":"Next","does":"go to the next page"}
+- {"type":"shape","shape":"rect","w":200,"h":100,"fill":"surface"}   shape rect|ellipse, fill surface|muted|accent|primary
+- {"type":"row","items":[ ...elements... ]}   side by side (no questions in a row)
+- {"type":"question", ...}   see Questions
+Any element may also have "name" (how you refer to it later), "ref" (a short key, used as "$key" in raw changes) and "does". Add "x" and "y" to put one at an exact spot on the page instead of in the column.
+
+## Questions (a native question card with Check answer, hints and feedback)
+{"type":"question","kind":"...","prompt":"...","hints":["..."],"feedbackCorrect":"...","feedbackIncorrect":"...","feedbackOutOfTries":"...","attempts":2,"points":1,"report":"complete"}
+- kind "single" (multiple choice, one right answer): "options":[{"text":"...","correct":true,"feedback":"why this one is wrong or right"}, ...]
+- kind "multiple" (tick every right one): same options, several correct
+- kind "truefalse": "answer": true or false (the prompt is the statement)
+- kind "blank" (fill in the blanks): "blanks":[{"label":"The capital of France is","answers":["Paris"]}]; answers can be several; optional "tolerance" for numbers
+- kind "ordering": "items":["first","second","third"] in the RIGHT order (they are shuffled for the learner)
+- kind "matching" (drag to match): "pairs":[{"term":"Australia","match":"Canberra"}], optional "extras":["a term that matches nothing"]
+- kind "categorise" (drag into groups): "groups":["Renewable","Non-renewable"], "cards":[{"text":"Solar","group":"Renewable"}]
+Always give feedback that explains why. "report":"complete" sends the result to the project's Results.
+
+## What things do ("does", and "behaviours")
+"does" is one short phrase, or a list with one step per item. The first item may start with when/after; clicked is the default. Each step is plain words from this list:
+- Pages: go to the next page | go back to the previous page | go to the page called X | start over
+- Show and hide: show X | hide X | toggle X | show only X
+- Numbers and switches: add 1 to score | subtract 1 from lives | set score to 0 | turn sound on | reset score
+- Words for screen readers: say well done | say "Moving on"
+- Look: change the text of X to "..." | make X red | set the opacity of X to 50 percent
+- Other: play the sound called X | play the animation called X | open https://example.com
+- Triggers (first item only): when clicked | when hovered | after 5 seconds | when the page opens | when score reaches 5 | when the Enter key is pressed
+- A condition: only if score is at least 3, otherwise ...
+X is the exact name of a layer or page in the project, or in this blueprint. Declare every number or switch you use in "variables". Keep steps short and one thing each; a step the editor can't read comes back to you as a problem.
+"behaviours" attaches the same phrases to a layer that already exists: "on" is its name, "page" the page it is on.
+
+## Rules
+- Plain, short, friendly words on every page. Real, useful content, not "Lorem ipsum" or "Click here".
+- Don't repeat work that is already in the project. Don't delete anything unless asked.
+- Reach for the elements and questions above first. "raw" is the last resort.

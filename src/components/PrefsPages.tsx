@@ -15,6 +15,7 @@ import { KeymapList } from './KeymapPrefs';
 import { KeymapSetBar } from './KeymapSets';
 import { WorkspacePrefs } from './WorkspacePrefs';
 import { WorkspaceOrder } from './WorkspaceOrder';
+import { DesignerAllowance } from './DesignerAllowance';
 
 /**
  * Every setting in the Preferences window, in one list: which page and section it is on, what it is called, what it does, which
@@ -128,6 +129,17 @@ export const SETTINGS: SettingDef[] = [
   check('altDragHintAlways', 'general', 'Help and hints', 'Always show the Alt-drag hint', 'Dragging a layer, a page or a row in Layers says that holding Alt (Option on a Mac) drags a copy. It shows for your first three drags; tick this to see it on every drag', 'altDragHintAlways', { words: 'copy duplicate drag option' }),
   check('commentNotices', 'general', 'Notifications', 'Comment notices', 'Tell me (a bell on the projects page, a message while a project is open) when a review comment is handed to me, mentions me, or gets a reply in a conversation I am in', 'commentNotices', { words: 'review comments bell mentions alerts' }),
 
+  // ---- Activity Designer
+  {
+    id: 'designerAllowance',
+    page: 'general',
+    section: 'Activity Designer',
+    label: 'Use my own Cogniti allowance',
+    tip: "Everyone's Activity Designer requests share one Cogniti allowance, which can run out. Paste a personal Cogniti API token (Cogniti, your name, User data, API tokens) and your requests use your own allowance instead. The token is checked once, kept encrypted on the server and never shown again",
+    words: 'cogniti ai token api key limit allowance hourly designer assistant requests personal',
+    keys: [],
+    render: () => <DesignerAllowance />,
+  },
   check('tutorialBadges', 'general', 'Tutorials', 'Tutorial badges and cheers', 'Tick boxes on each step of a tutorial, a short cheer when you tick one, a badge when you finish a whole tutorial or a set of them, and your progress on the Tutorials button on the projects page. Off hides all of it; your progress is kept and comes back if you turn it on again', 'tutorialBadges', { words: 'tutorials badges fanfare confetti celebrate rewards progress gamify steps tick' }),
   check('tutorialSound', 'general', 'Tutorials', 'Soft chime with the cheers', 'A short, quiet chime with the tutorial cheers. Off by default: nothing in the editor makes a sound unless you ask', 'tutorialSound', { words: 'sound audio noise beep tutorials', disabled: (p) => p.tutorialBadges === false }),
   {

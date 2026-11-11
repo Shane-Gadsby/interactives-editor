@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { session } from '../lib/db';
 import { designerChat, type ChatState } from '../lib/designer';
 import { Markdown } from '../help/markdown';
+import { openHelp } from '../help/Help';
+import { openPrefsSetting } from '../lib/prefs-window';
 import { store } from '../store/store';
 import { IconButton } from './ui';
 import { Icons } from './icons';
@@ -61,7 +63,10 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
   useEffect(() => designerChat().subscribe(setChat), []);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
+    if (!open) return;
+    inputRef.current?.focus();
+    //how much of the shared allowance is left (or that they are on their own)
+    void designerChat().refreshStatus();
   }, [open]);
 
   useEffect(() => {
@@ -83,6 +88,8 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
     void designerChat().send(text, openProjectId());
     setDraft('');
   };
+
+  const ownAllowance = () => openPrefsSetting('general', 'designerAllowance');
 
   const undo = async () => {
     await designerChat().undo();
@@ -160,6 +167,16 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
         <IconButton icon={<Icons.close />} title="Close the chat (it keeps the conversation)" onClick={onClose} />
       </header>
       <p className="designer-note muted small">It builds in your project as you watch. Check what it made; you can undo it.</p>
+      {!chat.own && chat.quota && (
+        <p className="designer-quota muted small" role="status">
+          {chat.quota.left > 0
+            ? `${chat.quota.left} of ${chat.quota.limit} shared requests left this hour`
+            : `No shared requests left this hour (the next comes back in about ${Math.max(1, Math.ceil(chat.quota.resetsIn / 60))} min)`}{' '}
+          <button className="link-btn" onClick={ownAllowance} title="Add your own Cogniti token in Preferences, so your requests don't use the shared allowance">
+            Use my own Cogniti allowance
+          </button>
+        </p>
+      )}
       <div className="designer-log" ref={listRef} role="log" aria-live="polite" aria-label="Conversation">
         {chat.messages.length === 0 && (
           <div className="designer-examples">
@@ -181,6 +198,32 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
         {chat.messages.map((m) => (
           <div key={m.id} className={`designer-msg ${m.from}${m.failed ? ' failed' : ''}`}>
             {m.from === 'agent' ? <Markdown text={m.text} onLink={openLink} /> : <p>{m.text}</p>}
+            {m.from === 'help' && (
+              <>
+                <ul className="designer-topics">
+                  {(m.topics ?? []).map((t) => (
+                    <li key={`${t.id}#${t.anchor ?? ''}`}>
+                      <button className="link-btn" onClick={() => openHelp(t.id, t.anchor)} title={t.snippet}>
+                        {t.title}
+                        {t.heading ? `: ${t.heading}` : ''}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <p className="small">
+                  <button className="btn small" disabled={chat.working} onClick={() => void designerChat().send(m.ask ?? '', openProjectId(), { force: true })} title="Send this to the Activity Designer. It uses one of your requests.">
+                    Ask the Activity Designer anyway
+                  </button>
+                </p>
+              </>
+            )}
+            {m.allowance && (
+              <p className="small">
+                <button className="btn small" onClick={ownAllowance} title="Add your own Cogniti token in Preferences, so your requests don't use the shared allowance">
+                  Use my own Cogniti allowance
+                </button>
+              </p>
+            )}
             {m.failed && (
               <p className="small">
                 Not sent.{' '}

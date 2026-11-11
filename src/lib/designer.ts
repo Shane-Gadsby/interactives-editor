@@ -4,15 +4,30 @@
  * conversation lives on the server, so all this holds is the messages on screen and a handle to carry the chat on.
  * One chat per editor tab, kept while the panel is closed; New chat starts another.
  */
-import { apiUrl, resetDesigner, restoreRevision } from './db';
+import { apiUrl, designerStatus, resetDesigner, restoreRevision } from './db';
+import { localAnswer, openArtboardId, type HelpAnswer, type LocalAnswer } from './designer-local';
 
 export interface ChatMessage {
   id: string;
-  /** me: what the person typed. agent: its reply. error and note: the panel talking (a failure, "Undone"). */
-  from: 'me' | 'agent' | 'error' | 'note';
+  /** me: what the person typed. agent: its reply. error and note: the panel talking (a failure, "Undone"). help: an answer from the editor's own help, no AI used. */
+  from: 'me' | 'agent' | 'error' | 'note' | 'help';
   text: string;
   /** Sending failed before the server took it, so the message can be tried again. */
   failed?: boolean;
+  /** help: the topics that answer it. */
+  topics?: HelpAnswer[];
+  /** help: what was asked, so "Ask the Activity Designer anyway" can send it. */
+  ask?: string;
+  /** error: it is about the shared allowance, so offer "Use my own Cogniti allowance". */
+  allowance?: boolean;
+}
+
+/** What is left of a person's share of the shared Cogniti token this hour. Null for people on their own token. */
+export interface Quota {
+  limit: number;
+  left: number;
+  /** Seconds until the oldest request stops counting. */
+  resetsIn: number;
 }
 
 export interface ChatState {
@@ -24,6 +39,10 @@ export interface ChatState {
   /** The restore point from before the agent's first change in the last request, while it can still be undone. */
   undo: { revision: string } | null;
   undoing: boolean;
+  /** Their share of the shared token this hour. Null when they use their own, or it isn't known yet. */
+  quota: Quota | null;
+  /** They have added their own Cogniti token, so the shared allowance doesn't apply to them. */
+  own: boolean;
 }
 
 type Listener = (s: ChatState) => void;
@@ -31,14 +50,16 @@ type Listener = (s: ChatState) => void;
 interface Event {
   type: 'status' | 'changed' | 'reply' | 'error' | 'done';
   text?: string;
+  kind?: string;
   revision?: string | null;
   conversation?: string | null;
+  quota?: Quota | null;
 }
 
 let counter = 0;
 const mid = () => `m${Date.now().toString(36)}${++counter}`;
 
-const initial = (): ChatState => ({ messages: [], working: false, status: '', undo: null, undoing: false });
+const initial = (): ChatState => ({ messages: [], working: false, status: '', undo: null, undoing: false, quota: null, own: false });
 
 export class DesignerChat {
   state: ChatState = initial();
@@ -46,8 +67,18 @@ export class DesignerChat {
   private conversation: string | null = null;
   private projectId = '';
   private abort: AbortController | null = null;
+  /** Looking at whether the question can be answered for free (the help may have to load first). */
+  private checking = false;
 
-  constructor(private fetcher: typeof fetch = (...a) => fetch(...a)) {}
+  /**
+   * `local` is the panel's free answers (a "how do I" from the help, one behaviour through Describe it) and `artboard` the page that
+   * is open, so the AI starts from where the person is. Both are the editor's; tests pass their own.
+   */
+  constructor(
+    private fetcher: typeof fetch = (...a) => fetch(...a),
+    private local: (text: string) => LocalAnswer | null | Promise<LocalAnswer | null> = localAnswer,
+    private artboard: () => string = openArtboardId,
+  ) {}
 
   subscribe(fn: Listener): () => void {
     this.listeners.add(fn);
@@ -63,14 +94,49 @@ export class DesignerChat {
     this.set({ messages: [...this.state.messages, { id: mid(), ...m }] });
   }
 
-  /** Sends a request about this project. Another project in the same tab is a new chat. */
-  async send(text: string, projectId: string): Promise<void> {
+  /** How many shared requests are left, and whether they are on their own token. Quiet when it can't be read. */
+  async refreshStatus(): Promise<void> {
+    try {
+      const s = await designerStatus();
+      this.set({ quota: s.mine ? null : s.shared, own: !!s.mine });
+    } catch {
+      /* the count is a nicety, the panel works without it */
+    }
+  }
+
+  /**
+   * Sends a request about this project. Another project in the same tab is a new chat. A question about how to do something, or one
+   * behaviour Describe it already reads, is answered here with no message to the AI; `force` sends it to the AI anyway.
+   */
+  async send(text: string, projectId: string, opts: { force?: boolean } = {}): Promise<void> {
     const message = text.trim();
-    if (!message || this.state.working) return;
+    if (!message || this.state.working || this.checking) return;
     if (projectId !== this.projectId) {
       this.projectId = projectId;
       this.conversation = null;
-      this.state = initial();
+      this.state = { ...initial(), quota: this.state.quota, own: this.state.own };
+    }
+    if (!opts.force) {
+      let free: LocalAnswer | null = null;
+      this.checking = true;
+      try {
+        //a question for the help has to wait for it to load; everything else answers at once, so Stop works straight away
+        const got = this.local(message);
+        free = got instanceof Promise ? await got : got;
+      } catch {
+        free = null;
+      } finally {
+        this.checking = false;
+      }
+      if (free) {
+        const asked: ChatMessage = { id: mid(), from: 'me', text: message };
+        const answer: ChatMessage =
+          free.kind === 'help'
+            ? { id: mid(), from: 'help', text: 'This is in the help. Nothing was sent to the Activity Designer.', topics: free.topics, ask: message }
+            : { id: mid(), from: 'note', text: `Done without using the AI: ${free.sentence}. You can undo it like any other change.` };
+        this.set({ messages: [...this.state.messages.filter((m) => !m.failed), asked, answer] });
+        return;
+      }
     }
     this.abort = new AbortController();
     this.set({ working: true, status: 'Sending', undo: null, messages: [...this.state.messages.filter((m) => !m.failed), { id: mid(), from: 'me', text: message }] });
@@ -80,17 +146,23 @@ export class DesignerChat {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, conversation: this.conversation ?? undefined, message }),
+        body: JSON.stringify({ projectId, artboardId: this.artboard() || undefined, conversation: this.conversation ?? undefined, message }),
         signal: this.abort.signal,
       });
       if (!res.ok || !res.body) {
-        let why = '';
+        let body: { error?: string; kind?: string; quota?: Quota } = {};
         try {
-          why = ((await res.json()) as { error?: string }).error ?? '';
+          body = (await res.json()) as typeof body;
         } catch {
           /* not json */
         }
-        this.fail(why || (res.status === 403 ? "You can't change this project, so the Activity Designer can't either." : 'The Activity Designer could not be reached. Try again in a minute.'), true);
+        //Out of their share of the shared token: nothing was sent, and their own allowance is the way on
+        if (body.kind === 'quota') {
+          if (body.quota) this.set({ quota: body.quota });
+          this.fail(body.error || 'You have used your shared Activity Designer requests for this hour.', true, true);
+          return;
+        }
+        this.fail(body.error || (res.status === 403 ? "You can't change this project, so the Activity Designer can't either." : 'The Activity Designer could not be reached. Try again in a minute.'), true);
         return;
       }
       const reader = res.body.getReader();
@@ -138,20 +210,22 @@ export class DesignerChat {
         if (e.text) this.add({ from: 'agent', text: e.text });
         return false;
       case 'error':
-        this.add({ from: 'error', text: e.text || 'Something went wrong in the Activity Designer.' });
+        //Cogniti's own hourly limit on the shared token: their own allowance gets round it
+        this.add({ from: 'error', text: e.text || 'Something went wrong in the Activity Designer.', allowance: e.kind === 'limit' && !this.state.own });
         return false;
       case 'done':
         this.conversation = e.conversation ?? null;
+        if (e.quota !== undefined) this.set({ quota: e.quota });
         return true;
     }
     return false;
   }
 
-  private fail(text: string, notSent: boolean) {
+  private fail(text: string, notSent: boolean, allowance = false) {
     const msgs = [...this.state.messages];
     const last = msgs.at(-1);
-    if (notSent && last?.from === 'me') msgs[msgs.length - 1] = { ...last, failed: true };
-    this.set({ messages: [...msgs, { id: mid(), from: 'error', text }] });
+    if (notSent && last?.from === 'me') msgs[msgs.length - 1] = { ...last, failed: !allowance };
+    this.set({ messages: [...msgs, { id: mid(), from: 'error', text, ...(allowance ? { allowance: true } : {}) }] });
   }
 
   /** Stop after the step the agent is on. */
@@ -179,7 +253,7 @@ export class DesignerChat {
     this.stop();
     const id = this.projectId;
     this.conversation = null;
-    this.state = initial();
+    this.state = { ...initial(), quota: this.state.quota, own: this.state.own };
     this.listeners.forEach((l) => l(this.state));
     if (id) await resetDesigner(id).catch(() => undefined);
   }
