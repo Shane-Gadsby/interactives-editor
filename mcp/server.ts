@@ -26,6 +26,7 @@ import { cleanNotes, makeNote, NOTE_COLOURS } from '../../interactives-player/sr
 import type { Note } from '../../interactives-player/src/format';
 import { diff } from '../shared/ops.mjs';
 import { IDENT_RE, renameVariable } from '../src/lib/rename-variable';
+import { compileBlueprint, type Blueprint } from '../src/lib/designer-blueprint';
 import { TOPICS, topicBody } from '../src/help/topics';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
@@ -810,6 +811,56 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
   },
 ];
 
+// ---------------------------------------------------------------- the Activity Designer's one-shot build
+
+/** What the edit tool's changes can say, for the Activity Designer's "raw" part: its own description, and the interaction node kinds. */
+function rawReference(): string {
+  const edit = TOOLS.find((t) => t.name === 'edit')!;
+  const kinds = CATALOG.map((d) => `${d.kind} (${d.label}): ${d.params.map((pd) => pd.key).join(', ') || 'no settings'}`).join('\n');
+  return `${edit.description}\n\nInteraction node kinds for add_interactions (kind: its params):\n${kinds}`;
+}
+
+interface BuildOutcome {
+  changed: boolean;
+  /** What was done, plain words */
+  notes: string[];
+  warnings: string[];
+  /** Problems the build could not solve itself: the new ones only, never ones the project had already */
+  problems: string[];
+  /** What validate said before this build (hand it back on the next build of the same request, so the same old problems stay old) */
+  known: string[];
+  created: Record<string, string>;
+  ops: number;
+}
+
+/**
+ * The Activity Designer's one build: a blueprint compiled into ordinary editor content (src/lib/designer-blueprint.ts) and sent
+ * to the live room as ONE batch of ops, like the edit tool does, so it shows for everyone and is one step behind the restore point.
+ * Only the problems this build caused come back; whatever the project already had wrong is left alone.
+ */
+async function buildBlueprint(projectId: string, bp: Blueprint, opts: { artboardId?: string; known?: string[] } = {}): Promise<BuildOutcome> {
+  const s = join(projectId);
+  await s.ready;
+  const before = await loadProject(s.projectId);
+  const out = compileBlueprint(before, bp, {
+    artboardId: opts.artboardId,
+    applyRaw: (p, changes) => {
+      const r = applyChanges(p, changes as Change[]);
+      return { project: r.project, created: r.created };
+    },
+  });
+  const ops = diff(before, out.project);
+  if (ops.length) {
+    await api(`projects/${encodeURIComponent(s.projectId)}/ops`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clientId: s.clientId, ops }) });
+    const first = out.touched.map((id) => locate(out.project, id)).find(Boolean);
+    if (first) await presence(s, { artboardId: first.ab.id, selection: out.touched.slice(0, 50), cursor: { x: first.ab.canvasX + first.node.x + first.node.width, y: first.ab.canvasY + first.node.y } });
+  }
+  const known = opts.known ?? validate(before);
+  const had = new Set(known);
+  const problems = [...out.problems, ...validate(out.project).filter((x) => !had.has(x))];
+  return { changed: ops.length > 0, notes: out.notes, warnings: out.warnings, problems, known, created: out.created, ops: ops.length };
+}
+
 function people(s: Session, p: Project): string {
   const list = [...s.peers.values()].filter((x) => !x.left);
   if (!list.length) return 'Nobody else is in this project right now.';
@@ -879,7 +930,7 @@ function closeContext(c: McpContext) {
 }
 
 // The stdio loop only runs when this file is the server. The tests import the pieces below and drive them directly
-export { TOOLS, applyChanges, closeContext, handle, interactions, locate, notesReport, overview, reference, respond, sessions, setPath, syncRuns, validate };
+export { TOOLS, applyChanges, buildBlueprint, rawReference, closeContext, handle, interactions, locate, notesReport, overview, reference, respond, sessions, setPath, syncRuns, validate };
 
 if (!process.env.INTERACTIVES_MCP_NO_STDIO) {
   let buffer = '';

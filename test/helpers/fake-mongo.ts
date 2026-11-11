@@ -238,6 +238,7 @@ export class FakeDb {
   projects = new FakeCollection();
   revisions = new FakeCollection();
   prefs = new FakeCollection();
+  'designer-tokens' = new FakeCollection();
   libraries = new FakeCollection();
   templates = new FakeCollection();
   comments = new FakeCollection();
