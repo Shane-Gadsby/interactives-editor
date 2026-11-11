@@ -103,7 +103,7 @@ describe('the Cogniti client', () => {
 });
 
 //a scripted agent and builder around the real run
-const harness = (replies: (string | Error)[], builds: { changed?: boolean; notes?: string[]; warnings?: string[]; problems?: string[] }[] = []) => {
+const harness = (replies: (string | Error)[], builds: { changed?: boolean; notes?: string[]; warnings?: string[]; problems?: string[]; known?: string[] }[] = []) => {
   const sent: string[] = [];
   const events: any[] = [];
   const ai = {
