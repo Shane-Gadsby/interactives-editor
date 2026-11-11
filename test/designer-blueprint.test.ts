@@ -129,6 +129,27 @@ describe('the look of what is already there', () => {
   });
 });
 
+describe('names', () => {
+  it('keeps every layer name on a page its own, so "show X" has one answer', () => {
+    const r = compileBlueprint(fixture(), { pages: [{ name: 'Names', elements: [{ type: 'text', text: 'One' }, { type: 'text', text: 'Two' }, { type: 'text', text: 'Three' }] }] });
+    const names = layers(r.project, 'Names').filter((n) => n.type === 'text' && n.name !== 'Page title').map((n) => n.name);
+    expect(new Set(names).size).toBe(3);
+  });
+
+  it('puts a branded page\'s content under its own title, in a column that fits inside the page', () => {
+    const p = fixture();
+    const r = compileBlueprint(p, { pages: [{ name: 'Another', title: 'Another page', elements: [{ type: 'heading', text: 'Sub', level: 2 }, { type: 'row', items: [{ type: 'button', label: 'A' }, { type: 'button', label: 'B' }] }] }] });
+    const ab = page(r.project, 'Another');
+    const stack = ab.children.find((n) => n.name === 'Content') as FrameNode;
+    expect(stack.x).toBe(48);
+    expect(stack.y).toBe(114);
+    expect(stack.width).toBe(1024 - 96);
+    const row = stack.children.find((n) => n.name === 'Row') as FrameNode;
+    expect(row.children).toHaveLength(2);
+    expect(row.layout?.direction).toBe('row');
+  });
+});
+
 describe('questions of every kind', () => {
   const one = (el: Record<string, unknown>) => compileBlueprint(fixture(), { pages: [{ name: 'Q', elements: [{ type: 'question', ...el }] }] });
   const frameOf = (r: ReturnType<typeof one>) => layers(r.project, 'Q').find((n) => n.type === 'frame' && (n as FrameNode).question) as FrameNode;

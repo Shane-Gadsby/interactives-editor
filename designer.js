@@ -15,7 +15,7 @@ const DEFAULT_AGENT = '6af3a041a8d105e6274a6bdc',
 	//One to ask, and up to two more to put right what is still wrong. Past this it stops and says so
 	MAX_MESSAGES = 3,
 	//Each piece of what the agent is told about the project is cut to fit
-	CONTEXT_BUDGET = 16000,
+	CONTEXT_BUDGET = 17000,
 	DEFAULT_PER_HOUR = 6
 
 //The agent, address and token, and whether the button shows at all. INTERACTIVES_DESIGNER=off hides it even with a token

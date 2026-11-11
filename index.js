@@ -5721,14 +5721,16 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 			spec: designer.buildSpec(mcp.rawReference()),
 			//Where things stand: joins the live session (people there and the outline of every page), then the open page in full
 			context: async () => {
-				let joined = await callTool('join_session', {project_id: id})
+				//each part is cut on its own, so a big page can't push out the rest
+				let clip = (t, n) => t.length > n ? t.slice(0, n) + '\n...(cut to fit)' : t,
+					joined = await callTool('join_session', {project_id: id})
 				if (joined.error) throw new Error(joined.text)
-				let parts = [`# Where things stand\n${joined.text}`]
+				let parts = [`# Where things stand\n${clip(joined.text, 6500)}`]
 				if (artboardId) {
 					let page = await callTool('get_overview', {project_id: id, artboard_id: artboardId}),
 						graph = await callTool('get_interactions', {project_id: id, artboard_id: artboardId})
-					if (!page.error) parts.push(`# The open page in full\n${page.text}`)
-					if (!graph.error) parts.push(`# Its interactions\n${graph.text}`)
+					if (!page.error) parts.push(`# The open page in full\n${clip(page.text, 6500)}`)
+					if (!graph.error) parts.push(`# Its interactions\n${clip(graph.text, 3000)}`)
 				}
 
 				return parts.join('\n\n')

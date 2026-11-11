@@ -417,6 +417,8 @@ function fillPage(run: Run, ab: Artboard, spec: BpPage, isNew: boolean, like: Ar
   ab.children.push(stack);
   const free: SceneNode[] = [];
   const place = (el: BpElement, node: SceneNode, into: ContainerNode) => {
+    //two layers called Text would be two answers to "show Text", so every name on the page stays its own
+    node.name = uniqueName(nodeNames(ab), node.name);
     run.made.set(el, node.id);
     run.nodesMade.add(node.id);
     if (str(el.ref, 40)) run.created[str(el.ref, 40)] = node.id;
