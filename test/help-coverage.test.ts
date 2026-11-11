@@ -169,6 +169,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Build it tutorials and Concepts in the help': [['build-it', 'Just want to look?'], ['concepts', 'If something "does nothing"'], ['tutorial-mcq', 'Report result']],
   "Fonts load from StudyDesk's own server again": [['text', 'served from the same place as the editor']],
   "Saved values show in Preview's Debug panel straight away": [['interface', 'starting with any saved user data']],
+  'Frameling animations': [['frameling-animations', '.flplay']],
   'Media Catalogue on the live StudyDesk site': [['media-catalogue', 'older **Photography catalogue**']],
   'Share for review needs a sign in': [['comments', 'There is no guest option'], ['comments', 'Sign in with StudyDesk']],
 };
