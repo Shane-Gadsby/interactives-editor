@@ -5579,8 +5579,15 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 		emit = (e) => {
 			if (!res.writableEnded && !res.destroyed) res.write(JSON.stringify(e) + '\n')
 		}
+	//A Cogniti round can sit quiet for a minute or more (the first one reads the whole guide), and haproxy cuts a
+	//response that says nothing for its timeout server (25s on dev, 120s on test and prod). So a blank line every
+	//10s keeps it open, and the panel skips blank lines
+	let beat = setInterval(() => {
+		if (!res.writableEnded && !res.destroyed) res.write('\n')
+	}, 10000)
 	//The browser went (closed the tab, or Stop): finish the tool that's running and no more
 	res.on('close', () => {
+		clearInterval(beat)
 		if (!res.writableFinished) ctl.abort()
 	})
 
@@ -5641,6 +5648,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 		emit({type: 'error', text: 'Something went wrong in the Activity Designer. Try again in a minute.'})
 	}
 	finally {
+		clearInterval(beat)
 		if (mcp) mcp.closeContext(ctx)
 		designerRunning.delete(who)
 	}
