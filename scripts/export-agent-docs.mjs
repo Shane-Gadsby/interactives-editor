@@ -1,6 +1,6 @@
 // Writes the two files the Activity Designer's Cogniti agent is given:
 //   activity-designer-playbook.docx  -> the agent's Knowledge tab (agent-docs/playbook.md)
-//   interactives-help-N.docx         -> the agent's Resources tab (every help topic and tutorial, text only, in parts)
+//   interactives-help-N.md           -> the agent's Resources tab (every help topic and tutorial, in parts)
 // Usage: npm run build first (the help comes from mcp/dist), then
 //   node scripts/export-agent-docs.mjs [out dir]   (default: agent-docs/out)
 // It writes .html and, when LibreOffice (soffice) is on the PATH, converts each to .docx. Re-run and re-upload the help
@@ -146,8 +146,12 @@ let size = 0;
 for (const id of ids) {
   const md = mcp.reference(id);
   if (size + md.length > 150000 && parts.at(-1).length) parts.push([]), (size = 0);
-  parts.at(-1).push(html(md.replace(/^# /, '## ').replace(/\n#{1}(#+) /g, '\n#$1# ')));
+  parts.at(-1).push(md);
   size += md.length;
 }
-parts.forEach((p, i) => write(`interactives-help-${i + 1}`, `Interactives editor help, part ${i + 1} of ${parts.length}`, intro.replace('<h1>Interactives editor help</h1>', `<h1>Interactives editor help, part ${i + 1} of ${parts.length}</h1>`) + p.join('\n<hr>\n')));
+//Cogniti's server fails on LibreOffice's .docx (400 "unexpected error", 11 Nov), so the help goes up as Markdown, which it
+//takes as is. Pictures become their captions
+const mdPart = (p) => p.map((md) => md.replace(/^!\[([^\]]*)\]\([^)]+\)\s*$/gm, (_, alt) => (alt ? `(Picture: ${alt})` : '')).replace(/^# /, '## ').replace(/\n(#+) /g, '\n#$1 ')).join('\n\n---\n\n');
+parts.forEach((p, i) => writeFileSync(path.join(out, `interactives-help-${i + 1}.md`), `# Interactives editor help, part ${i + 1} of ${parts.length}\n\nEvery help page and tutorial in the StudyDesk Toolbox Interactives editor (version ${version}, exported ${new Date().toISOString().slice(0, 10)}).\n\n` + mdPart(p) + '\n'));
+console.log(`${parts.length} Markdown parts in ${out}`);
 process.exit(0);
