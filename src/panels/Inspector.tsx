@@ -747,7 +747,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           onChange={(v) => setLiveSync(store(), v)}
         />
         {!project.settings.liveSync && collaboratorCountOf(project.id) > 0 && (
-          <p className="hint">This project is shared with other people but Live collaboration is off, so you will not see each other's changes as they happen.</p>
+          <p className="hint">Shared with others, but Live collaboration is off: you will not see their changes as they happen.</p>
         )}
         <CheckField
           label="Run scripts in the sandbox"

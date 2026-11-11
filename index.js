@@ -281,8 +281,10 @@ const rooms = new Map(),
 	},
 
 	//A room keeps agent edits and live ops for up to a second before they reach mongo, and rev only moves when they do.
-	//Anything that reads or checks the rev of a project (loading it, a whole-document save, the stale check) lets a dirty
-	//room write first, or a tab without live sync would be handed (or checked against) a rev that's about to go stale
+	//So the rev to hand out for a room with unsaved ops is the one its next save will have, or a tab without live sync
+	//would load the document with a rev that's about to go stale. A whole-document save lets the room write first instead
+	roomRev = (room) => room.dirty && !room.deleted ? room.rev + 1 : room.rev,
+
 	settleRoom = async (id) => {
 		let room = rooms.get(id)
 
@@ -660,12 +662,10 @@ router.get('/api/projects/:id', async (req, res) => {
 		return
 	}
 
-	//A live room has newer content than mongo until its next save. Let it save first so the rev we hand out is the one
-	//the next save will be checked against (an editor with live sync off isn't in the room, and an AI agent may be)
-	await settleRoom(req.params.id)
-
+	//A live room has newer content than mongo until its next save (an editor with live sync off isn't in the room, and an
+	//AI agent may be), so the rev is the one that save will have
 	let room = rooms.get(req.params.id)
-	res.json({project: room ? room.doc : await store.parse(doc), rev: room ? room.rev : doc.rev, owner: doc.owner || null, live: room ? room.seq : null, collaborators: (doc.collaborators || []).length})
+	res.json({project: room ? room.doc : await store.parse(doc), rev: room ? roomRev(room) : doc.rev, owner: doc.owner || null, live: room ? room.seq : null, collaborators: (doc.collaborators || []).length})
 })
 
 //Just the rev, for an editor that has live sync off to ask now and then (when its tab comes back into view) whether the
@@ -677,10 +677,8 @@ router.get('/api/projects/:id/rev', async (req, res) => {
 		return
 	}
 
-	await settleRoom(req.params.id)
-
 	let room = rooms.get(req.params.id),
-		now = room ? room.rev : (await projects.findOne({_id: req.params.id}, {projection: {rev: 1}}))?.rev
+		now = room ? roomRev(room) : doc.rev
 
 	res.json({rev: now ?? doc.rev})
 })
