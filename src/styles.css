@@ -14299,6 +14299,20 @@ body.reorder-active .ix-tooltip {
   color: var(--muted);
   padding-left: 0;
 }
+.designer-msg.help {
+  align-self: flex-start;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+.designer-topics {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+.designer-quota {
+  margin: 0;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--line);
+}
 .designer-progress {
   margin: 0;
 }

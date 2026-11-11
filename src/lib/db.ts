@@ -132,6 +132,17 @@ export function resetDesigner(projectId: string): Promise<{ ok: boolean }> {
   return call('designer/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId }) });
 }
 
+/** What the Activity Designer says about allowances: whether this person has their own Cogniti token (never the token), or how much of the shared one is left this hour. */
+export interface DesignerStatus {
+  on: boolean;
+  mine: { connected: boolean; added: string; ends: string | null } | null;
+  shared: { limit: number; left: number; resetsIn: number } | null;
+}
+export const designerStatus = () => call<DesignerStatus>('designer/status');
+/** Add their own Cogniti token. The server checks it with Cogniti once and keeps it encrypted; it is never sent back. `ends` is the day it runs out, if they know. */
+export const setDesignerToken = (token: string, ends?: string) => call<{ ok: boolean; mine: NonNullable<DesignerStatus['mine']> }>('designer/token', json({ token, ends: ends || undefined }));
+export const removeDesignerToken = () => call<{ ok: boolean }>('designer/token', { method: 'DELETE' });
+
 export async function listProjects(all = false): Promise<ProjectMeta[]> {
   return call<ProjectMeta[]>(`projects${all ? '?all=1' : ''}`);
 }

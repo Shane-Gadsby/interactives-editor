@@ -15,9 +15,11 @@ interface State {
   keysSearch: string | null;
   /** The editor is on screen, so its Workspace page (panel layouts) means something. */
   editor: boolean;
+  /** A setting to scroll to and mark when the window opens (a link from somewhere else in the editor), by its id in PrefsPages. */
+  setting: string | null;
 }
 
-let state: State = { open: false, page: 'general', pendingImport: null, keysSearch: null, editor: false };
+let state: State = { open: false, page: 'general', pendingImport: null, keysSearch: null, editor: false, setting: null };
 const subs = new Set<() => void>();
 const set = (patch: Partial<State>) => {
   state = { ...state, ...patch };
@@ -28,6 +30,15 @@ const set = (patch: Partial<State>) => {
 export function openPrefs(page?: PageId): void {
   set({ open: true, ...(page ? { page } : {}) });
 }
+/** Open the window on a page, and take them to one setting on it (the panel's "Use my own Cogniti allowance" link). */
+export function openPrefsSetting(page: PageId, setting: string): void {
+  set({ open: true, page, setting });
+}
+export const takeSetting = (): string | null => {
+  const t = state.setting;
+  if (t !== null) state = { ...state, setting: null };
+  return t;
+};
 export function closePrefs(): void {
   if (state.open) set({ open: false });
 }
