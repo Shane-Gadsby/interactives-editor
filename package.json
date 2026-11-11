@@ -20,7 +20,8 @@
     "build:media": "vite build -c vite.media.config.ts",
     "dist:compress": "node scripts/precompress.mjs",
     "examples:upgrade": "node scripts/upgrade-examples.mjs",
-    "templates:questions": "node scripts/question-templates.mjs"
+    "templates:questions": "node scripts/question-templates.mjs",
+    "export:agent-docs": "node scripts/export-agent-docs.mjs"
   },
   "dependencies": {
     "express": "^5.3.0",
