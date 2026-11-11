@@ -58,6 +58,8 @@ beforeAll(async () => {
       if (gate) await gate;
       const next = script.shift() ?? 'Nothing more to say.';
       if (typeof next === 'number') return new Response(JSON.stringify({ message: 'no' }), { status: next });
+      //Cogniti giving up before the first word: the stream just breaks ("terminated")
+      if (next === 'CUT') return new Response(new ReadableStream({ start: (c) => c.error(new TypeError('terminated')) }));
       return new Response(JSON.stringify({ content: next, success: true }) + '\n');
     }
     //the editor's tools call back into this server over loopback on the real port, which in a test is the harness
@@ -174,8 +176,10 @@ describe('one request, one message', () => {
     expect(m.body.agent_id).toBe('6af3c21c0eba26d21bfa2427');
     expect(m.body.chat_history).toEqual([]);
     const text = m.body.messages[0].content as string;
-    for (const part of ['# Blueprint spec', '# Playbook', 'Every option gets its own feedback', '# The blueprint format', `id ${id}`, 'Water cycle', '# The open page in full', 'Box [rect r1]', '# Request\nAdd a page with a multiple choice question about clouds, linked from page 1']) expect(text).toContain(part);
+    for (const part of ['# Blueprint spec', '# The blueprint format', `id ${id}`, 'Water cycle', '# The open page in full', 'Box [rect r1]', '# Request\nAdd a page with a multiple choice question about clouds, linked from page 1']) expect(text).toContain(part);
     expect(text).not.toContain('# Tools');
+    //the playbook is in the Cogniti agent's Knowledge, so it isn't sent again unless asked for
+    expect(text).not.toContain('# Playbook');
     expect(text.length).toBeLessThan(30000);
 
     // the restore point: named, saved before the build, holding the project as it was
@@ -539,5 +543,41 @@ describe('their own Cogniti allowance', () => {
     script = ['Hi.'];
     await ask('hello', { user: bob });
     expect(messages().at(-1)!.auth).toBe(`Bearer ${TOKEN}`);
+  });
+});
+
+describe('when Cogniti gives up before it starts', () => {
+  it('tries once more with a lean message, and still builds', async () => {
+    script = ['CUT', bp(QUIZ)];
+    const start = (await getProject()).artboards[0].id;
+    const r = await ask('Add a page with a multiple choice question about clouds, linked from page 1', { artboardId: start });
+    expect(types(r.events)).toContain('reply');
+    expect(types(r.events)).not.toContain('error');
+    const [first, second] = messages().slice(-2).map((m) => m.body.messages[0].content as string);
+    expect(first).toContain('# Raw changes');
+    expect(second).not.toContain('# Raw changes');
+    expect(second.length).toBeLessThan(first.length);
+    expect(pageNamed(await getProject(), 'Quiz')).toBeTruthy();
+  });
+
+  it('says so in plain words when the lean try is cut off too', async () => {
+    script = ['CUT', 'CUT'];
+    const r = await ask('Add a page about rain');
+    const err = r.events.find((e) => e.type === 'error');
+    expect(err.text).toMatch(/took too long to start/);
+    expect(runs().at(-1)?.detail.outcome).toBe('cut');
+  });
+
+  it('sends the playbook as well with INTERACTIVES_DESIGNER_PLAYBOOK=inline', async () => {
+    process.env.INTERACTIVES_DESIGNER_PLAYBOOK = 'inline';
+    try {
+      script = ['Just words.'];
+      await ask('What makes a good question?');
+      const text = messages().at(-1)!.body.messages[0].content as string;
+      expect(text).toContain('# Playbook');
+      expect(text).toContain('Every option gets its own feedback');
+    } finally {
+      delete process.env.INTERACTIVES_DESIGNER_PLAYBOOK;
+    }
   });
 });

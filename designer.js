@@ -16,6 +16,7 @@ const DEFAULT_AGENT = '6af3c21c0eba26d21bfa2427',
 	MAX_MESSAGES = 3,
 	//Each piece of what the agent is told about the project is cut to fit
 	CONTEXT_BUDGET = 17000,
+	LEAN_CONTEXT = 6000,
 	DEFAULT_PER_HOUR = 6
 
 //The agent, address and token, and whether the button shows at all. INTERACTIVES_DESIGNER=off hides it even with a token
@@ -45,6 +46,7 @@ const WORDS = {
 	forbiddenOwn: "Cogniti didn't accept your own token. It may have ended, or the Activity Designer may not be shared with you yet. Check it in Preferences, or remove it to use the shared allowance.",
 	unavailable: 'The Activity Designer could not be reached. Try again in a minute.',
 	empty: "The Activity Designer didn't send anything back. Try again.",
+	cut: 'The Activity Designer took too long to start and Cogniti gave up. Try a smaller request, or try again in a minute.',
 }
 
 //The little client for Cogniti's chat api. Undocumented, found in its own chat page: a conversation is made first, then
@@ -105,13 +107,21 @@ const cogniti = (cfg, fetcher = (...a) => fetch(...a)) => {
 				},
 				dec = new TextDecoder(),
 				buf = ''
-			for await (let chunk of res.body) {
-				buf += typeof chunk === 'string' ? chunk : dec.decode(chunk, {stream: true})
-				let i
-				while ((i = buf.indexOf('\n')) >= 0) {
-					line(buf.slice(0, i))
-					buf = buf.slice(i + 1)
+			try {
+				for await (let chunk of res.body) {
+					buf += typeof chunk === 'string' ? chunk : dec.decode(chunk, {stream: true})
+					let i
+					while ((i = buf.indexOf('\n')) >= 0) {
+						line(buf.slice(0, i))
+						buf = buf.slice(i + 1)
+					}
 				}
+			}
+			catch (err) {
+				if (signal?.aborted) throw err
+				//Cogniti drops a reply that hasn't started after about 30s ("terminated", 11 Nov): a big message on an agent with
+				//knowledge and resources takes that long to get going. Nothing usable came, so say so and let the caller go lean
+				if (!reply.trim()) throw new DesignerError('cut', WORDS.cut)
 			}
 			line(buf)
 			if (!reply.trim()) throw new DesignerError(failed ? 'unavailable' : 'empty', failed ? WORDS.unavailable : WORDS.empty)
@@ -287,9 +297,13 @@ const playbook = () => {
 	return playbookCache
 }
 
+//The playbook lives in the Cogniti agent's Knowledge now (the second agent keeps it). Sending it as well made the message big
+//enough for Cogniti to give up before answering, so it only rides along with INTERACTIVES_DESIGNER_PLAYBOOK=inline
+const inlinePlaybook = () => /^inline$/i.test(process.env.INTERACTIVES_DESIGNER_PLAYBOOK || '')
+
 //One message holds everything: the spec, how to make it good, where we are, what's wanted
 const requestMessage = ({spec, projectId, projectName, firstName, context, message}) =>
-	`# Blueprint spec\n${spec}\n\n` + (playbook() ? `# Playbook\nApply this to everything you make.\n\n${playbook().replace(/^# .*\n+/, '')}\n\n` : '') + `# Open project\nid ${projectId}\nname ${JSON.stringify(projectName)}\n\n${context}\n` +
+	`# Blueprint spec\n${spec}\n\n` + (inlinePlaybook() && playbook() ? `# Playbook\nApply this to everything you make.\n\n${playbook().replace(/^# .*\n+/, '')}\n\n` : '') + `# Open project\nid ${projectId}\nname ${JSON.stringify(projectName)}\n\n${context}\n` +
 	(firstName ? `\n# Designer\nTheir first name is ${firstName}.\n` : '') +
 	`\n# Request\n${message}`
 
@@ -341,7 +355,8 @@ const run = async (deps, input) => {
 
 		if (!state.conversation) state.conversation = await ai.newConversation(signal)
 
-		let text = requestMessage({spec, projectId, projectName, firstName, context: around, message}),
+		let lean = false,
+			text = requestMessage({spec, projectId, projectName, firstName, context: around, message}),
 			//what goes in the chat's history for the message: the request without the project, which is stale next time
 			slim = `# Request\n${message}`
 
@@ -354,7 +369,18 @@ const run = async (deps, input) => {
 		while (rounds < MAX_MESSAGES) {
 			if (signal?.aborted) return done('cancelled')
 			emit({type: 'status', text: rounds ? STATUS.check : STATUS.think})
-			let reply = await ai.send(state.conversation, text, state.history, signal)
+			let reply
+			try {
+				reply = await ai.send(state.conversation, text, state.history, signal)
+			}
+			catch (err) {
+				//Too big to get started: once, the same request without the raw-change reference and with less of the project
+				if (err?.kind !== 'cut' || rounds || lean) throw err
+				lean = true
+				emit({type: 'status', text: STATUS.think})
+				text = requestMessage({spec: String(spec).split('\n\n# Raw changes')[0], projectId, projectName, firstName, context: cut(around, LEAN_CONTEXT), message})
+				reply = await ai.send(state.conversation, text, state.history, signal)
+			}
 			rounds++
 			state.history.push({role: 'user', content: slim, uuid: crypto.randomUUID()}, {role: 'ai', content: reply, uuid: crypto.randomUUID()})
 
