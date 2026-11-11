@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Frameling animations**: drop a `.flplay` file from Frameling (File > Export for Interactives there) onto the canvas and it plays as its own layer, crisp for pixel art. Pick the clip, whether it plays, loops and how fast in the inspector, with a small preview. Play a Frameling clip, Stop a Frameling animation and Show a Frameling frame control it from a click, When a Frameling clip ends and When a Frameling animation reaches a marker act on it, timelines can scrub its frame, and scripts use `ix.playClip`. Packages and single-file exports carry it.
 - **Live collaboration is a project setting, off to start with**: turn it on in Project settings, or with one click when you invite someone. Off, the editor sends nothing but the save, so a project you work on alone uses much less data. A copy of a project, or one made from a template, starts with it off.
 - **Inviting offers live collaboration**: inviting someone now offers to turn it on, and the Share menu says so when a shared project has it off.
 - **Changed somewhere else**: with live collaboration off, coming back to a tab tells you if the project was changed somewhere else (another tab, an AI assistant, a collaborator), with a Reload button. Saving over someone's newer work is still refused.

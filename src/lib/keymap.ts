@@ -55,6 +55,7 @@ const TOOL_NAMES: [string, string, string[]][] = [
   ['video', 'Video tool', []],
   ['draw', 'Script layer tool', []],
   ['shader', 'Shader layer tool', []],
+  ['animation', 'Frameling animation tool', []],
   ['progress', 'Progress bar tool', []],
   ['chart', 'Chart tool', []],
   ['connector', 'Connector tool', ['K']],

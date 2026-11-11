@@ -161,6 +161,7 @@ export type Tool =
   | 'video'
   | 'draw'
   | 'shader'
+  | 'animation'
   | 'progress'
   | 'chart'
   | 'bone'

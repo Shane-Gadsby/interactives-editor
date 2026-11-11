@@ -49,6 +49,7 @@ const fixtures: Record<string, { node: () => SceneNode; has: string[] }> = {
   embed: { node: () => createNode('embed', { mode: 'iframe' } as never), has: ['src'] },
   star: { node: () => createNode('star', {}), has: ['innerRatio'] },
   progress: { node: () => createNode('progress', {}), has: ['barFill.color', 'value', 'max'] },
+  animation: { node: () => createNode('animation', {}), has: ['clipName', 'playing', 'speed', 'frame'] },
 };
 
 /** Fields that have no key button on purpose: they are driven by bindings and interactions, or are set up once. */

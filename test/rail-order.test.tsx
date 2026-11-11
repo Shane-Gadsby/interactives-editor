@@ -63,7 +63,7 @@ describe('the tool rail in the person\'s order', { timeout: 30000 }, () => {
     expect(groups()).toEqual(['shapes', 'rig', 'media', 'data', 'web', 'draw']);
     expect(tools('shapes')).toEqual(['artboard', 'frame', 'star', 'ellipse', 'polygon', 'rect']);
     open('media');
-    expect(tools('media')).toEqual(['catalogue', 'draw', 'shader', 'video', 'image', 'text']);
+    expect(tools('media')).toEqual(['catalogue', 'draw', 'shader', 'animation', 'video', 'image', 'text']);
   });
 
   it('moves a group with Alt+Down on its heading, keeps the focus on it, and says so', async () => {

@@ -21,7 +21,7 @@ describe('the help mapping covers everything', () => {
   it('every layer type maps to a topic and anchor that exist', () => {
     for (const [type, t] of Object.entries(LAYER_HELP)) expect(problem(t.to), type).toBeNull();
     //the keys are the layer types the player knows (the format's union), so a new one is a compile error here too
-    expect(Object.keys(LAYER_HELP).sort()).toEqual(['bone', 'button', 'chart', 'connector', 'draw', 'ellipse', 'embed', 'frame', 'group', 'image', 'input', 'instance', 'link', 'path', 'polygon', 'progress', 'rect', 'shader', 'star', 'text', 'video']);
+    expect(Object.keys(LAYER_HELP).sort()).toEqual(['animation', 'bone', 'button', 'chart', 'connector', 'draw', 'ellipse', 'embed', 'frame', 'group', 'image', 'input', 'instance', 'link', 'path', 'polygon', 'progress', 'rect', 'shader', 'star', 'text', 'video']);
   });
   it('every tool maps to a topic and anchor that exist, including the ones in the rail groups', () => {
     for (const [tool, t] of Object.entries(TOOL_HELP)) expect(problem(t.to), tool).toBeNull();

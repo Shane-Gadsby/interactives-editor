@@ -136,6 +136,7 @@ const CREATE_TYPES: Partial<Record<Tool, NodeType>> = {
   video: 'video',
   draw: 'draw',
   shader: 'shader',
+  animation: 'animation',
   progress: 'progress',
   chart: 'chart',
 };
@@ -2165,6 +2166,7 @@ export function Canvas() {
       { type: 'video', label: 'Video' },
       { type: 'draw', label: 'Script layer' },
       { type: 'shader', label: 'Shader layer' },
+      { type: 'animation', label: 'Frameling animation' },
       { type: 'progress', label: 'Progress bar' },
       { type: 'chart', label: 'Chart' },
     ];
@@ -2810,6 +2812,13 @@ function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zo
         <>
           <rect x={x} y={y} width={w} height={h} fill="#1a1030" fillOpacity={0.9} />
           {h > 14 * zoom && label('Shader layer', '#c58bff', 14)}
+        </>
+      );
+    case 'animation':
+      return (
+        <>
+          <rect x={x} y={y} width={w} height={h} fill="#1d1b26" fillOpacity={0.85} />
+          {h > 14 * zoom && label('Frameling animation', '#ffc94a', 14)}
         </>
       );
     case 'progress':

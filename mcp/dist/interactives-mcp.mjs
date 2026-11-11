@@ -466,6 +466,36 @@ const SPECS = [
     hasInput: false,
     params: [{ key: "source", label: "Data source", type: "data" }]
   },
+  {
+    kind: "event.animationEnd",
+    label: "On animation clip end",
+    category: "event",
+    summary: "Runs when a Frameling animation layer finishes a clip, or a looping clip comes round.",
+    details: "A play-once clip fires once, when it stops on its last frame. A looping clip fires each time it comes round (`event.looped` is true). `event.layer` is the layer's name and `event.clip` the clip (empty for the whole animation).",
+    group: "Timelines and blends",
+    gives: ["event.layer", "event.clip", "event.looped"],
+    outputs: OUT,
+    hasInput: false,
+    params: [
+      { key: "target", label: "Animation layer", type: "node", placeholder: "Any animation layer", help: "Leave empty to fire for every animation layer" },
+      { key: "clip", label: "Clip name", type: "text", placeholder: "Any clip", help: "Leave empty to fire for every clip" }
+    ]
+  },
+  {
+    kind: "event.animationMarker",
+    label: "On animation marker",
+    category: "event",
+    summary: "Runs when a playing Frameling animation reaches a marker placed in Frameling (a footstep, a hit).",
+    details: "Markers are named moments the artist put on frames in Frameling. Only markers inside the clip that is playing count, on every lap of a loop. `event.marker` is the marker's name, `event.frame` its frame in the whole animation, `event.layer` the layer's name and `event.clip` the clip.",
+    group: "Timelines and blends",
+    gives: ["event.marker", "event.frame", "event.layer", "event.clip"],
+    outputs: OUT,
+    hasInput: false,
+    params: [
+      { key: "target", label: "Animation layer", type: "node", placeholder: "Any animation layer", help: "Leave empty to fire for every animation layer" },
+      { key: "marker", label: "Marker name", type: "text", placeholder: "Any marker", help: "Leave empty to fire for every marker" }
+    ]
+  },
   // ---------------------------------------------------------------- actions
   {
     kind: "action.timeline",
@@ -1862,6 +1892,93 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.animationPlay",
+    label: "Play animation clip",
+    category: "action",
+    summary: "Plays a clip of a Frameling animation layer, such as idle, wave or run.",
+    details: `Leave the clip empty to carry on with the clip the layer has. It starts from the clip's first frame unless From is "Where it is". Loop and Speed change the layer's own settings. "When it finishes" waits for one pass of the clip, so a looping clip carries on after one lap.`,
+    group: "Timelines and blends",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "target", label: "Animation layer", type: "node" },
+      { key: "clip", label: "Clip", type: "expr", default: "", placeholder: "The clip it has", help: 'A clip name in quotes, such as "run", or an expression. Empty keeps the clip the layer has.' },
+      {
+        key: "from",
+        label: "From",
+        type: "select",
+        options: [
+          { value: "start", label: "The first frame" },
+          { value: "current", label: "Where it is" }
+        ],
+        default: "start"
+      },
+      {
+        key: "loop",
+        label: "Loop",
+        type: "select",
+        options: [
+          { value: "", label: "Leave as it is" },
+          { value: "loop", label: "Loop" },
+          { value: "once", label: "Play once" }
+        ],
+        default: ""
+      },
+      { key: "speed", label: "Speed", type: "expr", default: "", placeholder: "Leave as it is", help: "1 is the speed it was drawn at, 2 twice as fast, -1 backwards. Empty leaves the layer's speed." },
+      {
+        key: "continue",
+        label: "Continue",
+        type: "select",
+        options: [
+          { value: "start", label: "Straight away" },
+          { value: "end", label: "When it finishes" },
+          { value: "percent", label: "Part-way through" }
+        ],
+        default: "start",
+        help: "When the next node runs: straight away, when the clip has played through, or part-way through"
+      },
+      { key: "continueAt", label: "At (%)", type: "number", default: 50, showIf: { key: "continue", values: ["percent"] }, help: "How far through, 0 to 100" }
+    ]
+  },
+  {
+    kind: "action.animationStop",
+    label: "Stop animation",
+    category: "action",
+    summary: "Stops a Frameling animation layer where it is, or back on its first frame.",
+    group: "Timelines and blends",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "target", label: "Animation layer", type: "node" },
+      { key: "reset", label: "Go back to the first frame", type: "boolean", default: false }
+    ]
+  },
+  {
+    kind: "action.animationFrame",
+    label: "Go to animation frame",
+    category: "action",
+    summary: "Shows one frame of a Frameling animation layer's clip, then stops, plays on or leaves it.",
+    details: "Frame 0 is the clip's first. A frame past the end shows the last one.",
+    group: "Timelines and blends",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "target", label: "Animation layer", type: "node" },
+      { key: "frame", label: "Frame", type: "expr", default: "0", help: "A number, counted from 0, or an expression" },
+      {
+        key: "then",
+        label: "Then",
+        type: "select",
+        options: [
+          { value: "stop", label: "Stop there" },
+          { value: "play", label: "Play on from there" },
+          { value: "keep", label: "Keep playing or not, as it was" }
+        ],
+        default: "stop"
+      }
+    ]
+  },
+  {
     kind: "action.waitTimeline",
     label: "Wait for time in timeline",
     category: "action",
@@ -2164,7 +2281,12 @@ const ANIMATABLE_PROPS = [
   { prop: "modifiers.0.opacity", label: "Text modifier opacity", kind: "number" },
   { prop: "modifiers.0.color", label: "Text modifier colour", kind: "color" },
   { prop: "modifiers.0.letterSpacing", label: "Text modifier letter spacing", kind: "number" },
-  { prop: "modifiers.0.blur", label: "Text modifier blur", kind: "number" }
+  { prop: "modifiers.0.blur", label: "Text modifier blur", kind: "number" },
+  // Frameling animation layers: scrub the frame from a timeline, or change the clip, playing and speed
+  { prop: "frame", label: "Frameling frame", kind: "number" },
+  { prop: "speed", label: "Frameling speed", kind: "number" },
+  { prop: "playing", label: "Frameling playing", kind: "boolean" },
+  { prop: "clipName", label: "Frameling clip", kind: "string" }
 ];
 function layerOwnProps(node) {
   if (node?.type === "connector") {
@@ -3881,6 +4003,14 @@ function sanitizeNode(raw, seen) {
     n.pixelRatio = isNum(raw.pixelRatio) && raw.pixelRatio > 0 ? Math.min(3, raw.pixelRatio) : "auto";
     n.uniforms = usableUniforms(raw.uniforms);
   }
+  if (raw.type === "animation") {
+    if (n.loop !== "clip" && n.loop !== "loop" && n.loop !== "once") n.loop = "clip";
+    if (n.fit !== "contain" && n.fit !== "cover" && n.fit !== "fill") n.fit = "contain";
+    if (n.smoothing !== "auto" && n.smoothing !== "crisp" && n.smoothing !== "smooth") n.smoothing = "auto";
+    n.speed = isNum(n.speed) ? Math.max(-100, Math.min(100, n.speed)) : 1;
+    n.frame = isNum(n.frame) && n.frame >= 0 ? n.frame : 0;
+    if (n.assetId !== null && !isStr(n.assetId)) n.assetId = null;
+  }
   if (raw.type === "progress") {
     if (n.orientation !== "horizontal" && n.orientation !== "vertical") n.orientation = "horizontal";
     if (n.semantics !== "none" && n.semantics !== "progressbar" && n.semantics !== "meter") n.semantics = "progressbar";
@@ -4813,6 +4943,7 @@ const NAMES$1 = {
   instance: "Instance",
   draw: "Script layer",
   shader: "Shader layer",
+  animation: "Frameling animation",
   progress: "Progress bar",
   chart: "Chart",
   connector: "Connector",
@@ -4998,6 +5129,7 @@ const FACTORIES = {
     width: 0,
     height: 0
   }),
+  animation: () => ({ assetId: null, clipName: "", playing: true, loop: "clip", speed: 1, frame: 0, fit: "contain", smoothing: "auto" }),
   shader: () => ({
     code: DEFAULT_SHADER.code,
     uniforms: structuredClone(DEFAULT_SHADER.uniforms),
@@ -8880,7 +9012,9 @@ function nameFromWords(typed, taken) {
   if (!fixed) return null;
   return { label: cleanVariableLabel(text2), name: uniqueIdentifier(taken, fixed) };
 }
+const FRAMELING_PACKAGE_MIME = "application/vnd.frameling.playable+zip";
 function assetKind(mime, name = "") {
+  if (mime === FRAMELING_PACKAGE_MIME || /\.flplay$/i.test(name)) return "animation";
   if (mime.startsWith("image/")) return "image";
   if (mime.startsWith("video/")) return "video";
   if (mime.startsWith("audio/")) return "audio";
@@ -11089,6 +11223,8 @@ const PLAIN_NODE = {
   "event.timelineEnd": "When an animation finishes",
   "event.timelineMarker": "When an animation reaches a marker",
   "event.videoCue": "When a video reaches a cue point",
+  "event.animationEnd": "When a Frameling clip ends",
+  "event.animationMarker": "When a Frameling animation reaches a marker",
   "event.step": "When the step changes",
   "event.message": "When a message arrives",
   "event.scroll": "When scrolled",
@@ -11100,6 +11236,9 @@ const PLAIN_NODE = {
   "event.media": "When the microphone or camera is used",
   "event.dataLoaded": "When data has loaded",
   "action.timeline": "Play or stop an animation",
+  "action.animationPlay": "Play a Frameling clip",
+  "action.animationStop": "Stop a Frameling animation",
+  "action.animationFrame": "Show a Frameling frame",
   "action.blendPlay": "Start a blend",
   "action.blendStop": "Stop a blend",
   "action.setVariable": "Change a value or counter",
@@ -24584,6 +24723,7 @@ The same buttons are above the raw text in the Data tab, and the setting reaches
 | \`ix.setTheme(name)\` / \`ix.getTheme()\` / \`ix.themes()\` | Show a [theme](themes) by name (\`'auto'\` follows the viewer), read the one showing, list them |
 | \`ix.record(name, value?)\` | Count that something happened, for [Insights](insights) (a name up to 60 characters, a short value) |
 | \`ix.setInstanceInput(layer, name, v)\` / \`ix.getInstanceInput(layer, name)\` / \`ix.fireInstanceTrigger(layer, name, data)\` | Set or read a variable inside an [instance](instances), or send a message into it only |
+| \`ix.playClip(layer, clip?, {from, loop, speed})\` / \`ix.stopAnimation(layer, reset?)\` / \`ix.goToFrame(layer, frame, play?)\` / \`ix.animation(layer)\` | Play, stop or move a [Frameling animation](frameling-animations) layer, and read what it is doing |
 | \`ix.onFrame((dt, t) => …)\` | Run every frame |
 | \`ix.pointer\`, \`ix.artboard\` | Pointer \`{x, y, down}\`, artboard \`{name, width, height}\` |
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
@@ -24601,6 +24741,66 @@ The sandbox is a locked room for scripts, so a script can't harm the page or the
 **Run scripts in the sandbox** in Project settings turns it off, so scripts run in the page itself with full access (\`node.element\`, \`fetch\`, the DOM). Keep it on for code you do not trust, and turn it off only for code you trust that needs the page.
 
 One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches the URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. It follows the project's [data rules](data-sources#what-may-be-loaded): http(s) only, no cookies to other sites, and, if you list **Allowed data hosts** in Project settings, only those hosts. A refused URL makes \`loadData\` throw, so use \`try\`/\`catch\`. Without an allowed-hosts list, only run projects whose scripts you trust.`
+  },
+  {
+    id: "frameling-animations",
+    title: "Frameling animations",
+    group: "Motion",
+    icon: "flipbook",
+    summary: "Play a character or effect drawn frame by frame in Frameling, and control its clips from clicks, timelines and scripts.",
+    keywords: "frameling flplay animation sprite sprite sheet flipbook frame by frame pixel art character walk run idle clip marker hand drawn cartoon",
+    body: () => `**Frameling** is a desktop app for drawing animation frame by frame: a character that waves, runs and jumps, a bouncing ball, a sparkle. A **Frameling animation** layer plays one on your page, and the page can tell it which clip to play.
+
+## Bring one in
+
+1. In Frameling, name your clips in the timeline (idle, wave, run...) and put **markers** on moments that matter (a footstep, the ball landing).
+2. Choose **File > Export for Interactives** there. It saves a \`.flplay\` file.
+3. Drag the \`.flplay\` file onto the canvas. It becomes a **Frameling animation** layer at the size it was drawn, playing its first clip.
+
+You can also add the file in **Assets** and press **Place**, or pick the **Frameling animation** tool (in the **Media** group of the tool bar), drag a box and choose the file in the inspector.
+
+## Settings
+
+- **Animation**: the \`.flplay\` file it plays. A small preview plays the clip beside it (press stop to hold it still).
+- **Clip**: which clip shows, or **Whole animation**.
+- **Playing**: on, it plays as the page starts. Off, it shows **Frame** until something plays it.
+- **Loop**: **As set in Frameling** follows each clip's own loop setting. **Loop** and **Play once** override it.
+- **Speed**: 1 is the speed it was drawn at, 2 twice as fast, below 0 backwards.
+- **Frame**: the frame it shows while stopped, counted from 0 (the clip's first). The canvas shows this frame while you edit.
+- **Fit**: how the drawing fits the box. **Pixels**: **Automatic** keeps pixel art crisp and everything else smooth.
+- **Size to the animation** puts the layer back to the size it was drawn.
+
+## Control it
+
+| Node | Does |
+|---|---|
+| **Play a Frameling clip** | Plays a clip ("run"), from its first frame or where it is. It can change Loop and Speed, and carry on straight away or when the clip has played through |
+| **Stop a Frameling animation** | Stops where it is, or back on the first frame |
+| **Show a Frameling frame** | Shows one frame, then stops or plays on |
+| **When a Frameling clip ends** | Runs when a play-once clip finishes, or each time a looping clip comes round (\`event.looped\`) |
+| **When a Frameling animation reaches a marker** | Runs at a marker from Frameling, such as footstep (\`event.marker\`) |
+
+For a character that walks when clicked: **When clicked** on the button, then **Play a Frameling clip** with Clip \`"walk"\`, then **Play a Frameling clip** with Clip \`"idle"\` set to continue **When it finishes**.
+
+**Timelines** can key **Frameling frame** to scrub it by hand, and **Frameling playing**, **Frameling speed** and **Frameling clip** to change it at a moment. A key on the frame wins over playback, so turn **Playing** off for a scrubbed one. **Set property** and data bindings reach the same four.
+
+## From a script
+
+\`\`\`
+ix.playClip('Hero', 'run', { speed: 1.5 });   // from: 'current' carries on from where it is; loop: 'loop' | 'once' | 'clip'
+ix.stopAnimation('Hero', true);               // true goes back to the first frame
+ix.goToFrame('Hero', 3, false);               // show frame 3 and stay there
+const s = ix.animation('Hero');               // { clip, frame, playing, speed, loop, frameCount, fps, clips, markers }
+\`\`\`
+
+These work in the [sandbox](scripts) too.
+
+## Good to know
+
+- The file goes inside \`.ixp\` packages and single-file exports like any other asset. Learners need nothing extra.
+- Changed the animation? Export it from Frameling again, then use **Replace** on it in **Assets**. Every layer using it keeps its settings.
+- A layer with no file, or a file that can't be read, shows a hatched box.
+- An animation layer is a picture to a screen reader: give it a **text alternative** that says what it shows, or mark it decorative.`
   },
   {
     id: "script-layers",

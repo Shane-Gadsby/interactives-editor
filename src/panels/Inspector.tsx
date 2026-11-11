@@ -26,6 +26,7 @@ import {
   type DrawNode,
   type ImageNode,
   type ShaderNode,
+  type AnimationNode,
   type ProgressNode,
   type ChartNode,
   type ConnectorNode,
@@ -123,6 +124,7 @@ import { useDrawProblem } from '../lib/draw-edit';
 import { confirmDialog } from '../components/dialogs';
 import { detach as detachFromLibrary } from '../lib/library-actions';
 import { ShaderFilterFields, ShaderSection } from './ShaderInspector';
+import { AnimationSection } from './AnimationInspector';
 import { FillSection, PaintOrderSection, StrokeSection } from './PaintLayers';
 import { ChartSection, ProgressSection } from './DataLayerInspectors';
 import { ConnectorSection } from './ConnectorInspector';
@@ -1745,6 +1747,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return <ChartSection nodes={nodes as ChartNode[]} project={project} ab={store().artboard()} />;
     case 'connector':
       return <ConnectorSection nodes={nodes as ConnectorNode[]} project={project} ab={store().artboard()} />;
+    case 'animation':
+      return <AnimationSection nodes={nodes as AnimationNode[]} project={project} />;
     case 'shader':
       return nodes.length === 1 ? <ShaderSection node={n as ShaderNode} project={project} /> : <p className="hint">Select one shader layer to edit its code and uniforms.</p>;
     case 'group':
