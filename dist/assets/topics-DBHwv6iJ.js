@@ -1,4 +1,4 @@
-import{bX as a,bY as o,bZ as m,b_ as r,b$ as k,c0 as V,c1 as R,c2 as L,c3 as h,c4 as s,c5 as i,c6 as U,c7 as E,c8 as b,c9 as n,ca as S,cb as C,cc as f,cd as w,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-D78u60h8.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bX as a,bY as o,bZ as m,b_ as r,b$ as k,c0 as V,c1 as R,c2 as L,c3 as h,c4 as s,c5 as i,c6 as U,c7 as E,c8 as b,c9 as n,ca as S,cb as C,cc as f,cd as w,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-0cbLgEzt.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -300,7 +300,7 @@ See [Embedding and the player API](embedding) for the iframe snippet, how the pa
 
 ## 7. Work with other people
 
-- **Invite someone to edit with you.** Choose **Share → Invite to collaborate…**, type their name and pick them from the list. The project appears on their projects page. When two or more people are in it, their initials appear at the top and you see each other's cursors. See [Live editing and saving](live-editing#inviting-people).
+- **Invite someone to edit with you.** Choose **Share → Invite to collaborate…**, type their name and pick them from the list. The project appears on their projects page. Press **Turn on live collaboration** in the same window (it is off until you do), and when two or more people are in it, their initials appear at the top and you see each other's cursors. See [Live editing and saving](live-editing#inviting-people).
 - **Ask for comments, not edits.** Choose **Share → Share for review…** and send the review link. Reviewers pin notes on the project and you answer them in the **Comments** tab. See [Review comments](comments).
 - **Let others start from yours.** Choose **Share → Save as template…** to make a template with a checklist, or tick **Allow remix** on the Link for StudyDesk. See [Templates, examples and remix](templates).
 - To let someone just play it, send a share link.
@@ -3807,9 +3807,9 @@ While the project plays, some layers let the pointer straight through to whateve
 
 ![Preview with the Switch button at 50% opacity: clicking it does nothing, and the Events list says the click landed on empty space, not on a layer.](help/concept-hit-testing-see-through.png)
 
-**More:** [See-through layers don't take clicks](interactions#see-through-layers-don-t-take-clicks), [Which layer inside was hit](interactions#which-layer-inside-was-hit), [See what ran](interactions#see-what-ran), [Order](arrange#order).`}},Bt=Object.freeze(Object.defineProperty({__proto__:null,concept:Ot},Symbol.toStringTag,{value:"Module"})),Nt={order:200,area:"interface",topic:{id:"concept-live-revisions",title:"It saves as you go; revisions are the way back",group:"Concepts",summary:"There is no Save to remember: every change is saved, other editors see it live, and Revision history takes the project back to an earlier version.",keywords:"concept save autosave no save button saved failed live editing collaborate two people same text revision history restore undo go back mistake bad change conflict 409 changed in another tab overwrite reload",body:`Every change you make is saved as you go. The label next to the project name says **Saved**, **Saving…** or **Save failed**, and <kbd>Ctrl</kbd>+<kbd>S</kbd> saves at once if you want to be sure.
+**More:** [See-through layers don't take clicks](interactions#see-through-layers-don-t-take-clicks), [Which layer inside was hit](interactions#which-layer-inside-was-hit), [See what ran](interactions#see-what-ran), [Order](arrange#order).`}},Bt=Object.freeze(Object.defineProperty({__proto__:null,concept:Ot},Symbol.toStringTag,{value:"Module"})),Nt={order:200,area:"interface",topic:{id:"concept-live-revisions",title:"It saves as you go; revisions are the way back",group:"Concepts",summary:"There is no Save to remember: every change is saved, other editors see it live once you turn Live collaboration on, and Revision history takes the project back to an earlier version.",keywords:"concept live collaboration setting off on save autosave no save button saved failed live editing collaborate two people same text revision history restore undo go back mistake bad change conflict 409 changed in another tab overwrite reload",body:`Every change you make is saved as you go. The label next to the project name says **Saved**, **Saving…** or **Save failed**, and <kbd>Ctrl</kbd>+<kbd>S</kbd> saves at once if you want to be sure.
 
-When other people you invited have the project open, the **Live** badge shows, their initials appear in the top bar, and their changes arrive on your canvas as they make them. A second tab of your own on the same project counts as another person.
+**Live collaboration** is a setting of the project, and it starts off. Turn it on in **Project settings** (or when you invite someone in **Share → Invite to collaborate…**) and, when other people you invited have the project open, the **Live** badge shows, their initials appear in the top bar, and their changes arrive on your canvas as they make them. A second tab of your own on the same project counts as another person. With it off, your editor sends nothing but the save, and tells you when you come back to a tab that the project was changed somewhere else.
 
 ![The top bar of a project with two tabs open: Saved, Live and a TU badge for the other tab, and on the canvas that tab's cursor labelled Test User and the dashed outline round the layer it has selected, which it has just renamed to Logo.](help/concept-live-revisions-live.png)
 
@@ -3823,7 +3823,7 @@ The server also keeps **revisions**: a snapshot every few minutes while the proj
 - **"I made a mess and undo isn't enough."** Open **Revision history** (the clock in the top bar), click a version to see a picture of it, press **Restore this version** and confirm with **Restore**. What is there now is saved into the history first, as **Before restore**, so a restore can itself be undone the same way. The editor reloads the project when it is done. Before a big change, **Save a named version…** saves what is there now under a name and pins it, and **Pin** does the same for a version in the list: pinned versions are never cleared out.
 - **"Undo took back my change, but not hers."** Undo only undoes your own changes, never someone else's.
 - **"We were both typing in the same text box."** The project keeps one value for each setting, and when two people change the same one at the same moment, the later change wins. Split the work by layer or by page.
-- **"A red bar says the project was changed in another tab or by someone else."** Two tabs on one project normally share one live session and just see each other's changes, so this is rare. You get it when a copy saves on its own, outside the live session, after the project has changed on the server. The server refused to quietly write over it. **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Whichever you don't pick is lost, though the revision history may still have it.
+- **"A red bar says the project was changed in another tab or by someone else."** With Live collaboration on, two tabs on one project share one live session and just see each other's changes, so this is rare. With it off, you get it when another tab, a collaborator or an AI assistant has saved the project since this tab opened it, and you then change something. The server refused to quietly write over it. **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Whichever you don't pick is lost, though the revision history may still have it.
 
 ## How to tell what is going on
 
@@ -3992,7 +3992,7 @@ The first line of the Export menu, **Want a link instead of a file?**, opens **S
 Share has four entries:
 
 - **Share…** asks **Where will people use it?** and gives you the one thing to copy for the answer: the embed code for a StudyDesk page (the **Link for StudyDesk**, which keeps each learner's results), the plain share link, the project name for the gradebook, or the file downloads.
-- **Invite to collaborate…** is for people who will edit it with you.
+- **Invite to collaborate…** is for people who will edit it with you. It also has the **Turn on live collaboration** button, for seeing each other's changes as they happen.
 - **Save as template…** is for people who will start their own project from it.
 - **Share for review…** is a link for reviewers to look and comment, not for learners.
 
@@ -8047,7 +8047,7 @@ Off by default, so embeds that already exist keep working. Turn it on and attrib
 ## Good to know
 - The list is documentation first. Nothing about how the project plays changes when you add to it, apart from this option.
 - Message names found in scripts are only the ones written out as text (\`ix.emit('done')\`), not names built from other values. Add those by hand.
-- **Update to the latest version** in Share link after changing the list, so the link plays the new version.`},{id:"project-settings",title:"Project settings",group:"Getting started",summary:"Start page, fit, page title, fonts, sandbox, reduced motion and Optimise output.",keywords:"settings start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider",body:`![The Project section of the Inspector, with Allowed data hosts filled in and the library and reduced motion boxes below it.](help/project-settings.png)
+- **Update to the latest version** in Share link after changing the list, so the link plays the new version.`},{id:"project-settings",title:"Project settings",group:"Getting started",summary:"Start page, fit, page title, fonts, live collaboration, sandbox, reduced motion and Optimise output.",keywords:"settings live collaboration start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider",body:`![The Project section of the Inspector, with Allowed data hosts filled in and the library and reduced motion boxes below it.](help/project-settings.png)
 
 The **Project** section holds the settings for the whole project, not one page. Click an empty part of the canvas, or a page's name, and it shows in the Inspector, below the page's own settings.
 
@@ -8060,6 +8060,7 @@ The **Project** section holds the settings for the whole project, not one page. 
 | Description | A note about the project, kept in the file |
 | Fit | How the page scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
 | Page background | The colour around the page in the exported page |
+| Live collaboration | Off unless you turn it on. On, people who share the project see each other's cursors and changes as they happen; off, nothing extra is sent and the project is saved one person at a time. See [Live editing and saving](live-editing#live-collaboration) |
 | Run scripts in the sandbox | See [Scripts](scripts) |
 | Run embedded HTML in the page | Only shown while the sandbox box above is off. Lets Embed layers with HTML reach the page, for HTML you wrote and trust. See [Web elements](web-elements) |
 | Allowed data hosts | Hosts that data may be loaded from, one per line (\`api.example.com\`, \`*.example.com\`). Empty allows any http(s) host. See [Data sources](data-sources#what-may-be-loaded) |
@@ -8405,7 +8406,7 @@ A phone photo can be 5 MB or more, and an export or share link carries every pic
 | Share | Gives you |
 |---|---|
 | Share… | Opens with **Where will people use it?**: in a StudyDesk page (keeping learners' results or not), in the StudyDesk gradebook, anyone with a link, or as a file. It shows the one thing to copy for that, and the link settings are under **More ways to share** (below) |
-| Invite to collaborate… | People who can open and edit the project with you, live, found by name, email or username (see [Collaborating](live-editing#inviting-people)) |
+| Invite to collaborate… | People who can open and edit the project with you, found by name, email or username, with an offer to turn on Live collaboration (see [Collaborating](live-editing#inviting-people)) |
 | Save as template… | A copy other people (or you) start new projects from, with a checklist of what to change (see [Templates](templates#save-as-template)) |
 | Share for review… | A link where reviewers look at the project and leave comments, without editing it (see [Review comments](comments)) |
 
@@ -8772,7 +8773,17 @@ Power users (and the brand group) can switch the lock off while they work, with 
 ## Good to know
 - The lock lives in the editor, as library read-only does. It isn't a server-side check on every save, so treat it as policy support, not security.
 - A kit marked after projects copied it locks those copies the next time they open the Libraries tab. A kit no longer marked unlocks them the same way.
-- Colours and fonts the kit carries are the ones in its styles; theme tokens are not part of a library.`},{id:"live-editing",title:"Live editing and saving",group:"Working together",summary:"Several people in one project, autosave, revisions and conflicts.",keywords:"multiplayer collaborate live share presence cursor save autosave conflict undo revision history version restore save failed too big retry offline",body:`Everything saves as you work, and <kbd>Ctrl</kbd>+<kbd>S</kbd> saves at once from anywhere in the editor. A project can be opened by its owner, by people the owner has invited to collaborate (below), and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). When more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
+- Colours and fonts the kit carries are the ones in its styles; theme tokens are not part of a library.`},{id:"live-editing",title:"Live editing and saving",group:"Working together",summary:"Live collaboration (off until you turn it on), autosave, revisions and conflicts.",keywords:"live collaboration turn on turn off setting data bandwidth multiplayer collaborate live share presence cursor save autosave conflict undo revision history version restore save failed too big retry offline",body:`Everything saves as you work, and <kbd>Ctrl</kbd>+<kbd>S</kbd> saves at once from anywhere in the editor. A project can be opened by its owner, by people the owner has invited to collaborate (below), and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). 
+
+## Live collaboration
+**Live collaboration** is a setting of each project, and it is **off** until someone turns it on. Turn it on in [Project settings](project-settings) (the **Live collaboration** box), or from the **Turn on live collaboration** button in **Share → Invite to collaborate…**, which is offered when you invite someone. Nothing turns it on for you.
+
+- **Off** (the default): your editor works alone. It saves the whole project a moment after each change, and sends nothing else: no cursors, no stream of other people's changes. That keeps the data use of a project you work on by yourself as small as it can be. If someone else (or you, in another tab) saves the project meanwhile, you are told the next time you save, or when you come back to the tab (see *When two copies disagree* below).
+- **On**: when more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
+
+Turning it on saves your project first and then joins the others; turning it off lets your last changes reach the server and goes back to plain saving. It is one undo step like any setting. Everyone who has the project open follows the setting. A copy of a project, or a project made from a template, starts with it off.
+
+**An AI assistant** (the MCP server) edits through the same live room whatever the setting says, and its work is saved with the project like anyone's. If you have live collaboration off, you will not see it happen. A bar at the top of the editor says **This project was changed somewhere else since you opened it** when you come back to the tab, and **Reload** shows the assistant's work. If you start changing something first, the next save is refused with the red bar below, so the assistant's work is never written over by accident.
 
 - **Undo** only undoes your own changes.
 - If two people change the same setting at the same moment, the later change wins.
@@ -8796,7 +8807,7 @@ The server keeps saved revisions of the project: a snapshot every few minutes wh
 ![The Revision history dialog.](help/revision-history.png)
 
 ## When two copies disagree
-If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).
+With live collaboration off, a second tab, a collaborator or an AI assistant can save the project while you have it open. Coming back to the tab, a bar says **This project was changed somewhere else since you opened it** with a **Reload** button, as long as you have no unsaved changes. If you do, saving shows the red bar. If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).
 
 ## Inviting people
 **Share → Invite to collaborate…** lets other people open and edit the project with you.
@@ -8804,7 +8815,7 @@ If the project was saved from another tab, or by someone else without live editi
 1. Open the project and choose **Share**, then **Invite to collaborate…**.
 2. Start typing their name, email or username. A list of matching people appears: pick the right one and they are invited at once. If you already know their StudyDesk username (for example *u1234567*) you can type it and press **Invite**.
 3. They are listed under the box. The bin beside a name takes them off again (you are asked first, and their changes stay).
-4. The project now shows on their own projects page, marked *shared with you by* your name. When you both have it open you see each other's cursors and changes live.
+4. The project now shows on their own projects page, marked *shared with you by* your name. If live collaboration is off, the window offers **Turn on live collaboration** (it stays off until you press it). With it on, when you both have the project open you see each other's cursors and changes live; with it off you each work on your own copy and the second to save is asked to reload.
 
 ![The Invite to collaborate window: a search box for a name, email or username, and the list of people already invited.](help/invite-dialog.png)
 

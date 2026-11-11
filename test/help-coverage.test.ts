@@ -11,6 +11,9 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Live collaboration is a project setting, off to start with': [['live-editing', 'is a setting of each project'], ['project-settings', 'Live collaboration']],
+  'Inviting offers live collaboration': [['live-editing', 'Turn on live collaboration']],
+  'Changed somewhere else': [['live-editing', 'This project was changed somewhere else since you opened it']],
   Rooms: [['rooms', 'A class chat in a few steps'], ['rooms', 'Moderating a room'], ['interactions', 'Send a message to a room'], ['data-sources', '+ Room']],
   'Live shared responses': [['shared-responses', 'updates live'], ['shared-responses', 'the backup']],
   'Describe it': [['interactions', 'Describe it in words'], ['command-palette', 'Describe it']],

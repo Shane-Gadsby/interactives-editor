@@ -2,6 +2,9 @@
 
 ## Unreleased: Symposium 3
 
+- **Live collaboration is a project setting, off to start with**: turn it on in Project settings, or with one click when you invite someone. Off, the editor sends nothing but the save, so a project you work on alone uses much less data. A copy of a project, or one made from a template, starts with it off.
+- **Inviting offers live collaboration**: inviting someone now offers to turn it on, and the Share menu says so when a shared project has it off.
+- **Changed somewhere else**: with live collaboration off, coming back to a tab tells you if the project was changed somewhere else (another tab, an AI assistant, a collaborator), with a Reload button. Saving over someone's newer work is still refused.
 - **Rooms**: a Room data source (Data tab, + Room) is a live chat or question wall for everyone in the same class on the StudyDesk learner page. People send with the new "Send a message to a room…" behaviour, a Send to room node or `ix.room.send`, and messages appear for everyone at once under a made-up name like Quiet Otter 41, or first names if you choose. Bind a repeat to the messages and a text to how many people are here. You and anyone you share the project with can hide a message from the Data tab, and the class stops seeing it at once. Preview has a pretend room that uses your sample messages.
 - **Live shared responses**: word clouds and polls now update live on the StudyDesk learner page. When anyone in the course adds or takes back an answer, or you hide or clear one, everyone sees the new counts within a second or so. Where the live link can't be made, the page still checks every few seconds as before, and the Look again setting is now that backup check.
 - **Describe it**: describe what you want in Ctrl+K, for example "make this go to the results page", "when clicked show the hint" or "add 1 to score". The behaviour box opens already filled in, with a note of what it understood, for you to check and Add.
