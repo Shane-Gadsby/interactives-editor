@@ -1,6 +1,6 @@
 // Writes the two files the Activity Designer's Cogniti agent is given:
 //   activity-designer-playbook.docx  -> the agent's Knowledge tab (agent-docs/playbook.md)
-//   interactives-help.docx           -> the agent's Resources tab (every help topic and tutorial, text only)
+//   interactives-help-N.docx         -> the agent's Resources tab (every help topic and tutorial, text only, in parts)
 // Usage: npm run build first (the help comes from mcp/dist), then
 //   node scripts/export-agent-docs.mjs [out dir]   (default: agent-docs/out)
 // It writes .html and, when LibreOffice (soffice) is on the PATH, converts each to .docx. Re-run and re-upload the help
@@ -139,6 +139,15 @@ const mcp = await import(pathToFileURL(path.join(root, 'mcp', 'dist', 'interacti
 const ids = mcp.reference('?').split('help pages: ')[1].split(', ');
 const version = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 const intro = `<h1>Interactives editor help</h1><p>Every help page and tutorial in the StudyDesk Toolbox Interactives editor (version ${version}, exported ${new Date().toISOString().slice(0, 10)}), as text. Pictures are given as their captions.</p>`;
-const topics = ids.map((id) => html(mcp.reference(id).replace(/^# /, '## ').replace(/\n#{1}(#+) /g, '\n#$1# '))).join('\n<hr>\n');
-write('interactives-help', 'Interactives editor help', intro + topics);
+//Cogniti won't index one 260k-token file ("Nothing was indexed"), so the help goes in parts of about 150k characters
+//of text each, cut between topics
+const parts = [[]];
+let size = 0;
+for (const id of ids) {
+  const md = mcp.reference(id);
+  if (size + md.length > 150000 && parts.at(-1).length) parts.push([]), (size = 0);
+  parts.at(-1).push(html(md.replace(/^# /, '## ').replace(/\n#{1}(#+) /g, '\n#$1# ')));
+  size += md.length;
+}
+parts.forEach((p, i) => write(`interactives-help-${i + 1}`, `Interactives editor help, part ${i + 1} of ${parts.length}`, intro.replace('<h1>Interactives editor help</h1>', `<h1>Interactives editor help, part ${i + 1} of ${parts.length}</h1>`) + p.join('\n<hr>\n')));
 process.exit(0);
