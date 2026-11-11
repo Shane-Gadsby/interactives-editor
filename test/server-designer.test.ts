@@ -23,7 +23,7 @@ let script: (string | number)[] = [];
 let gate: Promise<void> | null = null;
 let conversations = 0;
 //what GET /api/v1/agents/ answers (the check on a token of someone's own), and what a new conversation does
-let agents: { status: number; body: unknown } = { status: 200, body: [{ id: '6af3a041a8d105e6274a6bdc', can_chat: true }] };
+let agents: { status: number; body: unknown } = { status: 200, body: [{ id: '6af3c21c0eba26d21bfa2427', can_chat: true }] };
 let newConversationStatus = 200;
 
 const bp = (o: unknown, words = 'I added a Quiz page.') => '```blueprint\n' + JSON.stringify(o) + '\n```\n' + words;
@@ -86,7 +86,7 @@ beforeEach(async () => {
   script = [];
   gate = null;
   conversations = 0;
-  agents = { status: 200, body: [{ id: '6af3a041a8d105e6274a6bdc', can_chat: true }] };
+  agents = { status: 200, body: [{ id: '6af3c21c0eba26d21bfa2427', can_chat: true }] };
   newConversationStatus = 200;
   h.db.audit.docs = [];
   h.db['designer-tokens'].docs = [];
@@ -171,7 +171,7 @@ describe('one request, one message', () => {
     //what the one message carried: the spec, the project and its open page, the request. Not a tool list or the old 100k guide
     const m = messages()[0];
     expect(m.auth).toBe(`Bearer ${TOKEN}`);
-    expect(m.body.agent_id).toBe('6af3a041a8d105e6274a6bdc');
+    expect(m.body.agent_id).toBe('6af3c21c0eba26d21bfa2427');
     expect(m.body.chat_history).toEqual([]);
     const text = m.body.messages[0].content as string;
     for (const part of ['# Blueprint spec', '# Playbook', 'Every option gets its own feedback', '# The blueprint format', `id ${id}`, 'Water cycle', '# The open page in full', 'Box [rect r1]', '# Request\nAdd a page with a multiple choice question about clouds, linked from page 1']) expect(text).toContain(part);
@@ -509,7 +509,7 @@ describe('their own Cogniti allowance', () => {
     expect(r.json).toMatchObject({ why: 'notShared' });
     expect(r.json.error).toMatch(/can't chat with the Activity Designer yet/);
     expect(h.db['designer-tokens'].docs).toHaveLength(0);
-    agents = { status: 200, body: [{ id: '6af3a041a8d105e6274a6bdc', can_chat: false }] };
+    agents = { status: 200, body: [{ id: '6af3c21c0eba26d21bfa2427', can_chat: false }] };
     expect((await put(OWN)).json.why).toBe('notShared');
   });
 

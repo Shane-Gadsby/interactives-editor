@@ -10,7 +10,7 @@ const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 
-const DEFAULT_AGENT = '6af3a041a8d105e6274a6bdc',
+const DEFAULT_AGENT = '6af3c21c0eba26d21bfa2427',
 	DEFAULT_URL = 'https://cogniti.unisq.edu.au',
 	//One to ask, and up to two more to put right what is still wrong. Past this it stops and says so
 	MAX_MESSAGES = 3,

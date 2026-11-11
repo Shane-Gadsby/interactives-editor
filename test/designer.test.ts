@@ -17,7 +17,7 @@ const bp = (o: unknown, words = 'I added the page.') => '```blueprint\n' + JSON.
 describe('settings', () => {
   it('is on only with a token, and off switches it off', () => {
     expect(settings({}).on).toBe(false);
-    expect(settings({ COGNITI_TOKEN: 't' })).toMatchObject({ on: true, agent: '6af3a041a8d105e6274a6bdc', url: 'https://cogniti.unisq.edu.au', perHour: 6 });
+    expect(settings({ COGNITI_TOKEN: 't' })).toMatchObject({ on: true, agent: '6af3c21c0eba26d21bfa2427', url: 'https://cogniti.unisq.edu.au', perHour: 6 });
     expect(settings({ COGNITI_TOKEN: 't', INTERACTIVES_DESIGNER: 'off' }).on).toBe(false);
     expect(settings({ COGNITI_TOKEN: 't', INTERACTIVES_DESIGNER_AGENT: 'abc', INTERACTIVES_COGNITI_URL: 'http://cog.test/' })).toMatchObject({ agent: 'abc', url: 'http://cog.test' });
   });
