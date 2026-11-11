@@ -272,9 +272,24 @@ const buildSpec = (extra = '') => {
 	return specCache + (extra ? `\n\n# Raw changes (the last resort)\nEach item of "raw" is one change from this list, written as the tool describes:\n${extra}` : '')
 }
 
-//One message holds everything: the spec, where we are, what's wanted
+//What good looks like (agent-docs/playbook.md): learning design, question writing, accessibility, voice. It rides along
+//with every request instead of sitting in the Cogniti agent's Knowledge, which wouldn't keep it (11 Nov), and this way it
+//deploys with the editor. The cap counts messages, not their size, so it costs nothing there
+let playbookCache = null
+const playbook = () => {
+	if (playbookCache === null) {
+		try {
+			playbookCache = fs.readFileSync(path.join(__dirname, 'agent-docs', 'playbook.md'), 'utf8').trim()
+		} catch {
+			playbookCache = ''
+		}
+	}
+	return playbookCache
+}
+
+//One message holds everything: the spec, how to make it good, where we are, what's wanted
 const requestMessage = ({spec, projectId, projectName, firstName, context, message}) =>
-	`# Blueprint spec\n${spec}\n\n# Open project\nid ${projectId}\nname ${JSON.stringify(projectName)}\n\n${context}\n` +
+	`# Blueprint spec\n${spec}\n\n` + (playbook() ? `# Playbook\nApply this to everything you make.\n\n${playbook().replace(/^# .*\n+/, '')}\n\n` : '') + `# Open project\nid ${projectId}\nname ${JSON.stringify(projectName)}\n\n${context}\n` +
 	(firstName ? `\n# Designer\nTheir first name is ${firstName}.\n` : '') +
 	`\n# Request\n${message}`
 

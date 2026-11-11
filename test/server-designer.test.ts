@@ -174,7 +174,7 @@ describe('one request, one message', () => {
     expect(m.body.agent_id).toBe('6af3a041a8d105e6274a6bdc');
     expect(m.body.chat_history).toEqual([]);
     const text = m.body.messages[0].content as string;
-    for (const part of ['# Blueprint spec', '# The blueprint format', `id ${id}`, 'Water cycle', '# The open page in full', 'Box [rect r1]', '# Request\nAdd a page with a multiple choice question about clouds, linked from page 1']) expect(text).toContain(part);
+    for (const part of ['# Blueprint spec', '# Playbook', 'Every option gets its own feedback', '# The blueprint format', `id ${id}`, 'Water cycle', '# The open page in full', 'Box [rect r1]', '# Request\nAdd a page with a multiple choice question about clouds, linked from page 1']) expect(text).toContain(part);
     expect(text).not.toContain('# Tools');
     expect(text.length).toBeLessThan(30000);
 
