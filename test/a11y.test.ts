@@ -439,7 +439,6 @@ describe('autoplay and motion', () => {
   it('flags an autoplaying timeline until the project respects reduced motion, and the fix turns that on', () => {
     const r = rect({ id: 'n1', width: 50, height: 50 });
     const { p, ab } = scene([r]);
-    //new projects respect it already: this one doesn't
     p.settings.reducedMotion = false;
     ab.timelines.push(timeline());
     const [f] = of(p, 'autoplay-motion');
