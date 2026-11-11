@@ -89,6 +89,13 @@ describe('a page with a question, linked from page 1', () => {
     expect(stack.children.map((n) => n.type)).toContain('text');
     expect(stack.y + stack.height).toBeLessThan(quiz.height + 1);
   });
+
+  it("doesn't say the page's title twice when the agent starts with the same heading", () => {
+    const r = compileBlueprint(fixture(), { pages: [{ name: 'Check', title: 'Check your understanding', elements: [{ type: 'heading', text: 'Check your understanding' }, { type: 'text', text: 'Choose the best answer.' }] }] });
+    const texts = JSON.stringify(page(r.project, 'Check')).match(/Check your understanding/g) ?? [];
+    expect(texts).toHaveLength(1);
+    expect(JSON.stringify(page(r.project, 'Check'))).toContain('Choose the best answer.');
+  });
 });
 
 describe('the look of what is already there', () => {

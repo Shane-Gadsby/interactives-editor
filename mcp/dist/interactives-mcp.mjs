@@ -14585,7 +14585,12 @@ function fillPage(run2, ab, spec, isNew, like) {
     }
   };
   if (titleText && !title) build({ type: "heading", level: 1, text: titleText, name: "Page title" }, stack2, box.w);
-  for (const el of elements) build(rec(el), stack2, box.w);
+  const said = (title ? String(title.text ?? "") : titleText || "").trim().toLowerCase();
+  const same2 = (el) => {
+    const e = rec(el);
+    return !!said && str$1(e.type, 20).toLowerCase() === "heading" && str$1(e.text, 200).trim().toLowerCase() === said;
+  };
+  for (const [i, el] of elements.entries()) if (!(i === 0 && same2(el))) build(rec(el), stack2, box.w);
   if (stack2.children.length) {
     run2.touched.push(stack2.id);
     run2.nodesMade.add(stack2.id);

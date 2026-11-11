@@ -482,7 +482,13 @@ function fillPage(run: Run, ab: Artboard, spec: BpPage, isNew: boolean, like: Ar
   };
 
   if (titleText && !title) build({ type: 'heading', level: 1, text: titleText, name: 'Page title' }, stack, box.w);
-  for (const el of elements) build(rec(el) as BpElement, stack, box.w);
+  //The agent often repeats the page's title as its first heading; the page already says it once
+  const said = (title ? String((title as { text?: unknown }).text ?? '') : titleText || '').trim().toLowerCase();
+  const same = (el: unknown) => {
+    const e = rec(el) as BpElement;
+    return !!said && str(e.type, 20).toLowerCase() === 'heading' && str((e as { text?: unknown }).text, 200).trim().toLowerCase() === said;
+  };
+  for (const [i, el] of elements.entries()) if (!(i === 0 && same(el))) build(rec(el) as BpElement, stack, box.w);
 
   if (stack.children.length) {
     run.touched.push(stack.id);
