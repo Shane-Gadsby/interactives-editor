@@ -35,8 +35,13 @@ const TRANSITION_SPEEDS = [
   { value: "slow", label: "Slow", ms: 600 }
 ];
 const DEFAULT_TRANSITION_MS = 300;
+function speedOf(ms) {
+  const n = Number(ms ?? DEFAULT_TRANSITION_MS);
+  return TRANSITION_SPEEDS.find((s) => s.ms === n)?.value ?? "custom";
+}
 const TIMED_TRANSITIONS = PAGE_TRANSITIONS.filter((t2) => t2.value !== "none").map((t2) => t2.value);
 const ORIGIN_TRANSITIONS = ["iris", "zoom", "star", "diamond", "heart", "clock"];
+const isPageTransition = (kind) => PAGE_TRANSITIONS.some((t2) => t2.value === kind);
 Array.from({ length: 10 }, (_, i) => {
   const a = -Math.PI / 2 + i * Math.PI / 5;
   const r2 = i % 2 ? 0.45 : 1;
@@ -1960,6 +1965,13 @@ const ONLY_IF = { key: "onlyIf", label: "Only if", type: "expr", default: "", pl
 for (const d of SPECS) if (d.category === "event") d.params.push(ONLY_IF);
 const CATALOG = SPECS.map((d) => ({ ...d, description: [d.summary, d.details].filter(Boolean).join(" ") }));
 const CATALOG_BY_KIND = Object.fromEntries(CATALOG.map((d) => [d.kind, d]));
+function defaultParams(kind) {
+  const def = CATALOG_BY_KIND[kind];
+  const out = {};
+  if (!def) return out;
+  for (const p of def.params) if (p.default !== void 0) out[p.key] = p.default;
+  return out;
+}
 const SHADER_UNIFORM_TYPES = ["float", "vec2", "vec3", "vec4", "color", "image"];
 const SHADER_BUILTINS = ["u_time", "u_resolution", "u_mouse", "u_frame", "v_uv"];
 const GLSL_WORDS = new Set(
@@ -2025,11 +2037,11 @@ function normalizeUniform(raw) {
   if (typeof r2.max === "number" && Number.isFinite(r2.max)) u.max = r2.max;
   return u;
 }
-function usableUniforms(list) {
-  if (!Array.isArray(list)) return [];
+function usableUniforms(list2) {
+  if (!Array.isArray(list2)) return [];
   const out = [];
   const names = [];
-  for (const raw of list) {
+  for (const raw of list2) {
     const u = normalizeUniform(raw);
     if (!u || uniformNameProblem(u.name, names)) continue;
     if (u.type === "image" && names.includes(`${u.name}_size`)) continue;
@@ -2175,24 +2187,24 @@ function defaultModifier(patch = {}) {
   return { unit: "letter", start: 0, end: 100, offset: 0, shape: "square", strength: 100, x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, letterSpacing: 0, blur: 0, ...patch };
 }
 const isNum$3 = (v) => typeof v === "number" && Number.isFinite(v);
-const num$5 = (v, d) => isNum$3(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
+const num$6 = (v, d) => isNum$3(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
 function normalizeModifier(raw) {
   const r2 = raw && typeof raw === "object" ? raw : {};
   const d = defaultModifier();
   const m = {
     unit: MODIFIER_UNITS.includes(r2.unit) ? r2.unit : d.unit,
-    start: num$5(r2.start, d.start),
-    end: num$5(r2.end, d.end),
-    offset: num$5(r2.offset, d.offset),
+    start: num$6(r2.start, d.start),
+    end: num$6(r2.end, d.end),
+    offset: num$6(r2.offset, d.offset),
     shape: MODIFIER_SHAPES.includes(r2.shape) ? r2.shape : d.shape,
-    strength: num$5(r2.strength, d.strength),
-    x: num$5(r2.x, d.x),
-    y: num$5(r2.y, d.y),
-    rotation: num$5(r2.rotation, d.rotation),
-    scale: num$5(r2.scale, d.scale),
-    opacity: num$5(r2.opacity, d.opacity),
-    letterSpacing: num$5(r2.letterSpacing, d.letterSpacing),
-    blur: num$5(r2.blur, d.blur)
+    strength: num$6(r2.strength, d.strength),
+    x: num$6(r2.x, d.x),
+    y: num$6(r2.y, d.y),
+    rotation: num$6(r2.rotation, d.rotation),
+    scale: num$6(r2.scale, d.scale),
+    opacity: num$6(r2.opacity, d.opacity),
+    letterSpacing: num$6(r2.letterSpacing, d.letterSpacing),
+    blur: num$6(r2.blur, d.blur)
   };
   if (isNum$3(r2.falloffStart)) m.falloffStart = r2.falloffStart;
   if (isNum$3(r2.falloffEnd)) m.falloffEnd = r2.falloffEnd;
@@ -2225,20 +2237,20 @@ const overlaps = /* @__PURE__ */ new Map();
 function canShare(a, b, flags) {
   if (a.src === null || b.src === null) return true;
   const key = `${flags}/${a.src}/${b.src}`;
-  let hit = overlaps.get(key);
-  if (hit === void 0) {
+  let hit2 = overlaps.get(key);
+  if (hit2 === void 0) {
     const f2 = flags.replace(/[gy]/g, "");
     try {
       const ra = new RegExp(`^(?:${a.src})$`, f2);
       const rb = new RegExp(`^(?:${b.src})$`, f2);
-      hit = SAMPLE.some((ch) => ra.test(ch) && rb.test(ch));
+      hit2 = SAMPLE.some((ch) => ra.test(ch) && rb.test(ch));
     } catch {
-      hit = true;
+      hit2 = true;
     }
     if (overlaps.size > 2e3) overlaps.clear();
-    overlaps.set(key, hit);
+    overlaps.set(key, hit2);
   }
-  return hit;
+  return hit2;
 }
 function escapeLength(src, i) {
   const n = src[i + 1];
@@ -2276,18 +2288,18 @@ function checkPattern(src, flags = "") {
   const nestedClasses = flags.includes("v");
   const fold2 = flags.includes("i") ? (ch) => ch.toUpperCase().toLowerCase() : (ch) => ch;
   let last;
-  const noteAtom = (ch, text) => {
-    const atom = { src: text };
-    let first;
+  const noteAtom = (ch, text2) => {
+    const atom = { src: text2 };
+    let first2;
     if (cur.atBranchStart) {
       cur.firsts.push(ch === null ? "" : fold2(ch));
-      first = cur.firsts.length - 1;
+      first2 = cur.firsts.length - 1;
       cur.atBranchStart = false;
       cur.starts.push(atom);
     } else if (cur.nextStarts) cur.starts.push(atom);
     cur.nextStarts = false;
     if (ch === null) cur.complex = true;
-    return { first, atom };
+    return { first: first2, atom };
   };
   let i = 0;
   while (i < src.length) {
@@ -2400,10 +2412,10 @@ function assertSafePattern(source, flags = "") {
   const why = regexProblem(source, flags);
   if (why) throw new RegexRefused(`Pattern not allowed: ${why}`);
 }
-function assertSafeMatch(source, flags, text) {
+function assertSafeMatch(source, flags, text2) {
   assertSafePattern(source, flags);
   const { limit } = verdict(source, flags);
-  if (text.length > limit) throw new RegexRefused(`Text is too long to match against this pattern (${text.length} characters; the limit is ${limit})`);
+  if (text2.length > limit) throw new RegexRefused(`Text is too long to match against this pattern (${text2.length} characters; the limit is ${limit})`);
 }
 class RegexBudget extends RegexRefused {
 }
@@ -2452,17 +2464,17 @@ function parse(src, flags) {
     return cp;
   };
   function alternation() {
-    const list = [sequence()];
+    const list2 = [sequence()];
     while (peek() === "|") {
       p++;
-      list.push(sequence());
+      list2.push(sequence());
     }
-    return list.length === 1 ? list[0] : { t: "alt", list };
+    return list2.length === 1 ? list2[0] : { t: "alt", list: list2 };
   }
   function sequence() {
-    const list = [];
-    while (p < src.length && peek() !== "|" && peek() !== ")") list.push(term());
-    return list.length === 0 ? { t: "empty" } : list.length === 1 ? list[0] : { t: "cat", list };
+    const list2 = [];
+    while (p < src.length && peek() !== "|" && peek() !== ")") list2.push(term());
+    return list2.length === 0 ? { t: "empty" } : list2.length === 1 ? list2[0] : { t: "cat", list: list2 };
   }
   function braces() {
     const m = /^\{(\d+)(?:(,)(\d*))?\}/.exec(src.slice(p, p + 24));
@@ -2911,8 +2923,8 @@ function compileProgram(source, flagText) {
     13
     /* Match */
   );
-  let first = -1;
-  if (!f2.i && op[1] === 0 && a[1] <= 65535) first = a[1];
+  let first2 = -1;
+  if (!f2.i && op[1] === 0 && a[1] <= 65535) first2 = a[1];
   return {
     op: Int8Array.from(op),
     a: Int32Array.from(a),
@@ -2925,7 +2937,7 @@ function compileProgram(source, flagText) {
     names,
     hasNames: names.some((x) => x !== void 0),
     ...f2,
-    first,
+    first: first2,
     widths
   };
 }
@@ -2963,8 +2975,8 @@ function charge(n) {
   windowSpent += n;
   if (windowSpent > WINDOW_STEPS) throw new RegexBudget("Patterns are taking too long to run here; try a simpler pattern or less text");
 }
-function execProgram(prog, text, from, sticky) {
-  const n = text.length;
+function execProgram(prog, text2, from, sticky) {
+  const n = text2.length;
   const ninst = prog.op.length;
   const width = n + 1;
   if (ninst * width * prog.mult > MAX_STATES) throw new RegexBudget(`Text is too long to match against this pattern (${n} characters)`);
@@ -2973,17 +2985,17 @@ function execProgram(prog, text, from, sticky) {
   steps = 0;
   const caps = new Int32Array(prog.nslots).fill(-1);
   const gen = nextGen();
-  const ctx2 = { prog, text, n, width, caps, target: -1 };
+  const ctx2 = { prog, text: text2, n, width, caps, target: -1 };
   try {
     for (let s = from; s <= n; ) {
       if (!sticky && prog.first >= 0) {
-        const at = text.indexOf(String.fromCharCode(prog.first), s);
+        const at = text2.indexOf(String.fromCharCode(prog.first), s);
         if (at < 0) break;
         s = at;
       }
       if (run(ctx2, 0, s, gen)) return caps;
       if (sticky) break;
-      s += prog.u && s < n && text.codePointAt(s) > 65535 ? 2 : 1;
+      s += prog.u && s < n && text2.codePointAt(s) > 65535 ? 2 : 1;
     }
     return null;
   } finally {
@@ -2992,7 +3004,7 @@ function execProgram(prog, text, from, sticky) {
   }
 }
 function run(ctx2, startPc, startPos, gen) {
-  const { prog, text, n, width, caps } = ctx2;
+  const { prog, text: text2, n, width, caps } = ctx2;
   const { op, a, b, encl } = prog;
   const base2 = stackBase;
   let sp = base2;
@@ -3034,10 +3046,10 @@ function run(ctx2, startPc, startPos, gen) {
           if (pos >= n) break thread;
           const c2 = a[pc];
           if (c2 > 65535) {
-            if (text.codePointAt(pos) !== c2) break thread;
+            if (text2.codePointAt(pos) !== c2) break thread;
             pos += 2;
           } else {
-            if (text.charCodeAt(pos) !== c2) break thread;
+            if (text2.charCodeAt(pos) !== c2) break thread;
             pos++;
           }
           pc++;
@@ -3045,7 +3057,7 @@ function run(ctx2, startPc, startPos, gen) {
         }
         case 1: {
           if (pos >= n) break thread;
-          const c2 = unicode ? text.codePointAt(pos) : text.charCodeAt(pos);
+          const c2 = unicode ? text2.codePointAt(pos) : text2.charCodeAt(pos);
           if (!prog.s && isLine(c2)) break thread;
           pos += c2 > 65535 ? 2 : 1;
           pc++;
@@ -3053,24 +3065,24 @@ function run(ctx2, startPc, startPos, gen) {
         }
         case 2: {
           if (pos >= n) break thread;
-          const c2 = unicode ? text.codePointAt(pos) : text.charCodeAt(pos);
+          const c2 = unicode ? text2.codePointAt(pos) : text2.charCodeAt(pos);
           if (!prog.classes[a[pc]].test(c2)) break thread;
           pos += c2 > 65535 ? 2 : 1;
           pc++;
           break;
         }
         case 3:
-          if (!(pos === 0 || prog.m && isLine(text.charCodeAt(pos - 1)))) break thread;
+          if (!(pos === 0 || prog.m && isLine(text2.charCodeAt(pos - 1)))) break thread;
           pc++;
           break;
         case 4:
-          if (!(pos === n || prog.m && isLine(text.charCodeAt(pos)))) break thread;
+          if (!(pos === n || prog.m && isLine(text2.charCodeAt(pos)))) break thread;
           pc++;
           break;
         case 5:
         case 6: {
-          const before = pos > 0 && isWord(text.charCodeAt(pos - 1));
-          const after = pos < n && isWord(text.charCodeAt(pos));
+          const before = pos > 0 && isWord(text2.charCodeAt(pos - 1));
+          const after = pos < n && isWord(text2.charCodeAt(pos));
           if (before !== after !== (op[pc] === 5)) break thread;
           pc++;
           break;
@@ -3332,7 +3344,7 @@ new Set(
 new Set(
   "travel cancel label model level fuel signal total equal channel counsel quarrel marvel panel tunnel jewel shovel snorkel grovel rival pedal parallel dial duel libel initial".split(" ")
 );
-const QUESTION_KINDS = [
+const QUESTION_KINDS$1 = [
   { value: "single", label: "Multiple choice (one answer)", hint: "Pick the one right option" },
   { value: "multiple", label: "Multiple response (several answers)", hint: "Tick every right option" },
   { value: "truefalse", label: "True or false", hint: "A statement that is either true or false" },
@@ -3343,6 +3355,7 @@ const QUESTION_KINDS = [
   { value: "hotspot", label: "Hotspot (click the right place)", hint: "Click the right place on a picture" }
 ];
 const LOOK_STATES = ["right", "wrong", "missed", "picked"];
+const LOOK_KEYS = { right: "correct", wrong: "wrong", missed: "missed", picked: "picked" };
 const MAX_OPTIONS = 30;
 const MAX_BLANKS = 8;
 const MAX_PAIRS = 8;
@@ -3351,7 +3364,10 @@ const MAX_GROUPS = 6;
 const MAX_CARDS = 24;
 const MAX_HINTS = 10;
 const IDENT = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const isIdentifier = (s) => IDENT.test(s);
+const isIdentifier$1 = (s) => IDENT.test(s);
+const isMultiple = (q) => q.kind === "multiple" || q.kind === "hotspot" && (q.multi ?? q.options.filter((o) => o.correct).length > 1);
+const dragKind = (q) => q.kind === "matching" || q.kind === "categorise" || q.kind === "blank" && q.answerBy === "drag";
+const hintCount = (q) => q.hintTotal ?? q.hints.length;
 function newQuestion(kind, prefix = "q1") {
   const base2 = {
     kind,
@@ -3434,20 +3450,20 @@ function opts(texts, right) {
   return texts.map((text2, i) => ({ id: `o${i + 1}`, text: text2, ...right.includes(i) ? { correct: true } : {} }));
 }
 const isObj$5 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
-const str$1 = (v, d = "") => typeof v === "string" ? v : d;
-const num$4 = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
+const str$2 = (v, d = "") => typeof v === "string" ? v : d;
+const num$5 = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
 function cleanVoice(raw) {
   if (!isObj$5(raw)) return void 0;
   const out = {};
-  if (str$1(raw.voice)) out.voice = str$1(raw.voice).slice(0, 40);
-  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num$4(raw.speed, 1, 0.5, 1.5);
-  if (str$1(raw.say).trim()) out.say = str$1(raw.say).slice(0, 200);
-  if (str$1(raw.sentence).trim()) out.sentence = str$1(raw.sentence).slice(0, 300);
+  if (str$2(raw.voice)) out.voice = str$2(raw.voice).slice(0, 40);
+  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num$5(raw.speed, 1, 0.5, 1.5);
+  if (str$2(raw.say).trim()) out.say = str$2(raw.say).slice(0, 200);
+  if (str$2(raw.sentence).trim()) out.sentence = str$2(raw.sentence).slice(0, 300);
   if (raw.twice === true) out.twice = true;
-  if (str$1(raw.node)) out.node = str$1(raw.node).slice(0, 100);
-  if (str$1(raw.asset)) out.asset = str$1(raw.asset).slice(0, 100);
+  if (str$2(raw.node)) out.node = str$2(raw.node).slice(0, 100);
+  if (str$2(raw.asset)) out.asset = str$2(raw.asset).slice(0, 100);
   if (raw.own === true) out.own = true;
-  if (str$1(raw.ownAsset)) out.ownAsset = str$1(raw.ownAsset).slice(0, 100);
+  if (str$2(raw.ownAsset)) out.ownAsset = str$2(raw.ownAsset).slice(0, 100);
   if (raw.device === true) out.device = true;
   return Object.keys(out).length ? out : void 0;
 }
@@ -3462,48 +3478,48 @@ function cleanGuard(raw) {
 }
 function normaliseQuestion(raw) {
   if (!isObj$5(raw)) return null;
-  const kind = QUESTION_KINDS.some((k) => k.value === raw.kind) ? raw.kind : null;
+  const kind = QUESTION_KINDS$1.some((k) => k.value === raw.kind) ? raw.kind : null;
   if (!kind) return null;
   const d = newQuestion(kind);
-  const list = (v, max) => Array.isArray(v) ? v.filter(isObj$5).slice(0, max) : [];
-  const options = list(raw.options, MAX_OPTIONS).map((o, i) => ({
-    id: str$1(o.id) || `o${i + 1}`,
-    text: str$1(o.text),
+  const list2 = (v, max) => Array.isArray(v) ? v.filter(isObj$5).slice(0, max) : [];
+  const options = list2(raw.options, MAX_OPTIONS).map((o, i) => ({
+    id: str$2(o.id) || `o${i + 1}`,
+    text: str$2(o.text),
     ...o.correct === true ? { correct: true } : {},
-    ...str$1(o.feedback) ? { feedback: str$1(o.feedback) } : {},
+    ...str$2(o.feedback) ? { feedback: str$2(o.feedback) } : {},
     ...o.fixed === true ? { fixed: true } : {}
   }));
-  const blanks = list(raw.blanks, MAX_BLANKS).map((b, i) => ({
-    id: str$1(b.id) || `b${i + 1}`,
-    label: str$1(b.label),
+  const blanks = list2(raw.blanks, MAX_BLANKS).map((b, i) => ({
+    id: str$2(b.id) || `b${i + 1}`,
+    label: str$2(b.label),
     answers: (Array.isArray(b.answers) ? b.answers : []).filter((a) => typeof a === "string").slice(0, 40),
     ...b.caseSensitive === true ? { caseSensitive: true } : {},
     ...b.spelling === true ? { spelling: true } : {},
     ...b.spelling === true && b.usSpelling === true ? { usSpelling: true } : {},
     ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {},
-    ...str$1(b.feedback).trim() ? { feedback: str$1(b.feedback) } : {},
-    ...str$1(b.shownAs).trim() ? { shownAs: str$1(b.shownAs) } : {}
+    ...str$2(b.feedback).trim() ? { feedback: str$2(b.feedback) } : {},
+    ...str$2(b.shownAs).trim() ? { shownAs: str$2(b.shownAs) } : {}
   }));
-  const pairs = list(raw.pairs, MAX_PAIRS).map((pr, i) => ({ id: str$1(pr.id) || `p${i + 1}`, term: str$1(pr.term), match: str$1(pr.match) }));
-  const extras = list(raw.extras, MAX_EXTRAS).map((x, i) => ({ id: str$1(x.id) || `x${i + 1}`, text: str$1(x.text) }));
-  const groups = list(raw.groups, MAX_GROUPS).map((g, i) => ({ id: str$1(g.id) || `g${i + 1}`, name: str$1(g.name) }));
-  const cards = list(raw.cards, MAX_CARDS).map((c2, i) => ({
-    id: str$1(c2.id) || `c${i + 1}`,
-    text: str$1(c2.text),
-    group: str$1(c2.group),
-    ...str$1(c2.feedback) ? { feedback: str$1(c2.feedback) } : {}
+  const pairs = list2(raw.pairs, MAX_PAIRS).map((pr, i) => ({ id: str$2(pr.id) || `p${i + 1}`, term: str$2(pr.term), match: str$2(pr.match) }));
+  const extras = list2(raw.extras, MAX_EXTRAS).map((x, i) => ({ id: str$2(x.id) || `x${i + 1}`, text: str$2(x.text) }));
+  const groups = list2(raw.groups, MAX_GROUPS).map((g, i) => ({ id: str$2(g.id) || `g${i + 1}`, name: str$2(g.name) }));
+  const cards = list2(raw.cards, MAX_CARDS).map((c2, i) => ({
+    id: str$2(c2.id) || `c${i + 1}`,
+    text: str$2(c2.text),
+    group: str$2(c2.group),
+    ...str$2(c2.feedback) ? { feedback: str$2(c2.feedback) } : {}
   }));
-  const bank = isObj$5(raw.bank) && str$1(raw.bank.items).trim() ? {
-    items: str$1(raw.bank.items),
+  const bank = isObj$5(raw.bank) && str$2(raw.bank.items).trim() ? {
+    items: str$2(raw.bank.items),
     order: raw.bank.order === "sequence" ? "sequence" : "random",
     ...raw.bank.end === "finish" ? { end: "finish" } : {},
     ...raw.bank.end === "finish" && typeof raw.bank.count === "number" && raw.bank.count >= 1 ? { count: Math.min(1e3, Math.floor(raw.bank.count)) } : {}
   } : null;
   return {
     kind,
-    prefix: isIdentifier(str$1(raw.prefix)) ? str$1(raw.prefix) : d.prefix,
-    prompt: str$1(raw.prompt),
-    points: num$4(raw.points, 1, 0, 1e3),
+    prefix: isIdentifier$1(str$2(raw.prefix)) ? str$2(raw.prefix) : d.prefix,
+    prompt: str$2(raw.prompt),
+    points: num$5(raw.points, 1, 0, 1e3),
     options,
     blanks,
     pairs,
@@ -3513,14 +3529,14 @@ function normaliseQuestion(raw) {
     ...kind === "blank" && raw.answerBy === "drag" ? { answerBy: "drag" } : {},
     shuffle: raw.shuffle === true,
     partial: raw.partial === true,
-    attempts: Math.round(num$4(raw.attempts, 0, 0, 100)),
-    attemptPenalty: num$4(raw.attemptPenalty, 0, 0, 1),
+    attempts: Math.round(num$5(raw.attempts, 0, 0, 100)),
+    attemptPenalty: num$5(raw.attemptPenalty, 0, 0, 1),
     hints: (Array.isArray(raw.hints) ? raw.hints : []).filter((h) => typeof h === "string").slice(0, MAX_HINTS),
-    hintPenalty: num$4(raw.hintPenalty, 0, 0, 1),
-    feedbackCorrect: str$1(raw.feedbackCorrect),
-    feedbackPartial: str$1(raw.feedbackPartial),
-    feedbackIncorrect: str$1(raw.feedbackIncorrect),
-    feedbackOutOfTries: str$1(raw.feedbackOutOfTries),
+    hintPenalty: num$5(raw.hintPenalty, 0, 0, 1),
+    feedbackCorrect: str$2(raw.feedbackCorrect),
+    feedbackPartial: str$2(raw.feedbackPartial),
+    feedbackIncorrect: str$2(raw.feedbackIncorrect),
+    feedbackOutOfTries: str$2(raw.feedbackOutOfTries),
     reveal: raw.reveal !== false,
     bank,
     ...typeof raw.spoken === "string" && raw.spoken.trim() ? { spoken: raw.spoken.slice(0, 2e3) } : {},
@@ -3532,7 +3548,7 @@ function normaliseQuestion(raw) {
     ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
-    ...isObj$5(raw.retake) ? { retake: { limit: Math.round(num$4(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
+    ...isObj$5(raw.retake) ? { retake: { limit: Math.round(num$5(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
     ...cleanVoice(raw.voice) ? { voice: cleanVoice(raw.voice) } : {},
     ...cleanGuard(raw.guard) ? { guard: cleanGuard(raw.guard) } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
@@ -3552,6 +3568,101 @@ const cleanLooks = (v) => {
   }
   return Object.keys(out).length ? out : void 0;
 };
+function blankWord(b) {
+  return b.answers.map((a) => a.trim()).find((a) => a && !/^\/.+\/[a-z]*$/.test(a)) ?? "";
+}
+const varName = (q, suffix) => `${q.prefix}_${suffix}`;
+function questionVars(q) {
+  const out = [
+    { suffix: "prompt", type: "string", initial: q.prompt, about: "The question text (changes with a question bank)" },
+    { suffix: "items", type: "list", initial: JSON.stringify(buildItems(q, () => 0.5)), about: "The options, blanks or items as shown, in order, with selected and state" },
+    { suffix: "answered", type: "boolean", initial: false, about: "True once an answer has been checked" },
+    { suffix: "correct", type: "boolean", initial: false, about: "True when the last check was right" },
+    { suffix: "attempts", type: "number", initial: 0, about: "How many times the answer has been checked" },
+    { suffix: "triesLeft", type: "number", initial: q.attempts > 0 ? q.attempts : -1, about: "Checks left, or -1 when there is no limit" },
+    { suffix: "score", type: "number", initial: 0, about: "Points earned (up to the question’s points, less any penalties)" },
+    { suffix: "locked", type: "boolean", initial: false, about: "True once the question is finished: right, or out of tries" },
+    { suffix: "feedback", type: "string", initial: "", about: "What the learner is told after a check" },
+    { suffix: "hint", type: "string", initial: "", about: "The hint last shown" },
+    { suffix: "hintsUsed", type: "number", initial: 0, about: "Hints taken" },
+    { suffix: "hintsLeft", type: "number", initial: hintCount(q), about: "Hints still to take" }
+  ];
+  if (q.kind === "blank") q.blanks.forEach((_, i) => out.push({ suffix: `blank${i + 1}`, type: "string", initial: "", about: `What was typed in blank ${i + 1}` }));
+  if (q.serverMarked) out.push({ suffix: "counted", type: "number", initial: -1, about: "The score the server counts for this question (its first go), or -1 until it has one" });
+  if (q.keep && dragKind(q)) out.push({ suffix: "placed", type: "list", initial: "[]", about: "Where the layers were when the answer was last checked, so they go back there when the page is revisited" });
+  if (q.retake) {
+    out.push({ suffix: "round", type: "number", initial: 1, about: "Which go at the whole set this is (1 for the first)" });
+    out.push({ suffix: "retakesLeft", type: "number", initial: q.retake.limit, about: "Goes at the whole set still allowed after this one, or -1 when there is no limit" });
+    out.push({ suffix: "kept", type: "number", initial: 0, about: "The score on record for the whole set (the best round, or the latest, as the question says)" });
+    out.push({ suffix: "keptMax", type: "number", initial: 0, about: "The most the whole set can score" });
+  }
+  if (q.bank) {
+    out.push({ suffix: "bankIndex", type: "number", initial: -1, about: "Which row of the bank is showing (counting from 0)" });
+    out.push({ suffix: "bankSeen", type: "list", initial: "[]", about: "The rows already shown, so a random bank does not repeat until it has used them all" });
+    out.push({ suffix: "bankCount", type: "number", initial: 0, about: "How many rows the bank has" });
+  }
+  if (isRun(q)) {
+    out.push({ suffix: "setPos", type: "number", initial: 0, about: "Which question of the run this is (1 for the first, 0 before it has started)" });
+    out.push({ suffix: "setCount", type: "number", initial: 0, about: "How many questions the run has" });
+    out.push({ suffix: "setLeft", type: "number", initial: 0, about: "Questions of the run not finished yet" });
+    out.push({ suffix: "setScore", type: "number", initial: 0, about: "Points earned across the run so far" });
+    out.push({ suffix: "setMax", type: "number", initial: 0, about: "The most the run can score" });
+    out.push({ suffix: "setDone", type: "boolean", initial: false, about: "True once every question of the run is finished" });
+    out.push({ suffix: "missed", type: "list", initial: "[]", about: "The bank rows (counting from 0) finished wrong in this run, for a review of the missed ones" });
+    out.push({ suffix: "setOrder", type: "list", initial: "[]", about: "The bank rows drawn for this run, in the order they are asked" });
+    out.push({ suffix: "setLog", type: "list", initial: "[]", about: "How each finished question of the run went (row, score, points, right)" });
+  }
+  return out;
+}
+const QUESTION_SUFFIXES = ["prompt", "items", "answered", "correct", "attempts", "triesLeft", "score", "locked", "feedback", "hint", "hintsUsed", "hintsLeft", "bankIndex", "bankSeen", "bankCount", "round", "retakesLeft", "kept", "keptMax", "setPos", "setCount", "setLeft", "setScore", "setMax", "setDone", "missed", "setOrder", "setLog", "counted", "placed"];
+function renamePrefix(text2, from, to) {
+  if (from === to) return text2;
+  const re = new RegExp(`(^|[^A-Za-z0-9_$.])${from.replace(/[$]/g, "\\$")}_((?:${QUESTION_SUFFIXES.join("|")})|blank\\d+)(?![A-Za-z0-9_$])`, "g");
+  return text2.replace(re, (_m, pre, suffix) => `${pre}${to}_${suffix}`);
+}
+function shuffled(list2, rng, fixed = () => false) {
+  const out = list2.slice();
+  const free = out.map((_x, i) => i).filter((i) => !fixed(out[i]));
+  for (let i = free.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const a = free[i];
+    const b = free[j];
+    [out[a], out[b]] = [out[b], out[a]];
+  }
+  return out;
+}
+function buildItems(q, random = Math.random) {
+  if (q.kind === "blank") {
+    return q.blanks.map((b, i) => ({ id: b.id, text: "", label: b.label, number: i + 1, selected: false, state: "" }));
+  }
+  if (q.kind === "matching") {
+    const rows = q.pairs.map((p, i) => ({ id: p.id, text: p.term, label: p.match, number: i + 1, selected: false, state: "" }));
+    return [...rows, ...(q.extras ?? []).map((x, k) => ({ id: x.id, text: x.text, label: "", number: rows.length + k + 1, selected: false, state: "" }))];
+  }
+  if (q.kind === "categorise") {
+    const groups = new Map((q.groups ?? []).map((g) => [g.id, g.name]));
+    return (q.cards ?? []).map((c2, i) => ({ id: c2.id, text: c2.text, label: groups.get(c2.group) ?? "", number: i + 1, selected: false, state: "" }));
+  }
+  let list2 = q.options;
+  if (q.kind === "ordering") {
+    if (q.shuffle && list2.length > 1) {
+      let tries = 0;
+      let mixed = shuffled(list2, random);
+      while (tries++ < 8 && mixed.every((o, i) => o.id === list2[i].id)) mixed = shuffled(list2, random);
+      if (mixed.every((o, i) => o.id === list2[i].id)) mixed = [...list2.slice(1), list2[0]];
+      list2 = mixed;
+    }
+  } else if (q.shuffle && q.kind !== "truefalse" && q.kind !== "hotspot") list2 = shuffled(list2, random, (o) => !!o.fixed);
+  return list2.map((o, i) => ({ id: o.id, text: o.text, number: i + 1, selected: false, state: "" }));
+}
+const isRun = (q) => q.bank?.end === "finish";
+const MAX_VARIABLE_LABEL = 80;
+function cleanVariableLabel(raw) {
+  if (typeof raw !== "string") return void 0;
+  const text2 = raw.replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_VARIABLE_LABEL).trim();
+  return text2 || void 0;
+}
+const variableLabel = (v) => v.label?.trim() || v.name;
 const isObj$4 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isNum$2 = (v) => typeof v === "number" && Number.isFinite(v);
 function cleanCues(v) {
@@ -3616,6 +3727,15 @@ function resolveSpec(spec, vars) {
   }
   return /^--[\w-]+$/.test(s) ? vars[s] : void 0;
 }
+const TOKEN_PREFIX = "token:";
+const tokenRef = (id) => TOKEN_PREFIX + id;
+function hasTokens(t2) {
+  return !!t2 && Array.isArray(t2.list) && t2.list.length > 0 && Array.isArray(t2.tokens) && t2.tokens.length > 0;
+}
+function tokenByName(t2, name) {
+  const want = name.trim().toLowerCase();
+  return t2?.tokens.find((x) => x.name.trim().toLowerCase() === want);
+}
 const NOTE_COLOURS = ["gold", "orange", "green", "sky", "purple", "rose"];
 const NOTE_DEFAULT_W = 200;
 const NOTE_DEFAULT_H = 120;
@@ -3623,22 +3743,22 @@ const NOTE_MIN_W = 80;
 const NOTE_MIN_H = 48;
 const NOTE_MAX_TEXT = 4e3;
 const isObj$2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
-const num$3 = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
+const num$4 = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
 function cleanNote(raw) {
   if (!isObj$2(raw) || typeof raw.id !== "string" || !raw.id) return null;
   const n = {
     id: raw.id,
-    x: num$3(raw.x, 0),
-    y: num$3(raw.y, 0),
-    w: Math.max(NOTE_MIN_W, num$3(raw.w, NOTE_DEFAULT_W)),
-    h: Math.max(NOTE_MIN_H, num$3(raw.h, NOTE_DEFAULT_H)),
+    x: num$4(raw.x, 0),
+    y: num$4(raw.y, 0),
+    w: Math.max(NOTE_MIN_W, num$4(raw.w, NOTE_DEFAULT_W)),
+    h: Math.max(NOTE_MIN_H, num$4(raw.h, NOTE_DEFAULT_H)),
     text: typeof raw.text === "string" ? raw.text.slice(0, NOTE_MAX_TEXT) : ""
   };
   if (NOTE_COLOURS.includes(raw.colour)) n.colour = raw.colour;
   if (typeof raw.author === "string" && raw.author) n.author = raw.author.slice(0, 120);
   if (typeof raw.created === "string") n.created = raw.created.slice(0, 40);
   const a = raw.anchor;
-  if (isObj$2(a) && typeof a.layerId === "string" && a.layerId) n.anchor = { layerId: a.layerId, lx: num$3(a.lx, 0), ly: num$3(a.ly, 0) };
+  if (isObj$2(a) && typeof a.layerId === "string" && a.layerId) n.anchor = { layerId: a.layerId, lx: num$4(a.lx, 0), ly: num$4(a.ly, 0) };
   return n;
 }
 function cleanNotes(raw) {
@@ -3693,7 +3813,7 @@ function dragSettings(raw, draggable) {
   const pick = (k, ok) => {
     if (k in raw && ok(raw[k])) out[k] = raw[k];
   };
-  const oneOf2 = (list) => (v) => isStr(v) && list.includes(v);
+  const oneOf2 = (list2) => (v) => isStr(v) && list2.includes(v);
   const bool = (v) => typeof v === "boolean";
   const nonNeg = (v) => isNum(v) && v >= 0;
   pick("enabled", bool);
@@ -3731,15 +3851,15 @@ function sanitizeLayerInPlace(node) {
   if (!clean2) return false;
   const target = node;
   for (const k of Object.keys(target)) if (!(k in clean2)) delete target[k];
-  for (const [k, v] of Object.entries(clean2)) if (!same$1(target[k], v)) target[k] = v;
+  for (const [k, v] of Object.entries(clean2)) if (!same$2(target[k], v)) target[k] = v;
   return true;
 }
-function same$1(a, b) {
+function same$2(a, b) {
   if (a === b) return true;
   if (!a || !b || typeof a !== "object" || typeof b !== "object" || Array.isArray(a) !== Array.isArray(b)) return false;
   const ka = Object.keys(a);
   if (ka.length !== Object.keys(b).length) return false;
-  return ka.every((k) => same$1(a[k], b[k]));
+  return ka.every((k) => same$2(a[k], b[k]));
 }
 function sanitizeNode(raw, seen) {
   if (!isObj$1(raw) || !isStr(raw.id) || !raw.id || !isStr(raw.type)) return null;
@@ -3778,8 +3898,8 @@ function sanitizeNode(raw, seen) {
   }
   if (raw.type === "connector") {
     delete n.computed;
-    const end = (v, fallback) => {
-      if (!isObj$1(v)) return { ...fallback };
+    const end = (v, fallback2) => {
+      if (!isObj$1(v)) return { ...fallback2 };
       const out = {};
       const l = v.layer;
       if (isStr(l)) out.layer = l;
@@ -3808,7 +3928,7 @@ function sanitizeNode(raw, seen) {
   }
   if ("bindings" in n) n.bindings = stringMap(n.bindings);
   if ("converters" in n && !isObj$1(n.converters)) delete n.converters;
-  if (isObj$1(n.converters)) for (const [k, list] of Object.entries(n.converters)) n.converters[k] = objs(list).filter((c2) => isStr(c2.type));
+  if (isObj$1(n.converters)) for (const [k, list2] of Object.entries(n.converters)) n.converters[k] = objs(list2).filter((c2) => isStr(c2.type));
   if ("constraints" in n) n.constraints = objs(n.constraints).filter((c2) => isStr(c2.type));
   if ("repeat" in n && !(isObj$1(n.repeat) && isStr(n.repeat.items))) delete n.repeat;
   if (isObj$1(n.repeat) && "select" in n.repeat) {
@@ -3888,7 +4008,7 @@ function sanitizeNode(raw, seen) {
   if ("ariaCurrent" in n && typeof n.ariaCurrent !== "boolean" && !(isStr(n.ariaCurrent) && ["page", "step", "location", "date", "time"].includes(n.ariaCurrent))) delete n.ariaCurrent;
   if ("liveRegion" in n && n.liveRegion !== "polite" && n.liveRegion !== "assertive") delete n.liveRegion;
   for (const k of ["headingLevel", "tabOrder"]) if (k in n && !isNum(n[k])) delete n[k];
-  const stroke = (v) => {
+  const stroke2 = (v) => {
     const pt = isObj$1(v) ? paint(v.paint) : null;
     if (!isObj$1(v) || !pt) return null;
     const out = { ...fx(v), paint: pt, width: isNum(v.width) ? v.width : 1 };
@@ -3901,11 +4021,11 @@ function sanitizeNode(raw, seen) {
   };
   if ("fill" in n) n.fill = paint(n.fill);
   if ("barFill" in n) n.barFill = paint(n.barFill);
-  if ("stroke" in n) n.stroke = stroke(n.stroke);
+  if ("stroke" in n) n.stroke = stroke2(n.stroke);
   for (const k of ["strokes", "fills"]) {
     if (!(k in n)) continue;
-    const list = (Array.isArray(n[k]) ? n[k] : []).map(k === "fills" ? paint : stroke).filter(Boolean);
-    if (list.length) n[k] = list;
+    const list2 = (Array.isArray(n[k]) ? n[k] : []).map(k === "fills" ? paint : stroke2).filter(Boolean);
+    if (list2.length) n[k] = list2;
     else delete n[k];
   }
   const written = n.paintOrder;
@@ -3988,27 +4108,27 @@ function sanitizeNode(raw, seen) {
     n.children = (Array.isArray(n.children) ? n.children : []).map((c2) => sanitizeNode(c2, seen)).filter(Boolean);
     if (n.layout !== void 0 && n.layout !== null && !isObj$1(n.layout)) n.layout = null;
     if (isObj$1(n.layout)) {
-      const L = { ...LAYOUT_DEFAULTS, ...n.layout };
-      for (const [k, d] of Object.entries(LAYOUT_DEFAULTS)) if (!fits$1(L[k], d)) L[k] = structuredClone(d);
-      const pad = isObj$1(L.padding) ? L.padding : {};
-      L.padding = Object.fromEntries(["top", "right", "bottom", "left"].map((k) => [k, isNum(pad[k]) ? pad[k] : 0]));
-      if ("crossGap" in L && !isNum(L.crossGap)) delete L.crossGap;
-      if ("units" in L) {
-        const u = isObj$1(L.units) ? L.units : {};
+      const L2 = { ...LAYOUT_DEFAULTS, ...n.layout };
+      for (const [k, d] of Object.entries(LAYOUT_DEFAULTS)) if (!fits$1(L2[k], d)) L2[k] = structuredClone(d);
+      const pad = isObj$1(L2.padding) ? L2.padding : {};
+      L2.padding = Object.fromEntries(["top", "right", "bottom", "left"].map((k) => [k, isNum(pad[k]) ? pad[k] : 0]));
+      if ("crossGap" in L2 && !isNum(L2.crossGap)) delete L2.crossGap;
+      if ("units" in L2) {
+        const u = isObj$1(L2.units) ? L2.units : {};
         const kept = {};
         if (u.gap === "percent") kept.gap = "percent";
-        if (u.crossGap === "percent" && isNum(L.crossGap)) kept.crossGap = "percent";
+        if (u.crossGap === "percent" && isNum(L2.crossGap)) kept.crossGap = "percent";
         const sides = percentSides(u.padding);
         if (sides) kept.padding = sides;
-        if (Object.keys(kept).length) L.units = kept;
-        else delete L.units;
+        if (Object.keys(kept).length) L2.units = kept;
+        else delete L2.units;
       }
-      if ("grid" in L) {
-        const grid = gridLayout(L.grid);
-        if (grid) L.grid = grid;
-        else delete L.grid;
+      if ("grid" in L2) {
+        const grid = gridLayout(L2.grid);
+        if (grid) L2.grid = grid;
+        else delete L2.grid;
       }
-      n.layout = L;
+      n.layout = L2;
     }
   }
   return n;
@@ -4080,13 +4200,13 @@ function paint(v) {
       return null;
   }
 }
-const oneOf = (v, list) => list.includes(v) ? v : void 0;
+const oneOf = (v, list2) => list2.includes(v) ? v : void 0;
 function gridLayout(v) {
   if (!isObj$1(v)) return null;
-  const tracks = (list) => objs(list).map((t2) => ({ type: oneOf(t2.type, ["auto", "px", "percent", "fr"]), value: t2.value })).filter((t2) => t2.type).map((t2) => isNum(t2.value) ? { type: t2.type, value: t2.value } : { type: t2.type });
+  const tracks = (list2) => objs(list2).map((t2) => ({ type: oneOf(t2.type, ["auto", "px", "percent", "fr"]), value: t2.value })).filter((t2) => t2.type).map((t2) => isNum(t2.value) ? { type: t2.type, value: t2.value } : { type: t2.type });
   const g = { columns: tracks(v.columns), rows: tracks(v.rows) };
-  for (const [k, list] of [["justifyItems", ["start", "center", "end"]], ["alignItems", ["start", "center", "end"]], ["justifyContent", ["start", "center", "space-between"]], ["alignContent", ["start", "center"]]]) {
-    const x = oneOf(v[k], list);
+  for (const [k, list2] of [["justifyItems", ["start", "center", "end"]], ["alignItems", ["start", "center", "end"]], ["justifyContent", ["start", "center", "space-between"]], ["alignContent", ["start", "center"]]]) {
+    const x = oneOf(v[k], list2);
     if (x) g[k] = x;
   }
   if (v.stack === true) g.stack = true;
@@ -4666,8 +4786,8 @@ const STARTER_TOKEN_DEFS = [
   t("warning", "color/warning", ORANGE, GOLD, GOLD),
   t("warningSurface", "color/warning-surface", mix(ORANGE, 14, WHITE), mix(GOLD, 20, INK), INK)
 ];
-function starterHex(def, column) {
-  return paletteColor(def[column], currentPalette()) ?? "#808080";
+function starterHex(def, column2) {
+  return paletteColor(def[column2], currentPalette()) ?? "#808080";
 }
 const LIGHT_LOOK = {};
 function refreshLook() {
@@ -4891,6 +5011,38 @@ const FACTORIES = {
 function createNode(type, partial = {}) {
   return { ...base(type), ...FACTORIES[type](), ...partial, type };
 }
+function remapConnectorIds(n, map) {
+  if (n.type !== "connector") return;
+  for (const end of [n.from, n.to]) {
+    if (typeof end?.layer === "string") end.layer = map.get(end.layer) ?? end.layer;
+    else if (end?.layer && typeof end.layer.repeat === "string") end.layer.repeat = map.get(end.layer.repeat) ?? end.layer.repeat;
+  }
+}
+function cloneWithNewIds(node, idMap = /* @__PURE__ */ new Map()) {
+  const copy = structuredClone(node);
+  const reassign = (n) => {
+    const next = uid("n");
+    idMap.set(n.id, next);
+    n.id = next;
+    if (n.type === "group" || n.type === "frame" || n.type === "bone") n.children.forEach(reassign);
+  };
+  reassign(copy);
+  const remap = (id) => idMap.get(id) ?? id;
+  const fix = (n) => {
+    const x = n;
+    if (x.solo?.active) x.solo.active = remap(x.solo.active);
+    if (Array.isArray(x.drawOrder)) x.drawOrder = x.drawOrder.map(remap);
+    if (Array.isArray(n.constraints)) {
+      for (const c2 of n.constraints) if (typeof c2.target === "string") c2.target = remap(c2.target);
+    }
+    remapConnectorIds(n, idMap);
+    if (n.type === "path" && n.skin) for (const b of n.skin.bones) b.bone = remap(b.bone);
+    if (n.type === "image" && n.mesh?.skin) for (const b of n.mesh.skin.bones) b.bone = remap(b.bone);
+    if (isContainer(n)) n.children.forEach(fix);
+  };
+  fix(copy);
+  return copy;
+}
 const DRAW_API = [
   ["function draw(g, t, dt)", "Runs every frame. t is seconds since the layer started, dt seconds since the last frame it drew. The canvas is cleared before each frame, so draw everything every time."],
   ["function setup(g)", "Optional. Runs once, before the first draw. Top-level code and `let` variables outside the functions keep their values between frames."],
@@ -4975,13 +5127,13 @@ function migrateProjectGuides(p) {
 const MAX_SIZE = 30;
 const memo$2 = /* @__PURE__ */ new Map();
 function remembered(key, make) {
-  let hit = memo$2.get(key);
-  if (hit === void 0) {
-    hit = JSON.stringify(make());
+  let hit2 = memo$2.get(key);
+  if (hit2 === void 0) {
+    hit2 = JSON.stringify(make());
     if (memo$2.size >= 8) memo$2.delete(memo$2.keys().next().value);
-    memo$2.set(key, hit);
+    memo$2.set(key, hit2);
   }
-  return JSON.parse(hit);
+  return JSON.parse(hit2);
 }
 const MAX_WORDS = 80;
 function fits(grid, size, w, r2, c2, down) {
@@ -5017,8 +5169,8 @@ function attempt(order, size) {
     }
     placed.push({ ...w, row: r2, col: c2, down });
   };
-  const first = order[0];
-  put(first, Math.floor(size / 2), Math.floor((size - first.answer.length) / 2), false);
+  const first2 = order[0];
+  put(first2, Math.floor(size / 2), Math.floor((size - first2.answer.length) / 2), false);
   let left = order.slice(1);
   for (let pass = 0; pass < 3 && left.length; pass++) {
     const stillLeft = [];
@@ -5054,10 +5206,10 @@ function cleanWords(words, size) {
   if (!Array.isArray(words)) return [];
   const out = [];
   for (const w of words.slice(0, MAX_WORDS)) {
-    const row = typeof w === "string" ? { answer: w, clue: "" } : w && typeof w === "object" && typeof w.answer === "string" ? { ...w } : null;
-    if (!row) continue;
-    row.answer = row.answer.toUpperCase().replace(/[^A-Z]/g, "");
-    if (row.answer.length >= 2 && row.answer.length <= size) out.push(row);
+    const row2 = typeof w === "string" ? { answer: w, clue: "" } : w && typeof w === "object" && typeof w.answer === "string" ? { ...w } : null;
+    if (!row2) continue;
+    row2.answer = row2.answer.toUpperCase().replace(/[^A-Z]/g, "");
+    if (row2.answer.length >= 2 && row2.answer.length <= size) out.push(row2);
   }
   return out;
 }
@@ -5094,8 +5246,8 @@ function makeWordSearch(words, size = 12, seed = 7) {
 function hide(words, size, seed) {
   const rand = prng(seed);
   const grid = Array(size * size).fill("");
-  const text = (Array.isArray(words) ? words : []).slice(0, MAX_WORDS).map((w) => typeof w === "string" ? w : w && typeof w === "object" ? String(w.answer ?? w.word ?? "") : "");
-  const clean2 = text.map((w) => w.toUpperCase().replace(/[^A-Z]/g, "")).filter((w) => w.length >= 2 && w.length <= size);
+  const text2 = (Array.isArray(words) ? words : []).slice(0, MAX_WORDS).map((w) => typeof w === "string" ? w : w && typeof w === "object" ? String(w.answer ?? w.word ?? "") : "");
+  const clean2 = text2.map((w) => w.toUpperCase().replace(/[^A-Z]/g, "")).filter((w) => w.length >= 2 && w.length <= size);
   const order = clean2.map((w, i) => ({ w, i })).sort((a, b) => b.w.length - a.w.length);
   for (const { w, i } of order) {
     for (let tries = 0; tries < 400; tries++) {
@@ -5119,37 +5271,37 @@ function hide(words, size, seed) {
   return Array.from({ length: size }, (_, r2) => grid.slice(r2 * size, (r2 + 1) * size).join(""));
 }
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
-const num$2 = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
-const MAX_ITEMS = 200;
+const num$3 = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
+const MAX_ITEMS$1 = 200;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-const asList$1 = (v) => Array.isArray(v) ? v.slice(0, MAX_ITEMS) : [];
+const asList$1 = (v) => Array.isArray(v) ? v.slice(0, MAX_ITEMS$1) : [];
 function mindMap(nodes, opts2 = {}) {
-  const list = asList$1(nodes);
+  const list2 = asList$1(nodes);
   const o = isObj(opts2) ? opts2 : {};
-  const W2 = Math.max(100, num$2(o.width, 928));
-  const H = Math.max(60, num$2(o.height, 400));
-  let nodeW = Math.max(40, num$2(o.nodeW, 130));
-  let nodeH = Math.max(20, num$2(o.nodeH, 44));
-  let rootW = Math.max(nodeW, num$2(o.rootW, nodeW * 1.25));
-  let rootH = Math.max(nodeH, num$2(o.rootH, nodeH * 1.2));
-  let gapX = Math.max(8, num$2(o.gapX, 28));
-  const gapY = Math.max(2, num$2(o.gapY, 10));
+  const W2 = Math.max(100, num$3(o.width, 928));
+  const H = Math.max(60, num$3(o.height, 400));
+  let nodeW = Math.max(40, num$3(o.nodeW, 130));
+  let nodeH = Math.max(20, num$3(o.nodeH, 44));
+  let rootW = Math.max(nodeW, num$3(o.rootW, nodeW * 1.25));
+  let rootH = Math.max(nodeH, num$3(o.rootH, nodeH * 1.2));
+  let gapX = Math.max(8, num$3(o.gapX, 28));
+  const gapY = Math.max(2, num$3(o.gapY, 10));
   const folded = new Set((Array.isArray(o.collapsed) ? o.collapsed : []).map(String));
-  const n = list.length;
-  const ids = list.map((x, i) => isObj(x) ? String(x.id ?? i) : "");
-  const first = /* @__PURE__ */ new Map();
+  const n = list2.length;
+  const ids = list2.map((x, i) => isObj(x) ? String(x.id ?? i) : "");
+  const first2 = /* @__PURE__ */ new Map();
   ids.forEach((id, i) => {
-    if (id && !first.has(id)) first.set(id, i);
+    if (id && !first2.has(id)) first2.set(id, i);
   });
-  const rawParent = list.map((x, i) => {
+  const rawParent = list2.map((x, i) => {
     if (!isObj(x)) return -1;
-    const p = first.get(String(x.parent ?? ""));
+    const p = first2.get(String(x.parent ?? ""));
     return p === void 0 || p === i ? -1 : p;
   });
-  const root = rawParent.findIndex((p, i) => p === -1 && isObj(list[i]));
+  const root = rawParent.findIndex((p, i) => p === -1 && isObj(list2[i]));
   const parent = rawParent.slice();
   for (let i = 0; i < n; i++) {
-    if (i === root || !isObj(list[i])) continue;
+    if (i === root || !isObj(list2[i])) continue;
     if (parent[i] === -1) parent[i] = root;
     else {
       const seen = /* @__PURE__ */ new Set([i]);
@@ -5162,9 +5314,9 @@ function mindMap(nodes, opts2 = {}) {
       }
     }
   }
-  const kids = list.map(() => []);
+  const kids = list2.map(() => []);
   for (let i = 0; i < n; i++) if (i !== root && parent[i] >= 0) kids[parent[i]].push(i);
-  const out = list.map((x, i) => ({
+  const out = list2.map((x, i) => ({
     ...isObj(x) ? x : {},
     id: ids[i],
     x: 0,
@@ -5188,7 +5340,7 @@ function mindMap(nodes, opts2 = {}) {
   const shown = (i) => folded.has(ids[i]) ? [] : kids[i];
   out[root].visible = true;
   out[root].folded = folded.has(ids[root]) && kids[root].length > 0;
-  const leaves = list.map(() => 0);
+  const leaves = list2.map(() => 0);
   const countLeaves = (i) => {
     const k = shown(i);
     leaves[i] = k.length ? k.reduce((s, c2) => s + countLeaves(c2), 0) : 1;
@@ -5288,7 +5440,7 @@ function mindMap(nodes, opts2 = {}) {
   r2.x = cx - rootW / 2;
   r2.y = cy - rootH / 2;
   for (let i = 0; i < n; i++) {
-    if (out[i].visible || !isObj(list[i])) continue;
+    if (out[i].visible || !isObj(list2[i])) continue;
     let c2 = parent[i];
     while (c2 >= 0 && !out[c2].visible) c2 = parent[c2];
     const home = out[c2 >= 0 ? c2 : root];
@@ -5353,7 +5505,7 @@ function mindMapNextId(nodes) {
   return `n${k}`;
 }
 function mindMapEdit(nodes, op, at, arg) {
-  const list = asList$1(nodes).filter(isObj).map((x) => ({ ...x }));
+  const list2 = asList$1(nodes).filter(isObj).map((x) => ({ ...x }));
   const raw = asList$1(nodes);
   const pos = (k) => {
     const i2 = Math.floor(Number(k));
@@ -5361,136 +5513,136 @@ function mindMapEdit(nodes, op, at, arg) {
     return raw.slice(0, i2).filter(isObj).length;
   };
   const i = pos(at);
-  const idOf = (k) => String(list[k].id ?? "");
-  const parentOf = (k) => String(list[k].parent ?? "");
-  const rootIdx = list.findIndex((_, k) => !list.some((y) => String(y.id ?? "") === parentOf(k)) || parentOf(k) === idOf(k));
-  const siblings = (k) => list.map((_, j) => j).filter((j) => j !== k && parentOf(j) === parentOf(k));
+  const idOf = (k) => String(list2[k].id ?? "");
+  const parentOf = (k) => String(list2[k].parent ?? "");
+  const rootIdx = list2.findIndex((_, k) => !list2.some((y) => String(y.id ?? "") === parentOf(k)) || parentOf(k) === idOf(k));
+  const siblings = (k) => list2.map((_, j) => j).filter((j) => j !== k && parentOf(j) === parentOf(k));
   const descendants = (k) => {
     const out = /* @__PURE__ */ new Set([idOf(k)]);
     let grew = true;
     while (grew) {
       grew = false;
-      for (let j = 0; j < list.length; j++) if (!out.has(idOf(j)) && out.has(parentOf(j))) out.add(idOf(j)), grew = true;
+      for (let j = 0; j < list2.length; j++) if (!out.has(idOf(j)) && out.has(parentOf(j))) out.add(idOf(j)), grew = true;
     }
     return out;
   };
   const move = (from, before) => {
-    const [x] = list.splice(from, 1);
-    const to = before === null ? list.length : before > from ? before - 1 : before;
-    list.splice(to, 0, x);
-    return list;
+    const [x] = list2.splice(from, 1);
+    const to = before === null ? list2.length : before > from ? before - 1 : before;
+    list2.splice(to, 0, x);
+    return list2;
   };
   switch (op) {
     case "add": {
       const parentId = i >= 0 ? idOf(i) : rootIdx >= 0 ? idOf(rootIdx) : "";
       const label = String(arg ?? "").trim() || "New idea";
-      list.push({ id: mindMapNextId(raw), parent: parentId, label });
-      return list;
+      list2.push({ id: mindMapNextId(raw), parent: parentId, label });
+      return list2;
     }
     case "rename": {
-      if (i < 0) return list;
-      list[i].label = String(arg ?? "");
-      return list;
+      if (i < 0) return list2;
+      list2[i].label = String(arg ?? "");
+      return list2;
     }
     case "delete": {
-      if (i < 0 || i === rootIdx) return list;
+      if (i < 0 || i === rootIdx) return list2;
       const gone = descendants(i);
-      return list.filter((x) => !gone.has(String(x.id ?? "")));
+      return list2.filter((x) => !gone.has(String(x.id ?? "")));
     }
     case "up":
     case "down": {
-      if (i < 0 || i === rootIdx) return list;
+      if (i < 0 || i === rootIdx) return list2;
       const sibs = siblings(i);
       const before = sibs.filter((j) => j < i);
       const after = sibs.filter((j) => j > i);
-      if (op === "up") return before.length ? move(i, before[before.length - 1]) : list;
-      return after.length ? move(i, after[0] + 1) : list;
+      if (op === "up") return before.length ? move(i, before[before.length - 1]) : list2;
+      return after.length ? move(i, after[0] + 1) : list2;
     }
     case "indent": {
-      if (i < 0 || i === rootIdx) return list;
+      if (i < 0 || i === rootIdx) return list2;
       const before = siblings(i).filter((j) => j < i);
-      if (!before.length) return list;
-      list[i].parent = idOf(before[before.length - 1]);
-      return list;
+      if (!before.length) return list2;
+      list2[i].parent = idOf(before[before.length - 1]);
+      return list2;
     }
     case "outdent": {
-      if (i < 0 || i === rootIdx) return list;
-      const p = list.findIndex((x) => String(x.id ?? "") === parentOf(i));
-      if (p < 0 || p === rootIdx) return list;
-      list[i].parent = parentOf(p);
+      if (i < 0 || i === rootIdx) return list2;
+      const p = list2.findIndex((x) => String(x.id ?? "") === parentOf(i));
+      if (p < 0 || p === rootIdx) return list2;
+      list2[i].parent = parentOf(p);
       return move(i, p + 1);
     }
     case "reparent": {
       const to = pos(arg);
-      if (i < 0 || to < 0 || i === rootIdx || to === i || descendants(i).has(idOf(to))) return list;
-      if (parentOf(i) === idOf(to)) return list;
-      list[i].parent = idOf(to);
+      if (i < 0 || to < 0 || i === rootIdx || to === i || descendants(i).has(idOf(to))) return list2;
+      if (parentOf(i) === idOf(to)) return list2;
+      list2[i].parent = idOf(to);
       return move(i, null);
     }
     default:
-      return list;
+      return list2;
   }
 }
 function mindMapOutline(nodes, opts2 = {}) {
-  const list = asList$1(nodes).filter(isObj);
+  const list2 = asList$1(nodes).filter(isObj);
   const o = isObj(opts2) ? opts2 : {};
   const field = typeof o.field === "string" && o.field ? o.field : "label";
   const more = typeof o.detail === "string" && o.detail ? o.detail : "";
   const indent = typeof o.indent === "string" ? o.indent : "  ";
-  const ids = new Set(list.map((x) => String(x.id ?? "")));
+  const ids = new Set(list2.map((x) => String(x.id ?? "")));
   const lines = [];
   const seen = /* @__PURE__ */ new Set();
   const walkTree = (k, depth) => {
     if (seen.has(k)) return;
     seen.add(k);
-    const extra = more && list[k][more] ? `: ${String(list[k][more])}` : "";
-    lines.push(`${indent.repeat(depth)}${depth ? "- " : ""}${String(list[k][field] ?? "")}${extra}`);
-    const id = String(list[k].id ?? "");
-    list.forEach((x, j) => {
+    const extra = more && list2[k][more] ? `: ${String(list2[k][more])}` : "";
+    lines.push(`${indent.repeat(depth)}${depth ? "- " : ""}${String(list2[k][field] ?? "")}${extra}`);
+    const id = String(list2[k].id ?? "");
+    list2.forEach((x, j) => {
       if (j !== k && String(x.parent ?? "") === id) walkTree(j, depth + 1);
     });
   };
-  const rootAt = list.findIndex((x) => !ids.has(String(x.parent ?? "")));
+  const rootAt = list2.findIndex((x) => !ids.has(String(x.parent ?? "")));
   if (rootAt >= 0) walkTree(rootAt, 0);
-  list.forEach((_, j) => walkTree(j, 1));
+  list2.forEach((_, j) => walkTree(j, 1));
   return lines.join("\n");
 }
 const escapeXml = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 function mindMapSvg(placed, opts2 = {}) {
-  const list = asList$1(placed).filter(isObj);
+  const list2 = asList$1(placed).filter(isObj);
   const o = isObj(opts2) ? opts2 : {};
-  const W2 = Math.max(50, num$2(o.width, 928));
-  const H = Math.max(50, num$2(o.height, 400));
+  const W2 = Math.max(50, num$3(o.width, 928));
+  const H = Math.max(50, num$3(o.height, 400));
   const title = typeof o.title === "string" && o.title ? o.title : "Mind map";
   const parts = [];
-  const by = new Map(list.map((p, i) => [i, p]));
+  const by = new Map(list2.map((p, i) => [i, p]));
   const shown = (p) => p.visible === true;
-  list.forEach((p, i) => {
+  list2.forEach((p, i) => {
     const parent = typeof p.parentIndex === "number" ? by.get(p.parentIndex) : void 0;
     if (!shown(p) || !parent || !shown(parent)) return;
     const left = p.side === "left";
-    const ax = left ? num$2(parent.x, 0) : num$2(parent.x, 0) + num$2(parent.w, 0);
-    const ay = num$2(parent.y, 0) + num$2(parent.h, 0) / 2;
-    const bx = left ? num$2(p.x, 0) + num$2(p.w, 0) : num$2(p.x, 0);
-    const by_ = num$2(p.y, 0) + num$2(p.h, 0) / 2;
+    const ax = left ? num$3(parent.x, 0) : num$3(parent.x, 0) + num$3(parent.w, 0);
+    const ay = num$3(parent.y, 0) + num$3(parent.h, 0) / 2;
+    const bx = left ? num$3(p.x, 0) + num$3(p.w, 0) : num$3(p.x, 0);
+    const by_ = num$3(p.y, 0) + num$3(p.h, 0) / 2;
     const k = Math.abs(bx - ax) / 2;
     const c1 = ax + (left ? -k : k);
     const c2 = bx + (left ? k : -k);
     parts.push(`<path d="M${ax} ${ay}C${c1} ${ay} ${c2} ${by_} ${bx} ${by_}" fill="none" stroke="#6e6964" stroke-width="2"/>`);
   });
-  for (const p of list) {
+  for (const p of list2) {
     if (!shown(p)) continue;
     const root = p.depth === 0;
-    const w = num$2(p.w, 100);
-    const h = num$2(p.h, 40);
+    const w = num$3(p.w, 100);
+    const h = num$3(p.h, 40);
     const max = Math.max(3, Math.floor((w - 12) / 7.5));
     const raw = String(p.label ?? "");
     const label = raw.length > max ? `${raw.slice(0, max - 1)}...` : raw;
     parts.push(
-      `<rect x="${num$2(p.x, 0)}" y="${num$2(p.y, 0)}" width="${w}" height="${h}" rx="12" fill="${root ? "#3c2d4d" : "#ffffff"}" stroke="${root ? "#3c2d4d" : "#6e6964"}" stroke-width="${root ? 0 : p.depth === 1 ? 2.5 : 1.5}"/><text x="${num$2(p.x, 0) + w / 2}" y="${num$2(p.y, 0) + h / 2}" text-anchor="middle" dominant-baseline="central" font-family="Open Sans, Arial, sans-serif" font-size="14" font-weight="600" fill="${root ? "#ffffff" : "#2d2d2d"}">${escapeXml(label)}</text>`
+      `<rect x="${num$3(p.x, 0)}" y="${num$3(p.y, 0)}" width="${w}" height="${h}" rx="12" fill="${root ? "#3c2d4d" : "#ffffff"}" stroke="${root ? "#3c2d4d" : "#6e6964"}" stroke-width="${root ? 0 : p.depth === 1 ? 2.5 : 1.5}"/><text x="${num$3(p.x, 0) + w / 2}" y="${num$3(p.y, 0) + h / 2}" text-anchor="middle" dominant-baseline="central" font-family="Open Sans, Arial, sans-serif" font-size="14" font-weight="600" fill="${root ? "#ffffff" : "#2d2d2d"}">${escapeXml(label)}</text>`
     );
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W2} ${H}" width="${W2}" height="${H}" role="img"><title>${escapeXml(title)}</title><desc>${escapeXml(mindMapOutline(list.map((p) => ({ id: p.id, parent: list[Number(p.parentIndex)]?.id ?? "", label: p.label }))))}</desc>${parts.join("")}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W2} ${H}" width="${W2}" height="${H}" role="img"><title>${escapeXml(title)}</title><desc>${escapeXml(mindMapOutline(list2.map((p) => ({ id: p.id, parent: list2[Number(p.parentIndex)]?.id ?? "", label: p.label }))))}</desc>${parts.join("")}</svg>`;
 }
 const FLOW_SIZES = { start: [150, 48], end: [150, 48], process: [170, 56], decision: [190, 90], io: [170, 56] };
 const kindOf = (s) => {
@@ -5513,11 +5665,11 @@ function flowLinks(steps2, links, opts2 = {}) {
   const centre = (p) => horizontal ? p.y + p.h / 2 : p.x + p.w / 2;
   const [lo, hi, along, into] = horizontal ? ["top", "bottom", "right", "left"] : ["left", "right", "bottom", "top"];
   const sideOf = /* @__PURE__ */ new Map();
-  const outgoing = /* @__PURE__ */ new Map();
+  const outgoing2 = /* @__PURE__ */ new Map();
   edges.forEach((e, k) => {
-    if (!back[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) (outgoing.get(e.a) ?? outgoing.set(e.a, []).get(e.a)).push(k);
+    if (!back[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) (outgoing2.get(e.a) ?? outgoing2.set(e.a, []).get(e.a)).push(k);
   });
-  for (const [a, ks] of outgoing) {
+  for (const [a, ks] of outgoing2) {
     if (kindOf(st[a]) !== "decision" || ks.length < 2) continue;
     const sorted = [...ks].sort((x, y) => centre(placed[edges[x].b]) - centre(placed[edges[y].b]) || x - y);
     sorted.forEach((k, n) => sideOf.set(k, n === 0 ? lo : n === sorted.length - 1 ? hi : along));
@@ -5635,16 +5787,16 @@ function spread(want, sep) {
 function flowChart(steps2, links, opts2 = {}) {
   const st = asList$1(steps2);
   const o = isObj(opts2) ? opts2 : {};
-  const W2 = Math.max(100, num$2(o.width, 600));
-  const H = Math.max(100, num$2(o.height, 440));
+  const W2 = Math.max(100, num$3(o.width, 600));
+  const H = Math.max(100, num$3(o.height, 440));
   const horizontal = o.direction === "right";
   const sizes = { ...FLOW_SIZES };
   for (const k2 of Object.keys(sizes)) {
     const s = o.sizes?.[k2];
     if (Array.isArray(s) && s.length === 2 && Number(s[0]) > 0 && Number(s[1]) > 0) sizes[k2] = [Number(s[0]), Number(s[1])];
   }
-  const gapRow = Math.max(4, num$2(horizontal ? o.gapX : o.gapY, 34));
-  const gapIn = Math.max(4, num$2(horizontal ? o.gapY : o.gapX, 28));
+  const gapRow = Math.max(4, num$3(horizontal ? o.gapX : o.gapY, 34));
+  const gapIn = Math.max(4, num$3(horizontal ? o.gapY : o.gapX, 28));
   const ids = /* @__PURE__ */ new Map();
   st.forEach((s, i) => {
     if (isObj(s) && !ids.has(String(s.id ?? ""))) ids.set(String(s.id ?? ""), i);
@@ -5667,8 +5819,8 @@ function flowChart(steps2, links, opts2 = {}) {
   const succs = (i) => fwd.filter((e2) => e2.a === i).map((e2) => e2.b);
   const pos = new Array(n).fill(0);
   const index = new Array(n).fill(0);
-  const reindex = () => rows.forEach((r2) => r2?.forEach((i, k2) => index[i] = k2));
-  reindex();
+  const reindex2 = () => rows.forEach((r2) => r2?.forEach((i, k2) => index[i] = k2));
+  reindex2();
   for (let pass = 0; pass < 4; pass++) {
     const down = pass % 2 === 0;
     const seq = down ? rows.map((_, k2) => k2).slice(1) : rows.map((_, k2) => k2).slice(0, -1).reverse();
@@ -5846,13 +5998,13 @@ const W = {
 };
 const advance = (ch) => W[ch] ?? (ch >= "0" && ch <= "9" ? 0.572 : ch.charCodeAt(0) > 8192 ? 1 : 0.56);
 const TEXT_WIDTH_MARGIN = 0.04;
-function textWidth(text, size, weight = 400) {
+function textWidth(text2, size, weight = 400) {
   const bold = weight >= 700 ? 1.07 : weight >= 600 ? 1.04 : 1;
   let em = 0;
-  for (const ch of String(text)) em += advance(ch);
+  for (const ch of String(text2)) em += advance(ch);
   return em * size * bold * (1 + TEXT_WIDTH_MARGIN);
 }
-function wrapLines(text, room, size, weight = 400) {
+function wrapLines(text2, room, size, weight = 400) {
   const lines = [];
   let line = "";
   let widest = 0;
@@ -5860,11 +6012,11 @@ function wrapLines(text, room, size, weight = 400) {
     widest = Math.max(widest, textWidth(line, size, weight));
     lines.push(line);
   };
-  for (const word of String(text).trim().split(/\s+/).filter(Boolean)) {
-    const next = line ? `${line} ${word}` : word;
+  for (const word2 of String(text2).trim().split(/\s+/).filter(Boolean)) {
+    const next = line ? `${line} ${word2}` : word2;
     if (line && textWidth(next, size, weight) > room) {
       close();
-      line = word;
+      line = word2;
     } else line = next;
   }
   close();
@@ -5873,33 +6025,33 @@ function wrapLines(text, room, size, weight = 400) {
 const FLOOR = 11;
 const HARD_MAX_WORDS = 120;
 const WEIGHT = 600;
-const num$1 = (v, fallback) => {
+const num$2 = (v, fallback2) => {
   const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
-  return Number.isFinite(n) ? n : fallback;
+  return Number.isFinite(n) ? n : fallback2;
 };
 const clean = (s) => s.trim().replace(/\s+/g, " ");
 const stripEnds = (s) => s.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
-const cloudKey = (text) => clean(String(text ?? "")).toLowerCase();
-function wordBox(text, size) {
+const cloudKey = (text2) => clean(String(text2 ?? "")).toLowerCase();
+function wordBox(text2, size) {
   const padX = Math.max(12, size * 0.3);
   const padY = Math.max(4, size * 0.16);
-  return { w: Math.ceil(textWidth(text, size, WEIGHT) + 2 * padX), h: Math.ceil(size + 2 * padY) };
+  return { w: Math.ceil(textWidth(text2, size, WEIGHT) + 2 * padX), h: Math.ceil(size + 2 * padY) };
 }
 function gather(input, blocked, minCount) {
   const merged = /* @__PURE__ */ new Map();
   const rows = Array.isArray(input) ? input : [];
   for (const raw of rows) {
     const isObj2 = !!raw && typeof raw === "object" && !Array.isArray(raw);
-    const text = clean(String(isObj2 ? raw.text ?? "" : typeof raw === "string" || typeof raw === "number" ? raw : ""));
-    if (!text) continue;
-    const key = text.toLowerCase();
+    const text2 = clean(String(isObj2 ? raw.text ?? "" : typeof raw === "string" || typeof raw === "number" ? raw : ""));
+    if (!text2) continue;
+    const key = text2.toLowerCase();
     if (blocked.has(key) || key.split(" ").some((t2) => blocked.has(stripEnds(t2)))) continue;
-    const weight = isObj2 ? Math.max(0, num$1(raw.weight, 1)) : 1;
+    const weight = isObj2 ? Math.max(0, num$2(raw.weight, 1)) : 1;
     const have = merged.get(key);
     if (have) have.weight += weight;
     else {
       const { text: _t, weight: _w, ...extra } = isObj2 ? raw : {};
-      merged.set(key, { key, text, weight, extra });
+      merged.set(key, { key, text: text2, weight, extra });
     }
   }
   return [...merged.values()].filter((r2) => r2.weight >= minCount && r2.weight > 0).sort((a, b) => b.weight - a.weight || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
@@ -5911,7 +6063,7 @@ function pack(boxes, W2, H, gap) {
   const cx = W2 / 2;
   const cy = H / 2;
   const squash = Math.min(1, H / W2);
-  const reach = W2 / 2 + Math.max(...boxes.map((b) => b.w), 0);
+  const reach2 = W2 / 2 + Math.max(...boxes.map((b) => b.w), 0);
   boxes.forEach((b, i) => {
     if (b.w > W2 || b.h > H) {
       out.push(null);
@@ -5925,7 +6077,7 @@ function pack(boxes, W2, H, gap) {
     let theta = i * GOLDEN;
     let r2 = 0;
     let found = null;
-    while (r2 <= reach) {
+    while (r2 <= reach2) {
       const x = Math.round(cx + r2 * Math.cos(theta) - b.w / 2);
       const y = Math.round(cy + r2 * Math.sin(theta) * squash - b.h / 2);
       if (free(x, y)) {
@@ -5943,19 +6095,19 @@ function pack(boxes, W2, H, gap) {
 const memo$1 = /* @__PURE__ */ new Map();
 function layoutCloud(input, width, height, options) {
   const o = options && typeof options === "object" ? options : {};
-  const W2 = Math.min(4e3, Math.max(40, num$1(width, 600)));
-  const H = Math.min(4e3, Math.max(40, num$1(height, 400)));
-  const minSize = Math.max(FLOOR, num$1(o.minSize, 16));
-  const maxSize = Math.max(minSize, num$1(o.maxSize, 64));
-  const gap = Math.max(0, num$1(o.gap, 6));
+  const W2 = Math.min(4e3, Math.max(40, num$2(width, 600)));
+  const H = Math.min(4e3, Math.max(40, num$2(height, 400)));
+  const minSize = Math.max(FLOOR, num$2(o.minSize, 16));
+  const maxSize = Math.max(minSize, num$2(o.maxSize, 64));
+  const gap = Math.max(0, num$2(o.gap, 6));
   const scale = o.scale === "linear" || o.scale === "log" ? o.scale : "sqrt";
-  const minCount = Math.max(0, num$1(o.minCount, 0));
-  const grow1 = Math.max(1, Math.min(3, num$1(o.grow, 1)));
-  const limit = Math.min(HARD_MAX_WORDS, Math.max(1, Math.round(num$1(o.max, 60))));
+  const minCount = Math.max(0, num$2(o.minCount, 0));
+  const grow1 = Math.max(1, Math.min(3, num$2(o.grow, 1)));
+  const limit = Math.min(HARD_MAX_WORDS, Math.max(1, Math.round(num$2(o.max, 60))));
   const blocked = new Set((Array.isArray(o.blocked) ? o.blocked : []).map((b) => stripEnds(cloudKey(b))).filter(Boolean));
   const key = JSON.stringify([input, W2, H, minSize, maxSize, gap, scale, minCount, limit, grow1, [...blocked]]);
-  const hit = memo$1.get(key);
-  if (hit !== void 0) return JSON.parse(hit);
+  const hit2 = memo$1.get(key);
+  if (hit2 !== void 0) return JSON.parse(hit2);
   const rows = gather(input, blocked, minCount).slice(0, limit);
   const top = rows.length ? rows[0].weight : 1;
   const low = rows.length ? rows[rows.length - 1].weight : 1;
@@ -6001,9 +6153,9 @@ function layoutCloud(input, width, height, options) {
 }
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const SHORT$1 = MONTHS.map((m) => m.slice(0, 3));
-const num = (v, fallback) => {
+const num$1 = (v, fallback2) => {
   const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
-  return Number.isFinite(n) ? n : fallback;
+  return Number.isFinite(n) ? n : fallback2;
 };
 const daysIn = (y, m) => [31, y % 4 === 0 && y % 100 !== 0 || y % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
 function parseDate(v) {
@@ -6067,24 +6219,24 @@ function markerDate(v) {
 const memo = /* @__PURE__ */ new Map();
 function timelineLayout(eventsIn, erasIn, fromIn, toIn, options) {
   const o = options && typeof options === "object" ? options : {};
-  const length = Math.min(2e4, Math.max(40, num(o.length, 880)));
+  const length = Math.min(2e4, Math.max(40, num$1(o.length, 880)));
   const vertical = o.orientation === "vertical";
-  const size = Math.max(8, num(o.labelSize, 14));
-  const lanes = Math.max(1, Math.min(12, Math.round(num(o.lanes, 4))));
-  const maxLabel = Math.max(40, num(o.maxLabel, 170));
-  const column = Math.max(40, num(o.columnWidth, 150));
-  const maxLines = Math.max(1, Math.min(6, Math.round(num(o.maxLines, 2))));
-  const gap = Math.max(0, num(o.gap, 8));
-  const tickSpace = Math.max(20, num(o.tickSpace, 64));
+  const size = Math.max(8, num$1(o.labelSize, 14));
+  const lanes = Math.max(1, Math.min(12, Math.round(num$1(o.lanes, 4))));
+  const maxLabel = Math.max(40, num$1(o.maxLabel, 170));
+  const column2 = Math.max(40, num$1(o.columnWidth, 150));
+  const maxLines = Math.max(1, Math.min(6, Math.round(num$1(o.maxLines, 2))));
+  const gap = Math.max(0, num$1(o.gap, 8));
+  const tickSpace = Math.max(20, num$1(o.tickSpace, 64));
   const lineH = size * 1.25;
   const dateLine = o.dateLine === true;
-  const sides = num(o.sides, 2) === 1 ? 1 : 2;
-  const from = num(fromIn, 0);
-  let to = num(toIn, from + 1);
+  const sides = num$1(o.sides, 2) === 1 ? 1 : 2;
+  const from = num$1(fromIn, 0);
+  let to = num$1(toIn, from + 1);
   if (to <= from) to = from + 1;
-  const key = JSON.stringify([eventsIn, erasIn, from, to, length, vertical, size, lanes, maxLabel, column, maxLines, gap, tickSpace, o.marker === "today" ? (/* @__PURE__ */ new Date()).toDateString() : o.marker, dateLine, sides]);
-  const hit = memo.get(key);
-  if (hit !== void 0) return JSON.parse(hit);
+  const key = JSON.stringify([eventsIn, erasIn, from, to, length, vertical, size, lanes, maxLabel, column2, maxLines, gap, tickSpace, o.marker === "today" ? (/* @__PURE__ */ new Date()).toDateString() : o.marker, dateLine, sides]);
+  const hit2 = memo.get(key);
+  if (hit2 !== void 0) return JSON.parse(hit2);
   const span = to - from;
   const px = length / span;
   const at = (t2) => (t2 - from) * px;
@@ -6113,13 +6265,13 @@ function timelineLayout(eventsIn, erasIn, fromIn, toIn, options) {
   const items = parsed.map((p, index) => {
     const title = String(p.row.title ?? p.row.name ?? "");
     const range = !!p.b;
-    const text = range ? `${dateText(p.a)} to ${dateText(p.b)}` : dateText(p.a);
+    const text2 = range ? `${dateText(p.a)} to ${dateText(p.b)}` : dateText(p.a);
     const eraIdx = eraRows.findIndex((e) => p.a.t >= e.a.t && p.a.t < e.b.t);
     const inView = p.a.t <= to && p.stop >= from;
-    const wrapped = vertical ? wrapLines(title, column, size, 600) : wrapLines(title, maxLabel, size, 600);
+    const wrapped = vertical ? wrapLines(title, column2, size, 600) : wrapLines(title, maxLabel, size, 600);
     const lines = Math.min(maxLines, wrapped.lines.length) + (dateLine ? 1 : 0);
-    const room = vertical ? column : maxLabel;
-    const labelW = Math.ceil(Math.min(room, Math.max(wrapped.width, dateLine ? textWidth(text, size, 600) : 0)));
+    const room = vertical ? column2 : maxLabel;
+    const labelW = Math.ceil(Math.min(room, Math.max(wrapped.width, dateLine ? textWidth(text2, size, 600) : 0)));
     return {
       ...p.row,
       index,
@@ -6127,8 +6279,8 @@ function timelineLayout(eventsIn, erasIn, fromIn, toIn, options) {
       range,
       start: p.a.t,
       stop: p.stop,
-      dateText: text,
-      spoken: range ? `from ${text}` : text,
+      dateText: text2,
+      spoken: range ? `from ${text2}` : text2,
       eraIndex: eraIdx,
       eraName: eraIdx >= 0 ? String(eraRows[eraIdx].row.name ?? eraRows[eraIdx].row.title ?? "") : "",
       inView,
@@ -6141,7 +6293,7 @@ function timelineLayout(eventsIn, erasIn, fromIn, toIn, options) {
       labelW,
       labelH: Math.ceil(lines * lineH),
       lines,
-      priority: num(p.row.priority, 0)
+      priority: num$1(p.row.priority, 0)
     };
   });
   const along = (it) => vertical ? it.labelH : it.labelW;
@@ -6267,35 +6419,35 @@ function matcher(rest) {
   if (!OPS.includes(op)) throw new ListHelperError(`"${op}" is not a comparison; use one of ${OPS.join(" ")}`);
   return (item) => compare(fieldOf(item, rest[0]), op, rest[2]);
 }
-const asList = (list) => Array.isArray(list) ? list : [];
-function count(list, ...rest) {
-  const l = asList(list);
+const asList = (list2) => Array.isArray(list2) ? list2 : [];
+function count(list2, ...rest) {
+  const l = asList(list2);
   const m = matcher(rest);
   return m ? l.filter(m).length : l.length;
 }
-function where(list, ...rest) {
-  const l = asList(list);
+function where(list2, ...rest) {
+  const l = asList(list2);
   const m = matcher(rest);
   return m ? l.filter(m) : l.slice();
 }
-function positions(list, ...rest) {
+function positions(list2, ...rest) {
   const m = matcher(rest);
   const out = [];
-  asList(list).forEach((item, i) => {
+  asList(list2).forEach((item, i) => {
     if (!m || m(item)) out.push(i);
   });
   return out;
 }
-function sum(list, field) {
+function sum(list2, field) {
   let total = 0;
-  for (const item of asList(list)) {
+  for (const item of asList(list2)) {
     const n = Number(fieldOf(item, field));
     if (Number.isFinite(n)) total += n;
   }
   return total;
 }
-function pluck(list, field) {
-  return asList(list).map((item) => fieldOf(item, field));
+function pluck(list2, field) {
+  return asList(list2).map((item) => fieldOf(item, field));
 }
 class ExprError extends Error {
 }
@@ -6306,7 +6458,7 @@ const MAX_SOURCE = 2e4;
 const MAX_STRING = 1e6;
 const MAX_LIST = 1e5;
 const SHORT = Symbol("short");
-const RESERVED = /* @__PURE__ */ new Set([
+const RESERVED$2 = /* @__PURE__ */ new Set([
   "function",
   "this",
   "class",
@@ -6348,7 +6500,7 @@ const RESERVED = /* @__PURE__ */ new Set([
   "true",
   "false"
 ]);
-const PUNCT = [
+const PUNCT$1 = [
   ">>>=",
   "...",
   "===",
@@ -6449,10 +6601,10 @@ class Parser {
     if (DIGIT.test(c2) || c2 === "." && DIGIT.test(s[start + 1] ?? "")) {
       let m = /^0[xX][0-9a-fA-F]+|^0[bB][01]+|^0[oO][0-7]+/.exec(s.slice(start));
       if (!m) m = /^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/.exec(s.slice(start));
-      const text = m[0];
-      if (s[start + text.length] && ID_START.test(s[start + text.length])) this.fail("Unexpected character after number", start);
-      this.pos = start + text.length;
-      return { t: "num", v: text, n: Number(text), start, end: this.pos };
+      const text2 = m[0];
+      if (s[start + text2.length] && ID_START.test(s[start + text2.length])) this.fail("Unexpected character after number", start);
+      this.pos = start + text2.length;
+      return { t: "num", v: text2, n: Number(text2), start, end: this.pos };
     }
     if (ID_START.test(c2)) {
       let i = start + 1;
@@ -6460,7 +6612,7 @@ class Parser {
       this.pos = i;
       return { t: "id", v: s.slice(start, i), start, end: i };
     }
-    for (const p of PUNCT) {
+    for (const p of PUNCT$1) {
       if (s.startsWith(p, start)) {
         if (p === "?." && DIGIT.test(s[start + 2] ?? "")) continue;
         this.pos = start + p.length;
@@ -6544,13 +6696,13 @@ class Parser {
     }
   }
   sequence() {
-    const first = this.ternary();
-    if (!this.is(",")) return first;
-    const list = [first];
-    while (this.eat(",")) list.push(this.ternary());
+    const first2 = this.ternary();
+    if (!this.is(",")) return first2;
+    const list2 = [first2];
+    while (this.eat(",")) list2.push(this.ternary());
     return (env) => {
       let v;
-      for (const e of list) v = e(env);
+      for (const e of list2) v = e(env);
       return v;
     };
   }
@@ -6578,7 +6730,7 @@ class Parser {
       this.tok = save.tok;
     };
     let params = null;
-    if (this.tok.t === "id" && !RESERVED.has(this.tok.v)) {
+    if (this.tok.t === "id" && !RESERVED$2.has(this.tok.v)) {
       const name = this.tok.v;
       this.advance();
       if (this.is("=>")) params = [name];
@@ -6588,7 +6740,7 @@ class Parser {
       let ok = true;
       if (!this.is(")")) {
         for (; ; ) {
-          if (this.tok.t === "id" && !RESERVED.has(this.tok.v)) {
+          if (this.tok.t === "id" && !RESERVED$2.has(this.tok.v)) {
             names2.push(this.tok.v);
             this.advance();
           } else {
@@ -6693,17 +6845,17 @@ class Parser {
     });
   }
   args() {
-    const list = [];
+    const list2 = [];
     this.expect("(");
     while (!this.is(")")) {
       if (this.eat("...")) {
         const e = this.ternary();
-        list.push(markSpread(e));
-      } else list.push(this.ternary());
+        list2.push(markSpread(e));
+      } else list2.push(this.ternary());
       if (!this.eat(",")) break;
     }
     this.expect(")");
-    return list;
+    return list2;
   }
   postfix() {
     let e = this.primary();
@@ -6798,7 +6950,7 @@ class Parser {
   identifier() {
     const name = this.tok.v;
     if (name === "new") return this.newExpr();
-    if (RESERVED.has(name)) {
+    if (RESERVED$2.has(name)) {
       if (name === "null") {
         this.advance();
         return () => null;
@@ -6825,7 +6977,7 @@ class Parser {
   }
   newExpr() {
     this.advance();
-    if (this.tok.t !== "id" || RESERVED.has(this.tok.v)) this.fail("Expected a name after new");
+    if (this.tok.t !== "id" || RESERVED$2.has(this.tok.v)) this.fail("Expected a name after new");
     const name = this.tok.v;
     this.advance();
     this.names.add(name);
@@ -6865,7 +7017,7 @@ class Parser {
         let shorthand = null;
         if (this.tok.t === "id") {
           key = this.tok.v;
-          shorthand = RESERVED.has(this.tok.v) ? null : this.tok.v;
+          shorthand = RESERVED$2.has(this.tok.v) ? null : this.tok.v;
           this.advance();
         } else if (this.tok.t === "str") {
           key = this.tok.v;
@@ -7007,9 +7159,9 @@ function markSpread(e) {
   SPREAD.add(w);
   return w;
 }
-function evalArgs(list, env) {
+function evalArgs(list2, env) {
   const out = [];
-  for (const e of list) {
+  for (const e of list2) {
     if (SPREAD.has(e)) {
       const v = e(env);
       if (typeof v === "string" || Array.isArray(v)) {
@@ -7045,9 +7197,9 @@ class PatternText {
     this.source = source;
   }
 }
-function guardRegex(re, text) {
+function guardRegex(re, text2) {
   try {
-    assertSafeMatch(re.source, re instanceof RegExp ? re.flags : "", text);
+    assertSafeMatch(re.source, re instanceof RegExp ? re.flags : "", text2);
   } catch (e) {
     if (e instanceof RegexRefused) throw new ExprError(e.message);
     throw e;
@@ -7112,9 +7264,9 @@ for (const m of ["match", "matchAll", "search", "replace", "replaceAll", "split"
       guardRegex(p, this);
       re = p;
     } else if (compiles && p !== void 0 && p !== null) {
-      const text = String(p);
-      guardRegex(new PatternText(text), this);
-      re = new RegExp(text, m === "matchAll" ? "g" : "");
+      const text2 = String(p);
+      guardRegex(new PatternText(text2), this);
+      re = new RegExp(text2, m === "matchAll" ? "g" : "");
     }
     if (!re) return inner.apply(this, a);
     return linearly(() => {
@@ -7265,9 +7417,9 @@ const ObjectNs = {
   keys: (o) => Object.keys(plainOnly(o)),
   values: (o) => Object.values(plainOnly(o)),
   entries: (o) => Object.entries(plainOnly(o)),
-  fromEntries: (list) => {
+  fromEntries: (list2) => {
     const out = {};
-    for (const e of guardedFrom(list)) {
+    for (const e of guardedFrom(list2)) {
       const k = propKey(e[0]);
       if (!BLOCKED.has(k)) Object.defineProperty(out, k, { value: e[1], enumerable: true, writable: true, configurable: true });
     }
@@ -7453,14 +7605,14 @@ function makeBinary(op, a, b) {
   }
 }
 const fold = (v) => typeof v === "string" ? v.toLowerCase() : v;
-function hasEach(list, items, all2) {
+function hasEach(list2, items, all2) {
   const wanted = (Array.isArray(items) ? items : [items]).map(fold);
-  if (typeof list === "string") {
-    const text = list.toLowerCase();
-    const has2 = (w) => text.includes(String(w));
+  if (typeof list2 === "string") {
+    const text2 = list2.toLowerCase();
+    const has2 = (w) => text2.includes(String(w));
     return all2 ? wanted.every(has2) : wanted.some(has2);
   }
-  const have = (Array.isArray(list) ? list : []).map(fold);
+  const have = (Array.isArray(list2) ? list2 : []).map(fold);
   const has = (w) => have.some((h) => Object.is(h, w) || h === w);
   return all2 ? wanted.every(has) : wanted.some(has);
 }
@@ -7478,9 +7630,9 @@ const FORMULA_HELPERS = {
     return outMin + (outMax - outMin) * k;
   },
   clamp: (v, min, max) => Math.min(max, Math.max(min, v)),
-  lookup(v, map, fallback) {
+  lookup(v, map, fallback2) {
     const key = String(v);
-    return map && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : fallback;
+    return map && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : fallback2;
   },
   /** A size in bytes as people say it: "340 KB", "12.4 MB" (binary units, as the editor's asset list shows). */
   fileSize(bytes) {
@@ -7529,8 +7681,8 @@ const FORMULA_HELPERS = {
     return [b.from, b.to, b.span, b.count];
   },
   /** How many words a text has (runs of anything but spaces). */
-  wordCount: (text) => {
-    const t2 = text === void 0 || text === null ? "" : String(text).trim();
+  wordCount: (text2) => {
+    const t2 = text2 === void 0 || text2 === null ? "" : String(text2).trim();
     return t2 ? t2.split(/\s+/).length : 0;
   },
   /** A label for where a value falls: thresholds from the highest down, one more label than thresholds. */
@@ -7550,8 +7702,8 @@ const FORMULA_HELPERS = {
     return h > 0 ? `${h}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}:${sec}` : `${Math.floor(s / 60)}:${sec}`;
   },
   /** The list in a new order. With a seed the order is the same every time. */
-  shuffle(list, seed) {
-    const out = Array.isArray(list) ? list.slice() : typeof list === "string" ? Array.from(list) : [];
+  shuffle(list2, seed) {
+    const out = Array.isArray(list2) ? list2.slice() : typeof list2 === "string" ? Array.from(list2) : [];
     const rnd = typeof seed === "number" ? mulberry32(Number.isFinite(seed) ? seed | 0 : 0) : Math.random;
     for (let i = out.length - 1; i > 0; i--) {
       const j = Math.floor(rnd() * (i + 1));
@@ -7571,19 +7723,19 @@ const FORMULA_HELPERS = {
     return hi < lo ? lo : lo + Math.floor(Math.random() * (hi - lo + 1));
   },
   /** Whether a list (or text) has every one of the items, ignoring capitals. */
-  includesAll: (list, items) => hasEach(list, items, true),
+  includesAll: (list2, items) => hasEach(list2, items, true),
   /** Whether a list (or text) has at least one of the items, ignoring capitals. */
-  includesAny: (list, items) => hasEach(list, items, false),
+  includesAny: (list2, items) => hasEach(list2, items, false),
   /** How many items a list has, or how many match: count(list), count(list, value), count(list, field, value), count(list, field, ">", value). */
-  count: (list, ...rest) => listHelper(() => count(list, ...rest)),
+  count: (list2, ...rest) => listHelper(() => count(list2, ...rest)),
   /** The items that match, same arguments as count. */
-  where: (list, ...rest) => listHelper(() => where(list, ...rest)),
+  where: (list2, ...rest) => listHelper(() => where(list2, ...rest)),
   /** The positions (0 is the first) of the items that match, same arguments as count. */
-  positions: (list, ...rest) => listHelper(() => positions(list, ...rest)),
+  positions: (list2, ...rest) => listHelper(() => positions(list2, ...rest)),
   /** A list of numbers added up, or one field of each item: sum(list), sum(list, field). */
-  sum: (list, field) => sum(list, field),
+  sum: (list2, field) => sum(list2, field),
   /** One field of every item as a list: pluck(list, field). */
-  pluck: (list, field) => pluck(list, field)
+  pluck: (list2, field) => pluck(list2, field)
 };
 function listHelper(run2) {
   try {
@@ -7595,18 +7747,18 @@ function listHelper(run2) {
 }
 const cache = /* @__PURE__ */ new Map();
 function compile(src) {
-  let hit = cache.get(src);
-  if (hit === void 0) {
+  let hit2 = cache.get(src);
+  if (hit2 === void 0) {
     try {
-      hit = new Parser(src).parseAll();
+      hit2 = new Parser(src).parseAll();
     } catch (e) {
-      hit = e instanceof ExprError ? e : new ExprError(String(e?.message ?? e));
+      hit2 = e instanceof ExprError ? e : new ExprError(String(e?.message ?? e));
     }
     if (cache.size > 2e3) cache.clear();
-    cache.set(src, hit);
+    cache.set(src, hit2);
   }
-  if (hit instanceof ExprError) throw new ExprError(`Cannot parse expression: ${src.trim()} - ${hit.message}`);
-  return hit;
+  if (hit2 instanceof ExprError) throw new ExprError(`Cannot parse expression: ${src.trim()} - ${hit2.message}`);
+  return hit2;
 }
 function exprNames(src) {
   const t2 = src.trim();
@@ -7741,13 +7893,13 @@ function liveProblems(project) {
   return out;
 }
 const isIdArray = (a) => Array.isArray(a) && a.length > 0 && a.every((e) => e && typeof e === "object" && typeof e.id === "string");
-const same = (a, b) => {
+const same$1 = (a, b) => {
   if (a === b) return true;
   if (typeof a !== "object" || typeof b !== "object" || !a || !b) return false;
   if (Array.isArray(a) !== Array.isArray(b)) return false;
   let ka = Object.keys(a), kb = Object.keys(b);
   if (ka.length !== kb.length) return false;
-  for (let k of ka) if (!same(a[k], b[k])) return false;
+  for (let k of ka) if (!same$1(a[k], b[k])) return false;
   return true;
 };
 function stayers(order) {
@@ -7774,7 +7926,7 @@ function diff(a, b, path = [], out = []) {
   if (a === b) return out;
   let aObj = a && typeof a === "object", bObj = b && typeof b === "object";
   if (!aObj || !bObj || Array.isArray(a) !== Array.isArray(b)) {
-    if (!same(a, b)) out.push({ t: "set", p: path, v: b });
+    if (!same$1(a, b)) out.push({ t: "set", p: path, v: b });
     return out;
   }
   if (Array.isArray(a)) {
@@ -7794,7 +7946,7 @@ function diff(a, b, path = [], out = []) {
     }
     let idArrays = (isIdArray(a) || a.length === 0) && (isIdArray(b) || b.length === 0) && (a.length || b.length);
     if (!idArrays) {
-      if (!same(a, b)) out.push({ t: "set", p: path, v: b });
+      if (!same$1(a, b)) out.push({ t: "set", p: path, v: b });
       return out;
     }
     let aIds = new Map(a.map((e, i) => [e.id, i])), bIds = new Set(b.map((e) => e.id));
@@ -7816,6 +7968,522 @@ function diff(a, b, path = [], out = []) {
   return out;
 }
 const PACKAGE_EXTENSION = ".ixp";
+function textFitOf(n) {
+  const f2 = n.fitText;
+  return f2 && typeof f2 === "object" ? f2 : null;
+}
+function textAutoSize(n) {
+  return textFitOf(n) ? "none" : n.autoSize;
+}
+function defaultAutoLayout(direction = "column") {
+  return { direction, gap: 8, padding: { top: 16, right: 16, bottom: 16, left: 16 }, justify: "start", align: "start", wrap: false, hugWidth: false, hugHeight: true };
+}
+const NO_MARGIN = { top: 0, right: 0, bottom: 0, left: 0 };
+const SIDES = ["top", "right", "bottom", "left"];
+const isPercent = (u) => u === "percent";
+const sidesPercent = (u) => !!u && SIDES.some((s) => isPercent(u[s]));
+const layoutHasPercent = (L2) => !!L2?.units && (isPercent(L2.units.gap) || isPercent(L2.units.crossGap) || sidesPercent(L2.units.padding));
+const marginHasPercent = (it) => sidesPercent(it?.marginUnits);
+function resolveLayout(L2, ownerW) {
+  if (!layoutHasPercent(L2)) return L2;
+  const u = L2.units;
+  const owner = Number.isFinite(ownerW) ? ownerW : 0;
+  const px = (v, unit) => isPercent(unit) ? v * owner / 100 : v;
+  const out = {
+    ...L2,
+    gap: px(L2.gap, u.gap),
+    padding: { top: px(L2.padding.top, u.padding?.top), right: px(L2.padding.right, u.padding?.right), bottom: px(L2.padding.bottom, u.padding?.bottom), left: px(L2.padding.left, u.padding?.left) }
+  };
+  if (L2.crossGap !== void 0) out.crossGap = px(L2.crossGap, u.crossGap);
+  delete out.units;
+  return out;
+}
+function resolveMargin(it, ownerW) {
+  const m = it?.margin ?? NO_MARGIN;
+  const u = it?.marginUnits;
+  if (!sidesPercent(u)) return m;
+  const owner = Number.isFinite(ownerW) ? ownerW : 0;
+  const px = (side) => isPercent(u[side]) ? (m[side] ?? 0) * owner / 100 : m[side];
+  return { top: px("top"), right: px("right"), bottom: px("bottom"), left: px("left") };
+}
+function layoutInnerWidth(frame, ownerW) {
+  const pad = frame.layout ? resolveLayout(frame.layout, ownerW ?? frame.width).padding : NO_MARGIN;
+  return Math.max(0, frame.width - pad.left - pad.right);
+}
+function resolvedView(n, ownerW) {
+  const L2 = n.layout;
+  const rl = resolveLayout(L2, ownerW ?? n.width);
+  const inner = Math.max(0, n.width - rl.padding.left - rl.padding.right);
+  const marginKids = n.children.some((c2) => marginHasPercent(c2.layoutItem));
+  if (rl === L2 && !marginKids) return n;
+  const children = marginKids ? n.children.map((c2) => marginHasPercent(c2.layoutItem) ? { ...c2, layoutItem: { ...c2.layoutItem, margin: resolveMargin(c2.layoutItem, inner), marginUnits: void 0 } } : c2) : n.children;
+  return { ...n, layout: rl, children };
+}
+const ROW_WRAP_SLACK = 55;
+const isFlow = (n) => (n.layoutItem?.position ?? "flow") === "flow";
+function soloFilter(frame) {
+  return (c2) => !frame.solo || (frame.children.some((k) => k.id === frame.solo.active) ? c2.id === frame.solo.active : !!frame.solo.active && c2.name === frame.solo.active);
+}
+function flowChildren(frame) {
+  const on = soloFilter(frame);
+  const flow = frame.children.filter((c2) => c2.visible && on(c2) && isFlow(c2));
+  if (frame.layout?.reverse) flow.reverse();
+  return flow;
+}
+function hugsAxis(frame, axis) {
+  const L2 = frame.layout;
+  if (!L2) return false;
+  const own = frame.layoutItem ?? {};
+  if (axis === "width") {
+    const pinned2 = own.position === "absolute" && own.inset?.left !== void 0 && own.inset?.right !== void 0;
+    const ratio2 = !!own.aspectRatio && own.width === "hug" && own.height !== "hug" && own.aspectDerive !== "height";
+    return L2.hugWidth && own.width !== "fill" && own.width !== "percent" && !pinned2 && !ratio2;
+  }
+  const pinned = own.position === "absolute" && own.inset?.top !== void 0 && own.inset?.bottom !== void 0;
+  const ratio = !!own.aspectRatio && own.height === "hug" && own.width !== "hug";
+  return L2.hugHeight && own.height !== "fill" && own.height !== "percent" && !pinned && !ratio;
+}
+function contentSize(layer, axis, depth = 0, ownerW) {
+  const fillsAxis = (layer.layoutItem?.[axis] ?? "fixed") === "fill";
+  if (layer.type !== "frame" || !layer.layout || depth > 12) return fillsAxis ? 0 : layer[axis];
+  const n = resolvedView(layer, ownerW);
+  const L2 = n.layout;
+  const inner = Math.max(0, n.width - L2.padding.left - L2.padding.right);
+  const pad = axis === "width" ? L2.padding.left + L2.padding.right : L2.padding.top + L2.padding.bottom;
+  const flow = flowChildren(n);
+  if (!flow.length) return pad;
+  const outer = (c2) => {
+    const mg = c2.layoutItem?.margin ?? NO_MARGIN;
+    const m = c2.layoutItem?.[axis] ?? "fixed";
+    const size = m === "fill" ? contentSize(c2, axis, depth + 1, inner) : m === "percent" ? 0 : c2[axis];
+    return size + (axis === "width" ? mg.left + mg.right : mg.top + mg.bottom);
+  };
+  if (L2.grid) return pad + gridContentSize(n, flow, axis, depth);
+  const along = L2.direction === "row" === (axis === "width");
+  if (!along) {
+    const stretched = (c2) => L2.align === "stretch" && !(c2.layoutItem?.aspectRatio && (c2.layoutItem?.[axis] ?? "fixed") === "hug");
+    const asked = hugsAxis(n, axis) ? flow : flow.filter((c2) => !stretched(c2));
+    return pad + Math.max(0, ...asked.map(outer));
+  }
+  return pad + flow.reduce((t2, c2) => t2 + outer(c2), 0) + L2.gap * (flow.length - 1);
+}
+function layoutFrame(frame, ownerW) {
+  const L2 = frame.layout;
+  if (!L2) return false;
+  const rl = resolveLayout(L2, ownerW ?? frame.width);
+  const marginKids = frame.children.filter((c2) => marginHasPercent(c2.layoutItem));
+  if (rl !== L2 || marginKids.length) {
+    const inner = Math.max(0, frame.width - rl.padding.left - rl.padding.right);
+    const saved = marginKids.map((c2) => c2.layoutItem);
+    frame.layout = rl;
+    marginKids.forEach((c2) => c2.layoutItem = { ...c2.layoutItem, margin: resolveMargin(c2.layoutItem, inner), marginUnits: void 0 });
+    try {
+      return layoutFrame(frame, ownerW);
+    } finally {
+      frame.layout = L2;
+      marginKids.forEach((c2, i) => c2.layoutItem = saved[i]);
+    }
+  }
+  const state = () => `${frame.width},${frame.height};${frame.children.map((c2) => `${c2.x},${c2.y},${c2.width},${c2.height},${c2.maxWidth},${isContainer(c2) ? c2.children.map((k) => k.maxWidth).join() : ""}`).join(";")}`;
+  const before = state();
+  const hugged = ["width", "height"].filter((axis) => !L2.grid && hugsAxis(frame, axis) && flowChildren(frame).some((c2) => (c2.layoutItem?.[axis] ?? "fixed") === "percent"));
+  if (!hugged.length) layoutCore(frame, {});
+  else {
+    for (const axis of hugged) for (const c2 of flowChildren(frame)) if ((c2.layoutItem?.[axis] ?? "fixed") === "percent") c2[axis] = 0;
+    layoutCore(frame, {});
+    const fixed = {};
+    for (const axis of hugged) fixed[axis] = true;
+    layoutCore(frame, fixed);
+  }
+  return state() !== before;
+}
+function layoutCore(frame, sized) {
+  const L2 = frame.layout;
+  const row2 = L2.direction === "row";
+  const pad = L2.padding;
+  let changed = false;
+  const set = (n, key, v) => {
+    const r2 = Math.round(v * 100) / 100;
+    if (Number.isFinite(r2) && n[key] !== r2) {
+      n[key] = r2;
+      changed = true;
+    }
+  };
+  const item = (n) => n.layoutItem ?? {};
+  const flow = flowChildren(frame);
+  const hugW = hugsAxis(frame, "width");
+  const hugH = hugsAxis(frame, "height");
+  const innerW = frame.width - pad.left - pad.right;
+  const innerH = frame.height - pad.top - pad.bottom;
+  const boxW = Math.max(0, innerW);
+  const boxH = Math.max(0, innerH);
+  const mode = (n, axis) => item(n)[axis] ?? "fixed";
+  const margin = (n) => item(n).margin ?? NO_MARGIN;
+  const placeAbsolute = () => {
+    for (const c2 of frame.children) {
+      const it = item(c2);
+      if (it.position !== "absolute") continue;
+      const ins = it.inset ?? {};
+      if (ins.left !== void 0 && ins.right !== void 0 && mode(c2, "width") !== "fixed") set(c2, "width", frame.width - ins.left - ins.right);
+      else if (mode(c2, "width") === "fill") set(c2, "width", frame.width - (ins.left ?? 0) - (ins.right ?? 0));
+      if (ins.top !== void 0 && ins.bottom !== void 0 && mode(c2, "height") !== "fixed") set(c2, "height", frame.height - ins.top - ins.bottom);
+      else if (mode(c2, "height") === "fill") set(c2, "height", frame.height - (ins.top ?? 0) - (ins.bottom ?? 0));
+      if (ins.left !== void 0) set(c2, "x", ins.left);
+      else if (ins.right !== void 0) set(c2, "x", frame.width - ins.right - c2.width);
+      if (ins.top !== void 0) set(c2, "y", ins.top);
+      else if (ins.bottom !== void 0) set(c2, "y", frame.height - ins.bottom - c2.height);
+    }
+  };
+  if (L2.grid) {
+    layoutGrid(frame, flow, L2.grid, { hugW, hugH, innerW: boxW, innerH: boxH, set });
+    placeAbsolute();
+    return changed;
+  }
+  const hugMain = row2 ? hugW : hugH;
+  const hugCross = row2 ? hugH : hugW;
+  const innerMain = row2 ? innerW : innerH;
+  const innerCross = row2 ? innerH : innerW;
+  const mainKey = row2 ? "width" : "height";
+  const crossKey = row2 ? "height" : "width";
+  const mStart = (n) => row2 ? margin(n).left : margin(n).top;
+  const mEnd = (n) => row2 ? margin(n).right : margin(n).bottom;
+  const cStart = (n) => row2 ? margin(n).top : margin(n).left;
+  const cEnd = (n) => row2 ? margin(n).bottom : margin(n).right;
+  const auto = (n, side) => !!item(n).marginAuto?.[side];
+  const autoStart = (n) => auto(n, row2 ? "left" : "top");
+  const autoEnd = (n) => auto(n, row2 ? "right" : "bottom");
+  const autoCStart = (n) => auto(n, row2 ? "top" : "left");
+  const autoCEnd = (n) => auto(n, row2 ? "bottom" : "right");
+  const lineGap = Number.isFinite(L2.crossGap) ? L2.crossGap : L2.gap;
+  for (const c2 of flow) {
+    const it = item(c2);
+    if (mode(c2, "width") === "percent" && (!hugW || sized.width)) set(c2, "width", boxW * (it.widthPercent ?? 100) / 100);
+    if (mode(c2, "height") === "percent" && (!hugH || sized.height)) set(c2, "height", boxH * (it.heightPercent ?? 100) / 100);
+  }
+  const hugsCross = (k) => k.type === "frame" && hugsAxis(k, crossKey);
+  const stretchesCross = (k) => !(!!item(k).aspectRatio && mode(k, crossKey) === "hug") && (L2.align === "stretch" && !hugsCross(k) || mode(k, crossKey) === "fill");
+  const singleLine = !L2.wrap || hugMain;
+  const crossOfLine = (line, alone = true) => alone && !hugCross ? innerCross : Math.max(0, ...line.map((k) => mode(k, crossKey) === "fill" || mode(k, crossKey) === "percent" ? 0 : k[crossKey] + cStart(k) + cEnd(k)));
+  const fromRatio = (c2, late) => {
+    const ar = item(c2).aspectRatio;
+    if (!ar || ar <= 0) return;
+    const wm = mode(c2, "width");
+    const hm = mode(c2, "height");
+    if (late !== (row2 && wm === "fill" && hm === "hug")) return;
+    if (hm === "hug" && wm !== "hug") set(c2, "height", c2.width / ar);
+    else if (wm === "hug" && hm !== "hug" && hm !== "fill" && item(c2).aspectDerive !== "height") set(c2, "width", c2.height * ar);
+  };
+  const outer = (n) => n[mainKey] + mStart(n) + mEnd(n);
+  const basisOf = (k) => {
+    const it = item(k);
+    if (it.basisPercent !== void 0) return Math.max(0, innerMain) * it.basisPercent / 100;
+    if (it.basis === "content") return contentSize(k, mainKey, 0, boxW);
+    return typeof it.basis === "number" ? it.basis : 0;
+  };
+  const asks = (n) => mode(n, mainKey) === "fill" ? basisOf(n) + mStart(n) + mEnd(n) : outer(n);
+  const breakLines = () => {
+    const out = [];
+    let cur = [];
+    let used = 0;
+    for (const k of flow) {
+      const need = (cur.length ? L2.gap : 0) + asks(k);
+      if (L2.wrap && cur.length && used + need > innerMain && !hugMain) {
+        out.push(cur);
+        cur = [];
+        used = 0;
+      }
+      used += need;
+      cur.push(k);
+    }
+    if (cur.length) out.push(cur);
+    return out;
+  };
+  const followsCross = (k) => {
+    const ar = item(k).aspectRatio;
+    if (!ar || ar <= 0) return false;
+    const wm = mode(k, "width");
+    const hm = mode(k, "height");
+    return row2 ? wm === "hug" && hm !== "hug" && hm !== "fill" && item(k).aspectDerive !== "height" : hm === "hug" && wm !== "hug";
+  };
+  const preStretch = (c2) => singleLine || followsCross(c2);
+  const lc = crossOfLine(flow);
+  for (const c2 of flow) if (stretchesCross(c2) && preStretch(c2)) set(c2, crossKey, lc - cStart(c2) - cEnd(c2));
+  for (const c2 of flow) fromRatio(c2, false);
+  const lines = breakLines();
+  const wrapRoom = (k) => {
+    const inner = k.type === "frame" && k.layout && !k.layout.grid && hugsAxis(k, "width") ? flowChildren(k) : [];
+    const t2 = k.type === "text" ? k : inner.length === 1 && inner[0].type === "text" ? inner[0] : null;
+    if (!t2 || t2.type !== "text" || !item(t2).wrapText || textAutoSize(t2) !== "width") return;
+    const wrapperPad = t2 === k || k.type !== "frame" || !k.layout ? 0 : resolveLayout(k.layout, boxW).padding.left + resolveLayout(k.layout, boxW).padding.right;
+    const sideMargins = margin(k).left + margin(k).right;
+    let room;
+    if (hugW) room = void 0;
+    else if (!row2) room = innerW - sideMargins - wrapperPad;
+    else {
+      const before = flow.slice(0, flow.indexOf(k)).reduce((x, o) => x + o.width + margin(o).left + margin(o).right + L2.gap, 0);
+      room = innerW - sideMargins - wrapperPad - (before ? Math.max(0, before - ROW_WRAP_SLACK) : 0);
+    }
+    if (room === void 0) return;
+    const v = Math.max(1, Math.round(room * 100) / 100);
+    if (t2.maxWidth !== v) {
+      t2.maxWidth = v;
+      changed = true;
+    }
+  };
+  if (!row2) for (const k of flow) wrapRoom(k);
+  let crossPos = row2 ? pad.top : pad.left;
+  let maxMain = 0;
+  for (const line of lines) {
+    const fills = line.filter((k) => mode(k, mainKey) === "fill");
+    if (fills.length && !hugMain) {
+      const fixed = line.filter((k) => mode(k, mainKey) !== "fill").reduce((t2, k) => t2 + outer(k), 0);
+      const margins = fills.reduce((t2, k) => t2 + mStart(k) + mEnd(k), 0);
+      const basis = fills.map(basisOf);
+      const weight = fills.map((k) => Math.max(0, item(k).grow ?? 1));
+      const free2 = innerMain - fixed - margins - basis.reduce((t2, b) => t2 + b, 0) - L2.gap * (line.length - 1);
+      const growTotal = weight.reduce((t2, w) => t2 + w, 0);
+      const shrinkTotal = fills.reduce((t2, _, i) => t2 + basis[i] * weight[i], 0);
+      fills.forEach((k, i) => {
+        let size = basis[i];
+        if (free2 >= 0) size += growTotal > 0 ? free2 * weight[i] / growTotal : 0;
+        else if (shrinkTotal > 0) size += free2 * basis[i] * weight[i] / shrinkTotal;
+        set(k, mainKey, Math.max(0, size));
+      });
+    }
+    for (const k of line) fromRatio(k, true);
+    if (row2) for (const k of line) wrapRoom(k);
+    const lineCross = crossOfLine(line, lines.length === 1);
+    const total = line.reduce((t2, k) => t2 + outer(k), 0) + L2.gap * Math.max(0, line.length - 1);
+    maxMain = Math.max(maxMain, total);
+    const free = hugMain ? 0 : innerMain - total;
+    let gap = L2.gap;
+    let pos = row2 ? pad.left : pad.top;
+    const autos = line.reduce((t2, k) => t2 + (autoStart(k) ? 1 : 0) + (autoEnd(k) ? 1 : 0), 0);
+    const share = autos && !hugMain ? Math.max(0, free) / autos : 0;
+    if (!hugMain && !autos) {
+      if (L2.justify === "center") pos += free / 2;
+      else if (L2.justify === "end") pos += free;
+      else if (L2.justify === "space-between" && line.length > 1) gap = L2.gap + free / (line.length - 1);
+    }
+    for (const k of line) {
+      if (stretchesCross(k) && !(lines.length > 1 && followsCross(k))) set(k, crossKey, lineCross - cStart(k) - cEnd(k));
+      const size = k[crossKey] + cStart(k) + cEnd(k);
+      let off = L2.align === "center" ? (lineCross - size) / 2 : L2.align === "end" ? lineCross - size : 0;
+      if (autoCStart(k) || autoCEnd(k)) off = autoCStart(k) && autoCEnd(k) ? (lineCross - size) / 2 : autoCStart(k) ? lineCross - size : 0;
+      pos += mStart(k) + (autoStart(k) ? share : 0);
+      set(k, row2 ? "x" : "y", pos);
+      set(k, row2 ? "y" : "x", crossPos + off + cStart(k));
+      pos += k[mainKey] + mEnd(k) + (autoEnd(k) ? share : 0) + gap;
+    }
+    crossPos += lineCross + lineGap;
+  }
+  const usedCross = lines.length ? crossPos - lineGap - (row2 ? pad.top : pad.left) : 0;
+  if (hugW && !sized.width) set(frame, "width", row2 ? maxMain + pad.left + pad.right : usedCross + pad.left + pad.right);
+  if (hugH && !sized.height) set(frame, "height", row2 ? usedCross + pad.top + pad.bottom : maxMain + pad.top + pad.bottom);
+  placeAbsolute();
+  return changed;
+}
+function placeGrid(grid, flow) {
+  if (grid.stack) return { cells: flow.map((k) => ({ k, col: 0, row: 0, cs: 1, rs: 1 })), nCols: 1, nRows: 1 };
+  const index = (v, explicit) => !v ? -1 : Math.max(0, v > 0 ? v - 1 : explicit + v);
+  const cells = flow.map((k) => {
+    const it = k.layoutItem ?? {};
+    return { k, col: index(it.gridColumn, grid.columns.length), row: index(it.gridRow, grid.rows.length), cs: Math.max(1, Math.round(it.gridColumnSpan ?? 1)), rs: Math.max(1, Math.round(it.gridRowSpan ?? 1)) };
+  });
+  let nCols = Math.max(1, grid.columns.length);
+  for (const c2 of cells) nCols = Math.max(nCols, c2.cs, c2.col >= 0 ? c2.col + c2.cs : 0);
+  const taken = /* @__PURE__ */ new Set();
+  const key = (r2, c2) => r2 * 4096 + c2;
+  const fits2 = (c2, r2, col) => {
+    for (let dr = 0; dr < c2.rs; dr++) for (let dc = 0; dc < c2.cs; dc++) if (taken.has(key(r2 + dr, col + dc))) return false;
+    return true;
+  };
+  const take = (c2) => {
+    for (let dr = 0; dr < c2.rs; dr++) for (let dc = 0; dc < c2.cs; dc++) taken.add(key(c2.row + dr, c2.col + dc));
+  };
+  for (const c2 of cells) if (c2.col >= 0 && c2.row >= 0) take(c2);
+  const rowCursor = /* @__PURE__ */ new Map();
+  for (const c2 of cells) {
+    if (c2.row < 0 || c2.col >= 0) continue;
+    let col = rowCursor.get(c2.row) ?? 0;
+    while (!fits2(c2, c2.row, col)) col++;
+    c2.col = col;
+    take(c2);
+    rowCursor.set(c2.row, col + c2.cs);
+    nCols = Math.max(nCols, col + c2.cs);
+  }
+  let cr = 0;
+  let cc = 0;
+  for (const c2 of cells) {
+    if (c2.row >= 0) continue;
+    if (c2.col >= 0) {
+      if (c2.col < cc) cr++;
+      cc = c2.col;
+      while (!fits2(c2, cr, c2.col)) cr++;
+    } else {
+      for (; ; ) {
+        if (cc + c2.cs > nCols) {
+          cc = 0;
+          cr++;
+        }
+        if (fits2(c2, cr, cc)) break;
+        cc++;
+      }
+      c2.col = cc;
+    }
+    c2.row = cr;
+    take(c2);
+  }
+  let nRows = Math.max(grid.rows.length, 1);
+  for (const c2 of cells) nRows = Math.max(nRows, c2.row + c2.rs);
+  return { cells, nCols, nRows };
+}
+function sizeTracks(defs, need, avail, gap, stack2) {
+  const count2 = need.length;
+  const sizes = need.map((n, i) => {
+    const d = defs[i] ?? { type: "auto" };
+    if (d.type === "px") return Math.max(0, d.value ?? 0);
+    if (d.type === "percent") return avail === void 0 ? n : avail * (d.value ?? 0) / 100;
+    return n;
+  });
+  const frs = need.map((_, i) => i).filter((i) => (stack2 || defs[i]?.type === "fr") && avail !== void 0);
+  if (!frs.length) return sizes;
+  const weight = (i) => stack2 ? 1 : Math.max(0, defs[i].value ?? 1);
+  let left = avail - sizes.reduce((t2, v, i) => frs.includes(i) ? t2 : t2 + v, 0) - gap * (count2 - 1);
+  let active = frs;
+  for (; ; ) {
+    const f2 = Math.max(0, left) / Math.max(1, active.reduce((t2, i) => t2 + weight(i), 0));
+    const over = active.filter((i) => weight(i) * f2 < need[i]);
+    if (!over.length) {
+      for (const i of active) sizes[i] = weight(i) * f2;
+      break;
+    }
+    for (const i of over) {
+      sizes[i] = need[i];
+      left -= need[i];
+    }
+    active = active.filter((i) => !over.includes(i));
+  }
+  return sizes;
+}
+function trackNeeds(cells, count2, axis, defs, gap, sizeOf2) {
+  const need = Array(count2).fill(0);
+  const at = (c2) => axis === "width" ? c2.col : c2.row;
+  const span = (c2) => axis === "width" ? c2.cs : c2.rs;
+  for (const c2 of cells) if (span(c2) === 1) need[at(c2)] = Math.max(need[at(c2)], sizeOf2(c2.k));
+  for (const c2 of [...cells].filter((x) => span(x) > 1).sort((a, b) => span(a) - span(b))) {
+    const tracks = Array.from({ length: span(c2) }, (_, i) => at(c2) + i).filter((i) => i < count2);
+    const have = tracks.reduce((t2, i) => t2 + need[i], 0) + gap * (tracks.length - 1);
+    const flexible = tracks.filter((i) => !defs[i] || defs[i].type === "auto" || defs[i].type === "fr");
+    const extra = sizeOf2(c2.k) - have;
+    if (extra > 0 && flexible.length) for (const i of flexible) need[i] += extra / flexible.length;
+  }
+  return need;
+}
+function gridPass(frame, flow, grid, availW, availH) {
+  const L2 = frame.layout;
+  const { cells, nCols, nRows } = placeGrid(grid, flow);
+  const colGap = grid.stack ? 0 : L2.gap;
+  const rowGap = grid.stack ? 0 : Number.isFinite(L2.crossGap) ? L2.crossGap : L2.gap;
+  const ask = (axis) => (k) => {
+    const m = k.layoutItem?.margin ?? NO_MARGIN;
+    const mode = k.layoutItem?.[axis] ?? "fixed";
+    return (mode === "fill" ? contentSize(k, axis, 0, Math.max(0, frame.width - L2.padding.left - L2.padding.right)) : mode === "percent" ? 0 : k[axis]) + (axis === "width" ? m.left + m.right : m.top + m.bottom);
+  };
+  const colDefs = grid.stack ? [] : grid.columns;
+  const rowDefs = grid.stack ? [] : grid.rows;
+  const cols = sizeTracks(colDefs, trackNeeds(cells, nCols, "width", colDefs, colGap, ask("width")), availW, colGap, !!grid.stack);
+  const own = /* @__PURE__ */ new Map();
+  for (const c2 of cells) {
+    const it = c2.k.layoutItem ?? {};
+    if (!it.aspectRatio || it.aspectRatio <= 0 || it.height !== "hug" || it.width === "hug") continue;
+    const m = it.margin ?? NO_MARGIN;
+    const span = cols.slice(c2.col, c2.col + c2.cs);
+    const cell = span.reduce((t2, v) => t2 + v, 0) + colGap * Math.max(0, span.length - 1);
+    const width = it.width === "fill" ? Math.max(0, cell - m.left - m.right) : it.width === "percent" ? cell * (it.widthPercent ?? 100) / 100 : c2.k.width;
+    own.set(c2.k, width / it.aspectRatio + m.top + m.bottom);
+  }
+  const askHeight = ask("height");
+  const rows = sizeTracks(rowDefs, trackNeeds(cells, nRows, "height", rowDefs, rowGap, (k) => own.get(k) ?? askHeight(k)), availH, rowGap, !!grid.stack);
+  return { cols, rows, cells, colGap, rowGap };
+}
+function gridContentSize(frame, flow, axis, depth) {
+  if (depth > 12) return 0;
+  const g = gridPass(frame, flow, frame.layout.grid, void 0, void 0);
+  const sizes = axis === "width" ? g.cols : g.rows;
+  return sizes.reduce((t2, v) => t2 + v, 0) + (axis === "width" ? g.colGap : g.rowGap) * Math.max(0, sizes.length - 1);
+}
+function layoutGrid(frame, flow, grid, o) {
+  const L2 = frame.layout;
+  const pad = L2.padding;
+  const { set } = o;
+  const g = gridPass(frame, flow, grid, o.hugW ? void 0 : o.innerW, o.hugH ? void 0 : o.innerH);
+  const sum2 = (v) => v.reduce((t2, x) => t2 + x, 0);
+  const totalW = sum2(g.cols) + g.colGap * Math.max(0, g.cols.length - 1);
+  const totalH = sum2(g.rows) + g.rowGap * Math.max(0, g.rows.length - 1);
+  const freeW = o.hugW ? 0 : o.innerW - totalW;
+  const freeH = o.hugH ? 0 : o.innerH - totalH;
+  let colGap = g.colGap;
+  let x0 = pad.left;
+  let y0 = pad.top;
+  if (grid.justifyContent === "center") x0 += freeW / 2;
+  else if (grid.justifyContent === "space-between" && g.cols.length > 1) colGap += freeW / (g.cols.length - 1);
+  if (grid.alignContent === "center") y0 += freeH / 2;
+  const starts = (sizes, gap, from) => sizes.map((_, i) => from + sum2(sizes.slice(0, i)) + gap * i);
+  const colX = starts(g.cols, colGap, x0);
+  const rowY = starts(g.rows, g.rowGap, y0);
+  const area = (starts_, sizes, at, span) => {
+    const last = Math.min(sizes.length - 1, at + span - 1);
+    return { from: starts_[at], size: starts_[last] + sizes[last] - starts_[at] };
+  };
+  for (const c2 of g.cells) {
+    const it = c2.k.layoutItem ?? {};
+    const m = it.margin ?? NO_MARGIN;
+    const w = area(colX, g.cols, c2.col, c2.cs);
+    const h = area(rowY, g.rows, c2.row, c2.rs);
+    const innerCellW = Math.max(0, w.size - m.left - m.right);
+    const innerCellH = Math.max(0, h.size - m.top - m.bottom);
+    if ((it.width ?? "fixed") === "fill") set(c2.k, "width", innerCellW);
+    else if (it.width === "percent") set(c2.k, "width", w.size * (it.widthPercent ?? 100) / 100);
+    if ((it.height ?? "fixed") === "fill") set(c2.k, "height", innerCellH);
+    else if (it.height === "percent") set(c2.k, "height", h.size * (it.heightPercent ?? 100) / 100);
+    if (it.aspectRatio && it.aspectRatio > 0 && it.height === "hug" && it.width !== "hug") set(c2.k, "height", c2.k.width / it.aspectRatio);
+    const at = (mode, free) => mode === "center" ? free / 2 : mode === "end" ? free : 0;
+    set(c2.k, "x", w.from + m.left + at(grid.justifyItems, innerCellW - c2.k.width));
+    set(c2.k, "y", h.from + m.top + at(grid.alignItems, innerCellH - c2.k.height));
+  }
+  if (o.hugW) set(frame, "width", totalW + pad.left + pad.right);
+  if (o.hugH) set(frame, "height", totalH + pad.top + pad.bottom);
+}
+const SETTLE_PASSES = 24;
+function relayoutTree(nodes, depth = 0, budget2, ownerW) {
+  const work = budget2 ?? { left: SETTLE_PASSES * countLayoutFrames(nodes) };
+  let changed = false;
+  for (const n of nodes) {
+    if (!isContainer(n)) continue;
+    const below = () => n.type === "frame" && n.layout ? layoutInnerWidth(n, ownerW) : void 0;
+    if (relayoutTree(n.children, depth + 1, work, below())) changed = true;
+    if (n.type !== "frame" || !n.layout) continue;
+    for (let pass = 0; pass < SETTLE_PASSES; pass++) {
+      if (pass > 0 && work.left <= 0) break;
+      work.left--;
+      if (!layoutFrame(n, ownerW)) break;
+      changed = true;
+      if (depth >= 32 || !relayoutTree(n.children, depth + 1, work, below())) break;
+    }
+  }
+  return changed;
+}
+function countLayoutFrames(nodes) {
+  let count2 = 0;
+  for (const n of nodes) {
+    if (!isContainer(n)) continue;
+    if (n.type === "frame" && n.layout) count2++;
+    count2 += countLayoutFrames(n.children);
+  }
+  return count2;
+}
+FORMULA_HELPERS.fileSize;
 const IDENT_RE = /^[A-Za-z_$][\w$]*$/;
 const esc = (s) => s.replace(/[$]/g, "\\$");
 function pieces(src, quotes) {
@@ -7841,9 +8509,9 @@ function renameInExpr(src, from, to) {
   const re = new RegExp(`(?<![\\w$.])${esc(from)}(?![\\w$])`, "g");
   return pieces(src, `"'\``).map((p) => p.quoted ? p.text : p.text.replace(re, to)).join("");
 }
-function renameInTemplate(text, from, to) {
-  if (!text || !text.includes("{") || !text.includes(from)) return text;
-  return text.replace(/\{\{|\}\}|\{([^{}]+)\}/g, (m, e) => e ? `{${renameInExpr(e, from, to)}}` : m);
+function renameInTemplate(text2, from, to) {
+  if (!text2 || !text2.includes("{") || !text2.includes(from)) return text2;
+  return text2.replace(/\{\{|\}\}|\{([^{}]+)\}/g, (m, e) => e ? `{${renameInExpr(e, from, to)}}` : m);
 }
 function renameInCode(code, from, to) {
   if (!code || !code.includes(from)) return code;
@@ -7853,9 +8521,9 @@ function renameInCode(code, from, to) {
     return p.text === `${q}${from}${q}` ? `${q}${to}${q}` : p.text;
   }).join("");
 }
-function renameCodeText(text, from, to) {
+function renameCodeText(text2, from, to) {
   const re = new RegExp(`((?<![\\w$.])vars\\s*\\.\\s*)?(\\.\\s*)?(?<![\\w$])${esc(from)}(?![\\w$])`, "g");
-  return text.replace(re, (m, viaVars, dot) => viaVars ? `${viaVars}${to}` : dot ? m : to);
+  return text2.replace(re, (m, viaVars, dot) => viaVars ? `${viaVars}${to}` : dot ? m : to);
 }
 function eachText(p, visit) {
   const field = (o, k, kind, where2) => {
@@ -7865,8 +8533,8 @@ function eachText(p, visit) {
   for (const v of p.variables) field(v, "formula", "expr", `Variable ${v.name}`);
   for (const s of p.scripts) field(s, "code", "code", `Script ${s.name}`);
   for (const ab of p.artboards) {
-    const walk2 = (list) => {
-      for (const n of list) {
+    const walk2 = (list2) => {
+      for (const n of list2) {
         const where2 = `${n.name} on ${ab.name}`;
         const any = n;
         if (n.type === "draw") field(n, "code", "code", where2);
@@ -7882,7 +8550,7 @@ function eachText(p, visit) {
         if (n.type === "progress") field(n, "valueText", "template", where2);
         if (n.bindings) for (const k of Object.keys(n.bindings)) field(n.bindings, k, "expr", where2);
         if (n.converters) {
-          for (const list2 of Object.values(n.converters)) for (const c2 of list2 ?? []) if (c2.type === "expr") field(c2, "expr", "expr", where2);
+          for (const list22 of Object.values(n.converters)) for (const c2 of list22 ?? []) if (c2.type === "expr") field(c2, "expr", "expr", where2);
         }
         if (isContainer(n) && n.repeat) field(n.repeat, "items", "expr", where2);
         if (n.type === "text" || n.type === "link") field(n, "text", "template", where2);
@@ -7911,8 +8579,8 @@ function eachText(p, visit) {
   }
 }
 function eachInstanceInputs(p, visit) {
-  const walk2 = (list) => {
-    for (const n of list) {
+  const walk2 = (list2) => {
+    for (const n of list2) {
       if (n.type === "instance" && n.inputs) visit(n.inputs);
       if (isContainer(n)) walk2(n.children);
     }
@@ -7945,6 +8613,280 @@ function renameVariable(d, id, to, opts2 = {}) {
   if (v.formerNames && !v.formerNames.length) delete v.formerNames;
   v.name = to;
   return changed;
+}
+function locate$1(artboard, id) {
+  const search = (list2, parent, ancestors) => {
+    for (let i = 0; i < list2.length; i++) {
+      const n = list2[i];
+      if (n.id === id) return { node: n, parent, siblings: list2, index: i, ancestors };
+      if (isContainer(n)) {
+        const f2 = search(n.children, n, [...ancestors, n]);
+        if (f2) return f2;
+      }
+    }
+    return null;
+  };
+  return search(artboard.children, null, []);
+}
+function uniqueName(existing, base2) {
+  const names = new Set(existing);
+  if (!names.has(base2)) return base2;
+  const stem = base2.replace(/\s+\d+$/, "");
+  for (let i = 2; ; i++) if (!names.has(`${stem} ${i}`)) return `${stem} ${i}`;
+}
+function uniqueIdentifier(existing, base2) {
+  const names = new Set(existing);
+  if (!names.has(base2)) return base2;
+  const stem = base2.replace(/\d+$/, "");
+  for (let i = 2; ; i++) if (!names.has(`${stem}${i}`)) return `${stem}${i}`;
+}
+function nodeNames(artboard) {
+  const out = [];
+  const rec2 = (l) => {
+    for (const n of l) {
+      out.push(n.name);
+      if (isContainer(n)) rec2(n.children);
+    }
+  };
+  rec2(artboard.children);
+  return out;
+}
+function isIdentifier(name) {
+  return /^[A-Za-z_$][\w$]*$/.test(name) && !RESERVED$1.has(name);
+}
+const RESERVED$1 = new Set(
+  "break case catch class const continue debugger default delete do else export extends false finally for function if import in instanceof new null return super switch this throw true try typeof var void while with yield let static enum await implements package protected interface private public Math event ix vars".split(
+    " "
+  )
+);
+const OP_LABELS = {
+  is: "is",
+  isnot: "is not",
+  atleast: "is at least",
+  atmost: "is at most",
+  more: "is more than",
+  less: "is less than",
+  contains: "contains",
+  empty: "is empty",
+  notempty: "is not empty",
+  true: "is on (true)",
+  false: "is off (false)"
+};
+const opTakesValue = (op) => !(op === "empty" || op === "notempty" || op === "true" || op === "false");
+const MAX_ROWS = 8;
+const SYMBOL = { is: "==", isnot: "!=", atleast: ">=", atmost: "<=", more: ">", less: "<" };
+const FROM_SYMBOL = { "==": "is", "===": "is", "!=": "isnot", "!==": "isnot", ">=": "atleast", "<=": "atmost", ">": "more", "<": "less" };
+function operandToExpr(o) {
+  if (o.t === "name") return o.name;
+  if (o.t === "num") return String(o.value);
+  if (o.t === "bool") return o.value ? "true" : "false";
+  return JSON.stringify(o.value);
+}
+function rowToExpr(r2) {
+  switch (r2.op) {
+    case "true":
+      return r2.left;
+    case "false":
+      return `!${r2.left}`;
+    case "empty":
+      return `${r2.left}.length == 0`;
+    case "notempty":
+      return `${r2.left}.length > 0`;
+    case "contains":
+      return `${r2.left}.includes(${operandToExpr(r2.right ?? { t: "str", value: "" })})`;
+    default:
+      return `${r2.left} ${SYMBOL[r2.op]} ${operandToExpr(r2.right ?? { t: "num", value: 0 })}`;
+  }
+}
+function conditionToExpr(c2) {
+  return c2.rows.map(rowToExpr).join(c2.join === "or" ? " || " : " && ");
+}
+const PUNCT = ["===", "!==", "==", "!=", ">=", "<=", "&&", "||", ">", "<", "!", "(", ")", "."];
+function lex(src) {
+  const out = [];
+  let i = 0;
+  while (i < src.length) {
+    const c2 = src[i];
+    if (/\s/.test(c2)) {
+      i++;
+      continue;
+    }
+    if (c2 === '"' || c2 === "'") {
+      let j = i + 1;
+      let raw = "";
+      let escaped = false;
+      while (j < src.length && src[j] !== c2) {
+        if (src[j] === "\\") {
+          escaped = true;
+          raw += src[j] + (src[j + 1] ?? "");
+          j += 2;
+        } else raw += src[j++];
+      }
+      if (j >= src.length) return null;
+      let value = raw;
+      if (escaped) {
+        if (c2 !== '"') return null;
+        try {
+          value = JSON.parse(`"${raw}"`);
+        } catch {
+          return null;
+        }
+      }
+      out.push({ t: "str", v: value });
+      i = j + 1;
+      continue;
+    }
+    const num2 = /^-?(?:\d+\.?\d*|\.\d+)/.exec(src.slice(i));
+    if (num2 && (c2 !== "-" || !out.length || out[out.length - 1].t === "p") && !/^[A-Za-z_$]/.test(src.slice(i + num2[0].length, i + num2[0].length + 1))) {
+      out.push({ t: "num", v: Number(num2[0]) });
+      i += num2[0].length;
+      continue;
+    }
+    const id = /^[A-Za-z_$][\w$]*/.exec(src.slice(i));
+    if (id) {
+      out.push({ t: "id", v: id[0] });
+      i += id[0].length;
+      continue;
+    }
+    const p = PUNCT.find((x) => src.startsWith(x, i));
+    if (!p) return null;
+    out.push({ t: "p", v: p });
+    i += p.length;
+  }
+  return out;
+}
+const RESERVED = /* @__PURE__ */ new Set(["null", "undefined", "this", "typeof", "new", "void", "in", "function"]);
+class Reader {
+  constructor(toks) {
+    this.toks = toks;
+    this.pos = 0;
+  }
+  peek() {
+    return this.toks[this.pos];
+  }
+  done() {
+    return this.pos >= this.toks.length;
+  }
+  isP(v) {
+    const t2 = this.peek();
+    return !!t2 && t2.t === "p" && t2.v === v;
+  }
+  eatP(v) {
+    if (!this.isP(v)) return false;
+    this.pos++;
+    return true;
+  }
+  /** a.b.c as one string, stopping before `.includes(`; null when no name starts here */
+  path() {
+    const t2 = this.peek();
+    if (!t2 || t2.t !== "id" || RESERVED.has(t2.v) || t2.v === "true" || t2.v === "false") return null;
+    this.pos++;
+    const parts = [t2.v];
+    while (this.isP(".")) {
+      const n = this.toks[this.pos + 1];
+      if (!n || n.t !== "id" || RESERVED.has(n.v)) return null;
+      if (n.v === "includes" && this.toks[this.pos + 2]?.t === "p" && this.toks[this.pos + 2].v === "(") break;
+      this.pos += 2;
+      parts.push(n.v);
+    }
+    return parts.join(".");
+  }
+  operand() {
+    const t2 = this.peek();
+    if (!t2) return null;
+    if (t2.t === "num") return this.pos++, { t: "num", value: t2.v };
+    if (t2.t === "str") return this.pos++, { t: "str", value: t2.v };
+    if (t2.t === "id" && (t2.v === "true" || t2.v === "false")) return this.pos++, { t: "bool", value: t2.v === "true" };
+    const p = this.path();
+    return p === null ? null : { t: "name", name: p };
+  }
+}
+function readRow(r2) {
+  if (r2.eatP("!")) {
+    const left2 = r2.path();
+    return left2 === null ? null : { left: left2, op: "false" };
+  }
+  const first2 = r2.peek();
+  if (!first2 || first2.t !== "id") return null;
+  const left = r2.path();
+  if (left === null) return null;
+  if (r2.isP(".")) {
+    r2.pos += 2;
+    if (!r2.eatP("(")) return null;
+    const right2 = r2.operand();
+    if (!right2 || !r2.eatP(")")) return null;
+    return { left, op: "contains", right: right2 };
+  }
+  const t2 = r2.peek();
+  if (!t2 || t2.t === "p" && (t2.v === "&&" || t2.v === "||")) return { left, op: "true" };
+  if (t2.t !== "p" || !(t2.v in FROM_SYMBOL)) return null;
+  r2.pos++;
+  const right = r2.operand();
+  if (!right) return null;
+  const op = FROM_SYMBOL[t2.v];
+  if (left.endsWith(".length") && right.t === "num" && right.value === 0) {
+    const base2 = left.slice(0, -".length".length);
+    if (op === "is") return { left: base2, op: "empty" };
+    if (op === "more") return { left: base2, op: "notempty" };
+  }
+  return { left, op, right };
+}
+function parseCondition$1(src) {
+  if (!src.trim()) return { join: "and", rows: [] };
+  const toks = lex(src);
+  if (!toks || !toks.length) return null;
+  const r2 = new Reader(toks);
+  const rows = [];
+  let join2 = null;
+  for (; ; ) {
+    const row2 = readRow(r2);
+    if (!row2) return null;
+    rows.push(row2);
+    if (rows.length > MAX_ROWS) return null;
+    if (r2.done()) break;
+    const j = r2.eatP("&&") ? "and" : r2.eatP("||") ? "or" : null;
+    if (!j || join2 && join2 !== j) return null;
+    join2 = j;
+  }
+  return { join: join2 ?? "and", rows };
+}
+function conditionWords(src) {
+  const c2 = parseCondition$1(src);
+  const t2 = src.trim().replace(/\s+/g, " ");
+  if (!c2 || !c2.rows.length) return t2;
+  const word2 = (o) => o.t === "str" ? `“${o.value}”` : o.t === "bool" ? o.value ? "on" : "off" : operandToExpr(o);
+  return c2.rows.map((r2) => {
+    if (r2.op === "true") return `${r2.left} is on`;
+    if (r2.op === "false") return `${r2.left} is off`;
+    return `${r2.left} ${OP_LABELS[r2.op]}${r2.right && opTakesValue(r2.op) ? " " + word2(r2.right) : ""}`;
+  }).join(c2.join === "or" ? " or " : " and ");
+}
+function friendlyIdentifier(typed) {
+  const text2 = typed.trim();
+  if (isIdentifier(text2)) return text2;
+  const words = text2.normalize("NFD").replace(/[̀-ͯ]/g, "").split(/[^A-Za-z0-9]+/).filter(Boolean);
+  if (!words.length) return "";
+  const plain2 = (w) => w === w.toUpperCase() ? w.toLowerCase() : w;
+  let id = words.map((w, i) => i === 0 ? plain2(w).replace(/^./, (c2) => c2.toLowerCase()) : plain2(w).replace(/^./, (c2) => c2.toUpperCase())).join("");
+  if (/^\d/.test(id)) id = `_${id}`;
+  if (!isIdentifier(id)) id = `${id}Value`;
+  return id;
+}
+function nameFromWords(typed, taken) {
+  const text2 = typed.trim();
+  if (!text2) return null;
+  if (isIdentifier(text2)) return { name: text2 };
+  const fixed = friendlyIdentifier(text2);
+  if (!fixed) return null;
+  return { label: cleanVariableLabel(text2), name: uniqueIdentifier(taken, fixed) };
+}
+function assetKind(mime, name = "") {
+  if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("audio/")) return "audio";
+  if (mime.startsWith("font/") || /\.(woff2?|ttf|otf)$/i.test(name)) return "font";
+  if (/json|csv|tab-separated|text\/plain/.test(mime) || /\.(json|csv|tsv|txt)$/i.test(name)) return "data";
+  return "other";
 }
 var react = { exports: {} };
 var react_production_min = {};
@@ -8000,10 +8942,10 @@ function requireReact_production_min() {
   H.constructor = G;
   C(H, E.prototype);
   H.isPureReactComponent = true;
-  var I = Array.isArray, J = Object.prototype.hasOwnProperty, K = { current: null }, L = { key: true, ref: true, __self: true, __source: true };
+  var I = Array.isArray, J = Object.prototype.hasOwnProperty, K = { current: null }, L2 = { key: true, ref: true, __self: true, __source: true };
   function M(a, b, e) {
     var d, c2 = {}, k = null, h = null;
-    if (null != b) for (d in void 0 !== b.ref && (h = b.ref), void 0 !== b.key && (k = "" + b.key), b) J.call(b, d) && !L.hasOwnProperty(d) && (c2[d] = b[d]);
+    if (null != b) for (d in void 0 !== b.ref && (h = b.ref), void 0 !== b.key && (k = "" + b.key), b) J.call(b, d) && !L2.hasOwnProperty(d) && (c2[d] = b[d]);
     var g = arguments.length - 2;
     if (1 === g) c2.children = e;
     else if (1 < g) {
@@ -8119,7 +9061,7 @@ function requireReact_production_min() {
       void 0 !== b.ref && (k = b.ref, h = K.current);
       void 0 !== b.key && (c2 = "" + b.key);
       if (a.type && a.type.defaultProps) var g = a.type.defaultProps;
-      for (f2 in b) J.call(b, f2) && !L.hasOwnProperty(f2) && (d[f2] = void 0 === b[f2] && void 0 !== g ? g[f2] : b[f2]);
+      for (f2 in b) J.call(b, f2) && !L2.hasOwnProperty(f2) && (d[f2] = void 0 === b[f2] && void 0 !== g ? g[f2] : b[f2]);
     }
     var f2 = arguments.length - 2;
     if (1 === f2) d.children = e;
@@ -8841,8 +9783,8 @@ function requireReact_development() {
         }
         var didWarnAboutMaps = false;
         var userProvidedKeyEscapeRegex = /\/+/g;
-        function escapeUserProvidedKey(text) {
-          return text.replace(userProvidedKeyEscapeRegex, "$&/");
+        function escapeUserProvidedKey(text2) {
+          return text2.replace(userProvidedKeyEscapeRegex, "$&/");
         }
         function getElementKey(element, index) {
           if (typeof element === "object" && element !== null && element.key != null) {
@@ -10194,16 +11136,19 @@ const PLAIN_OPTION = {
   "action.setVariable.op.previous": "Go to the previous number in a range"
 };
 const technicalWording = () => !!prefs().technicalWording;
+function nodeLabel(def, technical = technicalWording()) {
+  return technical ? def.label : PLAIN_NODE[def.kind] ?? def.label;
+}
 function optionLabel(kind, key, option, technical = technicalWording()) {
   return technical ? option.label : PLAIN_OPTION[`${kind}.${key}.${option.value}`] ?? option.label;
 }
 function nodeHeading(def) {
-  const plain = PLAIN_NODE[def.kind];
-  return plain && plain !== def.label ? `${plain} (${def.label})` : def.label;
+  const plain2 = PLAIN_NODE[def.kind];
+  return plain2 && plain2 !== def.label ? `${plain2} (${def.label})` : def.label;
 }
-function pw(text, technical = technicalWording()) {
-  if (technical || !text) return text;
-  return text.replace(/\b([Aa])n artboard/g, (_, a) => `${a} page`).replace(/\bartboards\b/g, "pages").replace(/\bArtboards\b/g, "Pages").replace(/\bartboard\b/g, "page").replace(/\bArtboard\b/g, "Page");
+function pw(text2, technical = technicalWording()) {
+  if (technical || !text2) return text2;
+  return text2.replace(/\b([Aa])n artboard/g, (_, a) => `${a} page`).replace(/\bartboards\b/g, "pages").replace(/\bArtboards\b/g, "Pages").replace(/\bartboard\b/g, "page").replace(/\bArtboard\b/g, "Page");
 }
 function plainParam(kind, p, technical = technicalWording()) {
   if (technical) return p;
@@ -10218,13 +11163,3600 @@ function plainParam(kind, p, technical = technicalWording()) {
     }))
   };
 }
+const quoted = (s) => `“${s}”`;
+const lowerFirst = (s) => s ? s[0].toLowerCase() + s.slice(1) : s;
+class Names {
+  constructor(ab, project) {
+    this.ab = ab;
+    this.project = project;
+    this.layers = /* @__PURE__ */ new Map();
+    walk(ab.children, (n) => void this.layers.set(n.id, n.name));
+  }
+  layer(id, none = "a layer") {
+    if (!id) return none;
+    return this.layers.has(String(id)) ? this.layers.get(String(id)) : "a layer that is missing";
+  }
+  timeline(id) {
+    return id ? this.ab.timelines.find((t2) => t2.id === id)?.name ?? "a timeline that is missing" : "a timeline";
+  }
+  blend(id) {
+    return id ? (this.ab.blends ?? []).find((b) => b.id === id)?.name ?? "a blend that is missing" : "a blend";
+  }
+  variable(id) {
+    if (!id) return "a variable";
+    const v = this.project.variables.find((x) => x.id === id);
+    return v ? variableLabel(v) : "a variable that is missing";
+  }
+  page(id) {
+    return id ? this.project.artboards.find((a) => a.id === id)?.name ?? "a page that is missing" : "a page";
+  }
+  asset(id, none = "a sound") {
+    return id ? this.project.assets.find((a) => a.id === id)?.name ?? "a sound that is missing" : none;
+  }
+  data(id) {
+    return id ? this.project.dataSources.find((d) => d.id === id)?.name ?? "a data source that is missing" : "a data source";
+  }
+  script(id) {
+    return id ? this.project.scripts.find((s) => s.id === id)?.name ?? "a script that is missing" : "a script";
+  }
+}
+function secs(ms) {
+  const t2 = String(ms ?? "").trim();
+  if (/^\d+(?:\.\d+)?$/.test(t2)) {
+    const s = Number(t2) / 1e3;
+    return `${Number.isInteger(s) ? s : Number(s.toFixed(2))} s`;
+  }
+  return t2 ? `${t2} ms` : "a moment";
+}
+function val(expr) {
+  const t2 = String(expr ?? "").trim();
+  if (!t2) return "nothing";
+  const str2 = /^"((?:[^"\\]|\\.)*)"$|^'((?:[^'\\]|\\.)*)'$/.exec(t2);
+  if (str2) return quoted(str2[1] ?? str2[2]);
+  return t2.replace(/\s+/g, " ");
+}
+const propLabel = (prop) => lowerFirst(ANIMATABLE_PROPS.find((a) => a.prop === prop)?.label ?? String(prop ?? "a property"));
+const POINTER = {
+  click: [(s) => `${s} is clicked`, "clicked"],
+  dblclick: [(s) => `${s} is double-clicked`, "double-clicked"],
+  pointerdown: [(s) => `${s} is pressed`, "pressed"],
+  pointerup: [(s) => `${s} is released`, "released"],
+  pointerenter: [(s) => `the pointer moves onto ${s}`, "hovered over"],
+  pointerleave: [(s) => `the pointer moves off ${s}`, "the pointer moves off"],
+  pointermove: [(s) => `the pointer moves over ${s}`, "the pointer moves over it"],
+  dragstart: [(s) => `${s} starts to be dragged`, "it starts to be dragged"],
+  drag: [(s) => `${s} is being dragged`, "it is being dragged"],
+  dragend: [(s) => `${s} is let go`, "it is let go"]
+};
+const KEY_TYPE = { keydown: "pressed", keyup: "released" };
+function eventPhrase(n, c2, self) {
+  const p = { ...defaultParams(n.kind), ...n.params };
+  const mine = !!self && p.target === self;
+  const subject = (none = "any layer") => mine ? "this layer" : c2.layer(p.target, none);
+  switch (n.kind) {
+    case "event.start":
+      return "When this page is shown";
+    case "event.beforeLoad":
+      return "Before the activity loads";
+    case "event.activityLoad":
+      return "When the activity has loaded";
+    case "event.pointer": {
+      const t2 = POINTER[String(p.type ?? "click")] ?? POINTER.click;
+      return mine ? `When ${t2[1]}` : `When ${t2[0](subject())}`;
+    }
+    case "event.key": {
+      const k = String(p.key ?? "").trim();
+      const mods2 = ["ctrl", "shift", "alt", "meta"].filter((m) => p[m]).map((m) => m === "meta" ? "Cmd" : m[0].toUpperCase() + m.slice(1));
+      const name = [...mods2, k || "a key"].join("+");
+      return `When ${name} is ${KEY_TYPE[String(p.type ?? "keydown")] ?? "pressed"}${p.target ? mine ? " on this layer" : ` on ${subject()}` : ""}`;
+    }
+    case "event.focus":
+      return `When ${subject()} ${p.type === "blur" ? "loses" : "gets"} keyboard focus`;
+    case "event.timer": {
+      const when = p.repeat === false ? `After ${secs(p.ms)}` : `Every ${secs(p.ms)}`;
+      return p.while ? `${when}, while ${conditionWords(String(p.while))}` : when;
+    }
+    case "event.variable":
+      return `When ${c2.variable(p.variable)} changes`;
+    case "event.timelineEnd":
+      return `When ${quoted(c2.timeline(p.timeline))} finishes`;
+    case "event.timelineMarker":
+      return `When ${quoted(c2.timeline(p.timeline))} reaches ${p.marker ? quoted(String(p.marker)) : "a marker"}`;
+    case "event.videoCue":
+      return `When ${subject("a video")} reaches ${p.name ? quoted(String(p.name)) : "a cue point"}`;
+    case "event.step":
+      return p.type === "done" ? `When step ${p.step ?? ""} has finished animating` : `When step ${p.step ?? ""} is chosen`;
+    case "event.message":
+      return `When the message ${p.name ? quoted(String(p.name)) : "you name"} arrives`;
+    case "event.scroll":
+      return `When ${subject()} scrolls ${p.type === "leave" ? "out of" : "into"} view`;
+    case "event.dragStart":
+      return `When ${subject()} is picked up`;
+    case "event.dragMove":
+      return `While ${subject()} is being dragged`;
+    case "event.dragOver":
+      return `When ${subject()} is dragged ${p.type === "leave" ? "off" : "over"} a drop zone`;
+    case "event.drop": {
+      const where2 = p.result === "rejected" ? " where it does not belong" : p.result === "accepted" ? " where it belongs" : "";
+      if (p.layer) return `When ${self && p.layer === self ? "this layer" : c2.layer(p.layer)} is dropped${p.target && p.result !== "missed" ? ` on ${c2.layer(p.target)}` : where2}`;
+      return `When ${subject()} is dropped${where2}`;
+    }
+    case "event.dragEnd":
+      return `When ${subject()} is let go`;
+    case "event.dataLoaded":
+      return `When ${c2.data(p.source)} has loaded`;
+    default:
+      return fallback(n, c2, true);
+  }
+}
+const TIMELINE_OP = {
+  play: (t2) => `play ${t2}`,
+  restart: (t2) => `restart ${t2}`,
+  pause: (t2) => `pause ${t2}`,
+  stop: (t2) => `stop ${t2} and put it back to the start`,
+  reverse: (t2) => `play ${t2} backwards`,
+  toggle: (t2) => `play or pause ${t2}`,
+  seek: (t2, p) => `jump ${t2} to ${secs(p.time)}`
+};
+function setVariable(p, c2) {
+  const what = setVariableDoes(p, c2);
+  const say = String(p.say ?? "").trim();
+  return say ? `${what}, then say “${say}” to screen readers` : what;
+}
+function setVariableDoes(p, c2) {
+  const v = c2.variable(p.variable);
+  const op = String(p.op ?? "set");
+  const over = (op === "set" || op === "add") && String(p.over ?? "").trim() && String(p.over).trim() !== "0" ? ` over ${secs(p.over)}` : "";
+  switch (op) {
+    case "add": {
+      const minus = /^-\s*(\d+(?:\.\d+)?|\(.+\))$/.exec(String(p.value ?? "").trim());
+      if (minus) return `take ${minus[1].replace(/^\((.+)\)$/, "$1")} off ${v}${over}`;
+      return `add ${val(p.value)} to ${v}${over}`;
+    }
+    case "next":
+    case "previous": {
+      const first2 = String(p.first ?? "").trim() || "0";
+      const last = String(p.last ?? "").trim();
+      const range = last ? ` (${first2} to ${last}, ${p.ends === "stop" ? "stopping at the ends" : "going round at the ends"})` : "";
+      return `go to the ${op} ${v}${range}`;
+    }
+    case "toggle":
+      return `switch ${v} on or off`;
+    case "push":
+      return `add ${val(p.value)} to the list ${v}`;
+    case "remove":
+      return `remove item ${val(p.value)} from the list ${v}`;
+    case "clear":
+      return `empty ${v}`;
+    case "reset":
+      return `put ${v} back to its starting value`;
+    case "toggleItem":
+      return `add ${val(p.value)} to the list ${v}, or take it out if it is there`;
+    case "removeValue":
+      return `remove ${val(p.value)} from the list ${v}`;
+    case "setItem":
+      return `change an item of the list ${v}`;
+    case "changeWhere": {
+      const f2 = String(p.whereField ?? "").trim();
+      const w = String(p.whereValue ?? "").trim();
+      return f2 || w ? `change the items of the list ${v} where ${f2 ? `${f2} is ` : "the item is "}${val(p.whereValue)}` : `change every item of the list ${v}`;
+    }
+    default: {
+      const t2 = String(p.value ?? "").trim();
+      if ((t2 === "true" || t2 === "false") && c2.project.variables.find((x) => x.id === p.variable)?.type === "boolean") return `switch ${v} ${t2 === "true" ? "on" : "off"}`;
+      return `set ${v} to ${val(p.value)}${over}`;
+    }
+  }
+}
+const ACTION = {
+  "action.timeline": (p, c2) => (TIMELINE_OP[String(p.op ?? "play")] ?? TIMELINE_OP.play)(quoted(c2.timeline(p.timeline)), p),
+  "action.blendPlay": (p, c2) => `play the blend ${quoted(c2.blend(p.blend))}`,
+  "action.blendStop": (p, c2) => `stop the blend ${quoted(c2.blend(p.blend))}`,
+  "action.setVariable": setVariable,
+  "action.resetVariables": (p, c2) => {
+    const list2 = (Array.isArray(p.variables) ? p.variables : []).map((id) => c2.variable(id));
+    return list2.length ? `put ${list2.join(", ")} back to the starting values` : "put variables back to their starting values";
+  },
+  "action.setProperty": (p, c2) => `set ${c2.layer(p.target)}’s ${propLabel(p.prop)} to ${val(p.value)}`,
+  "action.animate": (p, c2) => `${p.relative ? "move" : "animate"} ${c2.layer(p.target)}’s ${propLabel(p.prop)} ${p.relative ? "by" : "to"} ${val(p.to)} over ${secs(p.duration ?? 400)}`,
+  "action.visibility": (p, c2) => {
+    const t2 = c2.layer(p.target);
+    return p.op === "show" ? `show ${t2}` : p.op === "hide" ? `hide ${t2}` : `show or hide ${t2}`;
+  },
+  "action.artboard": (p, c2) => {
+    const kind = String(p.transition ?? "fade");
+    const speed = p.duration === void 0 ? "medium" : speedOf(p.duration);
+    const said = !TIMED_TRANSITIONS.includes(kind) || speed === "medium" ? "" : speed === "custom" ? secs(p.duration) : TRANSITION_SPEEDS.find((t2) => t2.value === speed).label.toLowerCase();
+    const look = PAGE_TRANSITIONS.find((t2) => t2.value === kind && (t2.value !== "fade" || said));
+    const how = look ? ` (${[look.label.replace(/ \(.*\)$/, "").toLowerCase(), said].filter(Boolean).join(", ")})` : "";
+    switch (String(p.to ?? "picked")) {
+      case "next":
+        return `go to the next page${how}`;
+      case "previous":
+        return `go to the previous page${how}`;
+      case "back":
+        return `go back to the page the learner came from${how}`;
+      case "expression":
+        return `go to the page a formula names${how}`;
+      default:
+        return `go to the page ${quoted(c2.page(p.artboard))}${how}`;
+    }
+  },
+  "action.moveView": (p, c2) => p.to === "page" ? "show the whole page again" : `move the view to ${c2.layer(p.target)}`,
+  "action.url": (p) => `open the link ${val(p.url)}`,
+  "action.credits": () => "open the credits",
+  "action.startOver": () => "start over",
+  "action.reportResult": (p) => p.completed === "progress" ? `report the score so far${p.score ? ` (${val(p.score)})` : ""}` : `report the result${p.score ? ` (score ${val(p.score)})` : ""}`,
+  "action.record": (p) => `record ${quoted(String(p.name ?? "milestone"))}`,
+  "action.sound": (p, c2) => `play ${p.asset ? quoted(c2.asset(p.asset)) : p.source ? `the sound ${val(p.source)}` : "a sound"}${String(p.loop ?? "false") === "true" ? " on a loop" : ""}${p.soundtrack === true ? " as the soundtrack" : ""}`,
+  "action.stopSound": (p, c2) => p.asset ? `stop the sound ${quoted(c2.asset(p.asset))}` : "stop all sounds",
+  "action.delay": (p) => `wait ${secs(p.ms)}`,
+  "action.emit": (p) => `send the message ${p.name ? quoted(String(p.name)) : "you name"}`,
+  "action.log": () => "write a note to the browser console",
+  "action.script": (p, c2) => `run the script ${quoted(c2.script(p.script))}`,
+  "action.code": () => "run a code snippet",
+  "action.announce": (p) => `tell screen readers ${val(p.text)}`,
+  "action.setTheme": (p) => `switch to the theme ${val(p.theme)}`,
+  "action.cursor": (p, c2) => `change the mouse pointer to ${String(p.cursor ?? "pointer")} over ${p.target ? c2.layer(p.target) : "the whole player"}`,
+  "action.focus": (p, c2) => p.op === "clear" ? "clear keyboard focus" : `move keyboard focus to ${c2.layer(p.target)}`,
+  "action.steps": (p) => {
+    const op = String(p.op ?? "next");
+    return op === "next" ? "go to the next step" : op === "back" ? "go to the previous step" : op === "first" ? "go to the first step" : op === "last" ? "go to the last step" : `go to step ${val(p.step)}`;
+  },
+  "action.questionCheck": (p, c2) => `check the answer on ${c2.layer(p.question, "the question")}`,
+  "action.questionReset": (p, c2) => `put ${c2.layer(p.question, "the question")} back to the start`,
+  "action.questionHint": (p, c2) => `show the next hint for ${c2.layer(p.question, "the question")}`,
+  "action.loadData": (p, c2) => `reload ${c2.data(p.source)}`,
+  "action.saveUserData": () => "save the learner’s progress",
+  "action.loadUserData": () => "bring back the learner’s saved progress",
+  "action.sharedAdd": (p, c2) => `add an answer to ${c2.data(p.source)}`,
+  "action.roomSend": (p, c2) => `send ${p.text ? val(p.text) : "a message"} to ${c2.data(p.source)}`,
+  "action.sharedWithdraw": (p, c2) => `take this learner’s answers back out of ${c2.data(p.source)}`,
+  "action.courseAdd": (p) => `${String(p.what ?? "stamp") === "counter" ? `raise the counter ${val(p.name)} to ${val(p.value ?? "1")}` : `add the stamp ${val(p.name)}`} in the course collection ${quoted(String(p.collection ?? "") || "you name")}`,
+  "action.courseLoad": (p) => `load the course collection ${quoted(String(p.collection ?? "") || "you name")}`,
+  "action.courseCheck": (p) => `check whether the course collection ${quoted(String(p.collection ?? "") || "you name")} has ${p.stamp ? `the stamp ${val(p.stamp)}` : p.counter ? `the counter ${val(p.counter)} at ${val(p.atLeast ?? "1")} or more` : "anything in it"}`
+};
+const LOGIC = {
+  "logic.if": (p) => `check whether ${conditionWords(String(p.condition ?? ""))}`,
+  "logic.switch": () => "alternate between two ways on",
+  "logic.random": () => "pick one way on at random",
+  "logic.once": () => "carry on, but only the first time",
+  "logic.sequence": () => "carry on down each way in turn"
+};
+function fallback(n, c2, event = false) {
+  const def = CATALOG_BY_KIND[n.kind];
+  if (!def) return `a step this editor does not know (${n.kind})`;
+  const params = { ...defaultParams(n.kind), ...n.params };
+  const parts = [];
+  for (const d of def.params) {
+    if (d.key === "onlyIf" || d.key === "continue" || d.key === "continueAt") continue;
+    if (d.showIf && !d.showIf.values.includes(params[d.showIf.key])) continue;
+    const v = params[d.key];
+    if (v === void 0 || v === "" || v === false || v === null) continue;
+    let text2 = "";
+    switch (d.type) {
+      case "node":
+        text2 = c2.layer(v);
+        break;
+      case "timeline":
+        text2 = c2.timeline(v);
+        break;
+      case "blend":
+        text2 = c2.blend(v);
+        break;
+      case "variable":
+        text2 = c2.variable(v);
+        break;
+      case "variables":
+        text2 = (Array.isArray(v) ? v : []).map((id) => c2.variable(id)).join(", ");
+        break;
+      case "artboard":
+        text2 = c2.page(v);
+        break;
+      case "script":
+        text2 = c2.script(v);
+        break;
+      case "data":
+        text2 = c2.data(v);
+        break;
+      case "asset":
+        text2 = c2.asset(v);
+        break;
+      case "select": {
+        const o = d.options?.find((x) => x.value === v);
+        text2 = o ? pw(optionLabel(n.kind, d.key, o)) : String(v);
+        break;
+      }
+      case "expr":
+        text2 = val(v);
+        break;
+      case "text":
+        text2 = n.kind === "action.code" ? "" : String(v).split("\n")[0].slice(0, 40);
+        break;
+      case "number":
+        text2 = String(v);
+        break;
+      default:
+        text2 = "";
+    }
+    if (text2) parts.push(text2);
+    if (parts.length >= 3) break;
+  }
+  const label = nodeLabel(def);
+  const name = event ? label : lowerFirst(label);
+  return parts.length ? `${name} (${parts.join(", ")})` : name;
+}
+function phrase(n, c2, self) {
+  if (n.kind.startsWith("event.")) return eventPhrase(n, c2, self);
+  const p = { ...defaultParams(n.kind), ...n.params };
+  const t2 = ACTION[n.kind] ?? (LOGIC[n.kind] ? (q) => LOGIC[n.kind](q) : null);
+  return t2 ? t2(p, c2) : fallback(n, c2);
+}
+[...Object.keys(ACTION), ...Object.keys(LOGIC), "event.start", "event.beforeLoad", "event.activityLoad", "event.pointer", "event.key", "event.focus", "event.timer", "event.variable", "event.timelineEnd", "event.timelineMarker", "event.videoCue", "event.step", "event.message", "event.scroll", "event.dragStart", "event.dragMove", "event.dragOver", "event.drop", "event.dragEnd", "event.dataLoaded"];
+function turnedOn(onlyIf) {
+  const cur = String(onlyIf ?? "").trim();
+  if (cur === "false") return "";
+  const m = /^false && \(([\s\S]*)\)$/.exec(cur);
+  return m ? m[1] : cur;
+}
+const isOffExpr = (s) => s === "false" || /^false && \([\s\S]*\)$/.test(s);
+const isOff = (n) => isOffExpr(String(n.params.onlyIf ?? "").trim());
+const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth"];
+const portPhrase = (kind, port, label) => {
+  const known = { true: "if so", false: "if not", correct: "if correct", wrong: "if wrong", finished: "when it is finished", setDone: "when the set is done", none: "if there is none", stopped: "if it is stopped", done: "when it is done", failed: "if it fails", recorded: "once it is recorded", a: "one way", b: "the other way" };
+  if (port in known) return known[port];
+  if (kind === "logic.sequence") return ORDINALS[Number(port) - 1] ?? `step ${port}`;
+  if (kind === "logic.random") return `way ${port}`;
+  return label ? lowerFirst(label) : `on “${port}”`;
+};
+function outgoing(ab, id) {
+  const y = new Map(ab.logic.nodes.map((n) => [n.id, n.y]));
+  return ab.logic.edges.filter((e) => e.from === id).sort((a, b) => (y.get(a.to) ?? 0) - (y.get(b.to) ?? 0));
+}
+function reachable(ab, id) {
+  const seen = /* @__PURE__ */ new Set([id]);
+  const todo = [id];
+  while (todo.length) {
+    const at = todo.pop();
+    for (const e of ab.logic.edges) if (e.from === at && !seen.has(e.to)) seen.add(e.to), todo.push(e.to);
+  }
+  return seen;
+}
+function buildFlow(event, ctx2, opts2 = {}) {
+  const { ab, project } = ctx2;
+  const c2 = new Names(ab, project);
+  const byId2 = new Map(ab.logic.nodes.map((n) => [n.id, n]));
+  const limit = opts2.limit ?? 8;
+  const emitted = /* @__PURE__ */ new Set([event.id]);
+  let count2 = 0;
+  const chain = (id, path) => {
+    const node = byId2.get(id);
+    if (!node || count2 >= limit) return [];
+    if (path.has(id)) return [{ node, text: `go back to “${phrase(node, c2, ctx2.self)}”`, summary: "The flow loops here", branches: [] }];
+    count2++;
+    emitted.add(id);
+    const def = CATALOG_BY_KIND[node.kind];
+    const step = { node, text: phrase(node, c2, ctx2.self), summary: def?.summary ?? "", branches: [] };
+    const next = outgoing(ab, id);
+    const inner = new Set(path).add(id);
+    if (next.length === 1 && next[0].fromPort === "out") return [step, ...chain(next[0].to, inner)];
+    for (const e of next) {
+      const label = e.fromPort === "out" || next.filter((x) => x.fromPort === e.fromPort).length > 1 ? "at the same time" : portPhrase(node.kind, e.fromPort, def?.outputs.find((o) => o.id === e.fromPort)?.label ?? "");
+      const steps22 = chain(e.to, inner);
+      if (steps22.length) step.branches.push({ label, steps: steps22 });
+    }
+    return [step];
+  };
+  const first2 = outgoing(ab, event.id);
+  const steps2 = [];
+  const top = /* @__PURE__ */ new Set([event.id]);
+  if (first2.length === 1) steps2.push(...chain(first2[0].to, top));
+  else if (first2.length > 1) {
+    const head = { node: event, text: "do all of these", summary: "", branches: [] };
+    for (const e of first2) {
+      const s = chain(e.to, top);
+      if (s.length) head.branches.push({ label: ORDINALS[head.branches.length] ?? `number ${head.branches.length + 1}`, steps: s });
+    }
+    if (head.branches.length) steps2.push(head);
+  }
+  const all2 = reachable(ab, event.id);
+  const more = Math.max(0, all2.size - emitted.size);
+  const cond = String(event.params.onlyIf ?? "").trim();
+  const off = isOff(event);
+  let when = eventPhrase(event, c2, ctx2.self);
+  const shown = off ? turnedOn(cond) : cond;
+  const doneAll = event.kind === "event.variable" ? /^includesAll\(\s*([A-Za-z_$][\w$]*)\s*,\s*\[(.*)\]\s*\)$/.exec(shown) : null;
+  if (doneAll && doneAll[1] === c2.variable(event.params.variable)) {
+    const names = [...doneAll[2].matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]);
+    when = `When all of these are done: ${names.length ? names.join(", ") : "none yet"}`;
+  } else if (shown) when += `, only if ${conditionWords(shown)}`;
+  return { event, when, off, steps: steps2, more };
+}
+function chainText(steps2) {
+  return steps2.map((s) => {
+    if (!s.branches.length) return s.text;
+    return `${s.text} (${s.branches.map((b) => `${b.label}: ${chainText(b.steps)}`).join("; ")})`;
+  }).join(", then ");
+}
+function flowSentence(flow) {
+  const body = chainText(flow.steps);
+  const tail = flow.more ? `${body ? ", and " : ""}${flow.more} more step${flow.more === 1 ? "" : "s"}` : "";
+  const off = flow.off ? " (turned off)" : "";
+  if (!body && !flow.more) return `${flow.when}${off}: nothing happens yet, no step is joined to it`;
+  return `${flow.when}${off}: ${body}${tail}`;
+}
+function writeFlow(ab, event, steps2) {
+  const y = ab.logic.nodes.reduce((m, n) => Math.max(m, n.y), -100) + 140;
+  const ev = { id: uid("lg"), kind: event.kind, x: 40, y, params: { ...defaultParams(event.kind), ...event.params }, ...event.note ? { note: event.note } : {} };
+  const made = steps2.map((s, i) => ({ id: uid("lg"), kind: s.kind, x: 300 + i * 260, y, params: { ...defaultParams(s.kind), ...s.params } }));
+  ab.logic.nodes.push(ev, ...made);
+  let from = ev;
+  for (const n of made) {
+    ab.logic.edges.push({ id: uid("e"), from: from.id, fromPort: "out", to: n.id, toPort: "in" });
+    from = n;
+  }
+  return { event: ev, steps: made };
+}
+function writeBranchFlow(ab, event, condition, yes, no) {
+  const y = ab.logic.nodes.reduce((m, n) => Math.max(m, n.y), -100) + 140;
+  const ev = { id: uid("lg"), kind: event.kind, x: 40, y, params: { ...defaultParams(event.kind), ...event.params } };
+  const check = { id: uid("lg"), kind: "logic.if", x: 300, y, params: { ...defaultParams("logic.if"), condition } };
+  const row2 = (steps2, rowY) => steps2.map((st, i) => ({ id: uid("lg"), kind: st.kind, x: 560 + i * 260, y: rowY, params: { ...defaultParams(st.kind), ...st.params } }));
+  const yesNodes = row2(yes, y);
+  const noNodes = row2(no, y + 140);
+  ab.logic.nodes.push(ev, check, ...yesNodes, ...noNodes);
+  const join2 = (from, port, to) => ab.logic.edges.push({ id: uid("e"), from: from.id, fromPort: port, to: to.id, toPort: "in" });
+  join2(ev, "out", check);
+  for (const [nodes, port] of [[yesNodes, "true"], [noNodes, "false"]]) {
+    let from = check;
+    let p = port;
+    for (const n of nodes) {
+      join2(from, p, n);
+      from = n;
+      p = "out";
+    }
+  }
+  return { event: ev, check, yes: yesNodes, no: noNodes };
+}
+const doneHowOf = (v) => v === "opened" || v === "answered" ? v : "click";
+function doneVariable(project, node, how) {
+  const layer = node;
+  if (how === "answered") return layer.question ? project.variables.find((v) => v.name === varName(layer.question, "answered")) : void 0;
+  if (how === "opened") {
+    const id = layer.dialog?.openVariable;
+    return id ? project.variables.find((v) => v.id === id) : void 0;
+  }
+  return void 0;
+}
+function doneLayers(ab, project, how) {
+  const out = [];
+  walk(ab.children, (n) => void ((how === "click" || doneVariable(project, n, how)) && out.push({ id: n.id, name: n.name })));
+  return out;
+}
+const word = (how) => how === "click" ? "clicked" : how === "opened" ? "opened" : "answered";
+function nameFor(raw, taken, fallback2) {
+  const name = uniqueIdentifier(taken, raw.trim().replace(/[^\w$]+/g, "_").replace(/^(\d)/, "_$1") || fallback2);
+  taken.push(name);
+  return name;
+}
+function buildDone(ab, project, how, layerIds, rawName, makeId, taken) {
+  const ok = new Map(doneLayers(ab, project, how).map((l) => [l.id, l.name]));
+  const picked = layerIds.filter((id) => ok.has(id));
+  if (!picked.length) throw new Error("No layer to count");
+  const name = nameFor(rawName, taken, "explored");
+  const countName = nameFor(`${name}Count`, taken, "doneCount");
+  const totalName = nameFor(`${name}Total`, taken, "doneTotal");
+  const list2 = { id: makeId("v"), name, type: "list", initial: "[]" };
+  const count2 = { id: makeId("v"), name: countName, type: "number", initial: 0, formula: `${name}.length`, live: true };
+  const total = { id: makeId("v"), name: totalName, type: "number", initial: picked.length, formula: String(picked.length) };
+  const seen = /* @__PURE__ */ new Set();
+  const keys = picked.map((id) => {
+    const base2 = ok.get(id) || "Layer";
+    let key = base2;
+    for (let i = 2; seen.has(key); i++) key = `${base2} ${i}`;
+    seen.add(key);
+    return key;
+  });
+  const layers2 = /* @__PURE__ */ new Map();
+  walk(ab.children, (n) => void layers2.set(n.id, n));
+  const add = { kind: "action.setVariable", params: { variable: list2.id, op: "push" } };
+  const trackers = picked.map((id, i) => {
+    const layer = layers2.get(id);
+    const notYet = `!includesAll(${name}, [${JSON.stringify(keys[i])}])`;
+    const step = { ...add, params: { ...add.params, value: JSON.stringify(keys[i]) } };
+    if (how === "click") return { event: { kind: "event.pointer", params: { target: id, type: "click", onlyIf: notYet } }, steps: [step] };
+    const v = doneVariable(project, layer, how);
+    return { event: { kind: "event.variable", params: { variable: v.id, onlyIf: `${v.name} && ${notYet}` } }, steps: [step] };
+  });
+  const every = `includesAll(${name}, [${keys.map((k) => JSON.stringify(k)).join(", ")}])`;
+  return {
+    variables: [list2, count2, total],
+    trackers,
+    all: { kind: "event.variable", params: { variable: list2.id }, onlyIf: every },
+    sentence: `count each of ${picked.length} layers once it is ${word(how)}, in ${name} (${countName} says how many, out of ${totalName})`,
+    list: list2,
+    count: count2
+  };
+}
+const THIS_LAYER = "__self__";
+const first = (xs) => xs[0];
+const DONE_NEEDS = [
+  { key: "donehow", kind: "donehow", label: "Each counts as done when it is" },
+  { key: "doneset", kind: "doneset", label: "These layers" },
+  { key: "donename", kind: "donename", label: "Call the count" }
+];
+const SAY = { key: "say", kind: "words", label: "Say it (optional)", optional: true };
+const sayParam = (a) => (a.say ?? "").trim() ? { say: a.say.trim() } : {};
+const HOW = { key: "transition", kind: "transition", label: "How the page changes" };
+const SPEED = { key: "speed", kind: "speed", label: "Speed" };
+const pageParams = (a, to) => ({
+  ...defaultParams("action.artboard"),
+  ...to,
+  ...isPageTransition(a.transition ?? "") ? { transition: a.transition } : {},
+  ...(a.speed ?? "").trim() !== "" && Number.isFinite(Number(a.speed)) && Number(a.speed) >= 0 ? { duration: Number(a.speed) } : {}
+});
+const RECIPES = [
+  {
+    id: "page-next",
+    label: "Go to the next page",
+    hint: "Moves on to the page after this one.",
+    group: "Pages",
+    needs: [HOW, SPEED],
+    action: (a) => ({ kind: "action.artboard", params: pageParams(a, { to: "next" }) })
+  },
+  {
+    id: "page-previous",
+    label: "Go to the previous page",
+    hint: "Goes back one page.",
+    group: "Pages",
+    needs: [HOW, SPEED],
+    action: (a) => ({ kind: "action.artboard", params: pageParams(a, { to: "previous" }) })
+  },
+  {
+    id: "page-pick",
+    label: "Go to a page…",
+    hint: "Jumps to the page you choose.",
+    group: "Pages",
+    needs: [{ key: "page", kind: "page", label: "Which page" }, HOW, SPEED],
+    action: (a) => ({ kind: "action.artboard", params: pageParams(a, { to: "picked", artboard: a.page ?? "" }) })
+  },
+  {
+    id: "show",
+    label: "Show a layer",
+    hint: "Makes a hidden layer appear. A layer other than this one starts hidden.",
+    group: "Layers",
+    needs: [{ key: "layer", kind: "layer", label: "Which layer" }],
+    action: (a, ctx2) => ({ kind: "action.visibility", params: { ...defaultParams("action.visibility"), target: layerOf(a, ctx2), op: "show" } })
+  },
+  {
+    id: "hide",
+    label: "Hide a layer",
+    hint: "Makes a layer disappear.",
+    group: "Layers",
+    needs: [{ key: "layer", kind: "layer", label: "Which layer" }],
+    action: (a, ctx2) => ({ kind: "action.visibility", params: { ...defaultParams("action.visibility"), target: layerOf(a, ctx2), op: "hide" } })
+  },
+  {
+    id: "toggle",
+    label: "Show or hide a layer",
+    hint: "Each time: shows it if it is hidden, hides it if it is showing.",
+    group: "Layers",
+    needs: [{ key: "layer", kind: "layer", label: "Which layer" }],
+    action: (a, ctx2) => ({ kind: "action.visibility", params: { ...defaultParams("action.visibility"), target: layerOf(a, ctx2), op: "toggle" } })
+  },
+  {
+    id: "only-one",
+    label: "Show only one of a set…",
+    hint: "Shows one layer and hides the others you tick. Good for tabs: each tab shows its own panel and hides the rest.",
+    group: "Layers",
+    needs: [
+      { key: "layer", kind: "layer", label: "Show" },
+      { key: "set", kind: "layerset", label: "Hide these" }
+    ],
+    steps: (a, ctx2) => {
+      const shown = layerOf(a, ctx2);
+      const hide2 = splitSet(a.set).filter((id) => id !== shown);
+      return [...hide2.map((id) => ({ kind: "action.visibility", params: { ...defaultParams("action.visibility"), target: id, op: "hide" } })), { kind: "action.visibility", params: { ...defaultParams("action.visibility"), target: shown, op: "show" } }];
+    }
+  },
+  {
+    id: "look",
+    label: "Change a layer’s look…",
+    hint: "Changes the colour, the text, how see-through or how big a layer is, with the same pickers as the Inspector.",
+    group: "Layers",
+    needs: [
+      { key: "layer", kind: "layer", label: "Which layer" },
+      { key: "what", kind: "lookwhat", label: "Change its" },
+      { key: "colour", kind: "colour", label: "Colour", when: (a) => (a.what ?? "colour") === "colour" },
+      { key: "words", kind: "words", label: "Text", optional: true, when: (a) => a.what === "text" },
+      { key: "percent", kind: "percent", label: "Opacity (%)", when: (a) => a.what === "opacity" },
+      { key: "width", kind: "size", label: "Width (px)", optional: true, when: (a) => a.what === "size" },
+      { key: "height", kind: "size", label: "Height (px)", optional: true, when: (a) => a.what === "size" }
+    ],
+    steps: (a, ctx2) => {
+      const target = layerOf(a, ctx2);
+      const node = findLayer$1(ctx2.ab, target);
+      const set = (prop, value) => ({ kind: "action.setProperty", params: { ...defaultParams("action.setProperty"), target, prop, value } });
+      switch (a.what ?? "colour") {
+        case "text":
+          return [set(node?.type === "button" ? "label" : "text", JSON.stringify(a.words ?? ""))];
+        case "opacity":
+          return [set("opacity", String(Math.round(Math.min(100, Math.max(0, Number(a.percent ?? "100"))) * 100) / 1e4))];
+        case "size":
+          return [...(a.width ?? "").trim() ? [set("width", String(Number(a.width)))] : [], ...(a.height ?? "").trim() ? [set("height", String(Number(a.height)))] : []];
+        default:
+          return [set(node?.type === "text" ? "color" : "fill.color", JSON.stringify(a.colour ?? "#000000"))];
+      }
+    }
+  },
+  {
+    id: "view-layer",
+    label: "Move the view to a layer…",
+    hint: "Pans and zooms the page to frame a layer. The page master stays put.",
+    group: "Layers",
+    needs: [{ key: "layer", kind: "layer", label: "Which layer" }],
+    action: (a, ctx2) => ({ kind: "action.moveView", params: { ...defaultParams("action.moveView"), to: "layer", target: layerOf(a, ctx2) } })
+  },
+  {
+    id: "view-page",
+    label: "Show the whole page again",
+    hint: "Pans and zooms back out after the view was moved to a layer.",
+    group: "Layers",
+    needs: [],
+    action: () => ({ kind: "action.moveView", params: { ...defaultParams("action.moveView"), to: "page" } })
+  },
+  {
+    id: "animation",
+    label: "Play an animation",
+    hint: "Plays one of this page’s timelines.",
+    group: "Motion and sound",
+    needs: [{ key: "timeline", kind: "timeline", label: "Which animation" }],
+    action: (a) => ({ kind: "action.timeline", params: { ...defaultParams("action.timeline"), timeline: a.timeline ?? "", op: "play" } })
+  },
+  {
+    id: "sound",
+    label: "Play a sound",
+    hint: "Plays a sound file once.",
+    group: "Motion and sound",
+    needs: [{ key: "sound", kind: "sound", label: "Which sound" }],
+    action: (a) => ({ kind: "action.sound", params: { ...defaultParams("action.sound"), asset: a.sound ?? "" } })
+  },
+  {
+    id: "soundtrack",
+    label: "Play music that carries on across pages",
+    hint: "The soundtrack: it keeps playing when the page changes, goes quiet under narration, and stops at Stop the music.",
+    group: "Motion and sound",
+    needs: [{ key: "sound", kind: "sound", label: "Which music" }],
+    action: (a) => ({ kind: "action.sound", params: { ...defaultParams("action.sound"), asset: a.sound ?? "", loop: "true", soundtrack: true } })
+  },
+  {
+    id: "soundtrack-stop",
+    label: "Stop the music",
+    hint: "Fades the soundtrack out. Other sounds stop too.",
+    group: "Motion and sound",
+    needs: [],
+    action: () => ({ kind: "action.stopSound", params: { ...defaultParams("action.stopSound") } })
+  },
+  {
+    id: "sound-toggle",
+    label: "Turn the sound off or on",
+    hint: "Mutes every sound and video, or brings the sound back. The viewer's browser remembers the choice.",
+    group: "Motion and sound",
+    needs: [],
+    action: () => ({ kind: "action.captions", params: { ...defaultParams("action.captions"), op: "soundToggle" } })
+  },
+  {
+    id: "video-toggle",
+    label: "Play or pause a video",
+    hint: "Plays the video if it is paused, pauses it if it is playing.",
+    group: "Motion and sound",
+    needs: [{ key: "video", kind: "video", label: "Which video" }],
+    action: (a, ctx2) => ({ kind: "action.video", params: { ...defaultParams("action.video"), target: videoOf(a, ctx2), op: "toggle" } })
+  },
+  {
+    id: "video-seek",
+    label: "Jump a video to a time…",
+    hint: "Goes to a moment in the video, like a chapter button.",
+    group: "Motion and sound",
+    needs: [{ key: "video", kind: "video", label: "Which video" }, { key: "seconds", kind: "seconds", label: "Seconds in" }],
+    action: (a, ctx2) => ({ kind: "action.video", params: { ...defaultParams("action.video"), target: videoOf(a, ctx2), op: "seek", seconds: String(a.seconds ?? "0").trim() || "0" } })
+  },
+  {
+    id: "counter",
+    label: "Change a number…",
+    hint: "Adds to a number, takes some off, or sets it to an amount: a score, a tally, how many times it happens. You can show it or test it.",
+    group: "Counting and switches",
+    needs: [
+      { key: "counter", kind: "counter", label: "Which number" },
+      { key: "numhow", kind: "numhow", label: "What to do" },
+      { key: "amount", kind: "amount", label: "Amount" },
+      SAY
+    ],
+    action: (a) => {
+      const how = a.numhow ?? "add";
+      const amount = (a.amount ?? "1").trim() || "1";
+      const value = how === "subtract" ? /^\d+(\.\d+)?$/.test(amount) ? `-${amount}` : `-(${amount})` : amount;
+      return { kind: "action.setVariable", params: { ...defaultParams("action.setVariable"), variable: a.counter ?? "", op: how === "set" ? "set" : "add", value, ...sayParam(a) } };
+    }
+  },
+  {
+    id: "item-next",
+    label: "Go to the next item…",
+    hint: "Moves a number on by one, for a slideshow or carousel. Goes back to the start after the last, or stops there.",
+    group: "Counting and switches",
+    needs: [
+      { key: "counter", kind: "counter", label: "Which number", newName: "slide" },
+      { key: "startat", kind: "startat", label: "The first one is" },
+      { key: "last", kind: "last", label: "How many items" },
+      { key: "ends", kind: "ends", label: "After the last" },
+      SAY
+    ],
+    action: (a, ctx2) => ({ kind: "action.setVariable", params: roundParams(a, ctx2, "next") })
+  },
+  {
+    id: "item-previous",
+    label: "Go to the previous item…",
+    hint: "Moves a number back by one, for a slideshow or carousel. Goes round to the end from the first, or stops there.",
+    group: "Counting and switches",
+    needs: [
+      { key: "counter", kind: "counter", label: "Which number", newName: "slide" },
+      { key: "startat", kind: "startat", label: "The first one is" },
+      { key: "last", kind: "last", label: "How many items" },
+      { key: "ends", kind: "ends", label: "Before the first" },
+      SAY
+    ],
+    action: (a, ctx2) => ({ kind: "action.setVariable", params: roundParams(a, ctx2, "previous") })
+  },
+  {
+    id: "text-set",
+    label: "Set a text or choice…",
+    hint: "Puts a piece of text in a variable, or picks one of its choices: the answer chosen, the current mode, a name.",
+    group: "Counting and switches",
+    needs: [
+      { key: "textvar", kind: "textvar", label: "Which text or choice" },
+      { key: "textvalue", kind: "textvalue", label: "Set it to" }
+    ],
+    action: (a, ctx2) => ({ kind: "action.setVariable", params: { ...defaultParams("action.setVariable"), variable: a.textvar ?? "", op: "set", value: JSON.stringify(textValueOf(a, ctx2)) } })
+  },
+  {
+    id: "switch",
+    label: "Switch something on or off",
+    hint: "Flips a yes/no setting each time, such as sound on or off. Or turns it on, or off, every time.",
+    group: "Counting and switches",
+    needs: [
+      { key: "switch", kind: "switch", label: "Which switch" },
+      { key: "how", kind: "switchhow", label: "What to do" },
+      SAY
+    ],
+    action: (a) => {
+      const how = a.how ?? "flip";
+      return { kind: "action.setVariable", params: { ...defaultParams("action.setVariable"), variable: a.switch ?? "", ...how === "on" || how === "off" ? { op: "set", value: how === "on" ? "true" : "false" } : { op: "toggle", value: "" }, ...sayParam(a) } };
+    }
+  },
+  {
+    id: "count-done",
+    label: "Count what has been done…",
+    hint: "Keeps count of which layers have been clicked, opened or answered, so you can show “3 of 5 explored” or use it in a condition. It writes a list the layers add themselves to, and numbers made from it.",
+    group: "Counting and switches",
+    needs: DONE_NEEDS,
+    //it is not something that happens when this layer is clicked: each layer you tick gets its own small flow, so there is no step to write here
+    steps: () => []
+  },
+  {
+    id: "reset",
+    label: "Put values back to the start…",
+    hint: "Puts the numbers, text and switches you tick back to what they were at the start. Nothing else changes.",
+    group: "Counting and switches",
+    needs: [{ key: "vars", kind: "varset", label: "Put these back" }],
+    action: (a) => ({ kind: "action.resetVariables", params: { ...defaultParams("action.resetVariables"), variables: splitSet(a.vars) } })
+  },
+  {
+    id: "announce",
+    label: "Say something to screen readers",
+    hint: "A screen reader reads the message out. Nothing changes on screen. Good for “Correct” or “3 of 5 done”.",
+    group: "Other",
+    needs: [{ key: "words", kind: "words", label: "What to say" }],
+    action: (a) => ({ kind: "action.announce", params: { ...defaultParams("action.announce"), text: JSON.stringify(a.words ?? "") } })
+  },
+  {
+    id: "link",
+    label: "Open a link",
+    hint: "Opens a web address in a new tab.",
+    group: "Other",
+    needs: [{ key: "link", kind: "link", label: "Web address" }],
+    action: (a) => ({ kind: "action.url", params: { ...defaultParams("action.url"), url: JSON.stringify(a.link ?? ""), target: "_blank" } })
+  },
+  {
+    id: "script",
+    label: "Run a script",
+    hint: "Runs one of the project's scripts, or a new one to write in the Scripts tab. event says what was clicked.",
+    group: "Other",
+    needs: [{ key: "script", kind: "script", label: "Which script" }],
+    action: (a) => ({ kind: "action.script", params: { ...defaultParams("action.script"), script: a.script ?? "" } })
+  },
+  {
+    id: "room-send",
+    label: "Send a message to a room…",
+    hint: "Sends the text a person typed to everyone in the room, then empties the box. Add a Room in the Data tab first.",
+    group: "Other",
+    needs: [
+      { key: "room", kind: "room", label: "Which room" },
+      { key: "textvar", kind: "textvar", label: "The text to send" }
+    ],
+    steps: (a, ctx2) => {
+      const typed = ctx2.project.variables.find((v) => v.id === a.textvar);
+      return [
+        { kind: "action.roomSend", params: { ...defaultParams("action.roomSend"), source: a.room ?? "", text: typed?.name ?? "" } },
+        { kind: "action.setVariable", params: { ...defaultParams("action.setVariable"), variable: a.textvar ?? "", op: "set", value: JSON.stringify("") } }
+      ];
+    }
+  },
+  {
+    id: "start-over",
+    label: "Start over",
+    hint: "Clears everything the learner did and goes back to the first page.",
+    group: "Other",
+    needs: [],
+    action: () => ({ kind: "action.startOver", params: { ...defaultParams("action.startOver") } })
+  }
+];
+const RECIPE_BY_ID = Object.fromEntries(RECIPES.map((r2) => [r2.id, r2]));
+const layerOf = (a, ctx2) => !a.layer || a.layer === THIS_LAYER ? ctx2.layerId : a.layer;
+const videoOf = (a, ctx2) => !a.video || a.video === THIS_LAYER ? ctx2.layerId : a.video;
+const SET_SEP = "|";
+const splitSet = (v) => (v ?? "").split(SET_SEP).filter(Boolean);
+const joinSet = (ids) => ids.join(SET_SEP);
+function findLayer$1(ab, id) {
+  let found;
+  walk(ab.children, (n) => void (n.id === id && (found = n)));
+  return found;
+}
+function currentColour(node) {
+  const n = node;
+  const c2 = n?.type === "text" ? n.color : n?.fill?.color;
+  return typeof c2 === "string" && c2 ? c2 : n?.type === "text" ? "#000000" : "#e0b200";
+}
+function videoChoices(ab) {
+  const out = [];
+  walk(ab.children, (n) => void (n.type === "video" && out.push({ id: n.id, name: n.name })));
+  return out;
+}
+const CLICK_SCRIPT = `// Runs when the layer is clicked. event says what happened, ix is the player.
+ix.log('clicked', event);
+`;
+function layerChoices(ab) {
+  const out = [];
+  walk(ab.children, (n) => void out.push({ id: n.id, name: n.name, hidden: n.visible === false }));
+  return out;
+}
+const otherPages = (ctx2) => ctx2.project.artboards.filter((a) => a.id !== ctx2.ab.id);
+const roomChoices = (project) => project.dataSources.filter((d) => d.source === "room");
+const audioAssets = (project) => project.assets.filter((a) => assetKind(a.mime, a.name) === "audio");
+const counterChoices = (project) => project.variables.filter((v) => v.type === "number" && !v.live && !v.formula);
+const switchChoices = (project) => project.variables.filter((v) => v.type === "boolean" && !v.live && !v.formula);
+const textChoices = (project) => project.variables.filter((v) => (v.type === "string" || v.type === "enum") && !v.live && !v.formula);
+const listChoices = (project) => project.variables.filter((v) => v.type === "list");
+const resettable = (project) => project.variables.filter((v) => !v.live);
+const NEW_PREFIX = "new:";
+const NEW_NAME = { counter: "count", switch: "isOn", textvar: "message" };
+const newNameOf = (n) => n.newName ?? NEW_NAME[n.kind] ?? "value";
+const MAKES_VARIABLE = ["counter", "switch", "textvar"];
+function textValueOf(a, ctx2) {
+  const v = ctx2.project.variables.find((x) => x.id === a.textvar);
+  const v0 = a.textvalue ?? "";
+  if (v?.type === "enum" && v.options?.length) return v.options.includes(v0) ? v0 : v.options[0];
+  return v0;
+}
+function roundParams(a, ctx2, op) {
+  const from = a.startat === "0" ? "0" : "1";
+  const raw = (a.last ?? "").trim();
+  let last;
+  if (raw.startsWith("list:")) {
+    const name = ctx2.project.variables.find((v) => v.id === raw.slice(5))?.name ?? "items";
+    last = from === "0" ? `${name}.length - 1` : `${name}.length`;
+  } else if (/^\d+$/.test(raw)) last = String(from === "0" ? Math.max(0, Number(raw) - 1) : Number(raw));
+  else last = from === "0" ? `(${raw || "1"}) - 1` : raw;
+  return { ...defaultParams("action.setVariable"), variable: a.counter ?? "", op, first: from, last, ends: a.ends === "stop" ? "stop" : "round", ...sayParam(a) };
+}
+const TRIGGERS = [
+  { id: "click", label: (who) => `“${who}” is clicked`, needs: [] },
+  { id: "pointerenter", label: (who) => `“${who}” is hovered over`, needs: [] },
+  { id: "start", label: () => "the page is shown", needs: [] },
+  { id: "timer", label: () => "some seconds have passed", needs: [{ key: "delay", kind: "delay", label: "After how many seconds" }] },
+  {
+    id: "value",
+    label: () => "a value reaches something",
+    needs: [
+      { key: "watch", kind: "watch", label: "Which value" },
+      { key: "reachop", kind: "reachop", label: "It" },
+      { key: "reachto", kind: "reachto", label: "This", when: (a) => opTakesValue(a.reachop ?? "atleast") }
+    ]
+  },
+  { id: "all", label: () => "all of these are done", needs: DONE_NEEDS },
+  { id: "drop", label: (who) => `“${who}” is dropped on something`, needs: [{ key: "zone", kind: "zone", label: "Dropped on" }] },
+  { id: "key", label: () => "a key is pressed", needs: [{ key: "key", kind: "key", label: "Which key" }] },
+  {
+    id: "video",
+    label: () => "a video reaches a time",
+    needs: [
+      { key: "video", kind: "video", label: "Which video" },
+      { key: "cuetime", kind: "cuetime", label: "At how many seconds" }
+    ]
+  }
+];
+const TRIGGER_BY_ID = Object.fromEntries(TRIGGERS.map((t2) => [t2.id, t2]));
+const triggerLabel = (t2, who) => TRIGGER_BY_ID[t2].label(who);
+function reachOps(v) {
+  if (v?.type === "boolean") return ["true", "false"];
+  if (v?.type === "number") return ["atleast", "atmost", "more", "less", "is"];
+  return ["is", "isnot"];
+}
+function zoneChoices(ab) {
+  const out = [];
+  walk(ab.children, (n) => void (n.dropZone && out.push({ id: n.id, name: n.name })));
+  return out;
+}
+function defaultsFor(needs, ctx2, id) {
+  const out = {};
+  for (const n of needs) {
+    if (n.kind === "layer") {
+      const others = layerChoices(ctx2.ab).filter((l) => l.id !== ctx2.layerId);
+      const pick = id === "show" ? others.find((l) => l.hidden) ?? others[0] : id === "toggle" || id === "view-layer" || id === "only-one" ? others[0] : void 0;
+      out[n.key] = pick?.id ?? THIS_LAYER;
+    } else if (n.kind === "page") out[n.key] = first(otherPages(ctx2))?.id ?? "";
+    else if (n.kind === "timeline") out[n.key] = first(ctx2.ab.timelines)?.id ?? "";
+    else if (n.kind === "room") out[n.key] = first(roomChoices(ctx2.project))?.id ?? "";
+    else if (n.kind === "sound") out[n.key] = first(audioAssets(ctx2.project))?.id ?? "";
+    else if (n.kind === "counter") out[n.key] = first(counterChoices(ctx2.project))?.id ?? NEW_PREFIX + newNameOf(n);
+    else if (n.kind === "switch") out[n.key] = first(switchChoices(ctx2.project))?.id ?? NEW_PREFIX + newNameOf(n);
+    else if (n.kind === "textvar") out[n.key] = first(textChoices(ctx2.project))?.id ?? NEW_PREFIX + newNameOf(n);
+    else if (n.kind === "textvalue") out[n.key] = first(textChoices(ctx2.project))?.options?.[0] ?? "";
+    else if (n.kind === "transition") out[n.key] = "fade";
+    else if (n.kind === "speed") out[n.key] = String(DEFAULT_TRANSITION_MS);
+    else if (n.kind === "video") out[n.key] = videoChoices(ctx2.ab).some((v) => v.id === ctx2.layerId) ? THIS_LAYER : first(videoChoices(ctx2.ab))?.id ?? "";
+    else if (n.kind === "seconds") out[n.key] = "0";
+    else if (n.kind === "script") out[n.key] = first(ctx2.project.scripts.filter((x) => !x.runOnStart))?.id ?? NEW_PREFIX + "onClick";
+    else if (n.kind === "numhow") out[n.key] = "add";
+    else if (n.kind === "switchhow") out[n.key] = "flip";
+    else if (n.kind === "amount") out[n.key] = "1";
+    else if (n.kind === "startat") out[n.key] = "1";
+    else if (n.kind === "last") out[n.key] = first(listChoices(ctx2.project)) ? `list:${first(listChoices(ctx2.project)).id}` : "3";
+    else if (n.kind === "ends") out[n.key] = "round";
+    else if (n.kind === "lookwhat") out[n.key] = "colour";
+    else if (n.kind === "colour") out[n.key] = currentColour(findLayer$1(ctx2.ab, ctx2.layerId));
+    else if (n.kind === "percent") out[n.key] = "50";
+    else if (n.kind === "size") out[n.key] = "";
+    else if (n.kind === "varset") out[n.key] = joinSet(resettable(ctx2.project).map((v) => v.id));
+    else if (n.kind === "delay") out[n.key] = "5";
+    else if (n.kind === "watch") out[n.key] = (first(ctx2.project.variables.filter((v) => v.type === "number")) ?? first(ctx2.project.variables))?.id ?? "";
+    else if (n.kind === "reachop") out[n.key] = reachOps(ctx2.project.variables.find((v) => v.id === out.watch))[0];
+    else if (n.kind === "reachto") out[n.key] = "1";
+    else if (n.kind === "key") out[n.key] = "ArrowRight";
+    else if (n.kind === "cuetime") out[n.key] = "10";
+    else if (n.kind === "doneset") out[n.key] = ctx2.layerId;
+    else if (n.kind === "donehow") out[n.key] = "click";
+    else if (n.kind === "donename") out[n.key] = "explored";
+    else out[n.key] = "";
+  }
+  return out;
+}
+const defaultAnswers = (recipe, ctx2) => defaultsFor(recipe.needs, ctx2, recipe.id);
+const defaultTriggerAnswers = (t2, ctx2) => defaultsFor(TRIGGER_BY_ID[t2].needs, ctx2, t2);
+const isNumber = (v) => v.trim() !== "" && Number.isFinite(Number(v));
+function gapsIn(needs, a, project, ab) {
+  for (const n of needs) {
+    if (n.when && !n.when(a)) continue;
+    const v = (a[n.key] ?? "").trim();
+    if (n.kind === "transition" || n.kind === "speed" || n.optional) continue;
+    if (n.kind === "donehow") continue;
+    if (n.kind === "donename") {
+      if (!v) return "Name what you are counting, such as explored.";
+      continue;
+    }
+    if (n.kind === "doneset") {
+      if (!splitSet(v).length) return "Tick the layers that count.";
+      const can = ab && project ? doneLayers(ab, project, doneHowOf(a.donehow)).map((l) => l.id) : null;
+      if (can && !splitSet(v).some((id) => can.includes(id))) return a.donehow === "answered" ? "None of the ticked layers is a question." : "None of the ticked layers is a dialog with an open value.";
+      continue;
+    }
+    if (n.kind === "size" || n.kind === "cuetime") continue;
+    if (n.kind === "amount") {
+      if (!v) return "Say how much.";
+      continue;
+    }
+    if (n.kind === "textvalue" || n.kind === "numhow" || n.kind === "switchhow" || n.kind === "startat" || n.kind === "ends" || n.kind === "lookwhat") continue;
+    if (n.kind === "words") {
+      if (!v) return `Write ${n.label.toLowerCase()}.`;
+      continue;
+    }
+    if (n.kind === "last") {
+      if (!v) return "Say how many items.";
+      continue;
+    }
+    if (n.kind === "layerset") {
+      if (!splitSet(v).length) return "Tick the layers to hide.";
+      continue;
+    }
+    if (n.kind === "varset") {
+      if (!splitSet(v).length) return "Tick the values to put back.";
+      continue;
+    }
+    if (n.kind === "percent") {
+      if (!isNumber(v) || Number(v) < 0 || Number(v) > 100) return "Opacity is a number from 0 to 100.";
+      continue;
+    }
+    if (n.kind === "delay") {
+      if (!isNumber(v) || Number(v) <= 0) return "Say how many seconds, as a number.";
+      continue;
+    }
+    if (n.kind === "reachto") {
+      const watched = project?.variables.find((x) => x.id === a.watch);
+      if (watched?.type === "number" ? !isNumber(v) : !v && watched?.type !== "string") return watched?.type === "number" ? "Say the number it reaches." : "Say what it reaches.";
+      continue;
+    }
+    if (n.kind === "reachop" || n.kind === "zone") continue;
+    if (n.kind === "key") {
+      if (!v) return "Choose which key.";
+      continue;
+    }
+    if (n.kind === "watch") {
+      if (!v) return "Choose which value.";
+      continue;
+    }
+    if (!v) return `Choose ${n.label.toLowerCase()}.`;
+    if (MAKES_VARIABLE.includes(n.kind) && v.startsWith(NEW_PREFIX) && !v.slice(NEW_PREFIX.length).trim()) return `Name the ${n.kind === "counter" ? "counter" : n.kind === "switch" ? "switch" : "variable"}.`;
+    if (n.kind === "script" && v.startsWith(NEW_PREFIX) && !v.slice(NEW_PREFIX.length).trim()) return "Name the script.";
+    if (n.kind === "link" && !/^(https?:\/\/|mailto:|\/)/i.test(v)) return "A web address starts with https://";
+  }
+  return null;
+}
+function incomplete(recipe, a, project, ab) {
+  const gap = gapsIn(recipe.needs, a, project, ab);
+  if (gap) return gap;
+  if (recipe.id === "look" && a.what === "size") {
+    const w = (a.width ?? "").trim();
+    const h = (a.height ?? "").trim();
+    if (!w && !h) return "Give a width or a height.";
+    if (w && !(isNumber(w) && Number(w) >= 0) || h && !(isNumber(h) && Number(h) >= 0)) return "Width and height are numbers, 0 or more.";
+  }
+  return null;
+}
+const triggerIncomplete = (t2, w, project, ab) => {
+  const gap = gapsIn(TRIGGER_BY_ID[t2].needs, w, project, ab);
+  if (gap) return gap;
+  if (t2 === "video" && !(isNumber(w.cuetime ?? "") && Number(w.cuetime) >= 0)) return "Say how many seconds in, as a number.";
+  return null;
+};
+const identifier = (raw, taken, fallback2) => uniqueIdentifier(taken, raw.trim().replace(/[^\w$]+/g, "_").replace(/^(\d)/, "_$1") || fallback2);
+function stepsFor(ctx2, recipeId, answers, makeId, acc) {
+  const recipe = RECIPE_BY_ID[recipeId];
+  if (!recipe) throw new Error(`No behaviour called ${recipeId}`);
+  const a = { ...answers };
+  for (const n of recipe.needs) {
+    if (n.kind === "script" && (a[n.key] ?? "").startsWith(NEW_PREFIX)) {
+      const names = [...ctx2.project.scripts, ...acc.scripts].map((x) => x.name);
+      const name = uniqueIdentifier(names, a[n.key].slice(NEW_PREFIX.length).trim() || "onClick");
+      const sc = { id: makeId("sc"), name, code: CLICK_SCRIPT, runOnStart: false };
+      acc.scripts.push(sc);
+      a[n.key] = sc.id;
+      continue;
+    }
+    if (MAKES_VARIABLE.includes(n.kind) && (a[n.key] ?? "").startsWith(NEW_PREFIX)) {
+      const made = nameFromWords(a[n.key].slice(NEW_PREFIX.length), acc.taken);
+      const name = made ? uniqueIdentifier(acc.taken, made.name) : identifier(a[n.key].slice(NEW_PREFIX.length), acc.taken, newNameOf(n));
+      acc.taken.push(name);
+      const initial = n.kind === "counter" ? recipe.id.startsWith("item-") && a.startat !== "0" ? 1 : 0 : n.kind === "switch" ? false : "";
+      const v = { id: makeId("v"), name, ...made?.label && made.label !== name ? { label: made.label } : {}, type: n.kind === "counter" ? "number" : n.kind === "switch" ? "boolean" : "string", initial };
+      acc.variables.push(v);
+      a[n.key] = v.id;
+    }
+  }
+  if (recipe.id === "show") {
+    const target = layerOf(a, ctx2);
+    const layer = layerChoices(ctx2.ab).find((l) => l.id === target);
+    if (layer && target !== ctx2.layerId && !layer.hidden && !acc.patches.some((p) => p.id === target)) acc.patches.push({ id: target, props: { visible: false } });
+  }
+  const withNew = acc.variables.length ? { ...ctx2, project: { ...ctx2.project, variables: [...ctx2.project.variables, ...acc.variables] } } : ctx2;
+  if (recipe.steps) return recipe.steps(a, withNew);
+  const act = recipe.action(a, withNew);
+  return [{ kind: act.kind, params: act.params }];
+}
+const clock = (secs2) => `${Math.floor(secs2 / 60)}:${String(Math.floor(secs2 % 60)).padStart(2, "0")}`;
+function eventFor(trigger, w, ctx2, acc, done) {
+  switch (trigger) {
+    case "all":
+      return done ? { kind: done.all.kind, params: done.all.params, onlyIf: done.all.onlyIf } : { kind: "event.start", params: {} };
+    case "start":
+      return { kind: "event.start", params: {} };
+    case "timer":
+      return { kind: "event.timer", params: { ms: String(Math.round(Number(w.delay ?? "5") * 1e3)), repeat: false } };
+    case "value": {
+      const v = ctx2.project.variables.find((x) => x.id === w.watch);
+      const op = w.reachop ?? reachOps(v)[0];
+      const raw = (w.reachto ?? "").trim();
+      const right = !opTakesValue(op) ? void 0 : v?.type === "number" && isNumber(raw) ? { t: "num", value: Number(raw) } : { t: "str", value: raw };
+      return { kind: "event.variable", params: { variable: w.watch ?? "" }, onlyIf: v ? rowToExpr({ left: v.name, op, right }) : "" };
+    }
+    case "drop":
+      return { kind: "event.drop", params: { target: w.zone ?? "", layer: ctx2.layerId, result: "accepted" } };
+    case "key":
+      return { kind: "event.key", params: { key: w.key ?? "", type: "keydown" } };
+    case "video": {
+      const id = videoOf({ video: w.video ?? "" }, ctx2);
+      const time = Math.max(0, Number(w.cuetime ?? "0"));
+      const cues = (findLayer$1(ctx2.ab, id)?.cues ?? []).slice();
+      const same2 = cues.find((c2) => Math.abs(c2.time - time) < 1e-3);
+      const name = same2?.name ?? `At ${clock(time)}`;
+      if (!same2) acc.patches.push({ id, props: { cues: [...cues, { id: uid("vc"), time, name }].sort((x, y) => x.time - y.time) } });
+      return { kind: "event.videoCue", params: { target: id, name } };
+    }
+    default:
+      return { kind: "event.pointer", params: { target: ctx2.layerId, type: trigger === "pointerenter" ? "pointerenter" : "click" } };
+  }
+}
+const both = (a, b) => a && b ? `(${a}) && (${b})` : a || b;
+function buildBehaviour(ctx2, recipeId, trigger, answers, makeId = uid, extras = {}) {
+  if (!RECIPE_BY_ID[recipeId]) throw new Error(`No behaviour called ${recipeId}`);
+  const acc = { variables: [], scripts: [], patches: [], taken: ctx2.project.variables.map((v) => v.name) };
+  const doneIn = recipeId === "count-done" ? answers : trigger === "all" ? extras.when ?? {} : null;
+  const done = doneIn ? buildDone(ctx2.ab, ctx2.project, doneHowOf(doneIn.donehow), splitSet(doneIn.doneset), doneIn.donename ?? "", makeId, acc.taken) : null;
+  if (done) acc.variables.push(...done.variables);
+  const counting = recipeId === "count-done";
+  const steps2 = counting ? [] : [{ recipe: recipeId, answers }, ...extras.then ?? []].flatMap((st) => stepsFor(ctx2, st.recipe, st.answers, makeId, acc));
+  const only = (extras.only ?? "").trim();
+  const otherwise = !counting && only && extras.otherwise ? stepsFor(ctx2, extras.otherwise.recipe, extras.otherwise.answers, makeId, acc) : [];
+  const scratch = { logic: { nodes: [...ctx2.ab.logic.nodes], edges: [] } };
+  let nodes;
+  let event;
+  let firstStep;
+  if (counting) {
+    const [head, ...rest] = done.trackers;
+    const w = writeFlow(scratch, head.event, head.steps);
+    event = w.event;
+    nodes = [w.event, ...w.steps];
+    firstStep = w.steps[0];
+    for (const t2 of rest) {
+      const x = writeFlow(scratch, t2.event, t2.steps);
+      nodes.push(x.event, ...x.steps);
+    }
+  } else {
+    const ev = eventFor(trigger, extras.when ?? {}, ctx2, acc, done);
+    if (otherwise.length) {
+      const w = writeBranchFlow(scratch, { kind: ev.kind, params: { ...ev.params, ...ev.onlyIf ? { onlyIf: ev.onlyIf } : {} } }, only, steps2, otherwise);
+      event = w.event;
+      nodes = [w.event, w.check, ...w.yes, ...w.no];
+      firstStep = w.yes[0];
+    } else {
+      const onlyIf = both(ev.onlyIf ?? "", only);
+      const w = writeFlow(scratch, { kind: ev.kind, params: { ...ev.params, ...onlyIf ? { onlyIf } : {} } }, steps2);
+      event = w.event;
+      nodes = [w.event, ...w.steps];
+      firstStep = w.steps[0];
+    }
+    for (const t2 of done?.trackers ?? []) {
+      const x = writeFlow(scratch, t2.event, t2.steps);
+      nodes.push(x.event, ...x.steps);
+    }
+  }
+  const edges = scratch.logic.edges;
+  const shown = { ...ctx2.ab, logic: { ...ctx2.ab.logic, nodes, edges } };
+  const project = { ...ctx2.project, variables: [...ctx2.project.variables, ...acc.variables], scripts: [...ctx2.project.scripts, ...acc.scripts] };
+  const flow = flowSentence(buildFlow(event, { ab: shown, project, self: ctx2.layerId }, { limit: 40 }));
+  const sentence = counting ? done.sentence : flow;
+  return { nodes, edges, variables: acc.variables, scripts: acc.scripts, patches: acc.patches, eventId: event.id, actionId: (firstStep ?? event).id, sentence };
+}
+function applyBehaviour(update, abId, b) {
+  let wrote = false;
+  update((d) => {
+    const ab = d.artboards.find((x) => x.id === abId);
+    if (!ab) return;
+    wrote = true;
+    for (const v of b.variables) d.variables.push(v);
+    for (const sc of b.scripts ?? []) d.scripts.push(sc);
+    ab.logic.nodes.push(...b.nodes);
+    ab.logic.edges.push(...b.edges);
+    for (const p of b.patches) {
+      walk(ab.children, (n) => {
+        if (n.id === p.id) Object.assign(n, p.props);
+      });
+    }
+  });
+  return { nodeIds: wrote ? b.nodes.map((n) => n.id) : [], eventId: b.eventId, actionId: b.actionId, variableIds: wrote ? b.variables.map((v) => v.id) : [] };
+}
+const VERBS = "(?:show|hide|go|jump|play|pause|stop|add|subtract|take|set|reset|open|say|tell|announce|change|turn|switch|toggle|flip|start|restart|mute|unmute|zoom|move|increase|decrease|raise|lower|count|make|display|reveal|fade|read|give|award|remove|close|run|clear|lose)";
+const END = `(?=\\s*,|\\s+then\\b|\\s+and\\b|\\s+${VERBS}\\b|\\s*$)`;
+const EXTRA_VERBS = /* @__PURE__ */ new Set(["show", "hide", "go", "jump", "play", "pause", "add", "subtract", "reset", "say", "tell", "announce", "change", "turn", "toggle", "flip", "restart", "mute", "zoom", "move", "increase", "decrease", "count", "make", "give", "run", "lose", "then", "and", "also", "if", "when", "after"]);
+const SELF = /^(?:this|it|this one|this layer|this button|that|that one|itself|here|me)$/i;
+const GENERIC = /* @__PURE__ */ new Set(["the", "a", "an", "this", "that", "my", "our", "their", "of", "page", "screen", "slide", "layer", "button", "timeline", "animation"]);
+const NUMWORDS = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, sixty: 60 };
+const NUM = "(?:-?\\d+(?:\\.\\d+)?|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|sixty)";
+const COLOURS = {
+  red: "#e53935",
+  orange: "#fb8c00",
+  yellow: "#fdd835",
+  green: "#43a047",
+  blue: "#1e88e5",
+  purple: "#8e24aa",
+  pink: "#ec407a",
+  black: "#000000",
+  white: "#ffffff",
+  grey: "#9e9e9e",
+  gray: "#9e9e9e",
+  brown: "#6d4c41",
+  teal: "#00897b",
+  gold: "#e0b200",
+  navy: "#1a237e"
+};
+const COLOUR_RE = `(?:${Object.keys(COLOURS).join("|")}|#[0-9a-f]{6}|#[0-9a-f]{3})`;
+const ON_WORDS = /^(?:on|true|yes|enabled)$/i;
+const OFF_WORDS = /^(?:off|false|no|disabled)$/i;
+const numOf = (s, fallback2 = 1) => {
+  if (s === void 0 || s === "") return fallback2;
+  const w = NUMWORDS[s.toLowerCase()];
+  if (w !== void 0) return w;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : fallback2;
+};
+function tokens(s, strip = true) {
+  const words = s.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[_\-]+/g, " ").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map((w) => w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w);
+  const kept = words.filter((w) => !GENERIC.has(w));
+  return strip && kept.length ? kept : words;
+}
+function editDistance(a, b) {
+  if (Math.abs(a.length - b.length) > 1) return 2;
+  const row2 = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row2[0];
+    row2[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cur = row2[j];
+      row2[j] = Math.min(row2[j] + 1, row2[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = cur;
+    }
+  }
+  return row2[b.length];
+}
+const sameWord = (w, n) => w === n || w.length >= 3 && n.startsWith(w) || n.length >= 4 && w.startsWith(n) || w.length >= 4 && n.length >= 4 && editDistance(w, n) <= 1;
+function nameScore(phrase2, name) {
+  const cand = tokens(name);
+  if (!phrase2.length || !cand.length) return 0;
+  if (phrase2.length === cand.length && phrase2.every((w, i) => w === cand[i])) return 100;
+  if (cand.every((n) => phrase2.includes(n))) {
+    const extra = phrase2.filter((w) => !cand.includes(w));
+    return extra.length <= 1 && !extra.some((w) => EXTRA_VERBS.has(w)) ? 80 + cand.length : 0;
+  }
+  if (phrase2.every((w) => cand.includes(w))) return 60 + Math.round(phrase2.length / cand.length * 10);
+  if (phrase2.every((w) => cand.some((n) => sameWord(w, n)))) return 40 + Math.round(phrase2.length / cand.length * 10);
+  return 0;
+}
+function matchName(phrase2, items) {
+  const p = tokens(phrase2);
+  let best = null;
+  let top = 0;
+  for (const it of items) {
+    const s = nameScore(p, it.name);
+    if (s > top) top = s, best = it;
+  }
+  return best;
+}
+function findAll(text2, items) {
+  const words = tokens(text2, false);
+  return items.filter((it) => {
+    const n = tokens(it.name);
+    return n.length > 0 && n.every((w) => words.some((x) => sameWord(x, w)));
+  });
+}
+const plain = (s) => s.trim().replace(/^(?:the|a|an|my)\s+/i, "");
+const camel = (s) => {
+  const w = s.replace(/[^A-Za-z0-9 ]+/g, " ").trim().split(/\s+/).filter((x) => x && !GENERIC.has(x.toLowerCase()));
+  return w.map((x, i) => i === 0 ? x.toLowerCase() : x[0].toUpperCase() + x.slice(1).toLowerCase()).join("");
+};
+const hit = (recipe, answers = {}, missing = []) => ({ recipe, answers, missing });
+const unq = (s, c2) => s.replace(/\s*qq(\d+)qq\s*/g, (_, n) => c2.quotes[Number(n)] ?? "").trim();
+function layerRef(rest, c2, id = c2.layerId) {
+  const p = (rest ?? "").trim();
+  if (!p || SELF.test(p) || /^(?:this|that) (?:one|layer|button|picture|image|box)$/i.test(p)) return { id: THIS_LAYER };
+  const m = matchName(p, c2.layers);
+  if (m) return { id: m.id === id ? THIS_LAYER : m.id };
+  return { missing: `a layer called “${plain(p)}”` };
+}
+const varNamed = (v) => ({ id: v.id, name: v.name });
+function findVar(phrase2, vars) {
+  const m = matchName(phrase2, vars.map(varNamed));
+  return m ? vars.find((v) => v.id === m.id) ?? null : null;
+}
+function siblingsOf(ab, id) {
+  let found = [];
+  const look = (list2) => {
+    if (list2.some((n) => n.id === id)) found = list2;
+  };
+  look(ab.children);
+  walk(ab.children, (n) => void (n.children && look(n.children)));
+  return found.filter((n) => n.id !== id);
+}
+const cut = (t2, m) => `${t2.slice(0, m.index)} , ${t2.slice(m.index + m[0].length)}`;
+const WHO = "(?:(?:the\\s+)?(?:learners?|students?|users?|person|viewer|someone|i|you|they|we|people)\\s+)";
+const KEYS = [
+  [/^(?:enter|return)$/i, "Enter"],
+  [/^(?:space|space ?bar|spacebar)$/i, "Space"],
+  [/^(?:escape|esc)$/i, "Escape"],
+  [/^(?:left|left arrow|arrow left)$/i, "ArrowLeft"],
+  [/^(?:right|right arrow|arrow right)$/i, "ArrowRight"],
+  [/^(?:up|up arrow|arrow up)$/i, "ArrowUp"],
+  [/^(?:down|down arrow|arrow down)$/i, "ArrowDown"]
+];
+function keyOf(phrase2) {
+  const p = phrase2.replace(/^(?:the\s+)?(?:key\s+)?/i, "").replace(/\s+key$/i, "").trim();
+  for (const [re, v] of KEYS) if (re.test(p)) return v;
+  if (/^[a-z0-9]$/i.test(p)) return p.toLowerCase();
+  return null;
+}
+function subjectOf(phrase2, c2) {
+  const r2 = layerRef(phrase2, c2);
+  if (r2.missing) return { missing: [r2.missing] };
+  return { layerId: r2.id === THIS_LAYER ? void 0 : r2.id, missing: [] };
+}
+function takeTrigger(t2, c2) {
+  let m;
+  const done = (trigger, when, mm, extra = {}) => ({ trigger, when, missing: [], rest: cut(t2, mm), ...extra });
+  m = new RegExp(`\\b(?:after|in|wait)\\s+(?:about\\s+)?(${NUM})\\s*(seconds?|secs?|s|minutes?|mins?)\\b`, "i").exec(t2);
+  if (m) {
+    const secs2 = numOf(m[1]) * (/^m/i.test(m[2]) ? 60 : 1);
+    return done("timer", { delay: String(secs2) }, m);
+  }
+  m = /\b(?:when|whenever|as soon as|once|as)\s+(?:the\s+|this\s+)?(?:page|slide|screen)\s+(?:is\s+|first\s+|gets\s+)?(?:opens?|opened|loads?|loaded|starts?|started|shows?|shown|appears?|visited|entered|begins?)\b/i.exec(t2) ?? /\bon\s+(?:page\s+)?(?:load|start|open|entry)\b/i.exec(t2);
+  if (m) return done("start", {}, m);
+  m = new RegExp(`\\b(?:when|whenever|once)\\s+${WHO}?(?:press(?:es|ed)?|hit(?:s)?|type(?:s)?)\\s+(?:the\\s+)?(.+?)${END}`, "i").exec(t2) ?? /\b(?:when|whenever)\s+(?:the\s+)?(.+?)\s+key\s+is\s+(?:pressed|hit)\b/i.exec(t2) ?? /\b(?:on|upon)\s+(?:a\s+)?(?:press|pressing)\s+of\s+(?:the\s+)?(.+?)\b(?:\s+key)?(?=\s*,|\s+then\b|$)/i.exec(t2) ?? /\bpress(?:ing)?\s+(?:the\s+)?(.+?)\s+to\b/i.exec(t2);
+  if (m) {
+    const k = keyOf(m[1]);
+    if (k) return done("key", { key: k }, m);
+  }
+  m = new RegExp(`\\b(?:when|whenever|once|as soon as|every time|each time)\\s+(?:the\\s+)?(.+?)\\s+(reaches|reached|hits|gets to|get to|goes up to|goes down to|drops to|falls to|becomes|equals|is at least|is at most|is more than|is greater than|is less than|is over|is under|is above|is below|is not|isnt|is now|is)\\s+(-?\\d+(?:\\.\\d+)?|true|false|on|off|yes|no|qq\\d+qq|[\\w-]+)${END}`, "i").exec(t2);
+  if (m) {
+    const v = findVar(m[1], c2.project.variables);
+    if (v) {
+      const w = reach$1(v, m[2], m[3], c2);
+      if (w) return done("value", { watch: v.id, ...w }, m);
+    }
+  }
+  m = new RegExp(`\\b(?:when|whenever|once)\\s+(?:(.+?)\\s+)?(?:is\\s+|gets\\s+)?(?:dropped|dragged|placed)\\s+(?:on|onto|in|into|over|to)\\s+(?:the\\s+)?(.+?)${END}`, "i").exec(t2);
+  if (m) {
+    const zones = zoneChoices(c2.ab);
+    const z = matchName(m[2], zones);
+    const subject = subjectOf(m[1], c2);
+    return done("drop", z ? { zone: z.id } : {}, m, { layerId: subject.layerId, missing: [...subject.missing, ...z ? [] : [`a drop zone called “${plain(m[2])}”`]] });
+  }
+  m = /\b(?:when|whenever|once)\s+(?:the\s+)?(?:(.+?)\s+)?(?:video|film|movie)\s+(?:reaches|gets to|hits|is at|gets)\s+(?:(\d+):(\d{2})|(\d+(?:\.\d+)?))\s*(?:seconds?|secs?|s)?/i.exec(t2);
+  if (m) {
+    const secs2 = m[2] !== void 0 ? Number(m[2]) * 60 + Number(m[3]) : Number(m[4]);
+    const v = m[1] ? matchName(m[1], videoChoices(c2.ab)) : null;
+    return done("video", { cuetime: String(secs2), ...v ? { video: v.id } : {} }, m);
+  }
+  m = new RegExp(`\\b(?:when|whenever|once|as soon as|every time|each time)\\s+${WHO}?(?:hover|mouse|point|roll)(?:s|ed|ing)?(?:\\s+(?:over|on|onto|at))?(?:\\s+(?!${VERBS}\\b)(?:the\\s+)?(.+?))?${END}`, "i").exec(t2) ?? /\b(?:when|whenever|every time|each time)\s+(?:(.+?)\s+)?(?:is\s+|gets\s+)?(?:hovered(?:\s+over)?|moused over|pointed at)\b/i.exec(t2) ?? /\bon\s+(?:hover|mouse ?over)\b/i.exec(t2);
+  if (m) {
+    const s = subjectOf(m[1], c2);
+    return done("pointerenter", {}, m, { layerId: s.layerId, missing: s.missing });
+  }
+  m = new RegExp(`\\b(?:when|whenever|once|as soon as|every time|each time)\\s+${WHO}(?:click|tap|press|select)(?:s|ed|ing)?(?:\\s+on)?(?:\\s+(?!${VERBS}\\b)(?:the\\s+)?(.+?))?${END}`, "i").exec(t2) ?? /\b(?:when|whenever|once|as soon as|every time|each time)\s+(?:(.+?)\s+)?(?:is\s+|gets\s+|are\s+)?(?:clicked|tapped|pressed|selected)\b/i.exec(t2) ?? /\b(?:on|upon)\s+click\b/i.exec(t2) ?? /\b(?:each|every)\s+(?:click|tap)\b/i.exec(t2) ?? /^(?:click|tap)(?:ping)?(?:\s+(?:on\s+)?(?:this|it|here))?\s+to\b/i.exec(t2) ?? /^(?:click(?:ing)?|tap(?:ping)?)\s+(?:on\s+)?(?:the\s+)?(.+?)\s+(?:to|should|will)\b/i.exec(t2);
+  if (m) {
+    const s = subjectOf(m[1], c2);
+    return done("click", {}, m, { layerId: s.layerId, missing: s.missing });
+  }
+  return { trigger: "click", when: {}, missing: [], rest: t2 };
+}
+function reach$1(v, how, raw, c2) {
+  const h = how.toLowerCase();
+  const val2 = raw.trim();
+  if (v.type === "boolean") {
+    const not = /not|isnt/.test(h);
+    const on = ON_WORDS.test(val2);
+    if (!on && !OFF_WORDS.test(val2)) return null;
+    return { reachop: on !== not ? "true" : "false" };
+  }
+  if (v.type === "number") {
+    if (!Number.isFinite(Number(val2))) return null;
+    const op = /at most|drops|falls|goes down/.test(h) ? "atmost" : /more|greater|over|above/.test(h) ? "more" : /less|under|below/.test(h) ? "less" : /equals|is now|becomes|^is$/.test(h) ? "is" : /not|isnt/.test(h) ? "isnot" : "atleast";
+    return { reachop: op, reachto: val2 };
+  }
+  const text2 = /^qq\d+qq$/.test(val2) ? unq(val2, c2) : val2;
+  return { reachop: /not|isnt/.test(h) ? "isnot" : "is", reachto: text2 };
+}
+function parseCondition(text2, c2) {
+  const one = (s) => {
+    const sym = /^(.+?)\s*(>=|<=|!=|==|>|<|=)\s*(-?\d+(?:\.\d+)?)$/.exec(s);
+    if (sym) {
+      const v2 = findVar(sym[1], c2.project.variables);
+      const op = { ">=": "atleast", "<=": "atmost", "!=": "isnot", "==": "is", "=": "is", ">": "more", "<": "less" }[sym[2]];
+      return v2 ? { left: v2.name, op, right: { t: "num", value: Number(sym[3]) } } : null;
+    }
+    const flag = /^(?:the\s+)?(.+?)\s+(?:is|are)\s+(not\s+)?(on|off|true|false|yes|no|set|empty|full|filled in|filled)$/i.exec(s);
+    if (flag) {
+      const v2 = findVar(flag[1], c2.project.variables);
+      if (v2) {
+        const not = !!flag[2];
+        const w2 = flag[3].toLowerCase();
+        if (v2.type === "boolean") return { left: v2.name, op: (ON_WORDS.test(w2) || w2 === "set") !== not ? "true" : "false" };
+        if (w2 === "empty") return { left: v2.name, op: not ? "notempty" : "empty" };
+        if (w2 === "set" || w2 === "full" || w2 === "filled" || w2 === "filled in") return { left: v2.name, op: not ? "empty" : "notempty" };
+      }
+    }
+    const m = /^(?:the\s+)?(.+?)\s+(is at least|is at most|is more than|is greater than|is less than|is over|is under|is above|is below|is not|isnt|is|are|equals|reaches|has reached|hits|has|have)\s+(-?\d+(?:\.\d+)?|qq\d+qq|[\w-]+)$/i.exec(s);
+    if (!m) return null;
+    const v = findVar(m[1], c2.project.variables);
+    if (!v) return null;
+    const w = reach$1(v, m[2].replace(/^(?:has|have)$/i, "is at least").replace(/^has reached$/i, "reaches"), m[3], c2);
+    if (!w) return null;
+    if (w.reachop === "true" || w.reachop === "false") return { left: v.name, op: w.reachop };
+    if (v.type === "number") return { left: v.name, op: w.reachop, right: { t: "num", value: Number(w.reachto) } };
+    return { left: v.name, op: w.reachop, right: { t: "str", value: w.reachto ?? "" } };
+  };
+  const joinOr = /\s+or\s+/i.test(text2) && !/\s+and\s+/i.test(text2);
+  const parts = text2.split(joinOr ? /\s+or\s+/i : /\s+and\s+/i);
+  const rows = parts.map(one);
+  if (!rows.length || rows.some((r2) => !r2)) {
+    const whole = one(text2);
+    return whole ? { expr: conditionToExpr({ join: "and", rows: [whole] }) } : null;
+  }
+  return { expr: conditionToExpr({ join: joinOr ? "or" : "and", rows }) };
+}
+const FIRST_VERB = new RegExp(`\\s+(?=${VERBS}\\b)`, "i");
+function takeCondition(t2, c2) {
+  const at = /\b(?:only\s+)?if\b/i.exec(t2);
+  if (!at) return { rest: t2, only: "", otherwise: null, ignored: [] };
+  const before = t2.slice(0, at.index).replace(/[\s,]*\b(?:but|and|only)\s*$/i, "").trim();
+  const after = t2.slice(at.index + at[0].length).trim();
+  const [head, other] = after.split(/\s*,?\s*\b(?:otherwise|or else|else|if not)\b\s*/i);
+  const otherwise = other?.trim() ? other.trim() : null;
+  let condText = head.trim();
+  let rest = before;
+  if (!tokens(before, false).length) {
+    const sep = /\s*,\s*|\s+then\s+/i.exec(condText);
+    if (sep) {
+      rest = condText.slice(sep.index + sep[0].length);
+      condText = condText.slice(0, sep.index);
+    } else {
+      const v = FIRST_VERB.exec(condText);
+      if (v) {
+        rest = condText.slice(v.index).trim();
+        condText = condText.slice(0, v.index);
+      }
+    }
+  }
+  const cond = parseCondition(condText.replace(/[\s,]+$/, ""), c2);
+  if (!cond) return { rest, only: "", otherwise, ignored: [`the condition “${unq(condText, c2)}”`] };
+  return { rest, only: cond.expr, otherwise, ignored: [] };
+}
+function tidy(clause) {
+  let s = clause.trim().replace(/^[\s,]+|[\s,]+$/g, "");
+  for (let i = 0; i < 6; i++) {
+    const next = s.replace(/^(?:please|just|also|then|and|so|so that|it should|this should|should|will|to|let it|let this|i want (?:it |this )?to|i would like (?:it |this )?to|get (?:this|it) to|have (?:this|it)(?: to)?)\s+/i, "").replace(new RegExp(`^make\\s+(?:this|it|that)(?:\\s+button)?(?:\\s+to)?\\s+(?!say\\b|read\\b)(?=${VERBS}\\b)`, "i"), "").replace(/\s+(?:please|again|now)$/i, "").replace(/^(adds|shows|hides|plays|goes|takes|gives|resets|says|opens|toggles|increases|decreases|stops|starts|jumps|moves|turns|sets|changes|makes|fades|zooms|reveals)\b/i, (v) => /^goes$/i.test(v) ? "go" : v.slice(0, -1));
+    if (next === s) break;
+    s = next;
+  }
+  return s.trim();
+}
+function takeTransition(clause) {
+  const m = /\s*\b(?:with|using)\s+(?:a\s+|an\s+|the\s+)?(fade|slide|wipe|push|zoom|iris|instant)\s*(?:transition|effect)?\s*$/i.exec(clause) ?? /\s*\b(?:with|using)\s+(?:a\s+|an\s+|the\s+)?(fade|slide|wipe|push|zoom|iris|instant)\s+(?:transition|effect)\b/i.exec(clause);
+  if (!m) return { rest: clause };
+  const w = m[1].toLowerCase();
+  const pick = w === "instant" ? "none" : w === "fade" || w === "zoom" || w === "iris" ? w : `${w}Left`;
+  return PAGE_TRANSITIONS.some((x) => x.value === pick) ? { rest: clause.replace(m[0], ""), transition: pick } : { rest: clause };
+}
+function numberVarFor(noun, c2) {
+  return findVar(noun, counterChoices(c2.project));
+}
+function counterAnswer(v, phrase2, fallback2) {
+  if (v) return v.id;
+  const name = camel(phrase2);
+  return NEW_PREFIX + (name || fallback2);
+}
+const POINTS = "(?:points?|marks?|pts?)";
+function parseAction(raw, c2) {
+  const text2 = tidy(raw);
+  if (!text2) return null;
+  const tr = takeTransition(text2);
+  const t2 = tr.rest.trim();
+  let m;
+  const vars = c2.project.variables;
+  if (/^(?:start over|start again|restart|begin again|reset everything|start from the beginning)$/i.test(t2)) return hit("start-over");
+  if (/^(?:mute|unmute|mute (?:the )?(?:sound|audio)|toggle (?:the )?(?:sound|audio|volume)|(?:turn|switch) (?:the )?(?:sound|audio|volume) (?:on|off)|(?:turn|switch) (?:on|off) (?:the )?(?:sound|audio|volume)|(?:sound|audio) (?:on|off))$/i.test(t2)) {
+    if (!/^(?:turn|switch|toggle|sound|audio)/i.test(t2) || !findVar("sound", switchChoices(c2.project))) return hit("sound-toggle");
+  }
+  if (/^(?:stop|silence|end|turn off|fade out)\s+(?:the\s+)?(?:background\s+)?(?:music|soundtrack|sounds?|audio|song)$/i.test(t2)) return hit("soundtrack-stop");
+  m = /^(?:play|start|put on)\s+(?:some\s+|the\s+|a\s+)?(?:background\s+)?(?:music|soundtrack|song|tune)(?:\s+(?:called\s+|named\s+)?(.+))?$/i.exec(t2);
+  if (m) {
+    const a = m[1] ? matchName(m[1], audioAssets(c2.project)) : null;
+    return hit("soundtrack", a ? { sound: a.id } : {}, m[1] && !a ? [`a sound called “${plain(m[1])}”`] : []);
+  }
+  if (/^(?:jump|skip|go|seek|move|rewind|fast forward)\b(?=.*\b(?:video|film|movie)\b)/i.test(t2)) {
+    const tm = /(?:(\d+):(\d{2})|(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)?)/.exec(t2.replace(/\b(?:video|film|movie)\b/gi, " "));
+    if (tm) {
+      const secs2 = tm[1] !== void 0 ? Number(tm[1]) * 60 + Number(tm[2]) : Number(tm[3]);
+      const v = matchName(t2.replace(/\b(?:jump|skip|go|seek|move|rewind|fast forward|to|the|in|into|of|on|seconds?|secs?)\b|\d+(?::\d+)?/gi, " "), videoChoices(c2.ab));
+      return hit("video-seek", { seconds: String(secs2), ...v ? { video: v.id } : {} });
+    }
+  }
+  m = /^(?:(?:play|pause|stop|resume|start)(?:\s+or\s+(?:play|pause))?|play or pause|pause or play)\s+(?:the\s+)?(?:(.+?)\s+)?(?:video|film|movie|clip)$/i.exec(t2) ?? /^(?:play or pause|pause or play|pause|resume)\s+(?:the\s+)?(.+)$/i.exec(t2);
+  if (m) {
+    const name = m[1];
+    const v = name ? matchName(name, videoChoices(c2.ab)) : null;
+    if (!name || v || /video|film|movie|clip/i.test(t2)) return hit("video-toggle", v ? { video: v.id } : {}, name && !v && !/^(?:this|the|it)$/i.test(name) ? [`a video called “${plain(name)}”`] : []);
+  }
+  m = /^(?:play|run|start|trigger|do)\s+(?:the\s+|an?\s+)?(?:animation|timeline)\s*(?:called\s+|named\s+)?(.*)$/i.exec(t2) ?? /^(?:play|run|start|trigger)\s+(?:the\s+|an?\s+)?(.+?)\s+(?:animation|timeline)$/i.exec(t2) ?? /^animate(?:\s+(.+))?$/i.exec(t2);
+  if (m) {
+    const name = (m[1] ?? "").trim();
+    const tl = name ? matchName(name, c2.ab.timelines) : null;
+    return hit("animation", tl ? { timeline: tl.id } : {}, name && !tl ? [`an animation called “${plain(name)}”`] : []);
+  }
+  m = /^(?:play|ring|trigger|make|give)\s+(?:the\s+|an?\s+|some\s+)?(?:(.+?)\s+)?(?:sound|noise|audio|beep|ding|chime|clip|sound effect)(?:\s+(?:called|named)\s+(.+))?$/i.exec(t2) ?? /^(?:play|ring)\s+(?:the\s+|an?\s+)?(beep|ding|chime|click|bell)$/i.exec(t2);
+  if (m) {
+    const name = (m[1] ?? "") + " " + (m[2] ?? "");
+    const generic = !name.trim() || /^(?:a|an|the|some|short|little|nice|funny|sound)$/i.test(name.trim());
+    const a = generic ? null : matchName(name, audioAssets(c2.project));
+    return hit("sound", a ? { sound: a.id } : {}, !generic && !a && !/^(?:beep|ding|chime|click|bell)$/i.test(name.trim()) ? [`a sound called “${plain(name)}”`] : []);
+  }
+  m = /^play\s+(?:the\s+)?(.+)$/i.exec(t2);
+  if (m) {
+    const tl = matchName(m[1], c2.ab.timelines);
+    const snd = matchName(m[1], audioAssets(c2.project));
+    const vid = matchName(m[1], videoChoices(c2.ab));
+    if (tl) return hit("animation", { timeline: tl.id });
+    if (snd) return hit("sound", { sound: snd.id });
+    if (vid) return hit("video-toggle", { video: vid.id });
+  }
+  m = /^(?:set|change|make|put)\s+(?:the\s+)?(.+?)\s+(?:to|as|equal to|=)\s+(.+)$/i.exec(t2);
+  if (m) {
+    const v = findVar(m[1], vars.filter((x) => !x.live && !x.formula));
+    const val2 = unq(m[2], c2);
+    if (v?.type === "number" && Number.isFinite(Number(val2))) return hit("counter", { counter: v.id, numhow: "set", amount: val2 });
+    if (v?.type === "boolean" && (ON_WORDS.test(val2) || OFF_WORDS.test(val2))) return hit("switch", { switch: v.id, how: ON_WORDS.test(val2) ? "on" : "off" });
+    if (v && (v.type === "string" || v.type === "enum")) return hit("text-set", { textvar: v.id, textvalue: val2 });
+    if (!v && /^(?:on|off|true|false)$/i.test(val2) && !/\b(?:colou?r|text|label|opacity|width|height|size)\b/i.test(m[1])) return hit("switch", { switch: NEW_PREFIX + (camel(m[1]) || "isOn"), how: ON_WORDS.test(val2) ? "on" : "off" });
+  }
+  m = /^(?:turn|switch|set)\s+(?:the\s+)?(.+?)\s+(on|off)$/i.exec(t2) ?? /^(?:turn|switch)\s+(on|off)\s+(?:the\s+)?(.+)$/i.exec(t2);
+  if (m) {
+    const [phrase2, how] = /^(?:on|off)$/i.test(m[1]) ? [m[2], m[1]] : [m[1], m[2]];
+    const v = findVar(phrase2, switchChoices(c2.project));
+    return hit("switch", { switch: v ? v.id : NEW_PREFIX + (camel(phrase2) || "isOn"), how: how.toLowerCase() });
+  }
+  m = /^(?:toggle|flip|switch)\s+(?:the\s+)?(.+)$/i.exec(t2);
+  if (m) {
+    const v = findVar(m[1], switchChoices(c2.project));
+    const l = matchName(m[1], c2.layers);
+    if (v && (!l || nameScore(tokens(m[1]), v.name) >= nameScore(tokens(m[1]), l.name))) return hit("switch", { switch: v.id, how: "flip" });
+  }
+  m = new RegExp(`^(?:add|give|award|plus|put)\\s+(${NUM})?\\s*(?:more\\s+|extra\\s+)?${POINTS}?\\s*(?:to|onto|on|for)\\s+(?:the\\s+|their\\s+|my\\s+|a\\s+)?(.+)$`, "i").exec(t2);
+  if (m) {
+    const v = numberVarFor(m[2], c2);
+    return hit("counter", { counter: counterAnswer(v, m[2], "score"), numhow: "add", amount: String(numOf(m[1])) });
+  }
+  m = new RegExp(`^(?:add|give|award|get|earn|score)\\s+(${NUM})\\s*(?:more\\s+)?${POINTS}$`, "i").exec(t2);
+  if (m) return hit("counter", { counter: counterAnswer(findVar("score", counterChoices(c2.project)) ?? null, "score", "score"), numhow: "add", amount: String(numOf(m[1])) });
+  m = new RegExp(`^(?:subtract|take away|take off|take|remove|deduct|minus)\\s+(${NUM})\\s*${POINTS}?\\s*(?:from|off|of)\\s+(?:the\\s+|their\\s+|my\\s+)?(.+)$`, "i").exec(t2);
+  if (m) return hit("counter", { counter: counterAnswer(numberVarFor(m[2], c2), m[2], "score"), numhow: "subtract", amount: String(numOf(m[1])) });
+  m = new RegExp(`^(?:lose|deduct|subtract|minus)\\s+(${NUM})\\s*(${POINTS}|[a-z]+)$`, "i").exec(t2);
+  if (m) {
+    const v = /^(?:points?|marks?|pts?)$/i.test(m[2]) ? findVar("score", counterChoices(c2.project)) : numberVarFor(m[2], c2);
+    return hit("counter", { counter: counterAnswer(v, /^(?:points?|marks?|pts?)$/i.test(m[2]) ? "score" : m[2], "score"), numhow: "subtract", amount: String(numOf(m[1])) });
+  }
+  m = new RegExp(`^(?:increase|raise|bump up|bump|increment|count up|step up|go up)\\s+(?:the\\s+)?(.+?)(?:\\s+by\\s+(${NUM}))?$`, "i").exec(t2);
+  if (m) return hit("counter", { counter: counterAnswer(numberVarFor(m[1], c2), m[1], "count"), numhow: "add", amount: String(numOf(m[2])) });
+  m = new RegExp(`^(?:decrease|reduce|lower|decrement|count down|step down)\\s+(?:the\\s+)?(.+?)(?:\\s+by\\s+(${NUM}))?$`, "i").exec(t2);
+  if (m) return hit("counter", { counter: counterAnswer(numberVarFor(m[1], c2), m[1], "count"), numhow: "subtract", amount: String(numOf(m[2])) });
+  m = /^count\s+(?:the\s+)?(?:number of\s+)?(clicks?|taps?|times?|goes|tries|attempts|visits|presses)$/i.exec(t2);
+  if (m) return hit("counter", { counter: counterAnswer(numberVarFor(m[1], c2), m[1], "count"), numhow: "add", amount: "1" });
+  m = /^(?:go|move|jump|skip|advance|show)?\s*(?:on\s+)?(?:to\s+)?(?:the\s+)?(next|previous)\s+(item|card|picture|image|photo|step|slide|question)$/i.exec(t2);
+  if (m) {
+    const v = numberVarFor(m[2], c2);
+    const item = /^(?:item|card|picture|image|photo)$/i.test(m[2]) || !!v;
+    if (item) return hit(m[1].toLowerCase() === "next" ? "item-next" : "item-previous", { counter: v ? v.id : NEW_PREFIX + (/^(?:picture|image|photo)$/i.test(m[2]) ? "picture" : m[2].toLowerCase() === "card" ? "card" : m[2].toLowerCase() === "item" ? "item" : "slide") });
+  }
+  m = /^(?:go|move|jump|skip|continue|carry on|advance|head|proceed|turn|take (?:me|them|the (?:learner|student)s?|people|learners|users?)|send (?:me|them|the (?:learner|student)s?|people|learners|users?)|navigate)\b\s*(.*)$/i.exec(t2);
+  if (m || /^(?:next|next page|next slide|next screen|continue|go on|back|previous|previous page|previous slide|previous screen)$/i.test(t2)) {
+    const tail = (m ? m[1] : t2).replace(/^(?:on\s+)?/i, "").trim();
+    const transition = tr.transition ? { transition: tr.transition } : {};
+    if (/^(?:to\s+|onto\s+)?(?:the\s+)?(?:next|following)(?:\s+(?:page|slide|screen))?$/i.test(tail) || /^(?:next|next page|next slide|next screen|continue|on|go on|carry on)$/i.test(tail) || m && /^(?:continue|carry on|advance|proceed)$/i.test(m[0].trim())) return hit("page-next", transition);
+    if (/^(?:back|(?:back )?(?:to\s+)?(?:the\s+)?(?:previous|page before)(?:\s+(?:page|slide|screen))?|back (?:a|one) (?:page|slide|screen)|previous|previous page|previous slide|previous screen)$/i.test(tail)) return hit("page-previous", transition);
+    const to = /^(?:back\s+)?(?:to|onto)\s+(?:the\s+)?(.+)$/i.exec(tail);
+    if (to) return pageHit(to[1], c2, transition);
+  }
+  m = /^(?:open|show|display|visit|switch to)\s+(?:the\s+)?(.+?\s+(?:page|slide|screen))$/i.exec(t2);
+  if (m && matchName(m[1], c2.project.artboards)) return pageHit(m[1], c2, tr.transition ? { transition: tr.transition } : {});
+  m = /^(?:show only|only show)\s+(?:the\s+)?(.+)$/i.exec(t2) ?? /^show\s+(?:the\s+)?(.+?)\s+and\s+hide\s+(?:all\s+)?(?:the\s+)?(?:others?|rest|everything else|other ones)$/i.exec(t2);
+  if (m) return onlyOne(m[1], c2);
+  m = /^(?:change|set|update|replace)\s+(?:the\s+)?(?:text|label|words|caption)\s+(?:of\s+|on\s+|in\s+)?(.*?)\s*(?:to say|to read|to be|to|as)\s+(.+)$/i.exec(t2) ?? /^(?:change|set|update|replace)\s+(?:the\s+)?(.*?)\s*(?:text|label|words|caption)\s*(?:to say|to read|to be|to|as)\s+(.+)$/i.exec(t2) ?? /^(?:make|have)\s+(.+?)\s+(?:say|read)\s+(.+)$/i.exec(t2) ?? /^(?:change|set|update)\s+(?:the\s+)?(.+?)\s+(?:to say|to read)\s+(.+)$/i.exec(t2);
+  if (m) {
+    const r2 = layerRef(m[1].replace(/^(?:of|on|in)\s+/i, ""), c2);
+    return hit("look", { what: "text", words: unq(m[2], c2), ...r2.id ? { layer: r2.id } : {} }, r2.missing ? [r2.missing] : []);
+  }
+  m = new RegExp(`^(?:change|set)\\s+(?:the\\s+)?(?:colou?r|fill|background)(?:\\s+of\\s+(.+?))?\\s+to\\s+(${COLOUR_RE})$`, "i").exec(t2) ?? new RegExp(`^(?:make|turn|change|set|colou?r|paint|fill)\\s+(.*?)\\s*(?:to\\s+)?(?:the\\s+)?(${COLOUR_RE})$`, "i").exec(t2);
+  if (m) {
+    const who = (m[1] ?? "").replace(/\b(?:the|its|colou?r|fill|background|of|to)\b/gi, " ").trim();
+    const r2 = layerRef(who, c2);
+    const col = m[2].toLowerCase();
+    return hit("look", { what: "colour", colour: COLOURS[col] ?? col, ...r2.id ? { layer: r2.id } : {} }, r2.missing ? [r2.missing] : []);
+  }
+  m = /^(?:set|change)\s+(?:the\s+)?(?:opacity|transparency)(?:\s+of\s+(.+?))?\s+to\s+(\d{1,3})\s*(?:%|percent)?$/i.exec(t2) ?? /^(?:fade|make|set|change)\s+(.*?)\s*(?:to\s+|at\s+)?(\d{1,3})\s*(?:%|percent)\s*(?:see[- ]through|transparent|opaque|visible|opacity)?$/i.exec(t2);
+  if (m && Number(m[2]) <= 100) {
+    const r2 = layerRef((m[1] ?? "").replace(/\b(?:the|its|opacity|of|to)\b/gi, " "), c2);
+    return hit("look", { what: "opacity", percent: m[2], ...r2.id ? { layer: r2.id } : {} }, r2.missing ? [r2.missing] : []);
+  }
+  m = /^(?:fade|fade out|fade away)(?:\s+(?:the\s+)?(.+?))?(?:\s+(?:out|away))?$/i.exec(t2) ?? /^make\s+(.+?)\s+(?:transparent|see[- ]through|invisible)$/i.exec(t2);
+  if (m) {
+    const r2 = layerRef((m[1] ?? "").replace(/\b(?:the|out|away)\b/gi, " "), c2);
+    return hit("look", { what: "opacity", percent: "0", ...r2.id ? { layer: r2.id } : {} }, r2.missing ? [r2.missing] : []);
+  }
+  m = /^(?:make|set|resize|change)\s+(.*?)\s*(\d+)\s*(?:px|pixels?)?\s+(wide|tall|high)(?:\s+and\s+(\d+)\s*(?:px|pixels?)?\s+(wide|tall|high))?$/i.exec(t2);
+  if (m) {
+    const r2 = layerRef(m[1].replace(/\b(?:the|its|to|be)\b/gi, " "), c2);
+    const a = { what: "size", [/wide/i.test(m[3]) ? "width" : "height"]: m[2] };
+    if (m[4]) a[/wide/i.test(m[5]) ? "width" : "height"] = m[4];
+    return hit("look", { ...a, ...r2.id ? { layer: r2.id } : {} }, r2.missing ? [r2.missing] : []);
+  }
+  m = /^(?:set|change)\s+(?:the\s+)?(width|height)(?:\s+of\s+(.+?))?\s+to\s+(\d+)\s*(?:px|pixels?)?$/i.exec(t2);
+  if (m) {
+    const r2 = layerRef(m[2], c2);
+    return hit("look", { what: "size", [m[1].toLowerCase()]: m[3], ...r2.id ? { layer: r2.id } : {} }, r2.missing ? [r2.missing] : []);
+  }
+  if (/^(?:zoom out|show the whole page(?: again)?|show everything|zoom to (?:fit|the whole page))$/i.test(t2)) return hit("view-page");
+  m = /^(?:zoom|move the view|pan|scroll|focus)(?:\s+in)?(?:\s+(?:on|to|onto))?\s+(?:the\s+)?(.+)$/i.exec(t2);
+  if (m) {
+    const r2 = layerRef(m[1], c2);
+    return hit("view-layer", r2.id ? { layer: r2.id } : {}, r2.missing ? [r2.missing] : []);
+  }
+  m = /^(?:reset|clear|zero|put back|restore)\s+(?:the\s+)?(.+)$/i.exec(t2);
+  if (m) {
+    const all2 = resettable(c2.project);
+    if (/^(?:everything|all|all values|all the values|the values|all numbers|all of them|all scores|values)$/i.test(m[1].trim())) return hit("reset", { vars: joinSet(all2.map((v) => v.id)) });
+    const found = findAll(m[1], all2);
+    if (found.length) return hit("reset", { vars: joinSet(found.map((v) => v.id)) });
+    if (/^(?:reset|zero|put back|restore)/i.test(t2)) return hit("reset", {}, [`a value called “${plain(m[1])}”`]);
+  }
+  m = /^(?:say|announce|tell\s+(?:the\s+)?(?:users?|learners?|students?|them|people|everyone)(?:\s+that)?|tell screen ?readers?(?:\s+to say|\s+that)?|tell the screen reader(?:\s+to say|\s+that)?|read out|read aloud|speak|let screen ?readers know)\s+(.+)$/i.exec(t2);
+  if (m) return hit("announce", { words: unq(m[1], c2) });
+  m = /^open\s+(?:the\s+|a\s+)?(?:link\s+|website\s+|web ?site\s+|web ?page\s+|url\s+)?(?:at\s+|to\s+)?((?:https?:\/\/|www\.)\S+|\S+\.(?:com|org|edu|net|au|gov|io)\S*)$/i.exec(t2);
+  if (m) return hit("link", { link: /^https?:\/\//i.test(m[1]) ? m[1] : `https://${m[1]}` });
+  if (/^open\s+(?:a\s+|the\s+)?(?:link|website|web ?site|web ?page|url)$/i.test(t2)) return hit("link", {}, ["the web address"]);
+  m = /^run\s+(?:the\s+|a\s+)?(?:script\s+)?(?:(.+?)\s+)?script$/i.exec(t2) ?? /^run\s+(?:the\s+)?script\s+(.+)$/i.exec(t2);
+  if (m) {
+    const s = m[1] ? matchName(m[1], c2.project.scripts) : null;
+    return hit("script", s ? { script: s.id } : {}, m[1] && !s ? [`a script called “${plain(m[1])}”`] : []);
+  }
+  m = /^(?:toggle|flip|show or hide|hide or show|show\/hide)\s+(?:the\s+)?(.+)$/i.exec(t2);
+  if (m) {
+    const r2 = layerRef(m[1], c2);
+    return hit("toggle", r2.id ? { layer: r2.id } : {}, r2.missing ? [r2.missing] : []);
+  }
+  m = /^(?:show|reveal|display|unhide|bring up|pop up|uncover|open|make visible)(?:\s+up)?(?:\s+(?:the\s+|a\s+)?(.+))?$/i.exec(t2) ?? /^make\s+(.+?)\s+(?:visible|appear|show up)$/i.exec(t2);
+  if (m) return showHide("show", m[1], c2);
+  m = /^(?:hide|remove|get rid of|dismiss|close|take away|clear|make invisible)(?:\s+(?:the\s+|a\s+)?(.+))?$/i.exec(t2) ?? /^make\s+(.+?)\s+(?:disappear|vanish|go away)$/i.exec(t2);
+  if (m) return showHide("hide", m[1], c2);
+  return null;
+}
+function showHide(op, phrase2, c2) {
+  const p = (phrase2 ?? "").replace(/\s+(?:again|up)$/i, "").trim();
+  if (op === "show" && p) {
+    const l = matchName(p, c2.layers);
+    const pg = matchName(p, c2.project.artboards);
+    if (pg && (!l || /\b(?:page|screen|slide)\b/i.test(p))) return pageHit(p, c2, {});
+  }
+  const r2 = layerRef(p, c2);
+  return hit(op, r2.id ? { layer: r2.id } : {}, r2.missing ? [r2.missing] : []);
+}
+function pageHit(phrase2, c2, extra) {
+  const p = phrase2.trim();
+  const others = otherPages({ project: c2.project, ab: c2.ab, layerId: c2.layerId });
+  let target = null;
+  const num2 = /^(?:page|slide|screen)\s+(\d+)$/i.exec(p);
+  if (num2) target = c2.project.artboards[Number(num2[1]) - 1] ?? null;
+  else if (/^(?:the\s+)?(?:start|beginning|first(?:\s+(?:page|slide|screen))?|home(?:\s+page)?|title(?:\s+page)?)$/i.test(p)) target = c2.project.artboards.find((a) => a.id === c2.project.settings.startArtboardId) ?? c2.project.artboards[0] ?? null;
+  else if (/^(?:the\s+)?(?:end|last(?:\s+(?:page|slide|screen))?|final(?:\s+(?:page|slide|screen))?)$/i.test(p)) target = c2.project.artboards[c2.project.artboards.length - 1] ?? null;
+  else target = matchName(p, c2.project.artboards);
+  if (target && !others.some((a) => a.id === target.id)) target = null;
+  return hit("page-pick", { ...extra, ...target ? { page: target.id } : {} }, target ? [] : [`a page called “${plain(p)}”`]);
+}
+function onlyOne(phrase2, c2) {
+  const r2 = layerRef(phrase2, c2);
+  const id = r2.id === THIS_LAYER || !r2.id ? c2.layerId : r2.id;
+  const mine = findNode(c2.ab, id);
+  const sibs = siblingsOf(c2.ab, id);
+  const same2 = sibs.filter((n) => n.type === mine?.type);
+  const hide2 = (same2.length ? same2 : sibs).map((n) => n.id);
+  return hit("only-one", { ...r2.id ? { layer: r2.id } : {}, set: joinSet(hide2) }, r2.missing ? [r2.missing] : []);
+}
+function findNode(ab, id) {
+  let found;
+  walk(ab.children, (n) => void (n.id === id && (found = n)));
+  return found;
+}
+const SEP = /(\s*,\s*|\s+and then\s+|\s+then\s+|\s+and also\s+|\s+also\s+|\s+after that\s+|\s+and\s+)/i;
+function readClauses(text2, c2) {
+  const parts = text2.split(SEP);
+  const pieces2 = [];
+  const seps = [];
+  parts.forEach((p, i2) => i2 % 2 ? seps.push(p) : pieces2.push(p));
+  const hits = [];
+  const ignored = [];
+  let i = 0;
+  while (i < pieces2.length) {
+    let found = null;
+    let j = i - 1;
+    let loose = null;
+    for (let e = pieces2.length - 1; e >= i; e--) {
+      let s = pieces2[i];
+      for (let k = i + 1; k <= e; k++) s += seps[k - 1] + pieces2[k];
+      const h = parseAction(s, c2);
+      if (!h) continue;
+      if (!h.missing.length) {
+        found = h;
+        j = e;
+        break;
+      }
+      loose ??= { hit: h, at: e };
+    }
+    if (!found && loose) found = loose.hit, j = loose.at;
+    if (found) {
+      hits.push(found);
+      i = j + 1;
+    } else {
+      if (pieces2[i].trim()) ignored.push(unq(pieces2[i], c2));
+      i++;
+    }
+  }
+  return { hits, ignored };
+}
+function prep(text2) {
+  const quotes = [];
+  const t2 = text2.replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/"([^"]*)"/g, (_, q) => ` qq${quotes.push(q) - 1}qq `).replace(/[?!]+/g, " ").replace(/\.(?=\s|$)/g, " ").replace(/\s+/g, " ").trim().replace(/^please\s+/i, "").replace(/\s+please$/i, "");
+  return { t: t2, quotes };
+}
+function describeIt(sentence, project, ab, selectedLayerId = "") {
+  const { t: t2, quotes } = prep(sentence);
+  if (!t2) return null;
+  const layers2 = layerChoices(ab).map((l) => ({ id: l.id, name: l.name }));
+  const c2 = { project, ab, layerId: selectedLayerId, layers: layers2, quotes };
+  const tr = takeTrigger(t2, c2);
+  const stray = /\s*\b(?:when|whenever|every time|each time|as soon as|once)\b(.+)$/i.exec(tr.rest);
+  const cond = takeCondition(stray ? tr.rest.slice(0, stray.index) : tr.rest, c2);
+  if (stray) cond.ignored.push(unq(stray[0].trim(), c2));
+  const { hits, ignored } = readClauses(cond.rest, c2);
+  if (!hits.length) return null;
+  const layerId = tr.layerId ?? selectedLayerId ?? "";
+  const ctx2 = { project, ab, layerId };
+  const withDefaults = (h) => ({ recipe: h.recipe, answers: { ...defaultAnswers(RECIPE_BY_ID[h.recipe], ctx2), ...h.answers } });
+  const main = withDefaults(hits[0]);
+  const then = hits.slice(1).filter((h) => h.recipe !== "count-done").map(withDefaults);
+  let otherwise = null;
+  const missing = [...tr.missing, ...hits.flatMap((h) => h.missing)];
+  const lost = [...ignored, ...cond.ignored];
+  if (cond.only && cond.otherwise) {
+    const o = readClauses(cond.otherwise, c2);
+    if (o.hits[0]) {
+      otherwise = withDefaults(o.hits[0]);
+      missing.push(...o.hits[0].missing);
+    }
+    lost.push(...o.ignored);
+  }
+  const when = { ...defaultTriggerAnswers(tr.trigger, ctx2), ...tr.when };
+  const only = cond.only;
+  const gap = incomplete(RECIPE_BY_ID[main.recipe], main.answers, project, ab) ?? triggerIncomplete(tr.trigger, when, project, ab);
+  const who = layers2.find((l) => l.id === layerId)?.name ?? "this layer";
+  let said = `When ${triggerLabel(tr.trigger, who)}: ${RECIPE_BY_ID[main.recipe].label.replace(/…$/, "")}`;
+  if (layerId && !gap) {
+    try {
+      said = buildBehaviour(ctx2, main.recipe, tr.trigger, main.answers, void 0, { when, then, only, otherwise }).sentence;
+    } catch {
+    }
+  }
+  return { recipe: main.recipe, answers: main.answers, trigger: tr.trigger, when, then, only, otherwise, layerId, sentence: said, missing: [...new Set(missing)], ignored: lost };
+}
+function lookFor(themes) {
+  const out = { ...LIGHT_LOOK };
+  if (!hasTokens(themes)) return out;
+  for (const d of STARTER_TOKEN_DEFS) {
+    const token = tokenByName(themes, d.name);
+    if (token) out[d.key] = tokenRef(token.id);
+  }
+  return out;
+}
+const solid$1 = (color) => ({ type: "solid", color });
+function lookDefaults(project, type) {
+  if (!hasTokens(project.themes)) return {};
+  const l = lookFor(project.themes);
+  switch (type) {
+    case "rect":
+    case "ellipse":
+    case "polygon":
+    case "star":
+      return { fill: solid$1(l.surfaceMuted) };
+    case "path":
+      return { stroke: { paint: solid$1(l.text), width: 2 } };
+    case "text":
+      return { color: l.text };
+    case "frame":
+      return { fill: solid$1(l.background) };
+    case "button":
+      return { fill: solid$1(l.button), color: l.onButton };
+    case "input":
+      return { fill: solid$1(l.background), stroke: { paint: solid$1(l.border), width: 1 }, color: l.text };
+    case "link":
+      return { color: l.link };
+    case "progress":
+      return { fill: solid$1(l.surfaceMuted), barFill: solid$1(l.button) };
+    case "chart":
+      return { colors: [l.button, l.link, l.success, l.warning, l.error, l.muted], color: l.text };
+    case "connector":
+      return { fill: solid$1(l.background), stroke: { paint: solid$1(l.muted), width: 2, cap: "round", join: "round" }, color: l.text };
+    default:
+      return {};
+  }
+}
+let L = lookFor(void 0);
+const AREA_OFF = "#00000000";
+const AREA_ON = "#fb940033";
+const AREA_OK = "#2f6f1740";
+const AREA_BAD = "#b3261e40";
+const AREA_MISS = "#8a520040";
+const bodyStyle = (kind, answerBy) => kind === "multiple" ? "check" : kind === "blank" ? answerBy === "drag" ? "dragblank" : "blank" : kind === "ordering" ? "order" : kind === "matching" ? "match" : kind === "categorise" ? "categorise" : kind === "hotspot" ? "spot" : "radio";
+const RESET_LABELS = { again: "Try again", next: "Next question" };
+const solid = (color) => ({ type: "solid", color });
+const stroke = (color, width = 1.5) => ({ paint: solid(color), width });
+const row = (gap) => ({ ...defaultAutoLayout("row"), gap, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "center", hugHeight: true });
+const column = (gap) => ({ ...defaultAutoLayout("column"), gap, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "stretch" });
+const partOf = (n) => (n.questionPart ?? "").split(":")[0];
+function partsOf(frame) {
+  const out = {};
+  walk(frame.children, (n) => {
+    const p = partOf(n);
+    if (p) (out[p] ??= []).push(n);
+  });
+  return out;
+}
+const questionFrames = (ab) => {
+  const out = [];
+  walk(ab.children, (n) => {
+    if (n.type === "frame" && n.question) out.push(n);
+  });
+  return out;
+};
+function freePrefix(p, base2 = "q") {
+  const used = /* @__PURE__ */ new Set();
+  for (const ab of p.artboards) for (const f2 of questionFrames(ab)) used.add(f2.question.prefix);
+  for (const v of p.variables) {
+    const m = /^(.+?)_(?:prompt|items|answered)$/.exec(v.name);
+    if (m) used.add(m[1]);
+  }
+  for (let i = 1; ; i++) if (!used.has(`${base2}${i}`)) return `${base2}${i}`;
+}
+const LOOK_SLOTS = ["fill", "line", "text"];
+const SLOT_PROP = { fill: "fill.color", line: "stroke.paint.color", text: "color" };
+const PROP_SLOT = { "fill.color": "fill", "stroke.paint.color": "line", color: "text" };
+function defaultLooks(l = L) {
+  return {
+    right: { fill: l.successSurface, line: l.success, text: l.text },
+    wrong: { fill: l.errorSurface, line: l.error, text: l.text },
+    missed: { fill: l.warningSurface, line: l.warning, text: l.text },
+    picked: { fill: l.surfaceMuted, line: l.primary, text: l.text }
+  };
+}
+function effectiveLooks(q, l = L) {
+  const d = defaultLooks(l);
+  const out = defaultLooks(l);
+  for (const s of LOOK_STATES) for (const slot of LOOK_SLOTS) out[s][slot] = q?.looks?.[s]?.[slot] ?? d[s][slot];
+  return out;
+}
+let LK = effectiveLooks(void 0);
+const setLook = (q, themes) => {
+  L = lookFor(themes);
+  LK = effectiveLooks(q);
+};
+const reach = (ref) => ref === "item" ? ref : `${ref}?`;
+const lookKey = (ref, picked) => picked ? `${reach(ref)}.state || (${reach(ref)}.selected ? "picked" : "")` : `${reach(ref)}.state`;
+function lookBindings(ref, normal, states = ["right", "wrong", "missed"], picked = false) {
+  const bindings = {};
+  const converters = {};
+  for (const slot of LOOK_SLOTS) {
+    const own = normal[slot];
+    if (own === void 0) continue;
+    const prop = SLOT_PROP[slot];
+    bindings[prop] = lookKey(ref, picked);
+    const map = {};
+    for (const s of states) map[LOOK_KEYS[s]] = LK[s][slot];
+    converters[prop] = [{ type: "map", map, fallback: own }];
+  }
+  return { bindings, converters };
+}
+const STATE_BINDING = /\.state( \|\| \(.+\.selected \? "picked" : ""\))?$/;
+function applyLooks(frame, before, after) {
+  let changed = 0;
+  walk(frame.children, (n) => {
+    for (const [prop, slot] of Object.entries(PROP_SLOT)) {
+      const list2 = n.converters?.[prop];
+      const c2 = list2?.length === 1 ? list2[0] : void 0;
+      if (c2?.type !== "map" || !STATE_BINDING.test(n.bindings?.[prop] ?? "")) continue;
+      for (const s of LOOK_STATES) {
+        const key = LOOK_KEYS[s];
+        if (key in c2.map && c2.map[key] === before[s][slot] && before[s][slot] !== after[s][slot]) {
+          c2.map[key] = after[s][slot];
+          changed++;
+        }
+      }
+    }
+  });
+  return changed;
+}
+const STATE_WORDS = '{item.state == "correct" ? "✓ Right" : item.state == "wrong" ? "✗ Wrong" : item.state == "missed" ? "← Right answer" : ""}';
+const STATE_DESCRIPTION = 'item.state == "correct" ? "Right" : item.state == "wrong" ? "Wrong" : item.state == "missed" ? "This was the right answer" : ""';
+function text(name, part, value, o = {}) {
+  return createNode("text", { name, questionPart: part, text: value, fontSize: 16, color: L.text, autoSize: "height", width: 200, height: 24, ...o });
+}
+function button(name, part, label, primary, bindings) {
+  return createNode("button", {
+    name,
+    questionPart: part,
+    label,
+    width: 150,
+    height: 44,
+    fill: solid(primary ? L.button : L.surfaceMuted),
+    color: primary ? L.onButton : L.text,
+    ...bindings ? { bindings } : {}
+  });
+}
+const ALL_LOOKS = ["right", "wrong", "missed", "picked"];
+function optionLooks(normal, own, picked) {
+  const l = lookBindings("item", normal, picked ? ALL_LOOKS : void 0, picked);
+  return { bindings: { ...own, ...l.bindings }, converters: l.converters };
+}
+function optionTemplate(style) {
+  const base2 = { height: 52, fill: solid(L.background), cornerRadius: 10, clip: false };
+  if (style === "order") {
+    return createNode("frame", {
+      ...base2,
+      name: "Item",
+      questionPart: "option",
+      stroke: stroke(L.border),
+      layout: { ...row(12), padding: { top: 10, right: 12, bottom: 10, left: 16 } },
+      ...optionLooks({ fill: L.background, line: L.border }, { ariaDescription: STATE_DESCRIPTION }, false),
+      children: [
+        text("Number", "optionNumber", "{item.number}.", { width: 28, color: L.muted, fontWeight: 600, decorative: true }),
+        text("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, ...lookBindings("item", { text: L.text }) }),
+        text("Result", "optionState", STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L.muted, autoSize: "width", width: 90, decorative: true }),
+        createNode("button", { name: "Move up", questionPart: "moveUp", label: "↑", width: 40, height: 36, fill: solid(L.surfaceMuted), color: L.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
+        createNode("button", { name: "Move down", questionPart: "moveDown", label: "↓", width: 40, height: 36, fill: solid(L.surfaceMuted), color: L.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } })
+      ]
+    });
+  }
+  const checkbox = style === "check";
+  const markerBase = { name: "Marker", questionPart: "marker", width: 22, height: 22, fill: solid(L.background), stroke: stroke(L.border, 2), decorative: true, bindings: { "fill.color": 'item.selected ? "' + L.primary + '" : "' + L.background + '"', "stroke.paint.color": 'item.selected ? "' + L.primary + '" : "' + L.border + '"' } };
+  return createNode("frame", {
+    ...base2,
+    name: "Option",
+    questionPart: "option",
+    role: checkbox ? "checkbox" : "radio",
+    focusable: true,
+    stroke: stroke(L.border),
+    layout: { ...row(12), padding: { top: 12, right: 16, bottom: 12, left: 16 } },
+    ...optionLooks({ fill: L.background, line: L.border }, { ariaChecked: "item.selected", ariaLabel: "item.text", ariaDescription: STATE_DESCRIPTION }, true),
+    children: [
+      checkbox ? createNode("rect", { ...markerBase, cornerRadius: 5 }) : createNode("ellipse", markerBase),
+      text("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, decorative: true, ...lookBindings("item", { text: L.text }, ALL_LOOKS, true) }),
+      text("Result", "optionState", STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L.muted, autoSize: "width", width: 110, decorative: true })
+    ]
+  });
+}
+function optionsBody(q, style) {
+  const items = varName(q, "items");
+  return createNode("frame", {
+    name: style === "order" ? "Items" : "Options",
+    questionPart: `options:${style}`,
+    fill: null,
+    stroke: null,
+    clip: false,
+    // A group of radio buttons is named by the question; the checkboxes and the ordering list are just a group
+    ...style === "radio" ? { role: "radiogroup", bindings: { ariaLabel: varName(q, "prompt") } } : {},
+    layout: column(10),
+    repeat: { items, layout: "none", gap: 0, columns: 1 },
+    children: [optionTemplate(style)]
+  });
+}
+function blankRow(q, i, blankVar) {
+  const items = varName(q, "items");
+  const at = `${items}[${i}]`;
+  const line = lookBindings(at, { line: L.border }, ["right", "wrong"]);
+  return createNode("frame", {
+    name: `Blank ${i + 1}`,
+    questionPart: "blankRow",
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: { ...column(6), align: "stretch" },
+    children: [
+      text("Blank label", "blankLabel", q.blanks[i]?.label ?? "", { fontSize: 14, fontWeight: 600, color: L.muted, bindings: { text: `${at}?.label ?? ""` } }),
+      createNode("input", {
+        name: "Blank input",
+        questionPart: "blankInput",
+        placeholder: "Your answer",
+        ariaLabel: q.blanks[i]?.label || "Answer",
+        ...q.blanks[i]?.spelling && q.guard?.spellcheck !== false ? { noAssist: true } : {},
+        ...q.blanks[i]?.spelling && q.guard && q.guard.paste !== false ? { noPaste: true } : {},
+        width: 280,
+        height: 44,
+        bindingModes: { value: "both" },
+        converters: line.converters,
+        bindings: { value: blankVar, ...line.bindings, ariaLabel: `${at}?.label || "Answer"` }
+      }),
+      text("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: L.warning, bindings: { visible: `!!${at}?.answer` } })
+    ]
+  });
+}
+function blanksBody(q, blankVars) {
+  return createNode("frame", {
+    name: "Blanks",
+    questionPart: "blanks",
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: column(14),
+    children: q.blanks.map((_, i) => blankRow(q, i, blankVars[i]))
+  });
+}
+const TERM_W = 170;
+const TERM_H = 52;
+const TERM_PITCH = 76;
+const AREA_W = 592;
+const AREA_H = 280;
+const termTag = (q) => `${q.prefix}-term`;
+const itemAt = (q, i) => `${varName(q, "items")}[${i}]`;
+const stateFor = (ref) => {
+  const r2 = `${ref}?`;
+  return {
+    description: (right, wrong) => `${r2}.state == "correct" ? "Right" : ${r2}.state == "wrong" ? ${wrong} : ${r2}.state == "missed" ? ${right} : ""`
+  };
+};
+function dealOrder(n, seed) {
+  const out = Array.from({ length: n }, (_, i) => i);
+  let h = 7;
+  for (const c2 of seed) h = h * 31 + c2.charCodeAt(0) >>> 0;
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h, 1103515245) + 12345 >>> 0;
+    const j = h % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  if (n > 1 && out.every((v, i) => v === i)) out.push(out.shift());
+  return out;
+}
+function chip(q, o) {
+  const at = itemAt(q, o.index);
+  return createNode("frame", {
+    name: o.name,
+    questionPart: `${o.part}:${o.id}`,
+    x: o.x,
+    y: o.y,
+    width: o.w ?? TERM_W,
+    height: o.h ?? TERM_H,
+    fill: solid(L.background),
+    stroke: stroke(L.border, 2),
+    cornerRadius: 10,
+    clip: false,
+    layout: { ...row(8), padding: { top: 8, right: 12, bottom: 8, left: 12 }, hugHeight: false },
+    ariaLabel: o.word,
+    draggable: { tags: [o.tag], onMiss: "return", label: o.word },
+    shadow: { x: 0, y: 2, blur: 6, spread: 0, color: "rgba(0,0,0,0.15)" },
+    ...o.marks ? lookBindings(at, { fill: L.background, line: L.border }) : {},
+    children: [text(`${o.name} text`, `${o.part}Text`, o.marks ? `{${at}?.state == "correct" ? "✓ " : ${at}?.state == "wrong" ? "✗ " : ""}{${at}?.text}` : o.word, { layoutItem: { width: "fill" }, decorative: true, ...o.marks ? lookBindings(at, { text: L.text }) : {} })]
+  });
+}
+function matchTerm(q, p, i, slot, name = `Term ${i + 1}`) {
+  return createNode("frame", {
+    name,
+    questionPart: `matchTerm:${p.id}`,
+    x: 0,
+    y: slot * TERM_PITCH,
+    width: TERM_W,
+    height: TERM_H,
+    fill: solid(L.background),
+    stroke: stroke(L.border, 2),
+    cornerRadius: 10,
+    clip: false,
+    layout: { ...row(8), padding: { top: 8, right: 12, bottom: 8, left: 12 }, hugHeight: false },
+    ariaLabel: p.term,
+    draggable: { tags: [termTag(q)], onMiss: "return", label: p.term },
+    shadow: { x: 0, y: 2, blur: 6, spread: 0, color: "rgba(0,0,0,0.15)" },
+    ...lookBindings(itemAt(q, i), { fill: L.background, line: L.border }),
+    children: [text("Term text", "matchTermText", `{${itemAt(q, i)}?.text}`, { layoutItem: { width: "fill" }, decorative: true, ...lookBindings(itemAt(q, i), { text: L.text }) })]
+  });
+}
+function matchRow(q, p, i) {
+  const at = itemAt(q, i);
+  const st = stateFor(at);
+  const line = lookBindings(at, { line: L.border });
+  return createNode("frame", {
+    name: `Match ${i + 1}`,
+    questionPart: `matchRow:${p.id}`,
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: { ...column(4), align: "stretch" },
+    children: [
+      createNode("frame", {
+        name: "Match line",
+        questionPart: "matchLine",
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: row(12),
+        children: [
+          text("Definition", "matchDefinition", `{${at}?.label}`, { layoutItem: { width: "fill" } }),
+          createNode("frame", {
+            name: `Slot ${i + 1}`,
+            questionPart: `matchZone:${p.id}`,
+            width: TERM_W,
+            height: TERM_H,
+            fill: null,
+            stroke: { ...stroke(L.border, 2), dash: [6, 4] },
+            cornerRadius: 10,
+            clip: false,
+            dropZone: { accepts: [termTag(q)], capacity: 1, whenFull: "swap", snap: "center", label: p.match },
+            converters: line.converters,
+            bindings: { ...line.bindings, ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) }
+          })
+        ]
+      }),
+      text("Match result", "matchState", `{${at}?.state == "correct" ? "✓ Right" : ${at}?.state == "wrong" ? "✗ Wrong" + (${at}?.answer ? ". The answer is " + ${at}.answer : "") : ""}`, {
+        fontSize: 13,
+        fontWeight: 600,
+        color: L.muted,
+        decorative: true,
+        width: TERM_W,
+        height: 18,
+        //Out of the flow on purpose. A hidden layer takes no room in the layout now (task 217), so it is not about measuring any more,
+        //but showing it in the flow would still push the rows below it down on Check, and the terms already dropped in the slots stay put
+        layoutItem: { position: "absolute", inset: { left: 402 - TERM_W, top: TERM_H + 2 } },
+        bindings: { visible: `!!${at}?.state` }
+      })
+    ]
+  });
+}
+const matchTerms = (q) => [
+  ...q.pairs.map((p, i) => ({ id: p.id, term: p.term, index: i, name: `Term ${i + 1}` })),
+  ...(q.extras ?? []).map((x, k) => ({ id: x.id, term: x.text, index: q.pairs.length + k, name: `Extra ${k + 1}` }))
+];
+function matchingBody(q) {
+  const all2 = matchTerms(q);
+  const n = all2.length;
+  const order = dealOrder(n, q.prefix);
+  return createNode("frame", {
+    name: "Matching",
+    questionPart: "matching",
+    fill: null,
+    stroke: null,
+    clip: false,
+    //The terms are the later layer so they paint over the slots, and the reversed layout puts them on the left
+    layout: { ...row(20), align: "start", reverse: true },
+    children: [
+      createNode("frame", {
+        name: "Matches",
+        questionPart: "matches",
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: { ...column(24), align: "stretch" },
+        layoutItem: { width: "fill" },
+        children: q.pairs.map((p, i) => matchRow(q, p, i))
+      }),
+      createNode("frame", {
+        name: "Terms",
+        questionPart: "terms",
+        width: TERM_W,
+        height: Math.max(TERM_H, n * TERM_PITCH - (TERM_PITCH - TERM_H)),
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: null,
+        children: order.map((pi, slot) => matchTerm(q, { id: all2[pi].id, term: all2[pi].term }, all2[pi].index, slot, all2[pi].name))
+      })
+    ]
+  });
+}
+const CHIP_W = 150;
+const CHIP_H = 44;
+const CHIP_PITCH_X = 162;
+const CHIP_PITCH_Y = 56;
+const CHIP_COLS = 3;
+const GROUP_H = 170;
+const catTag = (q) => `${q.prefix}-item`;
+const wordTag = (q) => `${q.prefix}-word`;
+const chipSpot = (k) => ({ x: k % CHIP_COLS * CHIP_PITCH_X, y: Math.floor(k / CHIP_COLS) * CHIP_PITCH_Y });
+const trayHeight = (n) => Math.max(CHIP_H, Math.ceil(Math.max(1, n) / CHIP_COLS) * CHIP_PITCH_Y - (CHIP_PITCH_Y - CHIP_H));
+function catZone(q, g, i) {
+  return createNode("frame", {
+    name: g.name || `Group ${i + 1}`,
+    questionPart: `catZone:${g.id}`,
+    height: GROUP_H,
+    layoutItem: { width: "fill" },
+    fill: solid(L.surface),
+    stroke: { ...stroke(L.border, 2), dash: [8, 5] },
+    cornerRadius: 12,
+    clip: false,
+    layout: null,
+    //Unlimited, and a dropped item stays where it was let go. Every group takes every item: whether it is right is for Check to say
+    dropZone: { accepts: [catTag(q)], snap: "none", label: g.name },
+    ariaLabel: g.name,
+    children: [text(`Group ${i + 1} heading`, "catHeading", g.name, { x: 12, y: 10, width: 140, fontWeight: 700, fontSize: 18, decorative: true })]
+  });
+}
+function catCard(q, c2, i) {
+  const spot = chipSpot(i);
+  return chip(q, { name: `Item ${i + 1}`, part: "catCard", id: c2.id, word: c2.text, tag: catTag(q), index: i, ...spot, w: CHIP_W, h: CHIP_H, marks: true });
+}
+function categoriseBody(q) {
+  const groups = q.groups ?? [];
+  const cards = q.cards ?? [];
+  const order = dealOrder(cards.length, q.prefix);
+  const items = varName(q, "items");
+  return createNode("frame", {
+    name: "Categorise",
+    questionPart: "categorise",
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: column(16),
+    children: [
+      createNode("frame", {
+        name: "Groups",
+        questionPart: "groups",
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: { ...row(12), align: "start", hugHeight: true },
+        children: groups.map((g, i) => catZone(q, g, i))
+      }),
+      //The tray is a frame with no layout, because draggable layers can't sit in an auto layout flow
+      createNode("frame", {
+        name: "Items",
+        questionPart: "cardTray",
+        width: CHIP_PITCH_X * CHIP_COLS - 12,
+        height: trayHeight(cards.length),
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: null,
+        children: order.map((ci, slot) => {
+          const made = catCard(q, cards[ci], ci);
+          Object.assign(made, chipSpot(slot));
+          return made;
+        })
+      }),
+      text("Right groups", "catAnswer", `{${items}.filter(i => i.answer).map(i => i.text + " goes in " + i.answer).join(". ")}`, {
+        fontSize: 14,
+        fontWeight: 600,
+        color: L.warning,
+        bindings: { visible: `${items}.some(i => i.answer)` }
+      })
+    ]
+  });
+}
+function syncCategories(frame, q, ab) {
+  const groupsBox = partsOf(frame).groups?.[0];
+  const tray = partsOf(frame).cardTray?.[0];
+  if (!groupsBox || !tray) return;
+  const groups = q.groups ?? [];
+  const cards = q.cards ?? [];
+  const zoneId = (n) => /^catZone:(.+)$/.exec(n.questionPart ?? "")?.[1];
+  const cardId = (n) => /^catCard:(.+)$/.exec(n.questionPart ?? "")?.[1];
+  const gids = new Set(groups.map((g) => g.id));
+  const cids = new Set(cards.map((c2) => c2.id));
+  groupsBox.children = groupsBox.children.filter((c2) => !zoneId(c2) || gids.has(zoneId(c2)));
+  const hadCards = tray.children.filter((c2) => cardId(c2)).length;
+  tray.children = tray.children.filter((c2) => !cardId(c2) || cids.has(cardId(c2)));
+  const names = nodeNames(ab);
+  groups.forEach((g, i) => {
+    if (!groupsBox.children.some((c2) => zoneId(c2) === g.id)) {
+      const made = catZone(q, g, i);
+      made.name = uniqueName(names, made.name);
+      groupsBox.children.push(made);
+    }
+  });
+  let changed = hadCards !== tray.children.length;
+  cards.forEach((c2, i) => {
+    if (!tray.children.some((x) => cardId(x) === c2.id)) {
+      const made = catCard(q, c2, i);
+      made.name = uniqueName(names, made.name);
+      tray.children.push(made);
+      changed = true;
+    }
+  });
+  const rank = new Map(groups.map((g, i) => [g.id, i]));
+  groupsBox.children.sort((a, b) => (rank.get(zoneId(a) ?? "") ?? 0) - (rank.get(zoneId(b) ?? "") ?? 0));
+  groups.forEach((g, i) => {
+    const z = groupsBox.children.find((c2) => zoneId(c2) === g.id);
+    const heading2 = (partsOf(z).catHeading ?? [])[0];
+    const was = heading2 && heading2.type === "text" ? heading2.text : "";
+    if (/^Group \d+$/.test(z.name) || z.name === g.name || was && z.name === was && g.name) z.name = g.name || `Group ${i + 1}`;
+    z.ariaLabel = g.name;
+    if (z.dropZone) {
+      z.dropZone.label = g.name;
+      z.dropZone.accepts = [catTag(q)];
+    }
+    if (heading2 && heading2.type === "text") {
+      heading2.text = g.name;
+      for (const r2 of heading2.runs ?? []) r2.text = g.name;
+    }
+  });
+  cards.forEach((c2, i) => {
+    const card = tray.children.find((x) => cardId(x) === c2.id);
+    reindex(card, q, i);
+    if (/^Item \d+$/.test(card.name)) card.name = `Item ${i + 1}`;
+    card.ariaLabel = c2.text;
+    if (card.draggable) {
+      card.draggable.label = c2.text;
+      card.draggable.tags = [catTag(q)];
+    }
+  });
+  if (changed) {
+    tray.children.forEach((c2, k) => Object.assign(c2, chipSpot(k)));
+  }
+  tray.height = trayHeight(cards.length);
+}
+const bankWords = (q) => [
+  ...q.blanks.map((b, i) => ({ id: b.id, word: blankWord(b) || b.label || `Word ${i + 1}`, name: `Word ${i + 1}` })),
+  ...(q.extras ?? []).map((x, k) => ({ id: x.id, word: x.text, name: `Extra word ${k + 1}` }))
+];
+function dragBlankRow(q, b, i) {
+  const at = itemAt(q, i);
+  const st = stateFor(at);
+  const line = lookBindings(at, { line: L.border });
+  return createNode("frame", {
+    name: `Blank ${i + 1}`,
+    questionPart: `blankRow:${b.id}`,
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: { ...column(6), align: "stretch" },
+    children: [
+      text("Blank label", "blankLabel", b.label, { fontSize: 14, fontWeight: 600, color: L.muted, bindings: { text: `${at}?.label ?? ""` } }),
+      createNode("frame", {
+        name: `Gap ${i + 1}`,
+        questionPart: `blankZone:${b.id}`,
+        width: 200,
+        height: CHIP_H,
+        fill: null,
+        stroke: { ...stroke(L.border, 2), dash: [6, 4] },
+        cornerRadius: 10,
+        clip: false,
+        dropZone: { accepts: [wordTag(q)], capacity: 1, whenFull: "swap", snap: "center", label: b.label || `Blank ${i + 1}` },
+        ariaLabel: b.label || `Blank ${i + 1}`,
+        converters: line.converters,
+        bindings: { ...line.bindings, ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) }
+      }),
+      text("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: L.warning, bindings: { visible: `!!${at}?.answer` } })
+    ]
+  });
+}
+function wordChip(q, w, slot) {
+  return chip(q, { name: w.name, part: "blankWord", id: w.id, word: w.word, tag: wordTag(q), index: 0, ...chipSpot(slot), w: CHIP_W, h: CHIP_H });
+}
+function dragBlanksBody(q) {
+  const words = bankWords(q);
+  const order = dealOrder(words.length, q.prefix);
+  return createNode("frame", {
+    name: "Fill the blanks",
+    questionPart: "dragBlanks",
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: column(16),
+    children: [
+      createNode("frame", {
+        name: "Blanks",
+        questionPart: "blanks",
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: column(14),
+        children: q.blanks.map((b, i) => dragBlankRow(q, b, i))
+      }),
+      text("Word bank label", "wordBankLabel", "Word bank", { fontSize: 14, fontWeight: 600, color: L.muted }),
+      createNode("frame", {
+        name: "Word bank",
+        questionPart: "wordBank",
+        width: CHIP_PITCH_X * CHIP_COLS - 12,
+        height: trayHeight(words.length),
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: null,
+        children: order.map((wi, slot) => wordChip(q, words[wi], slot))
+      })
+    ]
+  });
+}
+function syncDragBlanks(frame, q, ab) {
+  const blanksBox = partsOf(frame).blanks?.[0];
+  const bank = partsOf(frame).wordBank?.[0];
+  if (!blanksBox || !bank) return;
+  const rowId = (n) => /^blankRow:(.+)$/.exec(n.questionPart ?? "")?.[1];
+  const wordId = (n) => /^blankWord:(.+)$/.exec(n.questionPart ?? "")?.[1];
+  const words = bankWords(q);
+  const bids = new Set(q.blanks.map((b) => b.id));
+  const wids = new Set(words.map((w) => w.id));
+  blanksBox.children = blanksBox.children.filter((c2) => !rowId(c2) || bids.has(rowId(c2)));
+  const hadWords = bank.children.filter((c2) => wordId(c2)).length;
+  bank.children = bank.children.filter((c2) => !wordId(c2) || wids.has(wordId(c2)));
+  const names = nodeNames(ab);
+  q.blanks.forEach((b, i) => {
+    if (!blanksBox.children.some((c2) => rowId(c2) === b.id)) {
+      const made = dragBlankRow(q, b, i);
+      made.name = uniqueName(names, made.name);
+      blanksBox.children.push(made);
+    }
+  });
+  let changed = hadWords !== bank.children.length;
+  for (const w of words) {
+    if (!bank.children.some((c2) => wordId(c2) === w.id)) {
+      const made = wordChip(q, w, bank.children.length);
+      made.name = uniqueName(names, made.name);
+      bank.children.push(made);
+      changed = true;
+    }
+  }
+  const rank = new Map(q.blanks.map((b, i) => [b.id, i]));
+  blanksBox.children.sort((a, b) => (rank.get(rowId(a) ?? "") ?? 0) - (rank.get(rowId(b) ?? "") ?? 0));
+  q.blanks.forEach((b, i) => {
+    const r2 = blanksBox.children.find((c2) => rowId(c2) === b.id);
+    reindex(r2, q, i);
+    if (/^Blank \d+$/.test(r2.name)) r2.name = `Blank ${i + 1}`;
+    const zone = partWithId(blanksBox, "blankZone", b.id);
+    if (zone?.dropZone) {
+      zone.dropZone.label = b.label || `Blank ${i + 1}`;
+      zone.dropZone.accepts = [wordTag(q)];
+    }
+  });
+  for (const w of words) {
+    const c2 = bank.children.find((x) => wordId(x) === w.id);
+    if (/^(Extra word|Word) \d+$/.test(c2.name)) c2.name = w.name;
+    c2.ariaLabel = w.word;
+    if (c2.draggable) {
+      c2.draggable.label = w.word;
+      c2.draggable.tags = [wordTag(q)];
+    }
+    walk([c2], (n) => {
+      if (n.type === "text" && n.questionPart === "blankWordText") {
+        n.text = w.word;
+        for (const r2 of n.runs ?? []) r2.text = w.word;
+      }
+    });
+  }
+  if (changed) bank.children.forEach((c2, k) => Object.assign(c2, chipSpot(k)));
+  bank.height = trayHeight(words.length);
+}
+function reindex(frameNode, q, idx) {
+  const re = new RegExp(`${varName(q, "items").replace(/\$/g, "\\$")}\\[\\d+\\]`, "g");
+  const to = itemAt(q, idx);
+  walk([frameNode], (n) => {
+    if (n.bindings) for (const k of Object.keys(n.bindings)) n.bindings[k] = n.bindings[k].replace(re, to);
+    if (n.type === "text") {
+      n.text = n.text.replace(re, to);
+      for (const r2 of n.runs ?? []) r2.text = r2.text.replace(re, to);
+    }
+  });
+}
+function partWithId(frame, part, id) {
+  return (partsOf(frame)[part] ?? []).find((n) => n.questionPart === `${part}:${id}`);
+}
+const SAMPLE_AREAS = {
+  Roof: { shape: "polygon", box: { x: 130, y: 58, w: 210, h: 80 }, points: [[0, 80], [105, 0], [210, 80]] },
+  Sun: { shape: "ellipse", box: { x: 456, y: 18, w: 98, h: 98 } },
+  Tree: { shape: "rect", box: { x: 384, y: 92, w: 112, h: 150 } },
+  Door: { shape: "rect", box: { x: 216, y: 168, w: 54, h: 76 } }
+};
+const defaultBox = (k) => ({ x: 40 + k * 46 % 360, y: 40 + k * 38 % 150, w: 90, h: 70 });
+function pentagon(w, h) {
+  return [[0.5, 0], [1, 0.4], [0.8, 1], [0.2, 1], [0, 0.4]].map(([x, y]) => ({ x: Math.round(x * w), y: Math.round(y * h) }));
+}
+function spotArea(q, o, i, shape, box, points) {
+  const at = itemAt(q, i);
+  const r2 = `${at}?`;
+  const common = {
+    name: `Area: ${o.text || i + 1}`,
+    questionPart: `spot:${o.id}`,
+    x: box.x,
+    y: box.y,
+    width: box.w,
+    height: box.h,
+    role: isMultiple(q) ? "checkbox" : "radio",
+    focusable: true,
+    ariaLabel: o.text,
+    fill: solid("#ffffff01"),
+    stroke: stroke(AREA_OFF, 3),
+    cursor: "pointer",
+    bindings: {
+      ariaChecked: `${r2}.selected`,
+      ariaLabel: `${r2}.text`,
+      ariaDescription: stateFor(at).description('"This was the right answer"', '"Wrong"'),
+      "fill.color": `${r2}.state == "correct" ? "${AREA_OK}" : ${r2}.state == "wrong" ? "${AREA_BAD}" : ${r2}.state == "missed" ? "${AREA_MISS}" : ${r2}.selected ? "${AREA_ON}" : "#ffffff01"`,
+      "stroke.paint.color": `${r2}.state == "correct" ? "${L.success}" : ${r2}.state == "wrong" ? "${L.error}" : ${r2}.state == "missed" ? "${L.warning}" : ${r2}.selected ? "${L.primary}" : "${AREA_OFF}"`
+    }
+  };
+  if (shape === "ellipse") return createNode("ellipse", common);
+  if (shape === "polygon") return createNode("path", { ...common, paths: [{ closed: true, points: points ? points.map(([x, y]) => ({ x, y })) : pentagon(box.w, box.h) }] });
+  return createNode("rect", { ...common, cornerRadius: 8 });
+}
+function samplePicture() {
+  const shape = (type, name, x, y, w, h, color, extra = {}) => createNode(type, { name, x, y, width: w, height: h, fill: solid(color), stroke: null, decorative: true, ...extra });
+  return createNode("frame", {
+    name: "Picture",
+    questionPart: "picture",
+    width: AREA_W,
+    height: AREA_H,
+    fill: solid("#cfe8ff"),
+    stroke: null,
+    cornerRadius: 10,
+    clip: true,
+    role: "image",
+    ariaLabel: "A house with a red roof and a door, a tree beside it and the sun in the sky",
+    children: [
+      shape("ellipse", "Sun", 466, 28, 78, 78, "#ffcf33"),
+      shape("rect", "Ground", 0, 224, AREA_W, 56, "#9bd18b"),
+      shape("rect", "Walls", 150, 138, 170, 104, "#e8c9a0"),
+      createNode("path", { name: "Roof", x: 130, y: 62, width: 210, height: 76, fill: solid("#b5523b"), stroke: null, decorative: true, paths: [{ closed: true, points: [{ x: 0, y: 76 }, { x: 105, y: 0 }, { x: 210, y: 76 }] }] }),
+      shape("rect", "Door", 224, 178, 38, 64, "#7a4a2b"),
+      shape("rect", "Trunk", 428, 168, 20, 74, "#7a4a2b"),
+      shape("ellipse", "Leaves", 394, 98, 90, 88, "#3f9a4a")
+    ]
+  });
+}
+function hotspotBody(q) {
+  const areas = q.options.map((o, i) => {
+    const sample = SAMPLE_AREAS[o.text];
+    return sample ? spotArea(q, o, i, sample.shape, sample.box, sample.points) : spotArea(q, o, i, "rect", defaultBox(i));
+  });
+  const prompt = varName(q, "prompt");
+  const items = varName(q, "items");
+  return createNode("frame", {
+    name: "Hotspots",
+    questionPart: "hotspots",
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: column(8),
+    children: [
+      createNode("frame", {
+        name: "Picture area",
+        questionPart: "spots",
+        width: AREA_W,
+        height: AREA_H,
+        fill: null,
+        stroke: stroke(L.divider, 1),
+        cornerRadius: 10,
+        clip: false,
+        role: isMultiple(q) ? "region" : "radiogroup",
+        bindings: { ariaLabel: prompt },
+        //The areas sit in one group: a single On pointer on it (only when a child is hit) feeds Choose option the child's place, so an area added later needs no flow of its own
+        children: [samplePicture(), createNode("frame", { name: "Areas", questionPart: "spotAreas", width: AREA_W, height: AREA_H, fill: null, stroke: null, clip: false, children: areas })]
+      }),
+      text("Picks", "spotPicks", `Selected: {${items}.filter(i => i.selected).map(i => i.text + (i.state == "correct" ? " (right)" : i.state == "wrong" ? " (wrong)" : "")).join(", ")}`, {
+        fontSize: 14,
+        color: L.muted,
+        bindings: { visible: `${items}.some(i => i.selected)` }
+      }),
+      text("Right areas", "spotAnswer", `Right answer: {${items}.filter(i => i.state == "missed").map(i => i.text).join(", ")}`, {
+        fontSize: 14,
+        fontWeight: 600,
+        color: L.warning,
+        bindings: { visible: `${items}.some(i => i.state == "missed")` }
+      })
+    ]
+  });
+}
+const resetLabel = (q) => q.bank ? RESET_LABELS.next : RESET_LABELS.again;
+const resetVisible = (q, gate) => {
+  if (q.hideReset) return gate ? `${gate} && false` : "false";
+  const own = q.bank ? varName(q, "locked") : `${varName(q, "locked")} && !${varName(q, "correct")}`;
+  if (gate) return `${gate} && ${own}`;
+  return q.retake ? "false" : own;
+};
+const GATED = /^([A-Za-z_$][\w$]*) && /;
+function gateOf(d, q, visible) {
+  const m = GATED.exec(visible ?? "");
+  return m && !m[1].startsWith(`${q.prefix}_`) && d.variables.some((v) => v.name === m[1] && v.type === "boolean") ? m[1] : void 0;
+}
+function bodyFor(q, style, blankVars) {
+  if (style === "blank") return blanksBody(q, blankVars);
+  if (style === "dragblank") return dragBlanksBody(q);
+  if (style === "match") return matchingBody(q);
+  if (style === "categorise") return categoriseBody(q);
+  if (style === "spot") return hotspotBody(q);
+  return optionsBody(q, style);
+}
+function frameFor(q, blankVars, at) {
+  const p = (s) => varName(q, s);
+  const style = bodyStyle(q.kind, q.answerBy);
+  const body = bodyFor(q, style, blankVars);
+  return createNode("frame", {
+    name: "Question",
+    x: at.x,
+    y: at.y,
+    width: 640,
+    height: 420,
+    role: "region",
+    question: q,
+    //A flat grey card on the page, like the toolbox's cards
+    fill: solid(L.surface),
+    stroke: null,
+    cornerRadius: 8,
+    clip: false,
+    bindings: { ariaLabel: `"Question: " + ${p("prompt")}` },
+    layout: { ...defaultAutoLayout("column"), gap: 16, padding: { top: 24, right: 24, bottom: 24, left: 24 }, align: "stretch", hugHeight: true },
+    children: [
+      text("Prompt", "prompt", `{${p("prompt")}}`, { role: "heading", headingLevel: 3, fontSize: 20, fontWeight: 600, lineHeight: 1.35 }),
+      body,
+      text("Hint text", "hintText", `Hint: {${p("hint")}}`, { fontSize: 14, fontStyle: "italic", color: L.muted, bindings: { visible: `${p("hint")} != ""` } }),
+      text("Feedback", "feedback", `{${p("feedback")}}`, {
+        fontWeight: 600,
+        bindings: { visible: `${p("feedback")} != ""`, color: `${p("answered")} ? (${p("correct")} ? "${L.success}" : "${L.error}") : "${L.muted}"` }
+      }),
+      createNode("frame", {
+        name: "Buttons",
+        questionPart: "buttons",
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: { ...row(12), align: "center" },
+        children: [
+          button("Check answer", "check", "Check answer", true, { disabled: p("locked") }),
+          button("Hint", "hint", "Hint", false, { visible: `${p("hintsLeft")} > 0 && !${p("locked")}` }),
+          button("Try again", "reset", resetLabel(q), false, { visible: resetVisible(q) }),
+          text("Score", "score", `Score: {${p("score")}}`, { fontWeight: 600, color: L.muted, autoSize: "width", width: 90, bindings: { visible: p("locked") } })
+        ]
+      })
+    ]
+  });
+}
+function ensureVariables(d, q) {
+  const out = [];
+  for (const def of questionVars(q)) {
+    const name = varName(q, def.suffix);
+    let v = d.variables.find((x) => x.name === name);
+    if (!v) {
+      v = { id: uid("v"), name, type: def.type, initial: def.initial };
+      d.variables.push(v);
+    } else if (["prompt", "items", "triesLeft", "hintsLeft", "retakesLeft"].includes(def.suffix)) v.initial = def.initial;
+    out.push(v);
+  }
+  return out;
+}
+function bankSource(p, expr) {
+  const head = /^\s*([A-Za-z_$][\w$]*)/.exec(expr ?? "")?.[1];
+  const name = head === "data" ? /^\s*data\s*\.\s*([A-Za-z_$][\w$]*)/.exec(expr ?? "")?.[1] : head;
+  return name && p.dataSources.some((s) => s.name === name) ? name : null;
+}
+const KEY_OPTION = "Number(event.key) - 1";
+function wantedSlots(d, frame, q) {
+  const parts = partsOf(frame);
+  const id = (part) => parts[part]?.[0]?.id;
+  const resetAction = { kind: "action.questionReset", params: { question: frame.id, next: true } };
+  const out = [{ eventSlot: "start:event", actionSlot: "start:action", event: { kind: "event.start", params: {} }, action: resetAction }];
+  const source = q.bank ? bankSource(d, q.bank.items) : null;
+  if (source) out.push({ eventSlot: "dataLoaded:event", actionSlot: "start:action", event: { kind: "event.dataLoaded", params: { source } }, action: resetAction });
+  const click = (part, actionKind, extra = {}) => {
+    const target = id(part);
+    if (target) out.push({ eventSlot: `${part}:event`, actionSlot: `${part}:action`, event: { kind: "event.pointer", params: { target, type: "click" } }, action: { kind: actionKind, params: { question: frame.id, ...extra } } });
+  };
+  const style = bodyStyle(q.kind, q.answerBy);
+  if (style === "radio" || style === "check") click("option", "action.questionChoose", { option: "event.index" });
+  if (style === "categorise" && q.dropFeedback) {
+    for (const g of q.groups ?? []) {
+      const target = partWithId(frame, "catZone", g.id)?.id;
+      if (target) out.push({ eventSlot: `drop:${g.id}:event`, actionSlot: `drop:${g.id}:action`, event: { kind: "event.drop", params: { target, result: "accepted" } }, action: { kind: "action.questionDrop", params: { question: frame.id } } });
+    }
+  }
+  if (style === "spot" && parts.spotAreas?.[0]) {
+    const target = id("spotAreas");
+    if (target) out.push({ eventSlot: "spots:event", actionSlot: "spots:action", event: { kind: "event.pointer", params: { target, type: "click", childrenOnly: true } }, action: { kind: "action.questionChoose", params: { question: frame.id, option: "event.childIndex" } } });
+  } else if (style === "spot") {
+    q.options.forEach((o, i) => {
+      const target = partWithId(frame, "spot", o.id)?.id;
+      if (target) out.push({ eventSlot: `spot:${o.id}:event`, actionSlot: `spot:${o.id}:action`, option: String(i), event: { kind: "event.pointer", params: { target, type: "click" } }, action: { kind: "action.questionChoose", params: { question: frame.id, option: String(i) } } });
+    });
+  }
+  if (style === "order") {
+    click("moveUp", "action.questionMove", { item: "event.index", direction: "up" });
+    click("moveDown", "action.questionMove", { item: "event.index", direction: "down" });
+  }
+  click("check", "action.questionCheck");
+  if (style === "blank") out.push({ eventSlot: "enterCheck:event", actionSlot: "enterCheck:action", event: { kind: "event.key", params: { key: "Enter", type: "keydown", typing: true, target: frame.id } }, action: { kind: "action.questionCheck", params: { question: frame.id } } });
+  click("hint", "action.questionHint");
+  click("reset", "action.questionReset", { next: true });
+  if (q.listen) click("listen", "action.speak", { op: "auto", question: frame.id });
+  if (q.numberKeys && (style === "radio" || style === "check")) {
+    out.push({ eventSlot: "numberKeys:event", actionSlot: "numberKeys:action", event: { kind: "event.key", params: { key: "", type: "keydown" } }, action: { kind: "action.questionChoose", params: { question: frame.id, option: KEY_OPTION } } });
+  }
+  return out;
+}
+function ensureGraph(d, ab, frame, q) {
+  const wanted = wantedSlots(d, frame, q);
+  const logic = ab.logic;
+  const mine = (n) => n.kit?.frame === frame.id;
+  const keep = /* @__PURE__ */ new Set();
+  const existingMine = logic.nodes.filter(mine);
+  let nextY = existingMine.length ? Math.max(...existingMine.map((n) => n.y)) + 110 : logic.nodes.length ? Math.max(...logic.nodes.map((n) => n.y)) + 160 : 40;
+  const startX = existingMine.length ? Math.min(...existingMine.map((n) => n.x)) : 40;
+  const find2 = (slot) => logic.nodes.find((n) => mine(n) && n.kit.slot === slot);
+  for (const w of wanted) {
+    let ev = find2(w.eventSlot);
+    let ac = find2(w.actionSlot);
+    if (!ev) {
+      ev = { id: uid("l"), kind: w.event.kind, x: startX, y: ac ? ac.y : nextY, params: { ...defaultParams(w.event.kind), ...w.event.params }, kit: { frame: frame.id, slot: w.eventSlot } };
+      logic.nodes.push(ev);
+      if (!ac) nextY += 110;
+    }
+    if (!ac) {
+      ac = { id: uid("l"), kind: w.action.kind, x: startX + 320, y: ev.y, params: { ...defaultParams(w.action.kind), ...w.action.params }, kit: { frame: frame.id, slot: w.actionSlot } };
+      logic.nodes.push(ac);
+    }
+    const own = w.event.kind === "event.pointer" || w.event.kind === "event.drop" || w.event.kind === "event.key" && w.event.params.target ? ["target"] : w.event.kind === "event.dataLoaded" ? ["source"] : [];
+    for (const k of own) ev.params[k] = w.event.params[k];
+    ac.params.question = frame.id;
+    if (w.actionSlot === "start:action") ac.params.keepAnswer = !!q.keep;
+    if (w.option !== void 0) ac.params.option = w.option;
+    else if (w.actionSlot === "numberKeys:action") ac.params.option = KEY_OPTION;
+    else if (w.actionSlot === "spots:action") ac.params.option = "event.childIndex";
+    keep.add(ev.id);
+    keep.add(ac.id);
+    const evId = ev.id;
+    const acId = ac.id;
+    if (!logic.edges.some((e) => e.from === evId && e.to === acId && e.fromPort === "out" && e.toPort === "in")) {
+      logic.edges.push({ id: uid("e"), from: evId, fromPort: "out", to: acId, toPort: "in" });
+    }
+  }
+  const check = find2("check:action");
+  if (q.report && check) {
+    let rep = find2("report:action");
+    if (!rep) {
+      rep = { id: uid("l"), kind: "action.reportResult", x: check.x + 320, y: check.y + 40, params: { ...defaultParams("action.reportResult"), score: d.settings.reporting?.scoreFrom === "questions" ? "" : varName(q, "score") }, kit: { frame: frame.id, slot: "report:action" } };
+      logic.nodes.push(rep);
+    }
+    rep.params.completed = q.report;
+    const total = d.settings.reporting?.scoreFrom === "questions";
+    if (total && rep.params.score === varName(q, "score")) rep.params.score = "";
+    else if (!total && rep.params.score === "") rep.params.score = varName(q, "score");
+    keep.add(rep.id);
+    const repId = rep.id;
+    if (!logic.edges.some((e) => e.from === check.id && e.fromPort === "finished" && e.to === repId)) logic.edges.push({ id: uid("e"), from: check.id, fromPort: "finished", to: repId, toPort: "in" });
+  }
+  const gone = new Set(logic.nodes.filter((n) => mine(n) && !keep.has(n.id)).map((n) => n.id));
+  if (gone.size) {
+    logic.nodes = logic.nodes.filter((n) => !gone.has(n.id));
+    logic.edges = logic.edges.filter((e) => !gone.has(e.from) && !gone.has(e.to));
+  }
+}
+function renameEverywhere(d, from, to, only) {
+  const fix = (s) => renamePrefix(s, from, to);
+  let walked = false;
+  for (const ab of d.artboards) {
+    walk(only ? walked ? [] : [only] : ab.children, (n) => {
+      if (n.bindings) for (const k of Object.keys(n.bindings)) n.bindings[k] = fix(n.bindings[k]);
+      if (n.type === "text") {
+        n.text = fix(n.text);
+        for (const r2 of n.runs ?? []) r2.text = fix(r2.text);
+      }
+      if (n.type === "button") n.label = fix(n.label);
+      if (isContainer(n) && n.repeat) n.repeat.items = fix(n.repeat.items);
+    });
+    for (const l of ab.logic.nodes) if (!only || l.kit?.frame === only.id) {
+      for (const [k, v] of Object.entries(l.params)) if (typeof v === "string") l.params[k] = fix(v);
+    }
+    walked = true;
+  }
+}
+function bindBlank(n, name) {
+  n.bindings = { ...n.bindings, value: name };
+  n.bindingModes = { ...n.bindingModes, value: "both" };
+}
+function syncBlankRows(frame, q) {
+  const container = partsOf(frame).blanks?.[0];
+  if (!container) return;
+  const rows = container.children.filter((c2) => partOf(c2) === "blankRow");
+  const blankNames = q.blanks.map((_, i) => varName(q, `blank${i + 1}`));
+  while (rows.length > q.blanks.length) {
+    const gone = rows.pop();
+    container.children = container.children.filter((c2) => c2.id !== gone.id);
+  }
+  while (rows.length < q.blanks.length) {
+    const i = rows.length;
+    const made = blankRow(q, i, blankNames[i]);
+    const last = rows[rows.length - 1];
+    if (last) {
+      const copy = JSON.parse(JSON.stringify(last));
+      const reid = (n) => {
+        n.id = uid("n");
+        if (isContainer(n)) n.children.forEach(reid);
+      };
+      reid(copy);
+      const old = new RegExp(`\\[${i - 1}\\]`, "g");
+      walk([copy], (n) => {
+        if (n.bindings) for (const k of Object.keys(n.bindings)) n.bindings[k] = n.bindings[k].replace(old, `[${i}]`);
+        if (n.type === "text") n.text = n.text.replace(old, `[${i}]`);
+        if (n.type === "input") bindBlank(n, blankNames[i]);
+      });
+      copy.name = `Blank ${i + 1}`;
+      container.children.push(copy);
+      rows.push(copy);
+    } else {
+      container.children.push(made);
+      rows.push(made);
+    }
+  }
+  rows.forEach((r2, i) => {
+    walk([r2], (n) => {
+      if (n.type === "input") {
+        bindBlank(n, blankNames[i]);
+        const spell = !!q.blanks[i]?.spelling;
+        if (spell && q.guard?.spellcheck !== false) n.noAssist = true;
+        else if (spell && q.guard) delete n.noAssist;
+        if (spell && q.guard && q.guard.paste !== false) n.noPaste = true;
+        else if (spell) delete n.noPaste;
+      }
+    });
+  });
+}
+function syncPairs(frame, q, ab) {
+  const matches = partsOf(frame).matches?.[0];
+  const terms = partsOf(frame).terms?.[0];
+  if (!matches || !terms) return;
+  const ids = new Set(q.pairs.map((p) => p.id));
+  const all2 = matchTerms(q);
+  const termIds = new Set(all2.map((t2) => t2.id));
+  const rowId = (n) => /^matchRow:(.+)$/.exec(n.questionPart ?? "")?.[1];
+  const termId = (n) => /^matchTerm:(.+)$/.exec(n.questionPart ?? "")?.[1];
+  const had = terms.children.filter((c2) => termId(c2)).map((c2) => termId(c2));
+  matches.children = matches.children.filter((c2) => !rowId(c2) || ids.has(rowId(c2)));
+  terms.children = terms.children.filter((c2) => !termId(c2) || termIds.has(termId(c2)));
+  const names = nodeNames(ab);
+  let changed = had.length !== terms.children.filter((c2) => termId(c2)).length;
+  q.pairs.forEach((p, i) => {
+    if (!matches.children.some((c2) => rowId(c2) === p.id)) {
+      const made = matchRow(q, p, i);
+      made.name = uniqueName(names, made.name);
+      matches.children.push(made);
+    }
+  });
+  for (const t2 of all2) {
+    if (!terms.children.some((c2) => termId(c2) === t2.id)) {
+      const made = matchTerm(q, { id: t2.id, term: t2.term }, t2.index, terms.children.length, t2.name);
+      made.name = uniqueName(names, made.name);
+      terms.children.push(made);
+      changed = true;
+    }
+  }
+  const rank = new Map(q.pairs.map((p, i) => [p.id, i]));
+  matches.children.sort((a, b) => (rank.get(rowId(a) ?? "") ?? 0) - (rank.get(rowId(b) ?? "") ?? 0));
+  q.pairs.forEach((p, i) => {
+    const row2 = matches.children.find((c2) => rowId(c2) === p.id);
+    reindex(row2, q, i);
+    if (/^Match \d+$/.test(row2.name)) row2.name = `Match ${i + 1}`;
+    const slot = partWithId(matches, "matchZone", p.id);
+    if (slot && /^Slot \d+$/.test(slot.name)) slot.name = `Slot ${i + 1}`;
+    const zone = partWithId(matches, "matchZone", p.id);
+    if (zone?.dropZone) {
+      zone.dropZone.label = p.match;
+      zone.dropZone.accepts = [termTag(q)];
+    }
+  });
+  for (const t2 of all2) {
+    const term = terms.children.find((c2) => termId(c2) === t2.id);
+    reindex(term, q, t2.index);
+    if (/^(Term|Extra) \d+$/.test(term.name)) term.name = t2.name;
+    term.ariaLabel = t2.term;
+    if (term.draggable) {
+      term.draggable.label = t2.term;
+      term.draggable.tags = [termTag(q)];
+    }
+  }
+  if (changed) {
+    terms.children.forEach((c2, k) => {
+      c2.x = 0;
+      c2.y = k * TERM_PITCH;
+    });
+  }
+  terms.height = Math.max(TERM_H, all2.length * TERM_PITCH - (TERM_PITCH - TERM_H));
+}
+function syncAreas(frame, q, ab) {
+  const spots = partsOf(frame).spots?.[0];
+  if (!spots) return;
+  const holder = partsOf(frame).spotAreas?.[0] ?? spots;
+  const idOf = (n) => /^spot:(.+)$/.exec(n.questionPart ?? "")?.[1];
+  const ids = new Set(q.options.map((o) => o.id));
+  holder.children = holder.children.filter((c2) => !idOf(c2) || ids.has(idOf(c2)));
+  const names = nodeNames(ab);
+  const several = isMultiple(q);
+  let fresh = 0;
+  q.options.forEach((o, i) => {
+    let area = holder.children.find((c2) => idOf(c2) === o.id);
+    if (!area) {
+      area = spotArea(q, o, i, "rect", defaultBox(holder.children.filter((c2) => idOf(c2)).length + fresh++));
+      area.name = uniqueName(names, area.name);
+      holder.children.push(area);
+    }
+    reindex(area, q, i);
+    area.role = several ? "checkbox" : "radio";
+    area.ariaLabel = o.text;
+    if (area.name.startsWith("Area: ")) area.name = `Area: ${o.text || i + 1}`;
+  });
+  if (holder !== spots) {
+    const rank = new Map(q.options.map((o, i) => [o.id, i]));
+    holder.children.sort((x, y) => (rank.get(idOf(x) ?? "") ?? 0) - (rank.get(idOf(y) ?? "") ?? 0));
+  }
+  spots.role = several ? "region" : "radiogroup";
+}
+function syncQuestion(d, abId, frameId, before) {
+  const ab = d.artboards.find((a) => a.id === abId);
+  const loc = ab && locate$1(ab, frameId);
+  const frame = loc?.node;
+  if (!ab || !frame || frame.type !== "frame" || !frame.question) return;
+  const q = frame.question;
+  setLook(frame.question, d.themes);
+  if (before && before.prefix !== q.prefix) {
+    const othersUse = d.artboards.some((a) => questionFrames(a).some((f2) => f2.id !== frame.id && f2.question.prefix === before.prefix));
+    if (othersUse) renameEverywhere(d, before.prefix, q.prefix, frame);
+    else renameEverywhere(d, before.prefix, q.prefix);
+    if (!othersUse) {
+      for (const v of d.variables) {
+        const m = new RegExp(`^${before.prefix.replace(/\$/g, "\\$")}_(.+)$`).exec(v.name);
+        if (m && (QUESTION_SUFFIXES.includes(m[1]) || /^blank\d+$/.test(m[1])) && !d.variables.some((x) => x.name === `${q.prefix}_${m[1]}`)) v.name = `${q.prefix}_${m[1]}`;
+      }
+    }
+  }
+  ensureVariables(d, q);
+  const style = bodyStyle(q.kind, q.answerBy);
+  const parts = partsOf(frame);
+  const bodyNow = parts.dragBlanks?.[0] ? "dragblank" : parts.blanks?.[0] ? "blank" : parts.matching?.[0] ? "match" : parts.categorise?.[0] ? "categorise" : parts.hotspots?.[0] ? "spot" : (parts.options?.[0]?.questionPart ?? "").split(":")[1];
+  if (bodyNow !== style) {
+    const old = parts.dragBlanks?.[0] ?? parts.blanks?.[0] ?? parts.matching?.[0] ?? parts.categorise?.[0] ?? parts.hotspots?.[0] ?? parts.options?.[0];
+    const blankVars = q.blanks.map((_, i) => varName(q, `blank${i + 1}`));
+    const body = bodyFor(q, style, blankVars);
+    const names = nodeNames(ab);
+    body.name = uniqueName(names, body.name);
+    if (old) {
+      const at = locate$1(ab, old.id);
+      if (at) at.siblings.splice(at.index, 1, body);
+    } else frame.children.splice(1, 0, body);
+  } else if (style === "blank") syncBlankRows(frame, q);
+  else if (style === "dragblank") syncDragBlanks(frame, q, ab);
+  else if (style === "match") syncPairs(frame, q, ab);
+  else if (style === "categorise") syncCategories(frame, q, ab);
+  else if (style === "spot") syncAreas(frame, q, ab);
+  const reset = partsOf(frame).reset?.[0];
+  if (reset && reset.type === "button") {
+    if (!before || Boolean(before.bank) !== Boolean(q.bank) || Boolean(before.retake) !== Boolean(q.retake) || Boolean(before.hideReset) !== Boolean(q.hideReset)) {
+      const other = before?.bank ? RESET_LABELS.next : RESET_LABELS.again;
+      if (reset.label === other || !before) reset.label = resetLabel(q);
+      reset.bindings = { ...reset.bindings ?? {}, visible: resetVisible(q, gateOf(d, q, reset.bindings?.visible)) };
+    }
+  }
+  if (before && JSON.stringify(before.looks ?? null) !== JSON.stringify(q.looks ?? null)) applyLooks(frame, effectiveLooks(before), effectiveLooks(q));
+  syncListen(ab, frame, q);
+  syncKeysHint(frame, q);
+  ensureGraph(d, ab, frame, q);
+}
+function syncListen(ab, frame, q) {
+  const row2 = partsOf(frame).buttons?.[0];
+  if (!row2 || !isContainer(row2)) return;
+  const has = partsOf(frame).listen?.[0];
+  if (q.listen && !has) {
+    const at = Math.min(row2.children.length, Math.max(0, row2.children.findIndex((c2) => c2.questionPart === "hint") + 1));
+    const b = button(uniqueName(nodeNames(ab), "Listen"), "listen", "Listen", false, { visible: "voiceAvailable" });
+    b.ariaLabel = "Listen to the question";
+    row2.children.splice(at, 0, b);
+  } else if (!q.listen && has) {
+    const at = locateIn(frame, has.id);
+    if (at) at.siblings.splice(at.index, 1);
+  }
+}
+function syncKeysHint(frame, q) {
+  const parts = partsOf(frame);
+  const has = parts.keysHint?.[0];
+  const want = !!q.numberKeys && (bodyStyle(q.kind, q.answerBy) === "radio" || bodyStyle(q.kind, q.answerBy) === "check");
+  if (want && !has) {
+    const body = parts.options?.[0];
+    const at = body ? frame.children.findIndex((c2) => c2 === body) : -1;
+    const line = text("Number keys hint", "keysHint", `Press 1 to {${varName(q, "items")}.length} to choose`, { fontSize: 14, color: L.muted });
+    frame.children.splice(at >= 0 ? at + 1 : 2, 0, line);
+  } else if (!want && has) {
+    const loc = locateIn(frame, has.id);
+    if (loc) loc.siblings.splice(loc.index, 1);
+  }
+}
+function locateIn(frame, id) {
+  const look = (list2) => {
+    for (let i = 0; i < list2.length; i++) {
+      if (list2[i].id === id) return { siblings: list2, index: i };
+      const c2 = list2[i];
+      if (isContainer(c2)) {
+        const hit2 = look(c2.children);
+        if (hit2) return hit2;
+      }
+    }
+    return null;
+  };
+  return look(frame.children);
+}
+const PILL = { width: 84, height: 32, cornerRadius: 16, fontSize: 14 };
+function setKitOptions(d, abId, frameId, o) {
+  const ab = d.artboards.find((a) => a.id === abId);
+  const frame = ab && locate$1(ab, frameId)?.node;
+  if (!ab || !frame || frame.type !== "frame" || !frame.question) return;
+  const q = frame.question;
+  setLook(q, d.themes);
+  const parts = partsOf(frame);
+  const gate = (name) => {
+    if (name && !d.variables.some((v) => v.name === name && v.type === "boolean")) throw new Error(`kit option: no boolean variable ${name}`);
+    return name;
+  };
+  const check = parts.check?.[0];
+  if (o.checkLabel && check?.type === "button") check.label = o.checkLabel;
+  const reset = parts.reset?.[0];
+  if (reset?.type === "button") {
+    if (o.resetLabel) reset.label = o.resetLabel;
+    const g = gate(o.resetWhen);
+    if (g) reset.bindings = { ...reset.bindings ?? {}, visible: resetVisible(q, g) };
+  }
+  const hint = parts.hint?.[0];
+  if (hint?.type === "button") {
+    if (o.hintLabel) hint.label = o.hintLabel;
+    const g = gate(o.hintWhen);
+    if (g) hint.bindings = { ...hint.bindings ?? {}, visible: `${g} && ${varName(q, "hintsLeft")} > 0 && !${varName(q, "locked")}` };
+    if (o.hint === "pill") {
+      Object.assign(hint, PILL, { fill: solid(L.background), stroke: stroke(L.border), fontWeight: 600 });
+      hint.ariaLabel = "Show a hint";
+      const at = locateIn(frame, hint.id);
+      const row2 = promptRow(ab, frame);
+      if (at && row2 && !row2.children.includes(hint)) {
+        at.siblings.splice(at.index, 1);
+        row2.children.push(hint);
+      }
+    }
+  }
+  if (o.leadControls?.length) {
+    const row2 = parts.buttons?.[0];
+    if (row2 && isContainer(row2)) {
+      const lead = o.leadControls;
+      for (const c2 of lead) {
+        if (row2.children.includes(c2)) continue;
+        const was = locate$1(ab, c2.id);
+        if (was) was.siblings.splice(was.index, 1);
+      }
+      const gap = row2.children.find((c2) => c2.questionPart === "gap") ?? createNode("frame", { name: "Gap", questionPart: "gap", fill: null, stroke: null, width: 1, height: 1, decorative: true, layoutItem: { width: "fill" } });
+      const kit = row2.children.filter((c2) => !lead.includes(c2) && c2 !== gap);
+      const check2 = kit.filter((c2) => c2.questionPart === "check");
+      row2.children = [...lead, gap, ...kit.filter((c2) => c2.questionPart !== "check"), ...check2];
+      row2.layoutItem = { ...row2.layoutItem ?? {}, width: "fill" };
+    }
+  }
+}
+function promptRow(ab, frame) {
+  const parts = partsOf(frame);
+  const made = parts.promptRow?.[0];
+  if (made?.type === "frame") return made;
+  const prompt = parts.prompt?.[0];
+  const here = prompt && locateIn(frame, prompt.id);
+  if (!prompt || !here) return null;
+  prompt.layoutItem = { ...prompt.layoutItem ?? {}, width: "fill" };
+  const rowFrame = createNode("frame", { name: "Prompt row", questionPart: "promptRow", fill: null, stroke: null, clip: false, layout: { ...row(12), align: "start" }, children: [prompt] });
+  here.siblings.splice(here.index, 1, rowFrame);
+  rowFrame.name = uniqueName(nodeNames(ab), "Prompt row");
+  return rowFrame;
+}
+function addQuestion(d, abId, kind, opts2 = {}) {
+  const ab = d.artboards.find((a) => a.id === abId);
+  if (!ab) return null;
+  const q = newQuestion(kind, freePrefix(d));
+  q.looks = defaultLooks(lookFor(d.themes));
+  setLook(q, d.themes);
+  ensureVariables(d, q);
+  const blankVars = q.blanks.map((_, i) => varName(q, `blank${i + 1}`));
+  const at = opts2.at ?? { x: Math.max(0, (ab.width - 640) / 2), y: 40 };
+  const frame = frameFor(q, blankVars, at);
+  const names = nodeNames(ab);
+  frame.name = uniqueName(names, `Question ${q.prefix.replace(/^\D+/, "") || ""}`.trim());
+  const parent = opts2.parentId ? locate$1(ab, opts2.parentId)?.node : null;
+  if (parent && isContainer(parent)) parent.children.push(frame);
+  else ab.children.push(frame);
+  ensureGraph(d, ab, frame, q);
+  setKitOptions(d, abId, frame.id, opts2);
+  return frame.id;
+}
+function setQuestionSettings(d, abId, frameId, patch) {
+  const ab = d.artboards.find((a) => a.id === abId);
+  const frame = ab && locate$1(ab, frameId)?.node;
+  if (!frame || frame.type !== "frame" || !frame.question) return;
+  const before = JSON.parse(JSON.stringify(frame.question));
+  frame.question = { ...frame.question, ...patch };
+  syncQuestion(d, abId, frameId, before);
+}
+["action.questionCheck", "action.questionReset", "action.questionHint", "action.questionChoose", "action.questionMove"].filter((k) => CATALOG_BY_KIND[k]);
+const MAX_PAGES = 12;
+const MAX_ELEMENTS = 40;
+const MAX_ITEMS = 30;
+const str$1 = (v, max = 600) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "").replace(/\s+$/g, "").slice(0, max);
+const num = (v, lo, hi, fallback2) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fallback2;
+const list = (v, max = MAX_ITEMS) => Array.isArray(v) ? v.slice(0, max) : [];
+const rec = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+const QUESTION_KINDS = {
+  single: "single",
+  "multiple-choice": "single",
+  multiplechoice: "single",
+  mcq: "single",
+  choice: "single",
+  multiple: "multiple",
+  "multiple-response": "multiple",
+  multipleresponse: "multiple",
+  truefalse: "truefalse",
+  "true-false": "truefalse",
+  "true/false": "truefalse",
+  blank: "blank",
+  blanks: "blank",
+  "fill-in-the-blanks": "blank",
+  fill: "blank",
+  ordering: "ordering",
+  order: "ordering",
+  sort: "ordering",
+  matching: "matching",
+  match: "matching",
+  "drag-to-match": "matching",
+  categorise: "categorise",
+  categorize: "categorise",
+  group: "categorise",
+  groups: "categorise"
+};
+function textHeight(text2, fontSize, width, weight = 400, lineHeight = 1.3) {
+  const per = fontSize * (weight >= 600 ? 0.56 : 0.52);
+  const lines = text2.split("\n").reduce((n, l) => n + Math.max(1, Math.ceil(l.length * per / Math.max(40, width))), 0);
+  return Math.max(Math.ceil(fontSize * lineHeight), Math.ceil(lines * fontSize * lineHeight));
+}
+const FILLS = ["surface", "muted", "accent", "primary"];
+const pagesOf = (p) => p.artboards.filter((a) => !a.isMaster);
+const findPage = (p, name) => name ? pagesOf(p).find((a) => same(a.name, name)) : void 0;
+function findLayer(ab, f2) {
+  let hit2 = null;
+  walk(ab.children, (n) => void (!hit2 && f2(n) && (hit2 = n)));
+  return hit2;
+}
+function lookOf(ab) {
+  if (!ab) return { title: null, button: null, fontFamily: void 0 };
+  const title = ab.children.find((n) => n.type === "text" && n.name === "Page title") ?? null;
+  const button2 = findLayer(ab, (n) => n.type === "button");
+  const anyText = findLayer(ab, (n) => n.type === "text");
+  return { title, button: button2, fontFamily: title?.fontFamily ?? anyText?.fontFamily };
+}
+const drawn = (p, type, partial) => createNode(type, { ...lookDefaults(p, type), ...partial });
+const sizeOf = (size, pageW) => size === "small" ? 14 : size === "large" ? 22 : size === "normal" ? pageW >= 900 ? 18 : 16 : pageW >= 900 ? 18 : 16;
+function textLayer(run2, kit, el, width, over = {}) {
+  const body = str$1(el.text, 2e3) || " ";
+  const fontSize = over.fontSize ?? sizeOf(el.size, kit.pageW);
+  const weight = over.fontWeight ?? 400;
+  return drawn(run2.p, "text", {
+    name: str$1(el.name, 60) || "Text",
+    text: body,
+    width,
+    height: textHeight(body, fontSize, width, weight),
+    autoSize: "height",
+    fontSize,
+    ...kit.fontFamily ? { fontFamily: kit.fontFamily } : {},
+    ...el.align === "center" || el.align === "right" ? { align: el.align } : {},
+    ...over
+  });
+}
+function heading(run2, kit, el, width) {
+  const level = Math.round(num(el.level, 1, 3, 2));
+  const fontSize = level === 1 ? 32 : level === 2 ? 24 : 20;
+  return textLayer(run2, kit, { ...el, name: str$1(el.name, 60) || (level === 1 ? "Heading" : "Subheading") }, width, { fontSize, fontWeight: 700, role: "heading", headingLevel: level });
+}
+function buttonLayer(run2, kit, el) {
+  const label = str$1(el.label ?? el.text, 60) || "Continue";
+  const width = Math.round(num(el.w, 60, 600, Math.max(140, label.length * 11 + 56)));
+  const base2 = {};
+  const m = kit.button;
+  if (m) {
+    for (const k of ["fill", "stroke", "color", "fontFamily", "fontSize", "fontWeight", "cornerRadius", "height"]) {
+      if (m[k] !== void 0) base2[k] = structuredClone(m[k]);
+    }
+  }
+  return drawn(run2.p, "button", { height: 46, ...kit.fontFamily ? { fontFamily: kit.fontFamily } : {}, ...base2, name: str$1(el.name, 60) || `${label} button`, label, width, x: 0, y: 0 });
+}
+function fillOf(run2, name) {
+  const l = lookFor(run2.p.themes);
+  const key = FILLS.find((f2) => f2 === name) ?? "muted";
+  const color = key === "surface" ? l.surface : key === "accent" ? l.button : key === "primary" ? l.primary : l.surfaceMuted;
+  return { type: "solid", color };
+}
+function shapeLayer(run2, el, width) {
+  const w = Math.round(num(el.w, 8, 2e3, Math.min(width, 240)));
+  const h = Math.round(num(el.h, 8, 2e3, 120));
+  const type = el.shape === "ellipse" || el.shape === "circle" ? "ellipse" : "rect";
+  return drawn(run2.p, type, { name: str$1(el.name, 60) || (type === "ellipse" ? "Ellipse" : "Box"), width: w, height: h, fill: fillOf(run2, el.fill), ...type === "rect" ? { cornerRadius: 12 } : {}, decorative: true });
+}
+function pictureLayer(run2, el, width) {
+  const alt = str$1(el.alt ?? el.text ?? el.label, 200) || "Picture";
+  const w = Math.round(num(el.w, 40, 2e3, Math.min(width, 360)));
+  const h = Math.round(num(el.h, 40, 2e3, Math.round(w * 0.65)));
+  return drawn(run2.p, "rect", { name: str$1(el.name, 60) || `Picture: ${alt.slice(0, 40)}`, width: w, height: h, cornerRadius: 16, fill: fillOf(run2, "muted"), role: "image", ariaLabel: alt });
+}
+function listLayer(run2, kit, el, width) {
+  const rows = list(el.items).map((x) => str$1(typeof x === "string" ? x : rec(x).text, 300)).filter(Boolean);
+  const body = rows.map((r2, i) => el.ordered ? `${i + 1}. ${r2}` : `• ${r2}`).join("\n") || " ";
+  return textLayer(run2, kit, { ...el, text: body, name: str$1(el.name, 60) || "List" }, width);
+}
+const optionOf = (v, i) => {
+  const o = typeof v === "string" ? { text: v } : rec(v);
+  return { id: `o${i + 1}`, text: str$1(o.text ?? o.label, 300), ...o.correct === true ? { correct: true } : {}, ...str$1(o.feedback, 400) ? { feedback: str$1(o.feedback, 400) } : {} };
+};
+function questionLayer(run2, ab, el, parent, label) {
+  let kind = QUESTION_KINDS[str$1(el.kind, 40).toLowerCase().replace(/\s+/g, "-")] ?? "single";
+  const patch = { prompt: str$1(el.prompt ?? el.text, 500) || "Your question goes here" };
+  const bad = (m) => run2.problems.push(`${label}: ${m}`);
+  if (kind === "single" || kind === "multiple") {
+    const options = list(el.options, 12).map(optionOf).filter((o) => o.text);
+    if (options.length < 2) bad("a choice question needs at least two options");
+    const right = options.filter((o) => o.correct).length;
+    if (!right) bad("no option is marked correct");
+    if (kind === "single" && right > 1) {
+      kind = "multiple";
+      run2.warnings.push(`${label} has more than one right answer, so it asks people to tick every right one`);
+    }
+    patch.options = options;
+  } else if (kind === "truefalse") {
+    const opts2 = list(el.options, 2).map(optionOf).filter((o) => o.text);
+    patch.options = opts2.length === 2 && opts2.some((o) => o.correct) ? opts2 : [{ id: "o1", text: "True", ...el.answer !== false ? { correct: true } : {} }, { id: "o2", text: "False", ...el.answer === false ? { correct: true } : {} }];
+    if (el.answer === void 0 && !(opts2.length === 2 && opts2.some((o) => o.correct))) bad("say whether the statement is true or false (answer: true or false)");
+  } else if (kind === "blank") {
+    const blanks = list(el.blanks, 8).map((b, i) => {
+      const o = rec(b);
+      const answers = list(o.answers ?? o.answer, 10).map((a) => str$1(a, 120)).filter(Boolean);
+      return { id: `b${i + 1}`, label: str$1(o.label, 200), answers, ...typeof o.tolerance === "number" ? { tolerance: o.tolerance } : {}, ...o.caseSensitive === true ? { caseSensitive: true } : {}, ...str$1(o.feedback, 300) ? { feedback: str$1(o.feedback, 300) } : {} };
+    });
+    if (!blanks.length || blanks.some((b) => !b.answers.length)) bad("every blank needs at least one accepted answer");
+    patch.blanks = blanks;
+    if (el.answerBy === "drag") patch.answerBy = "drag";
+  } else if (kind === "ordering") {
+    const items = list(el.items ?? el.options, 12).map((x, i) => ({ id: `o${i + 1}`, text: str$1(typeof x === "string" ? x : rec(x).text, 300) })).filter((o) => o.text);
+    if (items.length < 2) bad("an ordering question needs at least two items, listed in the right order");
+    patch.options = items;
+    patch.shuffle = true;
+  } else if (kind === "matching") {
+    const pairs = list(el.pairs, 8).map((x, i) => ({ id: `p${i + 1}`, term: str$1(rec(x).term, 200), match: str$1(rec(x).match ?? rec(x).definition, 200) })).filter((x) => x.term && x.match);
+    if (pairs.length < 2) bad("a matching question needs at least two pairs (term and match)");
+    patch.pairs = pairs;
+    const extras = list(el.extras, 8).map((x, i) => ({ id: `x${i + 1}`, text: str$1(typeof x === "string" ? x : rec(x).text, 200) })).filter((x) => x.text);
+    if (extras.length) patch.extras = extras;
+    patch.shuffle = true;
+  } else if (kind === "categorise") {
+    const groups = list(el.groups, 6).map((x, i) => ({ id: `g${i + 1}`, name: str$1(typeof x === "string" ? x : rec(x).name, 100) })).filter((g) => g.name);
+    const cards = list(el.cards, 24).map((x, i) => {
+      const o = rec(x);
+      const g = groups.find((gr) => same(gr.name, str$1(o.group, 100)));
+      return { id: `c${i + 1}`, text: str$1(o.text, 200), group: g?.id ?? "", ...str$1(o.feedback, 300) ? { feedback: str$1(o.feedback, 300) } : {} };
+    });
+    if (groups.length < 2) bad("a sorting question needs at least two groups");
+    if (!cards.length || cards.some((c2) => !c2.text || !c2.group)) bad("every item to sort needs text and the name of the group it belongs in");
+    patch.groups = groups;
+    patch.cards = cards.filter((c2) => c2.text && c2.group);
+    patch.shuffle = true;
+    if (el.dropFeedback === true) patch.dropFeedback = true;
+  }
+  const hints = list(el.hints, 4).map((h) => str$1(h, 300)).filter(Boolean);
+  if (hints.length) patch.hints = hints;
+  for (const k of ["feedbackCorrect", "feedbackPartial", "feedbackIncorrect", "feedbackOutOfTries"]) if (str$1(el[k], 400)) patch[k] = str$1(el[k], 400);
+  if (typeof el.attempts === "number") patch.attempts = Math.round(num(el.attempts, 0, 10, 0));
+  if (typeof el.shuffle === "boolean") patch.shuffle = el.shuffle;
+  if (typeof el.points === "number") patch.points = num(el.points, 0, 100, 1);
+  if (el.report === "complete" || el.report === "progress") patch.report = el.report;
+  const id = addQuestion(run2.p, ab.id, kind, { parentId: parent.id, checkLabel: str$1(el.checkLabel, 40) || void 0 });
+  if (!id) {
+    bad("the question could not be added");
+    return null;
+  }
+  setQuestionSettings(run2.p, ab.id, id, patch);
+  const frame = parent.children.find((n) => n.id === id);
+  if (frame && str$1(el.name, 60)) frame.name = uniqueName(nodeNames(ab).filter((n) => n !== frame.name), str$1(el.name, 60));
+  return id;
+}
+function newPage(run2, spec, name, like) {
+  const p = run2.p;
+  const right = Math.max(0, ...p.artboards.map((a) => a.canvasX + a.width));
+  const ab = createArtboard({
+    name,
+    width: like?.width ?? 1024,
+    height: like?.height ?? 640,
+    canvasX: right + 100,
+    canvasY: 0,
+    ...like ? { background: structuredClone(like.background) } : {},
+    ...like?.master ? { master: like.master } : {}
+  });
+  if (like?.masterHide?.length) ab.masterHide = [...like.masterHide];
+  const after = findPage(p, spec.after);
+  const at = after ? p.artboards.indexOf(after) + 1 : (() => {
+    const firstMaster = p.artboards.findIndex((a) => a.isMaster);
+    return firstMaster < 0 ? p.artboards.length : firstMaster;
+  })();
+  p.artboards.splice(at, 0, ab);
+  return ab;
+}
+function boxOf(ab, title) {
+  const x = title ? Math.round(title.x) : ab.width >= 600 ? 48 : 24;
+  const y = title ? Math.round(title.y + title.height + 28) : 40;
+  const bottom = ab.height - (ab.master ? 90 : 40);
+  return { x, y, w: ab.width - x * 2, bottom };
+}
+function fillPage(run2, ab, spec, isNew, like) {
+  const look = lookOf(isNew ? like : ab);
+  const kit = { fontFamily: look.fontFamily, button: look.button, pageW: ab.width };
+  let title = isNew ? null : ab.children.find((n) => n.type === "text" && n.name === "Page title") ?? null;
+  const titleText = str$1(spec.title, 120);
+  const elements = list(spec.elements, MAX_ELEMENTS);
+  if (isNew && look.title) {
+    const copy = cloneWithNewIds(structuredClone(look.title), /* @__PURE__ */ new Map());
+    copy.text = titleText || pageName(spec);
+    delete copy.runs;
+    ab.children.push(copy);
+    title = copy;
+    run2.touched.push(copy.id);
+  }
+  const box = boxOf(ab, title);
+  let top = box.y;
+  if (!isNew) {
+    const lowest = Math.max(0, ...ab.children.filter((n) => n !== title && n.y + n.height <= box.bottom + 4).map((n) => n.y + n.height));
+    if (lowest) top = Math.max(top, Math.round(lowest + 28));
+  }
+  const stack2 = createNode("frame", {
+    name: uniqueName(nodeNames(ab), isNew ? "Content" : "Added content"),
+    x: box.x,
+    y: top,
+    width: box.w,
+    height: 100,
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: { ...defaultAutoLayout("column"), gap: 20, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "start", hugHeight: true }
+  });
+  ab.children.push(stack2);
+  const free = [];
+  const place = (el, node, into) => {
+    node.name = uniqueName(nodeNames(ab), node.name);
+    run2.made.set(el, node.id);
+    run2.nodesMade.add(node.id);
+    if (str$1(el.ref, 40)) run2.created[str$1(el.ref, 40)] = node.id;
+    if (typeof el.x === "number" && typeof el.y === "number") {
+      node.x = Math.round(el.x);
+      node.y = Math.round(el.y);
+      free.push(node);
+    } else into.children.push(node);
+  };
+  const build = (el, into, width) => {
+    const type = str$1(el.type, 20).toLowerCase();
+    switch (type) {
+      case "heading":
+        return place(el, heading(run2, kit, el, width), into);
+      case "text":
+        return place(el, textLayer(run2, kit, el, width), into);
+      case "list":
+        return place(el, listLayer(run2, kit, el, width), into);
+      case "image":
+      case "picture":
+        return place(el, pictureLayer(run2, el, width), into);
+      case "button":
+        return place(el, buttonLayer(run2, kit, el), into);
+      case "shape":
+        return place(el, shapeLayer(run2, el, width), into);
+      case "question": {
+        if (into !== stack2) {
+          run2.problems.push(`${ab.name}: a question has to sit on its own in the page, not inside a row`);
+          return;
+        }
+        const id = questionLayer(run2, ab, el, into, `${ab.name}: the question "${str$1(el.prompt ?? el.text, 30)}"`);
+        if (id) {
+          const f2 = stack2.children.find((n) => n.id === id);
+          if (f2 && f2.width > width) f2.width = width;
+          run2.made.set(el, id);
+          if (str$1(el.ref, 40)) run2.created[str$1(el.ref, 40)] = id;
+        }
+        return;
+      }
+      case "row": {
+        const items = list(el.items, 6);
+        const row2 = createNode("frame", {
+          name: uniqueName(nodeNames(ab), str$1(el.name, 60) || "Row"),
+          width,
+          height: 60,
+          fill: null,
+          stroke: null,
+          clip: false,
+          layout: { ...defaultAutoLayout("row"), gap: 16, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "start", hugHeight: true }
+        });
+        const each = Math.floor((width - 16 * Math.max(0, items.length - 1)) / Math.max(1, items.length));
+        for (const it of items) build(it, row2, each);
+        if (row2.children.length) place(el, row2, into);
+        return;
+      }
+      default:
+        run2.problems.push(`${ab.name}: "${type || "an element with no type"}" is not something a blueprint can make (heading, text, list, image, button, shape, question, row)`);
+    }
+  };
+  if (titleText && !title) build({ type: "heading", level: 1, text: titleText, name: "Page title" }, stack2, box.w);
+  for (const el of elements) build(rec(el), stack2, box.w);
+  if (stack2.children.length) {
+    run2.touched.push(stack2.id);
+    run2.nodesMade.add(stack2.id);
+  } else ab.children.splice(ab.children.indexOf(stack2), 1);
+  for (const n of free) {
+    ab.children.push(n);
+    run2.touched.push(n.id);
+  }
+  relayoutTree(ab.children);
+  if (stack2.children.length && stack2.y + stack2.height > box.bottom + 8) {
+    run2.warnings.push(`What was added to ${ab.name} runs past the bottom of the page, so it needs moving or a taller page`);
+  }
+  const made = stack2.children.length + free.length;
+  run2.notes.push(`${isNew ? "Added the page" : "Added to the page"} ${ab.name}${made ? ` (${made} ${made === 1 ? "layer" : "layers"})` : ""}`);
+  run2.firstAb ??= ab.id;
+}
+const pageName = (spec) => str$1(spec.name, 80) || "New page";
+const sentencesOf = (v) => (Array.isArray(v) ? v : [v]).map((x) => str$1(x, 300).trim()).filter(Boolean).slice(0, 8);
+function behave(run2, ab, layer, says) {
+  if (!says.length) return true;
+  const said = says.join(", ");
+  const lost = (why) => {
+    run2.problems.push(`${ab.name}: could not set up "${said}" on ${layer.name} (${why})`);
+    return false;
+  };
+  const read2 = (s) => {
+    const d = describeIt(s, run2.p, ab, layer.id);
+    if (!d) return { err: `"${s}" was not understood; use phrases like "go to the next page", "go to the page called X", "show X", "hide X", "add 1 to score", "say ..."` };
+    if (d.missing.length) return { err: `not found in the project: ${d.missing.join(", ")}` };
+    if (d.ignored.length) return { err: `these parts were not understood: ${d.ignored.join(", ")}` };
+    const gap = incomplete(RECIPE_BY_ID[d.recipe], d.answers, run2.p, ab);
+    return gap ? { err: gap } : { d };
+  };
+  const first2 = read2(says[0]);
+  if (!first2.d) return lost(first2.err);
+  const main = first2.d;
+  const then = [...main.then];
+  for (const s of says.slice(1)) {
+    const more = read2(s);
+    if (!more.d) return lost(more.err);
+    then.push({ recipe: more.d.recipe, answers: more.d.answers }, ...more.d.then);
+  }
+  try {
+    const b = buildBehaviour({ project: run2.p, ab, layerId: main.layerId || layer.id }, main.recipe, main.trigger, main.answers, void 0, { when: main.when, then, only: main.only, otherwise: main.otherwise });
+    const w = applyBehaviour((r2) => r2(run2.p), ab.id, b);
+    for (const id of w.nodeIds) run2.nodesMade.add(id);
+    run2.notes.push(`${layer.name}: ${b.sentence}`);
+    return true;
+  } catch (e) {
+    return lost(e.message);
+  }
+}
+const flat = (els) => els.flatMap((e) => [rec(e), ...str$1(rec(e).type).toLowerCase() === "row" ? flat(list(rec(e).items, 6)) : []]);
+const abOf = (p, id) => p.artboards.find((a) => a.id === id);
+function tidyNodes(run2) {
+  const p = run2.p;
+  const varIds = new Set(p.variables.map((v) => v.id));
+  for (const ab of p.artboards) {
+    const ids = /* @__PURE__ */ new Set();
+    walk(ab.children, (n) => ids.add(n.id));
+    const tl = new Set(ab.timelines.map((t2) => t2.id));
+    const gone = /* @__PURE__ */ new Set();
+    for (const n of ab.logic.nodes) {
+      if (!run2.nodesMade.has(n.id)) continue;
+      const def = CATALOG_BY_KIND[n.kind];
+      if (!def) continue;
+      for (const pd of def.params) {
+        const v = n.params[pd.key];
+        if (v === void 0 || v === "") continue;
+        if (pd.type === "node" && !ids.has(String(v)) || pd.type === "timeline" && !tl.has(String(v)) || pd.type === "variable" && !varIds.has(String(v))) gone.add(n.id);
+      }
+    }
+    for (const n of ab.logic.nodes) {
+      if (!run2.nodesMade.has(n.id) || gone.has(n.id)) continue;
+      if (CATALOG_BY_KIND[n.kind]?.category === "event" && !ab.logic.edges.some((e) => e.from === n.id)) gone.add(n.id);
+    }
+    if (!gone.size) continue;
+    ab.logic.nodes = ab.logic.nodes.filter((n) => !gone.has(n.id));
+    ab.logic.edges = ab.logic.edges.filter((e) => !gone.has(e.from) && !gone.has(e.to));
+    run2.warnings.push(`${gone.size} unfinished step${gone.size === 1 ? " was" : "s were"} left out of ${ab.name}`);
+  }
+}
+function compileBlueprint(p0, bp, opts2 = {}) {
+  const run2 = { p: structuredClone(p0), notes: [], warnings: [], problems: [], created: {}, touched: [], made: /* @__PURE__ */ new Map(), nodesMade: /* @__PURE__ */ new Set(), firstAb: null, openId: opts2.artboardId };
+  const p = run2.p;
+  for (const v of list(bp.variables, 20)) {
+    const o = rec(v);
+    const raw2 = str$1(o.name, 60);
+    const name = friendlyIdentifier(raw2);
+    if (!name) {
+      if (raw2) run2.problems.push(`"${raw2}" can't be a variable name`);
+      continue;
+    }
+    if (p.variables.some((x) => x.name === name)) continue;
+    const type = o.type === "string" || o.type === "boolean" ? o.type : "number";
+    const initial = type === "number" ? typeof o.initial === "number" ? o.initial : 0 : type === "boolean" ? o.initial === true : str$1(o.initial, 200);
+    const made = { id: uid("v"), name, type, initial };
+    p.variables.push(made);
+    run2.notes.push(`Added the ${type === "number" ? "number" : type === "boolean" ? "switch" : "text value"} ${name}`);
+  }
+  const pages2 = list(bp.pages, MAX_PAGES);
+  for (const spec0 of pages2) {
+    const spec = rec(spec0);
+    const have = findPage(p, spec.name);
+    if (have && str$1(spec.rename, 80)) {
+      const to = str$1(spec.rename, 80);
+      run2.notes.push(`Renamed the page ${have.name} to ${to}`);
+      have.name = to;
+      spec.name = to;
+    }
+  }
+  const plan = [];
+  for (const spec0 of pages2) {
+    const spec = rec(spec0);
+    const nm = pageName(spec);
+    const have = findPage(p, spec.name);
+    const open = opts2.artboardId ? abOf(p, opts2.artboardId) : void 0;
+    const like = findPage(p, spec.like) ?? (open && !open.isMaster ? open : void 0) ?? pagesOf(p).at(-1);
+    if (have) plan.push({ spec, ab: have, isNew: false, like: void 0 });
+    else plan.push({ spec, ab: newPage(run2, spec, nm, like), isNew: true, like });
+  }
+  for (const { spec, ab, isNew, like } of plan) fillPage(run2, ab, spec, isNew, like);
+  for (const { spec, ab } of plan) {
+    for (const el of flat(list(spec.elements, MAX_ELEMENTS))) {
+      const says = sentencesOf(rec(el).does);
+      const id = run2.made.get(el);
+      if (!says.length || !id) continue;
+      const layer = findLayer(ab, (n) => n.id === id);
+      if (layer) behave(run2, ab, layer, says);
+    }
+  }
+  for (const b0 of list(bp.behaviours, 30)) {
+    const b = rec(b0);
+    const on = str$1(b.on, 80);
+    const only = findPage(p, b.page);
+    let ab;
+    let layer = null;
+    const refId = run2.created[on];
+    for (const a of only ? [only] : pagesOf(p)) {
+      layer = findLayer(a, (n) => refId ? n.id === refId : same(n.name, on));
+      if (layer) {
+        ab = a;
+        break;
+      }
+    }
+    if (!layer || !ab) run2.problems.push(`${b.page ? `${b.page}: ` : ""}there is no layer called "${on}" to attach "${sentencesOf(b.does).join(", ").slice(0, 120)}" to`);
+    else behave(run2, ab, layer, sentencesOf(b.does));
+  }
+  const raw = list(bp.raw, 60).map((c2) => rec(c2));
+  if (raw.length && opts2.applyRaw) {
+    const sub = (v) => typeof v === "string" && v.startsWith("$") && run2.created[v.slice(1)] ? run2.created[v.slice(1)] : Array.isArray(v) ? v.map(sub) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, sub(x)])) : v;
+    try {
+      const out = opts2.applyRaw(p, raw.map((c2) => sub(c2)));
+      run2.p = out.project;
+      Object.assign(run2.created, out.created);
+      run2.notes.push(`Made ${raw.length} other change${raw.length === 1 ? "" : "s"} by hand`);
+    } catch (e) {
+      run2.problems.push(`The extra changes could not be made: ${e.message}`);
+    }
+  }
+  tidyNodes(run2);
+  for (const ab of run2.p.artboards) relayoutTree(ab.children);
+  return { project: run2.p, created: run2.created, notes: run2.notes, warnings: run2.warnings, problems: run2.problems, touched: [...new Set(run2.touched)], artboardId: run2.firstAb };
+}
 function allNodes(p) {
   return (p.artboards ?? []).flatMap(artboardNodes);
 }
 function artboardNodes(ab) {
   const out = [];
-  const go = (list) => {
-    for (const n of list ?? []) {
+  const go = (list2) => {
+    for (const n of list2 ?? []) {
       out.push(n);
       go(n.children);
     }
@@ -10274,7 +14806,7 @@ const noAutoplay = (c2) => {
 };
 const variable = (name, type) => (c2) => !!c2.project.variables?.some((v) => v.name === name && (!type || v.type === type));
 const variableWhere = (name, ok) => (c2) => !!c2.project.variables?.some((v) => v.name === name && ok(v));
-const variables = (...list) => (c2) => list.every(([name, type]) => variable(name, type)(c2));
+const variables = (...list2) => (c2) => list2.every(([name, type]) => variable(name, type)(c2));
 const pages = (min) => (c2) => c2.project.artboards.length >= min;
 const pageNamed = (name) => (c2) => c2.project.artboards.some((a) => name.test(a.name));
 const nodesOfKind = (kind, min = 1) => (c2) => c2.project.artboards.reduce((n, ab) => n + ab.logic.nodes.filter((x) => x.kind === kind).length, 0) >= min;
@@ -10296,7 +14828,7 @@ const hasMaster = (c2) => c2.project.artboards.some((a) => !!a.master);
 const question = (kind, ok) => (c2) => allNodes(c2.project).some((n) => n.type === "frame" && !!n.question && (!kind || n.question.kind === kind) && (!ok || ok(n.question)));
 const scoredFromQuestions = (c2) => c2.project.settings?.reporting?.scoreFrom === "questions";
 const saw = (what) => (c2) => c2.seen[what];
-const all = (...list) => (c2) => list.every((f2) => f2(c2));
+const all = (...list2) => (c2) => list2.every((f2) => f2(c2));
 const TUTORIALS = [
   {
     id: "tutorial-first-animation",
@@ -15178,10 +19710,10 @@ const BUILD_IT_OVERVIEW = {
       `**Just want to look?** Every tutorial's finished project is on the projects page: open **Templates**, and under **Examples** find **Build it**. **Play** runs it, and **Make my copy** gives you your own copy to pull apart.`
     ];
     for (const level of LEVELS) {
-      const list = BUILD_TUTORIALS.filter((t2) => t2.level === level);
-      if (!list.length) continue;
+      const list2 = BUILD_TUTORIALS.filter((t2) => t2.level === level);
+      if (!list2.length) continue;
       lines.push("", `## ${levelName[level]}`, "");
-      for (const t2 of list) lines.push(`- [${t2.topic.title}](${t2.topic.id}), about ${t2.minutes} minutes. ${t2.topic.summary}`);
+      for (const t2 of list2) lines.push(`- [${t2.topic.title}](${t2.topic.id}), about ${t2.minutes} minutes. ${t2.topic.summary}`);
     }
     return lines.join("\n");
   }
@@ -16601,6 +21133,7 @@ The small **(i)** icon in the title bar shows the version of Interactives you ar
 - **Tutorial badges and cheers**: on by default. Gives every tutorial a tick box on each step, a short line when you tick one, a badge card (with a quick burst of confetti) when you finish a whole tutorial or a set of them, and your progress on the **Tutorials** button on the projects page. Turn it off and all of that goes: no tick boxes, no badges, no cheers, no progress marks, no self-ticking steps and no **Show me** buttons. What you had ticked is kept, and comes back if you turn it on again. If your system is set to reduce motion, the badge card is still and there is no confetti. See [Tutorials, badges and progress](help#tutorials-badges-and-progress).
 - **Soft chime with the cheers**: off by default. Nothing in the editor makes a sound unless you ask. Tick it for a short, quiet chime with the cheers. It is greyed out while the badges and cheers are off.
 - **Reset tutorial progress**: after you press it and say yes, every tutorial goes back to not started: the steps you ticked, the finished marks and every badge are cleared. It is greyed out when nothing has been started, it asks first, and it cannot be undone. It leaves the two switches above as they are, and **Reset this page** and **Reset everything** do not touch your progress.
+- **Use my own Cogniti allowance**: for the [Activity Designer](activity-designer). Everyone's requests share one Cogniti allowance, which can run out for the hour. Paste your own Cogniti API token here and your requests use your own allowance instead. Open Cogniti, click your name at the top right, then **User data**, then **API tokens**, make a token (it can last up to 365 days) and copy it. The server checks it once, keeps it encrypted, and never shows it again: afterwards this setting only says **Connected**, when you added it and when it ends if you said, with a **Remove** button. It is yours, not the project's. See [Use my own Cogniti allowance](activity-designer#use-my-own-cogniti-allowance).
 - **Always show the Alt-drag hint**: off by default. Dragging a layer, a page, a page group or a row in Layers says "Alt: drag a copy" for your first three drags, then goes quiet. Tick this to see it on every drag. See [Alt-drag](shortcuts#mouse).
 - **Comment notices**: a bell on the projects page, and a message while a project is open, when a review comment is handed to you, mentions you or gets a reply in a conversation you are in.
 
@@ -18928,6 +23461,8 @@ It matches fixed phrasings, not an AI service, and nothing you type leaves the e
 
 It works for most of the list: pages, showing and hiding, a layer's colour, text, opacity or size, animations, sounds and music, video, adding to or taking from a number, setting a text or a switch, putting values back, saying something to a screen reader, opening a link and starting over. For **It starts when** it knows **after 5 seconds**, **when the page opens**, **when hovered**, **when score reaches 10**, **when I press space**, **when dropped on the bin** and **when the video reaches 10 seconds**. Join steps with **then**, **and** or a comma, add **only if score is at least 3**, and give **otherwise** what to do when it is not true. It needs a layer to attach the behaviour to, so select one first, or name it: **when the Start button is clicked, show the hint**.
 
+The [Activity Designer](activity-designer) panel reads sentences the same way: a sentence that starts with what triggers it (**when clicked go to the next page and say moving on**), typed with one layer selected, is done on the spot with no AI, and the Activity Designer uses it for what its buttons do when it builds pages for you.
+
 ### Counting what is done
 Choose **all of these are done** under **It starts when** and the thing you picked to happen runs once every layer you tick has been done. Or choose **Count what has been done…** from the list to get only the counting, with nothing to run at the end. Either way you answer three questions:
 - **Each counts as done when it is**: *clicked*, *opened (a pop-up or dialog layer)* or *answered (a question)*. Opened works for a frame with the **Dialog** setting and an **open value**. Answered works for a layer made into a question. Only layers that can be done that way are listed.
@@ -19546,21 +24081,37 @@ A question keeps its settings on its frame, and each part layer is marked as par
     title: "Ask the Activity Designer",
     group: "Getting started",
     summary: "Describe what you want in plain words and UniSQ's Activity Designer builds it in your project while you watch. One click undoes it.",
-    keywords: "ai chat assistant agent activity designer ask help ideas build cogniti undo limit",
-    body: `The speech bubble button at the top right of the editor opens **Ask the Activity Designer**, in a panel down the right. Tell it what you want and it **builds it in your open project**: pages, layers, text, buttons, flows between them. You see its changes appear on the canvas as it works, the same way you see a colleague's, and it shows in the project as "Activity Designer".
+    keywords: "ai chat assistant agent activity designer ask help ideas build cogniti undo limit allowance token own shared requests hour question how do i",
+    body: `The speech bubble button at the top right of the editor opens **Ask the Activity Designer**, in a panel down the right. Tell it what you want and it **builds it in your open project**: pages, text, buttons, questions, what happens when something is clicked. You see its changes appear on the canvas as it works, the same way you see a colleague's, and it shows in the project as "Activity Designer".
 
 ## Things to ask
 
 - "Add a page called Results with a heading 'Well done!', and make the Add one button go to it when the score reaches 5."
-- "Make a multiple choice question with three answers and feedback for each one."
+- "Add a page with a multiple choice question about clouds, linked from page 1."
+- "Make a sorting question with two groups and feedback for each item."
 - "Check my project for problems and fix them."
 - "What would make a good activity for teaching the water cycle?" It answers questions and gives ideas without changing anything.
 
 Short, specific requests work best. If your request is unclear, or would replace a lot of your work, it asks first.
 
+## How it builds
+
+The Activity Designer plans your request in one go, and the editor builds the plan with the same tools you have: the question builder for questions, [Describe it](interactions#describe-it-in-words) for what a button does, and the look of the page you have open (its master, background, title and buttons) for everything else. What it makes is ordinary pages, layers, questions and interactions you can open and change like anything you made yourself. Pictures come as grey boxes with their text description already written, ready for you to drop a picture in.
+
+After it builds, the editor checks the project. If something it made still has a problem, the Activity Designer is told once and puts it right. Most requests need no second try.
+
+## Free answers
+
+Some things don't need the Activity Designer, so they don't use up a request:
+
+- **"How do I..." and "What is..." questions** are answered from this help. The panel lists the best matching topics as links, and says nothing was sent to the Activity Designer. If you wanted it to do the thing anyway, press **Ask the Activity Designer anyway**.
+- **One behaviour on a layer you have selected**, such as "when clicked go to the next page and say moving on", is done with Describe it straight away. The panel says **Done without using the AI**, and you can undo it like any other change (<kbd>Ctrl</kbd>+<kbd>Z</kbd>).
+
+When it isn't sure, a message goes to the Activity Designer.
+
 ## While it works
 
-The panel says what it's doing ("Reading the project", "Changing the project", "Checking the project"). A request can take a minute or two. **Stop** ends it after the step it's on. Press <kbd>Enter</kbd> to send, <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line.
+The panel says what it's doing ("Reading the project", "Thinking it through", "Building it in your project", "Checking my work"). A request can take a minute or so. **Stop** ends it after the step it's on. Press <kbd>Enter</kbd> to send, <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line.
 
 ## Undo
 
@@ -19570,13 +24121,26 @@ Before it changes anything, the Activity Designer saves a copy of your project a
 
 Closing the panel keeps the conversation; **New chat** starts afresh. It remembers the chat for a couple of hours. Drag the panel's left edge (or focus it and use the arrow keys) to make it wider or narrower.
 
-## The hourly limit
+## The hourly limit and your share
 
-The Activity Designer is shared by everyone using the editor, and UniSQ's Cogniti allows only so many messages an hour. When it's used up the panel says **"The Activity Designer has reached its hourly limit"**: try again in a little while. A request that changes things sends a number of messages, so ask for a piece at a time.
+UniSQ's Cogniti allows each account only so many messages an hour, and everyone using the editor shares one Activity Designer account. So each person gets a fair share of it, and the panel shows it: **"4 of 6 shared requests left this hour"**. A request counts as one, however much it builds. The next one comes back an hour after you used it. If Cogniti's own limit is reached first, the panel says **"The Activity Designer has reached its hourly limit"**: try again in a little while. The free answers above never count.
+
+## Use my own Cogniti allowance
+
+When the shared allowance is used up (the panel then offers it), or if you use the Activity Designer a lot, you can use your own Cogniti allowance instead. Then your requests aren't counted against the shared one, and the panel shows no count.
+
+1. Open [Cogniti](https://cogniti.unisq.edu.au/) and sign in.
+2. Click your name at the top right, then **User data**, then **API tokens**.
+3. Make a new token (it can last up to 365 days) and copy it.
+4. In the editor, open **Preferences**, **General**, **Activity Designer** (the panel's **Use my own Cogniti allowance** link goes straight there), paste the token and press **Connect**. If you know the day it ends, put it in too.
+
+The editor checks the token with Cogniti once. It is kept encrypted on the server, used only for your requests, and never shown again: Preferences only says **Connected**, when you added it and when it ends. **Remove** deletes it and puts you back on the shared allowance. A token needs to be made again when it ends. Treat it like a password.
+
+If Cogniti says your account can't chat with the Activity Designer, the Toolbox team need to share it with you. Tell them, and try again.
 
 ## Where your project goes
 
-Your requests, and the parts of the project the Activity Designer reads (layer names, text, flows, settings), are sent to **UniSQ's Cogniti**, the university's AI platform, and from there to UniSQ's own Azure OpenAI. It can't read learners' answers or results, so no learner data is sent. Only people who can edit a project can ask it to change it, and everything it does is recorded in the project's audit log. The button only shows on servers where it's set up.`
+Your requests, and the parts of the project the Activity Designer reads (page and layer names, text, flows, settings), are sent to **UniSQ's Cogniti**, the university's AI platform, and from there to UniSQ's own Azure OpenAI. It can't read learners' answers or results, so no learner data is sent. Only people who can edit a project can ask it to change it, and everything it does is recorded in the project's audit log. The button only shows on servers where it's set up.`
   },
   {
     id: "command-palette",
@@ -21816,7 +26380,7 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
     keywords: "branded brand starter pack unisq colourway colourways theme logo locked open sans chrome template quiz switch colour gold purple blue green orange red apply the look existing project",
     body: () => {
       const ways = "Gold, Purple, Blue, Green, Orange and Red, from the UniSQ palette.";
-      const list = "The list of starters is in the editor (Templates, Built-in).";
+      const list2 = "The list of starters is in the editor (Templates, Built-in).";
       return `A **branded starter pack** is a ready-made activity in the UniSQ look: a gradient title page with the logo, white content pages with a footer line, and sections on deep purple. You write the content. The look is already done, and it stays done.
 
 ## Using one
@@ -21930,7 +26494,7 @@ The two optional extras are one switch each, for every question. **Offer a Hint*
 
 A button says what happens to the answer: **Submit answer** where it is final, **Check answer** where there are tries. A button that starts a sound is disabled and reads "Playing..." until the sound ends, so it can't be pressed over itself.
 
-${list}
+${list2}
 `;
     }
   },
@@ -22415,10 +26979,10 @@ async function api(path, init = {}) {
   const headers = { ...init.headers };
   if (ctx().sessionId) headers["X-Session-ID"] = ctx().sessionId;
   const res = await fetch(`${ctx().base}/api/${path}`, { ...init, headers });
-  const text = await res.text();
-  let body = text;
+  const text2 = await res.text();
+  let body = text2;
   try {
-    body = JSON.parse(text);
+    body = JSON.parse(text2);
   } catch {
   }
   if (!res.ok) throw new Error(body?.error ?? `Server said ${res.status}`);
@@ -22479,20 +27043,20 @@ async function presence(s, p) {
 function locate(p, id) {
   for (const ab of p.artboards) {
     let found = null;
-    const rec = (list, parent) => {
-      for (const n of list) {
+    const rec2 = (list2, parent) => {
+      for (const n of list2) {
         if (found) return;
         if (n.id === id) found = { ab, node: n, parent };
-        else if (isContainer(n)) rec(n.children, n);
+        else if (isContainer(n)) rec2(n.children, n);
       }
     };
-    rec(ab.children, null);
+    rec2(ab.children, null);
     if (found) return found;
   }
   return null;
 }
-function outline(list, depth, maxDepth, out, limit) {
-  for (const n of [...list].reverse()) {
+function outline(list2, depth, maxDepth, out, limit) {
+  for (const n of [...list2].reverse()) {
     if (limit.n-- <= 0) return;
     const extra = [];
     if (n.type === "text") extra.push(JSON.stringify(n.text.slice(0, 40)) + (n.runs?.length ? ` (${n.runs.length} runs)` : ""));
@@ -22647,14 +27211,14 @@ function applyChanges(p0, changes) {
         if (isContainer(node) && Array.isArray(c2.children)) node.children = [];
         syncRuns(node, resolveRefs(c2.props ?? {}));
         sanitizeLayerInPlace(node);
-        let list = ab.children;
+        let list2 = ab.children;
         if (c2.parent_id) {
           const parent = locate(p, ref(c2.parent_id));
           if (!parent || !isContainer(parent.node)) throw new Error(`${where2}: parent ${String(c2.parent_id)} is not a group or frame`);
-          list = parent.node.children;
+          list2 = parent.node.children;
         }
-        const index = typeof c2.index === "number" ? Math.max(0, Math.min(list.length, c2.index)) : list.length;
-        list.splice(index, 0, node);
+        const index = typeof c2.index === "number" ? Math.max(0, Math.min(list2.length, c2.index)) : list2.length;
+        list2.splice(index, 0, node);
         if (key) created[key] = node.id;
         touched.push(node.id);
         break;
@@ -22663,8 +27227,8 @@ function applyChanges(p0, changes) {
         const id = ref(c2.id);
         const loc = locate(p, id);
         if (!loc) throw new Error(`${where2}: no layer ${id}`);
-        const list = loc.parent && isContainer(loc.parent) ? loc.parent.children : loc.ab.children;
-        list.splice(list.indexOf(loc.node), 1);
+        const list2 = loc.parent && isContainer(loc.parent) ? loc.parent.children : loc.ab.children;
+        list2.splice(list2.indexOf(loc.node), 1);
         break;
       }
       case "move": {
@@ -22862,19 +27426,19 @@ function applyChanges(p0, changes) {
     }
   }
   if (p.notes) {
-    const list = cleanNotes(p.notes);
-    if (list) p.notes = list;
+    const list2 = cleanNotes(p.notes);
+    if (list2) p.notes = list2;
     else delete p.notes;
   }
   for (const ab of p.artboards) {
     if (ab.notes) {
-      const list = cleanNotes(ab.notes);
-      if (list) ab.notes = list;
+      const list2 = cleanNotes(ab.notes);
+      if (list2) ab.notes = list2;
       else delete ab.notes;
     }
     if (ab.logic.notes) {
-      const list = cleanNotes(ab.logic.notes);
-      if (list) ab.logic.notes = list;
+      const list2 = cleanNotes(ab.logic.notes);
+      if (list2) ab.logic.notes = list2;
       else delete ab.logic.notes;
     }
   }
@@ -22934,8 +27498,8 @@ const TOOLS = [
     description: "List the Interactives projects this session can see (id, name, last change).",
     inputSchema: S({}),
     run: async () => {
-      const list = await api("projects");
-      return list.map((x) => `- ${x.name} [${x.id}] ${x.artboards} artboards, updated ${x.updated}`).join("\n") || "No projects.";
+      const list2 = await api("projects");
+      return list2.map((x) => `- ${x.name} [${x.id}] ${x.artboards} artboards, updated ${x.updated}`).join("\n") || "No projects.";
     }
   },
   {
@@ -23009,8 +27573,8 @@ ${JSON.stringify(loc.node, null, 1)}`);
       const ops = diff(before, project);
       if (!ops.length) return "Nothing changed.";
       await api(`projects/${encodeURIComponent(s.projectId)}/ops`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId: s.clientId, ops }) });
-      const first = touched.map((id) => locate(project, id)).find(Boolean);
-      if (first) await presence(s, { artboardId: first.ab.id, selection: touched.slice(0, 50), cursor: { x: first.ab.canvasX + first.node.x + first.node.width, y: first.ab.canvasY + first.node.y } });
+      const first2 = touched.map((id) => locate(project, id)).find(Boolean);
+      if (first2) await presence(s, { artboardId: first2.ab.id, selection: touched.slice(0, 50), cursor: { x: first2.ab.canvasX + first2.node.x + first2.node.width, y: first2.ab.canvasY + first2.node.y } });
       const problems = validate(project);
       return `Applied ${a.changes.length} change(s) as ${ops.length} op(s).${Object.keys(created).length ? `
 Created: ${JSON.stringify(created)}` : ""}${problems.length ? `
@@ -23087,10 +27651,40 @@ Problems now in the project:
     }
   }
 ];
+function rawReference() {
+  const edit = TOOLS.find((t2) => t2.name === "edit");
+  const kinds = CATALOG.map((d) => `${d.kind} (${d.label}): ${d.params.map((pd) => pd.key).join(", ") || "no settings"}`).join("\n");
+  return `${edit.description}
+
+Interaction node kinds for add_interactions (kind: its params):
+${kinds}`;
+}
+async function buildBlueprint(projectId, bp, opts2 = {}) {
+  const s = join(projectId);
+  await s.ready;
+  const before = await loadProject(s.projectId);
+  const out = compileBlueprint(before, bp, {
+    artboardId: opts2.artboardId,
+    applyRaw: (p, changes) => {
+      const r2 = applyChanges(p, changes);
+      return { project: r2.project, created: r2.created };
+    }
+  });
+  const ops = diff(before, out.project);
+  if (ops.length) {
+    await api(`projects/${encodeURIComponent(s.projectId)}/ops`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId: s.clientId, ops }) });
+    const first2 = out.touched.map((id) => locate(out.project, id)).find(Boolean);
+    if (first2) await presence(s, { artboardId: first2.ab.id, selection: out.touched.slice(0, 50), cursor: { x: first2.ab.canvasX + first2.node.x + first2.node.width, y: first2.ab.canvasY + first2.node.y } });
+  }
+  const known = opts2.known ?? validate(before);
+  const had = new Set(known);
+  const problems = [...out.problems, ...validate(out.project).filter((x) => !had.has(x))];
+  return { changed: ops.length > 0, notes: out.notes, warnings: out.warnings, problems, known, created: out.created, ops: ops.length };
+}
 function people(s, p) {
-  const list = [...s.peers.values()].filter((x) => !x.left);
-  if (!list.length) return "Nobody else is in this project right now.";
-  return "In the session:\n" + list.map((x) => {
+  const list2 = [...s.peers.values()].filter((x) => !x.left);
+  if (!list2.length) return "Nobody else is in this project right now.";
+  return "In the session:\n" + list2.map((x) => {
     const ab = p.artboards.find((a) => a.id === x.artboardId);
     const sel = (x.selection ?? []).map((id) => locate(p, id)?.node.name ?? id);
     return `- ${x.name}${ab ? ` on ${ab.name}` : ""}${sel.length ? `, selected: ${sel.join(", ")}` : ""}`;
@@ -23119,8 +27713,8 @@ async function respond(msg) {
       const tool = TOOLS.find((t2) => t2.name === msg.params?.name);
       if (!tool) return fail(-32602, `Unknown tool ${String(msg.params?.name)}`);
       try {
-        const text = await tool.run(msg.params?.arguments ?? {});
-        return reply({ content: [{ type: "text", text }] });
+        const text2 = await tool.run(msg.params?.arguments ?? {});
+        return reply({ content: [{ type: "text", text: text2 }] });
       } catch (err) {
         return reply({ content: [{ type: "text", text: `Error: ${err.message}` }], isError: true });
       }
@@ -23162,12 +27756,14 @@ if (!process.env.INTERACTIVES_MCP_NO_STDIO) {
 export {
   TOOLS,
   applyChanges,
+  buildBlueprint,
   closeContext,
   handle,
   interactions,
   locate,
   notesReport,
   overview,
+  rawReference,
   reference,
   respond,
   runAs,
