@@ -1,4 +1,4 @@
-import{bX as V,bY as R,bZ as L,b_ as h,b$ as s,c0 as a,c1 as i,c2 as k,c3 as o,c4 as m,c5 as U,c6 as E,c7 as r,c8 as b,c9 as C,ca as n,cb as f,cc as w,cd as S,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-Cn_Q68Hf.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bX as a,bY as o,bZ as m,b_ as r,b$ as k,c0 as V,c1 as R,c2 as L,c3 as h,c4 as s,c5 as i,c6 as U,c7 as E,c8 as b,c9 as n,ca as S,cb as C,cc as f,cd as w,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-D78u60h8.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -4532,7 +4532,6 @@ The small **(i)** icon in the title bar shows the version of Interactives you ar
 - **Tutorial badges and cheers**: on by default. Gives every tutorial a tick box on each step, a short line when you tick one, a badge card (with a quick burst of confetti) when you finish a whole tutorial or a set of them, and your progress on the **Tutorials** button on the projects page. Turn it off and all of that goes: no tick boxes, no badges, no cheers, no progress marks, no self-ticking steps and no **Show me** buttons. What you had ticked is kept, and comes back if you turn it on again. If your system is set to reduce motion, the badge card is still and there is no confetti. See [Tutorials, badges and progress](help#tutorials-badges-and-progress).
 - **Soft chime with the cheers**: off by default. Nothing in the editor makes a sound unless you ask. Tick it for a short, quiet chime with the cheers. It is greyed out while the badges and cheers are off.
 - **Reset tutorial progress**: after you press it and say yes, every tutorial goes back to not started: the steps you ticked, the finished marks and every badge are cleared. It is greyed out when nothing has been started, it asks first, and it cannot be undone. It leaves the two switches above as they are, and **Reset this page** and **Reset everything** do not touch your progress.
-- **Use my own Cogniti allowance**: for the [Activity Designer](activity-designer). Everyone's requests share one Cogniti allowance, which can run out for the hour. Paste your own Cogniti API token here and your requests use your own allowance instead. Open Cogniti, click your name at the top right, then **User data**, then **API tokens**, make a token (it can last up to 365 days) and copy it. The server checks it once, keeps it encrypted, and never shows it again: afterwards this setting only says **Connected**, when you added it and when it ends if you said, with a **Remove** button. It is yours, not the project's. See [Use my own Cogniti allowance](activity-designer#use-my-own-cogniti-allowance).
 - **Always show the Alt-drag hint**: off by default. Dragging a layer, a page, a page group or a row in Layers says "Alt: drag a copy" for your first three drags, then goes quiet. Tick this to see it on every drag. See [Alt-drag](shortcuts#mouse).
 - **Comment notices**: a bell on the projects page, and a message while a project is open, when a review comment is handed to you, mentions you or gets a reply in a conversation you are in.
 
@@ -6526,8 +6525,6 @@ It matches fixed phrasings, not an AI service, and nothing you type leaves the e
 
 It works for most of the list: pages, showing and hiding, a layer's colour, text, opacity or size, animations, sounds and music, video, adding to or taking from a number, setting a text or a switch, putting values back, saying something to a screen reader, opening a link and starting over. For **It starts when** it knows **after 5 seconds**, **when the page opens**, **when hovered**, **when score reaches 10**, **when I press space**, **when dropped on the bin** and **when the video reaches 10 seconds**. Join steps with **then**, **and** or a comma, add **only if score is at least 3**, and give **otherwise** what to do when it is not true. It needs a layer to attach the behaviour to, so select one first, or name it: **when the Start button is clicked, show the hint**.
 
-The [Activity Designer](activity-designer) panel reads sentences the same way: a sentence that starts with what triggers it (**when clicked go to the next page and say moving on**), typed with one layer selected, is done on the spot with no AI, and the Activity Designer uses it for what its buttons do when it builds pages for you.
-
 ### Counting what is done
 Choose **all of these are done** under **It starts when** and the thing you picked to happen runs once every layer you tick has been done. Or choose **Count what has been done…** from the list to get only the counting, with nothing to run at the end. Either way you answer three questions:
 - **Each counts as done when it is**: *clicked*, *opened (a pop-up or dialog layer)* or *answered (a question)*. Opened works for a frame with the **Dialog** setting and an **open value**. Answered works for a layer made into a question. Only layers that can be done that way are listed.
@@ -7057,65 +7054,7 @@ Questions work with a keyboard and a screen reader without extra setup. These ne
 ## Reference
 
 A question keeps its settings on its frame, and each part layer is marked as part of the question, so the settings can find it again after it is renamed or moved. Both are in the exported file. The player uses the settings and ignores the markers. The nodes are **Check answer**, **Reset question**, **Show hint**, **Choose option** and **Move item** in the [node reference](interaction-nodes).
-`},{id:"activity-designer",title:"Ask the Activity Designer",group:"Getting started",summary:"Describe what you want in plain words and UniSQ's Activity Designer builds it in your project while you watch. One click undoes it.",keywords:"ai chat assistant agent activity designer ask help ideas build cogniti undo limit allowance token own shared requests hour question how do i",body:`The speech bubble button at the top right of the editor opens **Ask the Activity Designer**, in a panel down the right. Tell it what you want and it **builds it in your open project**: pages, text, buttons, questions, what happens when something is clicked. You see its changes appear on the canvas as it works, the same way you see a colleague's, and it shows in the project as "Activity Designer".
-
-## Things to ask
-
-- "Add a page called Results with a heading 'Well done!', and make the Add one button go to it when the score reaches 5."
-- "Add a page with a multiple choice question about clouds, linked from page 1."
-- "Make a sorting question with two groups and feedback for each item."
-- "Check my project for problems and fix them."
-- "What would make a good activity for teaching the water cycle?" It answers questions and gives ideas without changing anything.
-
-Short, specific requests work best. If your request is unclear, or would replace a lot of your work, it asks first.
-
-## How it builds
-
-The Activity Designer plans your request in one go, and the editor builds the plan with the same tools you have: the question builder for questions, [Describe it](interactions#describe-it-in-words) for what a button does, and the look of the page you have open (its master, background, title and buttons) for everything else. What it makes is ordinary pages, layers, questions and interactions you can open and change like anything you made yourself. Pictures come as grey boxes with their text description already written, ready for you to drop a picture in.
-
-After it builds, the editor checks the project. If something it made still has a problem, the Activity Designer is told once and puts it right. Most requests need no second try.
-
-## Free answers
-
-Some things don't need the Activity Designer, so they don't use up a request:
-
-- **"How do I..." and "What is..." questions** are answered from this help. The panel lists the best matching topics as links, and says nothing was sent to the Activity Designer. If you wanted it to do the thing anyway, press **Ask the Activity Designer anyway**.
-- **One behaviour on a layer you have selected**, such as "when clicked go to the next page and say moving on", is done with Describe it straight away. The panel says **Done without using the AI**, and you can undo it like any other change (<kbd>Ctrl</kbd>+<kbd>Z</kbd>).
-
-When it isn't sure, a message goes to the Activity Designer.
-
-## While it works
-
-The panel says what it's doing ("Reading the project", "Thinking it through", "Building it in your project", "Checking my work"). A request can take a minute or so. **Stop** ends it after the step it's on. Press <kbd>Enter</kbd> to send, <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line.
-
-## Undo
-
-Before it changes anything, the Activity Designer saves a copy of your project as a revision called **Before the Activity Designer**. After a request that changed something, an **Undo what the Activity Designer did** button appears under its reply; it puts the project back as it was before that request. Anything you or someone else changed in the meantime goes back too, so undo straight away if you're going to. You can always find that copy in the Revision history. It can't see how the canvas looks, only what's in the project, so check what it made.
-
-## Chats
-
-Closing the panel keeps the conversation; **New chat** starts afresh. It remembers the chat for a couple of hours. Drag the panel's left edge (or focus it and use the arrow keys) to make it wider or narrower.
-
-## The hourly limit and your share
-
-UniSQ's Cogniti allows each account only so many messages an hour, and everyone using the editor shares one Activity Designer account. So each person gets a fair share of it, and the panel shows it: **"4 of 6 shared requests left this hour"**. A request counts as one, however much it builds. The next one comes back an hour after you used it. If Cogniti's own limit is reached first, the panel says **"The Activity Designer has reached its hourly limit"**: try again in a little while. The free answers above never count.
-
-## Use my own Cogniti allowance
-
-When the shared allowance is used up (the panel then offers it), or if you use the Activity Designer a lot, you can use your own Cogniti allowance instead. Then your requests aren't counted against the shared one, and the panel shows no count.
-
-1. Open [Cogniti](https://cogniti.unisq.edu.au/) and sign in.
-2. Click your name at the top right, then **User data**, then **API tokens**.
-3. Make a new token (it can last up to 365 days) and copy it.
-4. In the editor, open **Preferences**, **General**, **Activity Designer** (the panel's **Use my own Cogniti allowance** link goes straight there), paste the token and press **Connect**. If you know the day it ends, put it in too.
-
-The editor checks the token with Cogniti once. It is kept encrypted on the server, used only for your requests, and never shown again: Preferences only says **Connected**, when you added it and when it ends. **Remove** deletes it and puts you back on the shared allowance. A token needs to be made again when it ends. Treat it like a password.
-
-If Cogniti says your account can't chat with the Activity Designer, the Toolbox team need to share it with you. Tell them, and try again.
-
-## Where your project goes
-
-Your requests, and the parts of the project the Activity Designer reads (page and layer names, text, flows, settings), are sent to **UniSQ's Cogniti**, the university's AI platform, and from there to UniSQ's own Azure OpenAI. It can't read learners' answers or results, so no learner data is sent. Only people who can edit a project can ask it to change it, and everything it does is recorded in the project's audit log. The button only shows on servers where it's set up.`},{id:"command-palette",title:"The command palette",group:"Getting started",summary:"Ctrl+K: type what you want to do, and do it, without hunting through menus.",keywords:"command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share describe it sentence words plain behaviour",body:`Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
+`},{id:"command-palette",title:"The command palette",group:"Getting started",summary:"Ctrl+K: type what you want to do, and do it, without hunting through menus.",keywords:"command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share describe it sentence words plain behaviour",body:`Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
 
 ![The command palette searching for timeline: the New timeline and Open Timeline commands, then matching help pages.](help/command-palette.png)
 

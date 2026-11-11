@@ -79,7 +79,8 @@ beforeEach(async () => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'trace').mockImplementation(() => {});
   process.env.COGNITI_TOKEN = TOKEN;
-  delete process.env.INTERACTIVES_DESIGNER;
+  //parked: these tests switch it on, as a box would to bring it back
+  process.env.INTERACTIVES_DESIGNER = 'on';
   //no share limit unless a test is about it
   process.env.INTERACTIVES_DESIGNER_PER_HOUR = '0';
   delete process.env.INTERACTIVES_DESIGNER_BEAT_MS;
@@ -115,11 +116,16 @@ const validate = async () => {
 };
 
 describe('who can use it', () => {
-  it('is hidden without a token and off with the switch', async () => {
+  it('is hidden without a token, parked without INTERACTIVES_DESIGNER=on, and off with the switch', async () => {
     delete process.env.COGNITI_TOKEN;
     expect((await h.call('GET', '/api/session', { user: ann })).json.designer).toBe(false);
     expect((await ask('hi')).status).toBe(404);
     process.env.COGNITI_TOKEN = TOKEN;
+    //parked: a token alone isn't enough
+    delete process.env.INTERACTIVES_DESIGNER;
+    expect((await h.call('GET', '/api/session', { user: ann })).json.designer).toBe(false);
+    expect((await ask('hi')).status).toBe(404);
+    process.env.INTERACTIVES_DESIGNER = 'on';
     expect((await h.call('GET', '/api/session', { user: ann })).json.designer).toBe(true);
     process.env.INTERACTIVES_DESIGNER = 'off';
     expect((await h.call('GET', '/api/session', { user: ann })).json.designer).toBe(false);

@@ -15,11 +15,12 @@ const ndjson = (...parts: string[]) => parts.map((p) => JSON.stringify({ content
 const bp = (o: unknown, words = 'I added the page.') => '```blueprint\n' + JSON.stringify(o) + '\n```\n' + words;
 
 describe('settings', () => {
-  it('is on only with a token, and off switches it off', () => {
+  it('is parked: on only with a token and INTERACTIVES_DESIGNER=on', () => {
     expect(settings({}).on).toBe(false);
-    expect(settings({ COGNITI_TOKEN: 't' })).toMatchObject({ on: true, agent: '6af3c21c0eba26d21bfa2427', url: 'https://cogniti.unisq.edu.au', perHour: 6 });
+    expect(settings({ COGNITI_TOKEN: 't' }).on).toBe(false);
+    expect(settings({ COGNITI_TOKEN: 't', INTERACTIVES_DESIGNER: 'on' })).toMatchObject({ on: true, agent: '6af3c21c0eba26d21bfa2427', url: 'https://cogniti.unisq.edu.au', perHour: 6 });
     expect(settings({ COGNITI_TOKEN: 't', INTERACTIVES_DESIGNER: 'off' }).on).toBe(false);
-    expect(settings({ COGNITI_TOKEN: 't', INTERACTIVES_DESIGNER_AGENT: 'abc', INTERACTIVES_COGNITI_URL: 'http://cog.test/' })).toMatchObject({ agent: 'abc', url: 'http://cog.test' });
+    expect(settings({ COGNITI_TOKEN: 't', INTERACTIVES_DESIGNER: 'on', INTERACTIVES_DESIGNER_AGENT: 'abc', INTERACTIVES_COGNITI_URL: 'http://cog.test/' })).toMatchObject({ agent: 'abc', url: 'http://cog.test' });
   });
 
   it('takes the shared hourly allowance from INTERACTIVES_DESIGNER_PER_HOUR (0 or off is no limit)', () => {

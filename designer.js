@@ -19,9 +19,11 @@ const DEFAULT_AGENT = '6af3c21c0eba26d21bfa2427',
 	LEAN_CONTEXT = 6000,
 	DEFAULT_PER_HOUR = 6
 
-//The agent, address and token, and whether the button shows at all. INTERACTIVES_DESIGNER=off hides it even with a token
+//The agent, address and token, and whether the button shows at all. Parked on 11 Nov 2026 (Cogniti's hourly cap and its
+//flaky long replies), so it's off unless a box sets INTERACTIVES_DESIGNER=on as well as the token. agent-docs/PARKED.md
+//says what else comes back with it
 const settings = (env = process.env) => ({
-	on: !/^(off|0|false|no)$/i.test(env.INTERACTIVES_DESIGNER || '') && !!env.COGNITI_TOKEN,
+	on: /^(on|1|true|yes)$/i.test(env.INTERACTIVES_DESIGNER || '') && !!env.COGNITI_TOKEN,
 	token: env.COGNITI_TOKEN || '',
 	agent: env.INTERACTIVES_DESIGNER_AGENT || DEFAULT_AGENT,
 	url: String(env.INTERACTIVES_COGNITI_URL || DEFAULT_URL).replace(/\/+$/, ''),

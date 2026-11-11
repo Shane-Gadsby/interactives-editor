@@ -55,10 +55,10 @@ describe('Use my own Cogniti allowance', () => {
     });
   };
 
-  it('is a setting on the General page, findable by what people would type', () => {
-    const s = SETTINGS.find((x) => x.id === 'designerAllowance')!;
-    expect(s).toMatchObject({ page: 'general', label: 'Use my own Cogniti allowance', keys: [] });
-    for (const q of ['cogniti', 'own allowance', 'api token', 'hourly limit']) expect(searchSettings(q, true).some((x) => x.id === 'designerAllowance'), q).toBe(true);
+  //The Activity Designer is parked (11 Nov 2026), so Preferences doesn't offer it. agent-docs/PARKED.md has the entry to put back
+  it('is not in Preferences while the Activity Designer is parked', () => {
+    expect(SETTINGS.find((x) => x.id === 'designerAllowance')).toBeUndefined();
+    expect(searchSettings('cogniti', true).some((x) => x.id === 'designerAllowance')).toBe(false);
   });
 
   it('explains where the token comes from, links to Cogniti, and hides what is typed', async () => {

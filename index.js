@@ -590,7 +590,7 @@ router.put('/api/prefs', express.json({limit: '512kb'}), async (req, res) => {
 
 //Ask the Activity Designer: a Cogniti agent that builds in the open project (designer.js, and the /api/designer routes
 //further down by the MCP ones). COGNITI_TOKEN is the one secret, an api token from a Cogniti account (its API tokens
-//page; whoever holds that account grants it). Without one, or with INTERACTIVES_DESIGNER=off, the button isn't shown
+//page; whoever holds that account grants it). Parked: it only runs with INTERACTIVES_DESIGNER=on as well (agent-docs/PARKED.md)
 const designer = require('./designer')
 
 //Who the editor's talking to, for the projects list and the owner badge
