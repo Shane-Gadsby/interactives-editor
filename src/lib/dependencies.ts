@@ -255,6 +255,7 @@ export function analyzeUsage(project: Project): UsageReport {
 
         if (n.type === 'image') useId('asset', n.assetId, by, 'image');
         if (n.type === 'video') useId('asset', n.assetId, by, 'video');
+        if (n.type === 'animation') useId('asset', n.assetId, by, 'Frameling animation');
         if (n.type === 'draw') useCode(n.code, by, 'script layer code');
         // Pictures a shader reads (image uniforms of a shader layer or an image layer's shader filter)
         for (const u of (n.type === 'shader' ? n.uniforms : n.type === 'image' ? n.shaderFilter?.uniforms : undefined) ?? []) if (u.type === 'image' && typeof u.value === 'string' && u.value) useId('asset', u.value, by, 'shader image');

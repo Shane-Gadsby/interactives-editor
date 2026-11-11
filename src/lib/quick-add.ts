@@ -9,15 +9,16 @@ import { nameFromWords } from './friendly-names';
 export const ADD_ASSET = '__add_asset__';
 export const ADD_VARIABLE = '__add_variable__';
 
-export type PickKind = 'image' | 'video' | 'audio' | 'data';
+export type PickKind = 'image' | 'video' | 'audio' | 'data' | 'animation';
 
 const ACCEPT: Record<PickKind, string> = {
   image: 'image/*',
   video: 'video/*',
   audio: 'audio/*',
   data: '.json,.csv,.tsv,.txt,application/json,text/csv,text/plain',
+  animation: '.flplay',
 };
-const NOUN: Record<PickKind, string> = { image: 'image', video: 'video', audio: 'sound', data: 'data file' };
+const NOUN: Record<PickKind, string> = { image: 'image', video: 'video', audio: 'sound', data: 'data file', animation: 'Frameling animation' };
 
 export const addAssetOption = (kind: PickKind) => ({ value: ADD_ASSET, label: `+ Add a new ${NOUN[kind]}…` });
 export const addVariableOption = () => ({ value: ADD_VARIABLE, label: '+ Create new variable…' });

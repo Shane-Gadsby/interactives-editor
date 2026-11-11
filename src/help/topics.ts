@@ -3935,6 +3935,7 @@ The same buttons are above the raw text in the Data tab, and the setting reaches
 | \`ix.setTheme(name)\` / \`ix.getTheme()\` / \`ix.themes()\` | Show a [theme](themes) by name (\`'auto'\` follows the viewer), read the one showing, list them |
 | \`ix.record(name, value?)\` | Count that something happened, for [Insights](insights) (a name up to 60 characters, a short value) |
 | \`ix.setInstanceInput(layer, name, v)\` / \`ix.getInstanceInput(layer, name)\` / \`ix.fireInstanceTrigger(layer, name, data)\` | Set or read a variable inside an [instance](instances), or send a message into it only |
+| \`ix.playClip(layer, clip?, {from, loop, speed})\` / \`ix.stopAnimation(layer, reset?)\` / \`ix.goToFrame(layer, frame, play?)\` / \`ix.animation(layer)\` | Play, stop or move a [Frameling animation](frameling-animations) layer, and read what it is doing |
 | \`ix.onFrame((dt, t) => …)\` | Run every frame |
 | \`ix.pointer\`, \`ix.artboard\` | Pointer \`{x, y, down}\`, artboard \`{name, width, height}\` |
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
@@ -3953,6 +3954,67 @@ The sandbox is a locked room for scripts, so a script can't harm the page or the
 
 One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches the URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. It follows the project's [data rules](data-sources#what-may-be-loaded): http(s) only, no cookies to other sites, and, if you list **Allowed data hosts** in Project settings, only those hosts. A refused URL makes \`loadData\` throw, so use \`try\`/\`catch\`. Without an allowed-hosts list, only run projects whose scripts you trust.`,
   },
+  {
+    id: 'frameling-animations',
+    title: 'Frameling animations',
+    group: 'Motion',
+    icon: 'flipbook',
+    summary: 'Play a character or effect drawn frame by frame in Frameling, and control its clips from clicks, timelines and scripts.',
+    keywords: 'frameling flplay animation sprite sprite sheet flipbook frame by frame pixel art character walk run idle clip marker hand drawn cartoon',
+    body: () => `**Frameling** is a desktop app for drawing animation frame by frame: a character that waves, runs and jumps, a bouncing ball, a sparkle. A **Frameling animation** layer plays one on your page, and the page can tell it which clip to play.
+
+## Bring one in
+
+1. In Frameling, name your clips in the timeline (idle, wave, run...) and put **markers** on moments that matter (a footstep, the ball landing).
+2. Choose **File > Export for Interactives** there. It saves a \`.flplay\` file.
+3. Drag the \`.flplay\` file onto the canvas. It becomes a **Frameling animation** layer at the size it was drawn, playing its first clip.
+
+You can also add the file in **Assets** and press **Place**, or pick the **Frameling animation** tool (in the **Media** group of the tool bar), drag a box and choose the file in the inspector.
+
+## Settings
+
+- **Animation**: the \`.flplay\` file it plays. A small preview plays the clip beside it (press stop to hold it still).
+- **Clip**: which clip shows, or **Whole animation**.
+- **Playing**: on, it plays as the page starts. Off, it shows **Frame** until something plays it.
+- **Loop**: **As set in Frameling** follows each clip's own loop setting. **Loop** and **Play once** override it.
+- **Speed**: 1 is the speed it was drawn at, 2 twice as fast, below 0 backwards.
+- **Frame**: the frame it shows while stopped, counted from 0 (the clip's first). The canvas shows this frame while you edit.
+- **Fit**: how the drawing fits the box. **Pixels**: **Automatic** keeps pixel art crisp and everything else smooth.
+- **Size to the animation** puts the layer back to the size it was drawn.
+
+## Control it
+
+| Node | Does |
+|---|---|
+| **Play a Frameling clip** | Plays a clip ("run"), from its first frame or where it is. It can change Loop and Speed, and carry on straight away or when the clip has played through |
+| **Stop a Frameling animation** | Stops where it is, or back on the first frame |
+| **Show a Frameling frame** | Shows one frame, then stops or plays on |
+| **When a Frameling clip ends** | Runs when a play-once clip finishes, or each time a looping clip comes round (\`event.looped\`) |
+| **When a Frameling animation reaches a marker** | Runs at a marker from Frameling, such as footstep (\`event.marker\`) |
+
+For a character that walks when clicked: **When clicked** on the button, then **Play a Frameling clip** with Clip \`"walk"\`, then **Play a Frameling clip** with Clip \`"idle"\` set to continue **When it finishes**.
+
+**Timelines** can key **Frameling frame** to scrub it by hand, and **Frameling playing**, **Frameling speed** and **Frameling clip** to change it at a moment. A key on the frame wins over playback, so turn **Playing** off for a scrubbed one. **Set property** and data bindings reach the same four.
+
+## From a script
+
+\`\`\`
+ix.playClip('Hero', 'run', { speed: 1.5 });   // from: 'current' carries on from where it is; loop: 'loop' | 'once' | 'clip'
+ix.stopAnimation('Hero', true);               // true goes back to the first frame
+ix.goToFrame('Hero', 3, false);               // show frame 3 and stay there
+const s = ix.animation('Hero');               // { clip, frame, playing, speed, loop, frameCount, fps, clips, markers }
+\`\`\`
+
+These work in the [sandbox](scripts) too.
+
+## Good to know
+
+- The file goes inside \`.ixp\` packages and single-file exports like any other asset. Learners need nothing extra.
+- Changed the animation? Export it from Frameling again, then use **Replace** on it in **Assets**. Every layer using it keeps its settings.
+- A layer with no file, or a file that can't be read, shows a hatched box.
+- An animation layer is a picture to a screen reader: give it a **text alternative** that says what it shows, or mark it decorative.`,
+  },
+
   {
     id: 'script-layers',
     title: 'Script layers',

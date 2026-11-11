@@ -171,6 +171,7 @@ const MENUS: Record<string, Record<string, string>> = {
     Rectangle: 'add.rect',
     'Script layer': 'add.draw',
     'Shader layer': 'add.shader',
+    'Frameling animation': 'add.animation',
     Star: 'add.star',
     Text: 'add.text',
     Video: 'add.video',

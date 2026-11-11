@@ -76,6 +76,7 @@ export const NEW_LAYERS: { type: NodeType; label: string; words: string }[] = [
   { type: 'video', label: 'Video', words: 'movie clip' },
   { type: 'draw', label: 'Script layer', words: 'code generative' },
   { type: 'shader', label: 'Shader layer', words: 'gpu effect backdrop' },
+  { type: 'animation', label: 'Frameling animation', words: 'sprite flipbook character frameling flplay frame by frame' },
   { type: 'progress', label: 'Progress bar', words: 'score meter' },
   { type: 'chart', label: 'Chart', words: 'graph bar pie line data' },
 ];
