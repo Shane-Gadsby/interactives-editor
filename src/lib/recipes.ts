@@ -1,6 +1,6 @@
 import { nameFromWords } from './friendly-names';
 import { defaultParams, DEFAULT_TRANSITION_MS, isPageTransition, uid, walk, type Artboard, type LogicEdge, type LogicNode, type Project, type SceneNode, type Script, type Variable } from 'interactives-player';
-import { assetKind } from './assets';
+import { assetKind } from './asset-kind';
 import { buildFlow, flowSentence } from './flow-describe';
 import { writeBranchFlow, writeFlow, type FlowStep } from './click-flow';
 import { conditionToExpr, opTakesValue, rowToExpr, type CondOp } from './condition';
