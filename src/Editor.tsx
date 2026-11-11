@@ -4,8 +4,9 @@ import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName,
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
 import { ToastView } from './components/ToastView';
-import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
-import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
+import { ApiError, ConflictError, collaboratorCountOf, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
+import { LIVE_FALLBACK_EVENT, liveSession, setLiveSession } from './lib/live';
+import { openLiveIfOn, watchLiveSync, watchStale } from './lib/live-sync';
 import { assetUrls } from './lib/assets';
 import { ensureFonts } from './lib/fonts';
 import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, standaloneHtml } from './lib/export';
@@ -99,8 +100,9 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
         if (cancelled) return;
         const s = new EditorStore(p);
         setCurrentStore(s);
-        // Live editing: ops instead of whole-document saves, and other people's changes as they happen
-        setLiveSession(new LiveSession(p.id, s, liveSeqOf(p.id)));
+        // Live collaboration (a project setting, off unless turned on): ops instead of whole-document saves, and other
+        // people's changes as they happen. Off, there is no room at all and the plain autosave does the saving
+        openLiveIfOn(s, liveSeqOf(p.id));
         // Review comments: their own stream, apart from the editing room
         comments.onNotice = (text) => prefs().commentNotices && s.toast(text, 'info');
         void comments.startEditor(p.id);
@@ -205,11 +207,14 @@ function useAutosave() {
     };
     // The live session closes (parent cleanup) before this one runs, so remember now whether changes travel as ops
     let viaOps = !!liveSession();
-    const save = async (force = false) => {
+    const save = async (force = false, wait = false): Promise<boolean> => {
       // A live session saves through ops; a whole-document PUT would reset everyone else's copy
-      if (liveSession() && !force) return;
-      if (saving) return;
+      if (liveSession() && !force) return true;
+      // Switching live collaboration on waits for a save that is already on its way, then saves again behind it
+      while (wait && saving) await new Promise((r) => setTimeout(r, 50));
+      if (saving) return false;
       saving = true;
+      let ok = false;
       const rev = s.revision;
       s.set({ saveState: 'saving' });
       try {
@@ -220,6 +225,7 @@ function useAutosave() {
         retrying = false;
         retryIn = 2000;
         lastRefusal = '';
+        ok = true;
       } catch (err) {
         if (err instanceof ConflictError) setConflict(true);
         const message = err instanceof Error ? err.message : String(err);
@@ -237,12 +243,13 @@ function useAutosave() {
         saving = false;
         if (s.revision !== rev) schedule();
       }
+      return ok;
     };
     const schedule = () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => void save(), 800);
     };
-    (window as unknown as { __ixForceSave: () => Promise<void> }).__ixForceSave = () => save(true);
+    (window as unknown as { __ixForceSave: () => Promise<void> }).__ixForceSave = async () => void (await save(true));
     const unsub = s.subscribe(() => {
       if (s.revision !== lastRev) {
         lastRev = s.revision;
@@ -275,7 +282,14 @@ function useAutosave() {
         .then(() => save());
     };
     window.addEventListener(LIVE_FALLBACK_EVENT, onLiveFallback);
+    // Live collaboration turned on or off in the project settings while the editor is open (by you, or by someone in the room)
+    const stopSwitch = watchLiveSync(
+      s,
+      () => save(false, true),
+      (live) => (viaOps = live),
+    );
     return () => {
+      stopSwitch();
       window.removeEventListener(LIVE_FALLBACK_EVENT, onLiveFallback);
       window.removeEventListener('online', onOnline);
       if (retryTimer) clearTimeout(retryTimer);
@@ -466,6 +480,7 @@ function useBrandOverride() {
 
 function Workspace({ home }: { home: () => void }) {
   const conflict = useAutosave();
+  const stale = useStaleCheck();
   useRemoteAssets();
   useThumbnails();
   useShortcuts();
@@ -504,6 +519,7 @@ function Workspace({ home }: { home: () => void }) {
       <TopBar home={home} onPreview={() => (store().set({ previewPlaying: false }), setPreview(true))} />
       <div className="banner-area">
         {conflict && <ConflictBanner />}
+        {stale && !conflict && <StaleBanner />}
         {s.brandOverride && <div className="power-banner">Power user mode: the brand lock is off for this session. Edits to brand kit items, and to the logo, colours and fonts of a branded starter project, are yours to make (F9 to turn it back on).</div>}
         <LinkBanner />
         <LinkChanges />
@@ -534,6 +550,26 @@ function Workspace({ home }: { home: () => void }) {
       <ComponentPicker />
       {s.toast && <ToastView toast={s.toast} />}
       {s.report && <ReportModal title={s.report.title} lines={s.report.lines} undo={!!s.report.undo} />}
+    </div>
+  );
+}
+
+/** With live collaboration off: has the project been changed somewhere else (another tab, an AI assistant) since this tab loaded it? */
+function useStaleCheck(): boolean {
+  const [stale, setStale] = useState(false);
+  useEffect(() => watchStale(store(), () => setStale(true)), []);
+  return stale;
+}
+
+function StaleBanner() {
+  const count = collaboratorCountOf(store().get().project.id);
+  return (
+    <div className="conflict-banner" role="status">
+      This project was changed somewhere else since you opened it (another tab, an AI assistant{count ? ' or someone you share it with' : ''}). Reload to see the latest.
+      {count > 0 && ' Turn on Live collaboration in the project settings to see each other\'s changes as they happen.'}
+      <button className="btn" onClick={() => location.reload()}>
+        Reload
+      </button>
     </div>
   );
 }
@@ -604,6 +640,8 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   const [shareOpen, setShareOpen] = useState(false);
   const [shareMenu, setShareMenu] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const liveSyncIsOn = useEditor((x) => !!x.project.settings.liveSync);
+  const sharedButNotLive = !liveSyncIsOn && collaboratorCountOf(st.get().project.id) > 0;
   const [templateOpen, setTemplateOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
   const [motionOpen, setMotionOpen] = useState(false);
@@ -826,7 +864,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
             </button>
             <button onClick={() => (setShareMenu(false), setInviteOpen(true))}>
               Invite to collaborate…
-              <span className="muted small">People who can open and edit it with you, live</span>
+              <span className="muted small">{sharedButNotLive ? 'Live collaboration is off, so you will not see each other\'s changes as they happen. Open this to turn it on' : 'People who can open and edit it with you'}</span>
             </button>
             <button onClick={() => (setShareMenu(false), setTemplateOpen(true))}>
               Save as template…

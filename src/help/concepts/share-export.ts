@@ -21,7 +21,7 @@ The first line of the Export menu, **Want a link instead of a file?**, opens **S
 Share has four entries:
 
 - **Share…** asks **Where will people use it?** and gives you the one thing to copy for the answer: the embed code for a StudyDesk page (the **Link for StudyDesk**, which keeps each learner's results), the plain share link, the project name for the gradebook, or the file downloads.
-- **Invite to collaborate…** is for people who will edit it with you.
+- **Invite to collaborate…** is for people who will edit it with you. It also has the **Turn on live collaboration** button, for seeing each other's changes as they happen.
 - **Save as template…** is for people who will start their own project from it.
 - **Share for review…** is a link for reviewers to look and comment, not for learners.
 
