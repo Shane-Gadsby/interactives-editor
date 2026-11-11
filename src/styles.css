@@ -278,6 +278,20 @@ code,
   margin: 4px 0;
   padding-left: 1.2em;
 }
+/* Edit in Frameling: the steps for bringing the saved file back */
+.frameling-howto {
+  border: 1px solid var(--border, #888);
+  border-radius: 6px;
+  padding: 4px 10px 6px;
+  line-height: 1.4;
+}
+.frameling-howto p {
+  margin: 4px 0;
+}
+.frameling-howto ol {
+  margin: 4px 0;
+  padding-left: 1.3em;
+}
 .hint code {
   background: var(--panel-2);
   padding: 0 3px;

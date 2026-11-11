@@ -23,6 +23,8 @@ const SCAN = [join(ROOT, 'panels'), join(ROOT, 'components', 'ProjectModals.tsx'
 const EXCEPTIONS: Record<string, string> = {
   // says plainly what the guard cannot do, in the section itself (test/word-audio-own.test.tsx holds it to that)
   'panels/GuardSection.tsx: Keeps spell check, Grammarly and other w': 'honest limits',
+  // the steps shown once Edit in Frameling has downloaded the file, a status after an action rather than an explainer
+  'panels/AnimationInspector.tsx: is in your downloads. Open it in Frameli': 'round trip steps',
 };
 
 function walk(dir: string, out: string[] = []): string[] {

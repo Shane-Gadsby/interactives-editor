@@ -170,6 +170,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   "Fonts load from StudyDesk's own server again": [['text', 'served from the same place as the editor']],
   "Saved values show in Preview's Debug panel straight away": [['interface', 'starting with any saved user data']],
   'Frameling animations': [['frameling-animations', '.flplay']],
+  'Edit in Frameling': [['frameling-animations', '## Edit in Frameling'], ['frameling-animations', '**Still frame**'], ['frameling-animations', '**Copy offset**']],
   'Media Catalogue on the live StudyDesk site': [['media-catalogue', 'older **Photography catalogue**']],
   'Share for review needs a sign in': [['comments', 'There is no guest option'], ['comments', 'Sign in with StudyDesk']],
 };

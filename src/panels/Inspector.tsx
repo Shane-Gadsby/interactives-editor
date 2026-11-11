@@ -1748,7 +1748,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'connector':
       return <ConnectorSection nodes={nodes as ConnectorNode[]} project={project} ab={store().artboard()} />;
     case 'animation':
-      return <AnimationSection nodes={nodes as AnimationNode[]} project={project} />;
+      return <AnimationSection nodes={nodes as AnimationNode[]} project={project} ab={store().artboard()} />;
     case 'shader':
       return nodes.length === 1 ? <ShaderSection node={n as ShaderNode} project={project} /> : <p className="hint">Select one shader layer to edit its code and uniforms.</p>;
     case 'group':
