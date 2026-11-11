@@ -2,10 +2,11 @@ import { track } from '../lib/analytics';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Renderer, prepareNodes, withMaster, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
-import { store } from '../store/store';
+import { store, useEditor } from '../store/store';
+import { setLiveSync } from '../lib/live-sync';
 import { serverMarkedCounts } from '../lib/question-kit';
 import { embedAspect, embedCode } from '../lib/embed';
-import { addCollaborator, clearResults, resultsCsv, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, saveNamedVersion, updateRevision, publishShare, restoreRevision, revertShare, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
+import { addCollaborator, setCollaboratorCount, clearResults, resultsCsv, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, saveNamedVersion, updateRevision, publishShare, restoreRevision, revertShare, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
 import { download, standaloneHtml, warnInEditor } from '../lib/export';
 import { IconButton } from './ui';
@@ -622,8 +623,11 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
     return () => clearTimeout(t);
   }, [username]);
   const [error, setError] = useState<string | null>(null);
+  const liveOn = useEditor((st) => !!st.project.settings.liveSync);
+  //Someone was just invited while live collaboration is off: the offer to turn it on stands out
+  const [justInvited, setJustInvited] = useState(false);
   useEffect(() => {
-    getCollaborators(projectId).then(setData, (e) => setError(e instanceof Error ? e.message : String(e)));
+    getCollaborators(projectId).then((d) => (setCollaboratorCount(projectId, d.collaborators.length), setData(d)), (e) => setError(e instanceof Error ? e.message : String(e)));
   }, [projectId]);
   const add = async (person?: Person) => {
     const u = person?.username ?? username.trim();
@@ -632,6 +636,8 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
     setError(null);
     try {
       const collaborators = await addCollaborator(projectId, u, person?.name ?? '');
+      setCollaboratorCount(projectId, collaborators.length);
+      setJustInvited(true);
       setData((d) => (d ? { ...d, collaborators } : d));
       setUsername('');
       setFound([]);
@@ -663,6 +669,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
     if (!(await confirmDialog({ title: 'Remove collaborator', message: `${u} won't be able to open this project any more. Their changes stay.`, confirmLabel: 'Remove', danger: true }))) return;
     try {
       const collaborators = await removeCollaborator(projectId, u);
+      setCollaboratorCount(projectId, collaborators.length);
       setData((d) => (d ? { ...d, collaborators } : d));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -671,7 +678,28 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal title="Invite to collaborate" help="live-editing#inviting-people" onClose={onClose} className="share-modal">
       <div className="share-body">
-        <p className="muted">People you invite can open this project from their own projects page and edit it with you, live. They can comment and share it too; only you can delete it or change who's invited.</p>
+        <p className="muted">People you invite can open this project from their own projects page and edit it with you. They can comment and share it too; only you can delete it or change who's invited.</p>
+        <div className={`live-collab ${!liveOn && (justInvited || !!data?.collaborators.length) ? 'offer' : ''}`} role="status">
+          {liveOn ? (
+            <>
+              <p>
+                <strong>Live collaboration is on.</strong> You and the people you invite see each other's changes and cursors as you work.
+              </p>
+              <button className="btn small" onClick={() => setLiveSync(store(), false)} title="Go back to saving one person at a time. Nobody's work is lost, but you will not see each other's changes until the project is reloaded">
+                Turn off
+              </button>
+            </>
+          ) : (
+            <>
+              <p>
+                <strong>Live collaboration is off.</strong> {justInvited || data?.collaborators.length ? 'You will not see each other\'s changes as they happen. If two of you have the project open, the second to save is asked to reload.' : 'People you invite will not see your changes as they happen.'} Turn it on to work together at the same time: you see each other's cursors and changes live. It uses a little more data.
+              </p>
+              <button className="btn primary small" onClick={() => (setLiveSync(store(), true), store().toast('Live collaboration is on'))} title="You and the people you invite see each other's changes and cursors as they happen">
+                Turn on live collaboration
+              </button>
+            </>
+          )}
+        </div>
         {data?.canManage !== false && (
           <form
             className="invite-row"

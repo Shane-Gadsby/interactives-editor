@@ -120,6 +120,25 @@ export function liveSeqOf(id: string): number {
   return liveSeqs.get(id) ?? 0;
 }
 
+/** How many people the project has been shared with to edit (not counting the owner), as of when it was loaded. */
+const collaboratorCounts = new Map<string, number>();
+export const collaboratorCountOf = (id: string): number => collaboratorCounts.get(id) ?? 0;
+/** The invite box keeps this right as people are added and removed. */
+export const setCollaboratorCount = (id: string, n: number): void => void collaboratorCounts.set(id, n);
+
+/** The revision this editor last loaded or saved (what the next whole-project save is checked against). */
+export const knownRevOf = (id: string): number | undefined => revs.get(id);
+
+/** The server's revision of a project right now, without downloading it. Null when it can't be asked (offline, no access). */
+export async function currentRevOf(id: string): Promise<number | null> {
+  try {
+    const r = await call<{ rev: number }>(`projects/${encodeURIComponent(id)}/rev`);
+    return typeof r.rev === 'number' ? r.rev : null;
+  } catch {
+    return null;
+  }
+}
+
 export function session(): Promise<SessionInfo> {
   return call<SessionInfo>('session');
 }
@@ -153,9 +172,10 @@ export const setProjectMeta = (id: string, patch: { tags?: string[]; folder?: st
 
 export async function loadProjectRecord(id: string): Promise<Project | null> {
   try {
-    const r = await call<{ project: Project; rev: number; live?: number | null }>(`projects/${encodeURIComponent(id)}`);
+    const r = await call<{ project: Project; rev: number; live?: number | null; collaborators?: number }>(`projects/${encodeURIComponent(id)}`);
     revs.set(id, r.rev);
     liveSeqs.set(id, r.live ?? null);
+    if (typeof r.collaborators === 'number') collaboratorCounts.set(id, r.collaborators);
     return normalizeProject(r.project);
   } catch (err) {
     if (err instanceof Error && /No such project/.test(err.message)) return null;

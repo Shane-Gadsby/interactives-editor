@@ -14358,3 +14358,19 @@ body.reorder-active .ix-tooltip {
 .designer-panel.resizing {
   user-select: none;
 }
+.live-collab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+}
+.live-collab p {
+  flex: 1;
+  line-height: 1.4;
+}
+.live-collab.offer {
+  border-color: var(--primary-bg);
+  box-shadow: inset 3px 0 0 var(--primary-bg);
+}

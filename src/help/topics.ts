@@ -5030,8 +5030,8 @@ Off by default, so embeds that already exist keep working. Turn it on and attrib
     id: 'project-settings',
     title: 'Project settings',
     group: 'Getting started',
-    summary: 'Start page, fit, page title, fonts, sandbox, reduced motion and Optimise output.',
-    keywords: 'settings start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider',
+    summary: 'Start page, fit, page title, fonts, live collaboration, sandbox, reduced motion and Optimise output.',
+    keywords: 'settings live collaboration start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider',
     body: `![The Project section of the Inspector, with Allowed data hosts filled in and the library and reduced motion boxes below it.](help/project-settings.png)
 
 The **Project** section holds the settings for the whole project, not one page. Click an empty part of the canvas, or a page's name, and it shows in the Inspector, below the page's own settings.
@@ -5045,6 +5045,7 @@ The **Project** section holds the settings for the whole project, not one page. 
 | Description | A note about the project, kept in the file |
 | Fit | How the page scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
 | Page background | The colour around the page in the exported page |
+| Live collaboration | Off unless you turn it on. On, people who share the project see each other's cursors and changes as they happen; off, nothing extra is sent and the project is saved one person at a time. See [Live editing and saving](live-editing#live-collaboration) |
 | Run scripts in the sandbox | See [Scripts](scripts) |
 | Run embedded HTML in the page | Only shown while the sandbox box above is off. Lets Embed layers with HTML reach the page, for HTML you wrote and trust. See [Web elements](web-elements) |
 | Allowed data hosts | Hosts that data may be loaded from, one per line (\`api.example.com\`, \`*.example.com\`). Empty allows any http(s) host. See [Data sources](data-sources#what-may-be-loaded) |
@@ -5417,7 +5418,7 @@ A phone photo can be 5 MB or more, and an export or share link carries every pic
 | Share | Gives you |
 |---|---|
 | Share… | Opens with **Where will people use it?**: in a StudyDesk page (keeping learners' results or not), in the StudyDesk gradebook, anyone with a link, or as a file. It shows the one thing to copy for that, and the link settings are under **More ways to share** (below) |
-| Invite to collaborate… | People who can open and edit the project with you, live, found by name, email or username (see [Collaborating](live-editing#inviting-people)) |
+| Invite to collaborate… | People who can open and edit the project with you, found by name, email or username, with an offer to turn on Live collaboration (see [Collaborating](live-editing#inviting-people)) |
 | Save as template… | A copy other people (or you) start new projects from, with a checklist of what to change (see [Templates](templates#save-as-template)) |
 | Share for review… | A link where reviewers look at the project and leave comments, without editing it (see [Review comments](comments)) |
 
@@ -5841,9 +5842,19 @@ Power users (and the brand group) can switch the lock off while they work, with 
     id: 'live-editing',
     title: 'Live editing and saving',
     group: 'Working together',
-    summary: 'Several people in one project, autosave, revisions and conflicts.',
-    keywords: 'multiplayer collaborate live share presence cursor save autosave conflict undo revision history version restore save failed too big retry offline',
-    body: `Everything saves as you work, and <kbd>Ctrl</kbd>+<kbd>S</kbd> saves at once from anywhere in the editor. A project can be opened by its owner, by people the owner has invited to collaborate (below), and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). When more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
+    summary: 'Live collaboration (off until you turn it on), autosave, revisions and conflicts.',
+    keywords: 'live collaboration turn on turn off setting data bandwidth multiplayer collaborate live share presence cursor save autosave conflict undo revision history version restore save failed too big retry offline',
+    body: `Everything saves as you work, and <kbd>Ctrl</kbd>+<kbd>S</kbd> saves at once from anywhere in the editor. A project can be opened by its owner, by people the owner has invited to collaborate (below), and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). 
+
+## Live collaboration
+**Live collaboration** is a setting of each project, and it is **off** until someone turns it on. Turn it on in [Project settings](project-settings) (the **Live collaboration** box), or from the **Turn on live collaboration** button in **Share → Invite to collaborate…**, which is offered when you invite someone. Nothing turns it on for you.
+
+- **Off** (the default): your editor works alone. It saves the whole project a moment after each change, and sends nothing else: no cursors, no stream of other people's changes. That keeps the data use of a project you work on by yourself as small as it can be. If someone else (or you, in another tab) saves the project meanwhile, you are told the next time you save, or when you come back to the tab (see *When two copies disagree* below).
+- **On**: when more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
+
+Turning it on saves your project first and then joins the others; turning it off lets your last changes reach the server and goes back to plain saving. It is one undo step like any setting. Everyone who has the project open follows the setting. A copy of a project, or a project made from a template, starts with it off.
+
+**An AI assistant** (the MCP server) edits through the same live room whatever the setting says, and its work is saved with the project like anyone's. If you have live collaboration off, you will not see it happen. A bar at the top of the editor says **This project was changed somewhere else since you opened it** when you come back to the tab, and **Reload** shows the assistant's work. If you start changing something first, the next save is refused with the red bar below, so the assistant's work is never written over by accident.
 
 - **Undo** only undoes your own changes.
 - If two people change the same setting at the same moment, the later change wins.
@@ -5867,7 +5878,7 @@ The server keeps saved revisions of the project: a snapshot every few minutes wh
 ![The Revision history dialog.](help/revision-history.png)
 
 ## When two copies disagree
-If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).
+With live collaboration off, a second tab, a collaborator or an AI assistant can save the project while you have it open. Coming back to the tab, a bar says **This project was changed somewhere else since you opened it** with a **Reload** button, as long as you have no unsaved changes. If you do, saving shows the red bar. If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).
 
 ## Inviting people
 **Share → Invite to collaborate…** lets other people open and edit the project with you.
@@ -5875,7 +5886,7 @@ If the project was saved from another tab, or by someone else without live editi
 1. Open the project and choose **Share**, then **Invite to collaborate…**.
 2. Start typing their name, email or username. A list of matching people appears: pick the right one and they are invited at once. If you already know their StudyDesk username (for example *u1234567*) you can type it and press **Invite**.
 3. They are listed under the box. The bin beside a name takes them off again (you are asked first, and their changes stay).
-4. The project now shows on their own projects page, marked *shared with you by* your name. When you both have it open you see each other's cursors and changes live.
+4. The project now shows on their own projects page, marked *shared with you by* your name. If live collaboration is off, the window offers **Turn on live collaboration** (it stays off until you press it). With it on, when you both have the project open you see each other's cursors and changes live; with it off you each work on your own copy and the second to save is asked to reload.
 
 ![The Invite to collaborate window: a search box for a name, email or username, and the list of people already invited.](help/invite-dialog.png)
 

@@ -280,6 +280,19 @@ const rooms = new Map(),
 		return room
 	},
 
+	//A room keeps agent edits and live ops for up to a second before they reach mongo, and rev only moves when they do.
+	//So the rev to hand out for a room with unsaved ops is the one its next save will have, or a tab without live sync
+	//would load the document with a rev that's about to go stale. A whole-document save lets the room write first instead
+	roomRev = (room) => room.dirty && !room.deleted ? room.rev + 1 : room.rev,
+
+	settleRoom = async (id) => {
+		let room = rooms.get(id)
+
+		if (room?.dirty && !room.deleted && !room.storeFailed) {
+			await persist(room)
+		}
+	},
+
 	maybeCloseRoom = (room) => {
 		if (room.clients.size) return
 		clearTimeout(room.closeTimer)
@@ -649,9 +662,25 @@ router.get('/api/projects/:id', async (req, res) => {
 		return
 	}
 
-	//A live room has newer content than mongo until its next save
+	//A live room has newer content than mongo until its next save (an editor with live sync off isn't in the room, and an
+	//AI agent may be), so the rev is the one that save will have
 	let room = rooms.get(req.params.id)
-	res.json({project: room ? room.doc : await store.parse(doc), rev: room ? room.rev : doc.rev, owner: doc.owner || null, live: room ? room.seq : null})
+	res.json({project: room ? room.doc : await store.parse(doc), rev: room ? roomRev(room) : doc.rev, owner: doc.owner || null, live: room ? room.seq : null, collaborators: (doc.collaborators || []).length})
+})
+
+//Just the rev, for an editor that has live sync off to ask now and then (when its tab comes back into view) whether the
+//project was changed somewhere else, an AI agent or another tab, without downloading the document
+router.get('/api/projects/:id/rev', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let room = rooms.get(req.params.id),
+		now = room ? roomRev(room) : doc.rev
+
+	res.json({rev: now ?? doc.rev})
 })
 
 //Save. The editor sends the rev it loaded, and a mismatch means someone else saved in between,
@@ -664,6 +693,9 @@ router.put('/api/projects/:id', express.json({limit: saveLimit}), async (req, re
 	if (!validID(id) || !project || project.id !== id || project.format !== 'interactives' || !Array.isArray(project.artboards)) {
 		return res.status(400).json({error: 'Not a valid project'})
 	}
+
+	//An agent's edits may still be in the room: let them reach mongo first so the rev check sees them
+	await settleRoom(id)
 
 	let existing = await projects.findOne({_id: id}, {projection: {doc: 0}})
 
@@ -1089,6 +1121,8 @@ router.post('/api/projects/:id/duplicate', express.json(), async (req, res) => {
 	project.id = newID
 	project.name = String(name || `${project.name} copy`).slice(0, 200)
 	project.created = project.updated = now.toISOString()
+	//The copy starts with nobody else on it, so live collaboration starts off again
+	if (project.settings) delete project.settings.liveSync
 
 	if (fs.existsSync(projectDir(id))) {
 		await fs.promises.cp(projectDir(id), projectDir(newID), {recursive: true})
@@ -2496,6 +2530,8 @@ const maxTemplate = 12 * 1024 * 1024,
 		project.id = newID
 		project.name = String(name || project.name || 'Untitled project').slice(0, 200)
 		project.created = project.updated = now.toISOString()
+		//A new project starts with nobody else on it, so live collaboration starts off whatever the source had
+		if (project.settings) delete project.settings.liveSync
 
 		if (filesFrom && fs.existsSync(filesFrom)) {
 			await fs.promises.mkdir(projectDir(newID), {recursive: true})

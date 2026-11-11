@@ -62,6 +62,8 @@ import {
   variableLabelAndName,
 } from 'interactives-player';
 import { keyTime, store, useEditor, valueAt } from '../store/store';
+import { collaboratorCountOf } from '../lib/db';
+import { setLiveSync } from '../lib/live-sync';
 import { getArtboard, isIdentifier, locate } from '../store/doc';
 import { ColourwayRow } from './ColourwayRow';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, TrackField, UnitField } from '../components/ui';
@@ -738,6 +740,15 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           ]}
         />
         <ColorField label="Page background" value={project.settings.pageBackground} onChange={(c) => setProject((p) => (p.settings.pageBackground = c), 'page-bg')} />
+        <CheckField
+          label="Live collaboration"
+          title="Turn on when you work on this project at the same time as the people you invite: you see each other's cursors and changes as they happen. Off (the default), the project is saved one person at a time, nothing extra is sent, and if two people have it open the second to save is asked to reload."
+          value={!!project.settings.liveSync}
+          onChange={(v) => setLiveSync(store(), v)}
+        />
+        {!project.settings.liveSync && collaboratorCountOf(project.id) > 0 && (
+          <p className="hint">Shared with others, but Live collaboration is off: you will not see their changes as they happen.</p>
+        )}
         <CheckField
           label="Run scripts in the sandbox"
           title="Scripts run in a JavaScript VM (WASM) with only the ix API: no DOM, cookies or network. Turn off to let scripts reach the page (node.element)."
