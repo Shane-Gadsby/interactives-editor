@@ -360,7 +360,7 @@ Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock
 The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
-**Preview** runs the project exactly as the exported file will, from the start page or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. **Less motion** plays it as a viewer whose device asks for less motion sees it (calm timelines at their end, and with Respect reduced motion on, autoplay at its end and instant page changes), without changing your own computer; it's off each time Preview opens. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
+**Preview** runs the project exactly as the exported file will, from the start page or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. **Less motion** plays it as a viewer whose device asks for less motion sees it (calm timelines at their end, and with Respect reduced motion on, autoplay at its end, Frameling animations on their still frame and instant page changes), without changing your own computer; it's off each time Preview opens. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
 
 - **Now showing**: the page on screen and how many instances it contains.
 - **Timelines**: the ones running, with a progress bar (green dot = playing).
@@ -3960,7 +3960,7 @@ One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches the URL 
     group: 'Motion',
     icon: 'flipbook',
     summary: 'Play a character or effect drawn frame by frame in Frameling, and control its clips from clicks, timelines and scripts.',
-    keywords: 'frameling flplay animation sprite sprite sheet flipbook frame by frame pixel art character walk run idle clip marker hand drawn cartoon',
+    keywords: 'frameling flplay animation sprite sprite sheet flipbook frame by frame pixel art character walk run idle clip marker hand drawn cartoon edit in frameling replace file reduced motion still frame essential repeater copy offset',
     body: () => `**Frameling** is a desktop app for drawing animation frame by frame: a character that waves, runs and jumps, a bouncing ball, a sparkle. A **Frameling animation** layer plays one on your page, and the page can tell it which clip to play.
 
 ## Bring one in
@@ -3981,6 +3981,31 @@ You can also add the file in **Assets** and press **Place**, or pick the **Frame
 - **Frame**: the frame it shows while stopped, counted from 0 (the clip's first). The canvas shows this frame while you edit.
 - **Fit**: how the drawing fits the box. **Pixels**: **Automatic** keeps pixel art crisp and everything else smooth.
 - **Size to the animation** puts the layer back to the size it was drawn.
+- **Essential motion**: leave it off unless the movement is the point (showing how a machine turns, say). See [Less motion](#less-motion).
+- **Still frame**: the frame viewers who ask for less motion see instead of it playing.
+- **Copy offset** (only inside a [repeater](repeaters)): see [In a repeater](#in-a-repeater).
+
+## Edit in Frameling
+
+**Edit in Frameling** (under the Animation picker) downloads the layer's \`.flplay\` file with its drawing inside, and shows the steps:
+
+1. Open the downloaded file in Frameling. Double-click it (Frameling opens \`.flplay\` files once it is installed), or use **File > Open Interactives file…** in Frameling.
+2. Change the drawing and save. Frameling writes the changes back into the same \`.flplay\`.
+3. Drag the saved file onto the layer on the canvas, or press **Replace file…** and choose it.
+
+The new version replaces the old one everywhere it is used, and every layer keeps its clip, speed, size and other settings. One undo puts the old file back. A browser can't open the file in Frameling for you or notice when you save it, which is why the file makes the trip through your downloads.
+
+The button only shows when the file has its drawing inside. A file exported with **Include the editable drawing** unticked can still be played and replaced, but not opened for editing: export it again with that ticked. **Replace file…** is always there, for a new export of any kind.
+
+## Less motion
+
+When **Respect reduced motion** is on in **Project settings** and a viewer's device asks for less motion, an animation layer that would play on its own shows its **Still frame** (the clip's first, unless you choose another) and waits. **Play a Frameling clip** run from **When the page is shown** or **When a timer goes off** changes the clip but doesn't set it going either. Anything the viewer does still plays it: a click, a key, a message, a script. Once they have set it going it stays going.
+
+Turn on **Essential motion** for an animation whose movement is the content, and it plays for everyone.
+
+## In a repeater
+
+The copies a [repeater](repeaters) makes of an animation layer are one layer as far as playback goes: they share one playhead, one **Play a Frameling clip** plays them all, and **When a Frameling clip ends** and marker events run once, not once per copy. That keeps a list of 30 cards from running 30 sets of events. So a row of the same character doesn't move in step, **Copy offset** shows each copy that many frames on from the one before it (round and round a looping clip). A copy whose clip is bound to its item's (\`item.clip\`) loops round its own clip.
 
 ## Control it
 
@@ -4010,7 +4035,7 @@ These work in the [sandbox](scripts) too.
 ## Good to know
 
 - The file goes inside \`.ixp\` packages and single-file exports like any other asset. Learners need nothing extra.
-- Changed the animation? Export it from Frameling again, then use **Replace** on it in **Assets**. Every layer using it keeps its settings.
+- Changed the animation? Use [Edit in Frameling](#edit-in-frameling), or export it from Frameling again and use **Replace file…** in the inspector (or the **↑** on it in **Assets**, or drop it on the layer). Every layer using it keeps its settings.
 - A layer with no file, or a file that can't be read, shows a hatched box.
 - An animation layer is a picture to a screen reader: give it a **text alternative** that says what it shows, or mark it decorative.`,
   },

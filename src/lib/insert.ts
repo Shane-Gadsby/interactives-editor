@@ -190,6 +190,16 @@ export async function replaceAssetFile(oldId: string, file: File): Promise<boole
     st.toast(`${file.name} isn't ${was === 'audio' ? 'a sound' : `a ${was} file`}, so it can't replace ${old.name}`, 'error');
     return false;
   }
+  //A new version of a Frameling animation is checked before it goes up, like a first import, so a broken file leaves the old one alone
+  let framePkg: import('interactives-player').FramelingPackage | null = null;
+  if (now === 'animation') {
+    try {
+      framePkg = await (await import('./frameling-import')).readFramelingFile(file);
+    } catch (err) {
+      st.toast(err instanceof Error ? err.message : String(err), 'error');
+      return false;
+    }
+  }
   let asset: Asset;
   try {
     asset = await storeFile(p.id, file);
@@ -197,6 +207,7 @@ export async function replaceAssetFile(oldId: string, file: File): Promise<boole
     st.toast(err instanceof Error ? err.message : String(err), 'error');
     return false;
   }
+  if (framePkg) (await import('./frameling-import')).primeAsset(asset.id, framePkg);
   track('feature', 'asset-replace', { thing: extOf(file.name) });
   // How long the new sound is, if a timeline plays the old one
   const onTimeline = p.artboards.some((ab) => ab.timelines.some((tl) => tl.audio?.some((t) => t.assetId === oldId)));

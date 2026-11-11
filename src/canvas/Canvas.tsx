@@ -46,7 +46,7 @@ import { HitPulse } from './HitPulse';
 import { PageLinkLayer } from './PageLinkLayer';
 import { setShowRoutes, showRoutes } from '../lib/page-routes-pref';
 import { addNote, leaveNote, noteScale } from '../lib/notes';
-import { NOTE_DEFAULT_H, NOTE_DEFAULT_W } from 'interactives-player';
+import { NOTE_DEFAULT_H, NOTE_DEFAULT_W, isFramelingFile } from 'interactives-player';
 import { anchorAt } from '../lib/comment-anchor';
 import { comments } from '../lib/comments';
 import { drawnBox, drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
@@ -1574,6 +1574,14 @@ export function Canvas() {
     const files = captureDrop(e.dataTransfer);
     if (!files.length) return;
     const w = toWorld(e.clientX, e.clientY);
+    //One .flplay dropped on a Frameling animation layer is a new version of its file (back from Edit in Frameling), not another layer
+    if (files.length === 1 && isFramelingFile(files[0].name, files[0].type)) {
+      const under = layerAt(w, true)?.hit;
+      if (under?.type === 'animation') {
+        await (await import('../lib/frameling-import')).updateAnimationFile(under, files[0]);
+        return;
+      }
+    }
     const ab = abAt(w) ?? active;
     if (!ab) return;
     await insertFiles(files, ab.id, local(ab, w));
