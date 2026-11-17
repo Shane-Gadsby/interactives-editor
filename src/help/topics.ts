@@ -793,7 +793,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
     title: 'Pages (artboards)',
     group: 'Design',
     summary: 'Screens with their own size, background, timelines and interactions. Called artboards in the settings and the file.',
-    keywords: 'artboard artboards screen page pages scene size background start preset duplicate delete move resize clip',
+    keywords: 'artboard artboards screen page pages scene size background start preset duplicate delete move resize clip fit height content hug grow auto height embed iframe animate',
     body: `A page (also called an **artboard**) is one screen of the interactive. The file, the advanced settings and a few menus (**Duplicate artboard**, **Delete artboard**) use the name artboard.
 
 Each page has its own size, background, layers, timelines and interactions. Variables, scripts, data and assets belong to the whole project, so every artboard shares them.
@@ -802,6 +802,13 @@ Each page has its own size, background, layers, timelines and interactions. Vari
 - Make a new page with the **Page** tool (<kbd>A</kbd>), the **+ Add page** button at the bottom of the **Layers** panel, or by right-clicking empty canvas and choosing **New page here**.
 - Click a page's name above it on the canvas, or its row in the **Layers** panel, to select it.
 - Drag the name to move the page around the canvas. Drag its corners to resize it.
+
+## Fit height to content
+Turn on **Fit height to content** in the **Page** section and the page is as tall as its lowest showing layer. Its height is no longer typed in (the **H** box is greyed out): it follows the layers. That keeps going while the project plays, so the page grows and shrinks as a list fills from data, a layer is shown or hidden, or text gets longer. In StudyDesk the embed's iframe follows it, so nothing is cut off and there's no empty space under it.
+
+- **Space below** keeps some room under the lowest layer.
+- A hidden layer, a mask, and anything inside a frame that clips or scrolls (past the frame's own edge) take no room.
+- **Animate height changes** eases the page to its new height instead of jumping. **Duration** is the **Project default** (**Page height time** in the project settings, 300 ms unless you change it) or **Custom**, with its own **Time**. A viewer whose device asks for less motion always gets the jump. The first height, as the page opens, never animates.
 
 ## Selecting several pages
 Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click page names on the canvas, or rows in the **Layers** panel. <kbd>Ctrl</kbd>+click on a chosen page takes it out again. <kbd>Shift</kbd>+click on a name adds it, and <kbd>Shift</kbd>+click on a row selects every row between it and the one you clicked before.
@@ -5580,7 +5587,7 @@ For StudyDesk, StaffDesk and the open site, use the **Embed code** in [Share lin
 
 Anywhere else, upload the **Single HTML file** and show it in an iframe.
 
-Inside StudyDesk the project tells the page its height, so the iframe fits. (For developers: it uses the suite's \`setILARSize\`, or a \`{width: null, height, cacheID}\` message.)
+Inside StudyDesk the project tells the page its height, so the iframe fits. On a page with **Fit height to content** that height follows what's on it as it plays (see [Pages](artboards)). (For developers: it uses the suite's \`setILARSize\`, or a \`{width: null, height, cacheID}\` message.)
 
 ## The web component
 \`\`\`

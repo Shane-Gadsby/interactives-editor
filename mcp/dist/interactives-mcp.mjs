@@ -5313,6 +5313,76 @@ function textFitOf(n) {
 function textAutoSize(n) {
   return textFitOf(n) ? "none" : n.autoSize;
 }
+function pathBounds(paths) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  const add = (x, y) => {
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  };
+  for (const sp of paths) {
+    for (const p of sp.points) {
+      add(p.x, p.y);
+      if (p.in) add(p.x + p.in.x, p.y + p.in.y);
+      if (p.out) add(p.x + p.out.x, p.y + p.out.y);
+    }
+  }
+  if (minX === Infinity) return { x: 0, y: 0, width: 0, height: 0 };
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+function multiply(m, n) {
+  return [
+    m[0] * n[0] + m[2] * n[1],
+    m[1] * n[0] + m[3] * n[1],
+    m[0] * n[2] + m[2] * n[3],
+    m[1] * n[2] + m[3] * n[3],
+    m[0] * n[4] + m[2] * n[5] + m[4],
+    m[1] * n[4] + m[3] * n[5] + m[5]
+  ];
+}
+function apply(m, x, y) {
+  return { x: m[0] * x + m[2] * y + m[4], y: m[1] * x + m[3] * y + m[5] };
+}
+function nodeMatrix(n, shift) {
+  const ox = n.width * n.originX;
+  const oy = n.height * n.originY;
+  const rad = n.rotation * Math.PI / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  let m = [1, 0, 0, 1, n.x + ox + 0, n.y + oy + 0];
+  m = multiply(m, [cos, sin, -sin, cos, 0, 0]);
+  m = multiply(m, [n.scaleX, 0, 0, n.scaleY, 0, 0]);
+  m = multiply(m, [1, 0, 0, 1, -ox, -oy]);
+  return m;
+}
+const ID$1 = [1, 0, 0, 1, 0, 0];
+function contentBottom(nodes) {
+  let bottom = null;
+  const visit = (list2, parent) => {
+    for (const n of list2) {
+      if (n.visible === false || n.mask) continue;
+      const m = multiply(parent, nodeMatrix(n));
+      const corners = [apply(m, 0, 0), apply(m, n.width, 0), apply(m, n.width, n.height), apply(m, 0, n.height)];
+      const own = Math.max(...corners.map((p) => p.y));
+      if (Number.isFinite(own)) bottom = bottom === null ? own : Math.max(bottom, own);
+      const clips = n.type === "frame" && (n.clip || !!n.scroll && n.scroll !== "none");
+      if (isContainer(n) && !clips) visit(n.children, m);
+    }
+  };
+  visit(nodes, ID$1);
+  return bottom;
+}
+function huggedHeight(ab, nodes) {
+  if (!ab.hugHeight) return ab.height;
+  const b = contentBottom(nodes);
+  if (b === null) return ab.height;
+  const pad = Number.isFinite(ab.hugPadding) ? Math.max(0, ab.hugPadding) : 0;
+  return Math.max(1, Math.ceil(b + pad));
+}
 const MAX_SIZE = 30;
 const memo$2 = /* @__PURE__ */ new Map();
 function remembered(key, make) {
@@ -8469,27 +8539,6 @@ function countLayoutFrames(nodes) {
     count2 += countLayoutFrames(n.children);
   }
   return count2;
-}
-function pathBounds(paths) {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  const add = (x, y) => {
-    if (x < minX) minX = x;
-    if (y < minY) minY = y;
-    if (x > maxX) maxX = x;
-    if (y > maxY) maxY = y;
-  };
-  for (const sp of paths) {
-    for (const p of sp.points) {
-      add(p.x, p.y);
-      if (p.in) add(p.x + p.in.x, p.y + p.in.y);
-      if (p.out) add(p.x + p.out.x, p.y + p.out.y);
-    }
-  }
-  if (minX === Infinity) return { x: 0, y: 0, width: 0, height: 0 };
-  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 const PLAYER_SCOPE_HINTS = {
   reducedMotion: { type: "true/false", hint: "The viewer's device asks for less motion" },
@@ -23381,7 +23430,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
     title: "Pages (artboards)",
     group: "Design",
     summary: "Screens with their own size, background, timelines and interactions. Called artboards in the settings and the file.",
-    keywords: "artboard artboards screen page pages scene size background start preset duplicate delete move resize clip",
+    keywords: "artboard artboards screen page pages scene size background start preset duplicate delete move resize clip fit height content hug grow auto height embed iframe animate",
     body: `A page (also called an **artboard**) is one screen of the interactive. The file, the advanced settings and a few menus (**Duplicate artboard**, **Delete artboard**) use the name artboard.
 
 Each page has its own size, background, layers, timelines and interactions. Variables, scripts, data and assets belong to the whole project, so every artboard shares them.
@@ -23390,6 +23439,13 @@ Each page has its own size, background, layers, timelines and interactions. Vari
 - Make a new page with the **Page** tool (<kbd>A</kbd>), the **+ Add page** button at the bottom of the **Layers** panel, or by right-clicking empty canvas and choosing **New page here**.
 - Click a page's name above it on the canvas, or its row in the **Layers** panel, to select it.
 - Drag the name to move the page around the canvas. Drag its corners to resize it.
+
+## Fit height to content
+Turn on **Fit height to content** in the **Page** section and the page is as tall as its lowest showing layer. Its height is no longer typed in (the **H** box is greyed out): it follows the layers. That keeps going while the project plays, so the page grows and shrinks as a list fills from data, a layer is shown or hidden, or text gets longer. In StudyDesk the embed's iframe follows it, so nothing is cut off and there's no empty space under it.
+
+- **Space below** keeps some room under the lowest layer.
+- A hidden layer, a mask, and anything inside a frame that clips or scrolls (past the frame's own edge) take no room.
+- **Animate height changes** eases the page to its new height instead of jumping. **Duration** is the **Project default** (**Page height time** in the project settings, 300 ms unless you change it) or **Custom**, with its own **Time**. A viewer whose device asks for less motion always gets the jump. The first height, as the page opens, never animates.
 
 ## Selecting several pages
 Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click page names on the canvas, or rows in the **Layers** panel. <kbd>Ctrl</kbd>+click on a chosen page takes it out again. <kbd>Shift</kbd>+click on a name adds it, and <kbd>Shift</kbd>+click on a row selects every row between it and the one you clicked before.
@@ -28153,7 +28209,7 @@ For StudyDesk, StaffDesk and the open site, use the **Embed code** in [Share lin
 
 Anywhere else, upload the **Single HTML file** and show it in an iframe.
 
-Inside StudyDesk the project tells the page its height, so the iframe fits. (For developers: it uses the suite's \`setILARSize\`, or a \`{width: null, height, cacheID}\` message.)
+Inside StudyDesk the project tells the page its height, so the iframe fits. On a page with **Fit height to content** that height follows what's on it as it plays (see [Pages](artboards)). (For developers: it uses the suite's \`setILARSize\`, or a \`{width: null, height, cacheID}\` message.)
 
 ## The web component
 \`\`\`
@@ -29388,6 +29444,7 @@ function applyChanges(p0, changes) {
           if (k === "master" && typeof v === "string") ab[k] = p.artboards.find((a) => a.id === v || a.name === v)?.id ?? v;
           else ab[k] = v;
         }
+        if (ab.hugHeight) ab.height = huggedHeight(ab, ab.children);
         break;
       }
       case "add_variable": {
@@ -29995,7 +30052,7 @@ ${JSON.stringify(loc.node, null, 1)}`);
   },
   {
     name: "edit",
-    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id or ids: [...], props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"; ids sets the same props on several layers); add_layer {artboard_id, type, props?, children?: [{type, props?, children?, ref?}], parent_id?, index?, ref?} (a whole tree in one op; with no colour given a layer follows the starter tokens, as in the editor); duplicate {id, count?, dx?, dy?, columns?, name? ("Card {n}": the original is 1), ref?} (copies with everything inside, each dx/dy on from the last; with columns they wrap into a grid; refs are ref1, ref2...); delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; rename_variable {id or name, name, scripts? (default true; false leaves scripts and code snippets alone)}: renames it and everything that names it, keeping saved learner values (never rename with set_variable); add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, dip?, keys: [{t, value, ease}]}], ref?} (text, label and true/false keys hold until the next key and never ease; to soften a text change key opacity and/or blur dipping to 0 / 8 either side of it on separate tracks marked dip: true, which reduced motion leaves out); add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids; params that point at a layer, variable, script, timeline, blend, artboard or asset take its id, its exact name or a $ref); remove_interactions {artboard_id, ids}; set_interaction {artboard_id, id, params? (merged in, null removes one), note?, x?, y?} (change a node in place, its connections kept); connect {artboard_id, from, to, from_port?}; disconnect {artboard_id, id} or {artboard_id, from, to, from_port?}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; add_theme {name, copy_from?, mode?: light|dark, high_contrast?, ref?} (the first one also makes Light, Dark, High contrast and the starter tokens); remove_theme {id}; add_colourway {colourway: gold|purple|blue|green|orange|red|high-contrast, default?} (as + Colourway in the Themes tab); add_token {name (like "color/accent"), value? (every theme), values? {theme id or name: colour}, ref?}; set_token {id or name, name?, value?, values?}; remove_token {id or name} (layers keep its colour); set_themes {default? (theme id or name), follow? (switch with dark mode and contrast settings), learner_switcher? (swatches that let learners pick a colourway)}; set_project_settings {props: {path: value}, name?} (paths into the project settings, as export_project shows them); add_data_source {name, kind: json|csv|tsv|text, text? (the file contents: uploaded for you) | url? (fetched when it plays, refresh? seconds) | asset_id?, ref?}; set_data_source {id or name, name?, kind?, url?, asset_id?, refresh?}; remove_data_source {id or name}; add_text_style {name, props: {fontFamily, fontSize, fontWeight, fontStyle, lineHeight, letterSpacing, color?}, ref?}; set_text_style {id or name, props} (a layer follows one with props styleRefs: {text: id or name}); add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). Give "ref" to name something you create, then use "$ref" in later changes in the same batch (a colour can say "token:$ref"). Colours take "token:<name>" as well as "token:<id>". Read read_reference("layers"), ("interactions"), ("properties") and ("colours") first.',
+    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id or ids: [...], props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"; ids sets the same props on several layers); add_layer {artboard_id, type, props?, children?: [{type, props?, children?, ref?}], parent_id?, index?, ref?} (a whole tree in one op; with no colour given a layer follows the starter tokens, as in the editor); duplicate {id, count?, dx?, dy?, columns?, name? ("Card {n}": the original is 1), ref?} (copies with everything inside, each dx/dy on from the last; with columns they wrap into a grid; refs are ref1, ref2...); delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster, and hugHeight true to fit the page height to its content as it plays (hugPadding px under the lowest layer, hugAnimate to ease the change, hugDuration ms or the project settings.hugDuration, default 300)); add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; rename_variable {id or name, name, scripts? (default true; false leaves scripts and code snippets alone)}: renames it and everything that names it, keeping saved learner values (never rename with set_variable); add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, dip?, keys: [{t, value, ease}]}], ref?} (text, label and true/false keys hold until the next key and never ease; to soften a text change key opacity and/or blur dipping to 0 / 8 either side of it on separate tracks marked dip: true, which reduced motion leaves out); add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids; params that point at a layer, variable, script, timeline, blend, artboard or asset take its id, its exact name or a $ref); remove_interactions {artboard_id, ids}; set_interaction {artboard_id, id, params? (merged in, null removes one), note?, x?, y?} (change a node in place, its connections kept); connect {artboard_id, from, to, from_port?}; disconnect {artboard_id, id} or {artboard_id, from, to, from_port?}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; add_theme {name, copy_from?, mode?: light|dark, high_contrast?, ref?} (the first one also makes Light, Dark, High contrast and the starter tokens); remove_theme {id}; add_colourway {colourway: gold|purple|blue|green|orange|red|high-contrast, default?} (as + Colourway in the Themes tab); add_token {name (like "color/accent"), value? (every theme), values? {theme id or name: colour}, ref?}; set_token {id or name, name?, value?, values?}; remove_token {id or name} (layers keep its colour); set_themes {default? (theme id or name), follow? (switch with dark mode and contrast settings), learner_switcher? (swatches that let learners pick a colourway)}; set_project_settings {props: {path: value}, name?} (paths into the project settings, as export_project shows them); add_data_source {name, kind: json|csv|tsv|text, text? (the file contents: uploaded for you) | url? (fetched when it plays, refresh? seconds) | asset_id?, ref?}; set_data_source {id or name, name?, kind?, url?, asset_id?, refresh?}; remove_data_source {id or name}; add_text_style {name, props: {fontFamily, fontSize, fontWeight, fontStyle, lineHeight, letterSpacing, color?}, ref?}; set_text_style {id or name, props} (a layer follows one with props styleRefs: {text: id or name}); add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). Give "ref" to name something you create, then use "$ref" in later changes in the same batch (a colour can say "token:$ref"). Colours take "token:<name>" as well as "token:<id>". Read read_reference("layers"), ("interactions"), ("properties") and ("colours") first.',
     inputSchema: S({ project_id: str("Project id"), changes: { type: "array", items: { type: "object" } }, explain: str("One line saying what this does (shown in the editor log)") }, ["project_id", "changes"]),
     run: async (a) => {
       const s = join(String(a.project_id));

@@ -4,6 +4,7 @@ import { useSyncExternalStore, useRef } from 'react';
 import {
   animatableProp,
   pathPointPropName,
+  huggedHeight,
   relayoutTree,
   createArtboard,
   frameTime,
@@ -94,16 +95,26 @@ function settleLayout(project: Project, fitGroups = false): Project {
   // wrong place. Fitting moves nothing on the canvas, so a group waiting for the next edit looks the same
   if (fitGroups) project = settleGroups(project);
   const withLayout = new Set<string>();
+  const fresh = new Set<string>();
   for (const ab of project.artboards) {
     if (layoutSettled.has(ab)) continue;
+    fresh.add(ab.id);
     let has = layoutFlag.get(ab);
     if (has === undefined) layoutFlag.set(ab, (has = hasAutoLayout(ab.children)));
     if (has) withLayout.add(ab.id);
   }
-  if (!withLayout.size) return project;
-  const next = produce(project, (d) => {
-    for (const ab of d.artboards) if (withLayout.has(ab.id)) relayoutTree(ab.children as SceneNode[]);
-  });
+  let next = !withLayout.size
+    ? project
+    : produce(project, (d) => {
+        for (const ab of d.artboards) if (withLayout.has(ab.id)) relayoutTree(ab.children as SceneNode[]);
+      });
+  // A page that fits its content takes the height its layers need, once they're laid out (the player works it out again as it runs)
+  const hug = new Set(next.artboards.filter((ab) => fresh.has(ab.id) && ab.hugHeight && huggedHeight(ab, ab.children) !== ab.height).map((ab) => ab.id));
+  if (hug.size) {
+    next = produce(next, (d) => {
+      for (const ab of d.artboards) if (hug.has(ab.id)) ab.height = huggedHeight(ab, ab.children as SceneNode[]);
+    });
+  }
   for (const ab of next.artboards) layoutSettled.add(ab);
   return next;
 }

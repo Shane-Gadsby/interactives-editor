@@ -61,6 +61,8 @@ import {
   walk,
   shownAmount,
   variableLabelAndName,
+  HUG_DURATION_MS,
+  hugDuration,
 } from 'interactives-player';
 import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { collaboratorCountOf } from '../lib/db';
@@ -633,6 +635,8 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             label="H"
             value={ab.height}
             min={1}
+            disabled={!!ab.hugHeight}
+            title={ab.hugHeight ? 'Fit height to content is on, so the height follows the layers on the page' : undefined}
             onChange={(v) =>
               setAb((a) => {
                 if (a.lockRatio && a.height) a.width = Math.max(1, Math.round((a.width * v) / a.height));
@@ -666,6 +670,55 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <div className="field-label block">Background</div>
         <PaintField paint={ab.background} project={project} box={{ w: ab.width, h: ab.height }} onChange={(p) => setAb((a) => (a.background = p), `ab-bg-${ab.id}`)} />
         </PropRow>
+        <CheckField
+          label="Fit height to content"
+          title="The page is as tall as its lowest showing layer, and keeps fitting as it plays: a list filling from data, a layer shown or hidden, text growing. An embed in StudyDesk grows and shrinks with it"
+          value={!!ab.hugHeight}
+          onChange={(v) => setAb((a) => (v ? (a.hugHeight = true) : (delete a.hugHeight, delete a.hugPadding, delete a.hugAnimate, delete a.hugDuration)))}
+        />
+        {ab.hugHeight && (
+          <>
+            <NumberField
+              label="Space below"
+              title="Room kept under the lowest layer"
+              value={ab.hugPadding ?? 0}
+              min={0}
+              max={2000}
+              suffix="px"
+              onChange={(v) => setAb((a) => (v > 0 ? (a.hugPadding = Math.round(v)) : delete a.hugPadding), `ab-hugpad-${ab.id}`)}
+            />
+            <CheckField
+              label="Animate height changes"
+              title="Ease to the new height instead of jumping. A viewer whose device asks for less motion still gets the jump"
+              value={!!ab.hugAnimate}
+              onChange={(v) => setAb((a) => (v ? (a.hugAnimate = true) : (delete a.hugAnimate, delete a.hugDuration)))}
+            />
+            {ab.hugAnimate && (
+              <SelectField
+                label="Duration"
+                title="How long the page takes to reach its new height: the project's default (Project settings) or its own"
+                value={ab.hugDuration === undefined ? 'default' : 'custom'}
+                options={[
+                  { value: 'default', label: `Project default (${hugDuration({}, project.settings)} ms)` },
+                  { value: 'custom', label: 'Custom' },
+                ]}
+                onChange={(v) => setAb((a) => (v === 'custom' ? (a.hugDuration = hugDuration({}, project.settings)) : delete a.hugDuration))}
+              />
+            )}
+            {ab.hugAnimate && ab.hugDuration !== undefined && (
+              <NumberField
+                label="Time"
+                title="How long this page takes to reach its new height"
+                value={ab.hugDuration}
+                min={0}
+                max={5000}
+                step={50}
+                suffix="ms"
+                onChange={(v) => setAb((a) => (a.hugDuration = Math.max(0, Math.min(5000, Math.round(v)))), `ab-hugms-${ab.id}`)}
+              />
+            )}
+          </>
+        )}
         <CheckField label="Clip content to page" title="Preview and exports cut off whatever hangs outside the page. On the canvas it still shows faintly there (Preferences: Show layers outside clipped artboards)" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
         {project.settings.library && !ab.library && (
           <CheckField
@@ -784,6 +837,22 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           title="When the viewer's device asks for less motion, autoplaying timelines show their last frame and artboard transitions are instant"
           value={!!project.settings.reducedMotion}
           onChange={(v) => setProject((p) => (p.settings.reducedMotion = v))}
+        />
+        <NumberField
+          label="Page height time"
+          title="How long a page with Fit height to content and Animate height changes takes to reach its new height, unless the page sets its own"
+          value={hugDuration({}, project.settings)}
+          min={0}
+          max={5000}
+          step={50}
+          suffix="ms"
+          onChange={(v) =>
+            setProject((p) => {
+              const ms = Math.max(0, Math.min(5000, Math.round(v)));
+              if (ms === HUG_DURATION_MS) delete p.settings.hugDuration;
+              else p.settings.hugDuration = ms;
+            }, 'project-hug-ms')
+          }
         />
         <NumberField
           label="Depth range"

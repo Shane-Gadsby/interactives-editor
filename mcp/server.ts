@@ -23,6 +23,7 @@ import { DRAW_TEMPLATES } from '../../interactives-player/src/draw-templates';
 import { SHADER_PRESETS } from '../../interactives-player/src/shader-presets';
 import { SHADER_BUILTINS, SHADER_UNIFORM_TYPES } from '../../interactives-player/src/shader-uniforms';
 import { runsPatch } from '../../interactives-player/src/textruns';
+import { huggedHeight } from '../../interactives-player/src/hug';
 import { sanitizeLayerInPlace } from '../../interactives-player/src/sanitize';
 import { migrateProjectGuides } from '../../interactives-player/src/guides';
 import { liveProblems } from '../../interactives-player/src/live';
@@ -579,6 +580,8 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
           if (k === 'master' && typeof v === 'string') (ab as unknown as Record<string, unknown>)[k] = p.artboards.find((a) => a.id === v || a.name === v)?.id ?? v;
           else (ab as unknown as Record<string, unknown>)[k] = v;
         }
+        // A page that fits its content is as tall as its layers now (the editor and player keep it so)
+        if (ab.hugHeight) ab.height = huggedHeight(ab, ab.children);
         break;
       }
       case 'add_variable': {
@@ -1232,7 +1235,7 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       'set_props {id or ids: [...], props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"; ids sets the same props on several layers); ' +
       'add_layer {artboard_id, type, props?, children?: [{type, props?, children?, ref?}], parent_id?, index?, ref?} (a whole tree in one op; with no colour given a layer follows the starter tokens, as in the editor); ' +
       'duplicate {id, count?, dx?, dy?, columns?, name? ("Card {n}": the original is 1), ref?} (copies with everything inside, each dx/dy on from the last; with columns they wrap into a grid; refs are ref1, ref2...); delete {id}; move {id, parent_id?, artboard_id?, index?}; ' +
-      'add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); ' +
+      'add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster, and hugHeight true to fit the page height to its content as it plays (hugPadding px under the lowest layer, hugAnimate to ease the change, hugDuration ms or the project settings.hugDuration, default 300)); ' +
       'add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; rename_variable {id or name, name, scripts? (default true; false leaves scripts and code snippets alone)}: renames it and everything that names it, keeping saved learner values (never rename with set_variable); ' +
       'add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, dip?, keys: [{t, value, ease}]}], ref?} (text, label and true/false keys hold until the next key and never ease; to soften a text change key opacity and/or blur dipping to 0 / 8 either side of it on separate tracks marked dip: true, which reduced motion leaves out); ' +
       'add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids; params that point at a layer, variable, script, timeline, blend, artboard or asset take its id, its exact name or a $ref); remove_interactions {artboard_id, ids}; ' +
