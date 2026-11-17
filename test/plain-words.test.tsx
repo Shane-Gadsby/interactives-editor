@@ -1,5 +1,6 @@
 //Plain wording for the interaction nodes (and page for artboard): the technical names stay findable and shown on request.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { nodeKindParked } from '../src/lib/parked';
 import fs from 'node:fs';
 import path from 'node:path';
 import { act, createRef } from 'react';
@@ -201,13 +202,13 @@ describe('the palette', () => {
 describe('help names both', () => {
   const body = () => topicBody(getTopic('interaction-nodes')!);
   it('every node has a heading with its plain name and the technical one in brackets', () => {
-    for (const [kind, plain] of Object.entries(PLAIN_NODE)) {
+    for (const [kind, plain] of Object.entries(PLAIN_NODE).filter(([k]) => !nodeKindParked(k))) {
       expect(body(), kind).toContain(`### ${plain} (${CATALOG_BY_KIND[kind].label})`);
     }
   });
   it('the Help button for a node lands on a heading that exists, for every node', () => {
     const anchors = new Set([...body().matchAll(/^### (.*)$/gm)].map((m) => slug(m[1])));
-    for (const d of CATALOG) {
+    for (const d of CATALOG.filter((x) => !nodeKindParked(x.kind))) {
       const t = nodeHelp(d.kind)!;
       expect(t.to.startsWith('interaction-nodes#'), d.kind).toBe(true);
       expect(anchors.has(t.to.split('#')[1]), `${d.kind} -> ${t.to}`).toBe(true);

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { parked } from '../lib/parked';
 import { keyHints, runCommand } from '../lib/keymap';
 import { windowCommand } from '../lib/key-area';
 import {
@@ -2194,7 +2195,7 @@ export function Canvas() {
       { type: 'video', label: 'Video' },
       { type: 'draw', label: 'Script layer' },
       { type: 'shader', label: 'Shader layer' },
-      { type: 'animation', label: 'Frameling animation' },
+      ...(parked.frameling ? [] : [{ type: 'animation' as const, label: 'Frameling animation' }]),
       { type: 'progress', label: 'Progress bar' },
       { type: 'chart', label: 'Chart' },
     ];

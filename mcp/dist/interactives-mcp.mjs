@@ -16800,6 +16800,11 @@ function compileBlueprint(p0, bp, opts2 = {}) {
   for (const ab of run2.p.artboards) relayoutTree(ab.children);
   return { project: run2.p, created: run2.created, notes: run2.notes, warnings: run2.warnings, problems: run2.problems, touched: [...new Set(run2.touched)], artboardId: run2.firstAb };
 }
+const FRAMELING_NODES = /* @__PURE__ */ new Set(["event.animationEnd", "event.animationMarker", "action.animationPlay", "action.animationStop", "action.animationFrame"]);
+function hasAnimationLayer(project) {
+  return false;
+}
+const nodeKindParked = (kind, project) => FRAMELING_NODES.has(kind) && !hasAnimationLayer();
 function allNodes(p) {
   return (p.artboards ?? []).flatMap(artboardNodes);
 }
@@ -23065,7 +23070,7 @@ Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock
 The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
-**Preview** runs the project exactly as the exported file will, from the start page or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. **Less motion** plays it as a viewer whose device asks for less motion sees it (calm timelines at their end, and with Respect reduced motion on, autoplay at its end, Frameling animations on their still frame and instant page changes), without changing your own computer; it's off each time Preview opens. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
+**Preview** runs the project exactly as the exported file will, from the start page or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. **Less motion** plays it as a viewer whose device asks for less motion sees it (calm timelines at their end, and with Respect reduced motion on, autoplay at its end${""} and instant page changes), without changing your own computer; it's off each time Preview opens. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
 
 - **Now showing**: the page on screen and how many instances it contains.
 - **Timelines**: the ones running, with a progress bar (green dot = playing).
@@ -25669,7 +25674,7 @@ Everyone should be able to finish the activity, so every drag has two ways that 
     body: () => {
       const section = (title, cat) => `## ${title}
 
-` + CATALOG.filter((d) => d.category === cat).map((d) => {
+` + CATALOG.filter((d) => d.category === cat && !nodeKindParked(d.kind)).map((d) => {
         const params = d.params.map((raw) => plainParam(d.kind, raw, false)).map((p) => `- **${p.label}**${p.help ? `: ${p.help}` : p.options ? `: ${p.options.map((o) => o.label).join(", ")}` : ""}`).join("\n");
         const outs = d.outputs.filter((o) => o.label).map((o) => pw(o.label, false));
         const rest = pw(`${d.details ?? ""}${outs.length ? `${d.details ? " " : ""}Outputs: ${outs.join(", ")}.` : ""}`, false);
@@ -26775,8 +26780,7 @@ The same buttons are above the raw text in the Data tab, and the setting reaches
 | \`ix.setTheme(name)\` / \`ix.getTheme()\` / \`ix.themes()\` | Show a [theme](themes) by name (\`'auto'\` follows the viewer), read the one showing, list them |
 | \`ix.record(name, value?)\` | Count that something happened, for [Insights](insights) (a name up to 60 characters, a short value) |
 | \`ix.setInstanceInput(layer, name, v)\` / \`ix.getInstanceInput(layer, name)\` / \`ix.fireInstanceTrigger(layer, name, data)\` | Set or read a variable inside an [instance](instances), or send a message into it only |
-| \`ix.playClip(layer, clip?, {from, loop, speed})\` / \`ix.stopAnimation(layer, reset?)\` / \`ix.goToFrame(layer, frame, play?)\` / \`ix.animation(layer)\` | Play, stop or move a [Frameling animation](frameling-animations) layer, and read what it is doing |
-| \`ix.onFrame((dt, t) => …)\` | Run every frame |
+${""}| \`ix.onFrame((dt, t) => …)\` | Run every frame |
 | \`ix.pointer\`, \`ix.artboard\` | Pointer \`{x, y, down}\`, artboard \`{name, width, height}\` |
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
 | \`ix.context.firstName\`, \`ix.context.courseCode\`, \`ix.context.isStaff\` | The course and learner, read only ([Course and learner context](course-context)) |
@@ -29031,7 +29035,7 @@ The first column is the technical name of the property. Scripts use it: \`ix.nod
 
 | Path | Property | Kind |
 |---|---|---|
-` + ANIMATABLE_PROPS.map((p) => `| \`${p.prop}\` | ${p.label} | ${p.kind} |`).join("\n")
+` + ANIMATABLE_PROPS.filter((p) => !p.label.startsWith("Frameling")).map((p) => `| \`${p.prop}\` | ${p.label} | ${p.kind} |`).join("\n")
   },
   {
     id: "troubleshooting",
@@ -29208,6 +29212,7 @@ Preview sits above the help drawer so it never covers its controls. Asking for h
 - **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).`
   }
 ];
+TOPICS.splice(TOPICS.findIndex((t2) => t2.id === "frameling-animations"), 1);
 function topicBody(t2) {
   return typeof t2.body === "function" ? t2.body() : t2.body;
 }

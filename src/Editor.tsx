@@ -1,4 +1,5 @@
 import { answerPreviewProgress, forgetPreviewCourse, forgetPreviewLearner, previewCourseHas, previewLearnerHas, usesCourseCollections } from './lib/preview-learner';
+import { parked } from './lib/parked';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
@@ -921,7 +922,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string }[] = [
   { tool: 'text', icon: 'text', label: 'Text' },
   { tool: 'draw', icon: 'draw', label: 'Script layer (generative art, charts)' },
   { tool: 'shader', icon: 'shader', label: 'Shader layer (GPU effects, backdrops)' },
-  { tool: 'animation', icon: 'flipbook', label: 'Frameling animation (a character or effect drawn in Frameling, played from its .flplay file)' },
+  ...(parked.frameling ? [] : [{ tool: 'animation' as Tool, icon: 'flipbook' as IconName, label: 'Frameling animation (a character or effect drawn in Frameling, played from its .flplay file)' }]),
   { tool: 'progress', icon: 'progress', label: 'Progress bar (a bar that fills to a value, for scores, steps and timers)' },
   { tool: 'chart', icon: 'chart', label: 'Chart (bar, column, line, pie and donut charts from a list)' },
   { tool: 'bone', icon: 'bone', label: 'Bone (drag to draw one; start on a bone tip to continue the chain)' },
@@ -1053,7 +1054,7 @@ function AddWebThing({ which }: { which: (typeof WEB_ADDS)[number] }) {
 export const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[] = [
   { id: 'shapes', label: 'Shapes', tools: ['artboard', 'frame', 'rect', 'ellipse', 'polygon', 'star'], open: true },
   { id: 'draw', label: 'Draw', tools: ['line', 'connector', 'pen', 'pencil', 'bend'], open: true },
-  { id: 'media', label: 'Media', tools: ['text', 'draw', 'shader', 'animation', 'video'], open: false },
+  { id: 'media', label: 'Media', tools: ['text', 'draw', 'shader', ...(parked.frameling ? [] : ['animation' as Tool]), 'video'], open: false },
   { id: 'data', label: 'Data', tools: ['progress', 'chart'], open: false },
   { id: 'web', label: 'Web', tools: ['button', 'input', 'link', 'embed'], open: false },
   { id: 'rig', label: 'Rig', tools: ['bone'], open: false },

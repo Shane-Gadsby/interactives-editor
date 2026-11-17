@@ -70,6 +70,7 @@ import { usePrefs } from '../lib/prefs';
 import { compatibleKinds, newNodePort, type DragDirection } from '../lib/graph';
 import { artboardChoices } from '../lib/variants-edit';
 import { nodeMenuItems } from '../lib/node-menu';
+import { nodeKindParked } from '../lib/parked';
 import { GraphPalette } from './GraphPalette';
 import { FlowSentences } from './FlowSentences';
 import { MasterFlows } from './MasterFlows';
@@ -858,7 +859,7 @@ export function LogicGraph() {
     );
 
   /** Node palette as menu items: categories with their nodes, each calling `pick(kind)`. */
-  const paletteItems = nodeMenuItems;
+  const paletteItems = (pick: (kind: string) => void, only?: (kind: string) => boolean) => nodeMenuItems(pick, (kind) => !nodeKindParked(kind, s.project) && (!only || only(kind)));
 
   const paneMenu = (e: React.MouseEvent | MouseEvent) => {
     e.preventDefault();

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from 'react';
 import { createNode, loadFrameling, isContainer, isMasterArtboard, masterOf, nodeTypeLabel, pagesOfMaster, type Artboard, type ArtboardGroup, type Project, type SceneNode } from 'interactives-player';
 import { animationLayer } from '../lib/frameling-import';
+import { parked } from '../lib/parked';
 import { store, useEditor } from '../store/store';
 import { Icons, type IconName } from '../components/icons';
 import { IconButton } from '../components/ui';
@@ -962,7 +963,7 @@ export function Assets() {
           );
           const actions = (
             <div className="asset-actions">
-              {(kind === 'image' || kind === 'video' || kind === 'animation') && ab && center && (
+              {(kind === 'image' || kind === 'video' || (kind === 'animation' && !parked.frameling)) && ab && center && (
                 <button className="link-btn" title={`Place on “${ab.name}”`} onClick={(e) => (e.stopPropagation(), place(a, kind))}>
                   Place
                 </button>

@@ -1,4 +1,5 @@
 import { nodeHeading, plainParam, pw } from '../lib/plain-words';
+import { nodeKindParked, parked } from '../lib/parked';
 import { ANIMATABLE_PROPS, CATALOG, DRAW_API, DRAW_TEMPLATES, PACKAGE_EXTENSION, SHADER_PRESETS, type NodeDef } from 'interactives-player';
 import { TUTORIALS } from './tutorials';
 import { BUILD_TOPICS } from './build';
@@ -31,6 +32,10 @@ export const provideBrandedHelp = (fn: () => BrandedHelpSource): void => {
 };
 
 export const GROUPS = ['Getting started', 'Build it', 'Concepts', 'Design', 'Web elements', 'Motion', 'Interactivity', 'Data', 'Import and export', 'Working together', 'Reference'];
+
+// The scripting table's row for Frameling animation layers, left out while they are parked
+const FRAMELING_API_ROW = `| \`ix.playClip(layer, clip?, {from, loop, speed})\` / \`ix.stopAnimation(layer, reset?)\` / \`ix.goToFrame(layer, frame, play?)\` / \`ix.animation(layer)\` | Play, stop or move a [Frameling animation](frameling-animations) layer, and read what it is doing |
+`;
 
 export const TOPICS: HelpTopic[] = [
   // ---------------------------------------------------------------- getting started
@@ -360,7 +365,7 @@ Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock
 The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
-**Preview** runs the project exactly as the exported file will, from the start page or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. **Less motion** plays it as a viewer whose device asks for less motion sees it (calm timelines at their end, and with Respect reduced motion on, autoplay at its end, Frameling animations on their still frame and instant page changes), without changing your own computer; it's off each time Preview opens. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
+**Preview** runs the project exactly as the exported file will, from the start page or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. **Less motion** plays it as a viewer whose device asks for less motion sees it (calm timelines at their end, and with Respect reduced motion on, autoplay at its end${parked.frameling ? '' : ', Frameling animations on their still frame'} and instant page changes), without changing your own computer; it's off each time Preview opens. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
 
 - **Now showing**: the page on screen and how many instances it contains.
 - **Timelines**: the ones running, with a progress bar (green dot = playing).
@@ -2970,7 +2975,7 @@ Everyone should be able to finish the activity, so every drag has two ways that 
     body: () => {
       const section = (title: string, cat: NodeDef['category']) =>
         `## ${title}\n\n` +
-        CATALOG.filter((d) => d.category === cat)
+        CATALOG.filter((d) => d.category === cat && !nodeKindParked(d.kind))
           .map((d) => {
             const params = d.params
               .map((raw) => plainParam(d.kind, raw, false))
@@ -4081,8 +4086,7 @@ The same buttons are above the raw text in the Data tab, and the setting reaches
 | \`ix.setTheme(name)\` / \`ix.getTheme()\` / \`ix.themes()\` | Show a [theme](themes) by name (\`'auto'\` follows the viewer), read the one showing, list them |
 | \`ix.record(name, value?)\` | Count that something happened, for [Insights](insights) (a name up to 60 characters, a short value) |
 | \`ix.setInstanceInput(layer, name, v)\` / \`ix.getInstanceInput(layer, name)\` / \`ix.fireInstanceTrigger(layer, name, data)\` | Set or read a variable inside an [instance](instances), or send a message into it only |
-| \`ix.playClip(layer, clip?, {from, loop, speed})\` / \`ix.stopAnimation(layer, reset?)\` / \`ix.goToFrame(layer, frame, play?)\` / \`ix.animation(layer)\` | Play, stop or move a [Frameling animation](frameling-animations) layer, and read what it is doing |
-| \`ix.onFrame((dt, t) => …)\` | Run every frame |
+${parked.frameling ? '' : FRAMELING_API_ROW}| \`ix.onFrame((dt, t) => …)\` | Run every frame |
 | \`ix.pointer\`, \`ix.artboard\` | Pointer \`{x, y, down}\`, artboard \`{name, width, height}\` |
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
 | \`ix.context.firstName\`, \`ix.context.courseCode\`, \`ix.context.isStaff\` | The course and learner, read only ([Course and learner context](course-context)) |
@@ -6353,7 +6357,7 @@ Layers an agent adds follow the project's starter colours, the same as yours, so
     keywords: 'property properties animatable list prop path',
     body: () =>
       `A property is something about a layer that you can change over time or with a rule: where it is, how big, how see-through, its colour. Any property below can get keyframes on a timeline (see [Timelines and keyframes](timelines)), be bound to an expression (see [Bindings](bindings)), and be changed with **Change a layer's setting** and **Animate a layer's setting**.\n\nThe first column is the technical name of the property. Scripts use it: \`ix.node('Box').set('fill.color', '#f00')\`.\n\n| Path | Property | Kind |\n|---|---|---|\n` +
-      ANIMATABLE_PROPS.map((p) => `| \`${p.prop}\` | ${p.label} | ${p.kind} |`).join('\n'),
+      ANIMATABLE_PROPS.filter((p) => !(parked.frameling && p.label.startsWith('Frameling'))).map((p) => `| \`${p.prop}\` | ${p.label} | ${p.kind} |`).join('\n'),
   },
   {
     id: 'troubleshooting',
@@ -6530,6 +6534,9 @@ Preview sits above the help drawer so it never covers its controls. Asking for h
 - **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).`,
   },
 ];
+
+// A parked feature keeps its topic in the code and out of the help (lib/parked.ts)
+if (parked.frameling) TOPICS.splice(TOPICS.findIndex((t) => t.id === 'frameling-animations'), 1);
 
 export function topicBody(t: HelpTopic): string {
   return typeof t.body === 'function' ? t.body() : t.body;
