@@ -1,4 +1,4 @@
-import{bZ as a,b_ as o,b$ as m,c0 as r,c1 as k,c2 as V,c3 as R,c4 as M,c5 as h,c6 as s,c7 as i,c8 as U,c9 as E,ca as b,cb as n,cc as S,cd as C,ce as f,cf as w,cg as A,ch as l,ci as d,cj as T,ck as P,cl as u,cm as O,cn as x,co as Y,cp as F,cq as K,cr as D,cs as I,ct as $,cu as Q,cv as X,bl as J,a8 as Z,bv as ee,bd as te,ae as W,b0 as ae}from"./index-Ct4HRtKU.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bZ as a,b_ as o,b$ as m,c0 as r,c1 as k,c2 as V,c3 as R,c4 as M,c5 as h,c6 as s,c7 as i,c8 as U,c9 as E,ca as b,cb as n,cc as S,cd as C,ce as f,cf as w,cg as A,ch as l,ci as d,cj as T,ck as P,cl as u,cm as O,cn as x,co as Y,cp as F,cq as K,cr as D,cs as I,ct as $,cu as Q,cv as X,bl as J,a8 as Z,bv as ee,bd as te,ae as W,b0 as ae}from"./index-DwsJCHZq.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -6,7 +6,7 @@ This is how it looks when it is done:
 
 ## 1. Make a project
 
-1. Open the Interactives page and press **New project**. A window called **Start a new project** asks how to begin: keep **Blank project**, leave the name as it is (or type your own) and press **Create project**. The editor opens with one page called **Home**, 800 by 600.
+1. Open the Ixia page and press **New project**. A window called **Start a new project** asks how to begin: keep **Blank project**, leave the name as it is (or type your own) and press **Create project**. The editor opens with one page called **Home**, 800 by 600.
 2. Click the project name at the top left (it says *Untitled project*), type **My first animation** and press <kbd>Enter</kbd>. Everything saves by itself. The label next to the name says **Saved** when it has.
 
 ## 2. Draw the box
@@ -119,7 +119,7 @@ The graph can do much more than the list, and it helps to have drawn one flow yo
 - **+ When clicked…** writes the nodes for you, and **Show in graph** shows them. You can also drag from an output into empty space to add and join a node in one move.
 - The **Preview** and its event list are the quickest way to test.
 
-**Next:** [Tutorial 3: A state machine with variables](tutorial-state-machine). More on the graph: [Interactions](interactions) and [Interaction node reference](interaction-nodes).`},{id:"tutorial-state-machine",title:"Tutorial 3: A state machine with variables",group:"Getting started",summary:"Build a lamp that switches on and off, with a tap counter, using variables, a data binding and Set variable nodes.",keywords:"tutorial state machine variable boolean number toggle binding set variable counter lamp switch text expression braces state",body:`A *state machine* is a thing that is always in one state, and moves to another when something happens. In Interactives the state lives in **variables**, the things that happen are **events**, and the look of each state comes from **bindings**.
+**Next:** [Tutorial 3: A state machine with variables](tutorial-state-machine). More on the graph: [Interactions](interactions) and [Interaction node reference](interaction-nodes).`},{id:"tutorial-state-machine",title:"Tutorial 3: A state machine with variables",group:"Getting started",summary:"Build a lamp that switches on and off, with a tap counter, using variables, a data binding and Set variable nodes.",keywords:"tutorial state machine variable boolean number toggle binding set variable counter lamp switch text expression braces state",body:`A *state machine* is a thing that is always in one state, and moves to another when something happens. In Ixia the state lives in **variables**, the things that happen are **events**, and the look of each state comes from **bindings**.
 
 You will build a lamp. A button switches it on and off, and a counter shows how many times you pressed. It takes about ten minutes.
 
@@ -4129,7 +4129,9 @@ Ask: **does it change while it runs?**
 - In Preview, **Variables (live)** shows every variable as it changes, and you can set one by hand to see what the bindings do with it.
 
 **More:** [Variables](variables), [Data sources](data-sources), [Bindings](bindings#which-way-in-out-or-both), [Tutorial 3](tutorial-state-machine), [Content from a data file](tutorial-data-source).`}},pa=Object.freeze(Object.defineProperty({__proto__:null,concept:ca},Symbol.toStringTag,{value:"Module"})),ua=Object.assign({"./a11y-names.ts":xt,"./assets.ts":St,"./auto-layout.ts":Pt,"./components.ts":It,"./coordinates.ts":Wt,"./edit-vs-play.ts":Lt,"./events-actions.ts":Mt,"./expressions.ts":Ot,"./hit-testing.ts":Nt,"./live-revisions.ts":qt,"./notes-comments.ts":_t,"./only-if.ts":Gt,"./pages-masters.ts":Ut,"./reduced-motion.ts":Kt,"./repeaters.ts":Qt,"./responsive-variants.ts":Jt,"./results.ts":ea,"./seeds-random.ts":aa,"./share-export.ts":sa,"./themes-tokens.ts":ia,"./timelines.ts":ha,"./user-data.ts":la,"./variables-data-bindings.ts":pa}),B=Object.entries(ua).filter(([e])=>!/\/index\.ts$/.test(e)).map(([,e])=>e.concept).filter(Boolean).sort((e,t)=>e.order-t.order||e.topic.title.localeCompare(t.topic.title)),ga={id:"concepts",title:"Concepts: the ideas behind the editor",group:"Concepts",summary:"Short explanations of the ideas that catch people out: what the canvas shows, variables and bindings, repeaters, auto layout, what gets clicked and more.",keywords:"concepts ideas explain why confused does nothing not working understand how it works basics",body:()=>{const e=[`Each of these is a few minutes' read: the idea, the ways people get caught out, and how to tell what is going on. If something "does nothing", start with the first one.`,""];for(const t of B)e.push(`- [${t.topic.title}](${t.topic.id}). ${t.topic.summary}`);return e.join(`
-`)}},ma=[ga,...B.map(e=>e.topic)];let q=null;const wa=e=>{q=e},ya=["Getting started","Build it","Concepts","Design","Web elements","Motion","Interactivity","Data","Import and export","Working together","Reference"],j=[{id:"welcome",title:"Welcome to Interactives",group:"Getting started",summary:"What Interactives is, how a project fits together, and where to start.",keywords:"intro overview start getting started tutorial beginner first learn new user onboarding glossary words",body:`Interactives builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on pages, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
+`)}},ma=[ga,...B.map(e=>e.topic)];let q=null;const wa=e=>{q=e},ya=["Getting started","Build it","Concepts","Design","Web elements","Motion","Interactivity","Data","Import and export","Working together","Reference"],j=[{id:"welcome",title:"Welcome to Ixia",group:"Getting started",summary:"What Ixia is, how a project fits together, and where to start.",keywords:"intro overview start getting started tutorial beginner first learn new user onboarding glossary words interactives old name renamed ixia",body:`Ixia builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on pages, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
+
+Ixia used to be called Interactives. Only the name changed: your projects, links and embeds are as they were, the address still says \`/interactives\`, scripts still use \`ix\` and packages are still \`.ixp\` files.
 
 ![The editor: tools down the left edge, then Layers, Assets, Libraries and Comments, the pages in the middle, the Properties panel on the right, and the Timeline, Interactions, Scripts, Variables, Data and other tabs along the bottom. Share and Export are at the top right.](help/editor-overview.png)
 
@@ -4143,7 +4145,7 @@ Under the top bar, the **Getting started** strip lists five jobs that tick thems
 
 ## Getting started as a beta tester
 
-Thank you for trying Interactives 0.5. It is a beta: the main parts work, a few edges are rough, and what you find now decides what gets fixed next. You don't need to read anything first. Follow the list below, and open the help page it links to when you want the detail.
+Thank you for trying Ixia 0.5. It is a beta: the main parts work, a few edges are rough, and what you find now decides what gets fixed next. You don't need to read anything first. Follow the list below, and open the help page it links to when you want the detail.
 
 ### What to try first
 
@@ -4264,7 +4266,7 @@ See [Using this help](help) for the detail.
 - **New project** (top right, or the **+** card) opens **Start a new project**, one window with four ways to begin. Pick one on the left (<kbd>Up</kbd> and <kbd>Down</kbd> move between them), then give the project a name and a folder at the bottom and press **Create project**. It opens straight away.
   - **Blank project**: one empty page called **Home**, with the Light, Dark and High contrast themes. Your default font (Open Sans unless you changed it) is added to it. See [Preferences](preferences).
   - **Copy a project or template**: a list of your own projects, your own templates and the ones shared with you. A project is copied whole, with its pictures, and the copy is called **Copy of ...**. A template opens with its checklist, as under [Templates](templates).
-  - **Built-in template**: the starters that come with Interactives, shown with their pictures.
+  - **Built-in template**: the starters that come with Ixia, shown with their pictures.
   - **Copy an example**: the finished examples, shown with their pictures. You get your own copy to change.
   
   The search box above each list filters it as you type. Press <kbd>Down</kbd> to move from the search box to the list, the arrow keys to move through it, and <kbd>Enter</kbd> to create the project from the one you picked. <kbd>Esc</kbd> closes the window without making anything. The name starts as something sensible and follows what you pick until you type your own. The folder starts as the one you were looking at, and you can change it.
@@ -4512,7 +4514,7 @@ Preferences are your own settings for the editor. Open **Preferences** from the 
 
 It is one window with a list of **pages** down the left and the settings of one page on the right. Your settings are saved with your account, so they follow you to any browser you sign in on.
 
-The small **(i)** icon in the title bar shows the version of Interactives you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. Put it in every problem report. The same icon is beside **Help** on the help and projects pages.
+The small **(i)** icon in the title bar shows the version of Ixia you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. Put it in every problem report. The same icon is beside **Help** on the help and projects pages.
 
 ## Using the window
 - **Changes apply at once.** There is no OK and no Cancel: tick a box and the editor changes. <kbd>Esc</kbd> or the **×** closes the window.
@@ -8891,7 +8893,7 @@ Untick anything you do not want, then **Update**. It is one undo step (Ctrl+Z). 
 A template made from a project that already has a [brand kit](brand-kits) added, with some of its items placed, is a **pre-branded template**. Its card says **Brand kit**, and projects made from it start with the kit's logos and headers in place and locked, so they stay on brand. Everything else in the project is the author's to change.
 
 ## Examples
-**Examples** are finished projects that ship with Interactives: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. Every example's pages and graphs are laid out neatly and carry a [note](notes#notes-in-starters-and-examples) or two saying what to look at. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
+**Examples** are finished projects that ship with Ixia: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. Every example's pages and graphs are laid out neatly and carry a [note](notes#notes-in-starters-and-examples) or two saying what to look at. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
 
 ## Allow remix on a share link
 In **Share > Share link**, tick **Allow remix**. People who open the **Link for StudyDesk** while signed in to the editor get a **Remix this** button; pressing it copies the project into their own projects and opens it. The copy is theirs: it does not change your project, and it is not tied to it. A remix copies the project **as it is now** (not the version last published to the link), with every page, layer and picture, including parts the page does not show, so only allow it for projects you are happy to give away. Turn it off at any time; copies already made stay.
@@ -9076,7 +9078,7 @@ Turning it on saves your project first and then joins the others; turning it off
 
 ## When a save fails
 The label next to the project name says **Save failed**; hover it for the reason.
-- **Could not reach the Interactives server**, or **The server could not save this project**: the network or the server had a problem. The editor tries again by itself, waiting a little longer each time (up to a minute), and straight away when your computer is back online. Keep the tab open; nothing you did is lost.
+- **Could not reach the Ixia server**, or **The server could not save this project**: the network or the server had a problem. The editor tries again by itself, waiting a little longer each time (up to a minute), and straight away when your computer is back online. Keep the tab open; nothing you did is lost.
 - **This project is too big to save**: the project is over 64 MB. Large pictures or data pasted straight into layers are the usual cause. Put pictures in the [Assets panel](assets) and point layers at them instead; then the next change saves.
 - The red conflict bar: someone else saved first (below).
 
