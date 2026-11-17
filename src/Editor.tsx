@@ -5,6 +5,7 @@ import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
 import { ToastView } from './components/ToastView';
 import { ApiError, ConflictError, collaboratorCountOf, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
+import { publishLatest } from './lib/publish';
 import { LIVE_FALLBACK_EVENT, liveSession, setLiveSession } from './lib/live';
 import { openLiveIfOn, watchLiveSync, watchStale } from './lib/live-sync';
 import { assetUrls } from './lib/assets';
@@ -648,6 +649,9 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   //Share and the exports that hand the project to others first show what is likely wrong (Before you share), when there is anything
   const [gate, setGate] = useState<{ what: 'share' | 'export'; go: () => void } | null>(null);
   const gated = (what: 'share' | 'export', go: () => void) => (checkBeforeShare(st.get().project).length ? setGate({ what, go }) : go());
+  // Publish: Share's "Update to the latest version" from the top bar, once it's clear every embed changes with it
+  const [publishing, setPublishing] = useState(false);
+  const publishNow = () => void publishLatest(() => setShareOpen(true), setPublishing);
   const exportDefinitions = () => {
     const project = st.get().project;
     download(new Blob([typeDefinitions(project)], { type: 'text/plain' }), `${fileSafe(project.name)}.d.ts`);
@@ -852,6 +856,17 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
           </div>
         )}
       </div>
+      <button
+        className="btn"
+        disabled={publishing}
+        aria-busy={publishing}
+        onClick={() => gated('share', publishNow)}
+        onPointerEnter={warmPlayerSource}
+        onFocus={warmPlayerSource}
+        title="Update every link and embed of this project to the project as it is now (Share's Update to the latest version). Asks first"
+      >
+        {publishing ? 'Publishing…' : 'Publish'}
+      </button>
       <div className="menu-wrap">
         <button className="btn" data-tour="share" onClick={() => setShareMenu(!shareMenu)} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Share the project: a link to play it, people to edit it with, reviewers to comment on it">
           <Icons.share width={14} /> Share
