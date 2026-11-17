@@ -4382,6 +4382,23 @@ function paint(v) {
     }
     case "image":
       return isStr(v.assetId) ? fx(v) : null;
+    case "shader": {
+      if (!isStr(v.preset)) return null;
+      const out = { ...v };
+      if ("uniforms" in out) {
+        const src = isObj$1(out.uniforms) ? out.uniforms : {};
+        const clean2 = {};
+        for (const [k, val2] of Object.entries(src)) {
+          if (isNum(val2)) clean2[k] = val2;
+          else if (Array.isArray(val2) && val2.length && val2.every(isNum)) clean2[k] = val2;
+        }
+        if (Object.keys(clean2).length) out.uniforms = clean2;
+        else delete out.uniforms;
+      }
+      if ("fps" in out && !isNum(out.fps)) delete out.fps;
+      if ("animateInEditor" in out && typeof out.animateInEditor !== "boolean") delete out.animateInEditor;
+      return fx(out);
+    }
     default:
       return null;
   }
