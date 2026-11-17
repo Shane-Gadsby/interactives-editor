@@ -2398,6 +2398,10 @@ export function Canvas() {
       className={`canvas${altHeld && s.tool === 'select' ? ' alt-held' : ''}`}
       style={{ cursor }}
       onPointerDown={onPointerDown}
+      // A middle press pans the canvas, so the browser mustn't start its own autoscroll as well (only cancelling mousedown stops it)
+      onMouseDown={(e) => {
+        if (e.button === 1) e.preventDefault();
+      }}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
