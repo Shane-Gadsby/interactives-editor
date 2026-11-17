@@ -114,6 +114,9 @@ import { VideoCues } from './VideoCuesSection';
 import { ReadAloudSection } from './ReadAloudSection';
 import { VariantsSection } from './VariantsSection';
 import { MasterSection } from './MasterSection';
+import { ComponentPropsSection } from './ComponentPropsSection';
+import { SHADER_PRESETS, SHADER_PRESETS_BY_ID } from 'interactives-player';
+import { StatesSection } from './StatesSection';
 import { PageLinkSection } from './PageLinkSection';
 import { PageNavSection } from './PageNavSection';
 import { StepsSection } from './StepsSection';
@@ -403,7 +406,43 @@ function GradientPoints({ paint, onChange, box }: { paint: Extract<Paint, { type
 }
 
 /** `box` (the layer's size) is what the gradient points start from; without it a 100 x 100 box stands in. */
-export function PaintField({ paint, onChange, project, allowNone = true, box }: { paint: Paint | null; onChange: (p: Paint | null) => void; project: Project; allowNone?: boolean; box?: { w: number; h: number } }) {
+/** A shader fill: which starter shader, and a slider for each control it declares. */
+function ShaderPaintFields({ paint, onChange }: { paint: Extract<Paint, { type: 'shader' }>; onChange: (p: Paint) => void }) {
+  const preset = SHADER_PRESETS_BY_ID[paint.preset];
+  const set = (name: string, value: number) => onChange({ ...paint, uniforms: { ...(paint.uniforms ?? {}), [name]: value } });
+  return (
+    <>
+      <SelectField
+        value={paint.preset}
+        title={preset?.description ?? 'Which starter shader paints this layer'}
+        options={SHADER_PRESETS.filter((x) => x.kind === 'generator').map((x) => ({ value: x.id, label: x.name }))}
+        //a different shader has different controls, so the old values go with it
+        onChange={(v) => onChange({ ...paint, preset: v, uniforms: undefined })}
+      />
+      {(preset?.uniforms ?? [])
+        .filter((u) => typeof u.value === 'number')
+        .map((u) => (
+          <NumberField
+            key={u.name}
+            label={u.name}
+            title={`${u.name} for this shader`}
+            value={Number(paint.uniforms?.[u.name] ?? u.value)}
+            step={0.1}
+            onChange={(v) => set(u.name, v)}
+            onCommit={() => store().commit()}
+          />
+        ))}
+      <CheckField
+        label="Animate on the canvas"
+        title="Keep it moving while you edit. Off: one still frame, which keeps the editor quick"
+        value={!!paint.animateInEditor}
+        onChange={(v) => onChange({ ...paint, animateInEditor: v || undefined })}
+      />
+    </>
+  );
+}
+
+export function PaintField({ paint, onChange, project, allowNone = true, box, shaders = true }: { paint: Paint | null; onChange: (p: Paint | null) => void; project: Project; allowNone?: boolean; box?: { w: number; h: number }; shaders?: boolean }) {
   const type = paint?.type ?? 'none';
   const stopsOf = (p: Paint | null): ColorStop[] =>
     p && (p.type === 'linear' || p.type === 'radial')
@@ -416,10 +455,11 @@ export function PaintField({ paint, onChange, project, allowNone = true, box }: 
   const setType = (t: string) => {
     const change = (p: Paint | null) => onChange(p && paint ? { ...paintFx(paint), ...p } : p);
     if (t === 'none') change(null);
-    else if (t === 'solid') change({ type: 'solid', color: paint && paint.type !== 'solid' && paint.type !== 'image' ? paint.stops[0]?.color ?? LIGHT_LOOK.surfaceMuted : LIGHT_LOOK.surfaceMuted });
+    else if (t === 'solid') change({ type: 'solid', color: paint && (paint.type === 'linear' || paint.type === 'radial') ? paint.stops[0]?.color ?? LIGHT_LOOK.surfaceMuted : LIGHT_LOOK.surfaceMuted });
     else if (t === 'linear') change({ type: 'linear', angle: 180, stops: stopsOf(paint) });
     else if (t === 'radial') change({ type: 'radial', stops: stopsOf(paint) });
     else if (t === 'image') change({ type: 'image', assetId: project.assets.find((a) => assetKind(a.mime) === 'image')?.id ?? '', fit: 'cover' });
+    else if (t === 'shader') change({ type: 'shader', preset: SHADER_PRESETS.find((x) => x.kind === 'generator')!.id });
   };
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
   return (
@@ -427,7 +467,14 @@ export function PaintField({ paint, onChange, project, allowNone = true, box }: 
       <SelectField
         value={type}
         onChange={setType}
-        options={[...(allowNone ? [{ value: 'none', label: 'None' }] : []), { value: 'solid', label: 'Solid' }, { value: 'linear', label: 'Linear gradient' }, { value: 'radial', label: 'Radial gradient' }, { value: 'image', label: 'Image' }]}
+        options={[
+          ...(allowNone ? [{ value: 'none', label: 'None' }] : []),
+          { value: 'solid', label: 'Solid' },
+          { value: 'linear', label: 'Linear gradient' },
+          { value: 'radial', label: 'Radial gradient' },
+          { value: 'image', label: 'Image' },
+          ...(shaders ? [{ value: 'shader', label: 'Shader' }] : []),
+        ]}
       />
       {paint?.type === 'solid' && <ColorField tokens value={paint.color} onChange={(c) => onChange({ ...paint, color: c })} onCommit={() => store().commit()} />}
       {(paint?.type === 'linear' || paint?.type === 'radial') && (
@@ -452,6 +499,7 @@ export function PaintField({ paint, onChange, project, allowNone = true, box }: 
           </button>
         </>
       )}
+      {paint?.type === 'shader' && <ShaderPaintFields paint={paint} onChange={onChange} />}
       {paint?.type === 'image' && (
         <>
           <SelectField
@@ -768,6 +816,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           <IconButton icon={<Icons.trash />} title="Delete page" onClick={() => store().deleteArtboard(ab.id)} />
         </Row>
       </Section>
+      <ComponentPropsSection ab={ab} project={project} />
       <PageNavSection ids={[ab.id]} project={project} />
       <VariantsSection ab={ab} project={project} />
       <MasterSection ab={ab} project={project} />
@@ -777,6 +826,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <JoysticksSection ab={ab} />
       <BonesArtboardSection ab={ab} />
       <WeightSection ab={ab} project={project} />
+      <FlowsSection ab={ab} project={project} />
       <Section help="project-settings" title="Project">
         <ColourwayRow project={project} />
         <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
@@ -1032,6 +1082,7 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
         )}
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={LAYER_BLEND_OPTIONS} onChange={(v) => set({ blendMode: v })} />
       </Section>
+      {single && <StatesSection node={n} />}
       {single && n.type === 'frame' && n.question && <QuestionSection frame={n} ab={ab} project={project} />}
       {single && n.questionPart && <QuestionPartNote node={n} ab={ab} />}
       {!isConn && <LayoutItemSection nodes={nodes} ab={ab} />}
@@ -2404,6 +2455,15 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
             <CheckField label="Hug height" value={L.hugHeight} onChange={(v) => update({ hugHeight: v })} />
           </Row>
           {L.wrap && !L.grid && lineGapField('Line gap', 'The space between wrapped rows (or columns). Empty uses Gap')}
+          {/* The limits hold whoever decides the frame's size: hugging, filling its parent, or being stretched by it */}
+          <Row k="Size limits" words={['min width', 'max width', 'min height', 'max height', 'smallest', 'largest', 'cap', 'clamp']}>
+            <LimitField label="Min W" title="The frame never gets narrower than this. Empty: no limit" value={L.minWidth} onChange={(v) => update({ minWidth: v })} />
+            <LimitField label="Max W" title="The frame never gets wider than this, however much is in it. Empty: no limit" value={L.maxWidth} onChange={(v) => update({ maxWidth: v })} />
+          </Row>
+          <Row>
+            <LimitField label="Min H" title="The frame never gets shorter than this. Empty: no limit" value={L.minHeight} onChange={(v) => update({ minHeight: v })} />
+            <LimitField label="Max H" title="The frame never gets taller than this, however much is in it. Empty: no limit" value={L.maxHeight} onChange={(v) => update({ maxHeight: v })} />
+          </Row>
           <LayoutAnimateFields value={L.animate} onChange={(animate) => update({ animate })} />
           <Row k="Remove auto layout" words={['delete layout', 'stop stacking']}>
             <button className="btn" onClick={() => set({ layout: null })}>
@@ -2414,6 +2474,134 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
         </>
       )}
     </Section>
+  );
+}
+
+/**
+ * One field per setting the source page says it takes (`Artboard.props`), reading and writing `node.inputs` by variable name.
+ * The variable's own type picks the field, and its `options` make it a dropdown.
+ */
+function ComponentPropFields({ node, target, project, set }: { node: InstanceNode; target: Artboard | undefined; project: Project; set: (patch: Partial<InstanceNode>) => void }) {
+  const props = target?.props ?? [];
+  if (!props.length) return null;
+  const put = (name: string, value: number | string | boolean | undefined) => {
+    const next = { ...(node.inputs ?? {}) };
+    if (value === undefined || value === '') delete next[name];
+    else next[name] = value;
+    set({ inputs: Object.keys(next).length ? next : undefined });
+  };
+  return (
+    <>
+      {props.map((p) => {
+        const v = project.variables.find((x) => x.id === p.variable);
+        if (!v) return null;
+        const label = p.label || v.label || v.name;
+        const cur = node.inputs?.[v.name];
+        const title = p.help || `Sets ${v.name} inside the component. Empty leaves the page's own starting value`;
+        if (v.options?.length || v.type === 'enum') {
+          return (
+            <SelectField
+              key={p.variable}
+              label={label}
+              title={title}
+              value={cur === undefined ? '' : String(cur)}
+              options={[{ value: '', label: "The page's own value" }, ...(v.options ?? []).map((o) => ({ value: o, label: o }))]}
+              onChange={(val) => put(v.name, val || undefined)}
+            />
+          );
+        }
+        if (v.type === 'boolean') {
+          return <CheckField key={p.variable} label={label} title={title} value={cur === undefined ? Boolean(v.initial) : Boolean(cur)} onChange={(val) => put(v.name, val)} />;
+        }
+        if (v.type === 'number') {
+          return (
+            <NumberField
+              key={p.variable}
+              label={label}
+              title={title}
+              value={cur === undefined ? Number(v.initial) || 0 : Number(cur)}
+              onChange={(val) => put(v.name, val)}
+            />
+          );
+        }
+        if (v.type === 'color') {
+          return <ColorField key={p.variable} label={label} title={title} tokens value={cur === undefined ? String(v.initial ?? '') : String(cur)} onChange={(val) => put(v.name, val)} />;
+        }
+        return <TextField key={p.variable} label={label} title={title} value={cur === undefined ? '' : String(cur)} placeholder={String(v.initial ?? '')} onChange={(val) => put(v.name, val || undefined)} />;
+      })}
+    </>
+  );
+}
+
+/**
+ * Named starting points. A page can already be the start; these are the other places worth jumping straight to while you build
+ * ("From the quiz", "Straight to the summary"), and Preview's From list offers them. They change nothing a learner sees.
+ */
+function FlowsSection({ ab, project }: { ab: Artboard; project: Project }) {
+  const flows = project.settings.flows ?? [];
+  const here = flows.filter((f) => f.artboardId === ab.id);
+  const setFlows = (f: (list: NonNullable<Project['settings']['flows']>) => void, coalesce?: string) =>
+    store().update(
+      (d) => {
+        d.settings.flows ??= [];
+        f(d.settings.flows);
+        if (!d.settings.flows.length) delete d.settings.flows;
+      },
+      coalesce ? { coalesce } : undefined,
+    );
+  return (
+    <Section id="flows" help="page-navigation#named-starting-points" title="Starting points" defaultOpen={here.length > 0}>
+      <SectionBlurb text="Places to start from while you build. Preview offers them; a learner still opens the start page." name="Starting points" help={['page-navigation']} />
+      {flows.map((f, i) => {
+        const page = project.artboards.find((a) => a.id === f.artboardId);
+        return (
+          <Row key={f.id}>
+            <TextField
+              label={page ? page.name : 'Page gone'}
+              title={page ? `Preview can start on ${page.name} with this name` : 'The page this started on has been deleted. Take it out'}
+              value={f.name}
+              onChange={(v) => setFlows((list) => void (list[i].name = v), `flow-name-${f.id}`)}
+            />
+            <IconButton icon={<Icons.trash />} title="Remove this starting point" onClick={() => setFlows((list) => void list.splice(i, 1))} />
+          </Row>
+        );
+      })}
+      <Row k="Add starting point" words={['flow', 'start here', 'jump to', 'preview from']}>
+        <button
+          className="btn"
+          title={`Add a starting point on ${ab.name}, so Preview can begin here`}
+          onClick={() => setFlows((list) => void list.push({ id: uid('fl'), name: freeFlowName(list, ab.name), artboardId: ab.id }))}
+        >
+          Start here too
+        </button>
+      </Row>
+    </Section>
+  );
+}
+
+/** A starting point name nothing else is using, from the page's own name. */
+function freeFlowName(list: { name: string }[], base: string): string {
+  const taken = new Set(list.map((f) => f.name));
+  if (!taken.has(base)) return base;
+  for (let i = 2; ; i++) if (!taken.has(`${base} ${i}`)) return `${base} ${i}`;
+}
+
+/** One of an auto layout's four size limits: a number, or empty for no limit. */
+function LimitField({ label, title, value, onChange }: { label: string; title: string; value: number | undefined; onChange: (v: number | undefined) => void }) {
+  return (
+    <TextField
+      label={label}
+      title={title}
+      value={value === undefined ? '' : String(value)}
+      placeholder="None"
+      commitOnBlur
+      onChange={(v) => {
+        const t = v.trim();
+        if (!t) return onChange(undefined);
+        const n = Number(t.replace(/px$/i, ''));
+        onChange(Number.isFinite(n) && n >= 0 ? Math.round(n) : undefined);
+      }}
+    />
   );
 }
 
@@ -2462,8 +2650,12 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
           </button>
         </Row>
       )}
+      {/* The page says what it takes (its What it takes list), so the instance shows real fields. The JSON box is still here
+          for anything not on that list, and for a page that declares nothing */}
+      <ComponentPropFields node={node} target={target} project={project} set={set} />
       <TextField
-        label="Inputs"
+        label={target?.props?.length ? 'Other inputs' : 'Inputs'}
+        title={target?.props?.length ? 'Anything else to set, as JSON. The fields above are the settings this page says it takes' : undefined}
         mono
         commitOnBlur
         value={inputs}

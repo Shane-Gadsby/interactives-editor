@@ -280,6 +280,7 @@ export function paintName(p: Paint): string {
   if (p.type === 'linear') return 'Linear gradient';
   if (p.type === 'radial') return 'Radial gradient';
   if (p.type === 'image') return 'Image';
+  if (p.type === 'shader') return 'Shader';
   const c = parseColor(p.color);
   if (!c) return p.color;
   return c[3] >= 1 ? formatColor(c) : `${formatColor([c[0], c[1], c[2], 1])} ${Math.round(c[3] * 100)}%`;

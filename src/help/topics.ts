@@ -1454,7 +1454,7 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
     title: 'Auto layout',
     group: 'Design',
     summary: 'Frames that arrange their children in rows, columns, grids or stacks, with fill, hug and percent sizes, grow, margins and aspect ratios.',
-    keywords: 'flex flexbox grid row column stack gap padding justify align wrap hug fill percent absolute responsive grow basis aspect ratio margin auto cell span layout item',
+    keywords: 'flex flexbox grid row column stack gap padding justify align wrap hug fill percent absolute responsive grow basis aspect ratio margin auto cell span layout item min max width height limit smallest largest cap clamp',
     body: `Turn on **Auto layout** on a frame and its children are placed for you, like CSS flexbox.
 
 | Setting | Meaning |
@@ -1485,6 +1485,11 @@ A percent is worked out again on every layout, so it follows the frame as it is 
 ![The Auto layout section of a frame with the Gap switched to a percent: the small button at the right of the field says % and shows px again when pressed.](help/layout-percent.png)
 
 A frame that hugs its width measures a percent against the width it had before the layout ran, so it settles in a pass or two rather than chasing itself. Percent **sizes** of a layer are separate (see *Percent* under child sizing); a track in a grid can be a percent too.
+
+## Size limits
+**Min W**, **Max W**, **Min H** and **Max H** hold the frame's own size, whoever decides it: hugging its content, filling its parent, or being stretched by it. Leave one empty for no limit.
+
+A box that grows with its text but never gets wider than 480 is **Hug width** on with **Max W** 480. A sidebar that fills what's left but never gets narrower than 240 is **Min W** 240. If you set a min above a max the min wins, so a frame is never given a negative size.
 
 ## Grids and stacks
 Set **Layout** to **Grid** to put the children in the cells of a table instead of along a line, or to **Stack** to put them all on top of each other.
@@ -1740,7 +1745,7 @@ Pictures (PNG, SVG, PDF, animated GIF), thumbnails, the single-file export, \`.i
     title: 'Instances (components)',
     group: 'Design',
     summary: 'Place one artboard inside another, with its own timelines, interactions and inputs.',
-    keywords: 'component nested artboard reuse symbol instance inputs fit height content grow shrink hug',
+    keywords: 'component nested artboard reuse symbol instance inputs fit height content grow shrink hug properties props what it takes settings fields json declare',
     body: `Any page can be placed inside another as a **component**. The layer it makes is called an **instance**, and the Inspector shows it as **Component**. It is a live copy that runs its own timelines and interactions on the parent's clock. Edit the source page and every instance updates.
 
 ## Placing a component
@@ -1758,8 +1763,20 @@ A component bigger than the page it goes on is shrunk to fit. Pages that would c
 - **Fit to page content** is the fifth, and it only shows when the source page has [Fit height to content](artboards) on. The box keeps the width you give it, and its height follows whatever the page inside needs while the project plays: a dialog's text growing, a tooltip opening, a list filling from data. It eases if the source page does (**Animate height changes**), so there's one movement, not two. The height typed on the instance layer is ignored while this is on.
 - **Reset size** puts the box back to the page's own size.
 - **Edit** followed by the page's name jumps to the source page.
-- **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. Write them as JSON, such as \`{"level": 3}\`.
+- **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. If the source page says what it takes (below), those come first as ordinary fields and this box is only for anything else. Write it as JSON, such as \`{"level": 3}\`.
 - Messages sent inside an instance (**Send message**, \`ix.emit\`) bubble up to the parent.
+
+## What the component takes
+A page's variables are already its settings. **What it takes** (a section on the page, under **Page**) says which of them an instance may set, so every instance shows proper fields instead of a box of JSON.
+
+- Pick a variable under **Add**. It joins the list.
+- **Name** is what the instance calls it. Leave it empty and it uses the variable's own name.
+- **Hint** is a line under the field saying what it does.
+- The arrows move a setting up or down; the bin takes it off the list again.
+
+The variable's own type decides the field: a number gets a number box, a true/false gets a tick, a colour gets the colour picker, and a variable with choices on it gets a dropdown of those choices. Every field starts on **The page's own value**, so an instance only carries what you actually changed.
+
+The section only shows once the page is used somewhere as a component, or once it already takes something.
 
 ## Steering an instance while it plays
 The parent can change an instance while the project plays.
@@ -2044,7 +2061,7 @@ In a script, \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer nam
     title: 'Page navigation',
     group: 'Interactivity',
     summary: 'Back, Next, the page number, page dots and a progress bar along the bottom of your pages, in one click.',
-    keywords: 'next back previous page number progress bar dots navigation buttons pages 3 of 8 bottom bar go to next artboard generate',
+    keywords: 'next back previous page number progress bar dots navigation buttons pages 3 of 8 bottom bar go to next artboard generate flow flows starting point start here preview from jump',
     body: `Every piece with more than one page needs **Next** and **Back**, and often "Page 3 of 8". Select a page and open **Page navigation** in the properties panel (or select several pages and open it there), pick a style and press **Add to this page**, **Add to these pages** or **Add to all pages**. If your pages share a [page master](page-master), select the master instead and press **Add to this master**: one set of buttons for every page that draws it.
 
 - **Back and Next**: Back on the left, Next (the main button) on the right and *Page 3 of 8* between them.
@@ -2063,7 +2080,12 @@ Page dots are drawn for the number of pages there are now: press **Add** again a
 **How the page changes**, above the buttons, is the look Back and Next use (a fade unless you choose another), and **Speed** under it is how long that takes. Both are written into the **Go to a page** nodes, where you can change them afterwards. The looks and speeds are listed in [How the page changes](links-cursors#how-the-page-changes).
 
 ## Where it goes
-Buttons can go on the page itself, or once on a [page master](page-master) so every page that draws it has them. On a master they are drawn over the pages, so a keyboard user reaches them after the page's own controls, and their flows run from the master on whichever page is showing. If a page already has navigation of its own, adding it to its master too shows two sets: the message names those pages, and **Remove** on them keeps just the master's.`,
+Buttons can go on the page itself, or once on a [page master](page-master) so every page that draws it has them. On a master they are drawn over the pages, so a keyboard user reaches them after the page's own controls, and their flows run from the master on whichever page is showing. If a page already has navigation of its own, adding it to its master too shows two sets: the message names those pages, and **Remove** on them keeps just the master's.
+
+## Named starting points
+While you build, **Starting points** (a section on the page, under **Page**) saves places worth jumping straight to: "From the quiz", "Straight to the summary". Select the page and press **Start here too**, then name it. **Preview**'s **From** list offers every one you've made, so testing one screen of a long sequence doesn't mean playing through to reach it.
+
+They change nothing a learner sees: what they open is still the **Start page**. Delete a page and its starting point stops being offered, and the row says so until you take it out.`,
   },
   {
     id: 'moving-the-view',
@@ -2970,6 +2992,33 @@ Settings that take an expression are worked out as a formula: see [Expressions](
 Two actions have more detail elsewhere. **Play sound** (volume, speed, loop, **Stop other sounds first**, music that carries across pages) and **Stop sound** are described under [Sound](captions#sound). **Change a value or counter** (with **Over (ms)** and **Easing**) and **Put values back to the start** are described in [Variables](variables).`;
       return [intro, section('Events', 'event'), section('Actions', 'action'), section('Logic', 'logic'), outro].join('\n\n');
     },
+  },
+  {
+    id: 'layer-states',
+    title: 'Layer states',
+    group: 'Design',
+    summary: 'Looks a layer takes on when it is hovered, pressed, focused, disabled, or whenever something is true.',
+    keywords: 'state states hover hovered press pressed active focus focused disabled correct right wrong picked selected highlight style variant rollover',
+    body: `A **state** is a look a layer takes on for a while: the colour a button goes when you hover it, the green a right answer turns, the grey a disabled control sits at. Without states, each of those is a ternary written into four or five separate bindings on the same layer. With them it's one row.
+
+**Add one:** select the layer, open **States** in the Properties panel and press **Add a state**. Pick **When** and set only the properties that change.
+
+## When a state is on
+- **Hovered**, **Pressed**, **Focused**: the layer's own pointer and keyboard. Hovering something *inside* it doesn't count. These need the piece to be running, so they show in **Preview** and in what you share, not on the canvas.
+- **Disabled**: the layer's own **Disabled** setting (buttons and inputs).
+- **When…**: on while an expression is true, such as \`item.state == "right"\` or \`picked == 3\`. Give it a **Name** so the list reads as it should. These show on the canvas too, so what you style is what you see.
+
+## What a state changes
+**Fill**, **Line** and **Text** are there from the start; **Also change** adds **Opacity**, **Scale W**, **Scale H** or **Radius**. Anything you leave alone keeps the layer's own value, so a hover state that only sets **Fill** changes nothing else.
+
+Colours can be [theme tokens](themes) like any other colour, so a state follows the theme instead of pinning a hex.
+
+## Several at once
+States are applied in the order they're listed, so a later one wins where two change the same thing. Put the general ones first and the specific ones last. The arrows move a state up or down.
+
+A state also beats a [binding](bindings) that sets the same property, so you can keep a binding for the normal look and let a state take over.
+
+**More:** [Bindings](bindings), [Expressions](expressions), [Themes and colour tokens](themes), [Questions and quizzes](question-kit) for the right/wrong marking a **When…** state usually reads.`,
   },
   {
     id: 'dialogs-kit',
@@ -4248,7 +4297,14 @@ Pick the **Progress bar** tool (in the **Data** group of the tool bar, which sta
 
 ## Where it works
 
-Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page. They are **not** part of a Lottie export (the export lists them as left out).`,
+Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page. They are **not** part of a Lottie export (the export lists them as left out).
+
+## A shader as a fill
+A shader doesn't have to be a layer of its own. In any **Fill** picker, choose **Shader** and pick one of the starter shaders: the layer is painted with it, clipped by its corner radius, and the sliders under the picker are that shader's own controls. Rectangles, ellipses, frames, buttons and progress bars all take one.
+
+The layer's plain fill shows until the shader has drawn, and comes back if it fails, so nothing is ever a blank box. **Animate on the canvas** keeps it moving while you edit; left off you get one still frame, which keeps the editor quick.
+
+Use a shader layer instead when you want to write the code, pick your own uniforms, or feed it a picture.`,
   },
   {
     id: 'charts',
@@ -4387,7 +4443,7 @@ The **Broken** group lists references that point at something that has been dele
     title: 'Themes and colour tokens',
     group: 'Design',
     summary: 'Name a colour once, give it a value for Light, Dark and High contrast, and let layers follow it.',
-    keywords: 'link colours to tokens fixed plain colours switch does nothing theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast',
+    keywords: 'link colours to tokens fixed plain colours switch does nothing theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast number words text density compact spacing language translation mode modes',
     body: `![The Themes tab: the starter tokens down the side with their Light, Dark and High contrast colours, and the contrast check.](help/themes-panel.png)
 
 A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark or High contrast) is a column of values for those names.
@@ -4445,6 +4501,17 @@ Dark and High contrast are built for contrast. They take their colours from the 
 
 ## Using a token
 In any colour picker in the inspector, open the arrow beside the swatch and choose the **Tokens** tab. Pick a token and the swatch shows a ring and link badge, and a one-line named chip replaces the hex box. Hover the chip to read the token's value in each theme. The **x** on the chip **detaches** it: the colour as it is now stays, as a plain colour. Choosing any other colour does the same.
+
+## Tokens that hold a number or some words
+A token's **kind**, beside its name in the Themes panel, is **Colour**, **Number** or **Words**. The last two aren't used as colours; expressions read them with \`token('its/name')\`, and they give whatever the theme being shown says.
+
+That turns a theme into any set of values you want to swap in one go:
+
+- **Density.** A \`space/gap\` number token, 24 in **Roomy** and 8 in **Compact**. Bind a frame's **Gap** to \`token('space/gap')\` and the whole layout tightens when the theme changes.
+- **Language.** A \`ui/next\` words token, *Next* in one theme and *Suivant* in another. A text layer reading \`{token('ui/next')}\` follows it, and so does every other label you set up the same way.
+- Anything else a theme should carry: a number of columns, a line of wording, a duration.
+
+A theme with nothing of its own for a token uses the default theme's, the same as a colour does. Change a token's kind and its palette link goes, since a number isn't a colour.
 
 ## When switching the theme changes nothing
 A theme can only change a colour that follows a token. A project built with plain colours (an imported file, or one made before the themes were added) has nothing to change, so the Light, Dark and High contrast switches, on the canvas, in Preview and in the Themes tab, all look the same. When that is the case you see a line, **Nothing here follows the theme: these colours are fixed**, with a **Link colours to tokens** button.

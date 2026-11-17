@@ -59,6 +59,7 @@ export const Icons = {
   arrowRight: P('M5 12h14M13 6l6 6-6 6'),
   chevronRight: P('M9 6l6 6-6 6'),
   chevronDown: P('M6 9l6 6 6-6'),
+  chevronUp: P('M6 15l6-6 6 6'),
   record: (props: SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" {...props}>
       <circle cx="12" cy="12" r="6" fill="currentColor" />

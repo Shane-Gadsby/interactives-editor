@@ -1234,6 +1234,13 @@ export function Toolbar() {
   );
 }
 
+/** The artboard a `flow:<id>` choice starts on, or null for anything else (and for a flow whose page has gone). */
+function flowStart(project: { settings: { flows?: { id: string; artboardId: string }[] }; artboards: { id: string }[] }, from: string): string | null {
+  if (!from.startsWith('flow:')) return null;
+  const f = (project.settings.flows ?? []).find((x) => x.id === from.slice(5));
+  return f && project.artboards.some((a) => a.id === f.artboardId) ? f.artboardId : null;
+}
+
 export function PreviewModal({ onClose }: { onClose: () => void }) {
   const project = useEditor((st) => st.project);
   const abId = useEditor((st) => st.activeArtboardId);
@@ -1242,7 +1249,8 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const { accessibility, screenReader } = usePrefs();
   const [said, setSaid] = useState<{ text: string; politeness: string }[]>([]);
   const [buildError, setBuildError] = useState<string | null>(null);
-  const [from, setFrom] = useState<'start' | 'current'>('start');
+  //'start', 'current', or 'flow:<id>' for one of the project's named starting points
+  const [from, setFrom] = useState<string>('start');
   //Play it as if this device asked for less motion, to check the calm version without changing the computer's own setting
   const [lessMotion, setLessMotion] = useState(false);
   const [log, setLog] = useState<string[]>([]);
@@ -1341,7 +1349,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   }, [html === null]);
   // Previewing from a variant opens on a page width that shows it
   useEffect(() => {
-    const cur = from === 'current' ? getArtboard(project, abId) : null;
+    const cur = from === 'current' ? getArtboard(project, abId) : from.startsWith('flow:') ? getArtboard(project, flowStart(project, from)) : null;
     if (!cur || !sets.length) return;
     const members = setMembers(project.artboards, cur);
     if (members.length > 1) setPageWidth(widthInside(members, cur, room));
@@ -1380,7 +1388,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
     let live = true;
     setBuildError(null);
     // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show
-    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project) }).then(
+    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project) }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );
@@ -1439,7 +1447,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
       timeInPreview();
     };
   }, [onClose]);
-  const ab = getArtboard(project, from === 'current' ? abId : project.settings.startArtboardId);
+  const ab = getArtboard(project, from === 'current' ? abId : (flowStart(project, from) ?? project.settings.startArtboardId));
   const post = (name: string, value: unknown) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'setVariable', name, value }, '*');
   return (
     <div className={`modal-backdrop preview-backdrop${peek ? ' peek' : ''}`} onPointerDown={(e) => !peek && e.target === e.currentTarget && onClose()}>
@@ -1448,9 +1456,14 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           {/* The controls wrap among themselves; Close stays at the end of the top line, however many lines they take */}
           <div className="preview-controls">
           <strong>Preview</strong>
-          <select value={from} onChange={(e) => setFrom(e.target.value as 'start' | 'current')}>
+          <select value={from} onChange={(e) => setFrom(e.target.value as 'start' | 'current')} title="Where this run starts. Named starting points come from Project settings">
             <option value="start">From the start artboard</option>
             <option value="current">From this artboard</option>
+            {(project.settings.flows ?? []).filter((f) => project.artboards.some((a) => a.id === f.artboardId)).map((f) => (
+              <option key={f.id} value={`flow:${f.id}`}>
+                {f.name}
+              </option>
+            ))}
           </select>
           <span className="muted small preview-size">{ab ? `${ab.width} × ${ab.height}` : ''}{peek ? '' : ' · runs exactly like the exported file'}</span>
           <button
