@@ -5,6 +5,8 @@
  *   as you pass over it) and letting go links the layer to it; press Enter or click without dragging and it offers the list of
  *   pages. The link is the ordinary On pointer click and Go to artboard nodes (lib/page-link.ts), so the graph shows it.
  * - faint arrows between pages for every route the graphs make (Go to a page, Next, Previous), a map of the whole piece.
+ * - an overlay's links: with an overlay page open, or a layer that shows one selected, a line from the overlay to the layer it
+ *   belongs to (its target) and to the layer that shows it (its trigger), so they can be seen instead of looked up.
  */
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import type { Artboard, Project } from 'interactives-player';
@@ -14,6 +16,7 @@ import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { Icons } from '../components/icons';
 import { linkedPage, linkToPage, pageRoutes, pagesToLinkTo, type PageRoute } from '../lib/page-link';
 import { useShowRoutes } from '../lib/page-routes-pref';
+import { OVERLAY_ARROW_WORDS, overlayArrows } from '../lib/overlay-arrows';
 
 interface Box {
 	x: number;
@@ -33,15 +36,18 @@ export function edgePoint(b: Box, toward: { x: number; y: number }): { x: number
 	return { x: cx + dx * t, y: cy + dy * t };
 }
 
-/** The path of an arrow from one page's box to another's: a gentle curve (the way back bows the other side), clear of both boxes. */
-export function arrowPath(a: Box, b: Box, gap = 8): { d: string; mid: { x: number; y: number } } {
+/**
+ * The path of an arrow from one page's box to another's: a gentle curve (the way back bows the other side), clear of both boxes.
+ * `bow` is how far it swings off the straight line, as a share of its length; a negative one swings the other way.
+ */
+export function arrowPath(a: Box, b: Box, gap = 8, bow = 0.12): { d: string; mid: { x: number; y: number } } {
 	const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
 	const cb = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
 	const len = Math.hypot(cb.x - ca.x, cb.y - ca.y) || 1;
 	//Control point off the middle, sideways by a share of the length
 	const nx = -(cb.y - ca.y) / len;
 	const ny = (cb.x - ca.x) / len;
-	const c = { x: (ca.x + cb.x) / 2 + nx * len * 0.12, y: (ca.y + cb.y) / 2 + ny * len * 0.12 };
+	const c = { x: (ca.x + cb.x) / 2 + nx * len * bow, y: (ca.y + cb.y) / 2 + ny * len * bow };
 	const p0 = edgePoint(a, c);
 	const p1 = edgePoint(b, c);
 	const back = (p: { x: number; y: number }, q: { x: number; y: number }) => {
@@ -75,6 +81,20 @@ export function PageLinkLayer({ project, zoom, panX, panY, active, selection, to
 	const routes = useMemo(() => (routesOn && onCanvas.length > 1 ? mergeRoutes(pageRoutes(project)) : []), [routesOn, onCanvas.length, project]);
 	const screen = (a: Artboard): Box => ({ x: panX + a.canvasX * zoom, y: panY + a.canvasY * zoom, w: a.width * zoom, h: a.height * zoom });
 	const byId = (id: string) => onCanvas.find((a) => a.id === id);
+
+	//An overlay's lines: from its card (or its page, when it has none) to each layer's own box on the page that layer is on
+	const links = useMemo(() => (hidden ? [] : overlayArrows(project, active, selection)), [hidden, project, active, selection]);
+	const linkLines = links.flatMap((l) => {
+		const from = byId(l.overlay);
+		const page = byId(l.page);
+		const at = page ? selectionBounds(page, [l.layer]) : null;
+		if (!from || !page || !at) return [];
+		const card = from.children.length === 1 && from.children[0].type === 'frame' ? from.children[0] : null;
+		const a: Box = card ? { x: panX + (from.canvasX + card.x) * zoom, y: panY + (from.canvasY + card.y) * zoom, w: card.width * zoom, h: card.height * zoom } : screen(from);
+		const b: Box = { x: panX + (page.canvasX + at.x) * zoom, y: panY + (page.canvasY + at.y) * zoom, w: at.width * zoom, h: at.height * zoom };
+		//The trigger's line swings the other way from the target's, so the two and their words never sit on top of each other
+		return [{ ...l, b, path: arrowPath(a, b, 4, l.role === 'trigger' ? -0.16 : 0.16), fromName: from.name }];
+	});
 
 	// The one selected layer the handle belongs to
 	const layerId = selection.length === 1 ? selection[0] : null;
@@ -196,6 +216,38 @@ export function PageLinkLayer({ project, zoom, panX, panY, active, selection, to
 						);
 					})}
 				</svg>
+			)}
+			{linkLines.length > 0 && (
+				<>
+					<svg className="page-routes overlay-links" aria-hidden="true">
+						<defs>
+							{/* one head per kind of line: a marker takes its colour from where it is defined, not from the line using it */}
+							{(['target', 'trigger', 'both'] as const).map((role) => (
+								<marker key={role} id={`overlay-link-head-${role}`} className={`overlay-link ${role}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+									<path d="M0 0L10 5L0 10z" fill="currentColor" />
+								</marker>
+							))}
+						</defs>
+						{linkLines.map((l) => (
+							<g key={`${l.overlay}>${l.layer}:${l.role}`} className={`overlay-link ${l.role}`} data-role={l.role} data-layer={l.layer}>
+								<rect x={l.b.x - 3} y={l.b.y - 3} width={l.b.w + 6} height={l.b.h + 6} rx={4} className="overlay-link-box" />
+								<path d={l.path.d} className="overlay-link-line" markerEnd={`url(#overlay-link-head-${l.role})`} />
+							</g>
+						))}
+					</svg>
+					{linkLines.map((l) => (
+						<span key={`${l.overlay}>${l.layer}:${l.role}`} className={`overlay-link-chip ${l.role}`} style={{ left: l.path.mid.x, top: l.path.mid.y }} aria-hidden="true">
+							{OVERLAY_ARROW_WORDS[l.role]}
+						</span>
+					))}
+					<ul className="sr-only" aria-label="Overlay links">
+						{linkLines.map((l) => (
+							<li key={`${l.overlay}>${l.layer}:${l.role}`}>
+								{l.fromName}: {OVERLAY_ARROW_WORDS[l.role].toLowerCase()} is {l.name}
+							</li>
+						))}
+					</ul>
+				</>
 			)}
 			{routes.length > 0 && !hidden && (
 				<ul className="sr-only" aria-label="Page routes">

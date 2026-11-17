@@ -3078,6 +3078,11 @@ That split is what lets a tooltip belong to a small icon while a much bigger are
 - **Confirmation.** Asks a question and takes the answer from its buttons. The buttons are a **list**: add one by adding a row, rename one by changing its label, and mark the answer you mean with \`"main": true\` so it stands out from the ways out. Picking a button writes what it stands for into **What they chose** and closes it. A click outside doesn't dismiss a confirmation.
 - **Prompt.** Asks for something typed. **OK** keeps what was typed in **What they answered** and closes; **Cancel** closes and leaves the last answer alone. Read that variable, or start a flow when it changes.
 
+## Seeing what it's linked to
+An overlay lives on a page of its own, so the canvas draws its links for you. Open the overlay's page and a line runs from it to every layer it's linked to: a **solid blue** line to its **Target** (the layer a tooltip sits beside) and a **dashed gold** line to its **Trigger** (the layer that shows it), each with its word on it. Where the target is its own trigger there is one line, marked **Target and trigger**. A modal, a confirmation and a prompt aren't placed beside anything, so they show only what opens them.
+
+Select a layer that shows an overlay, or one that is a trigger, and the same lines are drawn from that overlay. They are never part of the piece: Preview and exports don't have them.
+
 ## One overlay, many layers
 An overlay page is a definition, so any number of layers can point at the same one, each with its own **Side** and **Gap**. Its own section lists everything pointing at it, and clicking a row jumps to that layer.
 

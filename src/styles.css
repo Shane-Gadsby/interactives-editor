@@ -11758,6 +11758,52 @@ code {
 .page-routes .live.over {
   stroke-dasharray: none;
 }
+/* An overlay's links: a line from the overlay to its target (solid) and to its trigger (dashed, in the colour events have in the
+   graph), each with a word on it. Two ways of telling them apart, so neither rests on colour alone */
+.overlay-links .overlay-link {
+  color: var(--info);
+}
+.overlay-links .overlay-link.trigger,
+.overlay-links .overlay-link.both {
+  color: var(--primary-bg);
+}
+.overlay-links .overlay-link-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.overlay-links .overlay-link.trigger .overlay-link-line {
+  stroke-dasharray: 6 5;
+}
+.overlay-links .overlay-link-box {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.overlay-links .overlay-link.trigger .overlay-link-box {
+  stroke-dasharray: 4 4;
+}
+.overlay-link-chip {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 1px 7px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+  /* the panel's own colours with the line's colour round it, so the word reads in both themes */
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 0 0 1.5px var(--info);
+}
+.overlay-link-chip.trigger,
+.overlay-link-chip.both {
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+  box-shadow: none;
+}
 .page-link-handle {
   position: absolute;
   width: 26px;
