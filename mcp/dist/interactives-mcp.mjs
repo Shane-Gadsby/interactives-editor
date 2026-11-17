@@ -25600,6 +25600,47 @@ Two actions have more detail elsewhere. **Play sound** (volume, speed, loop, **S
     }
   },
   {
+    id: "dialogs-kit",
+    title: "Modals, prompts and tooltips",
+    group: "Interactivity",
+    summary: "Ready-made boxes that open over the page: a modal, a prompt with buttons you name, and a tooltip that can hold links.",
+    keywords: "dialog dialogue modal popup pop up overlay prompt confirm confirmation alert are you sure tooltip tip hover hint balloon callout scrim backdrop close escape buttons",
+    body: `**Add dialog** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds one of three things on the open page, out of ordinary layers, with the variables it keeps and the interactions that run it. After that it's yours: the Inspector changes the words, the colours and the buttons the same as any other layer. There's no separate settings panel to learn.
+
+All three are also in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>): **Add a modal**, **Add a prompt**, **Add a tooltip**.
+
+## Modal
+A box over the page with a heading, a paragraph and a **Close** button. It's a **dialog**, so while it's open:
+
+- the page behind it is dimmed by one backdrop drawn under the whole page, and see-through parts of the box show the dimmed page through them;
+- clicking outside it closes it, and so does <kbd>Esc</kbd>;
+- the keyboard stays inside it, and goes back to whatever opened it when it closes;
+- it never makes a page with [Fit height to content](artboards) any taller: dialogs open **over** the page.
+
+It shows while its **Dialog showing** variable is on. Open it from anywhere with **Set variable** on that variable, or a binding.
+
+## Prompt
+The same box, asking something, with its buttons kept as a **list**: \`[{"label": "Cancel", "value": "cancel"}, {"label": "Yes, do it", "value": "yes"}]\`.
+
+- **Add a button** by adding a row to that list in the **Variables** panel. You don't copy a layer or wire anything up.
+- **Rename one** by changing its \`label\`. The \`value\` is what your interactions read, so it can stay the same.
+- Picking a button writes its \`value\` into the **What they chose** variable and closes the prompt. Read that variable to decide what happens next.
+
+Clicking outside a prompt doesn't close it, since a question with buttons deserves an answer. <kbd>Esc</kbd> still does.
+
+## Tooltip
+A small box that shows while you hover or focus the thing it belongs to. The thing and the tip sit inside one wrapper, and it's the **wrapper** that opens and closes it, which is what lets the pointer travel from the thing into the tip without it vanishing. So a tip can hold a link or a button and people can actually reach them.
+
+- Put whatever you like in **Tip**, including buttons and links.
+- Replace **Hover me** with your own layer, or move your layer into the wrapper.
+- Focusing the layer with the keyboard opens it too, and blurring closes it.
+- A tooltip is marked **Not counted in the page height**, so opening one never grows a page that fits its height.
+
+**Good to know:** a tooltip is not a dialog. It doesn't dim the page, doesn't trap the keyboard and doesn't close on <kbd>Esc</kbd>. If you want those, use a modal.
+
+**More:** [Pages](artboards) for Fit height to content, [Variables](variables) for the buttons list, [Interactions](interactions) for what opens and closes them, and [Accessibility](accessibility) for roles and the keyboard.`
+  },
+  {
     id: "question-kit",
     title: "Questions and quizzes",
     group: "Interactivity",

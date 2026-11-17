@@ -14,6 +14,7 @@ import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, 
 import { warmPlayerSource } from './lib/player-source';
 import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
+import { DIALOG_KINDS, addDialog, type DialogKind } from './lib/dialog-kit';
 import { importGiftFile } from './lib/gift-import';
 import { watchKeyArea } from './lib/key-area';
 import { keyHint, keyHints, keysSuspended, withKey } from './lib/keymap';
@@ -1009,6 +1010,51 @@ function AddQuestion({ reorderKey }: { reorderKey?: string }) {
   );
 }
 
+/** The Add dialog button: a menu of ready-made modals, prompts and tooltips; picking one builds it on the open artboard and selects it. */
+function AddDialog({ reorderKey }: { reorderKey?: string }) {
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  const add = (kind: DialogKind) => {
+    const s = store();
+    const ab = s.artboard();
+    setAt(null);
+    if (!ab) return;
+    let id: string | null = null;
+    track('feature', 'dialog-add', { thing: kind });
+    s.update((d) => void (id = addDialog(d as Project, ab.id, kind)));
+    if (id) s.select([id], { artboardId: ab.id });
+  };
+  return (
+    <>
+      <IconButton
+        reorderKey={reorderKey}
+        icon={<Icons.dialog />}
+        title="Add a modal, a prompt or a tooltip, built and wired up"
+        active={!!at}
+        onClick={(e) => {
+          const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          setAt(at ? null : { left: r.right + 6, top: Math.max(8, Math.min(r.top, window.innerHeight - 320)) });
+        }}
+      />
+      {at && (
+        <>
+          <div className="q-menu-scrim" onClick={() => setAt(null)} />
+          <div className="q-menu" style={{ left: at.left, top: at.top }} role="menu" aria-label="Add dialog" onKeyDown={(e) => e.key === 'Escape' && setAt(null)}>
+            <div className="q-menu-title">
+              Add dialog <HelpLink topic="dialogs-kit" />
+            </div>
+            {DIALOG_KINDS.map((k) => (
+              <button key={k.value} role="menuitem" onClick={() => add(k.value)}>
+                {k.label}
+                <span className="muted small">{k.hint}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 // The tools column in groups that fold (Shapes and Draw start open), so it fits without scrolling. Select and Hand
 // always show; a folded group still shows its tool when that's the one in use
 export const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[] = [
@@ -1134,7 +1180,7 @@ export function Toolbar() {
         const isOpen = !!open[g.id];
         const activeHere = g.tools.includes(tool);
         // the group's tools and its extra buttons, in the person's order
-        const extras: Record<string, ReactNode> = g.id === 'media' ? { image, catalogue } : g.id === 'web' ? { question: <AddQuestion key="q" reorderKey="question" /> } : g.id === 'rig' ? { bones } : {};
+        const extras: Record<string, ReactNode> = g.id === 'media' ? { image, catalogue } : g.id === 'web' ? { question: <AddQuestion key="q" reorderKey="question" />, dialog: <AddDialog key="dlg" reorderKey="dialog" /> } : g.id === 'rig' ? { bones } : {};
         const keys = [...(g.tools as string[]), ...Object.keys(extras)];
         return (
           <div key={g.id} className={`tool-group${isOpen ? ' open' : ''}`} data-reorder-key={g.id}>
