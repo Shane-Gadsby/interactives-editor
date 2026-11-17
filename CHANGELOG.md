@@ -2,6 +2,10 @@
 
 ## Unreleased: Symposium 3
 
+- **Toasts**: a short message in a corner of the page that goes by itself ("Plan saved", "Copied"). The new **Toast** button in the Web tools builds one, and a **Show toast** node shows it with whatever words you hand it, so one toast serves every message. It's read out to screen readers as it appears, never takes the focus, stacks with others, and one with a button in it stays until dismissed.
+- **Dialogs that no layer opens**: a modal, confirmation or prompt now opens when its showing variable is turned on, with nothing on the page pointing at it, and a button inside a tooltip can open a modal the ordinary way. No more hidden layers added only to carry the link.
+- **Dialogs open where you're looking**: on a tall page embedded in a course, a modal, confirmation or prompt opens in the middle of the part on screen instead of the middle of the page, which could be out of sight.
+- **Tab into a tooltip**: with a tooltip's trigger focused, Tab goes to the first link or button in the tooltip and out again to what follows the trigger, so the keyboard reaches what the pointer can.
 - **Live collaboration is a project setting, off to start with**: turn it on in Project settings, or with one click when you invite someone. Off, the editor sends nothing but the save, so a project you work on alone uses much less data. A copy of a project, or one made from a template, starts with it off.
 - **Inviting offers live collaboration**: inviting someone now offers to turn it on, and the Share menu says so when a shared project has it off.
 - **Changed somewhere else**: with live collaboration off, coming back to a tab tells you if the project was changed somewhere else (another tab, an AI assistant, a collaborator), with a Reload button. Saving over someone's newer work is still refused.

@@ -312,6 +312,8 @@ const ACTION: Record<string, (p: P, c: Names) => string> = {
   'action.log': () => 'write a note to the browser console',
   'action.script': (p, c) => `run the script ${quoted(c.script(p.script))}`,
   'action.code': () => 'run a code snippet',
+  'action.toast': (p) => (p.text ? `show a toast saying ${val(p.text)}` : 'show a toast'),
+  'action.toastHide': (p) => (p.toast ? 'put the toast away' : 'put every toast away'),
   'action.announce': (p) => `tell screen readers ${val(p.text)}`,
   'action.setTheme': (p) => `switch to the theme ${val(p.theme)}`,
   'action.cursor': (p, c) => `change the mouse pointer to ${String(p.cursor ?? 'pointer')} over ${p.target ? c.layer(p.target) : 'the whole player'}`,

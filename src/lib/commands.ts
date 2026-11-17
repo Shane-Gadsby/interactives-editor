@@ -200,7 +200,7 @@ export function buildCommands(): Command[] {
       id: `dialog:${k.value}`,
       title: `Add a ${k.label.toLowerCase()}`,
       group: 'Add',
-      words: `dialog modal popup overlay prompt confirm confirmation ask input tooltip hint ${k.hint}`,
+      words: `dialog modal popup overlay prompt confirm confirmation ask input tooltip hint toast snackbar notification message ${k.hint}`,
       disabled: noPage,
       run: () => {
         const target = s.get().selection[0] ?? null;

@@ -356,3 +356,59 @@ describe('one overlay, many layers', () => {
   });
 });
 
+
+describe('the toast', () => {
+  it('is a page of its own with one card, whose words come from a variable the toast names as its message', () => {
+    const { p } = withTarget();
+    const { overlayId: id, linked } = addDialog(p, 'toast');
+    const page = pageOf(p, id);
+    expect(linked).toBeNull();
+    expect(page.name).toBe('Toast');
+    expect(page.overlay).toMatchObject({ kind: 'toast', place: 'bottom-right' });
+    const v = p.variables.find((x) => x.name === 'toast1Message')!;
+    expect(page.overlay!.message).toBe(v.id);
+    expect(page.props).toEqual([{ variable: v.id, label: 'Message' }]);
+    const card = page.children[0] as FrameNode;
+    expect(page.children).toHaveLength(1);
+    expect((card.children[0] as { text: string }).text).toBe('{toast1Message}');
+    //nothing was wired, since nothing was picked
+    expect(p.artboards[0].logic.nodes).toHaveLength(0);
+  });
+
+  it('with a layer picked, clicking that layer shows it, and nothing points at the toast', () => {
+    const { p, targetId } = withTarget();
+    const { overlayId: id, linked } = addDialog(p, 'toast', { targetId, artboardId: p.artboards[0].id });
+    expect(linked).toBe(targetId);
+    expect(p.artboards[0].children[0].overlay).toBeUndefined();
+    const [ev, act] = p.artboards[0].logic.nodes;
+    expect(ev).toMatchObject({ kind: 'event.pointer', params: { target: targetId, type: 'click' } });
+    expect(act).toMatchObject({ kind: 'action.toast', params: { toast: id } });
+    expect(p.artboards[0].logic.edges).toMatchObject([{ from: ev.id, to: act.id }]);
+  });
+
+  it('a second one gets its own name and its own message', () => {
+    const { p } = withTarget();
+    addDialog(p, 'toast');
+    const second = pageOf(p, addDialog(p, 'toast').overlayId);
+    expect(second.name).toBe('Toast 2');
+    expect(p.variables.map((v) => v.name)).toEqual(['toast1Message', 'toast2Message']);
+  });
+
+  it('what the editor builds runs: the click shows it with its words, and it goes by itself', async () => {
+    document.body.innerHTML = '<div id="stage" style="width:800px;height:600px"></div>';
+    const { p, targetId } = withTarget();
+    const { overlayId: id } = addDialog(p, 'toast', { targetId, artboardId: p.artboards[0].id });
+    pageOf(p, id).overlay = { ...pageOf(p, id).overlay!, fade: 0, duration: 1000 };
+    const player = new Player(document.getElementById('stage')!, sanitizeProject(structuredClone(p)), { loadData: false });
+    await new Promise((r) => setTimeout(r, 0));
+    const drawn = () => document.querySelector<HTMLElement>(`[data-ix-id="${overlayId(id, '')}"]`);
+    expect(drawn()).toBeNull();
+    document.querySelector<HTMLElement>('[data-ix-id="btn"] button')!.click();
+    await new Promise((r) => setTimeout(r, 0));
+    player.step(16);
+    expect(drawn()!.textContent).toContain('Saved');
+    for (let i = 0; i < 80; i++) player.step(16);
+    expect(drawn()).toBeNull();
+    player.destroy();
+  });
+});

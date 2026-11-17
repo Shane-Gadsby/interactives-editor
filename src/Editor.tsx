@@ -1012,7 +1012,7 @@ function AddQuestion({ reorderKey }: { reorderKey?: string }) {
   );
 }
 
-/** What the ready-made Web tools are, in the order they sit: four overlays, then the two that go on the page itself. */
+/** What the ready-made Web tools are, in the order they sit: five overlays, then the two that go on the page itself. */
 export const WEB_ADDS: { key: string; label: string; hint: string; icon: keyof typeof Icons; overlay?: DialogKind; onPage?: 'tabs' | 'accordion' }[] = [
   ...DIALOG_KINDS.map((k) => ({ key: `add-${k.value === 'input' ? 'prompt' : k.value}`, label: k.label, hint: k.hint, icon: (k.value === 'input' ? 'prompt' : k.value) as keyof typeof Icons, overlay: k.value })),
   { key: 'add-tabs', label: 'Tabs', hint: 'A row of tabs with one panel showing, with no wiring', icon: 'tabs', onPage: 'tabs' },
@@ -1040,7 +1040,8 @@ export function addWebThing(which: (typeof WEB_ADDS)[number]): void {
   const { overlayId, linked } = made as { overlayId: string; linked: string | null };
   //Open the overlay page so its words can be edited straight away
   s.set({ activeArtboardId: overlayId, artboardSelected: true, selection: [] });
-  s.toast(linked ? `${which.label} added and pointed at the layer you had picked` : `${which.label} added. Pick a layer and set its Overlay to show it`, 'info');
+  if (which.overlay === 'toast') s.toast(linked ? 'Toast added, and clicking the layer you had picked shows it' : 'Toast added. Show it with a Show toast node in Interactions', 'info');
+  else s.toast(linked ? `${which.label} added and pointed at the layer you had picked` : `${which.label} added. Pick a layer and set its Overlay to show it`, 'info');
 }
 
 /** One ready-made Web thing as a tool button of its own: one click builds it, wired up. */

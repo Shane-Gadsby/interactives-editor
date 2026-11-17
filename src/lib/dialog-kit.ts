@@ -1,4 +1,4 @@
-//The dialog kit: modals, prompts and tooltips. Each one is a page of its own, marked as an overlay, which belongs to no
+//The dialog kit: modals, prompts, tooltips and toasts. Each one is a page of its own, marked as an overlay, which belongs to no
 //screen and is shown beside (or over) whatever layer points at it. Adding one builds that page and, when a layer is
 //selected, links it straight away. The page holds ordinary layers, so the Inspector edits it like any other page.
 //Pure functions over a project draft (see store.update).
@@ -7,13 +7,14 @@ import { defaultParams } from 'interactives-player';
 import { lookFor } from './themes';
 
 //'input' is the prompt that takes typing: it has its own name in the file because 'prompt' used to mean the confirmation
-export type DialogKind = 'modal' | 'confirm' | 'input' | 'tooltip';
+export type DialogKind = 'modal' | 'confirm' | 'input' | 'tooltip' | 'toast';
 
 export const DIALOG_KINDS: { value: DialogKind; label: string; hint: string }[] = [
   { value: 'tooltip', label: 'Tooltip', hint: 'A small box beside the layer you point it at, while that layer is hovered or focused' },
   { value: 'modal', label: 'Modal', hint: 'A box over the whole page, opened by clicking the layer you point it at' },
   { value: 'confirm', label: 'Confirmation', hint: 'Asks a question and takes an answer from its buttons, which you add to and rename as a list' },
   { value: 'input', label: 'Prompt', hint: 'Asks for something typed, and keeps the answer where your interactions can read it' },
+  { value: 'toast', label: 'Toast', hint: 'A short message in a corner of the page that goes by itself, shown by a Show toast node' },
 ];
 
 /** What each kind is called where a page or a variable is named after it. */
@@ -22,6 +23,7 @@ const KIND_WORDS: Record<DialogKind, { page: string; stem: string; showing: stri
   modal: { page: 'Dialog', stem: 'dialog', showing: 'Dialog showing' },
   confirm: { page: 'Confirmation', stem: 'confirm', showing: 'Confirmation showing' },
   input: { page: 'Prompt', stem: 'prompt', showing: 'Prompt showing' },
+  toast: { page: 'Toast', stem: 'toast', showing: 'Toast showing' },
 };
 
 const solid = (color: string) => ({ type: 'solid' as const, color });
@@ -70,18 +72,28 @@ export function addDialog(d: Project, kind: DialogKind, opts: { targetId?: strin
   const names = new Set(d.artboards.map((a) => a.name));
   const right = Math.max(0, ...d.artboards.map((a) => a.canvasX + a.width));
   //The page is only where the card is designed: room round it so it reads on the canvas. The card is what is shown
-  const size = kind === 'tooltip' ? { width: 320, height: 140 } : { width: 520, height: 320 };
+  const size = kind === 'tooltip' ? { width: 320, height: 140 } : kind === 'toast' ? { width: 400, height: 110 } : { width: 520, height: 320 };
   const page = createArtboard({
     name: freeName(names, KIND_WORDS[kind].page),
     ...size,
     canvasX: right + 120,
     canvasY: 0,
   });
-  page.overlay = { kind, side: 'auto', offset: 8 };
+  page.overlay = kind === 'toast' ? { kind, place: 'bottom-right' } : { kind, side: 'auto', offset: 8 };
   page.background = solid(l.background);
   if (kind === 'tooltip') fillTooltip(page, l);
+  else if (kind === 'toast') fillToast(d, page, l);
   else fillBox(d, page, l, kind);
   d.artboards.push(page);
+
+  //Nothing points at a toast: a Show toast node shows it. With a layer picked, clicking that layer is wired to show it,
+  //which is nearly always what was meant (a Save button, a Copy button)
+  if (kind === 'toast') {
+    const host = opts.targetId ? (d.artboards.find((a) => a.id === opts.artboardId) ?? d.artboards.find((a) => findNode(a.children, opts.targetId!))) : null;
+    const node = host && !host.overlay ? findNode(host.children, opts.targetId!) : null;
+    if (host && node) wire(host, { kind: 'event.pointer', params: { target: node.id, type: 'click' } }, [{ kind: 'action.toast', params: { toast: page.id, text: '' } }]);
+    return { overlayId: page.id, linked: node ? node.id : null };
+  }
 
   //Linking it to the selected layer is the whole point, so do it when there is one
   let linked: string | null = null;
@@ -155,6 +167,48 @@ function fillTooltip(page: Artboard, l: Record<string, string>): void {
     clip: false,
     shadow: { x: 0, y: 4, blur: 12, spread: 0, color: 'rgba(0,0,0,0.18)' },
     layout: { ...defaultAutoLayout('column'), gap: 4, padding: { top: 6, right: 10, bottom: 6, left: 10 }, align: 'start', hugWidth: true, hugHeight: true },
+    children: [words],
+  }) as FrameNode;
+  page.children = [card];
+}
+
+/**
+ * The toast: one small card that hugs its words, lifted off the page with a shadow. Its words come from a variable the page
+ * says it takes, and the toast names that variable as where a Show toast node's Message goes, so one toast serves every
+ * message.
+ */
+function fillToast(d: Project, page: Artboard, l: Record<string, string>): void {
+  page.clip = false;
+  const used = new Set(d.variables.map((v) => v.name));
+  let stem = 'toast1';
+  for (let i = 1; used.has(`toast${i}Message`); i++) stem = `toast${i + 1}`;
+  const messageVar = `${stem}Message`;
+  const messageId = addVariable(d, { name: messageVar, label: 'Toast message', type: 'string', initial: 'Saved' });
+  page.props = [{ variable: messageId, label: 'Message' }];
+  page.overlay = { ...page.overlay!, message: messageId };
+  const words = createNode('text', {
+    name: 'Message',
+    text: `{${messageVar}}`,
+    fontSize: 14,
+    lineHeight: 1.4,
+    color: l.text,
+    autoSize: 'width',
+    maxWidth: 320,
+    width: 42,
+    height: 20,
+  });
+  const card = createNode('frame', {
+    name: 'Toast',
+    x: CARD_AT,
+    y: CARD_AT,
+    width: 42 + 32,
+    height: 20 + 24,
+    fill: solid(l.surface),
+    cornerRadius: 10,
+    stroke: { paint: solid(l.border), width: 1, align: 'inside' },
+    clip: false,
+    shadow: { x: 0, y: 8, blur: 24, spread: 0, color: 'rgba(0,0,0,0.18)' },
+    layout: { ...defaultAutoLayout('row'), gap: 12, padding: { top: 12, right: 16, bottom: 12, left: 16 }, align: 'center', hugWidth: true, hugHeight: true },
     children: [words],
   }) as FrameNode;
   page.children = [card];

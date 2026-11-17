@@ -125,6 +125,7 @@ export const Icons = {
   modal: P('M3 4h18v16H3zM7 8h10v8H7zM14 13.5h1'),
   confirm: P('M4 5h16v14H4zM8.5 12.5l2.5 2.5 4.5-5'),
   prompt: P('M4 5h16v14H4zM7 10.5h10v4.5H7zM9.5 12v1.5'),
+  toast: P('M3 4h18v16H3zM11 13h8v5h-8zM13 15.5h4'),
   tabs: P('M3 9V5h6v4M9 5h6v4M3 9h18v10H3z'),
   accordion: P('M4 4h16v4H4zM4 10h16v7H4zM4 19h16M15.5 5.3l1.2 1.2 1.2-1.2'),
   plug: P('M9 3v5M15 3v5M6 8h12v4a6 6 0 01-12 0zM12 18v3'),

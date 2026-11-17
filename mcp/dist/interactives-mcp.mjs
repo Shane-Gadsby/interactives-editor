@@ -1557,6 +1557,31 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.toast",
+    label: "Show toast",
+    category: "action",
+    summary: "Shows a toast: a short message over a corner of the page that goes by itself.",
+    details: "Make the toast first with the Toast button in the Web tools. It is read out to screen readers as it appears, so it needs no Announce node beside it. Showing one that is already up gives it the new words and its full time again; different toasts stack.",
+    group: "Layers and looks",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "toast", label: "Toast", type: "artboard", help: "The toast page to show" },
+      { key: "text", label: "Message", type: "expr", default: "", placeholder: '"Plan saved"', help: 'The words it says this time, as an expression, e.g. "Saved " + name. Empty leaves the words the toast already has' }
+    ]
+  },
+  {
+    kind: "action.toastHide",
+    label: "Hide toast",
+    category: "action",
+    summary: "Puts a toast away before its time is up, or one that stays until dismissed.",
+    details: "A Close button inside a toast is a click wired to this. With no toast chosen it puts every toast away.",
+    group: "Layers and looks",
+    outputs: OUT,
+    hasInput: true,
+    params: [{ key: "toast", label: "Toast", type: "artboard", help: "The toast to put away. None chosen puts them all away" }]
+  },
+  {
     kind: "action.announce",
     label: "Announce",
     category: "action",
@@ -14766,6 +14791,8 @@ const ACTION = {
   "action.log": () => "write a note to the browser console",
   "action.script": (p, c2) => `run the script ${quoted(c2.script(p.script))}`,
   "action.code": () => "run a code snippet",
+  "action.toast": (p) => p.text ? `show a toast saying ${val(p.text)}` : "show a toast",
+  "action.toastHide": (p) => p.toast ? "put the toast away" : "put every toast away",
   "action.announce": (p) => `tell screen readers ${val(p.text)}`,
   "action.setTheme": (p) => `switch to the theme ${val(p.theme)}`,
   "action.cursor": (p, c2) => `change the mouse pointer to ${String(p.cursor ?? "pointer")} over ${p.target ? c2.layer(p.target) : "the whole player"}`,
@@ -25753,13 +25780,13 @@ Each header is marked up as a button that says whether it is expanded, so a scre
   },
   {
     id: "overlays",
-    title: "Tooltips, modals, confirmations and prompts",
+    title: "Tooltips, modals, confirmations, prompts and toasts",
     group: "Interactivity",
     summary: "Overlays: pages that belong to no screen, shown beside or over whatever layer points at them.",
-    keywords: "overlay overlays dialog dialogue modal popup pop up prompt ask input type answer confirm confirmation are you sure tooltip tip hover hint balloon callout scrim backdrop target trigger side gap close escape",
-    body: `A **tooltip**, a **modal**, a **confirmation** and a **prompt** are all the same idea: a page that isn't a screen of its own, shown beside or over whatever points at it. The page is called an **overlay**.
+    keywords: "overlay overlays dialog dialogue modal popup pop up prompt ask input type answer confirm confirmation are you sure tooltip tip hover hint balloon callout scrim backdrop target trigger side gap close escape toast snackbar notification saved copied message corner show toast hide toast tab order keyboard open variable",
+    body: `A **tooltip**, a **modal**, a **confirmation**, a **prompt** and a **toast** are all the same idea: a page that isn't a screen of its own, shown beside or over the page you're on. The page is called an **overlay**.
 
-**Add one:** **Tooltip**, **Modal**, **Confirmation** and **Prompt** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and all four are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it, wired up. Pick the layer it belongs to first and it's pointed at that layer straight away; the new overlay page opens so you can write its words.
+**Add one:** **Tooltip**, **Modal**, **Confirmation**, **Prompt** and **Toast** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and all five are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it, wired up. Pick the layer it belongs to first and it's pointed at that layer straight away; the new overlay page opens so you can write its words.
 
 ## Target and trigger
 - The **target** is the layer the overlay belongs to: a tooltip appears beside it, and the link lives on it. It's whichever layer's **Overlay** section names the page.
@@ -25768,15 +25795,36 @@ Each header is marked up as a button that says whether it is expanded, so a scre
 
 That split is what lets a tooltip belong to a small icon while a much bigger area around it opens the tooltip.
 
-## The four kinds
+## The five kinds
 - **Tooltip.** Sits beside its target while the trigger is hovered or focused. **Side** chooses above, below, left or right, and **Wherever it fits** (the default) tries each in turn. A side you choose is kept unless there's no room there and there is on the opposite side, when it goes across (a tooltip below a card at the foot of the page would land on the card). Near the page's edge it slides in rather than changing side. **Gap** is the space between.
   - The **trigger is the whole layer**: point anywhere on a card made of a frame and its words, or tab to something inside it, and its tooltip shows. While a layer is being **dragged** its tooltip is put away.
   - It **fades** in and out. **Fade** is the **Project default** (the project's own transition time, **Page height time** in the project settings) or **Custom** with its own **Time**. A viewer whose device asks for less motion gets no fade.
   - It has a **Tail**: a small triangle on the side facing the target, pointing at the middle of it, in the tooltip's own colour. It follows whichever side the tooltip ended up on. Untick **Tail** to go without.
   - **Stays while you're on it** keeps it open when the pointer moves from the trigger onto the tooltip, with a moment's grace to cross the gap, so a link or a button inside it can be reached. Turn it off for a plain label that should go the moment you leave. <kbd>Esc</kbd> puts a tooltip away either way.
-- **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd> or a click outside closes it. A screen reader calls it by its **page's name**, so name the page for what it is ("Your progress", not "Dialog 2"); the same goes for a confirmation and a prompt. The dimming and the blocking of what's behind are part of being a modal, so they're there even with **Accessibility off** in Preview; only moving the focus in and keeping <kbd>Tab</kbd> inside follow that switch.
+  - The **keyboard reaches what's inside** the same way. With the trigger focused, <kbd>Tab</kbd> goes to the first link or button in the tooltip, <kbd>Tab</kbd> off the last one carries on to whatever follows the trigger, and <kbd>Shift</kbd>+<kbd>Tab</kbd> from the first goes back to the trigger. <kbd>Esc</kbd> from inside puts the tooltip away and hands the focus back to the trigger. A tooltip with nothing to press in it changes nothing about <kbd>Tab</kbd>.
+- **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd> or a click outside closes it. It opens in the **middle of what the viewer can see**: on a tall page embedded in a course that is the part on screen, not the middle of the page, which may be out of sight. It stays where it opened if they scroll. The same goes for a confirmation and a prompt. A screen reader calls it by its **page's name**, so name the page for what it is ("Your progress", not "Dialog 2"); the same goes for a confirmation and a prompt. The dimming and the blocking of what's behind are part of being a modal, so they're there even with **Accessibility off** in Preview; only moving the focus in and keeping <kbd>Tab</kbd> inside follow that switch.
 - **Confirmation.** Asks a question and takes the answer from its buttons. The buttons are a **list**: add one by adding a row, rename one by changing its label, and mark the answer you mean with \`"main": true\` so it stands out from the ways out. Picking a button writes what it stands for into **What they chose** and closes it. A click outside doesn't dismiss a confirmation.
 - **Prompt.** Asks for something typed. **OK** keeps what was typed in **What they answered** and closes; **Cancel** closes and leaves the last answer alone. Read that variable, or start a flow when it changes.
+- **Toast.** A short message that appears over a corner of the page, stays a moment and goes by itself: "Plan saved", "Copied", "Couldn't reach the server". See [Toasts](#toasts) below.
+
+## Opening one without a layer
+A modal, a confirmation and a prompt each have a **showing** variable (**Dialog showing**, and so on). Turn it on and the overlay opens, on whichever page is open, with **no layer pointing at it**: a **Change a value** node at the end of a flow, a script, or a timer. Its page's **Overlay** section says so when nothing points at it. A tooltip always needs a layer, since it has to sit beside something.
+
+A layer **inside an overlay** can point at another overlay too. A **More information** button in a tooltip opens a modal the ordinary way: select the button on the tooltip's page and choose the modal under **Overlay**.
+
+## Toasts
+**Add one:** the **Toast** button in the **Web** tools. Pick a button first (a **Save**, a **Copy**) and clicking that button is wired to show the toast. Otherwise add a **Show toast** node to any flow and choose the toast in it.
+
+- **Show toast** has a **Message**: the words it says this time, as an expression (\`"Plan saved"\`, or \`"Saved " + name\`). They go into the toast's own text variable, so **one toast serves every message**. Leave it empty and the toast keeps the words it had.
+- **Place** is a corner, or the middle of the top or bottom edge, and **Gap** is how far in from the edge. On a tall page it is the corner of the part the viewer can see.
+- **Stays** is **For a time** (4 seconds unless you change **Time**) or **Until dismissed**. The time waits while the pointer or the keyboard is on the toast. A toast with a **button in it always stays until dismissed**, so nobody has to race a timer to press it.
+- **Hide toast** puts one away. To give a toast a close button, add a button to its card and wire **When clicked** to **Hide toast** on the toast's own page.
+- It **fades** like a tooltip, with the same **Fade** setting, and not at all for a viewer who asks for less motion.
+- It's **read out** to a screen reader as it appears, so it needs no **Announce** node beside it. Tick **It's an error** for something that has gone wrong and it interrupts instead of waiting its turn. It **never takes the focus**.
+- Showing a toast that's already up gives it the new words and its full time again. Different toasts **stack**, the newest nearest the edge.
+- Nothing points at a toast, so it has no target or trigger and no lines on the canvas.
+
+From a script: \`ix.toast('Toast', 'Plan saved')\` and \`ix.hideToast('Toast')\`.
 
 ## Seeing what it's linked to
 An overlay lives on a page of its own, so the canvas draws its links for you. Open the overlay's page and a line runs from it to every layer it's linked to: a **solid blue** line to its **Target** (the layer a tooltip sits beside) and a **dashed gold** line to its **Trigger** (the layer that shows it), each with its word on it. Where the target is its own trigger there is one line, marked **Target and trigger**. A modal, a confirmation and a prompt aren't placed beside anything, so they show only what opens them.
@@ -26776,6 +26824,7 @@ The same buttons are above the raw text in the Data tab, and the setting reaches
 | \`await ix.moveView('Layer', {padding, maxZoom, duration, ease})\` / \`ix.resetView({duration, ease})\` | Pan and zoom the page to frame a layer / back to the whole page (see [Moving the view](moving-the-view)) |
 | \`ix.emit(name, data)\` / \`ix.on(name, fn)\` | Send messages to the host page / react to them |
 | \`ix.announce(text, 'polite' | 'assertive')\` | Say something to screen readers (see [Accessibility](accessibility)) |
+| \`ix.toast(name, message?)\` / \`ix.hideToast(name?)\` | Show a [toast](overlays#toasts) by its page's name, with the words it says this time, or put it (or every toast) away |
 | \`ix.soundPlaying(name?)\` / \`ix.soundsPlaying()\` | Is a Play sound sound going (any, or one asset by name or id), and the names of the ones going |
 | \`ix.setTheme(name)\` / \`ix.getTheme()\` / \`ix.themes()\` | Show a [theme](themes) by name (\`'auto'\` follows the viewer), read the one showing, list them |
 | \`ix.record(name, value?)\` | Count that something happened, for [Insights](insights) (a name up to 60 characters, a short value) |
