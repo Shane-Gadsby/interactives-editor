@@ -3021,45 +3021,66 @@ A state also beats a [binding](bindings) that sets the same property, so you can
 **More:** [Bindings](bindings), [Expressions](expressions), [Themes and colour tokens](themes), [Questions and quizzes](question-kit) for the right/wrong marking a **When…** state usually reads.`,
   },
   {
-    id: 'dialogs-kit',
-    title: 'Modals, prompts and tooltips',
+    id: 'accordions',
+    title: 'Accordions and tabs',
     group: 'Interactivity',
-    summary: 'Ready-made boxes that open over the page: a modal, a prompt with buttons you name, and a tooltip that can hold links.',
-    keywords: 'dialog dialogue modal popup pop up overlay prompt confirm confirmation alert are you sure tooltip tip hover hint balloon callout scrim backdrop close escape buttons',
-    body: `**Add dialog** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds one of three things on the open page, out of ordinary layers, with the variables it keeps and the interactions that run it. After that it's yours: the Inspector changes the words, the colours and the buttons the same as any other layer. There's no separate settings panel to learn.
+    summary: 'A frame whose sections open one at a time, or a row of tabs with one panel showing. No wiring.',
+    keywords: 'accordion accordions tabs tab strip panel panels sections collapse expand disclosure faq show hide one at a time toggle',
+    body: `An **accordion** is a stack of sections where opening one closes the others. **Tabs** are the same idea lying down: a row of headers with one panel showing. Both are a setting on a frame, so there is nothing to wire up.
 
-All three are also in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>): **Add a modal**, **Add a prompt**, **Add a tooltip**.
+**Add one:** **Add dialog** in the **Web** group of the tool bar has **Accordion** and **Tabs** under **Add on the page**, and both are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). You get three sections and the variable that remembers which is open.
 
-## Modal
-A box over the page with a heading, a paragraph and a **Close** button. It's a **dialog**, so while it's open:
+## How a frame becomes one
+Turn on **Make this an accordion** in the frame's **Accordion** section. Then:
 
-- the page behind it is dimmed by one backdrop drawn under the whole page, and see-through parts of the box show the dimmed page through them;
-- clicking outside it closes it, and so does <kbd>Esc</kbd>;
-- the keyboard stays inside it, and goes back to whatever opened it when it closes;
-- it never makes a page with [Fit height to content](artboards) any taller: dialogs open **over** the page.
+- Each layer in the frame is a **section**. Its **first** layer is the header (the part you click) and everything after it is the panel.
+- **Open** is **One at a time** (the usual accordion, and what tabs need) or **Any number**.
+- **Keeps what's open in** is a variable: a number for one at a time (counting from 0, with -1 for none), a list for any number. Without one, nothing opens when you click.
+- **Clicking the open one closes it** lets an accordion close fully. Tabs leave it off.
 
-It shows while its **Dialog showing** variable is on. Open it from anywhere with **Set variable** on that variable, or a binding.
+Because what's open is just a variable, anything else can read or change it: a **Next** button, a binding, a script, a [starting point](page-navigation#named-starting-points).
 
-## Prompt
-The same box, asking something, with its buttons kept as a **list**: \`[{"label": "Cancel", "value": "cancel"}, {"label": "Yes, do it", "value": "yes"}]\`.
+## Tabs
+Set **Panels** to a layer inside the frame whose own layers are the panels. The frame's other children are then the headers alone, matched to the panels in order: first header, first panel. Lay the headers out in a row and that is a tab strip.
 
-- **Add a button** by adding a row to that list in the **Variables** panel. You don't copy a layer or wire anything up.
-- **Rename one** by changing its \`label\`. The \`value\` is what your interactions read, so it can stay the same.
-- Picking a button writes its \`value\` into the **What they chose** variable and closes the prompt. Read that variable to decide what happens next.
+## What you get for free
+Each header is marked up as a button that says whether it is expanded, so a screen reader reads "Section 2, button, expanded" without you setting anything. The panel of a closed section is hidden, so it is skipped by the keyboard too.
 
-Clicking outside a prompt doesn't close it, since a question with buttons deserves an answer. <kbd>Esc</kbd> still does.
+**Good to know:** the editor canvas shows the first section open, whatever the variable says, so you can style the open and closed looks without playing it. [Layer states](layer-states) are the tidy way to make an open header look different.
 
-## Tooltip
-A small box that shows while you hover or focus the thing it belongs to. The thing and the tip sit inside one wrapper, and it's the **wrapper** that opens and closes it, which is what lets the pointer travel from the thing into the tip without it vanishing. So a tip can hold a link or a button and people can actually reach them.
+**More:** [Groups and frames](groups-frames), [Auto layout](auto-layout), [Variables](variables), [Layer states](layer-states).`,
+  },
+  {
+    id: 'overlays',
+    title: 'Tooltips, modals and prompts',
+    group: 'Interactivity',
+    summary: 'Overlays: pages that belong to no screen, shown beside or over whatever layer points at them.',
+    keywords: 'overlay overlays dialog dialogue modal popup pop up prompt confirm are you sure tooltip tip hover hint balloon callout scrim backdrop target trigger side gap close escape',
+    body: `A **tooltip**, a **modal** and a **prompt** are all the same idea: a page that isn't a screen of its own, shown beside or over whatever points at it. The page is called an **overlay**.
 
-- Put whatever you like in **Tip**, including buttons and links.
-- Replace **Hover me** with your own layer, or move your layer into the wrapper.
-- Focusing the layer with the keyboard opens it too, and blurring closes it.
-- A tooltip is marked **Not counted in the page height**, so opening one never grows a page that fits its height.
+**Add one:** **Add dialog** in the **Web** group of the tool bar (it starts folded: click **Web** to open it), or the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Pick the layer it belongs to first and it's pointed at that layer straight away; the new overlay page opens so you can write its words.
 
-**Good to know:** a tooltip is not a dialog. It doesn't dim the page, doesn't trap the keyboard and doesn't close on <kbd>Esc</kbd>. If you want those, use a modal.
+## Target and trigger
+- The **target** is the layer the overlay belongs to: a tooltip appears beside it, and the link lives on it. It's whichever layer's **Overlay** section names the page.
+- The **trigger** is what makes it show. It's the target itself unless you pick another layer, so most of the time you set nothing.
+- To pick a trigger, choose it in the **Trigger** list, or press the button beside that list and click a layer on the canvas.
 
-**More:** [Pages](artboards) for Fit height to content, [Variables](variables) for the buttons list, [Interactions](interactions) for what opens and closes them, and [Accessibility](accessibility) for roles and the keyboard.`,
+That split is what lets a tooltip belong to a small icon while a much bigger area around it opens the tooltip.
+
+## The three kinds
+- **Tooltip.** Sits beside its target while the trigger is hovered or focused. **Side** chooses above, below, left or right, and **Wherever it fits** (the default) tries each in turn and keeps it on the page. **Gap** is the space between.
+- **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd> or a click outside closes it.
+- **Prompt.** A modal that asks something. Its buttons are a **list**: add one by adding a row, rename one by changing its label. Picking a button writes what it stands for into a variable and closes the prompt. A click outside doesn't dismiss a prompt.
+
+## One overlay, many layers
+An overlay page is a definition, so any number of layers can point at the same one, each with its own **Side** and **Gap**. Its own section lists everything pointing at it, and clicking a row jumps to that layer.
+
+Overlays never appear in **Next** and **Previous**, never count in \`pageCount\`, and never make a page with [Fit height to content](artboards) any taller: they open over the page.
+
+## Changing what's in one
+An overlay page holds ordinary layers, timelines and interactions, so everything you know works there. A modal's **Close** button is a plain **Set variable** on the page's own showing variable, which is also what <kbd>Esc</kbd> turns off.
+
+**More:** [Pages](artboards), [Interactions](interactions), [Variables](variables), [Accessibility](accessibility).`,
   },
   {
     id: 'question-kit',

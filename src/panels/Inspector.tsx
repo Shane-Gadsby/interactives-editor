@@ -117,6 +117,8 @@ import { MasterSection } from './MasterSection';
 import { ComponentPropsSection } from './ComponentPropsSection';
 import { SHADER_PRESETS, SHADER_PRESETS_BY_ID } from 'interactives-player';
 import { StatesSection } from './StatesSection';
+import { OverlayPageSection, OverlaySection } from './OverlaySection';
+import { DisclosureSection } from './DisclosureSection';
 import { PageLinkSection } from './PageLinkSection';
 import { PageNavSection } from './PageNavSection';
 import { StepsSection } from './StepsSection';
@@ -816,6 +818,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           <IconButton icon={<Icons.trash />} title="Delete page" onClick={() => store().deleteArtboard(ab.id)} />
         </Row>
       </Section>
+      <OverlayPageSection ab={ab} project={project} />
       <ComponentPropsSection ab={ab} project={project} />
       <PageNavSection ids={[ab.id]} project={project} />
       <VariantsSection ab={ab} project={project} />
@@ -1082,6 +1085,8 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
         )}
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={LAYER_BLEND_OPTIONS} onChange={(v) => set({ blendMode: v })} />
       </Section>
+      {single && <DisclosureSection node={n} project={project} />}
+      {single && <OverlaySection node={n} ab={ab} project={project} />}
       {single && <StatesSection node={n} />}
       {single && n.type === 'frame' && n.question && <QuestionSection frame={n} ab={ab} project={project} />}
       {single && n.questionPart && <QuestionPartNote node={n} ab={ab} />}

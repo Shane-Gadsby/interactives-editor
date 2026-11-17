@@ -15,6 +15,7 @@ import { warmPlayerSource } from './lib/player-source';
 import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
 import { DIALOG_KINDS, addDialog, type DialogKind } from './lib/dialog-kit';
+import { addAccordion } from './lib/accordion-kit';
 import { importGiftFile } from './lib/gift-import';
 import { watchKeyArea } from './lib/key-area';
 import { keyHint, keyHints, keysSuspended, withKey } from './lib/keymap';
@@ -1018,10 +1019,16 @@ function AddDialog({ reorderKey }: { reorderKey?: string }) {
     const ab = s.artboard();
     setAt(null);
     if (!ab) return;
-    let id: string | null = null;
+    //The layer you had picked becomes the overlay's target, which is nearly always what you meant
+    const target = s.get().selection[0] ?? null;
+    let made: { overlayId: string; linked: string | null } | null = null;
     track('feature', 'dialog-add', { thing: kind });
-    s.update((d) => void (id = addDialog(d as Project, ab.id, kind)));
-    if (id) s.select([id], { artboardId: ab.id });
+    s.update((d) => void (made = addDialog(d as Project, kind, { targetId: target, artboardId: ab.id })));
+    if (!made) return;
+    const { overlayId, linked } = made as { overlayId: string; linked: string | null };
+    //Open the overlay page so its words can be edited straight away
+    s.set({ activeArtboardId: overlayId, artboardSelected: true, selection: [] });
+    s.toast(linked ? 'Overlay added and pointed at the layer you had picked' : 'Overlay added. Pick a layer and set its Overlay to show it', 'info');
   };
   return (
     <>
@@ -1040,10 +1047,35 @@ function AddDialog({ reorderKey }: { reorderKey?: string }) {
           <div className="q-menu-scrim" onClick={() => setAt(null)} />
           <div className="q-menu" style={{ left: at.left, top: at.top }} role="menu" aria-label="Add dialog" onKeyDown={(e) => e.key === 'Escape' && setAt(null)}>
             <div className="q-menu-title">
-              Add dialog <HelpLink topic="dialogs-kit" />
+              Add dialog <HelpLink topic="overlays" />
             </div>
             {DIALOG_KINDS.map((k) => (
               <button key={k.value} role="menuitem" onClick={() => add(k.value)}>
+                {k.label}
+                <span className="muted small">{k.hint}</span>
+              </button>
+            ))}
+            <div className="q-menu-title">
+              Add on the page <HelpLink topic="accordions" />
+            </div>
+            {([
+              { kind: 'accordion' as const, label: 'Accordion', hint: 'Sections that open one at a time, with no wiring' },
+              { kind: 'tabs' as const, label: 'Tabs', hint: 'A row of tabs with one panel showing' },
+            ]).map((k) => (
+              <button
+                key={k.kind}
+                role="menuitem"
+                onClick={() => {
+                  const s = store();
+                  const ab = s.artboard();
+                  setAt(null);
+                  if (!ab) return;
+                  let id: string | null = null;
+                  track('feature', 'accordion-add', { thing: k.kind });
+                  s.update((d) => void (id = addAccordion(d as Project, ab.id, k.kind)));
+                  if (id) s.select([id], { artboardId: ab.id });
+                }}
+              >
                 {k.label}
                 <span className="muted small">{k.hint}</span>
               </button>

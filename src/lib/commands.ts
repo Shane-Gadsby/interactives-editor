@@ -18,6 +18,7 @@ import { lookDefaults } from './themes';
 import { fontStack } from './font-catalog';
 import { addQuestion } from './question-kit';
 import { DIALOG_KINDS, addDialog } from './dialog-kit';
+import { addAccordion } from './accordion-kit';
 import { addPageNavigation } from './page-nav';
 import { setShowRoutes, showRoutes } from './page-routes-pref';
 import { openBehaviours } from '../components/BehaviourDialog';
@@ -201,8 +202,27 @@ export function buildCommands(): Command[] {
       words: `dialog modal popup overlay prompt confirm tooltip hint ${k.hint}`,
       disabled: noPage,
       run: () => {
+        const target = s.get().selection[0] ?? null;
+        let made: { overlayId: string; linked: string | null } | null = null;
+        s.update((d) => void (made = addDialog(d, k.value, { targetId: target, artboardId: ab!.id })));
+        if (made) s.set({ activeArtboardId: (made as { overlayId: string }).overlayId, artboardSelected: true, selection: [] });
+      },
+    });
+  }
+
+  for (const k of [
+    { id: 'accordion', title: 'Add an accordion', words: 'collapse expand sections disclosure faq' },
+    { id: 'tabs', title: 'Add tabs', words: 'tab strip panels switch' },
+  ] as const) {
+    add({
+      id: `accordion:${k.id}`,
+      title: k.title,
+      group: 'Add',
+      words: k.words,
+      disabled: noPage,
+      run: () => {
         let id: string | null = null;
-        s.update((d) => void (id = addDialog(d, ab!.id, k.value)));
+        s.update((d) => void (id = addAccordion(d, ab!.id, k.id === 'tabs' ? 'tabs' : 'accordion')));
         if (id) s.select([id], { artboardId: ab!.id });
       },
     });
