@@ -168,6 +168,8 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     width: inner,
     height: 40,
     fill: null,
+    //A row that only lays things out should never cut anything off: a focus ring reaches outside the button it is on
+    clip: false,
     layout: { ...defaultAutoLayout('row'), gap: 8, padding: { top: 0, right: 0, bottom: 0, left: 0 }, justify: 'end', align: 'center', hugHeight: true },
   }) as FrameNode;
   page.children = [title, body, row];
