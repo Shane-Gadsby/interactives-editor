@@ -22736,7 +22736,7 @@ Send it straight to whoever invited you to the beta, by email or Teams. The edit
 
 - **Browser.** Use a current Chrome or Edge. Other current browsers are meant to work too.
 - **Results are the Toolbox's own.** A learner's score and completion are kept per learner and course in the Toolbox. A mark reaches the StudyDesk gradebook only when you share the project **In the StudyDesk gradebook, with a mark** (see [Sharing](export#where-will-people-use-it)). Results and Insights only come from the **Link for StudyDesk**, and only for learners signed in to StudyDesk. See [Results and progress](results) and [Insights](insights).
-- **Share links are snapshots.** After you change a project, press **Update to the latest version** in the Share link dialog, or learners keep seeing the old one.
+- **Share links are snapshots.** After you change a project, press **Publish** in the top bar (or **Update to the latest version** in the Share link dialog), or learners keep seeing the old one.
 - **Undo is yours alone.** In a live session it only undoes your own changes. Use the revision history to go further back. See [Live editing and saving](live-editing).
 - **Comments have no email.** You are told in the editor (and by the bell on the projects page), not by mail. Anyone with a review link who signs in can read the whole project.
 - **Libraries** carry pages, styles, variables, fonts, data and assets, not project scripts, and only the latest version is kept. See [Libraries](libraries).
@@ -23008,6 +23008,8 @@ The layout is remembered in this browser. Whatever opens a panel for you (choosi
 ![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)
 
 When the project has [responsive pages](responsive), a **Page width** slider appears under the top bar. Drag it to resize the page the project runs in; the breakpoints are marked on the track and the player switches page as you cross them.
+
+**View at embed size** shows it the way StudyDesk shows the embed code: no wider than 800 px, and exactly as tall as the project asks the page for, changing as it runs. A page with **Fit height to content** grows and shrinks here as it would in the course, and anything the embed would cut off or leave empty shows. Scroll the preview when it's taller than the window.
 
 ## See what ran
 Press **Beside editor** in the Preview's header and Preview moves up to the right, leaving the canvas and the Interactions graph underneath showing. Then you can see what your clicks set off:
@@ -28165,7 +28167,7 @@ The project's Google fonts are copied into the page when you publish, so viewers
 ### Updating, reverting and turning off
 The link is a snapshot of the project when you published it.
 
-- Press **Update to the latest version** to publish later changes.
+- Press **Update to the latest version** to publish later changes. **Publish**, beside **Share** in the top bar, does the same without opening the dialog. It asks first, since every link and embed (in every course, and any added later) changes to this version at once. A project that hasn't been shared yet is sent to **Share…** instead.
 - The page it replaces is kept. If the update was a mistake, **Revert to previous version** puts it back for everyone at once, and pressing it again switches back.
 - **Turn off link** stops it working. After you confirm, the link shows a "turned off" page.
 - The **Link for StudyDesk** is the same link, so it stops too. If learners have results or progress in the project, the confirmation lists how many in each course and when each was last active, so you can tell a link a course is using this term from an old one.

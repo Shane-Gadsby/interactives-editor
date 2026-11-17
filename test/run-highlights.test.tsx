@@ -181,4 +181,23 @@ describe('Preview and the events it reports', () => {
     act(() => btn.click());
     expect(host.querySelector('.preview-backdrop')!.classList.contains('peek')).toBe(false);
   });
+
+  it('View at embed size keeps the frame to 800 px and as tall as the project asks, like StudyDesk', () => {
+    const btn = [...host.querySelectorAll<HTMLButtonElement>('header .btn')].find((b) => b.textContent === 'View at embed size')!;
+    const frameEl = () => host.querySelector<HTMLIFrameElement>('.preview-stage iframe')!;
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+    act(() => btn.click());
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    expect(host.querySelector('.preview-stage')!.classList.contains('embed-size')).toBe(true);
+    // nothing is measured here (no room yet), so it's the embed's own 800
+    expect(frameEl().style.width).toBe('800px');
+    fromPreview({ width: null, height: 1234.2, cacheID: 'interactives: T' });
+    expect(frameEl().style.height).toBe('1235px');
+    // anything else that says height is not the size message
+    fromPreview({ source: 'interactives', height: 5 });
+    expect(frameEl().style.height).toBe('1235px');
+    act(() => btn.click());
+    expect(frameEl().style.width).toBe('');
+    expect(frameEl().style.height).toBe('');
+  });
 });
