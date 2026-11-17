@@ -22,7 +22,9 @@ describe('Add dialog makes an overlay page', () => {
     const { overlayId: id } = addDialog(p, 'tooltip');
     const page = pageOf(p, id);
     expect(page.overlay).toMatchObject({ kind: 'tooltip' });
-    expect(page.children.map((c) => c.name)).toEqual(['Tip text']);
+    //one card on the page, and the words inside it
+    expect(page.children.map((c) => c.name)).toEqual(['Tooltip']);
+    expect((page.children[0] as FrameNode).children.map((c) => c.name)).toEqual(['Tip text']);
     //nothing was added to the page you were on
     expect(p.artboards[0].children).toHaveLength(before);
   });
@@ -49,7 +51,8 @@ describe('Add dialog makes an overlay page', () => {
     const openVar = p.variables.find((v) => v.id === page.overlay!.openVariable)!;
     expect(openVar.type).toBe('boolean');
     expect(openVar.initial).toBe(false);
-    const close = (page.children[2] as FrameNode).children[0];
+    const card = page.children[0] as FrameNode;
+    const close = (card.children[2] as FrameNode).children[0];
     const ev = page.logic.nodes.find((n) => n.kind === 'event.pointer' && n.params.target === close.id)!;
     const edge = page.logic.edges.find((e) => e.from === ev.id)!;
     const action = page.logic.nodes.find((n) => n.id === edge.to)!;
@@ -60,7 +63,7 @@ describe('Add dialog makes an overlay page', () => {
   it('a prompt keeps its buttons as a list, so adding one is adding a row', () => {
     const { p } = withTarget();
     const { overlayId: id } = addDialog(p, 'prompt');
-    const row = pageOf(p, id).children[2] as FrameNode;
+    const row = (pageOf(p, id).children[0] as FrameNode).children[2] as FrameNode;
     const list = p.variables.find((v) => v.type === 'list')!;
     expect(row.repeat?.items).toBe(list.name);
     expect(row.children).toHaveLength(1);
@@ -123,3 +126,64 @@ describe('what the editor builds actually runs', () => {
     player.destroy();
   });
 });
+
+describe('an overlay is drawn as its card', () => {
+  const run = async (p: Project) => {
+    document.body.innerHTML = '<div id="stage" style="width:800px;height:600px"></div>';
+    const player = new Player(document.getElementById('stage')!, p, { loadData: false });
+    await new Promise((r) => setTimeout(r, 0));
+    return player;
+  };
+
+  it("a prompt's buttons are repeated from the list, labelled, and the main one looks it", async () => {
+    const { p, targetId } = withTarget();
+    const made = addDialog(p, 'prompt', { targetId, artboardId: p.artboards[0].id });
+    const page = pageOf(p, made.overlayId);
+    const player = await run(p);
+    player.setVariable(p.variables.find((v) => v.id === page.overlay!.openVariable)!.name, true);
+    player.step(16);
+    const frame = document.querySelector(`[data-ix-id="${overlayId(made.overlayId, targetId)}"]`)!;
+    const buttons = [...frame.querySelectorAll<HTMLElement>('[data-ix-type="button"]')];
+    expect(buttons.map((b) => b.textContent?.trim())).toEqual(['Cancel', 'Yes, do it']);
+    //the main answer takes the button colour, the way out stays plain
+    const paint = (b: HTMLElement) => b.querySelector('button')!.style.background;
+    expect(paint(buttons[0])).not.toBe(paint(buttons[1]));
+    expect(paint(buttons[1])).not.toBe('');
+    player.destroy();
+  });
+
+  it('is the size of its card, not of the page it was designed on', async () => {
+    const { p, targetId } = withTarget();
+    const made = addDialog(p, 'modal', { targetId, artboardId: p.artboards[0].id });
+    const page = pageOf(p, made.overlayId);
+    const card = page.children[0] as FrameNode;
+    const player = await run(p);
+    player.setVariable(p.variables.find((v) => v.id === page.overlay!.openVariable)!.name, true);
+    player.step(16);
+    const el = document.querySelector<HTMLElement>(`[data-ix-id="${overlayId(made.overlayId, targetId)}"]`)!;
+    expect(el.style.width).toBe(`${card.width}px`);
+    expect(page.width).toBeGreaterThan(card.width);
+    player.destroy();
+  });
+
+  it('a longer message pushes the buttons down instead of running into them', async () => {
+    const { p, targetId } = withTarget();
+    const made = addDialog(p, 'modal', { targetId, artboardId: p.artboards[0].id });
+    const page = pageOf(p, made.overlayId);
+    const card = page.children[0] as FrameNode;
+    const message = card.children[1] as { text: string; height: number };
+    const row = card.children[2] as FrameNode;
+    const rowYShort = row.y;
+    //three lines' worth, as the editor would measure it
+    message.text = 'A much longer message that goes on for a while. '.repeat(3);
+    message.height = 66;
+    const player = await run(p);
+    player.setVariable(p.variables.find((v) => v.id === page.overlay!.openVariable)!.name, true);
+    player.step(16);
+    const rowEl = document.querySelector<HTMLElement>(`[data-ix-id="${row.id}"]`)!;
+    const rowY = Number(/translate\(\s*[-\d.]+px,\s*([-\d.]+)px/.exec(rowEl.style.transform)![1]);
+    expect(rowY).toBeGreaterThan(rowYShort);
+    player.destroy();
+  });
+});
+

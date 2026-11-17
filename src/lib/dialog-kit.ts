@@ -59,7 +59,8 @@ export function addDialog(d: Project, kind: DialogKind, opts: { targetId?: strin
   const l = lookFor(d.themes);
   const names = new Set(d.artboards.map((a) => a.name));
   const right = Math.max(0, ...d.artboards.map((a) => a.canvasX + a.width));
-  const size = kind === 'tooltip' ? { width: 240, height: 72 } : { width: 480, height: 200 };
+  //The page is only where the card is designed: room round it so it reads on the canvas. The card is what is shown
+  const size = kind === 'tooltip' ? { width: 320, height: 140 } : { width: 520, height: 320 };
   const page = createArtboard({
     name: freeName(names, kind === 'tooltip' ? 'Tooltip' : kind === 'prompt' ? 'Prompt' : 'Dialog'),
     ...size,
@@ -67,7 +68,7 @@ export function addDialog(d: Project, kind: DialogKind, opts: { targetId?: strin
     canvasY: 0,
   });
   page.overlay = { kind, side: 'auto', offset: 8 };
-  page.background = solid(l.surface);
+  page.background = solid(l.background);
   if (kind === 'tooltip') fillTooltip(page, l);
   else fillBox(d, page, l, kind);
   d.artboards.push(page);
@@ -111,68 +112,102 @@ export function overlayTargets(d: Project, overlayId: string): { node: SceneNode
   return out;
 }
 
-/** The tooltip's own page: a line of words, with room around them. */
+/** Where the card sits on its page, so there is a margin of page round it on the canvas. */
+const CARD_AT = 24;
+
+/**
+ * The tooltip: one small card, dark with light words whatever the page's theme, so it reads as sitting on top. Its words size
+ * the card: they stay on one line up to 260 wide and wrap after that, and the card hugs them.
+ */
 function fillTooltip(page: Artboard, l: Record<string, string>): void {
   page.clip = false;
-  page.children = [
-    createNode('text', {
-      name: 'Tip text',
-      x: 12,
-      y: 10,
-      width: page.width - 24,
-      height: page.height - 20,
-      text: 'What this is for.',
-      fontSize: 14,
-      color: l.text,
-      autoSize: 'height',
-    }),
-  ];
+  const words = createNode('text', {
+    name: 'Tip text',
+    text: 'What this is for.',
+    fontSize: 13,
+    lineHeight: 1.35,
+    color: l.background,
+    autoSize: 'width',
+    maxWidth: 260,
+    //what the editor measures it as; it measures again the first time the page is drawn
+    width: 118,
+    height: 18,
+  });
+  const card = createNode('frame', {
+    name: 'Tooltip',
+    x: CARD_AT,
+    y: CARD_AT,
+    width: 118 + 20,
+    height: 18 + 12,
+    fill: solid(l.text),
+    cornerRadius: 6,
+    stroke: null,
+    clip: false,
+    shadow: { x: 0, y: 4, blur: 12, spread: 0, color: 'rgba(0,0,0,0.18)' },
+    layout: { ...defaultAutoLayout('column'), gap: 4, padding: { top: 6, right: 10, bottom: 6, left: 10 }, align: 'start', hugWidth: true, hugHeight: true },
+    children: [words],
+  }) as FrameNode;
+  page.children = [card];
 }
 
-/** The modal's and the prompt's page: a heading, a message and a row of buttons. */
+/**
+ * The modal's and the prompt's card: a heading, a message and a row of buttons, stacked by auto layout so a longer message
+ * pushes the buttons down rather than running into them. Rounded, bordered and lifted off the page with a shadow.
+ */
 function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'modal' | 'prompt'): void {
   const stem = freeStem(d, kind === 'prompt' ? 'prompt' : 'dialog');
   const openVar = `${stem}Open`;
   const openId = addVariable(d, { name: openVar, label: kind === 'prompt' ? 'Prompt showing' : 'Dialog showing', type: 'boolean', initial: false });
   page.overlay = { ...page.overlay!, openVariable: openId, scrim: solid('rgba(0,0,0,0.5)') };
 
-  const inner = page.width - 48;
+  const cardW = 440;
+  const inner = cardW - 48;
   const title = createNode('text', {
     name: 'Title',
-    x: 24,
-    y: 24,
     width: inner,
     height: 28,
     text: kind === 'prompt' ? 'Are you sure?' : 'A heading',
     fontSize: 20,
     fontWeight: 700,
     color: l.text,
+    autoSize: 'height',
     role: 'heading',
     headingLevel: 2,
   });
   const body = createNode('text', {
     name: 'Message',
-    x: 24,
-    y: 64,
     width: inner,
-    height: 44,
+    height: 22,
     text: kind === 'prompt' ? 'This cannot be undone.' : 'Write what this is about here.',
-    fontSize: 16,
-    color: l.text,
+    fontSize: 15,
+    lineHeight: 1.45,
+    color: l.muted,
     autoSize: 'height',
   });
   const row = createNode('frame', {
     name: 'Buttons',
-    x: 24,
-    y: page.height - 64,
     width: inner,
     height: 40,
     fill: null,
-    //A row that only lays things out should never cut anything off: a focus ring reaches outside the button it is on
+    //A row that only lays things out should never cut anything off
     clip: false,
-    layout: { ...defaultAutoLayout('row'), gap: 8, padding: { top: 0, right: 0, bottom: 0, left: 0 }, justify: 'end', align: 'center', hugHeight: true },
+    layout: { ...defaultAutoLayout('row'), gap: 8, padding: { top: 8, right: 0, bottom: 0, left: 0 }, justify: 'end', align: 'center', hugHeight: true },
   }) as FrameNode;
-  page.children = [title, body, row];
+  const card = createNode('frame', {
+    name: kind === 'prompt' ? 'Prompt' : 'Dialog',
+    x: CARD_AT,
+    y: CARD_AT,
+    width: cardW,
+    height: 200,
+    fill: solid(l.surface),
+    cornerRadius: 12,
+    stroke: { paint: solid(l.border), width: 1, align: 'inside' },
+    clip: false,
+    shadow: { x: 0, y: 16, blur: 40, spread: 0, color: 'rgba(0,0,0,0.22)' },
+    layout: { ...defaultAutoLayout('column'), gap: 10, padding: { top: 24, right: 24, bottom: 20, left: 24 }, align: 'stretch', hugWidth: false, hugHeight: true },
+    children: [title, body, row],
+  }) as FrameNode;
+  page.children = [card];
 
   if (kind === 'modal') {
     const close = createNode('button', { name: 'Close', label: 'Close', width: 96, height: 40, fill: solid(l.button), color: l.onButton, cornerRadius: 8 });
@@ -181,11 +216,12 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     return;
   }
 
-  //The prompt's buttons are a repeated list, so adding one is adding a row rather than copying a layer and rewiring it
+  //The prompt's buttons are a repeated list, so adding one is adding a row rather than copying a layer and rewiring it.
+  //A row marked main is the answer you mean, and looks it; the others are ways out
   const buttonsVar = `${stem}Buttons`;
   const pickVar = `${stem}Pick`;
   const choiceVar = `${stem}Choice`;
-  addVariable(d, { name: buttonsVar, label: 'Prompt buttons', type: 'list', initial: JSON.stringify([{ label: 'Cancel', value: 'cancel' }, { label: 'Yes, do it', value: 'yes' }]) });
+  addVariable(d, { name: buttonsVar, label: 'Prompt buttons', type: 'list', initial: JSON.stringify([{ label: 'Cancel', value: 'cancel' }, { label: 'Yes, do it', value: 'yes', main: true }]) });
   const pickId = addVariable(d, { name: pickVar, label: 'Button picked (position)', type: 'number', initial: -1 });
   const choiceId = addVariable(d, { name: choiceVar, label: 'What they chose', type: 'string', initial: '' });
 
@@ -194,10 +230,15 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     label: 'Button',
     width: 120,
     height: 40,
-    fill: solid(l.button),
-    color: l.onButton,
+    fill: solid(l.surface),
+    color: l.text,
     cornerRadius: 8,
-    bindings: { label: 'item.label' },
+    stroke: { paint: solid(l.border), width: 1, align: 'inside' },
+    bindings: {
+      label: 'item.label',
+      'fill.color': `item.main ? "${l.button}" : "${l.surface}"`,
+      color: `item.main ? "${l.onButton}" : "${l.text}"`,
+    },
   });
   row.children.push(button);
   row.repeat = { items: buttonsVar, layout: 'horizontal', gap: 8, columns: 1, select: { mode: 'one', variable: pickId } };

@@ -25767,8 +25767,15 @@ An overlay page is a definition, so any number of layers can point at the same o
 
 Overlays never appear in **Next** and **Previous**, never count in \`pageCount\`, and never make a page with [Fit height to content](artboards) any taller: they open over the page.
 
+## The card
+What **Add dialog** makes is a page holding one **card**: a single frame with the overlay's look on it (its rounded corners, border, shadow and padding). When an overlay page holds just one frame like that, the card *is* the overlay: it's shown at the card's own size, and the page round it is only somewhere to design it.
+
+The card uses [auto layout](auto-layout), so it sizes itself to what's in it. A tooltip's words stay on one line up to 260 wide and wrap after that, with the card hugging them. A modal's buttons sit under its message, so a longer message pushes them down rather than running into them.
+
+Put more than one layer straight on the page and the whole page is the overlay instead, at the page's size.
+
 ## Changing what's in one
-An overlay page holds ordinary layers, timelines and interactions, so everything you know works there. A modal's **Close** button is a plain **Set variable** on the page's own showing variable, which is also what <kbd>Esc</kbd> turns off.
+An overlay page holds ordinary layers, timelines and interactions, so everything you know works there: repeated lists and bindings included. A modal's **Close** button is a plain **Set variable** on the page's own showing variable, which is also what <kbd>Esc</kbd> turns off.
 
 **More:** [Pages](artboards), [Interactions](interactions), [Variables](variables), [Accessibility](accessibility).`
   },
