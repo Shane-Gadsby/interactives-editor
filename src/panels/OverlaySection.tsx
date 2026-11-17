@@ -68,7 +68,7 @@ export function OverlaySection({ node, ab, project }: { node: SceneNode; ab: Art
             <Row>
               <SelectField
                 label="Side"
-                title="Which side of this layer it sits on. Wherever it fits tries above, below, right, then left"
+                title="Which side of this layer it sits on. Wherever it fits tries above, below, right, then left. A side with no room goes to the opposite one"
                 value={link.side ?? page.overlay!.side ?? 'auto'}
                 options={SIDES.map((s) => ({ value: s.value, label: s.label }))}
                 onChange={(v) => set({ side: v })}
