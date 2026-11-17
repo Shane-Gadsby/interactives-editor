@@ -266,6 +266,22 @@ function ToastSettings({ ab, project, setO }: { ab: Artboard; project: Project; 
         <NumberField label="Fade time" title="The fade, in milliseconds. 0 shows and hides it at once" value={o.fade} min={0} max={2000} suffix="ms" onChange={(v) => setO({ fade: Math.max(0, Math.round(v)) }, `overlay-fade-${ab.id}`)} />
       )}
       <SelectField
+        label="Comes and goes"
+        title="Fades where it sits, or also slides: up into place as it fades in and back down as it goes (the other way up at the top of the page). A viewer who asks for less motion gets neither"
+        value={o.motion === 'slide' ? 'slide' : 'fade'}
+        options={[
+          { value: 'fade', label: 'Fades' },
+          { value: 'slide', label: 'Slides and fades' },
+        ]}
+        onChange={(v) => setO({ motion: v === 'slide' ? 'slide' : undefined })}
+      />
+      <CheckField
+        label="On its own"
+        title="Showing this toast puts any other toast away, and showing another puts this one away. Tick it on every toast and there is only ever one, the latest"
+        value={!!o.alone}
+        onChange={(v) => setO({ alone: v ? true : undefined })}
+      />
+      <SelectField
         label="Words go into"
         title="The text variable a Show toast node's Message is put in, so one toast can say anything. Bind the toast's text to it"
         value={o.message ?? ''}

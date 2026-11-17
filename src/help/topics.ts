@@ -3107,9 +3107,10 @@ A layer **inside an overlay** can point at another overlay too. A **More informa
 - **Place** is a corner, or the middle of the top or bottom edge, and **Gap** is how far in from the edge. On a tall page it is the corner of the part the viewer can see. A bar the course page keeps fixed across its top can't be seen from inside the piece, so a toast at the top can end up under it: the bottom places are the safe ones.
 - **Stays** is **For a time** (4 seconds unless you change **Time**) or **Until dismissed**. The time waits while the pointer or the keyboard is on the toast. A toast with a **button in it always stays until dismissed**, so nobody has to race a timer to press it.
 - **Hide toast** puts one away. To give a toast a close button, add a button to its card and wire **When clicked** to **Hide toast** on the toast's own page.
-- It **fades** like a tooltip, with the same **Fade** setting, and not at all for a viewer who asks for less motion.
+- **Comes and goes** is **Slides and fades** (what a new toast starts with: it moves up into place as it fades in and back down as it goes, or the other way up at the top of the page) or plain **Fades**. Both take the **Fade** time, the same setting a tooltip has, and a viewer who asks for less motion gets neither.
 - It's **read out** to a screen reader as it appears, so it needs no **Announce** node beside it. Tick **It's an error** for something that has gone wrong and it interrupts instead of waiting its turn. It **never takes the focus**.
 - Showing a toast that's already up gives it the new words and its full time again. Different toasts **stack**, the newest nearest the edge.
+- **On its own** makes a toast show alone: showing it puts any other toast away, and showing another puts it away. Tick it on every toast and there is only ever one at a time, the latest.
 - Nothing points at a toast, so it has no target or trigger and no lines on the canvas.
 
 From a script: \`ix.toast('Toast', 'Plan saved')\` and \`ix.hideToast('Toast')\`.

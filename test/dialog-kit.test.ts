@@ -364,7 +364,7 @@ describe('the toast', () => {
     const page = pageOf(p, id);
     expect(linked).toBeNull();
     expect(page.name).toBe('Toast');
-    expect(page.overlay).toMatchObject({ kind: 'toast', place: 'bottom-right' });
+    expect(page.overlay).toMatchObject({ kind: 'toast', place: 'bottom-right', motion: 'slide' });
     const v = p.variables.find((x) => x.name === 'toast1Message')!;
     expect(page.overlay!.message).toBe(v.id);
     expect(page.props).toEqual([{ variable: v.id, label: 'Message' }]);

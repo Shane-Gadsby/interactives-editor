@@ -79,7 +79,7 @@ export function addDialog(d: Project, kind: DialogKind, opts: { targetId?: strin
     canvasX: right + 120,
     canvasY: 0,
   });
-  page.overlay = kind === 'toast' ? { kind, place: 'bottom-right' } : { kind, side: 'auto', offset: 8 };
+  page.overlay = kind === 'toast' ? { kind, place: 'bottom-right', motion: 'slide' } : { kind, side: 'auto', offset: 8 };
   page.background = solid(l.background);
   if (kind === 'tooltip') fillTooltip(page, l);
   else if (kind === 'toast') fillToast(d, page, l);
