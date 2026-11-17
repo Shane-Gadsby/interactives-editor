@@ -1011,80 +1011,41 @@ function AddQuestion({ reorderKey }: { reorderKey?: string }) {
   );
 }
 
-/** The Add dialog button: a menu of ready-made modals, confirmations, prompts and tooltips; picking one builds it on the open artboard and selects it. */
-function AddDialog({ reorderKey }: { reorderKey?: string }) {
-  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
-  const add = (kind: DialogKind) => {
-    const s = store();
-    const ab = s.artboard();
-    setAt(null);
-    if (!ab) return;
-    //The layer you had picked becomes the overlay's target, which is nearly always what you meant
-    const target = s.get().selection[0] ?? null;
-    let made: { overlayId: string; linked: string | null } | null = null;
-    track('feature', 'dialog-add', { thing: kind });
-    s.update((d) => void (made = addDialog(d as Project, kind, { targetId: target, artboardId: ab.id })));
-    if (!made) return;
-    const { overlayId, linked } = made as { overlayId: string; linked: string | null };
-    //Open the overlay page so its words can be edited straight away
-    s.set({ activeArtboardId: overlayId, artboardSelected: true, selection: [] });
-    s.toast(linked ? 'Overlay added and pointed at the layer you had picked' : 'Overlay added. Pick a layer and set its Overlay to show it', 'info');
-  };
-  return (
-    <>
-      <IconButton
-        reorderKey={reorderKey}
-        icon={<Icons.dialog />}
-        title="Add a tooltip, a modal, a confirmation or a prompt, built and wired up"
-        active={!!at}
-        onClick={(e) => {
-          const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          setAt(at ? null : { left: r.right + 6, top: Math.max(8, Math.min(r.top, window.innerHeight - 320)) });
-        }}
-      />
-      {at && (
-        <>
-          <div className="q-menu-scrim" onClick={() => setAt(null)} />
-          <div className="q-menu" style={{ left: at.left, top: at.top }} role="menu" aria-label="Add dialog" onKeyDown={(e) => e.key === 'Escape' && setAt(null)}>
-            <div className="q-menu-title">
-              Add dialog <HelpLink topic="overlays" />
-            </div>
-            {DIALOG_KINDS.map((k) => (
-              <button key={k.value} role="menuitem" onClick={() => add(k.value)}>
-                {k.label}
-                <span className="muted small">{k.hint}</span>
-              </button>
-            ))}
-            <div className="q-menu-title">
-              Add on the page <HelpLink topic="accordions" />
-            </div>
-            {([
-              { kind: 'accordion' as const, label: 'Accordion', hint: 'Sections that open one at a time, with no wiring' },
-              { kind: 'tabs' as const, label: 'Tabs', hint: 'A row of tabs with one panel showing' },
-            ]).map((k) => (
-              <button
-                key={k.kind}
-                role="menuitem"
-                onClick={() => {
-                  const s = store();
-                  const ab = s.artboard();
-                  setAt(null);
-                  if (!ab) return;
-                  let id: string | null = null;
-                  track('feature', 'accordion-add', { thing: k.kind });
-                  s.update((d) => void (id = addAccordion(d as Project, ab.id, k.kind)));
-                  if (id) s.select([id], { artboardId: ab.id });
-                }}
-              >
-                {k.label}
-                <span className="muted small">{k.hint}</span>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </>
-  );
+/** What the ready-made Web tools are, in the order they sit: four overlays, then the two that go on the page itself. */
+export const WEB_ADDS: { key: string; label: string; hint: string; icon: keyof typeof Icons; overlay?: DialogKind; onPage?: 'tabs' | 'accordion' }[] = [
+  ...DIALOG_KINDS.map((k) => ({ key: `add-${k.value === 'input' ? 'prompt' : k.value}`, label: k.label, hint: k.hint, icon: (k.value === 'input' ? 'prompt' : k.value) as keyof typeof Icons, overlay: k.value })),
+  { key: 'add-tabs', label: 'Tabs', hint: 'A row of tabs with one panel showing, with no wiring', icon: 'tabs', onPage: 'tabs' },
+  { key: 'add-accordion', label: 'Accordion', hint: 'Sections that open one at a time, with no wiring', icon: 'accordion', onPage: 'accordion' },
+];
+
+/** Build one of the ready-made Web things on the open artboard: an overlay pointed at the picked layer, or tabs or an accordion on the page. */
+export function addWebThing(which: (typeof WEB_ADDS)[number]): void {
+  const s = store();
+  const ab = s.artboard();
+  if (!ab) return;
+  if (which.onPage) {
+    let id: string | null = null;
+    track('feature', 'accordion-add', { thing: which.onPage });
+    s.update((d) => void (id = addAccordion(d as Project, ab.id, which.onPage!)));
+    if (id) s.select([id], { artboardId: ab.id });
+    return;
+  }
+  //The layer you had picked becomes the overlay's target, which is nearly always what you meant
+  const target = s.get().selection[0] ?? null;
+  let made: { overlayId: string; linked: string | null } | null = null;
+  track('feature', 'dialog-add', { thing: which.overlay! });
+  s.update((d) => void (made = addDialog(d as Project, which.overlay!, { targetId: target, artboardId: ab.id })));
+  if (!made) return;
+  const { overlayId, linked } = made as { overlayId: string; linked: string | null };
+  //Open the overlay page so its words can be edited straight away
+  s.set({ activeArtboardId: overlayId, artboardSelected: true, selection: [] });
+  s.toast(linked ? `${which.label} added and pointed at the layer you had picked` : `${which.label} added. Pick a layer and set its Overlay to show it`, 'info');
+}
+
+/** One ready-made Web thing as a tool button of its own: one click builds it, wired up. */
+function AddWebThing({ which }: { which: (typeof WEB_ADDS)[number] }) {
+  const I = Icons[which.icon];
+  return <IconButton reorderKey={which.key} tour={`tool-${which.key}`} icon={<I />} title={`${which.label}: ${which.hint.charAt(0).toLowerCase()}${which.hint.slice(1)}`} onClick={() => addWebThing(which)} />;
 }
 
 // The tools column in groups that fold (Shapes and Draw start open), so it fits without scrolling. Select and Hand
@@ -1212,7 +1173,7 @@ export function Toolbar() {
         const isOpen = !!open[g.id];
         const activeHere = g.tools.includes(tool);
         // the group's tools and its extra buttons, in the person's order
-        const extras: Record<string, ReactNode> = g.id === 'media' ? { image, catalogue } : g.id === 'web' ? { question: <AddQuestion key="q" reorderKey="question" />, dialog: <AddDialog key="dlg" reorderKey="dialog" /> } : g.id === 'rig' ? { bones } : {};
+        const extras: Record<string, ReactNode> = g.id === 'media' ? { image, catalogue } : g.id === 'web' ? { question: <AddQuestion key="q" reorderKey="question" />, ...Object.fromEntries(WEB_ADDS.map((w) => [w.key, <AddWebThing key={w.key} which={w} />])) } : g.id === 'rig' ? { bones } : {};
         const keys = [...(g.tools as string[]), ...Object.keys(extras)];
         return (
           <div key={g.id} className={`tool-group${isOpen ? ' open' : ''}`} data-reorder-key={g.id}>

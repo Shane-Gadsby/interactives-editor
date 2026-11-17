@@ -1,4 +1,4 @@
-//Add dialog: each one is an overlay page of its own, pointed at by a layer, not a pile of layers dropped on the page
+//The ready-made overlays (Tooltip, Modal, Confirmation, Prompt in the Web tools): each one is an overlay page of its own, pointed at by a layer, not a pile of layers dropped on the page
 import { describe, expect, it } from 'vitest';
 import { Player, createNode, createProject, type Artboard, type FrameNode, type Project } from 'interactives-player';
 import { overlayId, overlayUses } from '../../interactives-player/src/overlays';
@@ -16,7 +16,7 @@ const withTarget = (): { p: Project; targetId: string } => {
 
 const pageOf = (p: Project, id: string): Artboard => p.artboards.find((a) => a.id === id)!;
 
-describe('Add dialog makes an overlay page', () => {
+describe('adding a ready-made overlay makes an overlay page', () => {
   it('a tooltip is a page of its own, marked as an overlay, not a layer on the open page', () => {
     const { p } = withTarget();
     const before = p.artboards[0].children.length;

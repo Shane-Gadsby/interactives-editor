@@ -1,4 +1,4 @@
-import{bX as a,bY as o,bZ as m,b_ as r,b$ as k,c0 as V,c1 as L,c2 as R,c3 as h,c4 as s,c5 as i,c6 as U,c7 as E,c8 as b,c9 as n,ca as S,cb as C,cc as f,cd as w,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-Di9i-MFc.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bX as a,bY as o,bZ as m,b_ as r,b$ as k,c0 as V,c1 as L,c2 as R,c3 as h,c4 as s,c5 as i,c6 as U,c7 as E,c8 as b,c9 as n,ca as S,cb as C,cc as f,cd as w,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-BAcHWJgQ.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -6649,7 +6649,7 @@ A state also beats a [binding](bindings) that sets the same property, so you can
 
 **More:** [Bindings](bindings), [Expressions](expressions), [Themes and colour tokens](themes), [Questions and quizzes](question-kit) for the right/wrong marking a **When…** state usually reads.`},{id:"accordions",title:"Accordions and tabs",group:"Interactivity",summary:"A frame whose sections open one at a time, or a row of tabs with one panel showing. No wiring.",keywords:"accordion accordions tabs tab strip panel panels sections collapse expand disclosure faq show hide one at a time toggle",body:`An **accordion** is a stack of sections where opening one closes the others. **Tabs** are the same idea lying down: a row of headers with one panel showing. Both are a setting on a frame, so there is nothing to wire up.
 
-**Add one:** **Add dialog** in the **Web** group of the tool bar has **Accordion** and **Tabs** under **Add on the page**, and both are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). You get three sections and the variable that remembers which is open.
+**Add one:** **Accordion** and **Tabs** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and both are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it on the open page. You get three sections and the variable that remembers which is open.
 
 ## How a frame becomes one
 Turn on **Make this an accordion** in the frame's **Accordion** section. Then:
@@ -6671,7 +6671,7 @@ Each header is marked up as a button that says whether it is expanded, so a scre
 
 **More:** [Groups and frames](groups-frames), [Auto layout](auto-layout), [Variables](variables), [Layer states](layer-states).`},{id:"overlays",title:"Tooltips, modals, confirmations and prompts",group:"Interactivity",summary:"Overlays: pages that belong to no screen, shown beside or over whatever layer points at them.",keywords:"overlay overlays dialog dialogue modal popup pop up prompt ask input type answer confirm confirmation are you sure tooltip tip hover hint balloon callout scrim backdrop target trigger side gap close escape",body:`A **tooltip**, a **modal**, a **confirmation** and a **prompt** are all the same idea: a page that isn't a screen of its own, shown beside or over whatever points at it. The page is called an **overlay**.
 
-**Add one:** **Add dialog** in the **Web** group of the tool bar (it starts folded: click **Web** to open it), or the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Pick the layer it belongs to first and it's pointed at that layer straight away; the new overlay page opens so you can write its words.
+**Add one:** **Tooltip**, **Modal**, **Confirmation** and **Prompt** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and all four are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it, wired up. Pick the layer it belongs to first and it's pointed at that layer straight away; the new overlay page opens so you can write its words.
 
 ## Target and trigger
 - The **target** is the layer the overlay belongs to: a tooltip appears beside it, and the link lives on it. It's whichever layer's **Overlay** section names the page.
@@ -6699,7 +6699,7 @@ Each layer can also hand the overlay **its own words** as it opens. A modal, a c
 Overlays never appear in **Next** and **Previous**, never count in \`pageCount\`, and never make a page with [Fit height to content](artboards) any taller: they open over the page.
 
 ## The card
-What **Add dialog** makes is a page holding one **card**: a single frame with the overlay's look on it (its rounded corners, border, shadow and padding). When an overlay page holds just one frame like that, the card *is* the overlay: it's shown at the card's own size, and the page round it is only somewhere to design it.
+What those buttons make is a page holding one **card**: a single frame with the overlay's look on it (its rounded corners, border, shadow and padding). When an overlay page holds just one frame like that, the card *is* the overlay: it's shown at the card's own size, and the page round it is only somewhere to design it.
 
 The card uses [auto layout](auto-layout), so it sizes itself to what's in it. A tooltip's words stay on one line up to 260 wide and wrap after that, with the card hugging them. A modal's buttons sit under its message, so a longer message pushes them down rather than running into them.
 

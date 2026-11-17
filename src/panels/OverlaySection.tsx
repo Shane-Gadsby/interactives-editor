@@ -42,7 +42,7 @@ export function OverlaySection({ node, ab, project }: { node: SceneNode; ab: Art
       <SectionBlurb text="A tooltip, modal, confirmation or prompt shown for this layer. It lives on its own page." name="Overlay" help={['overlays']} />
       <SelectField
         label="Shows"
-        title="The overlay page this layer shows. Add one with Add dialog in the Web tools"
+        title="The overlay page this layer shows. Add one with Tooltip, Modal, Confirmation or Prompt in the Web tools"
         value={link?.overlayId ?? ''}
         options={[{ value: '', label: overlays.length ? 'None' : 'No overlays yet' }, ...overlays.map((a) => ({ value: a.id, label: a.name }))]}
         onChange={(v) => set(v ? { overlayId: v } : null)}
