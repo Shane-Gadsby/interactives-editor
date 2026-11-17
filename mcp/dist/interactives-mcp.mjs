@@ -25816,7 +25816,7 @@ A layer **inside an overlay** can point at another overlay too. A **More informa
 **Add one:** the **Toast** button in the **Web** tools. Pick a button first (a **Save**, a **Copy**) and clicking that button is wired to show the toast. Otherwise add a **Show toast** node to any flow and choose the toast in it.
 
 - **Show toast** has a **Message**: the words it says this time, as an expression (\`"Plan saved"\`, or \`"Saved " + name\`). They go into the toast's own text variable, so **one toast serves every message**. Leave it empty and the toast keeps the words it had.
-- **Place** is a corner, or the middle of the top or bottom edge, and **Gap** is how far in from the edge. On a tall page it is the corner of the part the viewer can see.
+- **Place** is a corner, or the middle of the top or bottom edge, and **Gap** is how far in from the edge. On a tall page it is the corner of the part the viewer can see. A bar the course page keeps fixed across its top can't be seen from inside the piece, so a toast at the top can end up under it: the bottom places are the safe ones.
 - **Stays** is **For a time** (4 seconds unless you change **Time**) or **Until dismissed**. The time waits while the pointer or the keyboard is on the toast. A toast with a **button in it always stays until dismissed**, so nobody has to race a timer to press it.
 - **Hide toast** puts one away. To give a toast a close button, add a button to its card and wire **When clicked** to **Hide toast** on the toast's own page.
 - It **fades** like a tooltip, with the same **Fade** setting, and not at all for a viewer who asks for less motion.
