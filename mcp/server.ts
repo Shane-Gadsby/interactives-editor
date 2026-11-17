@@ -11,8 +11,13 @@
  */
 import { CATALOG } from '../../interactives-player/src/catalog';
 import { ANIMATABLE_PROPS, layerOwnProps } from '../../interactives-player/src/animation';
-import { createNode } from '../../interactives-player/src/defaults';
-import { createArtboard, isContainer, uid, walk, type Artboard, type LogicNode, type NodeType, type Project, type SceneNode, type Variable } from '../../interactives-player/src/format';
+import { cloneWithNewIds, createNode, DEFAULT_TEXT_STYLE } from '../../interactives-player/src/defaults';
+import { createArtboard, isContainer, uid, walk, type Artboard, type DataKind, type DataSource, type LogicNode, type NodeType, type Project, type SceneNode, type TextStyleDef, type Variable } from '../../interactives-player/src/format';
+import { countTokenUse, defaultTheme, findTheme, isTokenRef, tokenByName, tokenIdOf, tokenRef } from '../../interactives-player/src/themes';
+import { addTheme, addToken, lookDefaults, newProjectWithThemes, removeTheme, removeToken, setTokenValue } from '../src/lib/themes';
+import { ALL_COLOURWAYS, addColourwayTheme, addLearnerSwitcher, removeLearnerSwitcher, setColourway } from '../src/lib/branded/colourway';
+import { syncNodeStyles } from '../src/lib/libraries';
+import { STARTERS, projectFromStarter, starterByKey } from '../src/lib/template-starters';
 import { DRAW_API } from '../../interactives-player/src/draw';
 import { DRAW_TEMPLATES } from '../../interactives-player/src/draw-templates';
 import { SHADER_PRESETS } from '../../interactives-player/src/shader-presets';
@@ -147,6 +152,43 @@ async function presence(s: Session, p: { artboardId?: string | null; selection?:
   await api(`projects/${encodeURIComponent(s.projectId)}/presence`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clientId: s.clientId, presence: p }) }).catch(() => undefined);
 }
 
+// ---------------------------------------------------------------- files
+
+/** Put bytes on the server as one of the project's assets; the document's asset record is added separately (the add_asset op). */
+async function putAsset(projectId: string, assetId: string, bytes: Uint8Array, mime: string): Promise<number> {
+  const res = await api<{ size: number }>(`projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}`, { method: 'PUT', headers: { 'Content-Type': mime || 'application/octet-stream' }, body: bytes as unknown as BodyInit });
+  return res.size;
+}
+
+const DATA_MIME: Record<string, string> = { json: 'application/json', csv: 'text/csv', tsv: 'text/tab-separated-values', text: 'text/plain' };
+const MIME_BY_EXT: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', avif: 'image/avif', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', m4a: 'audio/mp4', mp4: 'video/mp4', webm: 'video/webm', vtt: 'text/vtt', woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', otf: 'font/otf', json: DATA_MIME.json, csv: DATA_MIME.csv, tsv: DATA_MIME.tsv, txt: DATA_MIME.text, md: 'text/markdown', pdf: 'application/pdf' };
+const guessMime = (name: string) => MIME_BY_EXT[/\.([a-z0-9]+)$/i.exec(name)?.[1]?.toLowerCase() ?? ''] ?? 'application/octet-stream';
+
+/** An add_data_source that brings its contents as text: the text goes up as a file first, and the op points at it. */
+async function uploadDataText(projectId: string, changes: Change[]): Promise<Change[]> {
+  const out: Change[] = [];
+  for (const c of changes) {
+    if (c.op !== 'add_data_source' || typeof c.text !== 'string') {
+      out.push(c);
+      continue;
+    }
+    const kind = ['json', 'csv', 'tsv', 'text'].includes(String(c.kind)) ? String(c.kind) : 'json';
+    if (kind === 'json') {
+      try {
+        JSON.parse(c.text);
+      } catch (e) {
+        throw new Error(`The text for data source ${String(c.name)} is not JSON: ${(e as Error).message}`);
+      }
+    }
+    const id = uid('as');
+    const bytes = new TextEncoder().encode(c.text);
+    const size = await putAsset(projectId, id, bytes, DATA_MIME[kind]);
+    const { text: _text, ...rest } = c;
+    out.push({ op: 'add_asset', id, name: `${String(c.name ?? 'data')}.${kind === 'text' ? 'txt' : kind}`, mime: DATA_MIME[kind], size }, { ...rest, asset_id: id });
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- reading a project
 
 function locate(p: Project, id: string): { ab: Artboard; node: SceneNode; parent: SceneNode | null } | null {
@@ -217,11 +259,32 @@ function overview(p: Project, opts: { artboardId?: string; depth?: number }): st
     lines.push(...out, '');
   }
   if (p.notes?.length) lines.push(`Notes on the canvas outside any artboard: ${p.notes.length} (use list_notes)`, '');
-  if (p.variables.length) lines.push('## Variables', ...p.variables.map((v) => `- ${v.name} [${v.id}] ${v.type} = ${JSON.stringify(v.initial)}${v.shared ? ' shared' : ''}${v.formula ? ` formula=${JSON.stringify(v.formula)}` : ''}${v.live ? ' live' : ''}${v.userData ? ' userData' : ''}${v.options ? ` options=${v.options.join('|')}` : ''}`), '');
+  if (p.variables.length) lines.push('## Variables', ...p.variables.map((v) => `- ${v.name} [${v.id}] ${v.type} = ${short(JSON.stringify(v.initial))}${v.shared ? ' shared' : ''}${v.formula ? ` formula=${JSON.stringify(v.formula)}` : ''}${v.live ? ' live' : ''}${v.userData ? ' userData' : ''}${v.options ? ` options=${v.options.join('|')}` : ''}`), '');
   if (p.dataSources.length) lines.push('## Data sources', ...p.dataSources.map((d) => `- ${d.name} [${d.id}] ${d.kind} from ${d.source === 'url' ? d.url : d.source === 'shared' ? `shared responses (${d.shared?.who === 'me' ? 'only me' : 'everyone in the class'}${d.shared?.whoVariable ? `, switched by variable ${d.shared.whoVariable}` : ''})` : `asset ${d.assetId}`}`), '');
   if (p.scripts.length) lines.push('## Scripts', ...p.scripts.map((sc) => `- ${sc.name} [${sc.id}]${sc.runOnStart ? ' runs on start' : ''} (${sc.code.split('\n').length} lines)`), '');
-  if (p.assets.length) lines.push('## Assets', ...p.assets.map((a) => `- ${a.name} [${a.id}] ${a.mime}`));
-  return lines.join('\n');
+  if (p.assets.length) lines.push('## Assets', ...p.assets.map((a) => `- ${a.name} [${a.id}] ${a.mime}`), '');
+  lines.push(...themesReport(p));
+  const texts = p.styles?.texts ?? [];
+  if (texts.length) lines.push('## Text styles (a layer follows one with styleRefs.text: its id or name)', ...texts.map((s) => `- ${s.name} [${s.id}] ${s.fontFamily} ${s.fontSize}px ${s.fontWeight}${s.fontStyle === 'italic' ? ' italic' : ''} line ${s.lineHeight}${s.color ? ` ${s.color}` : ''}`), '');
+  return lines.join('\n').trimEnd();
+}
+
+/** Long values (a list variable's whole JSON) cut short, so an overview stays an overview: get_variables has them in full. */
+const short = (s: string | undefined, max = 80) => (s === undefined ? 'undefined' : s.length > max ? `${s.slice(0, max)}… (${s.length} chars, see get_variables)` : s);
+
+/** The project's themes and colour tokens, with each token's value in every theme. */
+function themesReport(p: Project): string[] {
+  const t = p.themes;
+  if (!t?.list.length) return ['## Themes', 'None. add_theme or add_colourway make them (the starter tokens come with the first).', ''];
+  const def = defaultTheme(t);
+  const out = ['## Themes', ...t.list.map((th) => `- ${th.name} [${th.id}]${th.mode ? ` ${th.mode}` : ''}${th.highContrast ? ' high contrast' : ''}${th.id === def.id ? ' (default)' : ''}`)];
+  out.push(`Follows the viewer's dark and contrast settings: ${t.follow === false ? 'no' : 'yes'}`, '');
+  if (t.tokens.length) {
+    out.push('## Colour tokens (a colour of "token:<id>" or "token:<name>" follows the theme)');
+    for (const tk of t.tokens) out.push(`- ${tk.name} [${tk.id}] ${t.list.map((th) => `${th.name} ${tk.values[th.id] ?? `(${tk.values[def.id] ?? 'none'})`}`).join(', ')}`);
+    out.push('');
+  }
+  return out;
 }
 
 function interactions(p: Project, abId: string): string {
@@ -275,6 +338,17 @@ function validate(p: Project): string[] {
       if (def.category === 'event' && !ab.logic.edges.some((e) => e.from === n.id)) problems.push(`${ab.name}: "${def.label}" (${n.id}) is not connected to anything`);
     }
     for (const e of ab.logic.edges) if (!ab.logic.nodes.some((n) => n.id === e.to) || !ab.logic.nodes.some((n) => n.id === e.from)) problems.push(`${ab.name}: a connection points at a missing node (${e.id})`);
+    // Colours that follow a token the project doesn't have draw as nothing, and the editor says "Missing token"
+    const used = countTokenUse(ab.children);
+    if (ab.background?.type === 'solid' && isTokenRef(ab.background.color)) used.set(tokenIdOf(ab.background.color), 1);
+    for (const id of used.keys()) if (!p.themes?.tokens.some((x) => x.id === id) && !tokenByName(p.themes, id)) problems.push(`${ab.name}: a colour follows a token that does not exist (token:${id}); see the colour tokens in get_overview`);
+    // A layer nowhere near its artboard is usually a stray from a slipped drag: nobody will ever see it
+    const reach = Math.max(ab.width, ab.height);
+    for (const n of ab.children) {
+      if (n.type === 'connector') continue;
+      const off = Math.max(-(n.x + n.width), n.x - ab.width, -(n.y + n.height), n.y - ab.height);
+      if (off > reach) problems.push(`${ab.name}: "${n.name}" (${n.id}) is ${Math.round(off)} px outside the artboard, at ${r(n.x)},${r(n.y)}: a stray? Delete it or move it in`);
+    }
   }
   problems.push(...liveProblems(p));
   return problems;
@@ -315,31 +389,126 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
     if (!ab) throw new Error(`No artboard ${String(id)}`);
     return ab;
   };
-  const resolveRefs = (o: unknown): unknown => (typeof o === 'string' ? ref(o) : Array.isArray(o) ? o.map(resolveRefs) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).map(([k, v]) => [k, resolveRefs(v)])) : o);
+  // A colour may name its token (token:color/primary) or a token made earlier in the batch (token:$brand): stored by id, the
+  // way the editor stores it, so the Themes tab can count and rename it
+  const fixToken = (s: string): string => {
+    if (!isTokenRef(s)) return s;
+    const want = tokenIdOf(s);
+    if (want.startsWith('$') && created[want.slice(1)]) return tokenRef(created[want.slice(1)]);
+    if (p.themes?.tokens.some((x) => x.id === want)) return s;
+    const t = tokenByName(p.themes, want);
+    return t ? tokenRef(t.id) : s;
+  };
+  const resolveRefs = (o: unknown): unknown => (typeof o === 'string' ? fixToken(ref(o)) : Array.isArray(o) ? o.map(resolveRefs) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).map(([k, v]) => [k, resolveRefs(v)])) : o);
+  let stylesTouched = false;
+  /** A layer's styleRefs may name their styles: kept as ids, like the editor keeps them. */
+  const fixStyleRefs = (n: SceneNode) => {
+    if (!n.styleRefs) return;
+    stylesTouched = true;
+    const s = n.styleRefs as Record<string, string | undefined>;
+    for (const k of Object.keys(s)) {
+      const v = s[k];
+      if (typeof v !== 'string') continue;
+      const list: { id: string; name: string }[] = k === 'text' ? (p.styles?.texts ?? []) : (p.styles?.colors ?? []);
+      s[k] = list.find((x) => x.id === v)?.id ?? list.find((x) => x.name === v)?.id ?? v;
+    }
+  };
+  /**
+   * What an interaction node's setting points at, given by id or by name (a variable, script, layer on that artboard,
+   * timeline, blend, artboard or asset), as the id the player wants. A name that matches nothing is left for validate to report.
+   */
+  const paramIds = (ab: Artboard, kind: string, params: Record<string, unknown>, where: string): Record<string, unknown> => {
+    const def = CATALOG.find((d) => d.kind === kind);
+    if (!def) return params;
+    const out = { ...params };
+    const pick = (list: { id: string; name: string }[], v: unknown, what: string): unknown => {
+      if (typeof v !== 'string' || !v || list.some((x) => x.id === v)) return v;
+      const hits = list.filter((x) => x.name === v);
+      if (hits.length > 1) throw new Error(`${where}: ${hits.length} ${what}s are called "${v}", give its id`);
+      return hits[0]?.id ?? v;
+    };
+    const layers: SceneNode[] = [];
+    walk(ab.children, (n) => layers.push(n));
+    for (const pd of def.params) {
+      const v = out[pd.key];
+      if (v === undefined || v === '') continue;
+      if (pd.type === 'variable') out[pd.key] = pick(p.variables, v, 'variable');
+      else if (pd.type === 'variables' && Array.isArray(v)) out[pd.key] = v.map((x) => pick(p.variables, x, 'variable'));
+      else if (pd.type === 'script') out[pd.key] = pick(p.scripts, v, 'script');
+      else if (pd.type === 'node') out[pd.key] = pick(layers, v, 'layer');
+      else if (pd.type === 'timeline') out[pd.key] = pick(ab.timelines, v, 'timeline');
+      else if (pd.type === 'blend') out[pd.key] = pick(ab.blends ?? [], v, 'blend');
+      else if (pd.type === 'artboard') out[pd.key] = pick(p.artboards, v, 'artboard');
+      else if (pd.type === 'asset') out[pd.key] = pick(p.assets, v, 'asset');
+    }
+    return out;
+  };
+  /** A layer from add_layer's spec, with its children: the starter token colours unless it gives its own, as the editor does. */
+  const build = (spec: Record<string, unknown>, where: string): SceneNode => {
+    const props = resolveRefs(spec.props ?? {}) as Record<string, unknown>;
+    const node = createNode(spec.type as NodeType, { ...lookDefaults(p, spec.type as NodeType), ...props } as never) as SceneNode;
+    syncRuns(node, props);
+    sanitizeLayerInPlace(node);
+    fixStyleRefs(node);
+    if (Array.isArray(spec.children)) {
+      if (!isContainer(node)) throw new Error(`${where}: a ${String(spec.type)} can't hold children (a group or frame can)`);
+      node.children = spec.children.map((ch, j) => build(ch as Record<string, unknown>, `${where} child ${j + 1}`));
+    }
+    if (typeof spec.ref === 'string') created[spec.ref] = node.id;
+    touched.push(node.id);
+    return node;
+  };
+  const themeId = (v: unknown, where: string): string => {
+    const th = findTheme(p.themes, String(v ?? ''));
+    if (!th) throw new Error(`${where}: no theme ${String(v)} (the themes are in get_overview)`);
+    return th.id;
+  };
+  const tokenOf = (v: unknown, where: string) => {
+    const id = ref(String(v ?? ''));
+    const t = p.themes?.tokens.find((x) => x.id === id) ?? tokenByName(p.themes, id);
+    if (!t) throw new Error(`${where}: no colour token ${String(v)}`);
+    return t;
+  };
+  /** values: {theme id or name: colour}, onto a token. */
+  const setValues = (tokenId: string, values: unknown, where: string) => {
+    if (!values || typeof values !== 'object') return;
+    for (const [th, colour] of Object.entries(values as Record<string, unknown>)) {
+      if (typeof colour !== 'string' || !colour.trim()) throw new Error(`${where}: the colour for ${th} is not a colour`);
+      setTokenValue(p, tokenId, themeId(th, where), colour.trim());
+    }
+  };
+  const dataName = (v: unknown, where: string, self?: string): string => {
+    const name = String(v ?? '').trim();
+    if (!IDENT_RE.test(name)) throw new Error(`${where}: ${name || 'an empty name'} can't be a data source name (letters, digits and _, not starting with a digit)`);
+    if (p.dataSources.some((d) => d.id !== self && d.name === name) || p.variables.some((x) => x.name === name)) throw new Error(`${where}: something is already called ${name}`);
+    return name;
+  };
   for (const [i, c] of changes.entries()) {
     const where = `change ${i + 1} (${c.op})`;
     const key = typeof c.ref === 'string' ? c.ref : undefined;
     switch (c.op) {
       case 'set_props': {
-        const loc = locate(p, ref(c.id));
-        if (!loc) throw new Error(`${where}: no layer ${String(c.id)}`);
+        // One layer (id) or the same props on several (ids)
+        const ids = Array.isArray(c.ids) ? c.ids : [c.id];
         const props = resolveRefs(c.props) as Record<string, unknown>;
-        for (const [k, v] of Object.entries(props)) {
-          if (k === 'id' || k === 'type' || k === 'children') continue;
-          setPath(loc.node as unknown as Record<string, unknown>, k, v);
+        for (const id of ids) {
+          const loc = locate(p, ref(id));
+          if (!loc) throw new Error(`${where}: no layer ${String(id)}`);
+          for (const [k, v] of Object.entries(props)) {
+            if (k === 'id' || k === 'type' || k === 'children') continue;
+            setPath(loc.node as unknown as Record<string, unknown>, k, v);
+          }
+          syncRuns(loc.node, props);
+          // An agent can set any value on any property: put wrong-typed ones right before the layer is shared
+          sanitizeLayerInPlace(loc.node);
+          fixStyleRefs(loc.node);
+          touched.push(loc.node.id);
         }
-        syncRuns(loc.node, props);
-        // An agent can set any value on any property: put wrong-typed ones right before the layer is shared
-        sanitizeLayerInPlace(loc.node);
-        touched.push(loc.node.id);
         break;
       }
       case 'add_layer': {
         const ab = findAb(c.artboard_id);
-        const node = createNode(c.type as NodeType, (resolveRefs(c.props ?? {}) as Partial<SceneNode>) as never) as SceneNode;
-        if (isContainer(node) && Array.isArray(c.children)) node.children = [];
-        syncRuns(node, (resolveRefs(c.props ?? {}) as Record<string, unknown>));
-        sanitizeLayerInPlace(node);
+        const node = build(c, where);
         let list = ab.children;
         if (c.parent_id) {
           const parent = locate(p, ref(c.parent_id));
@@ -348,8 +517,27 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
         }
         const index = typeof c.index === 'number' ? Math.max(0, Math.min(list.length, c.index)) : list.length;
         list.splice(index, 0, node);
-        if (key) created[key] = node.id;
-        touched.push(node.id);
+        break;
+      }
+      case 'duplicate': {
+        // count copies of a layer (with everything inside it), each dx, dy on from the last; with columns they wrap into a grid
+        const loc = locate(p, ref(c.id));
+        if (!loc) throw new Error(`${where}: no layer ${String(c.id)}`);
+        const count = Math.max(1, Math.min(200, Math.floor(Number(c.count ?? 1)) || 1));
+        const dx = typeof c.dx === 'number' ? c.dx : 20;
+        const dy = typeof c.dy === 'number' ? c.dy : typeof c.dx === 'number' ? 0 : 20;
+        const columns = typeof c.columns === 'number' && c.columns > 0 ? Math.floor(c.columns) : 0;
+        const list = loc.parent && isContainer(loc.parent) ? loc.parent.children : loc.ab.children;
+        let at = list.indexOf(loc.node);
+        for (let n = 1; n <= count; n++) {
+          const copy = cloneWithNewIds(loc.node);
+          copy.x = loc.node.x + (columns ? (n % columns) * dx : n * dx);
+          copy.y = loc.node.y + (columns ? Math.floor(n / columns) * dy : n * dy);
+          if (typeof c.name === 'string') copy.name = c.name.replace(/\{n\}/g, String(n + 1));
+          list.splice(++at, 0, copy);
+          if (key) created[count === 1 ? key : `${key}${n}`] = copy.id;
+          touched.push(copy.id);
+        }
         break;
       }
       case 'delete': {
@@ -462,7 +650,7 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
           if (n.ref) localIds[n.ref] = id;
           if (n.ref) created[n.ref] = id;
           const defaults = Object.fromEntries(def.params.filter((pd) => pd.default !== undefined).map((pd) => [pd.key, pd.default]));
-          ab.logic.nodes.push({ id, kind: n.kind, x: n.x ?? 40 + j * 260, y: n.y ?? baseY, params: { ...defaults, ...(resolveRefs(n.params ?? {}) as Record<string, unknown>) }, ...(n.note ? { note: n.note } : {}) });
+          ab.logic.nodes.push({ id, kind: n.kind, x: n.x ?? 40 + j * 260, y: n.y ?? baseY, params: { ...defaults, ...paramIds(ab, n.kind, resolveRefs(n.params ?? {}) as Record<string, unknown>, where) }, ...(n.note ? { note: n.note } : {}) });
         });
         for (const e of (c.edges as { from: string; to: string; from_port?: string }[]) ?? []) {
           const from = localIds[e.from] ?? ref(e.from);
@@ -557,6 +745,177 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
         }
         break;
       }
+      case 'set_interaction': {
+        // Change a node where it is, its edges untouched. Params merge into what it has (a null removes one)
+        const ab = findAb(c.artboard_id);
+        const n = ab.logic.nodes.find((x) => x.id === ref(c.id));
+        if (!n) throw new Error(`${where}: no interaction node ${String(c.id)} on ${ab.name}`);
+        if (c.params && typeof c.params === 'object') {
+          const next = { ...n.params, ...paramIds(ab, n.kind, resolveRefs(c.params) as Record<string, unknown>, where) };
+          for (const [k, v] of Object.entries(next)) if (v === null) delete next[k];
+          n.params = next;
+        }
+        if (c.note === null || c.note === '') delete n.note;
+        else if (typeof c.note === 'string') n.note = c.note;
+        if (typeof c.x === 'number') n.x = c.x;
+        if (typeof c.y === 'number') n.y = c.y;
+        break;
+      }
+      case 'connect': {
+        const ab = findAb(c.artboard_id);
+        const from = ref(c.from);
+        const to = ref(c.to);
+        for (const id of [from, to]) if (!ab.logic.nodes.some((x) => x.id === id)) throw new Error(`${where}: no interaction node ${id} on ${ab.name}`);
+        const fromPort = typeof c.from_port === 'string' ? c.from_port : 'out';
+        if (!ab.logic.edges.some((e) => e.from === from && e.to === to && e.fromPort === fromPort)) {
+          const e = { id: uid('e'), from, fromPort, to, toPort: 'in' };
+          ab.logic.edges.push(e);
+          if (key) created[key] = e.id;
+        }
+        break;
+      }
+      case 'disconnect': {
+        // By the edge's id, or by its ends (and output, when the node has several)
+        const ab = findAb(c.artboard_id);
+        const before = ab.logic.edges.length;
+        ab.logic.edges = ab.logic.edges.filter((e) => (c.id ? e.id !== ref(c.id) : !(e.from === ref(c.from) && e.to === ref(c.to) && (typeof c.from_port !== 'string' || e.fromPort === c.from_port))));
+        if (ab.logic.edges.length === before) throw new Error(`${where}: no such connection`);
+        break;
+      }
+      case 'add_theme': {
+        // The first theme brings the starter themes and tokens with it, as the Themes tab does
+        const fresh = !p.themes?.list.length;
+        const th = addTheme(p, String(c.name ?? 'Theme'), c.copy_from ? themeId(c.copy_from, where) : undefined);
+        if (c.mode === 'light' || c.mode === 'dark') th.mode = c.mode;
+        if (c.high_contrast) th.highContrast = true;
+        if (key) created[key] = th.id;
+        if (fresh && c.starters === false) {
+          p.themes!.list = [th];
+          p.themes!.tokens = [];
+        }
+        break;
+      }
+      case 'remove_theme': {
+        if (!removeTheme(p, themeId(c.id, where))) throw new Error(`${where}: the last theme can't go`);
+        break;
+      }
+      case 'add_colourway': {
+        // One of the branded colourways, as + Colourway in the Themes tab: its theme, and the brand tokens it needs
+        const want = String(c.colourway ?? '').trim().toLowerCase();
+        const way = ALL_COLOURWAYS.find((w) => w.id === want || w.name.toLowerCase() === want);
+        if (!way) throw new Error(`${where}: no colourway ${String(c.colourway)} (${ALL_COLOURWAYS.map((w) => w.id).join(', ')})`);
+        addColourwayTheme(p, way);
+        if (c.default) p.themes!.default = `theme-${way.id}`;
+        if (key) created[key] = `theme-${way.id}`;
+        break;
+      }
+      case 'add_token': {
+        const t = addToken(p, String(c.name ?? ''), typeof c.value === 'string' ? c.value : undefined);
+        setValues(t.id, c.values, where);
+        if (key) created[key] = t.id;
+        break;
+      }
+      case 'set_token': {
+        const t = tokenOf(c.id, where);
+        if (typeof c.name === 'string' && c.name.trim()) t.name = c.name.trim();
+        if (typeof c.value === 'string') for (const th of p.themes!.list) setTokenValue(p, t.id, th.id, c.value);
+        setValues(t.id, c.values, where);
+        break;
+      }
+      case 'remove_token': {
+        removeToken(p, tokenOf(c.id, where).id);
+        break;
+      }
+      case 'set_themes': {
+        // default: the theme the project opens in; follow: switch with the viewer's dark and contrast settings
+        if (!p.themes?.list.length) throw new Error(`${where}: the project has no themes yet (add_theme)`);
+        if (c.default !== undefined) {
+          const id = themeId(c.default, where);
+          // A branded colourway goes through the same path as the Inspector, so the brand record follows
+          if (!setColourway(p, id)) p.themes.default = id;
+        }
+        if (typeof c.follow === 'boolean') p.themes.follow = c.follow;
+        if (typeof c.learner_switcher === 'boolean') {
+          if (c.learner_switcher) {
+            if (!addLearnerSwitcher(p)) throw new Error(`${where}: a switcher needs two or more colourway themes (add_colourway)`);
+          } else removeLearnerSwitcher(p);
+        }
+        break;
+      }
+      case 'set_project_settings': {
+        for (const [k, v] of Object.entries(resolveRefs(c.props ?? {}) as Record<string, unknown>)) setPath(p.settings as unknown as Record<string, unknown>, k, v);
+        if (typeof c.name === 'string' && c.name.trim()) p.name = c.name.trim().slice(0, 200);
+        break;
+      }
+      case 'add_asset': {
+        // The record for bytes upload_asset has already put on the server
+        if (typeof c.id !== 'string' || !c.id) throw new Error(`${where}: an asset needs the id upload_asset gave it`);
+        if (!p.assets.some((a) => a.id === c.id)) p.assets.push({ id: c.id, name: String(c.name ?? c.id), mime: String(c.mime ?? 'application/octet-stream'), size: Number(c.size) || 0 });
+        if (key) created[key] = c.id;
+        break;
+      }
+      case 'add_data_source': {
+        // A file (asset_id; the edit tool uploads text for you) or an address fetched when the project plays
+        const kind = (['json', 'csv', 'tsv', 'text'].includes(String(c.kind)) ? c.kind : 'json') as DataKind;
+        const ds: DataSource = { id: uid('ds'), name: dataName(c.name, where), kind, source: c.url ? 'url' : 'asset' };
+        if (c.url) {
+          ds.url = String(c.url);
+          if (typeof c.refresh === 'number' && c.refresh > 0) ds.refresh = c.refresh;
+        } else {
+          const asset = ref(String(c.asset_id ?? ''));
+          if (!p.assets.some((a) => a.id === asset)) throw new Error(`${where}: give url, text or the asset_id of an uploaded file`);
+          ds.assetId = asset;
+        }
+        p.dataSources.push(ds);
+        if (key) created[key] = ds.id;
+        break;
+      }
+      case 'set_data_source': {
+        const ds = p.dataSources.find((d) => d.id === ref(c.id) || d.name === c.id);
+        if (!ds) throw new Error(`${where}: no data source ${String(c.id)}`);
+        if (c.name !== undefined) ds.name = dataName(c.name, where, ds.id);
+        if (typeof c.kind === 'string' && ['json', 'csv', 'tsv', 'text'].includes(c.kind)) ds.kind = c.kind as DataKind;
+        if (typeof c.url === 'string') {
+          ds.source = 'url';
+          ds.url = c.url;
+          delete ds.assetId;
+        }
+        if (typeof c.asset_id === 'string') {
+          ds.source = 'asset';
+          ds.assetId = ref(c.asset_id);
+          delete ds.url;
+        }
+        if (typeof c.refresh === 'number') ds.refresh = c.refresh;
+        break;
+      }
+      case 'remove_data_source': {
+        const before = p.dataSources.length;
+        p.dataSources = p.dataSources.filter((d) => d.id !== ref(c.id) && d.name !== c.id);
+        if (p.dataSources.length === before) throw new Error(`${where}: no data source ${String(c.id)}`);
+        break;
+      }
+      case 'add_text_style': {
+        // A named text style (H1, Body...); layers follow it with styleRefs.text and change when it does
+        p.styles ??= { colors: [], texts: [] };
+        const name = String(c.name ?? '').trim();
+        if (!name) throw new Error(`${where}: a text style needs a name`);
+        if (p.styles.texts.some((s) => s.name === name)) throw new Error(`${where}: there is a text style called ${name} already`);
+        const d = DEFAULT_TEXT_STYLE;
+        const st: TextStyleDef = { id: uid('ts'), name, fontFamily: d.fontFamily, fontSize: d.fontSize, fontWeight: d.fontWeight, fontStyle: d.fontStyle, lineHeight: d.lineHeight, letterSpacing: d.letterSpacing };
+        Object.assign(st, textStyleProps(resolveRefs(c.props ?? {}) as Record<string, unknown>));
+        p.styles.texts.push(st);
+        stylesTouched = true;
+        if (key) created[key] = st.id;
+        break;
+      }
+      case 'set_text_style': {
+        const st = p.styles?.texts.find((s) => s.id === ref(c.id) || s.name === c.id);
+        if (!st) throw new Error(`${where}: no text style ${String(c.id)}`);
+        if (st.library) throw new Error(`${where}: ${st.name} comes from a library, change it there`);
+        Object.assign(st, textStyleProps(resolveRefs(c.props ?? {}) as Record<string, unknown>));
+        stylesTouched = true;
+        break;
+      }
       default:
         throw new Error(`${where}: unknown op "${c.op}"`);
     }
@@ -567,6 +926,8 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
     if (list) p.notes = list;
     else delete p.notes;
   }
+  // Layers following a style get its look now, as they would in the editor
+  if (stylesTouched) syncNodeStyles(p);
   for (const ab of p.artboards) {
     if (ab.notes) {
       const list = cleanNotes(ab.notes);
@@ -593,8 +954,20 @@ function syncRuns(node: SceneNode, props: Record<string, unknown>): void {
   } else if ('text' in props || props.runs === null) delete node.runs;
 }
 
+/** The parts of a text style an agent can set, checked: anything else is dropped. A bare family gets the usual fallbacks. */
+function textStyleProps(o: Record<string, unknown>): Partial<TextStyleDef> {
+  const out: Partial<TextStyleDef> = {};
+  if (typeof o.fontFamily === 'string' && o.fontFamily.trim()) out.fontFamily = o.fontFamily.includes(',') ? o.fontFamily : `"${o.fontFamily.replace(/"/g, '').trim()}", system-ui, sans-serif`;
+  for (const k of ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing'] as const) if (typeof o[k] === 'number' && Number.isFinite(o[k])) out[k] = o[k] as number;
+  if (o.fontStyle === 'italic' || o.fontStyle === 'normal') out.fontStyle = o.fontStyle;
+  if (typeof o.color === 'string') out.color = o.color;
+  if (o.color === null) out.color = undefined;
+  return out;
+}
+
 function setPath(obj: Record<string, unknown>, path: string, v: unknown) {
   const keys = path.split('.');
+  if (keys.some((k) => k === '__proto__' || k === 'constructor' || k === 'prototype')) return;
   let cur = obj;
   for (const k of keys.slice(0, -1)) {
     if (k === '__proto__' || k === 'constructor') return;
@@ -606,10 +979,58 @@ function setPath(obj: Record<string, unknown>, path: string, v: unknown) {
 
 // ---------------------------------------------------------------- reference text for agents
 
-function reference(topic: string): string {
+const coloursReference = () => `# Colour values
+Anywhere a colour goes (fill.color, stroke.paint.color, color on text, buttons and links, gradient stops, barFill, shadow.color, chart colors, an artboard's background) takes:
+- a CSS colour: "#1e1e1e", "rgb(30 30 30)", "rgba(0,0,0,0.5)", "transparent";
+- a theme token, "token:<id>" or "token:<name>" (like "token:color/primary"), which takes its value from the theme being shown, so the layer follows Light, Dark, High contrast and any colourway. The edit tool stores a name as the token's id; "token:$ref" is a token add_token made earlier in the same batch. get_overview lists the tokens with their ids and values, and validate reports a token that does not exist (the editor shows those as "Missing token" and draws nothing).
+A paint is {"type":"solid","color":...}, or a gradient {"type":"linear","angle":90,"stops":[{"offset":0,"color":"token:color/primary"},{"offset":1,"color":"#ffffff"}]} (radial: "center", "radius"). Stops take tokens too.
+At runtime scripts and bindings may hand back token strings as well: ix.node("Card").set("fill.color", "token:color/success") and a binding on fill.color that returns "token:color/error" both draw the token's colour in the theme being shown, by id or by name.
+In a project with the starter tokens, a layer made by add_layer without a colour follows them as the editor's would: shapes color/surface-muted, text color/text, buttons color/button with color/on-button, inputs color/background with a color/border outline, links color/link, frames color/background. Give the colour yourself to override it.
+Starter token names: ${STARTER_NAMES()}.
+Text styles (add_text_style) are the same idea for type: a layer with styleRefs: {text: "<style id or name>"} takes the style's font, size, weight, line height, spacing (and colour, when the style has one) and changes with it. A font family is stored with its fallbacks: "Open Sans" becomes "\\"Open Sans\\", system-ui, sans-serif", the way the editor writes it.`;
+
+const RUNTIME_REFERENCE = `# How some runtime behaviour works (answers to questions agents have had)
+- Script scope: every script (and every Run script node) runs as its own async function, with ix, event and vars in scope, so a const or function declared in one is not visible in another. globalThis is shared by all the scripts of one player, sandboxed or not: a run_on_start script can put helpers there (globalThis.fmt = (n) => n.toFixed(1)) for the others to use.
+- Tokens at runtime: ix.node(x).set("fill.color", "token:...") and bindings returning "token:..." strings are drawn in the theme being shown, by id or by name (see read_reference("colours")).
+- ix.drag.reset(layer) puts a draggable back where it was authored (its x and y when the page started) and back into the zone it started in, whatever ix.drag.put or the learner did since; with no layer, every draggable on the page. It updates the zone variables.
+- ix.drag.enable(layer, false) switches dragging off for a draggable, or taking things off for a drop zone, for pointer and keyboard alike; a draggable being dragged at that moment goes back. A hidden zone (it, or a group or frame it is in, not visible) takes nothing anyway, by pointer or keyboard, so hiding one is enough.
+- Drag events carry names, not ids: event.zone (the zone it landed in) and event.from (the zone it came from) are zone layer names, "" for none; event.target and event.layer are the dragged layer's name, event.tags its tags, event.keyboard whether it was moved by keyboard. Compare with names, or use the zone variables (draggable.zoneVariable, dropZone.contentsVariable).
+- To check your work runs, validate catches broken references and bad expressions; the editor's Preview and its console are where runtime errors show. A headless run for agents is planned.`;
+
+/** The starter token names, from the definitions the editor makes them from. */
+const STARTER_NAMES = () => {
+  const t = newProjectWithThemes('x').themes;
+  return (t?.tokens ?? []).map((x) => x.name).join(', ');
+};
+
+/** One interaction node's reference entry, in full. */
+const nodeReference = (d: (typeof CATALOG)[number]) =>
+  `### ${d.kind} — ${d.label} (${d.category})\n${d.description}${d.gives ? `\nGives: ${d.gives.join(', ')}` : ''}${d.outputs.length > 1 || d.outputs[0]?.label ? `\nOutputs: ${d.outputs.map((o) => o.id).join(', ')}` : ''}\n${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.map((o) => o.value).join('|')}` : ''}${pd.default !== undefined ? `, default ${JSON.stringify(pd.default)}` : ''})${pd.help ? `: ${pd.help}` : ''}`).join('\n')}`;
+
+function reference(topic: string, opts: { node?: string; category?: string } = {}): string {
   if (topic === 'interactions') {
-    return CATALOG.map((d) => `### ${d.kind} — ${d.label} (${d.category})\n${d.description}${d.gives ? `\nGives: ${d.gives.join(', ')}` : ''}${d.outputs.length > 1 || d.outputs[0]?.label ? `\nOutputs: ${d.outputs.map((o) => o.id).join(', ')}` : ''}\n${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.map((o) => o.value).join('|')}` : ''}${pd.default !== undefined ? `, default ${JSON.stringify(pd.default)}` : ''})${pd.help ? `: ${pd.help}` : ''}`).join('\n')}`).join('\n\n');
+    // The whole catalogue is over 50 KB, more than most agents' tool output takes in one go: an index unless asked for some
+    if (opts.node) {
+      const want = opts.node.split(',').map((x) => x.trim()).filter(Boolean);
+      const hits = CATALOG.filter((d) => want.some((w) => d.kind === w || d.label.toLowerCase() === w.toLowerCase() || d.kind.endsWith(`.${w}`)));
+      return hits.length ? hits.map(nodeReference).join('\n\n') : `No node ${opts.node}. read_reference("interactions") lists them.`;
+    }
+    if (opts.category) {
+      const hits = CATALOG.filter((d) => d.category === opts.category);
+      return hits.length ? hits.map(nodeReference).join('\n\n') : `No category ${opts.category}: ${[...new Set(CATALOG.map((d) => d.category))].join(', ')}.`;
+    }
+    {
+      const cats = [...new Set(CATALOG.map((d) => d.category))];
+      return (
+        `Interaction nodes (${CATALOG.length}). For a node's settings, outputs and what it gives, call read_reference("interactions", node: "<kind>") (several: "event.drop, action.setVariable"), or category: "<category>" for a whole group.\n` +
+        'Settings that point at a layer, variable, script, timeline, blend, artboard or asset take its id or its exact name; the edit tool stores the id.\n\n' +
+        cats.map((cat) => `## ${cat}\n${CATALOG.filter((d) => d.category === cat).map((d) => `- ${d.kind}: ${d.label}. ${d.description.split(/(?<=\.)\s/)[0]}`).join('\n')}`).join('\n\n')
+      );
+    }
   }
+  if (topic === 'interactions-all') return CATALOG.map(nodeReference).join('\n\n');
+  if (topic === 'colours' || topic === 'colors') return coloursReference();
+  if (topic === 'runtime') return RUNTIME_REFERENCE;
   if (topic === 'properties') return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join('\n') + '\nOn a progress layer only: ' + layerOwnProps(createNode('progress')).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join('; ') + '\nOn a connector layer only: ' + layerOwnProps(createNode('connector')).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join('; ');
   if (topic === 'layers') {
     const types: NodeType[] = ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance', 'draw', 'shader', 'progress', 'chart', 'connector', 'bone'];
@@ -631,7 +1052,7 @@ function reference(topic: string): string {
   }
   const t = TOPICS.find((x) => x.id === topic);
   if (t) return `# ${t.title}\n${t.summary}\n\n${topicBody(t)}`;
-  return `Topics: interactions, properties, layers, and the help pages: ${TOPICS.map((x) => x.id).join(', ')}`;
+  return `Topics: interactions (index; node or category for detail), interactions-all (the whole catalogue, over 50 KB), properties, layers, colours, runtime, and the help pages: ${TOPICS.map((x) => x.id).join(', ')}`;
 }
 
 // ---------------------------------------------------------------- tools
@@ -655,6 +1076,98 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
     run: async () => {
       const list = await api<{ id: string; name: string; updated: string; artboards: number }[]>('projects');
       return list.map((x) => `- ${x.name} [${x.id}] ${x.artboards} artboards, updated ${x.updated}`).join('\n') || 'No projects.';
+    },
+  },
+  {
+    name: 'list_starters',
+    description: 'What create_project can start from: the built-in starters, the branded starter packs (each in a colourway), and the saved templates this session can see.',
+    inputSchema: S({}),
+    run: async () => {
+      const saved = await api<{ id: string; name: string; description?: string }[]>('templates').catch(() => []);
+      return [
+        '## Built-in starters (from: {starter: key})',
+        ...STARTERS.map((s) => `- ${s.key}: ${s.name}. ${s.description}`),
+        '',
+        // The branded packs lay their pages out with the player's runtime, which needs a browser: make those in the editor
+        `The branded starter packs can only be made in the editor (Templates on the home page). For their look in a blank project, add_colourway (${ALL_COLOURWAYS.map((w) => w.id).join(', ')}).`,
+        '',
+        '## Saved templates (from: {template_id})',
+        ...(saved.length ? saved.map((t) => `- ${t.id}: ${t.name}${t.description ? `. ${t.description}` : ''}`) : ['None this session can see.']),
+      ].join('\n');
+    },
+  },
+  {
+    name: 'create_project',
+    description:
+      'Make a new project and join its live session. from: "blank" (the default: the Light, Dark and High contrast themes with the starter tokens, Open Sans, one artboard), {starter: key} (a built-in starter, see list_starters) or {template_id} (a saved template). For a branded look, make it blank and add_colourway. Returns the id and the overview.',
+    inputSchema: S({ name: str('Name of the new project'), folder: str('Optional: the folder to put it in on the home page'), from: { description: '"blank", {starter} or {template_id}' } }, ['name']),
+    run: async (a) => {
+      const name = String(a.name ?? '').trim().slice(0, 200) || 'Untitled project';
+      const from = (a.from ?? 'blank') as string | { starter?: string; template_id?: string };
+      let id: string;
+      if (typeof from === 'object' && from?.template_id) {
+        id = (await api<{ id: string }>(`templates/${encodeURIComponent(from.template_id)}/use`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, folder: a.folder || null }) })).id;
+      } else {
+        let p: Project;
+        if (typeof from === 'object' && from?.starter) {
+          const builtin = starterByKey(from.starter);
+          if (!builtin) throw new Error(`No starter ${from.starter}. list_starters has them (the branded packs can only be made in the editor)`);
+          p = projectFromStarter(builtin, name);
+        } else if (from === 'blank' || from === undefined) p = newProjectWithThemes(name);
+        else throw new Error('from is "blank", {starter, colourway?} or {template_id}');
+        // Every new project starts in the suite's font, as the editor's do
+        if (!p.fonts.some((f) => f.family === 'Open Sans')) p.fonts.push({ family: 'Open Sans', source: 'google', weights: [400, 600, 700] });
+        await api(`projects/${encodeURIComponent(p.id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project: p, rev: 0 }) });
+        if (a.folder) await api(`projects/${encodeURIComponent(p.id)}/meta`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder: String(a.folder) }) }).catch(() => undefined);
+        id = p.id;
+      }
+      const s = join(id);
+      await s.ready;
+      const p = await loadProject(id);
+      return `Made "${p.name}" [${p.id}] and joined it. Open it in the editor at ${ctx().base}/#/p/${p.id}\n\n${overview(p, {})}`;
+    },
+  },
+  {
+    name: 'upload_asset',
+    description: 'Add a file to a project (a picture, a sound, a data file...) from base64 or plain text. Returns the asset id, for an image layer\'s assetId, a data source\'s asset_id, a fill {type:"image", assetId}, and so on.',
+    inputSchema: S({ project_id: str('Project id'), name: str('File name, like "map.png"'), mime: str('Its type, like image/png (guessed from the name when left out)'), base64: str('The bytes, base64'), text: str('Or the contents as text') }, ['project_id', 'name']),
+    run: async (a) => {
+      const name = String(a.name ?? 'file');
+      const mime = String(a.mime || guessMime(name));
+      let bytes: Uint8Array;
+      if (typeof a.base64 === 'string') bytes = Uint8Array.from(Buffer.from(a.base64.replace(/^data:[^,]*,/, ''), 'base64'));
+      else if (typeof a.text === 'string') bytes = new TextEncoder().encode(a.text);
+      else throw new Error('Give base64 or text');
+      if (!bytes.length) throw new Error('The file is empty');
+      const id = uid('as');
+      const size = await putAsset(String(a.project_id), id, bytes, mime);
+      await runEdit(a, [{ op: 'add_asset', id, name, mime, size }], `Add ${name}`);
+      return `Uploaded ${name} (${size} bytes) as asset ${id}.`;
+    },
+  },
+  {
+    name: 'export_project',
+    description: 'The project document as JSON (no file bytes: assets are records), or one part of it: settings, themes, styles, variables, scripts, dataSources, assets, fonts, artboards. For what the outline tools leave out.',
+    inputSchema: S({ project_id: str('Project id'), part: str('Optional: one top-level part') }, ['project_id']),
+    run: async (a) => {
+      const p = await loadProject(String(a.project_id));
+      if (a.part) {
+        const part = String(a.part);
+        if (!(part in p)) return `The project has no ${part}. Parts: ${Object.keys(p).join(', ')}`;
+        return JSON.stringify((p as unknown as Record<string, unknown>)[part], null, 1);
+      }
+      return JSON.stringify(p);
+    },
+  },
+  {
+    name: 'get_variables',
+    description: 'Variables in full (the overview cuts long values short): id, type, starting value and settings. Give names for some of them.',
+    inputSchema: S({ project_id: str('Project id'), names: { type: 'array', items: { type: 'string' }, description: 'Optional: names or ids' } }, ['project_id']),
+    run: async (a) => {
+      const p = await loadProject(String(a.project_id));
+      const want = Array.isArray(a.names) ? (a.names as string[]) : null;
+      const list = want ? p.variables.filter((v) => want.includes(v.name) || want.includes(v.id)) : p.variables;
+      return list.length ? JSON.stringify(list, null, 1) : 'No such variables.';
     },
   },
   {
@@ -716,22 +1229,30 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
     description:
       'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). ' +
       'Each change is {op, ...}: ' +
-      'set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); ' +
-      'add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; ' +
+      'set_props {id or ids: [...], props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"; ids sets the same props on several layers); ' +
+      'add_layer {artboard_id, type, props?, children?: [{type, props?, children?, ref?}], parent_id?, index?, ref?} (a whole tree in one op; with no colour given a layer follows the starter tokens, as in the editor); ' +
+      'duplicate {id, count?, dx?, dy?, columns?, name? ("Card {n}": the original is 1), ref?} (copies with everything inside, each dx/dy on from the last; with columns they wrap into a grid; refs are ref1, ref2...); delete {id}; move {id, parent_id?, artboard_id?, index?}; ' +
       'add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); ' +
       'add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; rename_variable {id or name, name, scripts? (default true; false leaves scripts and code snippets alone)}: renames it and everything that names it, keeping saved learner values (never rename with set_variable); ' +
       'add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, dip?, keys: [{t, value, ease}]}], ref?} (text, label and true/false keys hold until the next key and never ease; to soften a text change key opacity and/or blur dipping to 0 / 8 either side of it on separate tracks marked dip: true, which reduced motion leaves out); ' +
-      'add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; ' +
+      'add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids; params that point at a layer, variable, script, timeline, blend, artboard or asset take its id, its exact name or a $ref); remove_interactions {artboard_id, ids}; ' +
+      'set_interaction {artboard_id, id, params? (merged in, null removes one), note?, x?, y?} (change a node in place, its connections kept); connect {artboard_id, from, to, from_port?}; disconnect {artboard_id, id} or {artboard_id, from, to, from_port?}; ' +
       'add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; ' +
+      'add_theme {name, copy_from?, mode?: light|dark, high_contrast?, ref?} (the first one also makes Light, Dark, High contrast and the starter tokens); remove_theme {id}; add_colourway {colourway: gold|purple|blue|green|orange|red|high-contrast, default?} (as + Colourway in the Themes tab); ' +
+      'add_token {name (like "color/accent"), value? (every theme), values? {theme id or name: colour}, ref?}; set_token {id or name, name?, value?, values?}; remove_token {id or name} (layers keep its colour); set_themes {default? (theme id or name), follow? (switch with dark mode and contrast settings), learner_switcher? (swatches that let learners pick a colourway)}; ' +
+      'set_project_settings {props: {path: value}, name?} (paths into the project settings, as export_project shows them); ' +
+      'add_data_source {name, kind: json|csv|tsv|text, text? (the file contents: uploaded for you) | url? (fetched when it plays, refresh? seconds) | asset_id?, ref?}; set_data_source {id or name, name?, kind?, url?, asset_id?, refresh?}; remove_data_source {id or name}; ' +
+      'add_text_style {name, props: {fontFamily, fontSize, fontWeight, fontStyle, lineHeight, letterSpacing, color?}, ref?}; set_text_style {id or name, props} (a layer follows one with props styleRefs: {text: id or name}); ' +
       'add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; ' +
       'add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). ' +
-      'Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
+      'Give "ref" to name something you create, then use "$ref" in later changes in the same batch (a colour can say "token:$ref"). Colours take "token:<name>" as well as "token:<id>". Read read_reference("layers"), ("interactions"), ("properties") and ("colours") first.',
     inputSchema: S({ project_id: str('Project id'), changes: { type: 'array', items: { type: 'object' } }, explain: str('One line saying what this does (shown in the editor log)') }, ['project_id', 'changes']),
     run: async (a) => {
       const s = join(String(a.project_id));
       await s.ready;
       const before = await loadProject(s.projectId);
-      const { project, created, touched } = applyChanges(before, a.changes as Change[]);
+      const changes = await uploadDataText(s.projectId, (a.changes as Change[]) ?? []);
+      const { project, created, touched } = applyChanges(before, changes);
       const ops = diff(before, project);
       if (!ops.length) return 'Nothing changed.';
       await api(`projects/${encodeURIComponent(s.projectId)}/ops`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clientId: s.clientId, ops }) });
@@ -739,7 +1260,7 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       const first = touched.map((id) => locate(project, id)).find(Boolean);
       if (first) await presence(s, { artboardId: first.ab.id, selection: touched.slice(0, 50), cursor: { x: first.ab.canvasX + first.node.x + first.node.width, y: first.ab.canvasY + first.node.y } });
       const problems = validate(project);
-      return `Applied ${(a.changes as unknown[]).length} change(s) as ${ops.length} op(s).${Object.keys(created).length ? `\nCreated: ${JSON.stringify(created)}` : ''}${problems.length ? `\n\nProblems now in the project:\n- ${problems.slice(0, 30).join('\n- ')}` : ''}`;
+      return `Applied ${changes.length} change(s) as ${ops.length} op(s).${Object.keys(created).length ? `\nCreated: ${JSON.stringify(created)}` : ''}${problems.length ? `\n\nProblems now in the project:\n- ${problems.slice(0, 30).join('\n- ')}` : ''}`;
     },
   },
   {
@@ -794,9 +1315,9 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
   },
   {
     name: 'read_reference',
-    description: 'Reference for building: "layers" (layer types, fields and defaults), "interactions" (every event/action/logic node and its params), "properties" (animatable/bindable property paths), or any help page id (e.g. "expressions", "scripts", "auto-layout", "repeaters", "data-sources", "timelines"). No topic lists them.',
-    inputSchema: S({ topic: str('Topic id') }),
-    run: async (a) => reference(String(a.topic ?? '')),
+    description: 'Reference for building: "layers" (layer types, fields and defaults), "interactions" (an index of the event/action/logic nodes; give node for one or more in full, or category for a group), "properties" (animatable/bindable property paths), "colours" (colour values, theme tokens by id or name, text styles), "runtime" (script scope, drag behaviour, what drag events carry), or any help page id (e.g. "expressions", "scripts", "auto-layout", "repeaters", "data-sources", "timelines", "themes"). No topic lists them.',
+    inputSchema: S({ topic: str('Topic id'), node: str('interactions only: a node kind (or several, comma separated), like "event.drop"'), category: str('interactions only: event, action, logic...') }),
+    run: async (a) => reference(String(a.topic ?? ''), { node: typeof a.node === 'string' ? a.node : undefined, category: typeof a.category === 'string' ? a.category : undefined }),
   },
   {
     name: 'leave_session',
@@ -894,7 +1415,7 @@ async function respond(msg: RpcMessage): Promise<RpcReply | undefined> {
         capabilities: { tools: {} },
         serverInfo: { name: 'interactives', version: VERSION },
         instructions:
-          'Interactives is a 2D interactive builder. Start with list_projects, then join_session on the project the person is editing, so your edits show live and you can see their selection. Read read_reference("layers") and ("interactions") before editing, make changes with edit, and check them with validate.',
+          'Interactives is a 2D interactive builder. Start with list_projects and join_session on the project the person is editing (so your edits show live and you can see their selection), or create_project for a new one (list_starters says what it can start from). Read read_reference("layers"), ("interactions"), ("colours") and ("runtime") before editing, make changes with edit (themes, tokens, data sources and text styles included), upload files with upload_asset, and check them with validate.',
       });
     case 'notifications/initialized':
     case 'notifications/cancelled':

@@ -6156,13 +6156,19 @@ ${
 | Tool | Does |
 |---|---|
 | list_projects | Your projects |
+| create_project, list_starters | Make a new project, blank (with the Light, Dark and High contrast themes) or from a built-in starter or a saved template, and join it. The branded starter packs are made in the editor; an agent gives a blank project their look with a colourway |
 | join_session | Joins a project's live session; reports who is there and what they have selected |
 | leave_session | Leaves the session |
 | get_selection | The layers each person has selected, in full |
-| get_overview, get_layers, get_interactions | Read pages, layer trees, timelines, variables, interactions |
-| edit | Add, change, move and delete layers; add pages, variables, timelines, interactions and scripts, in one batch |
-| validate | Find broken references, unconnected events and expressions that don't parse |
-| read_reference | These help pages, plus generated references for layer fields, interaction nodes and animatable properties |
+| get_overview, get_layers, get_interactions, get_variables | Read pages, layer trees, timelines, variables, interactions, and the themes with every colour token |
+| export_project | The whole project document, or one part of it (its settings, themes, styles...) |
+| edit | Add, change, copy, move and delete layers (a whole tree at once); add pages, variables, timelines, interactions and scripts, and change interactions in place; add themes, colourways, colour tokens and text styles; add data sources; change project settings. All in one batch |
+| upload_asset | Add a picture, sound or data file to the project |
+| list_notes, add_note, add_graph_note, edit_note, remove_note | Read and leave sticky notes |
+| validate | Find broken references, colours that follow a missing token, layers lost far off the page, unconnected events and expressions that don't parse |
+| read_reference | These help pages, plus generated references for layer fields, interaction nodes, animatable properties, colour values and how some runtime behaviour works |
+
+Layers an agent adds follow the project's starter colours, the same as yours, so they look right in Dark and High contrast. It can name things the way you do, a colour token as **color/primary** or a variable by its name, and the project stores them the way the editor does.
 
 ## Staying in control
 - Everything the agent does goes through the same live editing as people, so you watch it happen.

@@ -497,7 +497,7 @@ describe('connectors by agents', () => {
 
 describe('reference', () => {
   it('lists every interaction node kind with its parameters', () => {
-    const text = mcp.reference('interactions');
+    const text = mcp.reference('interactions-all');
     for (const d of CATALOG) {
       expect(text, d.kind).toContain(`### ${d.kind} — ${d.label}`);
       for (const pd of d.params) expect(text, `${d.kind}.${pd.key}`).toContain(`- ${pd.key} (${pd.type}`);
@@ -528,7 +528,7 @@ describe('reference', () => {
     for (const t of TOPICS.filter((x) => !['interactions', 'properties', 'layers'].includes(x.id))) expect(mcp.reference(t.id), t.id).toContain(`# ${t.title}`);
     for (const bad of ['', 'nonsense']) {
       const text = mcp.reference(bad);
-      expect(text).toMatch(/^Topics: interactions, properties, layers/);
+      expect(text).toMatch(/^Topics: interactions \(index; node or category for detail\), interactions-all .*, properties, layers, colours, runtime/);
       for (const t of TOPICS) expect(text).toContain(t.id);
     }
   });
@@ -564,7 +564,7 @@ describe('JSON-RPC handler', () => {
   it('lists its tools, each with a schema whose required fields exist', async () => {
     const r = await rpc({ id: 5, method: 'tools/list' });
     const tools = r.result.tools as { name: string; description: string; inputSchema: { type: string; properties: Record<string, unknown>; required: string[] } }[];
-    expect(tools.map((t) => t.name)).toEqual(['list_projects', 'join_session', 'get_selection', 'get_overview', 'get_layers', 'get_interactions', 'edit', 'list_notes', 'add_note', 'add_graph_note', 'edit_note', 'remove_note', 'validate', 'read_reference', 'leave_session']);
+    expect(tools.map((t) => t.name)).toEqual(['list_projects', 'list_starters', 'create_project', 'upload_asset', 'export_project', 'get_variables', 'join_session', 'get_selection', 'get_overview', 'get_layers', 'get_interactions', 'edit', 'list_notes', 'add_note', 'add_graph_note', 'edit_note', 'remove_note', 'validate', 'read_reference', 'leave_session']);
     expect(new Set(tools.map((t) => t.name)).size).toBe(tools.length);
     for (const t of tools) {
       expect(t.description.length).toBeGreaterThan(10);
@@ -640,7 +640,7 @@ describe('sticky notes', () => {
   });
 
   it('the node reference an agent reads keeps every node\'s full text: the summary and then the details, with what an event gives', () => {
-    const text = mcp.reference('interactions');
+    const text = mcp.reference('interactions-all');
     for (const d of CATALOG) expect(text, d.kind).toContain(d.description);
     const key = CATALOG.find((d) => d.kind === 'event.key')!;
     expect(key.details).toBeTruthy();
