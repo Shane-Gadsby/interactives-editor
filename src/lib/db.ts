@@ -89,7 +89,7 @@ async function call<T>(path: string, init: RequestInit = {}, as?: 'blob'): Promi
     res = await (method === 'GET' && !init.body ? fetchOrEarly(API + path, { credentials: 'same-origin', ...init }) : fetch(API + path, { credentials: 'same-origin', ...init }));
   } catch (err) {
     reportError({ kind: 'api', error: err, where: route, detail: { method, status: 0 } });
-    throw new ApiError('Could not reach the Interactives server', 0);
+    throw new ApiError('Could not reach the Ixia server', 0);
   }
   // Which parts of the server get used (the route with its ids taken out), how long they take, and what it refused or broke on
   if (res.ok) track('api', 'call', { thing: route, ms: Date.now() - started, detail: { method } });

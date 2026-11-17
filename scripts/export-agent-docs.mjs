@@ -138,7 +138,7 @@ process.env.INTERACTIVES_MCP_NO_STDIO = '1';
 const mcp = await import(pathToFileURL(path.join(root, 'mcp', 'dist', 'interactives-mcp.mjs')).href);
 const ids = mcp.reference('?').split('help pages: ')[1].split(', ');
 const version = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version;
-const intro = `<h1>Interactives editor help</h1><p>Every help page and tutorial in the StudyDesk Toolbox Interactives editor (version ${version}, exported ${new Date().toISOString().slice(0, 10)}), as text. Pictures are given as their captions.</p>`;
+const intro = `<h1>Ixia editor help</h1><p>Every help page and tutorial in the StudyDesk Toolbox Ixia editor (version ${version}, exported ${new Date().toISOString().slice(0, 10)}), as text. Pictures are given as their captions.</p>`;
 //Cogniti won't index one 260k-token file ("Nothing was indexed"), so the help goes in parts of about 150k characters
 //of text each, cut between topics
 const parts = [[]];
@@ -152,6 +152,6 @@ for (const id of ids) {
 //Cogniti's server fails on LibreOffice's .docx (400 "unexpected error", 11 Nov), so the help goes up as Markdown, which it
 //takes as is. Pictures become their captions
 const mdPart = (p) => p.map((md) => md.replace(/^!\[([^\]]*)\]\([^)]+\)\s*$/gm, (_, alt) => (alt ? `(Picture: ${alt})` : '')).replace(/^# /, '## ').replace(/\n(#+) /g, '\n#$1 ')).join('\n\n---\n\n');
-parts.forEach((p, i) => writeFileSync(path.join(out, `interactives-help-${i + 1}.md`), `# Interactives editor help, part ${i + 1} of ${parts.length}\n\nEvery help page and tutorial in the StudyDesk Toolbox Interactives editor (version ${version}, exported ${new Date().toISOString().slice(0, 10)}).\n\n` + mdPart(p) + '\n'));
+parts.forEach((p, i) => writeFileSync(path.join(out, `interactives-help-${i + 1}.md`), `# Ixia editor help, part ${i + 1} of ${parts.length}\n\nEvery help page and tutorial in the StudyDesk Toolbox Ixia editor (version ${version}, exported ${new Date().toISOString().slice(0, 10)}).\n\n` + mdPart(p) + '\n'));
 console.log(`${parts.length} Markdown parts in ${out}`);
 process.exit(0);

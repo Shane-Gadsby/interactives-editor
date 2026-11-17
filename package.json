@@ -2,7 +2,7 @@
   "name": "interactives-editor",
   "version": "0.5.0",
   "private": true,
-  "description": "Browser-based editor for Interactives: artboards, vector and web elements, timelines, node-based interactions and custom JavaScript.",
+  "description": "Browser-based editor for Ixia: artboards, vector and web elements, timelines, node-based interactions and custom JavaScript.",
   "license": "MIT",
   "scripts": {
     "player:build": "npm --prefix ../interactives-player run build",

@@ -67,7 +67,7 @@ export function AdminPage() {
   const [auditProject, setAuditProject] = useState('');
 
   useEffect(() => {
-    document.title = 'Admin · Interactives';
+    document.title = 'Admin · Ixia';
     void session().then(
       (s) => setAllowed(!!s.power),
       () => setAllowed(false),
@@ -137,7 +137,7 @@ export function AdminPage() {
     <div className="home usage-page admin-page">
       <header className="home-head">
         <a className="brand" href="#/">
-          Interactives
+          Ixia
         </a>
         <span className="muted">Admin</span>
         <div className="home-actions">

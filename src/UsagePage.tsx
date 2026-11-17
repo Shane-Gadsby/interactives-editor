@@ -54,7 +54,7 @@ export function UsagePage() {
   const [tab, setTab] = useState<'editor' | 'errors' | 'published'>('editor');
 
   useEffect(() => {
-    document.title = 'Usage and errors · Interactives';
+    document.title = 'Usage and errors · Ixia';
     void session().then(
       (s) => setAllowed(!!s.power),
       () => setAllowed(false),
@@ -73,7 +73,7 @@ export function UsagePage() {
     <div className="home usage-page">
       <header className="home-head">
         <a className="brand" href="#/">
-          Interactives
+          Ixia
         </a>
         <span className="muted">Usage and errors</span>
         <div className="home-actions">

@@ -3371,7 +3371,7 @@ router.post('/api/notices/read', express.json({limit: '4kb'}), async (req, res) 
 
 //The review page's side. The link alone gets nobody in, it takes a signed in session as well: a StudyDesk one inside
 //StudyDesk, or the direct sign in token when the link was opened in its own tab. That one is its own tool in si-manager's
-//registry ('interactives-review', any staff member) so a reviewer doesn't need to be an Interactives beta tester, but
+//registry ('interactives-review', any staff member) so a reviewer doesn't need to be an Ixia beta tester, but
 //someone who already holds the editor's 'interactives' token gets in on that too. A token only resolves for the tool it
 //was issued for, so the lookups are tried in turn. The session is read here and refused in reviewProject, with a reply the
 //page knows how to read. That refusal doesn't wait for SUITE_SESSION_ENFORCE, the link on its own never opens anything
@@ -5093,7 +5093,7 @@ const learnerPage = (token, base, nonce, project, remix, sensors, mediaNonce) =>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Interactives</title>
+<title>Ixia</title>
 <style>html,body{margin:0;height:100%;background:#111}iframe{border:0;display:block;width:100%;height:100%}#remix{position:fixed;right:12px;bottom:12px;z-index:2;display:none;font:600 13px/1 system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);text-decoration:none}#remix:hover,#remix:focus-visible{background:#2f49d0}#remix[aria-disabled=true]{opacity:.7;cursor:progress}#remix.err{background:#b3261e}</style>
 </head>
 <body>

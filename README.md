@@ -1,6 +1,6 @@
 # interactives-editor
 
-The browser editor for Interactives. You use it to build interactive 2D experiences:
+The browser editor for Ixia. You use it to build interactive 2D experiences:
 - artboards with vector shapes, pen paths, text and images;
 - real web controls: buttons, inputs, links, HTML/iframe embeds and video;
 - keyframe timelines;
@@ -43,11 +43,13 @@ The browser editor for Interactives. You use it to build interactive 2D experien
 
 Projects are stored on the server in MongoDB. They export as a single self-contained HTML file or as a `.ixp` package (zip), and import back from `.ixp`.
 
+Ixia was called Interactives until November 2026, and the old name is still in everything that would break if it moved: the `/interactives` path, both repo names, the bundle file names, the `Interactives` global in an exported page, and the `app` on analytics rows. Scripts still use `ix` and packages are still `.ixp`.
+
 The runtime lives in the sibling repo [interactives-player](https://github.com/Shane-Gadsby/interactives-player). The editor draws its canvas with that player's renderer, and its exports embed that player.
 
 ## What's in 0.5
 
-Interactives 0.5 is the first beta. A short tour of what is in it, newest ideas first; every item has a page in the in-app help (F1), and the Welcome page has a **Getting started as a beta tester** section with what to try first, how to report a problem and the known limits.
+Ixia 0.5 is the first beta. A short tour of what is in it, newest ideas first; every item has a page in the in-app help (F1), and the Welcome page has a **Getting started as a beta tester** section with what to try first, how to report a problem and the known limits.
 
 **Working together**
 - **Share and Export are separate.** Export only makes files (single HTML, package, JSON, Lottie, PNG, SVG, the public interface reference). Share holds the links and people: **Share link** (plus the **Link for StudyDesk**), **Invite to collaborate**, **Save as template** and **Share for review**.
@@ -362,9 +364,9 @@ The share frame (`/s/<token>`) is sandboxed with an opaque origin, so the browse
 
 **Any change that adds, removes or changes something a user would encounter updates the help (`src/help`: topics, search keywords, tutorials) in the same change**, including its screenshots and recordings whenever what's on screen or how it behaves changes.
 
-Interactives is part of the StudyDesk Toolbox suite's two documentation sites, both served by si-manager:
+Ixia is part of the StudyDesk Toolbox suite's two documentation sites, both served by si-manager:
 
-- **`/toolbox-docs`**, for all staff, covers what Interactives is and how to get to it.
+- **`/toolbox-docs`**, for all staff, covers what Ixia is and how to get to it.
 - **`/suite-docs`**, for admins only, covers how it's built, deployed and run: its server, storage, analytics and env vars.
 
 A change to any of those updates those pages too. Neither site ever holds a credential.

@@ -104,7 +104,7 @@ export class CommentsClient {
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch {
-      throw new Error('Could not reach the Interactives server');
+      throw new Error('Could not reach the Ixia server');
     }
     if (!res.ok) {
       let e: { error?: string; signin?: boolean } = {};

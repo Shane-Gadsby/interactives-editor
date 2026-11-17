@@ -38,15 +38,15 @@ export function isReviewRoute(): boolean {
 /**
  * The direct sign in, started once: settled straight away when the page isn't a direct load (or can't sign in).
  * A review link is its own tool in si-manager ('interactives-review', any staff member), so a reviewer needn't be in the
- * Interactives beta group. Someone who already holds the editor's sign in is let straight through on that, no second box.
+ * Ixia beta group. Someone who already holds the editor's sign in is let straight through on that, no second box.
  */
 function signInDirectly(): Promise<unknown> {
   signing ??= (async () => {
     const directSignIn = (window as unknown as { directSignIn?: DirectSignIn }).directSignIn;
     if (typeof directSignIn !== 'function' || !isDirectLoad()) return null;
     try {
-      if (!isReviewRoute()) return await directSignIn('interactives', { title: 'Interactives' });
-      return (await directSignIn('interactives', { title: 'Interactives', prompt: false })) ?? (await directSignIn('interactives-review', { title: 'Interactives review' }));
+      if (!isReviewRoute()) return await directSignIn('interactives', { title: 'Ixia' });
+      return (await directSignIn('interactives', { title: 'Ixia', prompt: false })) ?? (await directSignIn('interactives-review', { title: 'Ixia review' }));
     } catch {
       return null;
     }

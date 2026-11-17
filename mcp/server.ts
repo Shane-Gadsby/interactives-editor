@@ -1,5 +1,5 @@
 /**
- * Interactives MCP server: lets an AI agent (Claude Code, Claude Desktop, any MCP client) work in a project
+ * Ixia MCP server: lets an AI agent (Claude Code, Claude Desktop, any MCP client) work in a project
  * alongside people. It joins the project's live editing room like an editor tab, so its edits appear for everyone
  * as they happen, it shows up in the editor as "<name> (AI)", and it can see what each person has selected.
  *
@@ -1096,7 +1096,7 @@ const runEdit = (a: Record<string, unknown>, changes: Change[], explain: string)
 const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a: Record<string, unknown>) => Promise<string> }[] = [
   {
     name: 'list_projects',
-    description: 'List the Interactives projects this session can see (id, name, last change).',
+    description: 'List the Ixia projects this session can see (id, name, last change).',
     inputSchema: S({}),
     run: async () => {
       const list = await api<{ id: string; name: string; updated: string; artboards: number }[]>('projects');
@@ -1438,9 +1438,9 @@ async function respond(msg: RpcMessage): Promise<RpcReply | undefined> {
       return reply({
         protocolVersion: (msg.params?.protocolVersion as string) ?? '2025-06-18',
         capabilities: { tools: {} },
-        serverInfo: { name: 'interactives', version: VERSION },
+        serverInfo: { name: 'ixia', version: VERSION },
         instructions:
-          'Interactives is a 2D interactive builder. Start with list_projects and join_session on the project the person is editing (so your edits show live and you can see their selection), or create_project for a new one (list_starters says what it can start from). Read read_reference("layers"), ("interactions"), ("colours") and ("runtime") before editing, make changes with edit (themes, tokens, data sources and text styles included), upload files with upload_asset, and check them with validate.',
+          'Ixia is a 2D interactive builder. Start with list_projects and join_session on the project the person is editing (so your edits show live and you can see their selection), or create_project for a new one (list_starters says what it can start from). Read read_reference("layers"), ("interactions"), ("colours") and ("runtime") before editing, make changes with edit (themes, tokens, data sources and text styles included), upload files with upload_asset, and check them with validate.',
       });
     case 'notifications/initialized':
     case 'notifications/cancelled':

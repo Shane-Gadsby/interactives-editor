@@ -201,7 +201,7 @@ export function HelpPage({ id, anchor }: { id: string; anchor?: string }) {
     <div className="help-page">
       <header className="home-head">
         <a className="brand" href="#/">
-          Interactives
+          Ixia
         </a>
         <span className="muted help-page-label">
           Help <VersionInfo />

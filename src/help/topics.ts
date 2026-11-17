@@ -41,11 +41,13 @@ export const TOPICS: HelpTopic[] = [
   // ---------------------------------------------------------------- getting started
   {
     id: 'welcome',
-    title: 'Welcome to Interactives',
+    title: 'Welcome to Ixia',
     group: 'Getting started',
-    summary: 'What Interactives is, how a project fits together, and where to start.',
-    keywords: 'intro overview start getting started tutorial beginner first learn new user onboarding glossary words',
-    body: `Interactives builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on pages, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
+    summary: 'What Ixia is, how a project fits together, and where to start.',
+    keywords: 'intro overview start getting started tutorial beginner first learn new user onboarding glossary words interactives old name renamed ixia',
+    body: `Ixia builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on pages, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
+
+Ixia used to be called Interactives. Only the name changed: your projects, links and embeds are as they were, the address still says \`/interactives\`, scripts still use \`ix\` and packages are still \`.ixp\` files.
 
 ![The editor: tools down the left edge, then Layers, Assets, Libraries and Comments, the pages in the middle, the Properties panel on the right, and the Timeline, Interactions, Scripts, Variables, Data and other tabs along the bottom. Share and Export are at the top right.](help/editor-overview.png)
 
@@ -59,7 +61,7 @@ Under the top bar, the **Getting started** strip lists five jobs that tick thems
 
 ## Getting started as a beta tester
 
-Thank you for trying Interactives 0.5. It is a beta: the main parts work, a few edges are rough, and what you find now decides what gets fixed next. You don't need to read anything first. Follow the list below, and open the help page it links to when you want the detail.
+Thank you for trying Ixia 0.5. It is a beta: the main parts work, a few edges are rough, and what you find now decides what gets fixed next. You don't need to read anything first. Follow the list below, and open the help page it links to when you want the detail.
 
 ### What to try first
 
@@ -191,7 +193,7 @@ See [Using this help](help) for the detail.
 - **New project** (top right, or the **+** card) opens **Start a new project**, one window with four ways to begin. Pick one on the left (<kbd>Up</kbd> and <kbd>Down</kbd> move between them), then give the project a name and a folder at the bottom and press **Create project**. It opens straight away.
   - **Blank project**: one empty page called **Home**, with the Light, Dark and High contrast themes. Your default font (Open Sans unless you changed it) is added to it. See [Preferences](preferences).
   - **Copy a project or template**: a list of your own projects, your own templates and the ones shared with you. A project is copied whole, with its pictures, and the copy is called **Copy of ...**. A template opens with its checklist, as under [Templates](templates).
-  - **Built-in template**: the starters that come with Interactives, shown with their pictures.
+  - **Built-in template**: the starters that come with Ixia, shown with their pictures.
   - **Copy an example**: the finished examples, shown with their pictures. You get your own copy to change.
   
   The search box above each list filters it as you type. Press <kbd>Down</kbd> to move from the search box to the list, the arrow keys to move through it, and <kbd>Enter</kbd> to create the project from the one you picked. <kbd>Esc</kbd> closes the window without making anything. The name starts as something sensible and follows what you pick until you type your own. The folder starts as the one you were looking at, and you can change it.
@@ -463,7 +465,7 @@ Preferences are your own settings for the editor. Open **Preferences** from the 
 
 It is one window with a list of **pages** down the left and the settings of one page on the right. Your settings are saved with your account, so they follow you to any browser you sign in on.
 
-The small **(i)** icon in the title bar shows the version of Interactives you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. Put it in every problem report. The same icon is beside **Help** on the help and projects pages.
+The small **(i)** icon in the title bar shows the version of Ixia you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. Put it in every problem report. The same icon is beside **Help** on the help and projects pages.
 
 ## Using the window
 - **Changes apply at once.** There is no OK and no Cancel: tick a box and the editor changes. <kbd>Esc</kbd> or the **×** closes the window.
@@ -5953,7 +5955,7 @@ Untick anything you do not want, then **Update**. It is one undo step (Ctrl+Z). 
 A template made from a project that already has a [brand kit](brand-kits) added, with some of its items placed, is a **pre-branded template**. Its card says **Brand kit**, and projects made from it start with the kit's logos and headers in place and locked, so they stay on brand. Everything else in the project is the author's to change.
 
 ## Examples
-**Examples** are finished projects that ship with Interactives: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. Every example's pages and graphs are laid out neatly and carry a [note](notes#notes-in-starters-and-examples) or two saying what to look at. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
+**Examples** are finished projects that ship with Ixia: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. Every example's pages and graphs are laid out neatly and carry a [note](notes#notes-in-starters-and-examples) or two saying what to look at. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
 
 ## Allow remix on a share link
 In **Share > Share link**, tick **Allow remix**. People who open the **Link for StudyDesk** while signed in to the editor get a **Remix this** button; pressing it copies the project into their own projects and opens it. The copy is theirs: it does not change your project, and it is not tied to it. A remix copies the project **as it is now** (not the version last published to the link), with every page, layer and picture, including parts the page does not show, so only allow it for projects you are happy to give away. Turn it off at any time; copies already made stay.
@@ -6163,7 +6165,7 @@ Turning it on saves your project first and then joins the others; turning it off
 
 ## When a save fails
 The label next to the project name says **Save failed**; hover it for the reason.
-- **Could not reach the Interactives server**, or **The server could not save this project**: the network or the server had a problem. The editor tries again by itself, waiting a little longer each time (up to a minute), and straight away when your computer is back online. Keep the tab open; nothing you did is lost.
+- **Could not reach the Ixia server**, or **The server could not save this project**: the network or the server had a problem. The editor tries again by itself, waiting a little longer each time (up to a minute), and straight away when your computer is back online. Keep the tab open; nothing you did is lost.
 - **This project is too big to save**: the project is over 64 MB. Large pictures or data pasted straight into layers are the usual cause. Put pictures in the [Assets panel](assets) and point layers at them instead; then the next change saves.
 - The red conflict bar: someone else saved first (below).
 

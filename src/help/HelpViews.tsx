@@ -310,13 +310,13 @@ const pageNav: HelpNav = {
 
 export function HelpPage({ id, anchor }: { id: string; anchor?: string }) {
   useEffect(() => {
-    document.title = `${getTopic(id)?.title ?? 'Help'} · Interactives help`;
+    document.title = `${getTopic(id)?.title ?? 'Help'} · Ixia help`;
   }, [id]);
   return (
     <div className="help-page">
       <header className="home-head">
         <a className="brand" href="#/">
-          Interactives
+          Ixia
         </a>
         <span className="muted help-page-label">
           Help <VersionInfo />

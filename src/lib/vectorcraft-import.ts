@@ -20,7 +20,7 @@
  *   - drop shadows, glows and Gaussian blur become the layer's shadow and blur.
  * Not carried over (and reported): opacity masks, gradient meshes (approximated by flat patches), envelope distortions (the
  * art is kept undistorted), pattern fills, brushes and variable width strokes, arrowheads,
- * type on a path, other live effects, placed documents, and blend modes Interactives does not have.
+ * type on a path, other live effects, placed documents, and blend modes Ixia does not have.
  */
 import { PASCAL_BLENDS, PASCAL_PAINT_BLENDS } from './blend-modes';
 import { gunzipSync } from 'fflate';

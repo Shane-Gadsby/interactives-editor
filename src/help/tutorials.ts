@@ -20,7 +20,7 @@ This is how it looks when it is done:
 
 ## 1. Make a project
 
-1. Open the Interactives page and press **New project**. A window called **Start a new project** asks how to begin: keep **Blank project**, leave the name as it is (or type your own) and press **Create project**. The editor opens with one page called **Home**, 800 by 600.
+1. Open the Ixia page and press **New project**. A window called **Start a new project** asks how to begin: keep **Blank project**, leave the name as it is (or type your own) and press **Create project**. The editor opens with one page called **Home**, 800 by 600.
 2. Click the project name at the top left (it says *Untitled project*), type **My first animation** and press <kbd>Enter</kbd>. Everything saves by itself. The label next to the name says **Saved** when it has.
 
 ## 2. Draw the box
@@ -149,7 +149,7 @@ The graph can do much more than the list, and it helps to have drawn one flow yo
     group: 'Getting started',
     summary: 'Build a lamp that switches on and off, with a tap counter, using variables, a data binding and Set variable nodes.',
     keywords: 'tutorial state machine variable boolean number toggle binding set variable counter lamp switch text expression braces state',
-    body: `A *state machine* is a thing that is always in one state, and moves to another when something happens. In Interactives the state lives in **variables**, the things that happen are **events**, and the look of each state comes from **bindings**.
+    body: `A *state machine* is a thing that is always in one state, and moves to another when something happens. In Ixia the state lives in **variables**, the things that happen are **events**, and the look of each state comes from **bindings**.
 
 You will build a lamp. A button switches it on and off, and a counter shows how many times you pressed. It takes about ten minutes.
 

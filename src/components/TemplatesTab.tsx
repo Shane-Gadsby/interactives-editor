@@ -324,10 +324,10 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
           <button role="tab" aria-selected={shown === 'shared'} className={shown === 'shared' ? 'on' : ''} onClick={() => choose('shared')} title="Templates other people shared with everyone">
             Shared <span className="tag-n">{shared.length}</span>
           </button>
-          <button role="tab" aria-selected={shown === 'builtin'} className={shown === 'builtin' ? 'on' : ''} onClick={() => choose('builtin')} title="Starters that come with Interactives, always up to date with the editor">
+          <button role="tab" aria-selected={shown === 'builtin'} className={shown === 'builtin' ? 'on' : ''} onClick={() => choose('builtin')} title="Starters that come with Ixia, always up to date with the editor">
             Built-in <span className="tag-n">{STARTERS.length + BRANDED_STARTERS.length}</span>
           </button>
-          <button role="tab" aria-selected={shown === 'examples'} className={shown === 'examples' ? 'on' : ''} onClick={() => choose('examples')} title="Finished projects that come with Interactives, the same for everyone: play one, or make your own copy to change">
+          <button role="tab" aria-selected={shown === 'examples'} className={shown === 'examples' ? 'on' : ''} onClick={() => choose('examples')} title="Finished projects that come with Ixia, the same for everyone: play one, or make your own copy to change">
             Examples <span className="tag-n">{examples?.length ?? 0}</span>
           </button>
         </div>

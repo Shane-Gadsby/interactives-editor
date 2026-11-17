@@ -67,7 +67,7 @@ describe('projects', () => {
     expect(await db.loadProjectRecord('prnothere01')).toBeNull();
     const real = globalThis.fetch;
     vi.stubGlobal('fetch', () => Promise.reject(new TypeError('connection refused')));
-    await expect(db.listProjects()).rejects.toThrow('Could not reach the Interactives server');
+    await expect(db.listProjects()).rejects.toThrow('Could not reach the Ixia server');
     vi.stubGlobal('fetch', real);
   });
 

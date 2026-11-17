@@ -549,7 +549,7 @@ describe('JSON-RPC handler', () => {
 
   it('initialises with the client\'s protocol version, tools capability and instructions', async () => {
     const r = await rpc({ id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26' } });
-    expect(r).toMatchObject({ jsonrpc: '2.0', id: 1, result: { protocolVersion: '2025-03-26', capabilities: { tools: {} }, serverInfo: { name: 'interactives' } } });
+    expect(r).toMatchObject({ jsonrpc: '2.0', id: 1, result: { protocolVersion: '2025-03-26', capabilities: { tools: {} }, serverInfo: { name: 'ixia' } } });
     expect(r.result.instructions).toMatch(/list_projects/);
     expect((await rpc({ id: 2, method: 'initialize' })).result.protocolVersion).toBe('2025-06-18');
   });

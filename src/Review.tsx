@@ -54,7 +54,7 @@ export function Review({ token }: { token: string }) {
         comments.startReview(token, { threads: body.threads, people: body.people, me: body.me });
         setState({ kind: 'ok', data: { id: body.id, name: body.name, project, me: body.me, threads: body.threads, people: body.people } });
       } catch {
-        if (!off) setState({ kind: 'error', message: 'Could not reach the Interactives server', signin: false });
+        if (!off) setState({ kind: 'error', message: 'Could not reach the Ixia server', signin: false });
       }
     })();
     return () => {
