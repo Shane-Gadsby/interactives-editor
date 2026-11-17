@@ -193,12 +193,42 @@ export function ThemesPanel() {
               <tr key={token.id}>
                 <td className="tk-name">
                   <TextField value={token.name} commitOnBlur title="The token's name. Layers keep following it when it is renamed" onChange={(v) => edit((d) => void (d.themes!.tokens.find((x) => x.id === token.id)!.name = v.trim() || token.name))} />
+                  {/* A token can hold a number or some words instead of a colour, which is how one project carries a
+                      density or a language per theme. Expressions read those with token('space/gap') */}
+                  <SelectField
+                    value={token.kind ?? 'color'}
+                    title="What this token holds. A colour is used wherever colours are; a number or some words are read by expressions, with token('its/name')"
+                    options={[
+                      { value: 'color', label: 'Colour' },
+                      { value: 'number', label: 'Number' },
+                      { value: 'text', label: 'Words' },
+                    ]}
+                    onChange={(k) =>
+                      edit((d) => {
+                        const tk = d.themes!.tokens.find((x) => x.id === token.id)!;
+                        if (k === 'color') delete tk.kind;
+                        else tk.kind = k;
+                        //a colour's palette link means nothing once it stops being a colour
+                        if (k !== 'color') delete tk.palette;
+                      })
+                    }
+                  />
                 </td>
                 {themes.list.map((t) => {
                   const bad = failing(t.id, token);
                   return (
                     <td key={t.id} className={`tk-cell${bad.length ? ' warn' : ''}`}>
-                      <ColorField value={tokenValue(themes, token, t.id) ?? '#808080'} onChange={(c) => edit((d) => setTokenValue(d, token.id, t.id, c), `token-${token.id}-${t.id}`)} onCommit={() => store().commit()} />
+                      {(token.kind ?? 'color') === 'color' ? (
+                        <ColorField value={tokenValue(themes, token, t.id) ?? '#808080'} onChange={(c) => edit((d) => setTokenValue(d, token.id, t.id, c), `token-${token.id}-${t.id}`)} onCommit={() => store().commit()} />
+                      ) : (
+                        <TextField
+                          value={token.values?.[t.id] ?? ''}
+                          commitOnBlur
+                          placeholder={token.kind === 'number' ? '16' : 'Next'}
+                          title={token.kind === 'number' ? `What space/gap is worth in ${t.name}` : `The words this token gives in ${t.name}`}
+                          onChange={(v) => edit((d) => setTokenValue(d, token.id, t.id, v), `token-${token.id}-${t.id}`)}
+                        />
+                      )}
                       {token.palette?.[t.id] && (
                         <span className="tk-link" title={`Follows ${token.palette[t.id]} in the shared StudyDesk palette, so it changes when the palette does. Changing the colour here unlinks it`}>
                           <Icons.link width={11} />

@@ -59,6 +59,7 @@ export const Icons = {
   arrowRight: P('M5 12h14M13 6l6 6-6 6'),
   chevronRight: P('M9 6l6 6-6 6'),
   chevronDown: P('M6 9l6 6 6-6'),
+  chevronUp: P('M6 15l6-6 6 6'),
   record: (props: SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" {...props}>
       <circle cx="12" cy="12" r="6" fill="currentColor" />
@@ -117,6 +118,15 @@ export const Icons = {
   bone: P('M6 6a2 2 0 100-4 2 2 0 000 4zM18 22a2 2 0 100-4 2 2 0 000 4zM7.4 5.4l3 .3 8.6 8.6-.3 3M5.4 7.4l.3 3 8.6 8.6 3-.3'),
   a11y: P('M12 5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM4 8c5 1.5 11 1.5 16 0M12 8v6m0 0l-3.5 7M12 14l3.5 7'),
   question: P('M4 5h16v11H10l-5 4v-4H4zM8.5 10.5l2.2 2.2 4.3-4.6'),
+  dialog: P('M3 4h18v3H3zM6 9h12v11H6zM9 16h6'),
+  // the Web tools that add something ready-made: a bubble with its tail, a box over a page, a box with a tick,
+  // a box with a field to type in, a row of tabs over a panel, and stacked sections with one open
+  tooltip: P('M4 5h16v10h-5.5L12 18.5 9.5 15H4z'),
+  modal: P('M3 4h18v16H3zM7 8h10v8H7zM14 13.5h1'),
+  confirm: P('M4 5h16v14H4zM8.5 12.5l2.5 2.5 4.5-5'),
+  prompt: P('M4 5h16v14H4zM7 10.5h10v4.5H7zM9.5 12v1.5'),
+  tabs: P('M3 9V5h6v4M9 5h6v4M3 9h18v10H3z'),
+  accordion: P('M4 4h16v4H4zM4 10h16v7H4zM4 19h16M15.5 5.3l1.2 1.2 1.2-1.2'),
   plug: P('M9 3v5M15 3v5M6 8h12v4a6 6 0 01-12 0zM12 18v3'),
   insights: P('M4 20V10M10 20V4M16 20v-8M22 20H2'),
   credits: P('M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h11M9 8h6'),

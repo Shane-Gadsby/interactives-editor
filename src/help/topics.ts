@@ -810,6 +810,8 @@ Turn on **Fit height to content** in the **Page** section and the page is as tal
 
 - **Space below** keeps some room under the lowest layer.
 - A hidden layer, a mask, and anything inside a frame that clips or scrolls (past the frame's own edge) take no room.
+- A **dialog** takes no room either. Dialogs open over the page, so opening one never makes the page (or the StudyDesk embed) taller. One taller than the page keeps the page the height it was, so give that dialog its own scrolling.
+- Any other layer can be left out the same way: turn on **Not counted in the page height** in its **Layer** section. That's for toasts, tooltips and anything else that floats on top.
 - **Animate height changes** eases the page to its new height instead of jumping. **Duration** is the **Project default** (**Page height time** in the project settings, 300 ms unless you change it) or **Custom**, with its own **Time**. A viewer whose device asks for less motion always gets the jump. The first height, as the page opens, never animates.
 
 ## Selecting several pages
@@ -1452,7 +1454,7 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
     title: 'Auto layout',
     group: 'Design',
     summary: 'Frames that arrange their children in rows, columns, grids or stacks, with fill, hug and percent sizes, grow, margins and aspect ratios.',
-    keywords: 'flex flexbox grid row column stack gap padding justify align wrap hug fill percent absolute responsive grow basis aspect ratio margin auto cell span layout item',
+    keywords: 'flex flexbox grid row column stack gap padding justify align wrap hug fill percent absolute responsive grow basis aspect ratio margin auto cell span layout item min max width height limit smallest largest cap clamp',
     body: `Turn on **Auto layout** on a frame and its children are placed for you, like CSS flexbox.
 
 | Setting | Meaning |
@@ -1483,6 +1485,11 @@ A percent is worked out again on every layout, so it follows the frame as it is 
 ![The Auto layout section of a frame with the Gap switched to a percent: the small button at the right of the field says % and shows px again when pressed.](help/layout-percent.png)
 
 A frame that hugs its width measures a percent against the width it had before the layout ran, so it settles in a pass or two rather than chasing itself. Percent **sizes** of a layer are separate (see *Percent* under child sizing); a track in a grid can be a percent too.
+
+## Size limits
+**Min W**, **Max W**, **Min H** and **Max H** hold the frame's own size, whoever decides it: hugging its content, filling its parent, or being stretched by it. Leave one empty for no limit.
+
+A box that grows with its text but never gets wider than 480 is **Hug width** on with **Max W** 480. A sidebar that fills what's left but never gets narrower than 240 is **Min W** 240. If you set a min above a max the min wins, so a frame is never given a negative size.
 
 ## Grids and stacks
 Set **Layout** to **Grid** to put the children in the cells of a table instead of along a line, or to **Stack** to put them all on top of each other.
@@ -1738,7 +1745,7 @@ Pictures (PNG, SVG, PDF, animated GIF), thumbnails, the single-file export, \`.i
     title: 'Instances (components)',
     group: 'Design',
     summary: 'Place one artboard inside another, with its own timelines, interactions and inputs.',
-    keywords: 'component nested artboard reuse symbol instance inputs',
+    keywords: 'component nested artboard reuse symbol instance inputs fit height content grow shrink hug properties props what it takes settings fields json declare',
     body: `Any page can be placed inside another as a **component**. The layer it makes is called an **instance**, and the Inspector shows it as **Component**. It is a live copy that runs its own timelines and interactions on the parent's clock. Edit the source page and every instance updates.
 
 ## Placing a component
@@ -1753,10 +1760,23 @@ A component bigger than the page it goes on is shrunk to fit. Pages that would c
 
 ## Settings on an instance
 - **Fit** decides how the page sits in the instance's box: **Stretch to the box**, **Contain**, **Cover** or **Actual size, centred**.
+- **Fit to page content** is the fifth, and it only shows when the source page has [Fit height to content](artboards) on. The box keeps the width you give it, and its height follows whatever the page inside needs while the project plays: a dialog's text growing, a tooltip opening, a list filling from data. It eases if the source page does (**Animate height changes**), so there's one movement, not two. The height typed on the instance layer is ignored while this is on.
 - **Reset size** puts the box back to the page's own size.
 - **Edit** followed by the page's name jumps to the source page.
-- **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. Write them as JSON, such as \`{"level": 3}\`.
+- **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. If the source page says what it takes (below), those come first as ordinary fields and this box is only for anything else. Write it as JSON, such as \`{"level": 3}\`.
 - Messages sent inside an instance (**Send message**, \`ix.emit\`) bubble up to the parent.
+
+## What the component takes
+A page's variables are already its settings. **What it takes** (a section on the page, under **Page**) says which of them an instance may set, so every instance shows proper fields instead of a box of JSON.
+
+- Pick a variable under **Add**. It joins the list.
+- **Name** is what the instance calls it. Leave it empty and it uses the variable's own name.
+- **Hint** is a line under the field saying what it does.
+- The arrows move a setting up or down; the bin takes it off the list again.
+
+The variable's own type decides the field: a number gets a number box, a true/false gets a tick, a colour gets the colour picker, and a variable with choices on it gets a dropdown of those choices. Every field starts on **The page's own value**, so an instance only carries what you actually changed.
+
+The section only shows once the page is used somewhere as a component, or once it already takes something.
 
 ## Steering an instance while it plays
 The parent can change an instance while the project plays.
@@ -2041,7 +2061,7 @@ In a script, \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer nam
     title: 'Page navigation',
     group: 'Interactivity',
     summary: 'Back, Next, the page number, page dots and a progress bar along the bottom of your pages, in one click.',
-    keywords: 'next back previous page number progress bar dots navigation buttons pages 3 of 8 bottom bar go to next artboard generate',
+    keywords: 'next back previous page number progress bar dots navigation buttons pages 3 of 8 bottom bar go to next artboard generate flow flows starting point start here preview from jump',
     body: `Every piece with more than one page needs **Next** and **Back**, and often "Page 3 of 8". Select a page and open **Page navigation** in the properties panel (or select several pages and open it there), pick a style and press **Add to this page**, **Add to these pages** or **Add to all pages**. If your pages share a [page master](page-master), select the master instead and press **Add to this master**: one set of buttons for every page that draws it.
 
 - **Back and Next**: Back on the left, Next (the main button) on the right and *Page 3 of 8* between them.
@@ -2060,7 +2080,12 @@ Page dots are drawn for the number of pages there are now: press **Add** again a
 **How the page changes**, above the buttons, is the look Back and Next use (a fade unless you choose another), and **Speed** under it is how long that takes. Both are written into the **Go to a page** nodes, where you can change them afterwards. The looks and speeds are listed in [How the page changes](links-cursors#how-the-page-changes).
 
 ## Where it goes
-Buttons can go on the page itself, or once on a [page master](page-master) so every page that draws it has them. On a master they are drawn over the pages, so a keyboard user reaches them after the page's own controls, and their flows run from the master on whichever page is showing. If a page already has navigation of its own, adding it to its master too shows two sets: the message names those pages, and **Remove** on them keeps just the master's.`,
+Buttons can go on the page itself, or once on a [page master](page-master) so every page that draws it has them. On a master they are drawn over the pages, so a keyboard user reaches them after the page's own controls, and their flows run from the master on whichever page is showing. If a page already has navigation of its own, adding it to its master too shows two sets: the message names those pages, and **Remove** on them keeps just the master's.
+
+## Named starting points
+While you build, **Starting points** (a section on the page, under **Page**) saves places worth jumping straight to: "From the quiz", "Straight to the summary". Select the page and press **Start here too**, then name it. **Preview**'s **From** list offers every one you've made, so testing one screen of a long sequence doesn't mean playing through to reach it.
+
+They change nothing a learner sees: what they open is still the **Start page**. Delete a page and its starting point stops being offered, and the row says so until you take it out.`,
   },
   {
     id: 'moving-the-view',
@@ -2967,6 +2992,117 @@ Settings that take an expression are worked out as a formula: see [Expressions](
 Two actions have more detail elsewhere. **Play sound** (volume, speed, loop, **Stop other sounds first**, music that carries across pages) and **Stop sound** are described under [Sound](captions#sound). **Change a value or counter** (with **Over (ms)** and **Easing**) and **Put values back to the start** are described in [Variables](variables).`;
       return [intro, section('Events', 'event'), section('Actions', 'action'), section('Logic', 'logic'), outro].join('\n\n');
     },
+  },
+  {
+    id: 'layer-states',
+    title: 'Layer states',
+    group: 'Design',
+    summary: 'Looks a layer takes on when it is hovered, pressed, focused, disabled, or whenever something is true.',
+    keywords: 'state states hover hovered press pressed active focus focused disabled correct right wrong picked selected highlight style variant rollover',
+    body: `A **state** is a look a layer takes on for a while: the colour a button goes when you hover it, the green a right answer turns, the grey a disabled control sits at. Without states, each of those is a ternary written into four or five separate bindings on the same layer. With them it's one row.
+
+**Add one:** select the layer, open **States** in the Properties panel and press **Add a state**. Pick **When** and set only the properties that change.
+
+**Buttons already respond.** Every button has a hover and a pressed look without you adding anything: a faint tint over its own colour, darker on a light button and lighter on a dark one. A hover or pressed state of your own replaces the tint, and a disabled button doesn't respond.
+
+## When a state is on
+- **Hovered**, **Pressed**, **Focused**: the layer's own pointer and keyboard. Hovering something *inside* it doesn't count. These need the piece to be running, so they show in **Preview** and in what you share, not on the canvas.
+- **Disabled**: the layer's own **Disabled** setting (buttons and inputs).
+- **When…**: on while an expression is true, such as \`item.state == "right"\` or \`picked == 3\`. Give it a **Name** so the list reads as it should. These show on the canvas too, so what you style is what you see.
+
+## What a state changes
+**Fill**, **Line** and **Text** are there from the start; **Also change** adds **Opacity**, **Scale W**, **Scale H** or **Radius**. Anything you leave alone keeps the layer's own value, so a hover state that only sets **Fill** changes nothing else.
+
+Colours can be [theme tokens](themes) like any other colour, so a state follows the theme instead of pinning a hex.
+
+## Several at once
+States are applied in the order they're listed, so a later one wins where two change the same thing. Put the general ones first and the specific ones last. The arrows move a state up or down.
+
+A state also beats a [binding](bindings) that sets the same property, so you can keep a binding for the normal look and let a state take over.
+
+**More:** [Bindings](bindings), [Expressions](expressions), [Themes and colour tokens](themes), [Questions and quizzes](question-kit) for the right/wrong marking a **When…** state usually reads.`,
+  },
+  {
+    id: 'accordions',
+    title: 'Accordions and tabs',
+    group: 'Interactivity',
+    summary: 'A frame whose sections open one at a time, or a row of tabs with one panel showing. No wiring.',
+    keywords: 'accordion accordions tabs tab strip panel panels sections collapse expand disclosure faq show hide one at a time toggle',
+    body: `An **accordion** is a stack of sections where opening one closes the others. **Tabs** are the same idea lying down: a row of headers with one panel showing. Both are a setting on a frame, so there is nothing to wire up.
+
+**Add one:** **Accordion** and **Tabs** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and both are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it on the open page. You get three sections and the variable that remembers which is open.
+
+## How a frame becomes one
+Turn on **Make this an accordion** in the frame's **Accordion** section. Then:
+
+- Each layer in the frame is a **section**. Its **first** layer is the header (the part you click) and everything after it is the panel.
+- **Open** is **One at a time** (the usual accordion, and what tabs need) or **Any number**.
+- **Keeps what's open in** is a variable: a number for one at a time (counting from 0, with -1 for none), a list for any number. Without one, nothing opens when you click.
+- **Clicking the open one closes it** lets an accordion close fully. Tabs leave it off.
+
+Because what's open is just a variable, anything else can read or change it: a **Next** button, a binding, a script, a [starting point](page-navigation#named-starting-points).
+
+## Tabs
+Set **Panels** to a layer inside the frame whose own layers are the panels. The frame's other children are then the headers alone, matched to the panels in order: first header, first panel. Lay the headers out in a row and that is a tab strip.
+
+## What you get for free
+Each header is marked up as a button that says whether it is expanded, so a screen reader reads "Section 2, button, expanded" without you setting anything. The panel of a closed section is hidden, so it is skipped by the keyboard too.
+
+**Good to know:** the editor canvas shows the first section open, whatever the variable says, so you can style the open and closed looks without playing it. [Layer states](layer-states) are the tidy way to make an open header look different.
+
+**More:** [Groups and frames](groups-frames), [Auto layout](auto-layout), [Variables](variables), [Layer states](layer-states).`,
+  },
+  {
+    id: 'overlays',
+    title: 'Tooltips, modals, confirmations and prompts',
+    group: 'Interactivity',
+    summary: 'Overlays: pages that belong to no screen, shown beside or over whatever layer points at them.',
+    keywords: 'overlay overlays dialog dialogue modal popup pop up prompt ask input type answer confirm confirmation are you sure tooltip tip hover hint balloon callout scrim backdrop target trigger side gap close escape',
+    body: `A **tooltip**, a **modal**, a **confirmation** and a **prompt** are all the same idea: a page that isn't a screen of its own, shown beside or over whatever points at it. The page is called an **overlay**.
+
+**Add one:** **Tooltip**, **Modal**, **Confirmation** and **Prompt** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and all four are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it, wired up. Pick the layer it belongs to first and it's pointed at that layer straight away; the new overlay page opens so you can write its words.
+
+## Target and trigger
+- The **target** is the layer the overlay belongs to: a tooltip appears beside it, and the link lives on it. It's whichever layer's **Overlay** section names the page.
+- The **trigger** is what makes it show. It's the target itself unless you pick another layer, so most of the time you set nothing.
+- To pick a trigger, choose it in the **Trigger** list, or press the button beside that list and click a layer on the canvas.
+
+That split is what lets a tooltip belong to a small icon while a much bigger area around it opens the tooltip.
+
+## The four kinds
+- **Tooltip.** Sits beside its target while the trigger is hovered or focused. **Side** chooses above, below, left or right, and **Wherever it fits** (the default) tries each in turn and keeps it on the page. **Gap** is the space between.
+  - It **fades** in and out. **Fade** is the **Project default** (the project's own transition time, **Page height time** in the project settings) or **Custom** with its own **Time**. A viewer whose device asks for less motion gets no fade.
+  - It has a **Tail**: a small triangle on the side facing the target, pointing at the middle of it, in the tooltip's own colour. It follows whichever side the tooltip ended up on. Untick **Tail** to go without.
+  - **Stays while you're on it** keeps it open when the pointer moves from the trigger onto the tooltip, with a moment's grace to cross the gap, so a link or a button inside it can be reached. Turn it off for a plain label that should go the moment you leave. <kbd>Esc</kbd> puts a tooltip away either way.
+- **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd> or a click outside closes it.
+- **Confirmation.** Asks a question and takes the answer from its buttons. The buttons are a **list**: add one by adding a row, rename one by changing its label, and mark the answer you mean with \`"main": true\` so it stands out from the ways out. Picking a button writes what it stands for into **What they chose** and closes it. A click outside doesn't dismiss a confirmation.
+- **Prompt.** Asks for something typed. **OK** keeps what was typed in **What they answered** and closes; **Cancel** closes and leaves the last answer alone. Read that variable, or start a flow when it changes.
+
+## Seeing what it's linked to
+An overlay lives on a page of its own, so the canvas draws its links for you. Open the overlay's page and a line runs from it to every layer it's linked to: a **solid blue** line to its **Target** (the layer a tooltip sits beside) and a **dashed gold** line to its **Trigger** (the layer that shows it), each with its word on it. Where the target is its own trigger there is one line, marked **Target and trigger**. A modal, a confirmation and a prompt aren't placed beside anything, so they show only what opens them.
+
+Select a layer that shows an overlay, or one that is a trigger, and the same lines are drawn from that overlay. They are never part of the piece: Preview and exports don't have them.
+
+## One overlay, many layers
+An overlay page is a definition, so any number of layers can point at the same one, each with its own **Side** and **Gap**. Its own section lists everything pointing at it, and clicking a row jumps to that layer.
+
+Each layer can also hand the overlay **its own words** as it opens. A modal, a confirmation and a prompt say what they take (**What it takes** on the overlay's page: a **Heading**, a **Message**, and for the last two a **For**), and those show as fields in the layer's **Overlay** section. So one confirmation can ask "Delete the photo?" from one button and "Leave the group?" from another.
+
+**For** is how you tell the answers apart: give each layer a word (\`photo\`, \`group\`), and the flow that reads **What they chose** can check **For** to see which layer asked. Add your own variables to **What it takes** and they become fields the same way.
+
+Overlays never appear in **Next** and **Previous**, never count in \`pageCount\`, and never make a page with [Fit height to content](artboards) any taller: they open over the page.
+
+## The card
+What those buttons make is a page holding one **card**: a single frame with the overlay's look on it (its rounded corners, border, shadow and padding). When an overlay page holds just one frame like that, the card *is* the overlay: it's shown at the card's own size, and the page round it is only somewhere to design it.
+
+The card uses [auto layout](auto-layout), so it sizes itself to what's in it. A tooltip's words stay on one line up to 260 wide and wrap after that, with the card hugging them. A modal's buttons sit under its message, so a longer message pushes them down rather than running into them.
+
+Put more than one layer straight on the page and the whole page is the overlay instead, at the page's size.
+
+## Changing what's in one
+An overlay page holds ordinary layers, timelines and interactions, so everything you know works there: repeated lists and bindings included. A modal's **Close** button is a plain **Set variable** on the page's own showing variable, which is also what <kbd>Esc</kbd> turns off.
+
+**More:** [Pages](artboards), [Interactions](interactions), [Variables](variables), [Accessibility](accessibility).`,
   },
   {
     id: 'question-kit',
@@ -4204,7 +4340,14 @@ Pick the **Progress bar** tool (in the **Data** group of the tool bar, which sta
 
 ## Where it works
 
-Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page. They are **not** part of a Lottie export (the export lists them as left out).`,
+Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page. They are **not** part of a Lottie export (the export lists them as left out).
+
+## A shader as a fill
+A shader doesn't have to be a layer of its own. In any **Fill** picker, choose **Shader** and pick one of the starter shaders: the layer is painted with it, clipped by its corner radius, and the sliders under the picker are that shader's own controls. Rectangles, ellipses, frames, buttons and progress bars all take one.
+
+The layer's plain fill shows until the shader has drawn, and comes back if it fails, so nothing is ever a blank box. **Animate on the canvas** keeps it moving while you edit; left off you get one still frame, which keeps the editor quick.
+
+Use a shader layer instead when you want to write the code, pick your own uniforms, or feed it a picture.`,
   },
   {
     id: 'charts',
@@ -4343,7 +4486,7 @@ The **Broken** group lists references that point at something that has been dele
     title: 'Themes and colour tokens',
     group: 'Design',
     summary: 'Name a colour once, give it a value for Light, Dark and High contrast, and let layers follow it.',
-    keywords: 'link colours to tokens fixed plain colours switch does nothing theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast',
+    keywords: 'link colours to tokens fixed plain colours switch does nothing theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast number words text density compact spacing language translation mode modes',
     body: `![The Themes tab: the starter tokens down the side with their Light, Dark and High contrast colours, and the contrast check.](help/themes-panel.png)
 
 A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark or High contrast) is a column of values for those names.
@@ -4378,7 +4521,7 @@ Open the **Themes** tab (bottom panel). For a project without themes, **Add Ligh
 The starter tokens are:
 - **color/background**, **color/surface** and **color/surface-muted** are the page, a card and a hover or quiet grey. **color/text** and **color/muted** are the copy on them.
 - **color/button** and **color/on-button** are the gold button and its black label. **color/primary** and **color/on-primary** are the accent for selections, which in the toolbox is the same gold. **color/link** is the toolbox's hyperlink blue, used by new Link layers.
-- **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus ring. The ring is two tones: this colour, with a thin black or white halo either side of it (whichever is further from it, worked out for you), so it stays visible on a white page, a gradient and a dark panel alike. You only choose the one colour.
+- **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus outline on dark items. The outline is a 1 px line tight round the focused item: near black (the palette's grey 7) on a light item, this colour on a dark one.
 - **color/success**, **color/error** and **color/warning** each come with a **-surface** tint, for the right, wrong and missed answers.
 
 ### Toolbox colours follow the shared palette
@@ -4401,6 +4544,17 @@ Dark and High contrast are built for contrast. They take their colours from the 
 
 ## Using a token
 In any colour picker in the inspector, open the arrow beside the swatch and choose the **Tokens** tab. Pick a token and the swatch shows a ring and link badge, and a one-line named chip replaces the hex box. Hover the chip to read the token's value in each theme. The **x** on the chip **detaches** it: the colour as it is now stays, as a plain colour. Choosing any other colour does the same.
+
+## Tokens that hold a number or some words
+A token's **kind**, beside its name in the Themes panel, is **Colour**, **Number** or **Words**. The last two aren't used as colours; expressions read them with \`token('its/name')\`, and they give whatever the theme being shown says.
+
+That turns a theme into any set of values you want to swap in one go:
+
+- **Density.** A \`space/gap\` number token, 24 in **Roomy** and 8 in **Compact**. Bind a frame's **Gap** to \`token('space/gap')\` and the whole layout tightens when the theme changes.
+- **Language.** A \`ui/next\` words token, *Next* in one theme and *Suivant* in another. A text layer reading \`{token('ui/next')}\` follows it, and so does every other label you set up the same way.
+- Anything else a theme should carry: a number of columns, a line of wording, a duration.
+
+A theme with nothing of its own for a token uses the default theme's, the same as a colour does. Change a token's kind and its palette link goes, since a number isn't a colour.
 
 ## When switching the theme changes nothing
 A theme can only change a colour that follows a token. A project built with plain colours (an imported file, or one made before the themes were added) has nothing to change, so the Light, Dark and High contrast switches, on the canvas, in Preview and in the Themes tab, all look the same. When that is the case you see a line, **Nothing here follows the theme: these colours are fixed**, with a **Link colours to tokens** button.
@@ -5866,7 +6020,7 @@ What you may notice:
 - A button's edge is an outline in its label colour (gold buttons in Purple have a dark one).
 - Selected outlines, bars and chart marks use the **primary** colour (purple in Purple). The button colour is kept for fills with a label on them.
 
-The keyboard focus ring is two tones, so it holds 3:1 everywhere, and there is nothing to choose. It is the **color/focus** colour (3 px) with a 2 px halo of black or white either side of it, whichever is further from that colour (white round Purple's and Blue's dark ring, black round a gold one). Whatever is behind a control, one of the two tones stands clear of it: the colour itself on the white pages, the halo on the dark ends of the Blue, Green and Purple gradients and on deep panels.
+The keyboard focus outline is a 1 px line tight round the focused item, the way the toolbox draws its own: near black (grey 7) round a light item, the **color/focus** colour round a dark one. Round a dark item on a pale page the gold line is faint against the page itself (under 3:1), and the item's own dark edge is what marks it.
 
 ## What is locked, and why
 Branded projects are held to the brand so every activity looks like it came from the same place, whoever writes it.

@@ -1,6 +1,6 @@
 import { noteLayerFault } from './analytics';
 import { useSyncExternalStore } from 'react';
-import { ShaderLayer, shaderSpec, type ImageNode, type Project, type SceneNode, type ShaderMount, type ShaderNode, type ShaderProblem } from 'interactives-player';
+import { ShaderLayer, shaderSpec, type Project, type SceneNode, type ShaderMount, type ShaderProblem } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /** What went wrong in each shader (by layer id), for the inspector. */
@@ -45,7 +45,7 @@ export function useShaderProblem(id: string): ShaderEditProblem | undefined {
 
 export interface EditorShader {
   /** The renderer's `mountShader`. */
-  mount: (node: ShaderNode | ImageNode, canvas: HTMLCanvasElement) => ShaderMount | null;
+  mount: (node: SceneNode, canvas: HTMLCanvasElement) => ShaderMount | null;
   /** The time to paint stills at (seconds into the active timeline, or 0) and a number that changes when loaded assets do. Set before rendering. */
   configure(time: number, epoch: string | number): void;
   dispose(): void;

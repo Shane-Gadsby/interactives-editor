@@ -17,6 +17,8 @@ import { BUILT_IN, applyWorkspace, savedWorkspaces } from './workspaces';
 import { lookDefaults } from './themes';
 import { fontStack } from './font-catalog';
 import { addQuestion } from './question-kit';
+import { DIALOG_KINDS, addDialog } from './dialog-kit';
+import { addAccordion } from './accordion-kit';
 import { addPageNavigation } from './page-nav';
 import { setShowRoutes, showRoutes } from './page-routes-pref';
 import { openBehaviours } from '../components/BehaviourDialog';
@@ -191,6 +193,41 @@ export function buildCommands(): Command[] {
       },
     });
   }
+  //---- Dialogs
+  for (const k of DIALOG_KINDS) {
+    add({
+      id: `dialog:${k.value}`,
+      title: `Add a ${k.label.toLowerCase()}`,
+      group: 'Add',
+      words: `dialog modal popup overlay prompt confirm confirmation ask input tooltip hint ${k.hint}`,
+      disabled: noPage,
+      run: () => {
+        const target = s.get().selection[0] ?? null;
+        let made: { overlayId: string; linked: string | null } | null = null;
+        s.update((d) => void (made = addDialog(d, k.value, { targetId: target, artboardId: ab!.id })));
+        if (made) s.set({ activeArtboardId: (made as { overlayId: string }).overlayId, artboardSelected: true, selection: [] });
+      },
+    });
+  }
+
+  for (const k of [
+    { id: 'accordion', title: 'Add an accordion', words: 'collapse expand sections disclosure faq' },
+    { id: 'tabs', title: 'Add tabs', words: 'tab strip panels switch' },
+  ] as const) {
+    add({
+      id: `accordion:${k.id}`,
+      title: k.title,
+      group: 'Add',
+      words: k.words,
+      disabled: noPage,
+      run: () => {
+        let id: string | null = null;
+        s.update((d) => void (id = addAccordion(d, ab!.id, k.id === 'tabs' ? 'tabs' : 'accordion')));
+        if (id) s.select([id], { artboardId: ab!.id });
+      },
+    });
+  }
+
   add({ id: 'question:paste', title: 'Paste questions from Word or Excel', group: 'Questions', words: 'import quiz table spreadsheet docx xlsx csv', run: openPasteQuestions });
   add({ id: 'question:gift', title: 'Import questions from a GIFT file', group: 'Questions', words: 'moodle quiz', run: () => void importGiftFile() });
 

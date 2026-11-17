@@ -4185,7 +4185,44 @@ function sanitizeNode(raw, seen) {
     }
   }
   if ("cornerRadii" in n && !(Array.isArray(n.cornerRadii) && n.cornerRadii.length === 4 && n.cornerRadii.every(isNum))) delete n.cornerRadii;
-  for (const k of ["mask", "locked", "noAssist", "noPaste"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  for (const k of ["mask", "locked", "noAssist", "noPaste", "hugIgnore"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  if ("overlay" in n && n.overlay !== null) {
+    const o = n.overlay;
+    if (!isObj$1(o) || !isStr(o.overlayId)) delete n.overlay;
+    else {
+      const out = { overlayId: o.overlayId };
+      if (isStr(o.trigger) && o.trigger) out.trigger = o.trigger;
+      if (isStr(o.side) && ["auto", "top", "right", "bottom", "left"].includes(o.side)) out.side = o.side;
+      if (isNum(o.offset)) out.offset = o.offset;
+      if (isObj$1(o.inputs)) {
+        const vals = Object.fromEntries(Object.entries(o.inputs).filter(([, v]) => isNum(v) || isStr(v) || typeof v === "boolean"));
+        if (Object.keys(vals).length) out.inputs = vals;
+      }
+      n.overlay = out;
+    }
+  }
+  if ("disclosure" in n && n.disclosure !== null) {
+    const o = n.disclosure;
+    if (!isObj$1(o) || !["one", "many"].includes(o.open)) delete n.disclosure;
+    else {
+      const out = { open: o.open };
+      if (isStr(o.variable) && o.variable) out.variable = o.variable;
+      if (o.toggle === true && o.open === "one") out.toggle = true;
+      if (isStr(o.panels) && o.panels) out.panels = o.panels;
+      n.disclosure = out;
+    }
+  }
+  if ("states" in n) {
+    const list2 = Array.isArray(n.states) ? n.states : [];
+    const clean2 = list2.filter(isObj$1).filter((st) => isStr(st.when) && ["hover", "pressed", "focus", "disabled", "expr"].includes(st.when)).map((st) => {
+      const out = { id: isStr(st.id) && st.id ? st.id : `st${Math.random().toString(36).slice(2, 9)}`, when: st.when, props: isObj$1(st.props) ? st.props : {} };
+      if (isStr(st.name) && st.name) out.name = st.name;
+      if (st.when === "expr" && isStr(st.expr)) out.expr = st.expr;
+      return out;
+    });
+    if (clean2.length) n.states = clean2;
+    else delete n.states;
+  }
   if ("maskMode" in n && !["alpha", "inverted", "luminance", "invertedLuminance"].includes(n.maskMode)) delete n.maskMode;
   for (const k of ["blur", "fontWeight"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
   for (const k of ["blendMode", "cursor", "ariaLabel", "ariaDescription", "sayAs", "className"]) if (k in n && !isStr(n[k])) delete n[k];
@@ -4382,6 +4419,23 @@ function paint(v) {
     }
     case "image":
       return isStr(v.assetId) ? fx(v) : null;
+    case "shader": {
+      if (!isStr(v.preset)) return null;
+      const out = { ...v };
+      if ("uniforms" in out) {
+        const src = isObj$1(out.uniforms) ? out.uniforms : {};
+        const clean2 = {};
+        for (const [k, val2] of Object.entries(src)) {
+          if (isNum(val2)) clean2[k] = val2;
+          else if (Array.isArray(val2) && val2.length && val2.every(isNum)) clean2[k] = val2;
+        }
+        if (Object.keys(clean2).length) out.uniforms = clean2;
+        else delete out.uniforms;
+      }
+      if ("fps" in out && !isNum(out.fps)) delete out.fps;
+      if ("animateInEditor" in out && typeof out.animateInEditor !== "boolean") delete out.animateInEditor;
+      return fx(out);
+    }
     default:
       return null;
   }
@@ -5364,7 +5418,8 @@ function contentBottom(nodes) {
   let bottom = null;
   const visit = (list2, parent) => {
     for (const n of list2) {
-      if (n.visible === false || n.mask) continue;
+      if (n.visible === false || n.mask || n.hugIgnore) continue;
+      if (n.type === "frame" && n.dialog) continue;
       const m = multiply(parent, nodeMatrix(n));
       const corners = [apply(m, 0, 0), apply(m, n.width, 0), apply(m, n.width, n.height), apply(m, 0, n.height)];
       const own = Math.max(...corners.map((p) => p.y));
@@ -8087,6 +8142,17 @@ function flowChildren(frame) {
   if (frame.layout?.reverse) flow.reverse();
   return flow;
 }
+function clampToLayout(n, key, v) {
+  if (key !== "width" && key !== "height") return v;
+  const L2 = n.type === "frame" ? n.layout : null;
+  if (!L2) return v;
+  const lo = key === "width" ? L2.minWidth : L2.minHeight;
+  const hi = key === "width" ? L2.maxWidth : L2.maxHeight;
+  let out = v;
+  if (typeof hi === "number" && Number.isFinite(hi)) out = Math.min(out, Math.max(0, hi));
+  if (typeof lo === "number" && Number.isFinite(lo)) out = Math.max(out, Math.max(0, lo));
+  return out;
+}
 function hugsAxis(frame, axis) {
   const L2 = frame.layout;
   if (!L2) return false;
@@ -8160,7 +8226,7 @@ function layoutCore(frame, sized) {
   const pad = L2.padding;
   let changed = false;
   const set = (n, key, v) => {
-    const r3 = Math.round(v * 100) / 100;
+    const r3 = Math.round(clampToLayout(n, key, v) * 100) / 100;
     if (Number.isFinite(r3) && n[key] !== r3) {
       n[key] = r3;
       changed = true;
@@ -8542,6 +8608,7 @@ function countLayoutFrames(nodes) {
 }
 const PLAYER_SCOPE_HINTS = {
   reducedMotion: { type: "true/false", hint: "The viewer's device asks for less motion" },
+  token: { type: "function", hint: "token('space/gap'): a number or text theme token, in the theme being shown" },
   voiceAvailable: { type: "true/false", hint: "A voice on this device can read the project aloud" },
   speaking: { type: "true/false", hint: "A voice is reading right now" },
   readRate: { type: "number", hint: "The learner's chosen reading speed" },
@@ -23447,6 +23514,8 @@ Turn on **Fit height to content** in the **Page** section and the page is as tal
 
 - **Space below** keeps some room under the lowest layer.
 - A hidden layer, a mask, and anything inside a frame that clips or scrolls (past the frame's own edge) take no room.
+- A **dialog** takes no room either. Dialogs open over the page, so opening one never makes the page (or the StudyDesk embed) taller. One taller than the page keeps the page the height it was, so give that dialog its own scrolling.
+- Any other layer can be left out the same way: turn on **Not counted in the page height** in its **Layer** section. That's for toasts, tooltips and anything else that floats on top.
 - **Animate height changes** eases the page to its new height instead of jumping. **Duration** is the **Project default** (**Page height time** in the project settings, 300 ms unless you change it) or **Custom**, with its own **Time**. A viewer whose device asks for less motion always gets the jump. The first height, as the page opens, never animates.
 
 ## Selecting several pages
@@ -24089,7 +24158,7 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
     title: "Auto layout",
     group: "Design",
     summary: "Frames that arrange their children in rows, columns, grids or stacks, with fill, hug and percent sizes, grow, margins and aspect ratios.",
-    keywords: "flex flexbox grid row column stack gap padding justify align wrap hug fill percent absolute responsive grow basis aspect ratio margin auto cell span layout item",
+    keywords: "flex flexbox grid row column stack gap padding justify align wrap hug fill percent absolute responsive grow basis aspect ratio margin auto cell span layout item min max width height limit smallest largest cap clamp",
     body: `Turn on **Auto layout** on a frame and its children are placed for you, like CSS flexbox.
 
 | Setting | Meaning |
@@ -24120,6 +24189,11 @@ A percent is worked out again on every layout, so it follows the frame as it is 
 ![The Auto layout section of a frame with the Gap switched to a percent: the small button at the right of the field says % and shows px again when pressed.](help/layout-percent.png)
 
 A frame that hugs its width measures a percent against the width it had before the layout ran, so it settles in a pass or two rather than chasing itself. Percent **sizes** of a layer are separate (see *Percent* under child sizing); a track in a grid can be a percent too.
+
+## Size limits
+**Min W**, **Max W**, **Min H** and **Max H** hold the frame's own size, whoever decides it: hugging its content, filling its parent, or being stretched by it. Leave one empty for no limit.
+
+A box that grows with its text but never gets wider than 480 is **Hug width** on with **Max W** 480. A sidebar that fills what's left but never gets narrower than 240 is **Min W** 240. If you set a min above a max the min wins, so a frame is never given a negative size.
 
 ## Grids and stacks
 Set **Layout** to **Grid** to put the children in the cells of a table instead of along a line, or to **Stack** to put them all on top of each other.
@@ -24375,7 +24449,7 @@ Pictures (PNG, SVG, PDF, animated GIF), thumbnails, the single-file export, \`.i
     title: "Instances (components)",
     group: "Design",
     summary: "Place one artboard inside another, with its own timelines, interactions and inputs.",
-    keywords: "component nested artboard reuse symbol instance inputs",
+    keywords: "component nested artboard reuse symbol instance inputs fit height content grow shrink hug properties props what it takes settings fields json declare",
     body: `Any page can be placed inside another as a **component**. The layer it makes is called an **instance**, and the Inspector shows it as **Component**. It is a live copy that runs its own timelines and interactions on the parent's clock. Edit the source page and every instance updates.
 
 ## Placing a component
@@ -24390,10 +24464,23 @@ A component bigger than the page it goes on is shrunk to fit. Pages that would c
 
 ## Settings on an instance
 - **Fit** decides how the page sits in the instance's box: **Stretch to the box**, **Contain**, **Cover** or **Actual size, centred**.
+- **Fit to page content** is the fifth, and it only shows when the source page has [Fit height to content](artboards) on. The box keeps the width you give it, and its height follows whatever the page inside needs while the project plays: a dialog's text growing, a tooltip opening, a list filling from data. It eases if the source page does (**Animate height changes**), so there's one movement, not two. The height typed on the instance layer is ignored while this is on.
 - **Reset size** puts the box back to the page's own size.
 - **Edit** followed by the page's name jumps to the source page.
-- **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. Write them as JSON, such as \`{"level": 3}\`.
+- **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. If the source page says what it takes (below), those come first as ordinary fields and this box is only for anything else. Write it as JSON, such as \`{"level": 3}\`.
 - Messages sent inside an instance (**Send message**, \`ix.emit\`) bubble up to the parent.
+
+## What the component takes
+A page's variables are already its settings. **What it takes** (a section on the page, under **Page**) says which of them an instance may set, so every instance shows proper fields instead of a box of JSON.
+
+- Pick a variable under **Add**. It joins the list.
+- **Name** is what the instance calls it. Leave it empty and it uses the variable's own name.
+- **Hint** is a line under the field saying what it does.
+- The arrows move a setting up or down; the bin takes it off the list again.
+
+The variable's own type decides the field: a number gets a number box, a true/false gets a tick, a colour gets the colour picker, and a variable with choices on it gets a dropdown of those choices. Every field starts on **The page's own value**, so an instance only carries what you actually changed.
+
+The section only shows once the page is used somewhere as a component, or once it already takes something.
 
 ## Steering an instance while it plays
 The parent can change an instance while the project plays.
@@ -24675,7 +24762,7 @@ In a script, \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer nam
     title: "Page navigation",
     group: "Interactivity",
     summary: "Back, Next, the page number, page dots and a progress bar along the bottom of your pages, in one click.",
-    keywords: "next back previous page number progress bar dots navigation buttons pages 3 of 8 bottom bar go to next artboard generate",
+    keywords: "next back previous page number progress bar dots navigation buttons pages 3 of 8 bottom bar go to next artboard generate flow flows starting point start here preview from jump",
     body: `Every piece with more than one page needs **Next** and **Back**, and often "Page 3 of 8". Select a page and open **Page navigation** in the properties panel (or select several pages and open it there), pick a style and press **Add to this page**, **Add to these pages** or **Add to all pages**. If your pages share a [page master](page-master), select the master instead and press **Add to this master**: one set of buttons for every page that draws it.
 
 - **Back and Next**: Back on the left, Next (the main button) on the right and *Page 3 of 8* between them.
@@ -24694,7 +24781,12 @@ Page dots are drawn for the number of pages there are now: press **Add** again a
 **How the page changes**, above the buttons, is the look Back and Next use (a fade unless you choose another), and **Speed** under it is how long that takes. Both are written into the **Go to a page** nodes, where you can change them afterwards. The looks and speeds are listed in [How the page changes](links-cursors#how-the-page-changes).
 
 ## Where it goes
-Buttons can go on the page itself, or once on a [page master](page-master) so every page that draws it has them. On a master they are drawn over the pages, so a keyboard user reaches them after the page's own controls, and their flows run from the master on whichever page is showing. If a page already has navigation of its own, adding it to its master too shows two sets: the message names those pages, and **Remove** on them keeps just the master's.`
+Buttons can go on the page itself, or once on a [page master](page-master) so every page that draws it has them. On a master they are drawn over the pages, so a keyboard user reaches them after the page's own controls, and their flows run from the master on whichever page is showing. If a page already has navigation of its own, adding it to its master too shows two sets: the message names those pages, and **Remove** on them keeps just the master's.
+
+## Named starting points
+While you build, **Starting points** (a section on the page, under **Page**) saves places worth jumping straight to: "From the quiz", "Straight to the summary". Select the page and press **Start here too**, then name it. **Preview**'s **From** list offers every one you've made, so testing one screen of a long sequence doesn't mean playing through to reach it.
+
+They change nothing a learner sees: what they open is still the **Start page**. Delete a page and its starting point stops being offered, and the row says so until you take it out.`
   },
   {
     id: "moving-the-view",
@@ -25594,6 +25686,117 @@ Settings that take an expression are worked out as a formula: see [Expressions](
 Two actions have more detail elsewhere. **Play sound** (volume, speed, loop, **Stop other sounds first**, music that carries across pages) and **Stop sound** are described under [Sound](captions#sound). **Change a value or counter** (with **Over (ms)** and **Easing**) and **Put values back to the start** are described in [Variables](variables).`;
       return [intro, section("Events", "event"), section("Actions", "action"), section("Logic", "logic"), outro].join("\n\n");
     }
+  },
+  {
+    id: "layer-states",
+    title: "Layer states",
+    group: "Design",
+    summary: "Looks a layer takes on when it is hovered, pressed, focused, disabled, or whenever something is true.",
+    keywords: "state states hover hovered press pressed active focus focused disabled correct right wrong picked selected highlight style variant rollover",
+    body: `A **state** is a look a layer takes on for a while: the colour a button goes when you hover it, the green a right answer turns, the grey a disabled control sits at. Without states, each of those is a ternary written into four or five separate bindings on the same layer. With them it's one row.
+
+**Add one:** select the layer, open **States** in the Properties panel and press **Add a state**. Pick **When** and set only the properties that change.
+
+**Buttons already respond.** Every button has a hover and a pressed look without you adding anything: a faint tint over its own colour, darker on a light button and lighter on a dark one. A hover or pressed state of your own replaces the tint, and a disabled button doesn't respond.
+
+## When a state is on
+- **Hovered**, **Pressed**, **Focused**: the layer's own pointer and keyboard. Hovering something *inside* it doesn't count. These need the piece to be running, so they show in **Preview** and in what you share, not on the canvas.
+- **Disabled**: the layer's own **Disabled** setting (buttons and inputs).
+- **When…**: on while an expression is true, such as \`item.state == "right"\` or \`picked == 3\`. Give it a **Name** so the list reads as it should. These show on the canvas too, so what you style is what you see.
+
+## What a state changes
+**Fill**, **Line** and **Text** are there from the start; **Also change** adds **Opacity**, **Scale W**, **Scale H** or **Radius**. Anything you leave alone keeps the layer's own value, so a hover state that only sets **Fill** changes nothing else.
+
+Colours can be [theme tokens](themes) like any other colour, so a state follows the theme instead of pinning a hex.
+
+## Several at once
+States are applied in the order they're listed, so a later one wins where two change the same thing. Put the general ones first and the specific ones last. The arrows move a state up or down.
+
+A state also beats a [binding](bindings) that sets the same property, so you can keep a binding for the normal look and let a state take over.
+
+**More:** [Bindings](bindings), [Expressions](expressions), [Themes and colour tokens](themes), [Questions and quizzes](question-kit) for the right/wrong marking a **When…** state usually reads.`
+  },
+  {
+    id: "accordions",
+    title: "Accordions and tabs",
+    group: "Interactivity",
+    summary: "A frame whose sections open one at a time, or a row of tabs with one panel showing. No wiring.",
+    keywords: "accordion accordions tabs tab strip panel panels sections collapse expand disclosure faq show hide one at a time toggle",
+    body: `An **accordion** is a stack of sections where opening one closes the others. **Tabs** are the same idea lying down: a row of headers with one panel showing. Both are a setting on a frame, so there is nothing to wire up.
+
+**Add one:** **Accordion** and **Tabs** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and both are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it on the open page. You get three sections and the variable that remembers which is open.
+
+## How a frame becomes one
+Turn on **Make this an accordion** in the frame's **Accordion** section. Then:
+
+- Each layer in the frame is a **section**. Its **first** layer is the header (the part you click) and everything after it is the panel.
+- **Open** is **One at a time** (the usual accordion, and what tabs need) or **Any number**.
+- **Keeps what's open in** is a variable: a number for one at a time (counting from 0, with -1 for none), a list for any number. Without one, nothing opens when you click.
+- **Clicking the open one closes it** lets an accordion close fully. Tabs leave it off.
+
+Because what's open is just a variable, anything else can read or change it: a **Next** button, a binding, a script, a [starting point](page-navigation#named-starting-points).
+
+## Tabs
+Set **Panels** to a layer inside the frame whose own layers are the panels. The frame's other children are then the headers alone, matched to the panels in order: first header, first panel. Lay the headers out in a row and that is a tab strip.
+
+## What you get for free
+Each header is marked up as a button that says whether it is expanded, so a screen reader reads "Section 2, button, expanded" without you setting anything. The panel of a closed section is hidden, so it is skipped by the keyboard too.
+
+**Good to know:** the editor canvas shows the first section open, whatever the variable says, so you can style the open and closed looks without playing it. [Layer states](layer-states) are the tidy way to make an open header look different.
+
+**More:** [Groups and frames](groups-frames), [Auto layout](auto-layout), [Variables](variables), [Layer states](layer-states).`
+  },
+  {
+    id: "overlays",
+    title: "Tooltips, modals, confirmations and prompts",
+    group: "Interactivity",
+    summary: "Overlays: pages that belong to no screen, shown beside or over whatever layer points at them.",
+    keywords: "overlay overlays dialog dialogue modal popup pop up prompt ask input type answer confirm confirmation are you sure tooltip tip hover hint balloon callout scrim backdrop target trigger side gap close escape",
+    body: `A **tooltip**, a **modal**, a **confirmation** and a **prompt** are all the same idea: a page that isn't a screen of its own, shown beside or over whatever points at it. The page is called an **overlay**.
+
+**Add one:** **Tooltip**, **Modal**, **Confirmation** and **Prompt** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and all four are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it, wired up. Pick the layer it belongs to first and it's pointed at that layer straight away; the new overlay page opens so you can write its words.
+
+## Target and trigger
+- The **target** is the layer the overlay belongs to: a tooltip appears beside it, and the link lives on it. It's whichever layer's **Overlay** section names the page.
+- The **trigger** is what makes it show. It's the target itself unless you pick another layer, so most of the time you set nothing.
+- To pick a trigger, choose it in the **Trigger** list, or press the button beside that list and click a layer on the canvas.
+
+That split is what lets a tooltip belong to a small icon while a much bigger area around it opens the tooltip.
+
+## The four kinds
+- **Tooltip.** Sits beside its target while the trigger is hovered or focused. **Side** chooses above, below, left or right, and **Wherever it fits** (the default) tries each in turn and keeps it on the page. **Gap** is the space between.
+  - It **fades** in and out. **Fade** is the **Project default** (the project's own transition time, **Page height time** in the project settings) or **Custom** with its own **Time**. A viewer whose device asks for less motion gets no fade.
+  - It has a **Tail**: a small triangle on the side facing the target, pointing at the middle of it, in the tooltip's own colour. It follows whichever side the tooltip ended up on. Untick **Tail** to go without.
+  - **Stays while you're on it** keeps it open when the pointer moves from the trigger onto the tooltip, with a moment's grace to cross the gap, so a link or a button inside it can be reached. Turn it off for a plain label that should go the moment you leave. <kbd>Esc</kbd> puts a tooltip away either way.
+- **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd> or a click outside closes it.
+- **Confirmation.** Asks a question and takes the answer from its buttons. The buttons are a **list**: add one by adding a row, rename one by changing its label, and mark the answer you mean with \`"main": true\` so it stands out from the ways out. Picking a button writes what it stands for into **What they chose** and closes it. A click outside doesn't dismiss a confirmation.
+- **Prompt.** Asks for something typed. **OK** keeps what was typed in **What they answered** and closes; **Cancel** closes and leaves the last answer alone. Read that variable, or start a flow when it changes.
+
+## Seeing what it's linked to
+An overlay lives on a page of its own, so the canvas draws its links for you. Open the overlay's page and a line runs from it to every layer it's linked to: a **solid blue** line to its **Target** (the layer a tooltip sits beside) and a **dashed gold** line to its **Trigger** (the layer that shows it), each with its word on it. Where the target is its own trigger there is one line, marked **Target and trigger**. A modal, a confirmation and a prompt aren't placed beside anything, so they show only what opens them.
+
+Select a layer that shows an overlay, or one that is a trigger, and the same lines are drawn from that overlay. They are never part of the piece: Preview and exports don't have them.
+
+## One overlay, many layers
+An overlay page is a definition, so any number of layers can point at the same one, each with its own **Side** and **Gap**. Its own section lists everything pointing at it, and clicking a row jumps to that layer.
+
+Each layer can also hand the overlay **its own words** as it opens. A modal, a confirmation and a prompt say what they take (**What it takes** on the overlay's page: a **Heading**, a **Message**, and for the last two a **For**), and those show as fields in the layer's **Overlay** section. So one confirmation can ask "Delete the photo?" from one button and "Leave the group?" from another.
+
+**For** is how you tell the answers apart: give each layer a word (\`photo\`, \`group\`), and the flow that reads **What they chose** can check **For** to see which layer asked. Add your own variables to **What it takes** and they become fields the same way.
+
+Overlays never appear in **Next** and **Previous**, never count in \`pageCount\`, and never make a page with [Fit height to content](artboards) any taller: they open over the page.
+
+## The card
+What those buttons make is a page holding one **card**: a single frame with the overlay's look on it (its rounded corners, border, shadow and padding). When an overlay page holds just one frame like that, the card *is* the overlay: it's shown at the card's own size, and the page round it is only somewhere to design it.
+
+The card uses [auto layout](auto-layout), so it sizes itself to what's in it. A tooltip's words stay on one line up to 260 wide and wrap after that, with the card hugging them. A modal's buttons sit under its message, so a longer message pushes them down rather than running into them.
+
+Put more than one layer straight on the page and the whole page is the overlay instead, at the page's size.
+
+## Changing what's in one
+An overlay page holds ordinary layers, timelines and interactions, so everything you know works there: repeated lists and bindings included. A modal's **Close** button is a plain **Set variable** on the page's own showing variable, which is also what <kbd>Esc</kbd> turns off.
+
+**More:** [Pages](artboards), [Interactions](interactions), [Variables](variables), [Accessibility](accessibility).`
   },
   {
     id: "question-kit",
@@ -26828,7 +27031,14 @@ Pick the **Progress bar** tool (in the **Data** group of the tool bar, which sta
 
 ## Where it works
 
-Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page. They are **not** part of a Lottie export (the export lists them as left out).`
+Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of a page. They are **not** part of a Lottie export (the export lists them as left out).
+
+## A shader as a fill
+A shader doesn't have to be a layer of its own. In any **Fill** picker, choose **Shader** and pick one of the starter shaders: the layer is painted with it, clipped by its corner radius, and the sliders under the picker are that shader's own controls. Rectangles, ellipses, frames, buttons and progress bars all take one.
+
+The layer's plain fill shows until the shader has drawn, and comes back if it fails, so nothing is ever a blank box. **Animate on the canvas** keeps it moving while you edit; left off you get one still frame, which keeps the editor quick.
+
+Use a shader layer instead when you want to write the code, pick your own uniforms, or feed it a picture.`
   },
   {
     id: "charts",
@@ -26967,7 +27177,7 @@ The **Broken** group lists references that point at something that has been dele
     title: "Themes and colour tokens",
     group: "Design",
     summary: "Name a colour once, give it a value for Light, Dark and High contrast, and let layers follow it.",
-    keywords: "link colours to tokens fixed plain colours switch does nothing theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast",
+    keywords: "link colours to tokens fixed plain colours switch does nothing theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast number words text density compact spacing language translation mode modes",
     body: `![The Themes tab: the starter tokens down the side with their Light, Dark and High contrast colours, and the contrast check.](help/themes-panel.png)
 
 A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark or High contrast) is a column of values for those names.
@@ -27002,7 +27212,7 @@ Open the **Themes** tab (bottom panel). For a project without themes, **Add Ligh
 The starter tokens are:
 - **color/background**, **color/surface** and **color/surface-muted** are the page, a card and a hover or quiet grey. **color/text** and **color/muted** are the copy on them.
 - **color/button** and **color/on-button** are the gold button and its black label. **color/primary** and **color/on-primary** are the accent for selections, which in the toolbox is the same gold. **color/link** is the toolbox's hyperlink blue, used by new Link layers.
-- **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus ring. The ring is two tones: this colour, with a thin black or white halo either side of it (whichever is further from it, worked out for you), so it stays visible on a white page, a gradient and a dark panel alike. You only choose the one colour.
+- **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus outline on dark items. The outline is a 1 px line tight round the focused item: near black (the palette's grey 7) on a light item, this colour on a dark one.
 - **color/success**, **color/error** and **color/warning** each come with a **-surface** tint, for the right, wrong and missed answers.
 
 ### Toolbox colours follow the shared palette
@@ -27025,6 +27235,17 @@ Dark and High contrast are built for contrast. They take their colours from the 
 
 ## Using a token
 In any colour picker in the inspector, open the arrow beside the swatch and choose the **Tokens** tab. Pick a token and the swatch shows a ring and link badge, and a one-line named chip replaces the hex box. Hover the chip to read the token's value in each theme. The **x** on the chip **detaches** it: the colour as it is now stays, as a plain colour. Choosing any other colour does the same.
+
+## Tokens that hold a number or some words
+A token's **kind**, beside its name in the Themes panel, is **Colour**, **Number** or **Words**. The last two aren't used as colours; expressions read them with \`token('its/name')\`, and they give whatever the theme being shown says.
+
+That turns a theme into any set of values you want to swap in one go:
+
+- **Density.** A \`space/gap\` number token, 24 in **Roomy** and 8 in **Compact**. Bind a frame's **Gap** to \`token('space/gap')\` and the whole layout tightens when the theme changes.
+- **Language.** A \`ui/next\` words token, *Next* in one theme and *Suivant* in another. A text layer reading \`{token('ui/next')}\` follows it, and so does every other label you set up the same way.
+- Anything else a theme should carry: a number of columns, a line of wording, a duration.
+
+A theme with nothing of its own for a token uses the default theme's, the same as a colour does. Change a token's kind and its palette link goes, since a number isn't a colour.
 
 ## When switching the theme changes nothing
 A theme can only change a colour that follows a token. A project built with plain colours (an imported file, or one made before the themes were added) has nothing to change, so the Light, Dark and High contrast switches, on the canvas, in Preview and in the Themes tab, all look the same. When that is the case you see a line, **Nothing here follows the theme: these colours are fixed**, with a **Link colours to tokens** button.
@@ -28484,7 +28705,7 @@ What you may notice:
 - A button's edge is an outline in its label colour (gold buttons in Purple have a dark one).
 - Selected outlines, bars and chart marks use the **primary** colour (purple in Purple). The button colour is kept for fills with a label on them.
 
-The keyboard focus ring is two tones, so it holds 3:1 everywhere, and there is nothing to choose. It is the **color/focus** colour (3 px) with a 2 px halo of black or white either side of it, whichever is further from that colour (white round Purple's and Blue's dark ring, black round a gold one). Whatever is behind a control, one of the two tones stands clear of it: the colour itself on the white pages, the halo on the dark ends of the Blue, Green and Purple gradients and on deep panels.
+The keyboard focus outline is a 1 px line tight round the focused item, the way the toolbox draws its own: near black (grey 7) round a light item, the **color/focus** colour round a dark one. Round a dark item on a pale page the gold line is faint against the page itself (under 3:1), and the item's own dark edge is what marks it.
 
 ## What is locked, and why
 Branded projects are held to the brand so every activity looks like it came from the same place, whoever writes it.
@@ -29145,11 +29366,20 @@ function overview(p, opts2) {
   const lines = [`# ${p.name} (${p.id})`, `Start artboard: ${p.settings.startArtboardId}`, ""];
   for (const ab of p.artboards) {
     if (opts2.artboardId && ab.id !== opts2.artboardId) continue;
-    lines.push(`## Artboard ${ab.name} [${ab.id}] ${ab.width}x${ab.height}`);
+    const fitted = ab.hugHeight ? huggedHeight(ab, ab.children) : null;
+    const size = fitted === null ? `${ab.width}x${ab.height}` : `${ab.width}x${fitted} (fits its height to its content: ${fitted}px for the layers as they start${fitted === ab.height ? "" : `, stored height ${ab.height} is stale until an editor recalculates it`}; it keeps changing as the project plays)`;
+    lines.push(`## Artboard ${ab.name} [${ab.id}] ${size}`);
     const master = ab.master ? p.artboards.find((a) => a.id === ab.master) : null;
     if (master) lines.push(`Page master: ${master.name} [${master.id}]${ab.masterHide?.length ? `, leaves out ${ab.masterHide.join(", ")}` : ""}${ab.masterSlots ? `, text slots ${JSON.stringify(ab.masterSlots)}` : ""} (its layers are drawn on this page, read only: edit them on the master)`);
     const users = p.artboards.filter((a) => a.master === ab.id).length;
     if (users) lines.push(`Used as a page master by ${users} page${users === 1 ? "" : "s"}${ab.masterOver?.length ? `; drawn over the pages: ${ab.masterOver.join(", ")}` : ""}`);
+    if (ab.props?.length) {
+      const named2 = ab.props.map((pr) => {
+        const v = p.variables.find((x) => x.id === pr.variable);
+        return `${pr.label || v?.label || v?.name || pr.variable} -> ${v?.name ?? "(deleted variable)"}${v ? ` (${v.type}${v.options?.length ? `: ${v.options.join("|")}` : ""})` : ""}`;
+      });
+      lines.push(`Takes as a component: ${named2.join("; ")} (set them in an instance's inputs, by the variable name)`);
+    }
     if (ab.timelines.length) lines.push(`Timelines: ${ab.timelines.map((t2) => `${t2.name} [${t2.id}] ${t2.duration}ms ${t2.loop}${t2.autoplay ? " autoplay" : ""} (${t2.tracks.length} tracks)`).join("; ")}`);
     if (ab.notes?.length) lines.push(`Notes: ${ab.notes.length} (use list_notes)`);
     if (ab.blends?.length) lines.push(`Blends: ${ab.blends.map((b) => `${b.name} [${b.id}] ${b.mode} (${b.entries.length} timelines)`).join("; ")}`);
@@ -29437,6 +29667,16 @@ function applyChanges(p0, changes) {
         const ab = createArtboard({ name: String(c2.name ?? "Artboard"), width: Number(c2.width ?? 800), height: Number(c2.height ?? 600), canvasX: right + 100, canvasY: 0 });
         p.artboards.push(ab);
         if (key) created[key] = ab.id;
+        break;
+      }
+      case "delete_artboard": {
+        const ab = findAb(c2.id);
+        if (p.artboards.length < 2) throw new Error(`${where2}: a project needs at least one artboard`);
+        const used = p.artboards.filter((a) => a.id !== ab.id && (a.master === ab.id || JSON.stringify(a.children).includes(`"${ab.id}"`)));
+        if (used.length && !c2.force) throw new Error(`${where2}: ${ab.name} is used by ${used.map((a) => a.name).join(", ")} (as a page master or a component). Pass force true to delete it anyway.`);
+        p.artboards = p.artboards.filter((a) => a.id !== ab.id);
+        for (const a of p.artboards) if (a.master === ab.id) delete a.master;
+        if (p.settings.startArtboardId === ab.id) p.settings.startArtboardId = p.artboards[0].id;
         break;
       }
       case "set_artboard": {
@@ -29826,10 +30066,12 @@ const coloursReference = () => `# Colour values
 Anywhere a colour goes (fill.color, stroke.paint.color, color on text, buttons and links, gradient stops, barFill, shadow.color, chart colors, an artboard's background) takes:
 - a CSS colour: "#1e1e1e", "rgb(30 30 30)", "rgba(0,0,0,0.5)", "transparent";
 - a theme token, "token:<id>" or "token:<name>" (like "token:color/primary"), which takes its value from the theme being shown, so the layer follows Light, Dark, High contrast and any colourway. The edit tool stores a name as the token's id; "token:$ref" is a token add_token made earlier in the same batch. get_overview lists the tokens with their ids and values, and validate reports a token that does not exist (the editor shows those as "Missing token" and draws nothing).
+A fill can also be a shader: {"type":"shader","preset":"<id>","uniforms":{"<name>":number},"animateInEditor":false} paints the layer with one of the starter shaders, clipped by its corner radius (rect, ellipse, frame, button and progress take one; a stroke or a gradient stop does not). The plain fill shows until it has drawn and again if it fails.
 A paint is {"type":"solid","color":...}, or a gradient {"type":"linear","angle":90,"stops":[{"offset":0,"color":"token:color/primary"},{"offset":1,"color":"#ffffff"}]} (radial: "center", "radius"). Stops take tokens too.
 At runtime scripts and bindings may hand back token strings as well: ix.node("Card").set("fill.color", "token:color/success") and a binding on fill.color that returns "token:color/error" both draw the token's colour in the theme being shown, by id or by name.
 In a project with the starter tokens, a layer made by add_layer without a colour follows them as the editor's would: shapes color/surface-muted, text color/text, buttons color/button with color/on-button, inputs color/background with a color/border outline, links color/link, frames color/background. Give the colour yourself to override it.
 Starter token names: ${STARTER_NAMES()}.
+A token can hold a number or some words instead of a colour: kind "number" or "text" on the token. Those are never used as colours; expressions read them with token('its/name') and get whatever the theme being shown says, so one project can carry a density (a space/gap number, 24 in Roomy and 8 in Compact, bound to a frame's layout.gap) or a language (a ui/next text token, read in a text layer as {token('ui/next')}). A theme with no entry of its own falls back to the default theme's, the same as a colour.
 Text styles (add_text_style) are the same idea for type: a layer with styleRefs: {text: "<style id or name>"} takes the style's font, size, weight, line height, spacing (and colour, when the style has one) and changes with it. A font family is stored with its fallbacks: "Open Sans" becomes "\\"Open Sans\\", system-ui, sans-serif", the way the editor writes it.`;
 const RUNTIME_REFERENCE = `# How some runtime behaviour works (answers to questions agents have had)
 - Script scope: every script (and every Run script node) runs as its own async function, with ix, event and vars in scope, so a const or function declared in one is not visible in another. globalThis is shared by all the scripts of one player, sandboxed or not: a run_on_start script can put helpers there (globalThis.fmt = (n) => n.toFixed(1)) for the others to use.
@@ -29873,7 +30115,7 @@ ${CATALOG.filter((d) => d.category === cat).map((d) => `- ${d.kind}: ${d.label}.
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n") + "\nOn a progress layer only: " + layerOwnProps(createNode("progress")).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join("; ") + "\nOn a connector layer only: " + layerOwnProps(createNode("connector")).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join("; ");
   if (topic === "layers") {
     const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "progress", "chart", "connector", "bone"];
-    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, depth (parallax, percent -100 to 100: while playing the layer shifts against the pointer, more the nearer it is; 0 is still; settings.parallax on the project {range px for depth 100, default 40; tilt true to follow a phone tilt too} sets how far), link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, ariaExpanded, ariaPressed (a toggle button: true/false), ariaCurrent (true, or page|step|location|date|time: the current tab, page or step), liveRegion (a text layer read aloud by screen readers when its words change: polite|assertive), decorative (hide from assistive tech), focusable (tab stop override), tabOrder, shortcut (a key that clicks the layer, e.g. "r", "1", "Ctrl+Enter"), className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it). Buttons and inputs take disabled (bindable) and disabledOpacity (0-1, default 0.5, how dimmed they look while disabled). A frame can be a dialog: dialog {modal (default true), scrim (a solid paint over the artboard behind it), closeOnEscape (default true), closeOnOutsideClick, initialFocus (layer id), returnFocus (default true), openVariable (variable id: the frame shows while it is on, Escape turns it off)}. A repeater (frame or group with repeat {items, layout, gap, columns}) can carry repeat.select {mode: one|several, variable (variable id: a number from 0, -1 for none, when one; a list of numbers when several), toggle (one only: clicking the picked copy clears it)}: a click, Space or Enter on a copy picks it with no nodes, each copy sees isSelected (and item.selected on record items), copies become radios or checkboxes with aria-checked, arrows move between them. A frame or group can carry keyNav {mode: list|grid|radio, orientation: vertical|horizontal|both, columns (grid on a container; a grid repeater uses its own), wrap, indexVariable (variable id, number from 0; setting it moves focus too when it is inside), countHidden (hidden copies keep their numbers and are stepped over)}: one item is the Tab stop and the arrows, Home and End move between a repeater\'s copies or a container\'s children; radio mode also selects (clicks) the item it lands on.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
+    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, depth (parallax, percent -100 to 100: while playing the layer shifts against the pointer, more the nearer it is; 0 is still; settings.parallax on the project {range px for depth 100, default 40; tilt true to follow a phone tilt too} sets how far), link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, ariaExpanded, ariaPressed (a toggle button: true/false), ariaCurrent (true, or page|step|location|date|time: the current tab, page or step), liveRegion (a text layer read aloud by screen readers when its words change: polite|assertive), decorative (hide from assistive tech), focusable (tab stop override), tabOrder, shortcut (a key that clicks the layer, e.g. "r", "1", "Ctrl+Enter"), className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it). Buttons and inputs take disabled (bindable) and disabledOpacity (0-1, default 0.5, how dimmed they look while disabled). states [{id, name?, when: hover|pressed|focus|disabled|expr, expr? (when expr), props {path: value}}] gives a layer the looks it takes on in a state, instead of a ternary in four or five bindings: props uses the same paths a binding does (fill.color, stroke.paint.color, color, opacity, scaleX, scaleY, cornerRadius), only what is listed changes, later states win over earlier ones, and a state beats a binding on the same property. The pointer states are the layer\'s own and only come on while it runs; an expr state shows on the canvas too. A frame or group can be an accordion: disclosure {open: one|many, variable (a number variable for one, counting from 0 with -1 for none; a list variable for many), toggle? (one only: clicking the open section closes it), panels? (a container inside it whose children are the panels, matched to the frame\'s other children in order, which makes it a set of tabs)}. Each child is a section: its first layer is the header and the rest is the panel, unless panels says otherwise. The clicking, the showing and the aria-expanded on each header are the frame\'s own job, so an accordion needs no interaction nodes. overlay {overlayId, trigger?, side?, offset?, inputs? (values handed to the overlay as it opens from this layer, by variable name, so one overlay can ask a different question from each layer; the page lists what it takes in props)} on a layer shows an overlay page for it: that layer is the target (a tooltip sits beside it), and the trigger is the same layer unless another id is given. The page is an artboard with overlay {kind: tooltip|modal|confirm|input (confirm asks with buttons, input asks for something typed and is what the editor calls a prompt; an old file\'s prompt is read as confirm), side?, offset?, scrim?, openVariable?, and for a tooltip fade? (ms to fade in and out; absent uses settings.hugDuration, 300 by default), tail? (a triangle pointing at the target, on unless false), stay? (stays open while the pointer is on the tooltip itself so links inside can be reached, on unless false)} on it. When the overlay page holds a single frame, that frame is the card: the overlay is drawn at the card\'s own auto-layout size (a tooltip as wide as its words), and the page is only where it is designed, set with set_artboard; an overlay page is never opened on its own, never counts in pageCount and never grows a fitted page. A modal, confirm or input shows while its openVariable is on, and a click on the trigger turns it on, so a Close button inside is a plain Set variable. A frame can be a dialog: dialog {modal (default true), scrim (a solid paint over the artboard behind it, drawn as its own full-page backdrop right under the dialog, so see-through parts of the dialog show the dimmed page), closeOnEscape (default true), closeOnOutsideClick, initialFocus (layer id), returnFocus (default true), openVariable (variable id: the frame shows while it is on, Escape turns it off)}. A dialog opens over the page: it never counts towards a fitted page height, and nor does any layer with hugIgnore true (toasts, tooltips, anything floating). An instance (a component) takes its box from fit: fill stretches the page to the box, contain letterboxes it, cover fills and crops, none draws it at its own size centred, and hug keeps the box width and lets its height follow whatever the page inside needs as it plays, easing the way that page does (the source artboard has to have hugHeight on; the height stored on the instance layer is ignored while it does). A repeater (frame or group with repeat {items, layout, gap, columns}) can carry repeat.select {mode: one|several, variable (variable id: a number from 0, -1 for none, when one; a list of numbers when several), toggle (one only: clicking the picked copy clears it)}: a click, Space or Enter on a copy picks it with no nodes, each copy sees isSelected (and item.selected on record items), copies become radios or checkboxes with aria-checked, arrows move between them. An auto layout also takes minWidth, maxWidth, minHeight and maxHeight (px): limits on the frame\'s own size, however it is decided (hugging, filling, stretched), with a min beating a max. A frame or group can carry keyNav {mode: list|grid|radio, orientation: vertical|horizontal|both, columns (grid on a container; a grid repeater uses its own), wrap, indexVariable (variable id, number from 0; setting it moves focus too when it is inside), countHidden (hidden copies keep their numbers and are stepped over)}: one item is the Tab stop and the arrows, Home and End move between a repeater\'s copies or a container\'s children; radio mode also selects (clicks) the item it lands on.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
 Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
 Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nProgress bars (type "progress"): a track with a bar filling it. Fields: value, max (both take bindings; value is animatable, so a timeline track or Animate property can fill it), fill/stroke (the track, any paints), barFill (the bar\'s paint), cornerRadius, orientation (horizontal | vertical), reverse (grow from the right or the top), semantics (progressbar | meter | none: the role and aria-valuenow/min/max/valuetext it carries; bars made for a screen reader need ariaLabel), valueText (a text template: {value}, {max}, {percent} and variables). Colours may be theme token references.\nPictures (type "image"): assetId, fit (cover | contain | fill) and an optional crop {x, y, zoom} that moves and zooms the picture inside its frame without touching the file: zoom is 1 to 20 (2 shows the middle quarter), x and y are fractions of the frame\'s width and height the picture is moved by (0.1 is a tenth to the right), and the frame clips the rest. Leave crop off for the picture as fit draws it. A new picture wants an ariaLabel saying what it shows (or decorative: true).\nCharts (type "chart"): a column | bar | line | pie | donut chart drawn from data, an expression for a list: numbers, objects (label from labelKey, number from valueKey; blank guesses), [label, value] pairs, or one object. Fields: kind, data, labelKey, valueKey, colors (tokens or colours handed out in turn; varyColors for one each on bar, column and line), color (labels and axes), fontFamily, fontSize, min/max (fixed axis ends, null fits the data), gridlines, axisLabels, valueLabels, legend, hole (donut, 0.1-0.95), animate, table (a hidden data table for screen readers), decimals, prefix, suffix ({variable} slots work in both). An object item with hidden: true (or the field hiddenKey names) is a placeholder: a dashed empty mark with a ?, read out as hidden, kept out of the auto axis unless it also has a number. Clicks, presses, hovers and focus on a mark give event.index (the item\'s position) to On pointer and On focus nodes. Give it an ariaLabel.\nConnectors (type "connector"): a line or arrow joining two layers that follows them, so you never position it. Fields: from and to, each {layer: layerId | {repeat: templateLayerId, index: "expression"} | "" for a loose point, side?: auto|top|right|bottom|left, offset?: px along the side, x?/y? for a loose point (in the connector\'s parent)}; route: straight | elbow | curved; stroke (the line: {paint, width, dash?, ...}, paints may be tokens); startCap/endCap: none | arrow | dot; capSize (0 = from the stroke width); gap (px short of each layer); cornerRadius (elbow corners and the label chip); label (text, {variable} slots work), labelAt (0-1 along the line), color (label text), fill (label background), fontFamily, fontSize, fontWeight. x, y, width, height and rotation are ignored (the box is worked out from the route; leave them 0). It is hidden while either layer is hidden or missing. To connect repeated layers: the repeater\'s template (its first child) has an id, copy i is id~i; put the connector in a repeater of its own over a list of links and use from.layer {repeat: templateId, index: "item.from"}. Decorative (hidden from screen readers) unless ariaLabel is set, so give the page a text alternative (a nested list) for what it shows. Stroke trimEnd animates a draw-in.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t22) => `- ${t22}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t22)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
@@ -30054,7 +30296,7 @@ ${JSON.stringify(loc.node, null, 1)}`);
   },
   {
     name: "edit",
-    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id or ids: [...], props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"; ids sets the same props on several layers); add_layer {artboard_id, type, props?, children?: [{type, props?, children?, ref?}], parent_id?, index?, ref?} (a whole tree in one op; with no colour given a layer follows the starter tokens, as in the editor); duplicate {id, count?, dx?, dy?, columns?, name? ("Card {n}": the original is 1), ref?} (copies with everything inside, each dx/dy on from the last; with columns they wrap into a grid; refs are ref1, ref2...); delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster, and hugHeight true to fit the page height to its content as it plays (hugPadding px under the lowest layer, hugAnimate to ease the change, hugDuration ms or the project settings.hugDuration, default 300)); add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; rename_variable {id or name, name, scripts? (default true; false leaves scripts and code snippets alone)}: renames it and everything that names it, keeping saved learner values (never rename with set_variable); add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, dip?, keys: [{t, value, ease}]}], ref?} (text, label and true/false keys hold until the next key and never ease; to soften a text change key opacity and/or blur dipping to 0 / 8 either side of it on separate tracks marked dip: true, which reduced motion leaves out); add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids; params that point at a layer, variable, script, timeline, blend, artboard or asset take its id, its exact name or a $ref); remove_interactions {artboard_id, ids}; set_interaction {artboard_id, id, params? (merged in, null removes one), note?, x?, y?} (change a node in place, its connections kept); connect {artboard_id, from, to, from_port?}; disconnect {artboard_id, id} or {artboard_id, from, to, from_port?}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; add_theme {name, copy_from?, mode?: light|dark, high_contrast?, ref?} (the first one also makes Light, Dark, High contrast and the starter tokens); remove_theme {id}; add_colourway {colourway: gold|purple|blue|green|orange|red|high-contrast, default?} (as + Colourway in the Themes tab); add_token {name (like "color/accent"), value? (every theme), values? {theme id or name: colour}, ref?}; set_token {id or name, name?, value?, values?}; remove_token {id or name} (layers keep its colour); set_themes {default? (theme id or name), follow? (switch with dark mode and contrast settings), learner_switcher? (swatches that let learners pick a colourway)}; set_project_settings {props: {path: value}, name?} (paths into the project settings, as export_project shows them); add_data_source {name, kind: json|csv|tsv|text, text? (the file contents: uploaded for you) | url? (fetched when it plays, refresh? seconds) | asset_id?, ref?}; set_data_source {id or name, name?, kind?, url?, asset_id?, refresh?}; remove_data_source {id or name}; add_text_style {name, props: {fontFamily, fontSize, fontWeight, fontStyle, lineHeight, letterSpacing, color?}, ref?}; set_text_style {id or name, props} (a layer follows one with props styleRefs: {text: id or name}); add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). Give "ref" to name something you create, then use "$ref" in later changes in the same batch (a colour can say "token:$ref"). Colours take "token:<name>" as well as "token:<id>". Read read_reference("layers"), ("interactions"), ("properties") and ("colours") first.',
+    description: `Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id or ids: [...], props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"; ids sets the same props on several layers); add_layer {artboard_id, type, props?, children?: [{type, props?, children?, ref?}], parent_id?, index?, ref?} (a whole tree in one op; with no colour given a layer follows the starter tokens, as in the editor); duplicate {id, count?, dx?, dy?, columns?, name? ("Card {n}": the original is 1), ref?} (copies with everything inside, each dx/dy on from the last; with columns they wrap into a grid; refs are ref1, ref2...); delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; delete_artboard {id, force?} (refuses while another page uses it as a page master or a component unless force is true; the start page moves to the first one left); set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster, and hugHeight true to fit the page height to its content as it plays (hugPadding px under the lowest layer, hugAnimate to ease the change, hugDuration ms or the project settings.hugDuration, default 300). A fitted page leaves out hidden layers, masks, dialog frames and any layer with hugIgnore true, so a dialog, toast or tooltip opens over the page instead of growing it. props [{variable (id), label?, help?}] says what the page takes when it is used as a component: each one is a field on every instance, set through InstanceNode.inputs by the variable's name, and the variable's own type and options decide the field. Declare them rather than describing them in a note); add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; rename_variable {id or name, name, scripts? (default true; false leaves scripts and code snippets alone)}: renames it and everything that names it, keeping saved learner values (never rename with set_variable); add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, dip?, keys: [{t, value, ease}]}], ref?} (text, label and true/false keys hold until the next key and never ease; to soften a text change key opacity and/or blur dipping to 0 / 8 either side of it on separate tracks marked dip: true, which reduced motion leaves out); add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids; params that point at a layer, variable, script, timeline, blend, artboard or asset take its id, its exact name or a $ref); remove_interactions {artboard_id, ids}; set_interaction {artboard_id, id, params? (merged in, null removes one), note?, x?, y?} (change a node in place, its connections kept); connect {artboard_id, from, to, from_port?}; disconnect {artboard_id, id} or {artboard_id, from, to, from_port?}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; add_theme {name, copy_from?, mode?: light|dark, high_contrast?, ref?} (the first one also makes Light, Dark, High contrast and the starter tokens); remove_theme {id}; add_colourway {colourway: gold|purple|blue|green|orange|red|high-contrast, default?} (as + Colourway in the Themes tab); add_token {name (like "color/accent"), value? (every theme), values? {theme id or name: colour}, ref?}; set_token {id or name, name?, value?, values?}; remove_token {id or name} (layers keep its colour); set_themes {default? (theme id or name), follow? (switch with dark mode and contrast settings), learner_switcher? (swatches that let learners pick a colourway)}; set_project_settings {props: {path: value}, name?} (paths into the project settings, as export_project shows them); add_data_source {name, kind: json|csv|tsv|text, text? (the file contents: uploaded for you) | url? (fetched when it plays, refresh? seconds) | asset_id?, ref?}; set_data_source {id or name, name?, kind?, url?, asset_id?, refresh?}; remove_data_source {id or name}; add_text_style {name, props: {fontFamily, fontSize, fontWeight, fontStyle, lineHeight, letterSpacing, color?}, ref?}; set_text_style {id or name, props} (a layer follows one with props styleRefs: {text: id or name}); add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). Give "ref" to name something you create, then use "$ref" in later changes in the same batch (a colour can say "token:$ref"). Colours take "token:<name>" as well as "token:<id>". Read read_reference("layers"), ("interactions"), ("properties") and ("colours") first.`,
     inputSchema: S({ project_id: str("Project id"), changes: { type: "array", items: { type: "object" } }, explain: str("One line saying what this does (shown in the editor log)") }, ["project_id", "changes"]),
     run: async (a) => {
       const s = join(String(a.project_id));

@@ -67,6 +67,8 @@ function paintKey(p: Paint): string {
       return `linear:${JSON.stringify([p.angle, p.stops, p.from ?? null, p.to ?? null])}`;
     case 'radial':
       return `radial:${JSON.stringify([p.stops, p.center ?? null, p.radius ?? null])}`;
+    case 'shader':
+      return `shader:${p.preset}:${JSON.stringify(p.uniforms ?? {})}`;
     default:
       return `image:${p.assetId}:${p.fit}`;
   }

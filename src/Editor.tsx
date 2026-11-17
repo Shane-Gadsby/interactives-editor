@@ -14,6 +14,8 @@ import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, 
 import { warmPlayerSource } from './lib/player-source';
 import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
+import { DIALOG_KINDS, addDialog, type DialogKind } from './lib/dialog-kit';
+import { addAccordion } from './lib/accordion-kit';
 import { importGiftFile } from './lib/gift-import';
 import { watchKeyArea } from './lib/key-area';
 import { keyHint, keyHints, keysSuspended, withKey } from './lib/keymap';
@@ -1009,6 +1011,43 @@ function AddQuestion({ reorderKey }: { reorderKey?: string }) {
   );
 }
 
+/** What the ready-made Web tools are, in the order they sit: four overlays, then the two that go on the page itself. */
+export const WEB_ADDS: { key: string; label: string; hint: string; icon: keyof typeof Icons; overlay?: DialogKind; onPage?: 'tabs' | 'accordion' }[] = [
+  ...DIALOG_KINDS.map((k) => ({ key: `add-${k.value === 'input' ? 'prompt' : k.value}`, label: k.label, hint: k.hint, icon: (k.value === 'input' ? 'prompt' : k.value) as keyof typeof Icons, overlay: k.value })),
+  { key: 'add-tabs', label: 'Tabs', hint: 'A row of tabs with one panel showing, with no wiring', icon: 'tabs', onPage: 'tabs' },
+  { key: 'add-accordion', label: 'Accordion', hint: 'Sections that open one at a time, with no wiring', icon: 'accordion', onPage: 'accordion' },
+];
+
+/** Build one of the ready-made Web things on the open artboard: an overlay pointed at the picked layer, or tabs or an accordion on the page. */
+export function addWebThing(which: (typeof WEB_ADDS)[number]): void {
+  const s = store();
+  const ab = s.artboard();
+  if (!ab) return;
+  if (which.onPage) {
+    let id: string | null = null;
+    track('feature', 'accordion-add', { thing: which.onPage });
+    s.update((d) => void (id = addAccordion(d as Project, ab.id, which.onPage!)));
+    if (id) s.select([id], { artboardId: ab.id });
+    return;
+  }
+  //The layer you had picked becomes the overlay's target, which is nearly always what you meant
+  const target = s.get().selection[0] ?? null;
+  let made: { overlayId: string; linked: string | null } | null = null;
+  track('feature', 'dialog-add', { thing: which.overlay! });
+  s.update((d) => void (made = addDialog(d as Project, which.overlay!, { targetId: target, artboardId: ab.id })));
+  if (!made) return;
+  const { overlayId, linked } = made as { overlayId: string; linked: string | null };
+  //Open the overlay page so its words can be edited straight away
+  s.set({ activeArtboardId: overlayId, artboardSelected: true, selection: [] });
+  s.toast(linked ? `${which.label} added and pointed at the layer you had picked` : `${which.label} added. Pick a layer and set its Overlay to show it`, 'info');
+}
+
+/** One ready-made Web thing as a tool button of its own: one click builds it, wired up. */
+function AddWebThing({ which }: { which: (typeof WEB_ADDS)[number] }) {
+  const I = Icons[which.icon];
+  return <IconButton reorderKey={which.key} tour={`tool-${which.key}`} icon={<I />} title={`${which.label}: ${which.hint.charAt(0).toLowerCase()}${which.hint.slice(1)}`} onClick={() => addWebThing(which)} />;
+}
+
 // The tools column in groups that fold (Shapes and Draw start open), so it fits without scrolling. Select and Hand
 // always show; a folded group still shows its tool when that's the one in use
 export const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[] = [
@@ -1134,7 +1173,7 @@ export function Toolbar() {
         const isOpen = !!open[g.id];
         const activeHere = g.tools.includes(tool);
         // the group's tools and its extra buttons, in the person's order
-        const extras: Record<string, ReactNode> = g.id === 'media' ? { image, catalogue } : g.id === 'web' ? { question: <AddQuestion key="q" reorderKey="question" /> } : g.id === 'rig' ? { bones } : {};
+        const extras: Record<string, ReactNode> = g.id === 'media' ? { image, catalogue } : g.id === 'web' ? { question: <AddQuestion key="q" reorderKey="question" />, ...Object.fromEntries(WEB_ADDS.map((w) => [w.key, <AddWebThing key={w.key} which={w} />])) } : g.id === 'rig' ? { bones } : {};
         const keys = [...(g.tools as string[]), ...Object.keys(extras)];
         return (
           <div key={g.id} className={`tool-group${isOpen ? ' open' : ''}`} data-reorder-key={g.id}>
@@ -1188,6 +1227,13 @@ export function Toolbar() {
   );
 }
 
+/** The artboard a `flow:<id>` choice starts on, or null for anything else (and for a flow whose page has gone). */
+function flowStart(project: { settings: { flows?: { id: string; artboardId: string }[] }; artboards: { id: string }[] }, from: string): string | null {
+  if (!from.startsWith('flow:')) return null;
+  const f = (project.settings.flows ?? []).find((x) => x.id === from.slice(5));
+  return f && project.artboards.some((a) => a.id === f.artboardId) ? f.artboardId : null;
+}
+
 export function PreviewModal({ onClose }: { onClose: () => void }) {
   const project = useEditor((st) => st.project);
   const abId = useEditor((st) => st.activeArtboardId);
@@ -1196,7 +1242,8 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const { accessibility, screenReader } = usePrefs();
   const [said, setSaid] = useState<{ text: string; politeness: string }[]>([]);
   const [buildError, setBuildError] = useState<string | null>(null);
-  const [from, setFrom] = useState<'start' | 'current'>('start');
+  //'start', 'current', or 'flow:<id>' for one of the project's named starting points
+  const [from, setFrom] = useState<string>('start');
   //Play it as if this device asked for less motion, to check the calm version without changing the computer's own setting
   const [lessMotion, setLessMotion] = useState(false);
   const [log, setLog] = useState<string[]>([]);
@@ -1295,7 +1342,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   }, [html === null]);
   // Previewing from a variant opens on a page width that shows it
   useEffect(() => {
-    const cur = from === 'current' ? getArtboard(project, abId) : null;
+    const cur = from === 'current' ? getArtboard(project, abId) : from.startsWith('flow:') ? getArtboard(project, flowStart(project, from)) : null;
     if (!cur || !sets.length) return;
     const members = setMembers(project.artboards, cur);
     if (members.length > 1) setPageWidth(widthInside(members, cur, room));
@@ -1334,7 +1381,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
     let live = true;
     setBuildError(null);
     // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show
-    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project) }).then(
+    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project) }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );
@@ -1393,7 +1440,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
       timeInPreview();
     };
   }, [onClose]);
-  const ab = getArtboard(project, from === 'current' ? abId : project.settings.startArtboardId);
+  const ab = getArtboard(project, from === 'current' ? abId : (flowStart(project, from) ?? project.settings.startArtboardId));
   const post = (name: string, value: unknown) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'setVariable', name, value }, '*');
   return (
     <div className={`modal-backdrop preview-backdrop${peek ? ' peek' : ''}`} onPointerDown={(e) => !peek && e.target === e.currentTarget && onClose()}>
@@ -1402,9 +1449,14 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           {/* The controls wrap among themselves; Close stays at the end of the top line, however many lines they take */}
           <div className="preview-controls">
           <strong>Preview</strong>
-          <select value={from} onChange={(e) => setFrom(e.target.value as 'start' | 'current')}>
+          <select value={from} onChange={(e) => setFrom(e.target.value as 'start' | 'current')} title="Where this run starts. Named starting points come from Project settings">
             <option value="start">From the start artboard</option>
             <option value="current">From this artboard</option>
+            {(project.settings.flows ?? []).filter((f) => project.artboards.some((a) => a.id === f.artboardId)).map((f) => (
+              <option key={f.id} value={`flow:${f.id}`}>
+                {f.name}
+              </option>
+            ))}
           </select>
           <span className="muted small preview-size">{ab ? `${ab.width} × ${ab.height}` : ''}{peek ? '' : ' · runs exactly like the exported file'}</span>
           <button

@@ -202,6 +202,11 @@ export interface EditorState {
   /** The active artboard itself is selected (its frame, not its layers). */
   artboardSelected: boolean;
   /**
+   * Picking an overlay's trigger by clicking the canvas: the layer whose Overlay is waiting for one, or null. The next click
+   * on a layer sets that overlay's trigger and turns this off.
+   */
+  overlayPick?: string | null;
+  /**
    * Every artboard that is selected when more than one is (Ctrl+click or Shift+click on a name on the canvas or a row in the
    * Layers panel). Only counts while `artboardSelected` is on and `activeArtboardId` is in it; `pickedArtboardIds` has the rule.
    * Anything else that picks an artboard or a layer sets this back to empty (see `set`).

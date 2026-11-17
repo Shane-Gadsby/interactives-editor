@@ -519,6 +519,23 @@ export function Canvas() {
 
     const ab = getArtboard(st.project, st.activeArtboardId);
 
+    // Picking an overlay's trigger: the next click on a layer sets it, and anywhere else gives up
+    if (st.overlayPick && e.button === 0) {
+      const picking = st.overlayPick;
+      const p = ab ? local(ab, w) : null;
+      const hit = ab && p ? pickFromHit(hitTest(ab, p.x, p.y), e.ctrlKey || e.metaKey) : null;
+      store().set({ overlayPick: null });
+      if (hit && hit.id !== picking) {
+        store().update((d) => {
+          const page = d.artboards.find((a) => a.id === st.activeArtboardId);
+          const node = page ? locate(page, picking)?.node : null;
+          if (node?.overlay) node.overlay = { ...node.overlay, trigger: hit.id };
+        });
+        store().toast('Trigger set', 'info');
+      }
+      return;
+    }
+
     // Handles (drawn on the overlay)
     if (handle) {
       const [kind, a, b] = handle.split(':');
