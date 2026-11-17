@@ -11,7 +11,7 @@ import type { Anchor, CommentUser, Person, Thread } from '../shared/comments.mjs
 import { comments, useComments } from './lib/comments';
 import { anchorAt, pinPlace, placeLabel } from './lib/comment-anchor';
 import { assetUrls } from './lib/assets';
-import { previewScope } from './lib/data';
+import { previewScope, previewValue } from './lib/data';
 import { ensureFonts } from './lib/fonts';
 import { isDirectLoad, sessionId, sessionUser } from './lib/session';
 import { standaloneHtml } from './lib/export';
@@ -201,7 +201,7 @@ function ReviewBoard({ project, artboard, scale }: { project: Project; artboard:
     const r = renderer.current;
     if (!r) return;
     const vars = previewScope(project, artboard);
-    r.render(artboard, prepareNodes(withMaster(project.artboards, artboard), { vars }), { vars });
+    r.render(artboard, prepareNodes(withMaster(project.artboards, artboard), { vars }, { variableValue: previewValue(project, vars) }), { vars });
   }, [project, artboard]);
 
   const place = (e: React.MouseEvent) => {

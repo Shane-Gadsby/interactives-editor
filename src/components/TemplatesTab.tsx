@@ -87,7 +87,7 @@ export async function makeFromPick(pick: Pick, o: { name: string; folder: string
 }
 
 /** "Use template": what it expects of you (its checklist), a name, then a new project in the folder you have open. */
-function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { pick: Pick; folder: string | null; folders: string[]; onClose: () => void; onMade: (id: string) => void }) {
+export function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { pick: Pick; folder: string | null; folders: string[]; onClose: () => void; onMade: (id: string) => void }) {
   const [folder, setFolder] = useState<string | null>(initialFolder);
   const title = pick.kind === 'saved' ? pick.t.name : pick.kind === 'example' ? pick.e.title : pick.s.name;
   const description = pick.kind === 'saved' ? pick.t.description : pick.kind === 'example' ? pick.e.description : pick.s.description;

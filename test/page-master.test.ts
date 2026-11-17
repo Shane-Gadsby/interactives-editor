@@ -5,7 +5,7 @@ import { EditorStore, setCurrentStore } from '../src/store/store';
 import { brandedPage, brandedProject, contentBox, text } from '../src/lib/branded/kit';
 import { COLOURWAYS } from '../src/lib/branded/looks';
 import { brandLookViolation } from '../src/lib/branded/lock';
-import { detachMaster, extractMaster, markMaster, setMaster, withMasterCached } from '../src/lib/page-master';
+import { detachMaster, extractMaster, markMaster, masterOutlines, setMaster, withMasterCached } from '../src/lib/page-master';
 import { analyzeUsage } from '../src/lib/dependencies';
 import { applyTemplateUpdate } from '../src/lib/templates';
 import { baselineOf, partsOf } from '../shared/template.mjs';
@@ -174,6 +174,18 @@ describe('master actions', () => {
     expect(get().artboards.find((a) => a.name === 'Page')!.masterSlots).toBeUndefined();
   });
 
+  it('keeps a page\'s slot text through Master None and back (Use for all other pages)', () => {
+    const { s, id, get } = make();
+    s.setMasterOf([id('Page')], id('Master'));
+    s.setMasterSlot(id('Page'), 'pageTitle', 'One');
+    s.setMasterOf([id('Page')], null);
+    expect(get().artboards.find((a) => a.name === 'Page')!.master).toBeUndefined();
+    s.setMasterOf([id('Page'), id('Page 2')], id('Master'));
+    const page = get().artboards.find((a) => a.name === 'Page')!;
+    const under = withMaster(get().artboards, page)[0] as unknown as { children: SceneNode[] };
+    expect((under.children.find((n) => n.name === 'Title') as { text: string }).text).toBe('One');
+  });
+
   it('moves a layer between under and over on the master', () => {
     const { s, get } = make();
     const m = get().artboards.find((a) => a.name === 'Master')!;
@@ -209,6 +221,39 @@ describe('master actions', () => {
     expect(page.children.every((n) => !isMasterId(n.id) && n.locked !== true && n.decorative === undefined)).toBe(true);
     expect((page.children[1] as { text: string }).text).toBe('Hi');
     expect(get().artboards.find((a) => a.name === 'Master')!.children.map((n) => n.id)).not.toContain(page.children[0].id);
+  });
+
+  it('detaching brings the master\'s button flows and timelines along, pointed at the new layers', () => {
+    const { s, id, get } = make();
+    s.update((d) => {
+      const m = d.artboards.find((a) => a.name === 'Master')!;
+      m.children.push(createNode('button', { id: 'nb', name: 'Next', label: 'Next' }));
+      m.logic.nodes.push(
+        { id: 'ev', kind: 'event.pointer', x: 0, y: 0, params: { type: 'click', target: 'nb' } },
+        { id: 'go', kind: 'action.artboard', x: 100, y: 0, params: { to: 'next', transition: 'none', duration: 0 } },
+        { id: 'tm', kind: 'action.timeline', x: 200, y: 0, params: { timeline: 'tl', op: 'play' } },
+        { id: 'dr', kind: 'event.dragStart', x: 0, y: 100, params: {} },
+      );
+      m.logic.edges.push({ id: 'e1', from: 'ev', fromPort: 'out', to: 'go', toPort: 'in' }, { id: 'e2', from: 'go', fromPort: 'out', to: 'tm', toPort: 'in' });
+      m.timelines.push({ id: 'tl', name: 'Pulse', duration: 500, loop: 'once', autoplay: false, speed: 1, tracks: [{ id: 'tr', nodeId: 'nb', prop: 'opacity', keys: [] }] });
+    });
+    s.setMasterOf([id('Page')], id('Master'));
+    s.detachMasterOf(id('Page'));
+    const page = get().artboards.find((a) => a.name === 'Page')!;
+    const button = page.children.find((n) => n.name === 'Next')!;
+    expect(button.id).not.toBe('nb');
+    const ev = page.logic.nodes.find((n) => n.kind === 'event.pointer')!;
+    expect(ev.params.target).toBe(button.id);
+    //the drag event is a page thing and does not come across
+    expect(page.logic.nodes.map((n) => n.kind).sort()).toEqual(['action.artboard', 'action.timeline', 'event.pointer']);
+    expect(page.logic.edges).toHaveLength(2);
+    const go = page.logic.nodes.find((n) => n.kind === 'action.artboard')!;
+    expect(page.logic.edges.some((e) => e.from === ev.id && e.to === go.id)).toBe(true);
+    expect(page.timelines).toHaveLength(1);
+    expect(page.timelines[0].tracks[0].nodeId).toBe(button.id);
+    expect(page.logic.nodes.find((n) => n.kind === 'action.timeline')!.params.timeline).toBe(page.timelines[0].id);
+    //the master keeps its own
+    expect(get().artboards.find((a) => a.name === 'Master')!.logic.nodes).toHaveLength(4);
   });
 
   it('edit master selects it and shows it on the canvas', () => {
@@ -364,3 +409,19 @@ describe('format', () => {
 });
 
 beforeEach(() => void 0);
+
+describe('master outlines for the canvas', () => {
+  it('lists the boxes of the master layers a page draws, minus the ones it leaves off, and nothing for a page without a master', () => {
+    const p = deck(2);
+    extractMaster(p, CHROME);
+    const page = word1(p);
+    const out = masterOutlines(p.artboards, page)!;
+    expect(out.master).toBe(contentMaster(p).name);
+    expect(out.boxes.length).toBeGreaterThan(0);
+    expect(out.boxes.every((b) => b.id.startsWith('ixm~') && b.width > 0)).toBe(true);
+    const first = out.boxes[0].name;
+    page.masterHide = [first];
+    expect(masterOutlines(p.artboards, page)!.boxes.some((b) => b.name === first)).toBe(false);
+    expect(masterOutlines(p.artboards, contentMaster(p))).toBeNull();
+  });
+});

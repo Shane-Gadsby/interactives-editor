@@ -1,9 +1,10 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { isLive, liveWriters, LIGHT_LOOK, planLive, uid, type Project, type Script, type Variable, type VariableType } from 'interactives-player';
+import { cleanVariableLabel, isLive, variableLabel, liveWriters, LIGHT_LOOK, planLive, uid, type Project, type Script, type Variable, type VariableType } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { isIdentifier, uniqueName } from '../store/doc';
 import { choiceDialog, confirmDialog } from '../components/dialogs';
 import { renameVariable } from '../lib/rename-variable';
+import { nameFromWords } from '../lib/friendly-names';
 import { planRename } from '../lib/rename-plan';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
 import { ExprField } from '../components/ExprField';
@@ -15,6 +16,8 @@ import { analyzeUsage, type Usage } from '../lib/dependencies';
 import { VARIABLE_KINDS, TYPE_LABELS, variableFor, type VariableKind } from '../lib/variable-kinds';
 import { go, sourceLabel } from './UsagePanel';
 import { SectionBlurb } from '../components/SectionBlurb';
+import { ListTable } from '../components/ListTable';
+import { ShowOnPage } from '../components/ShowOnPage';
 
 const SCRIPT_TEMPLATE = `// Runs with \`ix\` (the player API), \`event\` (what triggered it) and \`vars\`.
 // Tick "Run on start" to register handlers when the player starts.
@@ -134,30 +137,28 @@ ix.log(...)`}</pre>
   );
 }
 
-/** Whether text is a JSON array (what a list variable's starting value has to be). */
-function validList(text: string): boolean {
-  try {
-    return Array.isArray(JSON.parse(text));
-  } catch {
-    return false;
-  }
-}
-
-/**
- * A variable's name. Only a valid name is saved into the project: an empty or invalid one stays in the field as a draft,
- * with the warning, until it is fixed (or the field is reverted by undo or someone else's edit).
- */
 /**
  * Rename a variable and everything that names it. Goes straight through with an undo message, unless scripts name it (they are
  * guesswork, so they get a look first) or learners have saved values under the old name (they are carried over, and it says so).
  */
-async function renameFromPanel(id: string, to: string): Promise<void> {
+async function renameFromPanel(id: string, to: string, label?: string | null): Promise<void> {
+  //label: the words to show for it (null takes the label away, undefined leaves it)
+  const setLabel = (d: Project) => {
+    const v = d.variables.find((x) => x.id === id);
+    if (!v || label === undefined) return;
+    if (label) v.label = label;
+    else delete v.label;
+  };
   const plan = planRename(store().get().project as Project, id, to);
   if (plan.error) {
     store().toast(plan.error, 'error');
     return;
   }
-  if (plan.from === to) return;
+  if (plan.from === to) {
+    const was = store().get().project.variables.find((x) => x.id === id)?.label;
+    if (label !== undefined && (label || undefined) !== was) store().update((d) => setLabel(d as Project));
+    return;
+  }
   const { from } = plan;
   if (plan.kitPrefix) {
     const ok = await confirmDialog({
@@ -187,31 +188,80 @@ async function renameFromPanel(id: string, to: string): Promise<void> {
   let changed = 0;
   store().update((d) => {
     changed = renameVariable(d as Project, id, to, { scripts });
+    setLabel(d as Project);
   });
   store().toastUndo(changed ? `Renamed ${from} to ${to}, and ${changed} ${changed === 1 ? 'place' : 'places'} that named it.` : `Renamed ${from} to ${to}.`, mark);
 }
 
-function VariableNameField({ name, onValid }: { name: string; onValid: (name: string) => void }) {
-  const [draft, setDraft] = useState(name);
-  useEffect(() => setDraft(name), [name]);
-  const bad = !isIdentifier(draft.trim());
+/**
+ * A variable's name, in the words the author types. Words that are already an identifier ("score") are the name. Anything else
+ * ("Quiz score") is kept as the display label and the fixed identifier (quizScore) is offered as the name formulas use, in a small
+ * box under it that can be changed. Only a valid identifier is saved into the project: an empty name, or an identifier box
+ * that is not valid, stays in the field as a draft with the warning until it is fixed (or an undo or someone else's edit replaces it).
+ */
+function VariableNameField({ v, others, onCommit }: { v: Variable; others: string[]; onCommit: (name: string, label: string | null) => void }) {
+  const shown = v.label?.trim() || v.name;
+  const [words, setWords] = useState(shown);
+  //what was typed into the identifier box, until it is saved or the words change
+  const [typedIdent, setTypedIdent] = useState<string | null>(null);
+  useEffect(() => {
+    setWords(shown);
+    setTypedIdent(null);
+  }, [shown, v.name]);
+  const text = words.trim();
+  const wordsAreName = isIdentifier(text);
+  //unchanged words keep the name the variable has; new words get a name made from them
+  const offered = wordsAreName ? text : text === shown && v.label ? v.name : (nameFromWords(text, others)?.name ?? '');
+  const ident = typedIdent === null ? offered : typedIdent.trim();
+  const showIdent = !!text && !wordsAreName;
+  const identBad = showIdent && !isIdentifier(ident);
+  const bad = text === '' || (!wordsAreName && !offered && typedIdent === null) || identBad;
+  const save = (nextWords: string, nextIdent: string | null) => {
+    const t = nextWords.trim();
+    if (!t) return;
+    const isName = isIdentifier(t);
+    const id = isName ? t : (nextIdent ?? nameFromWords(t, others)?.name ?? '').trim();
+    if (!isIdentifier(id)) return;
+    onCommit(id, isName ? null : (cleanVariableLabel(t) ?? null));
+  };
+  const why =
+    text === ''
+      ? 'A variable needs a name.'
+      : !offered && typedIdent === null
+        ? 'Add a letter or a digit, or type the name formulas will use.'
+        : 'Formulas need a name with letters, digits and _ only, not starting with a digit.';
   return (
     <>
       <TextField
-        value={name}
-        mono
+        value={shown}
+        mono={wordsAreName}
         commitOnBlur
-        title="Letters, digits and _ only, not starting with a digit. A name that is not valid is not saved until you fix it."
-        onInput={setDraft}
-        onChange={(text) => {
-          const t = text.trim();
-          if (isIdentifier(t)) onValid(t);
-        }}
+        title="What you call it. Spaces and capitals are fine: formulas get a short name made from it, shown under the box."
+        onInput={setWords}
+        onChange={(t) => save(t, typedIdent)}
       />
+      {(showIdent || (text !== '' && !wordsAreName && !offered)) && (
+        <label className="var-ident small">
+          <span className="muted">Name in formulas </span>
+          <input
+            className="mono"
+            value={ident}
+            aria-label={`Name in formulas for ${text}`}
+            aria-invalid={identBad || undefined}
+            title="The name formulas and {braces} use for this variable. Made from your words: change it if you like. Letters, digits and _ only, not starting with a digit."
+            onChange={(e) => setTypedIdent(e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+            }}
+            onBlur={() => typedIdent !== null && save(words, typedIdent)}
+          />
+        </label>
+      )}
       {bad && (
         <div className="error small">
-          {draft.trim() === '' ? 'A variable needs a name.' : 'Use letters, digits and _ only, not starting with a digit.'}
-          {draft.trim() !== name && ' Not saved yet, the project still uses ' + name + '.'}
+          {why}
+          {(text === '' || identBad) && ' Not saved yet, the project still uses ' + v.name + '.'}
         </div>
       )}
     </>
@@ -245,7 +295,7 @@ export function VariablesPanel() {
   };
   return (
     <div className="variables">
-      <table className="var-table">
+      <table className="var-table var-main">
         <thead>
           <tr>
             <th>Name</th>
@@ -259,6 +309,7 @@ export function VariablesPanel() {
             <VariableRow
               key={v.id}
               v={v}
+              others={vars.filter((x) => x.id !== v.id).map((x) => x.name)}
               used={report.variables.find((u) => u.id === v.id)?.usedBy ?? []}
               circular={circle.has(v.id)}
               writers={writers.filter((w) => w.variable.id === v.id).length}
@@ -268,7 +319,7 @@ export function VariablesPanel() {
         </tbody>
       </table>
       <div className="var-add">
-        <button className="btn" aria-expanded={menu} aria-haspopup="true" onClick={() => setMenu(!menu)}>
+        <button className="btn" data-tour="add-variable" aria-expanded={menu} aria-haspopup="true" onClick={() => setMenu(!menu)}>
           + Add variable
         </button>
         {menu && (
@@ -290,7 +341,7 @@ export function VariablesPanel() {
 const defaultFor = (t: VariableType) => (t === 'number' ? 0 : t === 'boolean' ? false : t === 'color' ? LIGHT_LOOK.button : t === 'enum' ? 'first' : t === 'list' ? '[]' : '');
 
 /** One variable: its name and where it is used, its type and value, and the settings most people leave alone folded under Options. */
-function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used: Usage[]; circular: boolean; writers: number; setVar: (id: string, patch: Partial<Variable>, coalesce?: string) => void }) {
+function VariableRow({ v, others, used, circular, writers, setVar }: { v: Variable; others: string[]; used: Usage[]; circular: boolean; writers: number; setVar: (id: string, patch: Partial<Variable>, coalesce?: string) => void }) {
   const [places, setPlaces] = useState(false);
   // the formula box only shows for "Worked out": a variable that has one, or one the person just switched to it
   const [worked, setWorked] = useState(!!v.formula?.trim());
@@ -305,7 +356,7 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
       });
       if (used.length > 8) lines.push(`and ${used.length - 8} more`);
       const ok = await confirmDialog({
-        title: `Delete "${v.name}"?`,
+        title: `Delete "${variableLabel(v)}"?`,
         message: `It is used in ${used.length} ${used.length === 1 ? 'place' : 'places'}. They will stop working, because the name they read is gone.\n\n${lines.join('\n')}`,
         confirmLabel: 'Delete it anyway',
         danger: true,
@@ -316,13 +367,20 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
     store().update((d) => {
       d.variables = d.variables.filter((x) => x.id !== v.id);
     });
-    store().toastUndo(`Deleted the variable "${v.name}".`, mark);
+    store().toastUndo(`Deleted the variable "${variableLabel(v)}".`, mark);
   };
-  const optionsOpen = !!(v.persist || v.userData || v.live);
+  const optionsOpen = !!(v.persist || v.userData || v.live || v.shared);
   return (
     <tr>
       <td>
-        <VariableNameField name={v.name} onValid={(name) => void renameFromPanel(v.id, name)} />
+        <div className="var-name-row">
+          {isIdentifier(v.name) && (
+            <ShowOnPage value={v.type === 'list' ? { expr: `${v.name}.length`, label: `How many in ${variableLabel(v)}` } : { expr: v.name, label: variableLabel(v) }} />
+          )}
+          <div className="grow">
+            <VariableNameField v={v} others={others} onCommit={(name, label) => void renameFromPanel(v.id, name, label)} />
+          </div>
+        </div>
         <div className="var-used">
           {used.length ? (
             <button type="button" className="link-btn" aria-expanded={places} onClick={() => setPlaces(!places)} title="Where this variable is read or changed. Click to list the places">
@@ -379,18 +437,8 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
         {v.type === 'boolean' && <CheckField label={v.initial ? 'true' : 'false'} value={!!v.initial} onChange={(x) => setVar(v.id, { initial: x })} />}
         {v.type === 'color' && <ColorField value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
         {v.type === 'list' && (
-          <div className="enum-edit">
-            <TextField
-              value={String(v.initial)}
-              multiline
-              mono
-              rows={3}
-              commitOnBlur
-              title="The starting items as JSON: an array, usually of objects"
-              placeholder={'[{"name": "Ann"}, {"name": "Bo"}]'}
-              onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)}
-            />
-            {!validList(String(v.initial)) && <div className="error small">Not a JSON array, so the list starts empty.</div>}
+          <div>
+            <ListTable label={`${v.name} starting items`} value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} jsonTitle="The starting items as JSON: an array, usually of objects" />
           </div>
         )}
         {v.type === 'enum' && (
@@ -412,6 +460,7 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
           <ExprField
             value={v.formula ?? ''}
             commitOnBlur
+            calc
             title="A formula that works this variable out from the ones above it each time the project starts, instead of using the value above, for example crossword(words, 10) or wordSearch(words, 12). The value above is what it falls back to if the formula fails. The preview on the canvas follows it too."
             placeholder="Or work it out: e.g. crossword(words, 10)"
             onChange={(x) => setVar(v.id, x.trim() ? { formula: x } : { formula: undefined, live: undefined }, `var-formula-${v.id}`)}
@@ -444,6 +493,12 @@ function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used
             onChange={(x) => setVar(v.id, { userData: x ? true : undefined })}
           />
           <SectionBlurb text="Saves the value for each person on the server, so it follows them to another device." name="user data" help={['variables', 'save-as-user-data']} />
+          <CheckField
+            label="Shared with instances"
+            title="One value for this page and every instance of a component inside it, so changing it in one copy changes it in all of them. Off: each instance has its own. Imported Rive view models come in shared."
+            value={!!v.shared}
+            onChange={(x) => setVar(v.id, { shared: x ? true : undefined })}
+          />
         </details>
       </td>
       <td>

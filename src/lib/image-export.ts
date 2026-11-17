@@ -1,7 +1,7 @@
 import { Renderer, createStillShaders, measureCopies, prepareNodes, withMaster, type CopySizes, sampleArtboard, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { assetBytes } from './db';
 import { download, fileSafe } from './export';
-import { previewScope } from './data';
+import { previewScope, previewValue } from './data';
 import { editInstanceMount } from '../canvas/instances';
 import { canvasResolver } from './themes';
 import { fontUseIn, neededFonts, type FontNeed } from './font-use';
@@ -192,11 +192,11 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
     const sampled: SceneNode[] = timeline ? sampleArtboard(ab.children, timeline, time) : ab.children;
     const page = withMaster(project.artboards, ab, sampled);
     const sizes: CopySizes = new Map();
-    let drawn = prepareNodes(page, { vars }, { measured: sizes });
+    let drawn = prepareNodes(page, { vars }, { measured: sizes, variableValue: previewValue(project, vars) });
     r.render(ab, drawn, { vars });
     // Text in repeated copies is measured, and drawn again at the size it took
     if (measureCopies(r, drawn, sizes, ab.width)) {
-      drawn = prepareNodes(page, { vars }, { measured: sizes });
+      drawn = prepareNodes(page, { vars }, { measured: sizes, variableValue: previewValue(project, vars) });
       r.render(ab, drawn, { vars });
     }
     if (r.root.querySelector('iframe, video, [data-ix-embed]')) warnings.push('Embeds and video show as empty boxes in pictures.');

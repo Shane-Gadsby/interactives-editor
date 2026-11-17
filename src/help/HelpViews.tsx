@@ -6,6 +6,14 @@ import { noteHelpSearch, track } from '../lib/analytics';
 import { GROUPS, TOPICS, getTopic, topicBody } from './topics';
 import { Icons } from '../components/icons';
 import { setHelpScrollSource } from './Help';
+import { usePrefs } from '../lib/prefs';
+import { tickStep } from '../lib/tutorial-actions';
+import { isDone } from '../lib/tutorial-progress';
+import { TUTORIAL_SETS } from './tutorial-catalog';
+import { TutorialFoot, TutorialHead, guideFor, trackedFor, useEditorOpen } from './TutorialBar';
+import { startGuide } from '../lib/tutorial-guide';
+import { targetsOf } from '../lib/tutorial-checks';
+import { hideTour, showMe } from '../lib/tour';
 
 // The help's own screens: the drawer, quick search and the full page. Help.tsx holds the state and shortcuts and loads this
 // when something first asks to show help, so the topics (about 650 kB of prose) stay out of the editor's first download.
@@ -36,6 +44,36 @@ export function HelpView({ id, anchor, onNavigate, compact, onClose, focusKey, n
   const [query, setQuery] = useState('');
   const [navOpen, setNavOpen] = useState(!compact);
   const hits = useMemo(() => searchHelp(query, 30), [query]);
+  const prefs = usePrefs();
+  //Tutorials (and concepts) carry tick boxes and a progress strip, unless Preferences turned the badges off
+  const tracked = prefs.tutorialBadges !== false ? trackedFor(topic.id) : null;
+  //A tutorial with checks ticks its steps itself while a project is open, and its steps with a target get a Show me
+  const guide = tracked ? guideFor(topic.id) : undefined;
+  const editorOpen = useEditorOpen();
+  const ticks =
+    tracked && tracked.steps.length
+      ? {
+          done: new Set(prefs.tutorialProgress?.[topic.id]?.steps ?? []),
+          onTick: (n: number, on: boolean) => tickStep(tracked, n, on, TUTORIAL_SETS),
+          ...(guide && editorOpen
+            ? {
+                auto: new Set(Object.keys(guide).map(Number).filter((n) => guide[n].check)),
+                shows: new Set(Object.keys(guide).map(Number).filter((n) => targetsOf(guide[n]).length)),
+                onShow: (n: number) => showMe(targetsOf(guide[n])),
+              }
+            : {}),
+        }
+      : undefined;
+  const watched = !!tracked && !!guide;
+  useEffect(() => {
+    if (!watched || !tracked) return;
+    const stop = startGuide(tracked, guide!, TUTORIAL_SETS);
+    return () => {
+      stop();
+      hideTour();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topic.id, watched]);
   const body = useRef<HTMLDivElement>(null);
   const search = useRef<HTMLInputElement>(null);
   // Showing the help (on mount, and again each time it's asked for) puts the caret in the search box, so people can type
@@ -137,6 +175,7 @@ export function HelpView({ id, anchor, onNavigate, compact, onClose, focusKey, n
                     }}
                   >
                     {t.title}
+                    {prefs.tutorialBadges !== false && isDone(prefs.tutorialProgress, t.id) && <span className="nav-done" role="img" aria-label="Finished" title="You have finished this"><Icons.check width={12} height={12} /></span>}
                   </a>
                 ))}
               </div>
@@ -164,7 +203,9 @@ export function HelpView({ id, anchor, onNavigate, compact, onClose, focusKey, n
                 {topic.title}
               </h1>
               <p className="help-summary">{topic.summary}</p>
-              <Markdown text={topicBody(topic)} onLink={go} />
+              {tracked && <TutorialHead t={tracked} progress={prefs.tutorialProgress} />}
+              <Markdown text={topicBody(topic)} onLink={go} steps={ticks} />
+              {tracked && <TutorialFoot t={tracked} progress={prefs.tutorialProgress} />}
               <footer className="help-pager">
                 {prev ? (
                   <a href={`#/help/${prev.id}`} onClick={(e) => (e.preventDefault(), go(prev.id))}>

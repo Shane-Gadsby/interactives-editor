@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { cleanSharedSettings, dataKindOf, uid, type DataKind, type DataSource } from 'interactives-player';
+import { cleanRoomSettings, cleanSharedSettings, dataKindOf, uid, type DataKind, type DataSource } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { isIdentifier, uniqueIdentifier } from '../store/doc';
 import { dataCache } from '../lib/data';
@@ -11,7 +11,9 @@ import { assetKind } from '../lib/assets';
 import { addAssetOption, withQuickAdd } from '../lib/quick-add';
 import { CONTEXT_ID, ContextPanel } from './ContextPanel';
 import { SharedForm } from './SharedForm';
+import { RoomForm } from './RoomForm';
 import { DataFileEditor } from './DataFileEditor';
+import { ShowOnPage } from '../components/ShowOnPage';
 import { SectionBlurb } from '../components/SectionBlurb';
 
 const KINDS: { value: DataKind; label: string }[] = [
@@ -56,6 +58,13 @@ export function DataPanel() {
     });
     setActiveId(ds.id);
   };
+  const addRoom = () => {
+    const ds: DataSource = { id: uid('ds'), name: uniqueIdentifier(names(), 'chat'), kind: 'json', source: 'room', room: cleanRoomSettings({}) };
+    store().update((d) => {
+      d.dataSources.push(ds);
+    });
+    setActiveId(ds.id);
+  };
   const addFiles = async () => {
     const files = await pickFiles('.json,.csv,.tsv,.txt,application/json,text/csv,text/plain');
     if (!files.length) return;
@@ -93,7 +102,7 @@ export function DataPanel() {
             <button key={d.id} className={`list-item${d.id === active?.id ? ' active' : ''}`} onClick={() => setActiveId(d.id)}>
               <span className={`dot ${st?.error ? 'bad' : st && 'value' in st ? 'ok' : ''}`} />
               <span className="mono">{d.name}</span>
-              <span className="badge">{d.source === 'shared' ? 'shared' : d.kind}</span>
+              <span className="badge">{d.source === 'shared' ? 'shared' : d.source === 'room' ? 'room' : d.kind}</span>
             </button>
           );
         })}
@@ -106,6 +115,9 @@ export function DataPanel() {
         <button className="link-btn" title="Short answers people add (a word cloud, a poll), counted for the whole class or kept for each person" onClick={addShared}>
           + Shared responses
         </button>
+        <button className="link-btn" title="A live message list for the people in the same class: a chat or a question wall. Works on the StudyDesk learner page; Preview has a pretend room" onClick={addRoom}>
+          + Room
+        </button>
       </div>
       {active ? (
         <SplitColumns id="data-main" columns={[{ width: 320, min: 220, max: 640 }, 'flex']} className="data-main">
@@ -114,7 +126,7 @@ export function DataPanel() {
             {active.name === 'context' && <div className="error small">This hides the built-in context in expressions; pick another name.</div>}
             {!isIdentifier(active.name) && <div className="error small">Use letters, digits and _ only, so expressions can say {active.name.replace(/\W/g, '_')}.</div>}
             {s.variables.some((v) => v.name === active.name) && <div className="error small">A variable has the same name and wins in expressions; use data.{active.name}.</div>}
-            {active.source === 'shared' ? null : <SelectField<DataKind> label="Format" value={active.kind} options={KINDS} onChange={(v) => setSource(active.id, { kind: v })} />}
+            {active.source === 'shared' || active.source === 'room' ? null : <SelectField<DataKind> label="Format" value={active.kind} options={KINDS} onChange={(v) => setSource(active.id, { kind: v })} />}
             <SelectField
               label="From"
               value={active.source}
@@ -122,10 +134,13 @@ export function DataPanel() {
                 { value: 'asset', label: 'Uploaded file' },
                 { value: 'url', label: 'URL (fetched by the player)' },
                 { value: 'shared', label: 'Shared responses (what people add)' },
+                { value: 'room', label: 'Room (a live chat for the class)' },
               ]}
-              onChange={(v) => setSource(active.id, v === 'shared' ? { source: v, kind: 'json', shared: active.shared ?? cleanSharedSettings({}) } : { source: v })}
+              onChange={(v) => setSource(active.id, v === 'shared' ? { source: v, kind: 'json', shared: active.shared ?? cleanSharedSettings({}) } : v === 'room' ? { source: v, kind: 'json', room: active.room ?? cleanRoomSettings({}) } : { source: v })}
             />
-            {active.source === 'shared' ? (
+            {active.source === 'room' ? (
+              <RoomForm source={active} setSource={(patch, coalesce) => setSource(active.id, patch, coalesce)} />
+            ) : active.source === 'shared' ? (
               <SharedForm source={active} variables={s.variables} setSource={(patch, coalesce) => setSource(active.id, patch, coalesce)} />
             ) : active.source === 'url' ? (
               <>
@@ -159,7 +174,7 @@ export function DataPanel() {
               />
             )}
             <div className="row">
-              {active.source !== 'shared' && (
+              {active.source !== 'shared' && active.source !== 'room' && (
                 <button className="btn" onClick={() => void dataCache.load(active)}>
                   Reload
                 </button>
@@ -175,7 +190,7 @@ export function DataPanel() {
               />
             </div>
             <SectionBlurb
-              hidden={active.source === 'shared'}
+              hidden={active.source === 'shared' || active.source === 'room'}
               text={
                 <>
                   Use it by name in text, bindings and scripts, like <code>{`{${active.name}.length}`}</code>.
@@ -186,15 +201,15 @@ export function DataPanel() {
             />
           </div>
           <div className="data-preview data-editor">
-            {active.source === 'shared' ? (
+            {active.source === 'shared' || active.source === 'room' ? (
               <>
                 {loaded?.loading && <p className="muted">Loading…</p>}
                 {loaded?.error && <p className="error">{loaded.error}</p>}
-                {loaded && 'value' in loaded && <Preview value={loaded.value} />}
+                {loaded && 'value' in loaded && <Preview value={loaded.value} name={active.name} />}
               </>
             ) : (
               <>
-                {loaded && 'value' in loaded && <Fields value={loaded.value} />}
+                {loaded && 'value' in loaded && <Fields value={loaded.value} name={active.name} />}
                 <DataFileEditor key={active.id} source={active} />
               </>
             )}
@@ -212,25 +227,43 @@ export function DataPanel() {
   );
 }
 
-/** The field names a list of rows has, so people know what to write in an expression. */
-function Fields({ value }: { value: unknown }) {
-  if (!Array.isArray(value) || !value.length || !value.every((r) => r && typeof r === 'object' && !Array.isArray(r))) return null;
-  const cols = [...new Set(value.slice(0, 200).flatMap((r) => Object.keys(r as object)))];
+/**
+ * The field names a list of rows (or an object) has, so people know what to write in an expression. Each is also a handle: drag it
+ * onto the page to show it (the first row's, for a list), see lib/value-drag.ts.
+ */
+function Fields({ value, name }: { value: unknown; name: string }) {
+  const list = Array.isArray(value) && value.length && value.every((r) => r && typeof r === 'object' && !Array.isArray(r));
+  const record = !!value && typeof value === 'object' && !Array.isArray(value);
+  if (!list && !record) return null;
+  const cols = list ? [...new Set((value as object[]).slice(0, 200).flatMap((r) => Object.keys(r)))] : Object.keys(value as object).slice(0, 60);
+  const plain = isIdentifier(name);
   return (
     <div className="muted small">
-      {value.length} rows · item fields: {cols.join(', ')}
+      {list ? `${(value as unknown[]).length} rows · item fields:` : 'fields:'}
+      <span className="field-chip-row">
+        {cols.map((c) =>
+          plain && isIdentifier(c) ? (
+            <span key={c} className="field-chip">
+              <span className="mono">{c}</span>
+              <ShowOnPage value={{ expr: list ? `${name}[0].${c}` : `${name}.${c}`, label: list ? `${name}, first row: ${c}` : `${name}: ${c}` }} />
+            </span>
+          ) : (
+            <span key={c} className="mono">
+              {c}
+            </span>
+          ),
+        )}
+      </span>
     </div>
   );
 }
 
-function Preview({ value }: { value: unknown }) {
+function Preview({ value, name }: { value: unknown; name: string }) {
   if (Array.isArray(value) && value.length && value.every((r) => r && typeof r === 'object' && !Array.isArray(r))) {
     const cols = [...new Set(value.slice(0, 200).flatMap((r) => Object.keys(r as object)))];
     return (
       <>
-        <div className="muted small">
-          {value.length} rows · item fields: {cols.join(', ')}
-        </div>
+        <Fields value={value} name={name} />
         <table className="data-table">
           <thead>
             <tr>

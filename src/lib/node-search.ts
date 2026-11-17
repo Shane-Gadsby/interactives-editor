@@ -51,6 +51,7 @@ export const NODE_SYNONYMS: Record<string, string[]> = {
   'action.courseAdd': ['stamp', 'badge', 'passport', 'collect', 'achievement', 'counter', 'course', 'shared', 'progress'],
   'action.courseLoad': ['stamp', 'badge', 'passport', 'collection', 'course', 'shared', 'progress', 'load'],
   'action.courseCheck': ['stamp', 'badge', 'passport', 'has', 'earned', 'unlock', 'course', 'shared', 'check'],
+  'action.roomSend': ['chat', 'message', 'send', 'post', 'room', 'discussion', 'question wall', 'live', 'class', 'say'],
   'action.loadData': ['fetch', 'refresh', 'reload', 'api', 'csv', 'json', 'data source'],
   'action.clock': ['timer', 'clock', 'countdown', 'stopwatch', 'time limit', 'seconds'],
   'action.sound': ['sound', 'audio', 'music', 'soundtrack', 'background music', 'play audio', 'mp3', 'effect', 'noise', 'loop'],

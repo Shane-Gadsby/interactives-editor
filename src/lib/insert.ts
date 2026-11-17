@@ -1,5 +1,5 @@
 import { extOf, reportError, track } from './analytics';
-import { createNode, type Asset, type SceneNode } from 'interactives-player';
+import { createNode, isFramelingFile, type Asset, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { assetKind, assetUrls, imageSize, storeFile, swapAssetId, videoSize } from './assets';
 import { refreshAudioDuration, type ReplacedAudioFit } from './captions-edit';
@@ -58,6 +58,17 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
         reportError({ kind: 'import', error: err, where: 'svg', detail: { format: 'svg' } });
       }
     }
+    // A Frameling animation is checked before it is uploaded, so a broken file says so instead of sitting in Assets
+    let framePkg: import('interactives-player').FramelingPackage | null = null;
+    if (isFramelingFile(file.name, file.type)) {
+      try {
+        framePkg = await (await import('./frameling-import')).readFramelingFile(file);
+      } catch (err) {
+        st.toast(err instanceof Error ? err.message : String(err), 'error');
+        track('import', 'failed', { thing: 'flplay' });
+        continue;
+      }
+    }
     let asset: Asset;
     try {
       asset = await storeFile(projectId, file);
@@ -71,6 +82,16 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
     added.push(asset);
     const kind = assetKind(asset.mime, asset.name);
     const url = assetUrls.resolve(asset.id)!;
+    if (framePkg) {
+      const fl = await import('./frameling-import');
+      fl.primeAsset(asset.id, framePkg);
+      if (artboardId && at) {
+        const n = fl.animationLayer(asset.id, framePkg.manifest, { x: at.x + offset, y: at.y + offset }, file.name.replace(/\.[^.]+$/, ''));
+        nodes.push(n);
+        offset += 20;
+      }
+      continue;
+    }
     if (!artboardId || !at) continue;
     if (kind === 'image') {
       const size = await imageSize(url);
@@ -143,6 +164,8 @@ export function acceptFor(mime: string, name: string): string {
       return '.woff,.woff2,.ttf,.otf';
     case 'data':
       return '.json,.csv,.tsv,.txt';
+    case 'animation':
+      return '.flplay';
     default:
       return '';
   }
@@ -167,6 +190,16 @@ export async function replaceAssetFile(oldId: string, file: File): Promise<boole
     st.toast(`${file.name} isn't ${was === 'audio' ? 'a sound' : `a ${was} file`}, so it can't replace ${old.name}`, 'error');
     return false;
   }
+  //A new version of a Frameling animation is checked before it goes up, like a first import, so a broken file leaves the old one alone
+  let framePkg: import('interactives-player').FramelingPackage | null = null;
+  if (now === 'animation') {
+    try {
+      framePkg = await (await import('./frameling-import')).readFramelingFile(file);
+    } catch (err) {
+      st.toast(err instanceof Error ? err.message : String(err), 'error');
+      return false;
+    }
+  }
   let asset: Asset;
   try {
     asset = await storeFile(p.id, file);
@@ -174,6 +207,7 @@ export async function replaceAssetFile(oldId: string, file: File): Promise<boole
     st.toast(err instanceof Error ? err.message : String(err), 'error');
     return false;
   }
+  if (framePkg) (await import('./frameling-import')).primeAsset(asset.id, framePkg);
   track('feature', 'asset-replace', { thing: extOf(file.name) });
   // How long the new sound is, if a timeline plays the old one
   const onTimeline = p.artboards.some((ab) => ab.timelines.some((tl) => tl.audio?.some((t) => t.assetId === oldId)));

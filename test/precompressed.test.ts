@@ -23,7 +23,7 @@ type Store = { serve: (root: string, o?: object) => unknown; build: () => Promis
 const make = (dir: string, cache: string): Store => precompressed(dir, cache, { quality: 5 });
 
 const tmp = (name: string) => fs.mkdtempSync(path.join(os.tmpdir(), `ix-${name}-`));
-const listCache = (cache: string) => fs.readdirSync(cache, { recursive: true, withFileTypes: true }).filter((e) => e.isFile()).map((e) => path.relative(cache, path.join(e.parentPath, e.name))).sort();
+const listCache = (cache: string) => fs.readdirSync(cache, { recursive: true, withFileTypes: true }).filter((e) => e.isFile()).map((e) => path.relative(cache, path.join(e.parentPath, e.name)).split(path.sep).join('/')).sort();
 
 let dir: string;
 let cache: string;

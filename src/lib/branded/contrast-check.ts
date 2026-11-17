@@ -152,7 +152,7 @@ interface Sheet {
   entries: Entry[];
 }
 
-const OPAQUE_THINGS = new Set(['video', 'embed', 'draw', 'shader', 'instance', 'image']);
+const OPAQUE_THINGS = new Set(['video', 'embed', 'draw', 'shader', 'animation', 'instance', 'image']);
 
 function sheetOf(page: Artboard, nodes: SceneNode[]): Sheet {
   const paints: Paint1[] = [];

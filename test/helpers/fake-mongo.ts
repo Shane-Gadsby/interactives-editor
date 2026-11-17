@@ -151,6 +151,16 @@ export class FakeCollection {
     return c;
   }
 
+  async distinct(key: string, filter: Doc = {}) {
+    this.check('distinct');
+    const seen = new Set<any>();
+    for (const d of this.docs.filter((x) => matches(x, filter))) {
+      const v = getPath(d, key);
+      if (v !== undefined) seen.add(v);
+    }
+    return [...seen];
+  }
+
   async countDocuments(filter: Doc = {}) {
     this.check('countDocuments');
     return this.docs.filter((d) => matches(d, filter)).length;
@@ -228,6 +238,7 @@ export class FakeDb {
   projects = new FakeCollection();
   revisions = new FakeCollection();
   prefs = new FakeCollection();
+  'designer-tokens' = new FakeCollection();
   libraries = new FakeCollection();
   templates = new FakeCollection();
   comments = new FakeCollection();
@@ -237,6 +248,7 @@ export class FakeDb {
   'interactives-course-collections' = new FakeCollection();
   'shared-responses' = new FakeCollection();
   'shared-hidden' = new FakeCollection();
+  'room-messages' = new FakeCollection();
   ingest = new FakeCollection();
   'user-lookup' = new FakeCollection();
   'doc-chunks' = new FakeCollection();

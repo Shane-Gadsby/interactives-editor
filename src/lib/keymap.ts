@@ -55,6 +55,7 @@ const TOOL_NAMES: [string, string, string[]][] = [
   ['video', 'Video tool', []],
   ['draw', 'Script layer tool', []],
   ['shader', 'Shader layer tool', []],
+  ['animation', 'Frameling animation tool', []],
   ['progress', 'Progress bar tool', []],
   ['chart', 'Chart tool', []],
   ['connector', 'Connector tool', ['K']],
@@ -77,6 +78,7 @@ export const COMMANDS: CommandDef[] = [
 
   C('select-all', 'Select all on this page', 'Edit', 'canvas', ['Mod+A']),
   C('duplicate', 'Duplicate', 'Edit', 'canvas', ['Mod+D'], { edits: true, words: 'copy' }),
+  C('duplicate-layer', 'Duplicate layer only', 'Edit', 'canvas', ['Mod+Shift+D'], { edits: true, words: 'copy without interactions behaviour' }),
   C('delete', 'Delete', 'Edit', 'canvas', ['Delete', 'Backspace'], { edits: true, words: 'remove' }),
   C('copy', 'Copy', 'Edit', 'canvas', ['Mod+C'], { fixed: true }),
   C('cut', 'Cut', 'Edit', 'canvas', ['Mod+X'], { fixed: true, edits: true }),
@@ -168,6 +170,7 @@ export const COMMANDS: CommandDef[] = [
 const PALETTE_ALIAS: Record<string, string> = {
   'sel:all': 'select-all',
   'sel:duplicate': 'duplicate',
+  'sel:duplicate-layer': 'duplicate-layer',
   'sel:delete': 'delete',
   'sel:group': 'group',
   'sel:ungroup': 'ungroup',

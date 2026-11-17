@@ -1,4 +1,5 @@
 import type { HelpTopic } from './topics';
+import { all, bound, clickThen, imported, keys, layers, noAutoplay, renamed, saw, setsVariable, textHas, timelines, titled, variables, type Guide } from '../lib/tutorial-checks';
 
 /**
  * The Getting started path: five hands-on tutorials, read in order. Each one is a topic with numbered steps a new person can
@@ -97,7 +98,7 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 2. A short list of things that can happen opens. Choose **Play an animation**, then pick your timeline under **Which animation**. The line at the bottom reads back what it will do: *When clicked: play “Timeline”*.
 3. Press **Add**. The **Interactions** graph opens at the bottom, zoomed in on the two new nodes (more on them in step 4), and the section now says it in a sentence: **When clicked: play “Timeline”.** (If you would rather the view stayed put, untick **Show new interactions in the graph** in [Preferences](preferences#interactions).)
 
-That is the whole interaction. The same list can go to another page, show or hide a layer, play a sound, open a link, add 1 to a counter or switch something on or off. Every one is added to the **Interactions** graph as ordinary nodes, so you can always take it further.
+That is the whole interaction. The same list can go to another page, show or hide a layer, play a sound, open a link, change a number or switch something on or off. Every one is added to the **Interactions** graph as ordinary nodes, so you can always take it further.
 
 > A shortcut: right-click a layer, choose **Add interaction**, then **When clicked…**.
 
@@ -159,9 +160,9 @@ You will build a lamp. A button switches it on and off, and a counter shows how 
 3. In **Name** type \`lit\`, then press <kbd>Tab</kbd> (the name is saved when you leave the field). The **Type** is already **True/false (switch)**. Leave the starting value unticked (false).
 4. Press **+ Add variable** again and pick **Counter**. Name it \`taps\`. The **Type** is **Number (counter, score)** with the starting value 0.
 
-Names can only use letters, digits and \`_\`, and can't start with a digit. That is so they work inside expressions.
+You can type a name in plain words too, such as **Lamp on**. Formulas need a name made of letters, digits and \`_\`, so the editor offers \`lampOn\` in a small **Name in formulas** box, and keeps your words as the label you see in lists. The names in this tutorial are already plain, so they are used as typed.
 
-![The Variables tab: lit is true/false and starts false, taps is a number and starts at 0.](help/variables-panel.png)
+![The Variables tab: lit is true/false and starts false, taps is a number and starts at 0, each with a small T button at the left of its name.](help/variables-panel.png)
 
 ## 2. Draw the lamp
 
@@ -175,22 +176,22 @@ Names can only use letters, digits and \`_\`, and can't start with a digit. That
 A *binding* keeps a property up to date with an expression.
 
 1. Select **Bulb** and scroll the Properties panel to **Data bindings**.
-2. Choose **Fill colour** in the dropdown and press **Bind**.
-3. In the expression box that appears, type:
+2. Press **+ Add binding** and pick **Fill colour** (type \`fill\` to find it quickly).
+3. A row for the binding appears. Choose **Formula** rather than **Variable**, and in the box under it type:
 
 \`\`\`
 lit ? "#ffd23f" : "#c9ced6"
 \`\`\`
 
-That says: if \`lit\` is true the colour is yellow, otherwise it is grey. The fill now shows a link icon and can't be edited by hand while it is bound.
+That says: if \`lit\` is true the colour is yellow, otherwise it is grey. While it is bound, the binding decides the fill: a colour picked by hand is replaced by the binding's.
 
-![The Data bindings section with a binding on fill.color. The + Convert… menu below changes the value before it is set.](help/bindings-section.png)
+![The Data bindings section with a binding on fill.color set to a formula, with a Pick a calculation link under it. The + Convert… menu below changes the value before it is set.](help/bindings-section.png)
 
 ## 4. Add the interaction
 
 1. Select the **Switch** button. In its **Interactions** section press **+ When clicked…**.
 2. Choose **Switch something on or off** and, under **Which switch**, pick **lit**. Press **Add**.
-3. Press **+ When clicked…** again. Choose **Add 1 to a counter** and pick **taps**. Press **Add**.
+3. Press **+ When clicked…** again. Choose **Change a number…**, pick **taps** and press **Add** (it adds 1).
 
 The section now reads: **When clicked: switch lit on or off** and **When clicked: add 1 to taps**. Two flows start from the same click, and both run. (In the graph they are a **When clicked or hovered** joined to a **Change a value or counter** each, with **Do** on **Flip on or off** and on **Add to it**.)
 
@@ -205,7 +206,7 @@ The section now reads: **When clicked: switch lit on or off** and **When clicked
 ## Go further: more than two states
 
 - Make a variable called \`mode\` with **Type** **Choice** and the options \`off, on, broken\`. A choice shows as a dropdown wherever you set it.
-- Bind the bulb's fill through a **Look up** converter (use **+ Convert…** under the binding): it lists every option for you to give a colour.
+- Bind the bulb's fill to \`mode\` and choose **By value** under the binding: it lists every option for you to give a colour.
 - Use a **Check a condition** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **Check a condition** has a **true** and a **false** output.
 - Tick **Remember** (under **Options**) on a variable in the Variables tab to remember its value in the visitor's browser between visits.
 
@@ -345,7 +346,7 @@ See [Embedding and the player API](embedding) for the iframe snippet, how the pa
 
 ## 7. Work with other people
 
-- **Invite someone to edit with you.** Choose **Share → Invite to collaborate…**, type their name and pick them from the list. The project appears on their projects page. When two or more people are in it, their initials appear at the top and you see each other's cursors. See [Live editing and saving](live-editing#inviting-people).
+- **Invite someone to edit with you.** Choose **Share → Invite to collaborate…**, type their name and pick them from the list. The project appears on their projects page. Press **Turn on live collaboration** in the same window (it is off until you do), and when two or more people are in it, their initials appear at the top and you see each other's cursors. See [Live editing and saving](live-editing#inviting-people).
 - **Ask for comments, not edits.** Choose **Share → Share for review…** and send the review link. Reviewers pin notes on the project and you answer them in the **Comments** tab. See [Review comments](comments).
 - **Let others start from yours.** Choose **Share → Save as template…** to make a template with a checklist, or tick **Allow remix** on the Link for StudyDesk. See [Templates, examples and remix](templates).
 - To let someone just play it, send a share link.
@@ -356,3 +357,42 @@ See [Embedding and the player API](embedding) for the iframe snippet, how the pa
 You've built, animated, wired up, imported and published. Keep going with the topics on the left. Good places to go next: [Timelines and keyframes](timelines), [Groups and frames](groups-frames), [Auto layout](auto-layout), [Data sources](data-sources) and [Troubleshooting and common questions](troubleshooting).`,
   },
 ];
+
+/**
+ * How the help tells each step of a Getting started tutorial is done (the checks) and what Show me points at, by tutorial id and
+ * step number. A step left out is ticked by hand. The pure questions are in lib/tutorial-checks.ts.
+ */
+export const TUTORIAL_GUIDES: Record<string, Guide> = {
+  'tutorial-first-animation': {
+    1: { check: renamed, show: 'project-name' },
+    2: { check: layers('rect'), show: 'tool-rect' },
+    3: { check: timelines(), show: ['timeline-new', 'panel-timeline'] },
+    4: { check: keys(2), show: ['timeline-record', 'panel-timeline'] },
+    5: { check: saw('played'), show: ['timeline-play', 'panel-timeline'] },
+  },
+  'tutorial-first-interaction': {
+    1: { check: noAutoplay, show: 'panel-timeline' },
+    2: { check: layers('button'), show: 'tool-button' },
+    3: { check: clickThen('button', 'action.timeline'), show: 'add-when-clicked' },
+    4: { show: 'panel-logic' },
+    5: { check: clickThen('button', 'action.timeline', undefined, 2), show: 'add-empty-click' },
+    6: { check: saw('previewed'), show: 'preview' },
+  },
+  'tutorial-state-machine': {
+    1: { check: variables(['lit', 'boolean'], ['taps', 'number']), show: ['add-variable', 'panel-variables'] },
+    2: { check: all(layers('ellipse'), textHas('{taps}'), layers('button')), show: 'tool-ellipse' },
+    3: { check: bound('ellipse', 'fill'), show: 'panel-inspector' },
+    4: { check: all(clickThen('button', 'action.setVariable', setsVariable('lit')), clickThen('button', 'action.setVariable', setsVariable('taps'))), show: 'add-when-clicked' },
+    5: { check: saw('previewed'), show: 'preview' },
+  },
+  'tutorial-import-design': {
+    1: { check: imported, show: 'panel-layers' },
+    2: { check: imported, show: 'panel-layers' },
+  },
+  'tutorial-publish': {
+    1: { check: saw('previewed'), show: 'preview' },
+    2: { check: titled, show: 'panel-inspector' },
+    3: { show: 'export' },
+    4: { show: 'share' },
+  },
+};

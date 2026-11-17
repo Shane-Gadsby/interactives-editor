@@ -278,6 +278,20 @@ code,
   margin: 4px 0;
   padding-left: 1.2em;
 }
+/* Edit in Frameling: the steps for bringing the saved file back */
+.frameling-howto {
+  border: 1px solid var(--border, #888);
+  border-radius: 6px;
+  padding: 4px 10px 6px;
+  line-height: 1.4;
+}
+.frameling-howto p {
+  margin: 4px 0;
+}
+.frameling-howto ol {
+  margin: 4px 0;
+  padding-left: 1.3em;
+}
 .hint code {
   background: var(--panel-2);
   padding: 0 3px;
@@ -412,6 +426,21 @@ div.cm-editor.cm-focused {
   min-width: 14px;
   white-space: nowrap;
   flex: none;
+}
+.bound-mark {
+  display: inline-flex;
+  vertical-align: -1px;
+  margin-left: 4px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  color: var(--text);
+  background: var(--bg);
+}
+.field.is-bound input:not([type='checkbox']):not([type='color']),
+.field.is-bound select,
+.field.is-bound textarea {
+  border-style: dashed;
 }
 .field-label.block {
   display: block;
@@ -704,6 +733,17 @@ progress {
 }
 :is(.inspector, .param-form, .key-editor) .keyed > .field:not(.check-field) {
   margin: 0;
+}
+/* a stacked field (label above, a text box under it) in a keyed row spans the whole row, as it does outside one: the subgrid
+   above would otherwise pin the box to the label's column. Its status line and Insert value row go under it, full width */
+:is(.inspector, .param-form, .key-editor) .keyed > .field.stacked:not(.check-field) {
+  grid-column: 1 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .keyed > .field.stacked:not(.check-field) > * {
+  grid-column: 1 / -1;
+}
+:is(.inspector, .param-form, .key-editor) .keyed:has(> .field.stacked) > :is(.insert-value-row, .expr-status) {
+  grid-column: 1 / -1;
 }
 :is(.inspector, .param-form, .key-editor) .field > .field-label {
   grid-column: 1;
@@ -1274,6 +1314,33 @@ progress {
 }
 .search-pop-list li.empty {
   cursor: default;
+}
+.search-pop-list li.group {
+  cursor: default;
+  padding: 6px 8px 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+/* the Insert value button under a text field with {braces} in it: a line of its own under the field, never beside it */
+.insert-value-row {
+  display: flex;
+  margin: 2px 0 4px;
+}
+:is(.keyed, .field):has(> .insert-value-row) {
+  flex-wrap: wrap;
+}
+:is(.keyed, .field) > .insert-value-row {
+  flex: 0 0 100%;
+  grid-column: 1 / -1;
+  order: 10;
+}
+.search-picker.insert-value {
+  flex: none;
+  height: 24px;
+  font-size: 12px;
 }
 
 /* lists of things in one section (bindings, ...): a short rule between each */
@@ -1967,6 +2034,10 @@ hr.item-sep {
   align-self: stretch;
   background: var(--primary-bg);
 }
+/* The Hand tool, Space and a middle drag only pan: nothing under the pointer gets to promise a move or a resize (the right-click menu is still a menu) */
+.canvas.panning *:not(.ctx-menu, .ctx-menu *) {
+  cursor: inherit !important;
+}
 body.dock-dragging,
 body.dock-dragging * {
   cursor: grabbing !important;
@@ -2190,6 +2261,13 @@ body.dock-dragging * {
 }
 .menu button:hover {
   background: var(--line);
+}
+/* The Share pointer at the top of the Export menu, set apart from the file entries below it */
+.menu .menu-share-hint {
+  border-bottom: 1px solid var(--line-2);
+  border-radius: 6px 6px 0 0;
+  margin-bottom: 4px;
+  font-weight: 600;
 }
 .toolbar {
   grid-area: tools;
@@ -2457,6 +2535,23 @@ body.col-resizing * {
   stroke-width: 1;
   opacity: 0.8;
   filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
+}
+.master-outline {
+  fill: none;
+  stroke: var(--logic);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 3;
+  pointer-events: none;
+}
+.master-tag {
+  fill: var(--text);
+  font-size: 10.5px;
+}
+.master-tag-chip {
+  fill: var(--panel);
+  stroke: var(--logic);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
 }
 .focus-outline {
   fill: none;
@@ -3843,6 +3938,14 @@ button.twisty:hover {
 .logic-canvas {
   position: relative;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* the graph, its zoom buttons and the empty hint sit in a stage of their own, under the master's block */
+.logic-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
 }
 .logic-empty {
   position: absolute;
@@ -4422,6 +4525,68 @@ button.twisty:hover {
 }
 .var-used {
   margin-top: 2px;
+}
+.show-on-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: grab;
+  flex: none;
+}
+.show-on-page:hover,
+.show-on-page:focus-visible {
+  color: var(--primary-fg);
+  background: var(--primary-bg);
+}
+.show-on-page:active {
+  cursor: grabbing;
+}
+.var-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.var-name-row > .grow {
+  flex: 1;
+  min-width: 0;
+}
+.field-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.field-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12px;
+}
+.var-ident {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 12px;
+}
+.var-ident input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  padding: 2px 6px;
+}
+.preview-var small {
+  font-size: 11px;
 }
 .var-used .link-btn {
   font-size: 12px;
@@ -6112,6 +6277,19 @@ kbd {
 }
 .constraint:first-child {
   border-top: 0;
+}
+.list-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.list-table .seg {
+  align-self: flex-start;
+}
+.list-table .seg-btn {
+  padding: 3px 10px;
+  font-size: 11px;
 }
 .enum-edit {
   display: flex;
@@ -9240,6 +9418,13 @@ code {
 .tl-row-hit {
   font-weight: 600;
 }
+.tl-row-clash {
+  font-weight: 600;
+  color: var(--danger-text);
+}
+.tl-row.active .tl-row-clash {
+  color: var(--primary-fg);
+}
 .tl-row-problem {
   color: var(--danger-text);
 }
@@ -11914,7 +12099,7 @@ button.flow-text:focus-visible {
 
 /* the behaviour chooser */
 .modal.dialog.behaviour-dialog {
-  width: min(560px, 94vw);
+  width: min(780px, 96vw);
 }
 .recipe-list,
 .recipe-list ul {
@@ -11922,11 +12107,18 @@ button.flow-text:focus-visible {
   margin: 0;
   padding: 0;
 }
-/* the groups sit two across, so the list, the question it asks and the answer all fit without scrolling */
+/* the groups flow three across, so the list, the question it asks and the answer all fit without scrolling */
 .recipe-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 14px;
+  column-count: 3;
+  column-gap: 14px;
+}
+.recipe-group-item {
+  break-inside: avoid;
+}
+@media (max-width: 640px) {
+  .recipe-list {
+    column-count: 1;
+  }
 }
 .recipe-group {
   font-size: 11px;
@@ -11944,7 +12136,7 @@ button.flow-text:focus-visible {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 4px;
-  padding: 4px 9px;
+  padding: 3px 8px;
   margin: 2px 0;
   cursor: pointer;
 }
@@ -11977,6 +12169,22 @@ button.flow-text:focus-visible {
   color: var(--muted);
   font-size: 12px;
 }
+/* what Describe it understood from the sentence, above the list */
+.behaviour-described {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--primary-bg);
+  background: var(--panel-2);
+  font-size: 12px;
+}
+.behaviour-described p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.behaviour-described p + p {
+  margin-top: 2px;
+  color: var(--muted);
+}
 .behaviour-preview {
   margin: 2px 0 8px;
   min-height: 1.4em;
@@ -11988,6 +12196,52 @@ button.flow-text:focus-visible {
   border: 1px solid var(--line-2);
   border-radius: 4px;
   padding: 5px 8px;
+}
+/* trigger, more steps, Only if and Otherwise: below the choice, quiet until used */
+.behaviour-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.behaviour-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.behaviour-step-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.behaviour-step-head .dialog-field {
+  flex: 1;
+}
+.behaviour-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.check-list {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  margin: 0;
+  padding: 4px 8px;
+  max-height: 9em;
+  overflow: auto;
+}
+.check-list legend {
+  color: var(--muted);
+  padding: 0 4px;
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* the condition picker */
@@ -12042,6 +12296,58 @@ button.flow-text:focus-visible {
 }
 .cond-text .link-btn {
   font-size: 11px;
+}
+
+/* "Pick a calculation" under a value formula */
+.calc-open {
+  margin: 0 0 4px;
+}
+.calc-open .link-btn {
+  font-size: 11px;
+  padding: 0;
+}
+.calc {
+  margin: 4px 0 6px;
+  padding: 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.calc-kind {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.calc-kind select,
+.calc-kind input {
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 3px 6px;
+  height: 26px;
+}
+.calc-word {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.calc-formula {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.calc-formula code {
+  color: var(--text);
+}
+.calc .cond-actions {
+  margin-top: 0;
+}
+.calc-operand .field-label {
+  flex: none;
 }
 
 /* two lines in a narrow settings column: the value and how to compare it, then what to compare it with */
@@ -12777,6 +13083,32 @@ button.flow-text:focus-visible {
   width: 210px;
 }
 
+/* The Variables tab: a wide list table or a long textarea scrolls inside its own Value cell instead of
+   widening the table and squeezing Name and Type. Fixed layout, so the columns are what they say. */
+.var-main {
+  table-layout: fixed;
+  min-width: 620px;
+}
+.var-main th:nth-child(1) {
+  width: 190px;
+}
+.var-main th:nth-child(2) {
+  width: 170px;
+}
+.var-main td:nth-child(3) {
+  min-width: 0;
+  overflow-x: auto;
+}
+.var-main td:nth-child(3) textarea,
+.var-main td:nth-child(3) input[type='text'] {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.var-main td:nth-child(3) .list-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 /* Fill in this starter: the content of a starter as a plain form */
 .fillin {
   display: flex;
@@ -13326,5 +13658,737 @@ body.reorder-active .ix-tooltip {
 }
 /* the thing that was just moved says so for a moment (a static outline, so reduced motion needs nothing) */
 .reorder-landed {
+  box-shadow: inset 3px 0 0 var(--primary-bg);
+}
+/* ---------------------------------------------------------------- tutorials: dashboard cards, step ticks, badges and cheers */
+.tutorials-modal {
+  width: min(1040px, calc(100vw - 32px));
+  height: min(86vh, 900px);
+}
+.tut-body-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tut-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  align-items: center;
+  position: sticky;
+  top: -12px;
+  z-index: 2;
+  background: var(--panel);
+  padding: 8px 0;
+}
+.tut-top .help-search {
+  flex: 0 1 260px;
+}
+.tut-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  font-size: 12.5px;
+}
+.tut-total {
+  font-weight: 600;
+}
+.tut-sets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tut-sets li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+}
+.tut-sets li.earned {
+  color: var(--text);
+  font-weight: 600;
+}
+.tut-group h3 {
+  margin: 14px 0 0;
+  font-size: 16px;
+}
+.tut-group > p {
+  margin: 2px 0 8px;
+}
+.tut-level {
+  margin: 12px 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.tut-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 12px;
+}
+.tut-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-2, var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.tut-card.done {
+  border-color: var(--primary-bg);
+}
+.tut-pic {
+  background: var(--bg);
+  aspect-ratio: 16 / 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+}
+.tut-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.tut-body {
+  padding: 10px 12px 4px;
+  flex: 1;
+}
+.tut-body h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tut-body p {
+  margin: 0 0 4px;
+}
+.tut-line {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tut-progress {
+  color: var(--text);
+}
+.tut-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 12px;
+}
+.tut-badge .tut-badge-disc {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.6;
+}
+.tut-badge .tut-badge-ribbon {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.tut-badge .tut-badge-tick {
+  stroke: var(--muted);
+}
+.tut-badge.earned .tut-badge-disc {
+  fill: var(--primary-bg);
+  stroke: var(--focus-edge, #333);
+}
+.tut-badge.earned .tut-badge-ribbon {
+  fill: var(--primary-bg-hover, var(--primary-bg));
+  stroke: var(--focus-edge, #333);
+}
+.tut-badge.earned .tut-badge-tick {
+  stroke: var(--primary-fg);
+}
+/* the help: a tick box on each step, a strip under the title, a footer button */
+.help-article .help-step {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.step-tick {
+  appearance: none;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  align-self: center;
+  border: 1.5px solid var(--muted);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+}
+.step-tick:checked {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+}
+.step-tick:checked::after {
+  content: '';
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid var(--primary-fg);
+  border-bottom: 2px solid var(--primary-fg);
+  transform: translateY(-1px) rotate(-45deg);
+}
+.step-tick:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+.help-step.step-done {
+  color: var(--muted);
+}
+.tutorial-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 10px 0 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+.tutorial-bar progress {
+  flex: 1 1 80px;
+  max-width: 220px;
+  height: 8px;
+  accent-color: var(--primary-bg);
+}
+.tutorial-foot {
+  margin: 18px 0 6px;
+}
+.tutorial-guided {
+  flex: 1 1 100%;
+  font-size: 12px;
+}
+/* Show me: a button on a step, and the ring and label it puts on the editor. The ring never takes a click or the focus */
+.help-article .step-show {
+  margin-left: auto;
+  flex: none;
+  align-self: center;
+  padding: 2px 9px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--primary-bg);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.help-article .step-show:hover {
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.help-article .step-show:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+.tour-layer {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-toast) - 1);
+  pointer-events: none;
+}
+.tour-ring {
+  position: fixed;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 2px solid var(--primary-bg);
+  box-shadow: 0 0 0 1px var(--focus-edge, #333), 0 0 0 4px rgba(255, 255, 255, 0.35), 0 0 18px 4px var(--primary-bg);
+  pointer-events: none;
+}
+.tour-label {
+  position: fixed;
+  width: 220px;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--primary-fg);
+  background: var(--primary-bg);
+  border: 1px solid var(--focus-edge, #333);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+.tour-label.tour-note {
+  top: 64px;
+  left: 50%;
+  width: min(420px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  text-align: left;
+  font-weight: 500;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tour-ring {
+    animation: tour-pulse 1.1s ease-in-out 3;
+  }
+  .tour-label:not(.tour-note) {
+    animation: cheer-in 0.2s ease-out;
+  }
+}
+@keyframes tour-pulse {
+  50% {
+    box-shadow: 0 0 0 1px var(--focus-edge, #333), 0 0 0 8px rgba(255, 255, 255, 0.2), 0 0 26px 8px var(--primary-bg);
+  }
+}
+.help-nav .nav-done {
+  float: right;
+  color: var(--ok-text, var(--ok));
+  line-height: 1;
+  margin-left: 4px;
+}
+/* the cheers: a line, or a badge card, in the bottom corner. They never take the focus or block a click outside themselves */
+.cheer-line,
+.cheer-badge {
+  position: fixed;
+  z-index: var(--z-toast);
+  right: 18px;
+  bottom: 18px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--primary-bg);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  max-width: min(360px, calc(100vw - 36px));
+}
+.cheer-line {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.cheer-tick {
+  color: var(--ok-text, var(--ok));
+}
+.cheer-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 10px 12px 14px;
+}
+.cheer-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+.cheer-text span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.cheer-confetti {
+  position: absolute;
+  left: 40px;
+  top: 40%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.cheer-confetti i {
+  position: absolute;
+  width: 7px;
+  height: 11px;
+  border-radius: 1px;
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cheer-line,
+  .cheer-badge:not(.still) {
+    animation: cheer-in 0.25s ease-out;
+  }
+  .cheer-confetti i {
+    animation: cheer-burst 1.3s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+  }
+  .help-step.step-done .step-tick:checked {
+    animation: cheer-pop 0.3s ease-out;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cheer-confetti {
+    display: none;
+  }
+}
+@keyframes cheer-in {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+@keyframes cheer-burst {
+  0% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), calc(var(--dy) + 90px)) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+@keyframes cheer-pop {
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+/* Bindings: the By value table */
+.by-value {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.by-value-when {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.by-value-row {
+  padding-left: 8px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.by-value-if,
+.by-value-then {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.by-value-if > :is(.select-field, .text-field),
+.by-value-then > :is(.select-field, .text-field, .number-field, .color-field) {
+  flex: 1;
+  min-width: 0;
+}
+/* the result's own label is for screen readers only ("when it is … Fill colour is" says it on screen), so it takes no column:
+   the colour's hex box gets the room */
+.inspector .by-value-then > .field:not(.check-field),
+.inspector .by-value-if > .field:not(.check-field) {
+  grid-template-columns: 0 minmax(0, 1fr) var(--field-trail);
+  column-gap: 0;
+}
+.by-value-word {
+  flex: none;
+  min-width: 56px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.by-value-row.otherwise {
+  border-left-style: dashed;
+}
+.by-value-add {
+  align-self: flex-start;
+}
+
+/* Question section: the Looks row */
+.q-looks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.q-look > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.q-look > summary:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+.q-look-sample {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 22px;
+  border: 2px solid;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.q-looks .link-btn {
+  align-self: flex-start;
+}
+
+/* Interactions graph: a question's kit nodes folded into one block */
+.ix-kit-block {
+  min-width: 200px;
+  max-width: 260px;
+  background: var(--panel-2);
+  border: 1px dashed var(--line-2);
+  border-radius: 8px;
+  font-size: 11.5px;
+  color: var(--text);
+  position: relative;
+}
+.ix-kit-block.ran {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 18%, var(--panel-2));
+}
+.ix-kit-open {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ix-kit-open:hover {
+  background: color-mix(in srgb, var(--primary-bg) 14%, transparent);
+}
+.ix-kit-open:focus-visible,
+.ix-kit-tab:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+.ix-kit-hint {
+  margin-top: 2px;
+  font-weight: 600;
+  text-decoration: underline;
+}
+.ix-kit-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px dashed var(--line-2);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.ix-kit-tab:hover {
+  background: color-mix(in srgb, var(--primary-bg) 14%, var(--panel-2));
+}
+
+/* the page master's flows on the Interactions tab */
+.master-flows-slot {
+  flex: none;
+  max-height: 50%;
+  overflow-y: auto;
+  margin: 6px 0 0 8px;
+}
+.master-flows-slot:empty {
+  display: none;
+}
+.master-flows {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 12px;
+}
+.master-flows.note {
+  padding: 4px 8px;
+}
+.master-flows > summary {
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-right: 190px;
+}
+.master-flows > summary:focus-visible {
+  outline: var(--focus-outline);
+  box-shadow: var(--focus-halo);
+}
+.master-flows-body {
+  padding: 0 8px 8px;
+}
+
+.colourway-look-pick {
+  max-width: 100%;
+  height: 26px;
+  font-size: 12px;
+}
+
+/* Ask the Activity Designer: the chat in a panel down the right, over the inspector */
+.designer-panel {
+  position: fixed;
+  top: 44px;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-float);
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100vw - 40px);
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  box-shadow: -6px 0 18px rgb(0 0 0 / 0.3);
+}
+.designer-panel[hidden] {
+  display: none;
+}
+.designer-panel > header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.designer-panel > header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.designer-panel > header h2:focus {
+  outline: none;
+}
+.designer-note {
+  margin: 0;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.designer-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.designer-msg {
+  max-width: 92%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.designer-msg > :first-child {
+  margin-top: 0;
+}
+.designer-msg > :last-child {
+  margin-bottom: 0;
+}
+.designer-msg.agent {
+  align-self: flex-start;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+.designer-msg.me {
+  align-self: flex-end;
+  background: var(--primary-bg);
+  color: var(--primary-fg, #1e1e1e);
+}
+.designer-msg.me p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.designer-msg.failed {
+  opacity: 0.75;
+}
+.designer-msg.error {
+  align-self: flex-start;
+  background: var(--panel-2);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+.designer-msg.note {
+  align-self: flex-start;
+  color: var(--muted);
+  padding-left: 0;
+}
+.designer-msg.help {
+  align-self: flex-start;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+.designer-topics {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+.designer-quota {
+  margin: 0;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.designer-progress {
+  margin: 0;
+}
+.designer-undo,
+.designer-examples {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.designer-examples p {
+  margin: 0;
+}
+.designer-send {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  padding: 8px;
+  border-top: 1px solid var(--line);
+}
+.designer-send textarea {
+  flex: 1;
+  resize: none;
+  min-height: 2.6em;
+  max-height: 10em;
+  font: inherit;
+}
+.designer-resize {
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  z-index: 1;
+}
+.designer-resize:hover,
+.designer-resize:focus-visible {
+  background: var(--primary-bg);
+  outline: none;
+}
+
+.designer-panel.resizing {
+  user-select: none;
+}
+.live-collab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+}
+.live-collab p {
+  flex: 1;
+  line-height: 1.4;
+}
+.live-collab.offer {
+  border-color: var(--primary-bg);
   box-shadow: inset 3px 0 0 var(--primary-bg);
 }

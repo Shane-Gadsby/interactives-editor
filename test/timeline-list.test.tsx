@@ -5,7 +5,7 @@ import { createProject, uid, type Project, type SceneNode } from 'interactives-p
 import { EditorStore, setCurrentStore } from '../src/store/store';
 import { TimelinePanel } from '../src/panels/Timeline';
 import { analyzeUsage } from '../src/lib/dependencies';
-import { lengthLabel, missingStates, timelineRows } from '../src/lib/timeline-list';
+import { lengthLabel, missingStates, timelineClashes, timelineRows } from '../src/lib/timeline-list';
 import { groupOpen, hasMedia, laneShow, mediaBrief, mediaMarks, mediaSummary } from '../src/lib/timeline-view';
 import { prefs, setPrefs } from '../src/lib/prefs';
 import { TOPICS, topicBody } from '../src/help/topics';
@@ -101,6 +101,32 @@ describe('what the list knows about a timeline', () => {
     expect(missingStates(p, p.artboards[0])).toEqual(['Idle', 'Pressed']);
     p.artboards[0].timelines.push(tl('t4', 'Resting'), tl('t5', 'On click'));
     expect(missingStates(p, p.artboards[0])).toEqual([]);
+  });
+});
+
+describe('two timelines animating the same property', () => {
+  it('finds the other timeline and the layer property, and ignores different properties and empty tracks', () => {
+    const p = project();
+    const a = p.artboards[0];
+    // Hover also animates Title's x (clash with Intro) and Button's y (no clash); Spare has an empty x track on Title
+    a.timelines[1].tracks.push(track('r1') as never, { ...track('r2'), prop: 'y' } as never);
+    a.timelines[2].tracks.push({ ...track('r1'), keys: [] } as never);
+    const c = timelineClashes(a);
+    expect(c.get('t1')).toEqual([{ other: 'Hover', props: ['Title X'] }]);
+    expect(c.get('t2')).toEqual([{ other: 'Intro', props: ['Title X'] }]);
+    expect(c.get('t3')).toEqual([]);
+    expect(timelineRows(a).map((r) => r.clashes.length)).toEqual([1, 1, 0]);
+  });
+
+  it('warns in the list row and says who wins', () => {
+    const p = project();
+    p.artboards[0].timelines[1].tracks.push(track('r1') as never);
+    mount(p);
+    const warn = rows()[0].querySelector('.tl-row-clash')!;
+    expect(warn.textContent).toContain('Also animated by Hover');
+    expect(warn.getAttribute('title')).toContain('Hover wins');
+    expect(rows()[1].querySelector('.tl-row-clash')!.getAttribute('title')).toContain('Hover wins');
+    expect(rows()[2].querySelector('.tl-row-clash')).toBeNull();
   });
 });
 

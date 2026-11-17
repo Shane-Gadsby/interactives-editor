@@ -53,7 +53,7 @@ const IDENT_PART = /[\w$]/;
 const CHAIN_BEFORE_DOT = /([A-Za-z_$][\w$]*(?:\??\.[A-Za-z_$][\w$]*|\[[^[\]]*\]|\([^()]*\))*)\??\.$/;
 
 /** The text of the `{...}` the caret is inside (not a `{{` escape), or null. */
-function braceSpan(text: string, caret: number): { start: number } | null {
+export function braceSpan(text: string, caret: number): { start: number } | null {
   let open = -1;
   for (let i = 0; i < caret; i++) {
     const c = text[i];
@@ -183,7 +183,7 @@ function nameItems(env: SuggestEnv): Suggestion[] {
     if (!seen.has(s.label)) (seen.add(s.label), out.push(s));
   };
   for (const v of env.project.variables) {
-    add({ label: v.name, insert: v.name, kind: 'variable', type: FRIENDLY[v.type] ?? v.type, detail: preview(scope[v.name]) });
+    add({ label: v.name, insert: v.name, kind: 'variable', type: FRIENDLY[v.type] ?? v.type, detail: v.label ? `${v.label} · ${preview(scope[v.name])}` : preview(scope[v.name]) });
   }
   for (const d of env.project.dataSources) {
     add({ label: d.name, insert: d.name, kind: 'data', type: 'data', detail: d.kind });

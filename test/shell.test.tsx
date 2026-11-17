@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -84,8 +84,11 @@ describe('what index.html starts before the bundle', () => {
     expect(document.documentElement.dataset.theme).toBe('dark');
   });
 
-  it('is left alone by the document stamper (it only rewrites script and link tags that point at a file)', () => {
-    const { stampHTML } = createRequire(import.meta.url)('../../suite-libs/cache-headers.js') as { stampHTML: (h: string, v: string) => string };
+  // ../../suite-libs is the symlink on the Linux box and the checkout on test and prod; the Windows box has no symlink,
+  // so the suite's own folder one further up
+  const stamper = ['../../suite-libs/cache-headers.js', '../../../suite-libs/cache-headers.js'].map((p) => resolve(__dirname, p)).find((p) => existsSync(p));
+  it.skipIf(!stamper)('is left alone by the document stamper (it only rewrites script and link tags that point at a file; skipped with no suite-libs nearby)', () => {
+    const { stampHTML } = createRequire(import.meta.url)(stamper!) as { stampHTML: (h: string, v: string) => string };
     const stamped = stampHTML(html, 'abc123');
     expect(stamped).toContain(early);
     expect(stamped).toContain('new URL(path, document.baseURI).href');

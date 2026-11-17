@@ -46,12 +46,13 @@ import { HitPulse } from './HitPulse';
 import { PageLinkLayer } from './PageLinkLayer';
 import { setShowRoutes, showRoutes } from '../lib/page-routes-pref';
 import { addNote, leaveNote, noteScale } from '../lib/notes';
-import { NOTE_DEFAULT_H, NOTE_DEFAULT_W } from 'interactives-player';
+import { NOTE_DEFAULT_H, NOTE_DEFAULT_W, isFramelingFile } from 'interactives-player';
 import { anchorAt } from '../lib/comment-anchor';
 import { comments } from '../lib/comments';
 import { drawnBox, drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
 import { isBrandHeld } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
+import { masterOutlines } from '../lib/page-master';
 import { groupFrame, groupMembers, pickedArtboardIds } from '../lib/artboard-groups';
 import { artboardMenuItems, fitPageCommand, fitPageSelectionItems } from '../lib/artboard-commands';
 import { assetUrls } from '../lib/assets';
@@ -89,6 +90,7 @@ import { confirmDialog } from '../components/dialogs';
 import { openBehaviours } from '../components/BehaviourDialog';
 import { addInteraction } from '../lib/interaction-add';
 import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
+import { VALUE_DRAG, endValueDrag, getDraggedValue, placeValue, readValueDrag, textLayerAt } from '../lib/value-drag';
 import { rangeLabel } from '../lib/variants-edit';
 import { ANIM_PRESETS, animOptions } from '../lib/animate-presets';
 import { boneEndAt, boneFromDrag, boneGlyphs } from '../lib/rig';
@@ -134,6 +136,7 @@ const CREATE_TYPES: Partial<Record<Tool, NodeType>> = {
   video: 'video',
   draw: 'draw',
   shader: 'shader',
+  animation: 'animation',
   progress: 'progress',
   chart: 'chart',
 };
@@ -380,6 +383,9 @@ export function Canvas() {
         holdCode.current = e.code;
         spaceDown.current = true;
         setSpaceHeld(true);
+        // Space would scroll whatever holds the canvas too (and keeps doing it on every repeat). A focused control keeps its own Space
+        const t = e.target as Element | null;
+        if (!t?.closest?.('button, [role="button"], a[href], select, summary, [role="checkbox"], [role="switch"], [role="tab"]')) e.preventDefault();
       }
       const st = store().get();
       if (penRef.current && (e.key === 'Enter' || e.key === 'Escape')) {
@@ -1544,6 +1550,16 @@ export function Canvas() {
       if (ab) insertComponent(page, ab.id, local(ab, w));
       return;
     }
+    // A variable or data field dragged from its panel: added to the text it lands on, or a new text that shows it
+    const value = readValueDrag(e.dataTransfer);
+    if (value) {
+      endValueDrag();
+      hintAt(null, 0, 0);
+      const w = toWorld(e.clientX, e.clientY);
+      const ab = abAt(w);
+      if (ab) placeValue(ab.id, local(ab, w), value);
+      return;
+    }
     // A component dragged from the Libraries panel
     const comp = e.dataTransfer.getData(COMPONENT_DRAG);
     if (comp) {
@@ -1561,6 +1577,14 @@ export function Canvas() {
     const files = captureDrop(e.dataTransfer);
     if (!files.length) return;
     const w = toWorld(e.clientX, e.clientY);
+    //One .flplay dropped on a Frameling animation layer is a new version of its file (back from Edit in Frameling), not another layer
+    if (files.length === 1 && isFramelingFile(files[0].name, files[0].type)) {
+      const under = layerAt(w, true)?.hit;
+      if (under?.type === 'animation') {
+        await (await import('../lib/frameling-import')).updateAnimationFile(under, files[0]);
+        return;
+      }
+    }
     const ab = abAt(w) ?? active;
     if (!ab) return;
     await insertFiles(files, ab.id, local(ab, w));
@@ -1733,6 +1757,33 @@ export function Canvas() {
     if (s.focusId && locate(active, s.focusId)) {
       const pts = nodeCorners(active, s.focusId).map((p) => toS(active, p));
       overlay.push(<polygon key="focus" className="focus-outline" points={pts.map((p) => `${p.x},${p.y}`).join(' ')} />);
+    }
+
+    // Layers that come from a page master can't be picked (a click selects the page), so with the page selected they are
+    // outlined and named, which says where they live
+    const fromMaster = s.artboardSelected && !s.previewPlaying ? masterOutlines(project.artboards, active) : null;
+    if (fromMaster) {
+      fromMaster.boxes.forEach((b, i) => {
+        const o = toS(active, { x: b.x, y: b.y });
+        overlay.push(
+          <rect key={`master-box-${b.id}`} className="master-outline" x={o.x} y={o.y} width={b.width * zoom} height={b.height * zoom} />,
+        );
+        if (i === 0) {
+          // A chip above the page's top right corner, level with the page's own name: never over the page's content
+          const label = `From page master: ${fromMaster.master}`;
+          const top = toS(active, { x: 0, y: 0 });
+          const w = Math.round(label.length * 6 + 12);
+          const right = top.x + active.width * zoom;
+          overlay.push(
+            <g key="master-tag" pointerEvents="none">
+              <rect className="master-tag-chip" x={right - w} y={top.y - 24} width={w} height={19} rx={5} />
+              <text className="master-tag" x={right - w + 6} y={top.y - 10}>
+                {label}
+              </text>
+            </g>,
+          );
+        }
+      });
     }
 
     if (s.artboardSelected) {
@@ -2126,6 +2177,7 @@ export function Canvas() {
       { type: 'video', label: 'Video' },
       { type: 'draw', label: 'Script layer' },
       { type: 'shader', label: 'Shader layer' },
+      { type: 'animation', label: 'Frameling animation' },
       { type: 'progress', label: 'Progress bar' },
       { type: 'chart', label: 'Chart' },
     ];
@@ -2183,6 +2235,7 @@ export function Canvas() {
         { label: 'Copy', hint: keyHints('copy'), onClick: () => copySelection() },
         paste,
         { label: 'Duplicate', hint: keyHints('duplicate'), onClick: () => s2.duplicateSelection() },
+        { label: 'Duplicate layer only', hint: keyHints('duplicate-layer'), onClick: () => s2.duplicateSelection(10, { behaviour: false }) },
         { label: 'Delete', hint: keyHints('delete'), danger: true, onClick: () => s2.deleteSelection() },
         { separator: true },
         {
@@ -2341,13 +2394,20 @@ export function Canvas() {
   const baseCursor = dragCursorNow ?? (spaceHeld ? 'grab' : s.tool === 'select' || s.tool === 'bend' ? hoverCursor ?? toolCursor(s.tool) : toolCursor(s.tool));
   // the move cursor turns into the copy one while Alt is down (over something a drag would move), and for the whole of a copy drag
   const cursor = copying || (altHeld && baseCursor === 'move') ? 'copy' : baseCursor;
+  // While the Hand tool (or Space, or a middle drag) is panning, every press pans, so handles, artboard names and layers mustn't
+  // show their own resize or move cursors (.canvas.panning in styles.css makes them all take the canvas's)
 
   return (
     <div
       ref={vp}
-      className={`canvas${altHeld && s.tool === 'select' ? ' alt-held' : ''}`}
+      className={`canvas${altHeld && s.tool === 'select' ? ' alt-held' : ''}${s.tool === 'hand' || spaceHeld || dragging?.kind === 'pan' ? ' panning' : ''}`}
       style={{ cursor }}
       onPointerDown={onPointerDown}
+      // A middle press (or any press with Space held) pans the canvas, so the browser mustn't start its own autoscroll or a
+      // text selection that drags the page along as well (only cancelling mousedown stops them)
+      onMouseDown={(e) => {
+        if (e.button === 1 || (e.button === 0 && spaceDown.current)) e.preventDefault();
+      }}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
@@ -2366,9 +2426,23 @@ export function Canvas() {
           e.dataTransfer.dropEffect = ok ? 'copy' : 'none';
           setDropHost((cur) => (ok ? (cur === over!.id ? cur : over!.id) : cur ? null : cur));
         }
+        // A variable or data field: say what letting go would do
+        if (e.dataTransfer.types.includes(VALUE_DRAG)) {
+          const w = toWorld(e.clientX, e.clientY);
+          const over = abAt(w);
+          const ok = !!over && !over.library;
+          const v = getDraggedValue();
+          const on = ok ? textLayerAt(over!.id, local(over!, w)) : null;
+          e.dataTransfer.dropEffect = ok ? 'copy' : 'none';
+          setDropHost((cur) => (ok && !on ? (cur === over!.id ? cur : over!.id) : cur ? null : cur));
+          hintAt(ok && v ? (on ? `Let go to add ${v.label} to “${on.name}”` : `Let go to make a text that shows ${v.label}`) : null, e.clientX, e.clientY);
+        }
       }}
       onDragLeave={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropHost(null);
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setDropHost(null);
+          hintAt(null, 0, 0);
+        }
       }}
       onDrop={onDrop}
       onContextMenu={openMenu}
@@ -2756,6 +2830,13 @@ function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zo
         <>
           <rect x={x} y={y} width={w} height={h} fill="#1a1030" fillOpacity={0.9} />
           {h > 14 * zoom && label('Shader layer', '#c58bff', 14)}
+        </>
+      );
+    case 'animation':
+      return (
+        <>
+          <rect x={x} y={y} width={w} height={h} fill="#1d1b26" fillOpacity={0.85} />
+          {h > 14 * zoom && label('Frameling animation', '#ffc94a', 14)}
         </>
       );
     case 'progress':

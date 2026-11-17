@@ -1,6 +1,7 @@
-import { Fragment, useState } from 'react';
-import { PropRow } from '../lib/prop-search';
-import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, layerOwnProps, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
+import { variableOption } from '../lib/friendly-names';
+import { Fragment, useContext, useState } from 'react';
+import { PropRow, propKey } from '../lib/prop-search';
+import { variableLabel, ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, getPath, layerOwnProps, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { findArtboardOf, isIdentifier } from '../store/doc';
 import { previewScope } from '../lib/data';
 import { IconButton, Section } from '../components/ui';
@@ -9,6 +10,8 @@ import { ExprField, ExprLocals } from '../components/ExprField';
 import { Icons } from '../components/icons';
 import { SearchPicker, type PickerOption } from '../components/SearchPicker';
 import { ConvertersEditor } from '../components/Converters';
+import { ByValueTable } from '../components/ByValue';
+import { isByValue, startMap, whenKind } from '../lib/by-value';
 import { createVariable } from '../lib/quick-add';
 import { store } from '../store/store';
 import { SectionBlurb } from '../components/SectionBlurb';
@@ -78,17 +81,51 @@ export function bindableProps(node: SceneNode, project: Project): { prop: string
   return out;
 }
 
+/** Fields that call a property something other than the binding list does (Sx for scale X, Radius for corner radius, Colour for the fill colour). */
+const FIELD_ALIASES: Record<string, string[]> = {
+  scaleX: ['Scale W'],
+  scaleY: ['Scale H'],
+  originX: ['Pivot x'],
+  originY: ['Pivot y'],
+  cornerRadius: ['Radius'],
+  'fill.color': ['Fill', 'Colour'],
+};
+
+/**
+ * The inspector row keys (what a field's `data-prop` carries) of the properties a layer's bindings write every frame: the
+ * ones bound in (or both ways). A value typed into one of those fields is replaced the next time the variable changes, so
+ * the field gets a marker saying so. Out-only bindings are left out, since the field still sticks.
+ */
+export function boundFieldKeys(node: SceneNode, project: Project): Set<string> {
+  const keys = new Set<string>();
+  const bindings = node.bindings ?? {};
+  const modes = node.bindingModes ?? {};
+  if (!Object.keys(bindings).length) return keys;
+  const props = bindableProps(node, project);
+  for (const p of Object.keys(bindings)) {
+    if (!bindings[p] || (modes[p] ?? 'in') === 'out') continue;
+    const label = props.find((x) => x.prop === p)?.label ?? humanize(p);
+    for (const l of [label, humanize(p), ...(FIELD_ALIASES[p] ?? [])]) {
+      const k = propKey(l);
+      if (k) keys.add(k);
+    }
+  }
+  return keys;
+}
+
 /**
  * Data bindings: each ties one of the layer's properties to a variable. In (the default): the variable (or a formula of
  * variables) sets the property every frame. Out: the property's value goes into the variable as it changes. Both: they're
  * kept equal, whichever changed.
  */
 export function BindingsSection({ node, project, set }: { node: SceneNode; project: Project; set: (patch: Record<string, unknown>, coalesce?: string) => void }) {
+  //item and index from the Inspector when the layer is in a repeater, with self on top
+  const outer = useContext(ExprLocals);
   const bindings = node.bindings ?? {};
   const converters = node.converters ?? {};
   const modes = node.bindingModes ?? {};
   // data, enums, artboard, layer() and self, so a formula that reads them works out in the grey line the way it will play
-  const base = { ...previewScope(project, findArtboardOf(project, node.id)), self: layerScope(node) };
+  const base = { ...previewScope(project, findArtboardOf(project, node.id)), ...outer.values, self: layerScope(node) };
   const entries = Object.entries(bindings);
   const update = (next: Record<string, string>, conv: Record<string, Converter[]> = converters, m: Record<string, BindingMode> = modes) => {
     const keep = Object.fromEntries(Object.entries(conv).filter(([k, list]) => k in next && list.length && (m[k] ?? 'in') === 'in'));
@@ -125,7 +162,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
       {entries.length === 0 && (
         <SectionBlurb text="Nothing is bound yet. A binding ties a property to a variable: in, out or both ways." name="Data bindings" help={['bindings', 'which-way-in-out-or-both']} />
       )}
-      <ExprLocals.Provider value={{ self: node }}>
+      <ExprLocals.Provider value={{ ...outer, self: node }}>
       {entries.map(([p, expr], i) => (
         <Fragment key={p}>
           {i > 0 && <hr className="item-sep" />}
@@ -142,11 +179,13 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
               update({ ...bindings, [p]: keepExpr ? expr : '' }, converters, { ...modes, [p]: m });
             }}
             expr={expr}
+            current={getPath(node, p)}
             list={converters[p] ?? []}
             variables={project.variables}
             base={base}
             onExpr={(v) => update({ ...bindings, [p]: v })}
             onConverters={(list) => update(bindings, { ...converters, [p]: list })}
+            onBoth={(e, list) => update({ ...bindings, [p]: e }, { ...converters, [p]: list })}
             onRemove={() => {
               const next = { ...bindings };
               delete next[p];
@@ -172,11 +211,13 @@ function BindingItem({
   dragged,
   onMode,
   expr,
+  current,
   list,
   variables,
   base,
   onExpr,
   onConverters,
+  onBoth,
   onRemove,
 }: {
   prop: string;
@@ -188,17 +229,23 @@ function BindingItem({
   dragged?: boolean;
   onMode: (m: BindingMode) => void;
   expr: string;
+  /** What the layer has for this property now */
+  current: unknown;
   list: Converter[];
   variables: Variable[];
   base: Record<string, unknown>;
   onExpr: (v: string) => void;
   onConverters: (list: Converter[]) => void;
+  /** The formula and the converters in one change (two calls in a row would each overwrite the other) */
+  onBoth: (expr: string, list: Converter[]) => void;
   onRemove: () => void;
 }) {
   const plain = !expr.trim() || variables.some((v) => v.name === expr.trim());
-  const [formula, setFormula] = useState(!plain);
+  //a binding that is only a Look up opens as the By value table, so a table made there comes back as one
+  const [source, setSource] = useState<'variable' | 'formula' | 'value'>(isByValue(list) ? 'value' : plain ? 'variable' : 'formula');
+  const formula = source === 'formula';
   const t = trace(expr, list, variables, base);
-  const varOptions: PickerOption[] = variables.filter((v) => isIdentifier(v.name)).map((v) => ({ value: v.name, label: v.name, hint: v.type }));
+  const varOptions: PickerOption[] = variables.filter((v) => isIdentifier(v.name)).map((v) => variableOption(v, v.type));
   return (
     <div className="binding">
       <div className="binding-head">
@@ -246,21 +293,35 @@ function BindingItem({
       <>
       <div className="binding-source">
         <div className="seg" role="radiogroup" aria-label={`${label}: set from`}>
-          <button type="button" role="radio" aria-checked={!formula} className={`seg-btn${!formula ? ' on' : ''}`} title="Set it straight from one variable" onClick={() => {
-            setFormula(false);
-            if (!variables.some((v) => v.name === expr.trim())) onExpr('');
+          <button type="button" role="radio" aria-checked={source === 'variable'} className={`seg-btn${source === 'variable' ? ' on' : ''}`} title="Set it straight from one variable" onClick={() => {
+            setSource('variable');
+            const keep = variables.some((v) => v.name === expr.trim());
+            if (source === 'value') onBoth(keep ? expr : '', []);
+            else if (!keep) onExpr('');
           }}>
             Variable
           </button>
-          <button type="button" role="radio" aria-checked={formula} className={`seg-btn${formula ? ' on' : ''}`} title="Work it out from variables, e.g. lives > 0, or progress * 3" onClick={() => setFormula(true)}>
+          <button type="button" role="radio" aria-checked={source === 'formula'} className={`seg-btn${source === 'formula' ? ' on' : ''}`} title="Work it out from variables, e.g. lives > 0, or progress * 3" onClick={() => {
+            if (source === 'value') onConverters([]);
+            setSource('formula');
+          }}>
             Formula
           </button>
+          <button type="button" role="radio" aria-checked={source === 'value'} className={`seg-btn${source === 'value' ? ' on' : ''}`} title={`A small table: when a variable or item field has this value, ${label} is that`} onClick={() => {
+            if (source === 'value') return;
+            setSource('value');
+            onConverters([startMap(whenKind(expr, variables, { ...base }), kind, current)]);
+          }}>
+            By value
+          </button>
         </div>
-        {formula && kind === 'boolean' ? (
+        {source === 'value' ? (
+          <ByValueTable label={label} kind={kind} expr={expr} list={list} variables={variables} base={base} current={current} onBoth={onBoth} />
+        ) : formula && kind === 'boolean' ? (
           // a yes/no property (visible, disabled...) is set by a condition, so it gets the pickers
           <ConditionField label="Condition" value={expr} title="A condition: when it is true the property is on" placeholder="e.g. lives > 0" onChange={onExpr} />
         ) : formula ? (
-          <ExprField value={expr} commitOnBlur placeholder="e.g. lives > 0" title="A formula of variables; its result sets the property" onChange={onExpr} />
+          <ExprField value={expr} commitOnBlur calc placeholder="e.g. lives > 0" title="A formula of variables; its result sets the property" onChange={onExpr} />
         ) : (
           <SearchPicker
             value={expr.trim()}
@@ -276,7 +337,7 @@ function BindingItem({
           />
         )}
       </div>
-      <ConvertersEditor list={list} expr={expr} variables={variables} onChange={onConverters} />
+      {source !== 'value' && <ConvertersEditor list={list} expr={expr} variables={variables} onChange={onConverters} />}
       <div className={`binding-trace${t.error ? ' err' : ''}`} title="Worked out with every variable at its starting value">
         {t.error ? t.error : (
           <>
@@ -314,8 +375,8 @@ function SyncedSource({ label, prop, kind, mode, expr, variables, varOptions, on
         {!v
           ? 'Pick the variable to tie it to.'
           : mode === 'out'
-            ? <>Whenever <strong>{label}</strong> changes, <strong>{v.name}</strong> is set to it. Setting {v.name} doesn't change {label}.</>
-            : <>At the start <strong>{label}</strong> takes <strong>{v.name}</strong> ({show(startValue(v))}). After that, change either and the other follows.</>}
+            ? <>Whenever <strong>{label}</strong> changes, <strong>{variableLabel(v)}</strong> is set to it. Setting {variableLabel(v)} doesn't change {label}.</>
+            : <>At the start <strong>{label}</strong> takes <strong>{variableLabel(v)}</strong> ({show(startValue(v))}). After that, change either and the other follows.</>}
       </div>
     </>
   );

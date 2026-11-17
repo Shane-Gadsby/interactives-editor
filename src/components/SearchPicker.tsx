@@ -7,6 +7,8 @@ export interface PickerOption {
   label: string;
   /** Smaller text after the label (a type, a property path). */
   hint?: string;
+  /** A heading the option sits under; options of one group come together in the order given. */
+  group?: string;
 }
 
 export interface PickerAction {
@@ -131,7 +133,12 @@ export function SearchPicker({
               }}
             />
             <ul ref={list} role="listbox" className="search-pop-list">
-              {shown.map((o, i) => (
+              {shown.map((o, i) => [
+                o.group && o.group !== shown[i - 1]?.group ? (
+                  <li key={`group:${o.group}`} role="presentation" className="group">
+                    {o.group}
+                  </li>
+                ) : null,
                 <li
                   key={o.value}
                   role="option"
@@ -142,8 +149,8 @@ export function SearchPicker({
                 >
                   <span>{o.label}</span>
                   {o.hint && <span className="search-picker-hint">{o.hint}</span>}
-                </li>
-              ))}
+                </li>,
+              ])}
               {!shown.length && <li className="muted empty">Nothing matches “{q}”</li>}
               {actions.map((a, j) => (
                 <li key={a.label} className={`action${shown.length + j === sel ? ' on' : ''}`} onPointerEnter={() => setSel(shown.length + j)} onClick={() => choose(shown.length + j)}>

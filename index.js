@@ -70,12 +70,14 @@ let port = Number(process.env.PORT) || 3048,
 	projects,
 	revisions,
 	prefs,
+	designerTokens,
 	libraries,
 	templates,
 	userData,
 	activityData,
 	sharedRows,
 	sharedHidden,
+	roomMessages,
 	courseRows,
 	userLookup,
 	ingest,
@@ -107,6 +109,7 @@ let ops = null,
 	media = null,
 	commentLib = null,
 	responses = null,
+	roomsLib = null,
 	courseLib = null,
 	sharedLimits = {},
 	courseLimits = {},
@@ -275,6 +278,19 @@ const rooms = new Map(),
 		room = {id, doc: parsed, docChunks: doc.docChunks || null, owner: doc.owner || null, rev: doc.rev || 0, seq: 0, log: [], clients: new Set(), dirty: false, dirtySince: 0, saveTimer: null, closeTimer: null, nextColor: 0}
 		rooms.set(id, room)
 		return room
+	},
+
+	//A room keeps agent edits and live ops for up to a second before they reach mongo, and rev only moves when they do.
+	//So the rev to hand out for a room with unsaved ops is the one its next save will have, or a tab without live sync
+	//would load the document with a rev that's about to go stale. A whole-document save lets the room write first instead
+	roomRev = (room) => room.dirty && !room.deleted ? room.rev + 1 : room.rev,
+
+	settleRoom = async (id) => {
+		let room = rooms.get(id)
+
+		if (room?.dirty && !room.deleted && !room.storeFailed) {
+			await persist(room)
+		}
 	},
 
 	maybeCloseRoom = (room) => {
@@ -478,7 +494,7 @@ fontsProxy.prewarm()
 
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
-const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], codeTheme: ['follow', 'light', 'dark'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', attachGuides: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean', technicalWording: 'boolean', showNewInteractions: 'boolean', altDragHintAlways: 'boolean', gettingStarted: 'boolean', timelineList: 'boolean', timelineFoldEmpty: 'boolean', timelineHideSound: 'boolean', timelineHideCaptions: 'boolean', timelineHideDescriptions: 'boolean', singleKeys: 'boolean', keymapPreset: ['default', 'illustration']},
+const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], codeTheme: ['follow', 'light', 'dark'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', attachGuides: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean', technicalWording: 'boolean', showNewInteractions: 'boolean', altDragHintAlways: 'boolean', gettingStarted: 'boolean', timelineList: 'boolean', timelineFoldEmpty: 'boolean', timelineHideSound: 'boolean', timelineHideCaptions: 'boolean', timelineHideDescriptions: 'boolean', singleKeys: 'boolean', tutorialBadges: 'boolean', tutorialSound: 'boolean', keymapPreset: ['default', 'illustration']},
 	cleanKeymap = (m) => Object.fromEntries(
 		Object.entries(m)
 			.filter(([k, v]) => /^[a-z][a-z0-9.-]{0,59}$/i.test(k) && Array.isArray(v))
@@ -542,6 +558,25 @@ const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], co
 					.slice(0, 40)
 			)
 		}
+		//How far the person is through the tutorials: help topic id to the step numbers ticked and, once finished, when.
+		//At most 120 tutorials, 40 steps each, ids short plain keys, and anything else is dropped
+		if (p?.tutorialProgress && typeof p.tutorialProgress === 'object' && !Array.isArray(p.tutorialProgress)) {
+			out.tutorialProgress = Object.fromEntries(
+				Object.entries(p.tutorialProgress)
+					.filter(([k, v]) => /^[a-z0-9-]{1,60}$/.test(k) && v && typeof v === 'object' && !Array.isArray(v))
+					.map(([k, v]) => {
+						let e = {}
+						if (Array.isArray(v.steps)) {
+							let steps = [...new Set(v.steps.filter((n) => Number.isInteger(n) && n >= 1 && n <= 99))].sort((a, b) => a - b).slice(0, 40)
+							if (steps.length) e.steps = steps
+						}
+						if (Number.isInteger(v.done) && v.done > 0 && v.done < 8.64e15) e.done = v.done
+						return [k, e]
+					})
+					.filter(([, e]) => e.steps || e.done)
+					.slice(0, 120)
+			)
+		}
 		//Saved workspaces (panel layouts under a name). The editor checks the layout inside each one itself, so here
 		//it's only the shape and the size: at most 12, each with an id and a name and no bigger than 8 KB
 		if (Array.isArray(p?.workspaces)) {
@@ -566,9 +601,14 @@ router.put('/api/prefs', express.json({limit: '512kb'}), async (req, res) => {
 	res.json({user, prefs: clean})
 })
 
+//Ask the Activity Designer: a Cogniti agent that builds in the open project (designer.js, and the /api/designer routes
+//further down by the MCP ones). COGNITI_TOKEN is the one secret, an api token from a Cogniti account (its API tokens
+//page; whoever holds that account grants it). Parked: it only runs with INTERACTIVES_DESIGNER=on as well (agent-docs/PARKED.md)
+const designer = require('./designer')
+
 //Who the editor's talking to, for the projects list and the owner badge
 router.get('/api/session', (req, res) => {
-	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req)})
+	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req), designer: designer.settings().on})
 })
 
 //The projects list, mine only (owned or invited to). ?all=1 gets everyone's, but only for power users (god mode),
@@ -622,9 +662,25 @@ router.get('/api/projects/:id', async (req, res) => {
 		return
 	}
 
-	//A live room has newer content than mongo until its next save
+	//A live room has newer content than mongo until its next save (an editor with live sync off isn't in the room, and an
+	//AI agent may be), so the rev is the one that save will have
 	let room = rooms.get(req.params.id)
-	res.json({project: room ? room.doc : await store.parse(doc), rev: room ? room.rev : doc.rev, owner: doc.owner || null, live: room ? room.seq : null})
+	res.json({project: room ? room.doc : await store.parse(doc), rev: room ? roomRev(room) : doc.rev, owner: doc.owner || null, live: room ? room.seq : null, collaborators: (doc.collaborators || []).length})
+})
+
+//Just the rev, for an editor that has live sync off to ask now and then (when its tab comes back into view) whether the
+//project was changed somewhere else, an AI agent or another tab, without downloading the document
+router.get('/api/projects/:id/rev', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let room = rooms.get(req.params.id),
+		now = room ? roomRev(room) : doc.rev
+
+	res.json({rev: now ?? doc.rev})
 })
 
 //Save. The editor sends the rev it loaded, and a mismatch means someone else saved in between,
@@ -637,6 +693,9 @@ router.put('/api/projects/:id', express.json({limit: saveLimit}), async (req, re
 	if (!validID(id) || !project || project.id !== id || project.format !== 'interactives' || !Array.isArray(project.artboards)) {
 		return res.status(400).json({error: 'Not a valid project'})
 	}
+
+	//An agent's edits may still be in the room: let them reach mongo first so the rev check sees them
+	await settleRoom(id)
 
 	let existing = await projects.findOne({_id: id}, {projection: {doc: 0}})
 
@@ -872,6 +931,7 @@ const purgeProject = async (row) => {
 	await store.dropProject(id)
 	await userData.deleteMany({project: id})
 	await activityData.deleteMany({project: id})
+	sharedLiveEndProject(id)
 	await sharedRows.deleteMany({project: id})
 	await sharedHidden.deleteMany({project: id})
 	await commentRows.deleteMany({project: id})
@@ -1061,6 +1121,8 @@ router.post('/api/projects/:id/duplicate', express.json(), async (req, res) => {
 	project.id = newID
 	project.name = String(name || `${project.name} copy`).slice(0, 200)
 	project.created = project.updated = now.toISOString()
+	//The copy starts with nobody else on it, so live collaboration starts off again
+	if (project.settings) delete project.settings.liveSync
 
 	if (fs.existsSync(projectDir(id))) {
 		await fs.promises.cp(projectDir(id), projectDir(newID), {recursive: true})
@@ -2003,13 +2065,14 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 	let token = doc.share?.token || crypto.randomBytes(18).toString('base64url'),
 		sensors = declaredSensors(html),
 		shared = responses.declaredShared(html),
-		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {})}
+		roomsDeclared = roomsLib.declaredRooms(html),
+		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {}), ...(Object.keys(roomsDeclared).length ? {rooms: roomsDeclared} : {})}
 
 	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
 	//An update keeps the page it replaces (one, not a history), so a bad publish can be undone in a click
 	let prevKept = false
 	if (doc.share?.token && await moveIfThere(shareFile(token), sharePrevFile(token))) {
-		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {})}
+		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {})}
 		prevKept = true
 	}
 	await fs.promises.writeFile(shareFile(token), prepared ? prepared.html : html)
@@ -2049,7 +2112,7 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 	await fs.promises.rename(sharePrevFile(token), shareFile(token))
 	await fs.promises.rename(swap, sharePrevFile(token))
 
-	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
+	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
 		set = {share}, unset = {}
 
 	//The page that came back has the sensors it was shared with
@@ -2066,6 +2129,14 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 	}
 	else {
 		delete share.shared
+	}
+
+	//And its rooms
+	if (doc.share.previous.rooms) {
+		share.rooms = doc.share.previous.rooms
+	}
+	else {
+		delete share.rooms
 	}
 	//The answer keys swap with their pages
 	if (doc.previousMarking) set.marking = doc.previousMarking
@@ -2093,6 +2164,7 @@ router.delete('/api/projects/:id/share', async (req, res) => {
 		await fs.promises.rm(shareFile(doc.share.token), {force: true})
 		await fs.promises.rm(sharePrevFile(doc.share.token), {force: true})
 		audit(req, 'share-off', doc)
+		sharedLiveEndProject(id)
 	}
 	await projects.updateOne({_id: id}, {$unset: {share: '', marking: '', previousMarking: ''}})
 	res.json({ok: true})
@@ -2458,6 +2530,8 @@ const maxTemplate = 12 * 1024 * 1024,
 		project.id = newID
 		project.name = String(name || project.name || 'Untitled project').slice(0, 200)
 		project.created = project.updated = now.toISOString()
+		//A new project starts with nobody else on it, so live collaboration starts off whatever the source had
+		if (project.settings) delete project.settings.liveSync
 
 		if (filesFrom && fs.existsSync(filesFrom)) {
 			await fs.promises.mkdir(projectDir(newID), {recursive: true})
@@ -3957,6 +4031,10 @@ router.post('/learn/:token/shared/:source', express.json({limit: '4kb'}), async 
 
 	if (saved) {
 		sharedForget(project._id, source, person.course)
+
+		if (who === 'class') {
+			sharedNudge(project._id, source, person.course)
+		}
 	}
 
 	res.json({available: true, ok: true, kept: saved ? plan.kept : 0, value: await sharedValue(at, who, plan?.problem || '')})
@@ -3979,10 +4057,794 @@ router.post('/learn/:token/shared/:source/withdraw', express.json({limit: '4kb'}
 	let key = {project: project._id, source, course: person.course, username: person.username},
 		field = who === 'me' ? 'own' : 'answers'
 
-	await saveRecord(key, (existing) => existing && existing[field]?.length ? {[field]: responses.planWithdraw(existing[field], req.body?.answers, declared), updated: new Date()} : null, sharedRows)
+	let changed = await saveRecord(key, (existing) => existing && existing[field]?.length ? {[field]: responses.planWithdraw(existing[field], req.body?.answers, declared), updated: new Date()} : null, sharedRows)
 	sharedForget(project._id, source, person.course)
+
+	if (changed && who === 'class') {
+		sharedNudge(project._id, source, person.course)
+	}
+
 	res.json({available: true, ok: true, value: await sharedValue(at, who)})
 })
+
+//Live nudges for shared responses. A learner page opens one stream (server-sent events, over fetch, so it can send the session
+//headers) and the server says "changed" on it when somebody in the same project and course adds, takes back, hides or clears an
+//answer. The nudge is only the source id: no answer, no name, no count. The page hands it to the player, which reads the class
+//the normal way (same route, same privacy, same blocked words), so this can never show anybody more than a poll would. The poll
+//stays as the fallback, and the player slows it down while the stream is up.
+//One stream per open learner page, closed when it leaves and after sharedLiveAge anyway (so a share link turned off, or a session
+//that ended, stops holding it). A person has three at most (a second tab, a reconnect before the old one is noticed gone), a course
+//has sharedLiveMax, the box has sharedLiveTotalMax, and opening one is rate limited. Over any of those the page just keeps polling.
+//Nudges are coalesced: at most one per source every sharedLiveEvery ms for a course, however many people add at once.
+const sharedLive = new Map(),
+	sharedLiveEvery = 400,
+	sharedLiveAge = 20 * 60 * 1000,
+	sharedLiveMax = () => Number(process.env.INTERACTIVES_LIVE_PER_COURSE) || 600,
+	sharedLiveTotalMax = () => Number(process.env.INTERACTIVES_LIVE_TOTAL) || 5000,
+	sharedLiveCount = {open: 0},
+
+	sharedLiveSend = (hub, stream, event, data) => {
+		//A page that stopped reading is cut loose rather than buffered for
+		if (stream.res.writableLength > 16 * 1024) {
+			stream.res.destroy()
+			return
+		}
+
+		try {
+			sseSend(stream.res, event, data)
+		}
+		catch (e) {
+		}
+	},
+
+	sharedLiveFlush = (hub) => {
+		clearTimeout(hub.timer)
+		hub.timer = null
+		hub.last = Date.now()
+
+		for (let source of hub.pending) {
+			for (let stream of [...hub.streams]) {
+				sharedLiveSend(hub, stream, 'changed', {source})
+			}
+		}
+
+		hub.pending.clear()
+	},
+
+	sharedNudge = (project, source, course) => {
+		let hub = sharedLive.get(sharedKeyOf(project, '', course || ''))
+
+		if (!hub) {
+			return
+		}
+
+		hub.pending.add(source)
+		let wait = hub.last + sharedLiveEvery - Date.now()
+
+		if (wait <= 0) {
+			return sharedLiveFlush(hub)
+		}
+
+		if (!hub.timer) {
+			hub.timer = setTimeout(() => sharedLiveFlush(hub), wait)
+			hub.timer.unref?.()
+		}
+	},
+
+	//Every stream a project has (its share link went off, or the project is gone): they end, and the pages go back to polling
+	sharedLiveEndProject = (project) => {
+		roomEndProject(project)
+
+		for (let [key, hub] of [...sharedLive]) {
+			if (key.startsWith(`${project}|`)) {
+				for (let stream of [...hub.streams]) {
+					sharedLiveSend(hub, stream, 'bye', {})
+					stream.res.end()
+				}
+			}
+		}
+	}
+
+router.get('/learn/:token/shared-live', async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let person = learnerOf(req)
+
+	//No session, or a project with nothing shared in it: nothing to listen for, and the page keeps to its own poll
+	if (!person || !Object.keys(project.share?.shared || {}).length) {
+		return res.json({available: false})
+	}
+
+	if (!sharedLimits.live.hit(`${project._id}|${person.username}`)) {
+		return res.status(429).json({available: true, live: false, problem: 'busy'})
+	}
+
+	let key = sharedKeyOf(project._id, '', person.course || ''),
+		hub = sharedLive.get(key)
+
+	if (sharedLiveCount.open >= sharedLiveTotalMax() || (hub?.streams.size || 0) >= sharedLiveMax()) {
+		return res.status(503).json({available: true, live: false, problem: 'full'})
+	}
+
+	if (!hub) {
+		hub = {streams: new Set(), pending: new Set(), last: 0, timer: null}
+		sharedLive.set(key, hub)
+	}
+
+	//A fourth tab or a quick reconnect: the person's oldest stream makes way
+	let mine = [...hub.streams].filter((s) => s.username === person.username)
+
+	if (mine.length >= 3) {
+		mine[0].res.end()
+	}
+
+	res.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no'})
+	res.write(':ok\n\n')
+
+	let stream = {res, username: person.username},
+		finished = false
+
+	hub.streams.add(stream)
+	sharedLiveCount.open++
+	sharedLiveSend(hub, stream, 'hello', {live: true})
+
+	//Under haproxy's 25s server timeout, like the editing stream
+	let beat = setInterval(() => sharedLiveSend(hub, stream, 'beat', {}), 15 * 1000),
+		old = setTimeout(() => {
+			sharedLiveSend(hub, stream, 'bye', {})
+			res.end()
+		}, sharedLiveAge + Math.floor(Math.random() * 2 * 60 * 1000))
+
+	old.unref?.()
+
+	res.on('close', () => {
+		if (finished) {
+			return
+		}
+
+		finished = true
+		clearInterval(beat)
+		clearTimeout(old)
+		hub.streams.delete(stream)
+		sharedLiveCount.open--
+
+		if (!hub.streams.size) {
+			clearTimeout(hub.timer)
+
+			if (sharedLive.get(key) === hub) {
+				sharedLive.delete(key)
+			}
+		}
+	})
+})
+
+//Rooms: a live message list for the people in one project and course, over a WebSocket (the learner page holds it, see roomLink in
+//shared/rooms.mjs and the page below). A browser can't put a header on a WebSocket, so the first message is a hello with the share
+//token and the session id, and it goes through the same checks a /learn request does (the LTI launch, then the suite session, then
+//learnerOf), and the socket is closed if it doesn't come within a few seconds or doesn't check out. What a room may do is what the
+//project declared when it was shared (share.rooms), never what the browser says. Nobody is ever told a username: a person is a seat
+//(a keyed hash of who they are and the room) or their first name when the author said so.
+//Every message goes into mongo (room-messages) and stays there. Each room has a hub in memory: the last few messages, a numbered log
+//of what happened (message, hide, show) and who is in it. The numbers are what a reconnecting page asks "since" about, and the epoch
+//says which run of the hub they are from (a restart, or a hub that went idle, starts a new one and the page gets a snapshot instead).
+//Hiding a message (the owner or a collaborator, over /api) keeps it in mongo but takes it out of what anybody is told, live.
+//Caps are option A's: three sockets a person, INTERACTIVES_LIVE_PER_COURSE a course, INTERACTIVES_LIVE_TOTAL a box (live streams and
+//sockets together), and twelve opens a minute a person. There is no limit on how much a person may say, only that one message is at
+//most 2000 characters and a socket that sends more than 40 frames in a second is cut off.
+const {WebSocketServer} = require('ws')
+
+const roomHubs = new Map(),
+	roomConns = new Set(),
+	roomCourseCounts = new Map(),
+	roomLogKeep = 500,
+	roomHelloWait = () => Number(process.env.INTERACTIVES_ROOM_HELLO_MS) || 5000,
+	roomHubIdle = 5 * 60 * 1000,
+	roomBoot = crypto.randomBytes(6).toString('hex'),
+	roomPath = `/${appName}/rooms/ws`,
+	roomFatal = new Set(['session', 'nothing', 'nocourse']),
+	roomSockets = new WebSocketServer({noServer: true, maxPayload: 16 * 1024, perMessageDeflate: false}),
+	roomKey = (project, source, course) => `${project}|${source}|${course}`
+
+//Seats are a keyed hash, so they need a secret that stays the same: INTERACTIVES_ROOM_SECRET, or one made once and kept in storage/
+let roomSecretValue = null
+
+const roomSecret = () => {
+	if (roomSecretValue) {
+		return roomSecretValue
+	}
+
+	if (process.env.INTERACTIVES_ROOM_SECRET) {
+		return roomSecretValue = process.env.INTERACTIVES_ROOM_SECRET
+	}
+
+	let file = path.join(storageDir, '.room-secret')
+
+	try {
+		roomSecretValue = fs.readFileSync(file, 'utf8').trim()
+	}
+	catch (e) {
+	}
+
+	if (!roomSecretValue || roomSecretValue.length < 32) {
+		roomSecretValue = crypto.randomBytes(32).toString('hex')
+
+		try {
+			fs.writeFileSync(file, roomSecretValue, {mode: 0o600})
+		}
+		catch (e) {
+			console.warn(`${appName}: could not keep the room secret in ${file}, seats will change at the next restart`, e.message)
+		}
+	}
+
+	return roomSecretValue
+}
+
+//A message as one person is told it
+const roomView = (doc, username) => ({...roomsLib.publicMessage(doc), mine: doc.username === username}),
+	roomEventFor = (ev, username) => ev.doc ? {seq: ev.seq, e: ev.e, m: roomView(ev.doc, username)} : {seq: ev.seq, e: ev.e, id: ev.id},
+	roomHere = (hub) => new Set([...hub.clients].map((m) => m.username)).size,
+
+	roomPush = (conn, text) => {
+		if (conn.ws.readyState !== 1) {
+			return
+		}
+
+		//A page that stopped reading is cut loose rather than buffered for
+		if (conn.ws.bufferedAmount > 64 * 1024) {
+			conn.ws.terminate()
+			return
+		}
+
+		try {
+			conn.ws.send(typeof text === 'string' ? text : JSON.stringify(text))
+		}
+		catch (e) {
+		}
+	},
+
+	roomBye = (conn, reason) => {
+		roomPush(conn, {t: 'bye', reason})
+
+		try {
+			conn.ws.close(1000, reason)
+		}
+		catch (e) {
+		}
+	},
+
+	roomBroadcast = (hub, ev) => {
+		let others = JSON.stringify({t: 'event', room: hub.source, ...roomEventFor(ev, '')}),
+			author = ev.doc ? JSON.stringify({t: 'event', room: hub.source, ...roomEventFor(ev, ev.doc.username)}) : others
+
+		for (let m of hub.clients) {
+			roomPush(m.conn, ev.doc && ev.doc.username === m.username ? author : others)
+		}
+	},
+
+	roomLog = (hub, ev) => {
+		hub.log.push(ev)
+
+		if (hub.log.length > roomLogKeep) {
+			hub.log.shift()
+		}
+	},
+
+	//Who is here, said at most once a second however many come and go
+	roomScheduleHere = (hub) => {
+		if (hub.hereTimer) {
+			return
+		}
+
+		hub.hereTimer = setTimeout(() => {
+			hub.hereTimer = null
+
+			let text = JSON.stringify({t: 'here', room: hub.source, n: roomHere(hub)})
+
+			for (let m of hub.clients) {
+				roomPush(m.conn, text)
+			}
+		}, 1000)
+
+		hub.hereTimer.unref?.()
+	},
+
+	roomHubFor = async (project, source, course, declared) => {
+		let key = roomKey(project, source, course),
+			hub = roomHubs.get(key)
+
+		if (!hub) {
+			hub = {key, project, source, course, declared, epoch: crypto.randomBytes(4).toString('hex'), seq: 0, log: [], clients: new Set(), messages: [], hereTimer: null, idleTimer: null, chain: Promise.resolve()}
+			hub.ready = roomMessages.find({project, source, course, hidden: {$ne: true}}).sort({_id: -1}).limit(declared.show).toArray().then((rows) => {
+				hub.messages = rows.reverse()
+			})
+			roomHubs.set(key, hub)
+		}
+
+		hub.declared = declared
+		clearTimeout(hub.idleTimer)
+		hub.idleTimer = null
+
+		try {
+			await hub.ready
+		}
+		catch (e) {
+			if (roomHubs.get(key) === hub) {
+				roomHubs.delete(key)
+			}
+
+			throw e
+		}
+
+		return hub
+	},
+
+	roomLeave = (conn, source) => {
+		let m = conn.rooms.get(source)
+
+		if (!m) {
+			return
+		}
+
+		conn.rooms.delete(source)
+		m.hub.clients.delete(m)
+		roomScheduleHere(m.hub)
+
+		//A hub nobody is in stays a few minutes (a page that dropped and is coming back finds its log), then goes
+		if (!m.hub.clients.size && !m.hub.idleTimer) {
+			m.hub.idleTimer = setTimeout(() => {
+				clearTimeout(m.hub.hereTimer)
+
+				if (!m.hub.clients.size && roomHubs.get(m.hub.key) === m.hub) {
+					roomHubs.delete(m.hub.key)
+				}
+			}, roomHubIdle)
+			m.hub.idleTimer.unref?.()
+		}
+	},
+
+	roomJoin = async (conn, frame) => {
+		let source = typeof frame.room === 'string' ? frame.room : '',
+			declared = conn.project.share?.rooms?.[source]
+
+		if (!declared || (conn.rooms.size >= 8 && !conn.rooms.has(source))) {
+			return roomPush(conn, {t: 'closed', room: source.slice(0, 64)})
+		}
+
+		let hub = await roomHubFor(conn.project._id, source, conn.person.course, declared)
+
+		if (conn.dead || conn.ws.readyState !== 1) {
+			return
+		}
+
+		roomLeave(conn, source)
+		clearTimeout(hub.idleTimer)
+		hub.idleTimer = null
+
+		let seat = roomsLib.seatFor(roomSecret(), conn.project._id, source, conn.person.course, conn.username),
+			m = {conn, hub, username: conn.username, display: roomsLib.displayName(declared, seat, conn.firstName)}
+
+		conn.rooms.set(source, m)
+		hub.clients.add(m)
+
+		//A page that is back with an epoch and a number from this hub, and has not missed more than the log holds, is given what it
+		//missed. Anything else (a restart, a hub that went idle, a first visit) is a fresh look at the room
+		let since = Number.isInteger(frame.since) ? frame.since : -1,
+			first = hub.log.length ? hub.log[0].seq : hub.seq + 1,
+			here = roomHere(hub)
+
+		if (frame.epoch === hub.epoch && since >= 0 && since <= hub.seq && since >= first - 1) {
+			roomPush(conn, {t: 'replay', room: source, epoch: hub.epoch, seq: hub.seq, me: m.display, here, events: hub.log.filter((ev) => ev.seq > since).map((ev) => roomEventFor(ev, conn.username))})
+		}
+		else {
+			roomPush(conn, {t: 'snapshot', room: source, epoch: hub.epoch, seq: hub.seq, me: m.display, here, messages: hub.messages.filter((doc) => !roomsLib.isBlockedMessage(doc.text, declared.blocked)).map((doc) => roomView(doc, conn.username))})
+		}
+
+		roomScheduleHere(hub)
+	},
+
+	roomSend = (conn, frame) => {
+		let source = typeof frame.room === 'string' ? frame.room : '',
+			m = conn.rooms.get(source),
+			cid = typeof frame.cid === 'string' ? frame.cid.slice(0, 20) : '',
+			ack = (ok, problem = '') => roomPush(conn, {t: 'sent', room: source, cid, ok, problem})
+
+		if (!m) {
+			return ack(false, 'offline')
+		}
+
+		let hub = m.hub,
+			text = roomsLib.cleanMessage(frame.text)
+
+		if (!text) {
+			return ack(false, 'empty')
+		}
+
+		if (roomsLib.isBlockedMessage(text, hub.declared.blocked)) {
+			return ack(false, 'blocked')
+		}
+
+		let doc = {_id: roomsLib.messageId(), project: hub.project, source, course: hub.course, username: conn.username, seat: m.display, text, at: new Date(), hidden: false}
+
+		//One at a time per room, so the numbers and the ids come out in the same order
+		hub.chain = hub.chain.then(async () => {
+			await roomMessages.insertOne(doc)
+
+			let ev = {seq: ++hub.seq, e: 'message', doc}
+
+			roomLog(hub, ev)
+			hub.messages.push(doc)
+
+			if (hub.messages.length > hub.declared.show) {
+				hub.messages.splice(0, hub.messages.length - hub.declared.show)
+			}
+
+			roomBroadcast(hub, ev)
+			ack(true)
+		}).catch((err) => {
+			console.trace(`${appName}: room message not kept`, err)
+			ack(false, 'busy')
+		})
+	},
+
+	//The owner hid (or showed again) a message: everybody in the room hears it at once
+	roomHideLive = (project, source, course, id, hidden) => {
+		let hub = roomHubs.get(roomKey(project, source, course))
+
+		if (!hub) {
+			return Promise.resolve()
+		}
+
+		hub.chain = hub.chain.then(async () => {
+			let ev
+
+			if (hidden) {
+				hub.messages = hub.messages.filter((doc) => doc._id !== id)
+				ev = {seq: ++hub.seq, e: 'hide', id}
+			}
+			else {
+				let doc = await roomMessages.findOne({_id: id})
+
+				if (!doc || doc.hidden) {
+					return
+				}
+
+				hub.messages = [...hub.messages.filter((d) => d._id !== id), doc].sort((a, b) => a._id < b._id ? -1 : 1).slice(-hub.declared.show)
+				ev = {seq: ++hub.seq, e: 'show', doc}
+			}
+
+			roomLog(hub, ev)
+			roomBroadcast(hub, ev)
+		}).catch((err) => console.trace(`${appName}: room hide not sent`, err))
+
+		return hub.chain
+	},
+
+	//The share link went off or the project is gone: the sockets for it end, and the pages stop asking
+	roomEndProject = (project) => {
+		for (let conn of [...roomConns]) {
+			if (conn.project && String(conn.project._id) === String(project)) {
+				roomBye(conn, 'nothing')
+			}
+		}
+	},
+
+	//Who this is: the same two checks /learn runs (an LTI launch's own session, then the suite's), run on a stand-in for the request
+	//a hello stands for, and then learnerOf. Null when neither knows them
+	roomWho = async (conn, token, frame) => {
+		let session = typeof frame.session === 'string' && frame.session !== 'null' ? frame.session.slice(0, 1000) : '',
+			lti = typeof frame.lti === 'string' ? frame.lti.slice(0, 100) : '',
+			headers = {'x-session-id': session, 'x-lti-session': lti, 'user-agent': conn.agent, host: conn.host, referer: ''},
+			req = {method: 'WS', originalUrl: roomPath, params: {token}, query: {}, body: {}, sessionData: null, get: (name) => headers[String(name).toLowerCase()] || ''},
+			go = (middleware) => new Promise((resolve) => {
+				let res = {sendStatus: () => resolve(false), status: () => res, json: () => resolve(false)},
+					timer = setTimeout(() => resolve(false), 5000)
+
+				Promise.resolve(middleware(req, res, () => resolve(true))).catch(() => resolve(false)).finally(() => clearTimeout(timer))
+			})
+
+		if (!await go(lti13.attachLearner)) {
+			return null
+		}
+
+		if (!req.ltiLearner && !await go(learnSession)) {
+			return null
+		}
+
+		let person = learnerOf(req)
+
+		if (!person?.username) {
+			return null
+		}
+
+		let first = req.sessionData?.user?.firstName || req.sessionData?.user?.firstname || (req.ltiLearner ? String(person.name || '').split(' ')[0] : '')
+
+		return {person, first}
+	},
+
+	roomHello = async (conn, frame) => {
+		let token = typeof frame.token === 'string' ? frame.token : ''
+
+		if (!/^[\w-]{16,64}$/.test(token)) {
+			return roomBye(conn, 'nothing')
+		}
+
+		let project = await projects.findOne({'share.token': token}, {projection: {doc: 0}})
+
+		if (!project || !Object.keys(project.share?.rooms || {}).length) {
+			return roomBye(conn, 'nothing')
+		}
+
+		let who = await roomWho(conn, token, frame)
+
+		if (!who) {
+			return roomBye(conn, 'session')
+		}
+
+		//A room is a course's: with no course there is nobody to put this person in a room with
+		if (!who.person.course) {
+			return roomBye(conn, 'nocourse')
+		}
+
+		if (conn.dead || conn.ws.readyState !== 1) {
+			return
+		}
+
+		if (!sharedLimits.rooms.hit(`${project._id}|${who.person.username}`)) {
+			return roomBye(conn, 'busy')
+		}
+
+		let courseKey = `${project._id}|${who.person.course}`
+
+		if (sharedLiveCount.open + roomConns.size > sharedLiveTotalMax() || (roomCourseCounts.get(courseKey) || 0) >= sharedLiveMax()) {
+			return roomBye(conn, 'full')
+		}
+
+		//A fourth tab or a quick reconnect: the person's oldest socket makes way
+		let mine = [...roomConns].filter((c) => c.helloed && c.username === who.person.username && String(c.project._id) === String(project._id))
+
+		if (mine.length >= 3) {
+			roomBye(mine[0], 'refresh')
+		}
+
+		conn.helloed = true
+		conn.project = project
+		conn.person = who.person
+		conn.username = who.person.username
+		conn.firstName = who.first
+		conn.courseKey = courseKey
+		roomCourseCounts.set(courseKey, (roomCourseCounts.get(courseKey) || 0) + 1)
+		conn.old = setTimeout(() => roomBye(conn, 'refresh'), sharedLiveAge + Math.floor(Math.random() * 2 * 60 * 1000))
+		conn.old.unref?.()
+		roomPush(conn, {t: 'ready', epoch: roomBoot})
+	},
+
+	roomClosed = (conn) => {
+		if (conn.dead) {
+			return
+		}
+
+		conn.dead = true
+		clearTimeout(conn.helloTimer)
+		clearTimeout(conn.old)
+
+		for (let source of [...conn.rooms.keys()]) {
+			roomLeave(conn, source)
+		}
+
+		roomConns.delete(conn)
+
+		if (conn.courseKey) {
+			let n = (roomCourseCounts.get(conn.courseKey) || 1) - 1
+
+			if (n > 0) {
+				roomCourseCounts.set(conn.courseKey, n)
+			}
+			else {
+				roomCourseCounts.delete(conn.courseKey)
+			}
+		}
+	},
+
+	roomConnect = (ws, req) => {
+		let conn = {ws, rooms: new Map(), helloed: false, helloing: false, dead: false, alive: true, frames: 0, windowStart: Date.now(), agent: String(req.headers['user-agent'] || ''), host: String(req.headers.host || ''), project: null, person: null, username: ''}
+
+		roomConns.add(conn)
+		conn.helloTimer = setTimeout(() => ws.close(4001, 'hello'), roomHelloWait())
+		conn.helloTimer.unref?.()
+		ws.on('pong', () => {
+			conn.alive = true
+		})
+		ws.on('error', () => {
+		})
+		ws.on('close', () => roomClosed(conn))
+		ws.on('message', (data, isBinary) => {
+			//Not ours to understand: text only, and no more than 40 frames in a second (not a limit on talking, a guard for the box)
+			let now = Date.now()
+
+			if (isBinary) {
+				return ws.close(1003, 'text only')
+			}
+
+			if (now - conn.windowStart > 1000) {
+				conn.windowStart = now
+				conn.frames = 0
+			}
+
+			if (++conn.frames > 40) {
+				return ws.close(1008, 'too fast')
+			}
+
+			let frame
+
+			try {
+				frame = JSON.parse(data.toString())
+			}
+			catch (e) {
+				return
+			}
+
+			if (!frame || typeof frame !== 'object') {
+				return
+			}
+
+			let fail = (err) => console.trace(`${appName}: room frame ${String(frame.t).slice(0, 20)} failed`, err)
+
+			if (!conn.helloed) {
+				if (frame.t !== 'hello' || conn.helloing) {
+					return ws.close(4002, 'hello first')
+				}
+
+				conn.helloing = true
+				clearTimeout(conn.helloTimer)
+				roomHello(conn, frame).catch((err) => {
+					fail(err)
+					roomBye(conn, 'busy')
+				})
+				return
+			}
+
+			if (frame.t === 'join') {
+				roomJoin(conn, frame).catch((err) => {
+					fail(err)
+					roomPush(conn, {t: 'closed', room: String(frame.room).slice(0, 64)})
+				})
+			}
+			else if (frame.t === 'send') {
+				roomSend(conn, frame)
+			}
+			else if (frame.t === 'leave' && typeof frame.room === 'string') {
+				roomLeave(conn, frame.room)
+			}
+		})
+	},
+
+	//Only our own path, and only from a page on this host (a page on some other site has no business here, same as /mcp). Programs that
+	//send no Origin are let through to the hello, where they need a session like everybody
+	roomUpgrade = (req, socket, head) => {
+		let url = null
+
+		try {
+			url = new URL(req.url, 'http://localhost')
+		}
+		catch (e) {
+		}
+
+		if (!url || url.pathname !== roomPath) {
+			return socket.destroy()
+		}
+
+		let origin = req.headers.origin,
+			originHost = null
+
+		try {
+			originHost = origin ? new URL(origin).host : null
+		}
+		catch (e) {
+			originHost = '(bad)'
+		}
+
+		if (origin && originHost !== req.headers.host) {
+			socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n')
+			return socket.destroy()
+		}
+
+		//Sockets that have not said hello yet count too, or a flood of them would be free
+		if (sharedLiveCount.open + roomConns.size >= sharedLiveTotalMax() + 100) {
+			socket.write('HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nContent-Length: 0\r\n\r\n')
+			return socket.destroy()
+		}
+
+		roomSockets.handleUpgrade(req, socket, head, (ws) => roomConnect(ws, req))
+	},
+
+	//Every 20 seconds: a beat the page can hear (it drops a link that goes quiet) and a ping to find the ones that went away
+	roomBeat = () => {
+		for (let conn of [...roomConns]) {
+			if (!conn.alive) {
+				conn.ws.terminate()
+				continue
+			}
+
+			conn.alive = false
+
+			try {
+				conn.ws.ping()
+			}
+			catch (e) {
+			}
+
+			if (conn.helloed) {
+				roomPush(conn, '{"t":"beat"}')
+			}
+		}
+	},
+
+	roomAttach = (server) => {
+		server.on('upgrade', roomUpgrade)
+		setInterval(roomBeat, 20 * 1000).unref()
+	}
+
+//What the owner, a collaborator or a power user sees of a project's rooms: every room the shared page declares and, for each course that
+//has said anything, the latest messages with who sent them (the one place a username is shown, and only here), hidden ones marked.
+//Hiding keeps a message but takes it out of what the class is told (live, and in every snapshot after), and showing puts it back
+router.get('/api/projects/:id/rooms', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let out = []
+
+	for (let [source, declared] of Object.entries(doc.share?.rooms || {})) {
+		let courses = [],
+			names = (await roomMessages.distinct('course', {project: doc._id, source})).map((c) => String(c || '')).sort().slice(0, 30)
+
+		for (let course of names) {
+			let rows = await roomMessages.find({project: doc._id, source, course}).sort({_id: -1}).limit(100).toArray(),
+				hub = roomHubs.get(roomKey(doc._id, source, course))
+
+			courses.push({course, here: hub ? roomHere(hub) : 0, messages: rows.map((r) => ({id: r._id, seat: r.seat, username: r.username, text: r.text, at: new Date(r.at).getTime(), hidden: !!r.hidden, hiddenBy: r.hiddenBy || null}))})
+		}
+
+		out.push({source, name: declared.name || source, declared: {names: declared.names, show: declared.show, blocked: declared.blocked}, courses})
+	}
+
+	res.json({sources: out})
+})
+
+router.put('/api/projects/:id/rooms/:source/messages/:mid/hidden', express.json({limit: '1kb'}), async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let source = req.params.source,
+		mid = req.params.mid
+
+	if (!doc.share?.rooms?.[source]) {
+		return res.status(404).json({error: 'That project has no such room. Share it again after adding one'})
+	}
+
+	let row = /^[a-z0-9]{12,30}$/.test(mid) ? await roomMessages.findOne({_id: mid, project: doc._id, source}) : null
+
+	if (!row) {
+		return res.status(404).json({error: 'No such message'})
+	}
+
+	let hidden = req.body?.hidden !== false
+
+	await roomMessages.updateOne({_id: mid}, {$set: {hidden, hiddenBy: whoIs(req)?.username ?? null, hiddenAt: new Date()}})
+	await roomHideLive(doc._id, source, row.course, mid, hidden)
+	audit(req, hidden ? 'room-hide' : 'room-show', doc, {source, course: row.course})
+	res.json({ok: true, hidden})
+})
+
 
 //Course collections: named stamps and counters that every project in the same course can read and add to, for one learner. Not a
 //project's: the key is the person, their course and the collection name, so a passport that one piece adds to is there for the next
@@ -4167,6 +5029,7 @@ router.put('/api/projects/:id/shared/:source/hidden', express.json({limit: '4kb'
 
 	await sharedHidden.updateOne(where, {$set: {keys: [...keys], updated: new Date()}}, {upsert: true})
 	sharedForget(at.doc._id, at.source, course)
+	sharedNudge(at.doc._id, at.source, course)
 	audit(req, req.body?.hidden === false ? 'shared-unhide' : 'shared-hide', at.doc, {source: at.source, course})
 	res.json({ok: true, hidden: keys.has(key)})
 })
@@ -4203,6 +5066,7 @@ router.delete('/api/projects/:id/shared/:source/answers', express.json({limit: '
 	}
 
 	sharedForget(at.doc._id, at.source, course)
+	sharedNudge(at.doc._id, at.source, course)
 	audit(req, key ? 'shared-removed' : 'shared-cleared', at.doc, {source: at.source, course, people: removed})
 	res.json({ok: true, people: removed})
 })
@@ -4317,6 +5181,103 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			})
 		})
 	}
+	//Shared responses go live: once the project reads a class, this page keeps one stream open to the server (fetch, so the session
+	//headers go with it) and tells the player when it says something changed. All that comes down is the source id, the player
+	//reads the class itself the usual way. Anything that goes wrong (no session, a full course, a dropped connection) leaves the
+	//player on its own poll, and this page tries again in a while. It is closed when the page goes
+	var live = {started: false, ctl: null, tries: 0, timer: null, gone: false}
+	var tellLive = function (msg) {
+		if (frame.contentWindow) frame.contentWindow.postMessage(Object.assign({target: 'interactives', type: 'shared-live'}, msg), '*')
+	}
+	var liveAgain = function (wait) {
+		if (live.gone) return
+		clearTimeout(live.timer)
+		live.timer = setTimeout(liveConnect, wait + Math.floor(Math.random() * 1500))
+	}
+	var liveConnect = function () {
+		if (live.gone || typeof AbortController === 'undefined') return
+		var ctl = new AbortController(), headers = {}, up = false
+		live.ctl = ctl
+		if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
+		else if (ltiSession) headers['X-LTI-Session'] = ltiSession
+		var ended = function () {
+			if (up) tellLive({up: false})
+			up = false
+			live.tries++
+			liveAgain(Math.min(60000, 2000 * Math.pow(2, Math.min(live.tries, 5))))
+		}
+		fetch(base + '/learn/' + token + '/shared-live', {headers: headers, signal: ctl.signal}).then(function (r) {
+			if ((r.headers.get('content-type') || '').indexOf('text/event-stream') !== 0 || !r.ok || !r.body) {
+				//No session or nothing shared: never. A busy server or a full course: later
+				if (r.ok) return
+				throw new Error('later')
+			}
+			up = true
+			live.tries = 0
+			tellLive({up: true})
+			var reader = r.body.getReader(), decoder = new TextDecoder(), buf = ''
+			var pump = function () {
+				return reader.read().then(function (chunk) {
+					if (chunk.done) return
+					buf += decoder.decode(chunk.value, {stream: true})
+					var at
+					while ((at = buf.indexOf('\\n\\n')) >= 0) {
+						var block = buf.slice(0, at)
+						buf = buf.slice(at + 2)
+						var ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block)
+						if (ev && ev[1] === 'changed' && data) {
+							try {
+								var d = JSON.parse(data[1])
+								tellLive({changed: true, source: typeof d.source === 'string' ? d.source.slice(0, 64) : ''})
+							}
+							catch (e) {
+							}
+						}
+					}
+					return pump()
+				})
+			}
+			return pump().then(ended, ended)
+		}).catch(function () {
+			if (!live.gone) ended()
+		})
+	}
+	var openLive = function () {
+		if (live.started) return
+		live.started = true
+		liveConnect()
+	}
+	//Rooms: one WebSocket for every room the project has (a browser can't put a header on one, so its first message is a hello with
+	//the session). The link reconnects with a back off, asks the server for what it missed, and hands every frame to the project as
+	//it came. Nothing about who anybody is comes down it, only seats or first names
+	var createRoomLink = ${roomsLib.createRoomLink.toString()}
+	var roomLink = null
+	var tellRoom = function (msg) {
+		if (frame.contentWindow) frame.contentWindow.postMessage(Object.assign({target: 'interactives', type: 'room'}, msg), '*')
+	}
+	var openRooms = function () {
+		if (roomLink) return roomLink
+		roomLink = createRoomLink({
+			url: (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + base + '/rooms/ws',
+			WS: window.WebSocket,
+			hello: function () {
+				return {token: token, session: sessionID && sessionID !== 'null' ? sessionID : null, lti: ltiSession}
+			},
+			onFrame: function (f) {
+				tellRoom({frame: f})
+			},
+			onState: function (s) {
+				tellRoom(s)
+			}
+		})
+		return roomLink
+	}
+	window.addEventListener('pagehide', function () {
+		live.gone = true
+		clearTimeout(live.timer)
+		if (live.ctl) live.ctl.abort()
+		if (roomLink) roomLink.close()
+	})
 	var cleanRecord = ${records.cleanRecord.toString()}
 	var rowFor = ${records.rowFor.toString()}
 	var cleanDiag = ${records.cleanDiag.toString()}
@@ -4424,6 +5385,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			}, failed)
 		}
 		else if (m.op === 'shared-read') {
+			if (m.who !== 'me') openLive()
 			call('GET', 'shared/' + encodeURIComponent(m.sharedSource) + '?who=' + encodeURIComponent(m.who || '')).then(function (j) {
 				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
 			}, failed)
@@ -4437,6 +5399,17 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			call('POST', 'shared/' + encodeURIComponent(m.sharedSource) + '/withdraw', {who: m.who, answers: m.answers}).then(function (j) {
 				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
 			}, failed)
+		}
+		else if (m.op === 'room-join' && typeof m.roomSource === 'string') {
+			if (typeof WebSocket === 'undefined') return failed()
+			openRooms().join(m.roomSource.slice(0, 64))
+			answer(m, {ok: true, available: true, data: null})
+		}
+		else if (m.op === 'room-send' && typeof m.roomSource === 'string') {
+			if (typeof WebSocket === 'undefined') return failed()
+			openRooms().send(m.roomSource.slice(0, 64), typeof m.text === 'string' ? m.text.slice(0, 2000) : '').then(function (r) {
+				answer(m, {ok: true, available: true, data: {problem: r.problem || ''}})
+			})
 		}
 		else if (m.op === 'course-read' && typeof m.collection === 'string') {
 			call('GET', 'course/' + encodeURIComponent(m.collection)).then(function (j) {
@@ -4489,7 +5462,7 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	}
 
 	//The project the link is for, so the records its learners make are filed under it
-	let project = await projects.findOne({'share.token': token}, {projection: {_id: 1, 'share.remix': 1, 'share.sensors': 1}})
+	let project = await projects.findOne({'share.token': token}, {projection: {_id: 1, 'share.remix': 1, 'share.sensors': 1, 'share.rooms': 1}})
 
 	if (!project) {
 		return res.status(404).send('This share link has been turned off, or never existed')
@@ -4500,7 +5473,11 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	//Its own script, the suite's utilities.js from this host (script-src 'self') and its own api and the suite's
 	//analytics (connect-src 'self'), and the project in its sandbox as the one frame. It can be framed by StudyDesk.
 	//media-src blob: is the one thing added for the media bridge: a recorded video plays from memory in the page
-	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' 'self'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'; media-src blob:; base-uri 'none'; form-action 'none'`)
+	//A project with rooms talks to a WebSocket back to this host, and not every browser takes 'self' to cover ws: and wss: for it
+	let host = String(req.get('host') || ''),
+		sockets = Object.keys(project.share?.rooms || {}).length && /^[\w.:\[\]-]{1,200}$/.test(host) ? ` ws://${host} wss://${host}` : ''
+
+	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' 'self'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'${sockets}; media-src blob:; base-uri 'none'; form-action 'none'`)
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('Referrer-Policy', 'no-referrer')
 	res.setHeader('X-Robots-Tag', 'noindex')
@@ -4594,6 +5571,259 @@ router.delete('/api/projects/:id/results', async (req, res) => {
 	res.json({ok: true, deleted: result.deletedCount})
 })
 
+//The Activity Designer's chat. The panel posts {projectId, artboardId?, conversation?, message} and gets progress back as
+//lines of json as it happens: status (plain words about what it's doing), changed (it has changed the project, here's the
+//restore point to undo with), reply, error and done (with the chat's handle and what's left of their shared allowance). The
+//Cogniti conversation and its history stay in here per person and project, so the browser holds nothing but the handle.
+//Each request costs one Cogniti message (designer.js): the agent answers with a blueprint, which mcp.buildBlueprint compiles
+//with the editor's own code and sends to the live room as the person (same session, same audit rows, shows in the live
+//session as "Activity Designer (AI)"). Only someone who can change the project gets to use it
+let designerChats = new Map(),
+	designerRunning = new Set(),
+	DESIGNER_IDLE_MS = 2 * 60 * 60 * 1000,
+	//Who has made how many requests this hour on the shared token. Rebuilt when INTERACTIVES_DESIGNER_PER_HOUR changes
+	designerShared = {perHour: -1, q: null},
+	//How often a person may try a token of their own an hour (each try asks Cogniti)
+	designerTokenTries = null
+
+setInterval(() => {
+	let now = Date.now()
+	for (let [k, c] of designerChats) {
+		if (now - c.used > DESIGNER_IDLE_MS) designerChats.delete(k)
+	}
+}, 10 * 60 * 1000).unref()
+
+const designerKey = (req, id) => `${whoIs(req)?.username || 'guest'}|${id}`
+
+const sharedQuota = () => {
+	let n = designer.settings().perHour
+	if (!designerShared.q || designerShared.perHour !== n) {
+		designerShared = {perHour: n, q: designer.quota(n)}
+	}
+
+	return designerShared.q
+}
+
+//A person's own Cogniti token, opened. Null when they haven't added one (or it can't be opened: the key changed)
+const ownDesignerToken = async (username) => {
+	if (!username || !designerTokens) {
+		return null
+	}
+
+	let row = await designerTokens.findOne({_id: username})
+	return row ? designer.openToken(row, username, designer.secretKey(storageDir)) : null
+}
+
+//What the panel and Preferences are told about allowances. Never the token, not even its end
+const designerStatus = async (req) => {
+	let cfg = designer.settings(),
+		me = whoIs(req),
+		row = me?.username && designerTokens ? await designerTokens.findOne({_id: me.username}, {projection: {added: 1, ends: 1}}) : null
+	return {
+		on: cfg.on,
+		mine: row ? {connected: true, added: row.added, ends: row.ends || null} : null,
+		//only people on the shared token have a share to count
+		shared: row ? null : sharedQuota().status(me?.username || 'guest'),
+	}
+}
+
+router.get('/api/designer/status', async (req, res) => {
+	if (!whoIs(req)?.username && enforcing()) {
+		return res.status(401).json({error: 'Sign in to use the Activity Designer'})
+	}
+
+	res.json(await designerStatus(req))
+})
+
+//Use my own Cogniti allowance: a personal token, checked once against Cogniti, then kept encrypted (AES-256-GCM, designer.js)
+router.put('/api/designer/token', express.json({limit: '4kb'}), async (req, res) => {
+	let cfg = designer.settings(),
+		me = whoIs(req)
+	if (!cfg.on) return res.status(404).json({error: 'The Activity Designer is switched off here'})
+	if (!me?.username) return res.status(401).json({error: 'Sign in to add your own Cogniti token'})
+
+	let token = typeof req.body?.token === 'string' ? req.body.token.trim() : '',
+		ends = typeof req.body?.ends === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.body.ends) && !Number.isNaN(Date.parse(req.body.ends)) ? new Date(`${req.body.ends}T00:00:00Z`) : null
+	if (!token || token.length < 8 || token.length > 2000 || /\s/.test(token)) {
+		return res.status(400).json({error: 'That does not look like a Cogniti API token. Copy the whole token from Cogniti and paste it in.'})
+	}
+
+	designerTokenTries ||= designer.quota(10)
+	if (!designerTokenTries.take(me.username)) return res.status(429).json({error: 'Too many tries. Wait a little while and try again.'})
+
+	let access = await designer.cogniti({...cfg, token}).checkAccess()
+	if (!access.ok) {
+		let why = {
+			refused: "Cogniti didn't accept that token. Check you copied all of it, and that it hasn't ended.",
+			notShared: "That token works, but your Cogniti account can't chat with the Activity Designer yet. Ask the Toolbox team to share it with you, then try again.",
+			unreachable: 'Cogniti could not be reached just now to check the token. Try again in a minute.',
+		}[access.why]
+		return res.status(access.why === 'unreachable' ? 502 : 400).json({error: why, why: access.why})
+	}
+
+	let added = new Date()
+	await designerTokens.updateOne({_id: me.username}, {$set: {...designer.sealToken(token, me.username, designer.secretKey(storageDir)), added, ends}}, {upsert: true})
+	audit(req, 'designer-token-set', null, {ends})
+	res.json({ok: true, mine: {connected: true, added, ends}})
+})
+
+router.delete('/api/designer/token', async (req, res) => {
+	let me = whoIs(req)
+	if (!me?.username) return res.status(401).json({error: 'Sign in first'})
+
+	let had = await designerTokens.deleteOne({_id: me.username})
+	if (had?.deletedCount !== 0) audit(req, 'designer-token-removed', null, {})
+	res.json({ok: true})
+})
+
+router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res) => {
+	let cfg = designer.settings(),
+		me = whoIs(req)
+	if (!cfg.on) return res.status(404).json({error: 'The Activity Designer is switched off here'})
+	if (!me?.username && enforcing()) return res.status(401).json({error: 'Sign in to use the Activity Designer'})
+
+	let id = req.body?.projectId,
+		message = typeof req.body?.message === 'string' ? req.body.message.trim() : ''
+	if (!validID(id)) return res.status(400).json({error: 'Bad id'})
+	if (!message) return res.status(400).json({error: 'Say what you would like built'})
+	if (message.length > 4000) return res.status(413).json({error: 'That is too long for one message. Try a shorter request, then add to it'})
+
+	let doc = await projects.findOne({_id: id})
+	if (!doc) return res.status(404).json({error: 'No such project'})
+	if (!mayChange(req, res, doc)) return
+
+	let who = me?.username || 'guest'
+	if (designerRunning.has(who)) return res.status(409).json({error: 'The Activity Designer is still working on your last request. Wait for it to finish.'})
+
+	//Their own token when they've added one; otherwise the shared one, and a fair share of it an hour
+	let own = await ownDesignerToken(me?.username),
+		shared = sharedQuota()
+	if (own) {
+		cfg = {...cfg, token: own, own: true}
+	}
+	else if (!shared.take(who)) {
+		let s = shared.status(who),
+			mins = Math.max(1, Math.ceil(s.resetsIn / 60))
+		return res.status(429).json({error: `You have used your ${s.limit} shared Activity Designer requests for this hour. The next one comes back in about ${mins} ${mins === 1 ? 'minute' : 'minutes'}. You can use your own Cogniti allowance instead.`, kind: 'quota', quota: s})
+	}
+
+	designerRunning.add(who)
+
+	res.status(200).set({'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no'})
+	res.flushHeaders()
+	let ctl = new AbortController(),
+		emit = (e) => {
+			if (!res.writableEnded && !res.destroyed) res.write(JSON.stringify(e) + '\n')
+		}
+	//A Cogniti message can sit quiet for a minute or more, and haproxy cuts a response that says nothing for its
+	//timeout server (25s on dev, 120s on test and prod). So a blank line every 10s keeps it open, and the panel skips
+	//blank lines. INTERACTIVES_DESIGNER_BEAT_MS changes the 10s (the test uses a short one)
+	let beat = setInterval(() => {
+		if (!res.writableEnded && !res.destroyed) res.write('\n')
+	}, Number(process.env.INTERACTIVES_DESIGNER_BEAT_MS) || 10000)
+	//The browser went (closed the tab, or Stop): finish what's running and no more
+	res.on('close', () => {
+		clearInterval(beat)
+		if (!res.writableFinished) ctl.abort()
+	})
+
+	let key = designerKey(req, id),
+		state = designerChats.get(key),
+		ctx = {base: `http://127.0.0.1:${port}/${appName}`, sessionId: mcpSessionID(req), agent: 'Activity Designer', sessions: new Map()},
+		mcp = null,
+		artboardId = typeof req.body.artboardId === 'string' ? req.body.artboardId.slice(0, 100) : '',
+		result = {outcome: 'error', rounds: 0, changed: false}
+
+	try {
+		//The same chat carries on only when the panel hands back its handle; no handle is a new chat
+		if (!state || !req.body.conversation || state.chatId !== req.body.conversation || Date.now() - state.used > DESIGNER_IDLE_MS) {
+			state = {chatId: crypto.randomBytes(9).toString('base64url'), conversation: null, history: [], used: Date.now()}
+		}
+		designerChats.set(key, state)
+		if (designerChats.size > 1000) designerChats.delete(designerChats.keys().next().value)
+
+		mcp = await loadMCP()
+		let callTool = async (name, args) => {
+			if (mcpLimited(req)) return {error: true, text: 'Error: too many requests just now. Wait a few seconds and try again.'}
+			let msg = {jsonrpc: '2.0', id: 1, method: 'tools/call', params: {name, arguments: args}},
+				reply = await mcp.runAs(ctx, () => mcp.respond(msg))
+			mcpAudit(req, ctx, msg, reply)
+			if (reply?.error) return {error: true, text: `Error: ${reply.error.message}`}
+			return {error: !!reply?.result?.isError, text: (reply?.result?.content || []).map((c) => c.text).join('\n')}
+		}
+
+		result = await designer.run({
+			cogniti: designer.cogniti(cfg),
+			spec: designer.buildSpec(mcp.rawReference()),
+			//Where things stand: joins the live session (people there and the outline of every page), then the open page in full
+			context: async () => {
+				//each part is cut on its own, so a big page can't push out the rest
+				let clip = (t, n) => t.length > n ? t.slice(0, n) + '\n...(cut to fit)' : t,
+					joined = await callTool('join_session', {project_id: id})
+				if (joined.error) throw new Error(joined.text)
+				let parts = [`# Where things stand\n${clip(joined.text, 6500)}`]
+				if (artboardId) {
+					let page = await callTool('get_overview', {project_id: id, artboard_id: artboardId}),
+						graph = await callTool('get_interactions', {project_id: id, artboard_id: artboardId})
+					if (!page.error) parts.push(`# The open page in full\n${clip(page.text, 6500)}`)
+					if (!graph.error) parts.push(`# Its interactions\n${clip(graph.text, 3000)}`)
+				}
+
+				return parts.join('\n\n')
+			},
+			//The agent's blueprint, built in the open project as one batch to the live room
+			build: async (blueprint, known) => {
+				let out = await mcp.runAs(ctx, () => mcp.buildBlueprint(id, blueprint, {artboardId, known: known || undefined}))
+				mcpAudit(req, ctx, {method: 'tools/call', params: {name: 'designer_build', arguments: {project_id: id}}}, {})
+				return out
+			},
+			//A named revision of how the project is right now (the room saved first), which "Undo" restores
+			beforeEdit: async () => {
+				let now = await projects.findOne({_id: id}),
+					room = rooms.get(id)
+				if (room) await persist(room)
+				let current = room ? JSON.stringify(room.doc) : await store.get(now)
+				return snapshot(id, current, room ? room.rev : now.rev, whoIs(req), 'Before the Activity Designer', true, {name: 'Before the Activity Designer'})
+			},
+			emit,
+			signal: ctl.signal,
+		}, {
+			projectId: id,
+			projectName: String(doc.name || 'Untitled project').slice(0, 200),
+			firstName: String(req.sessionData?.user?.firstName || req.sessionData?.user?.firstname || (me?.name || '').split(' ')[0] || '').slice(0, 40),
+			message,
+			state,
+		})
+	}
+	catch (err) {
+		console.trace(`${appName}: designer failed`, err)
+		emit({type: 'error', text: 'Something went wrong in the Activity Designer. Try again in a minute.'})
+	}
+	finally {
+		clearInterval(beat)
+		if (mcp) mcp.closeContext(ctx)
+		designerRunning.delete(who)
+	}
+
+	//A request that never got a message to Cogniti didn't use any of the shared allowance
+	if (!own && !result.rounds) shared.refund(who)
+
+	//A run that didn't end in a plain reply leaves the agent's side of the chat half done, so the next one starts clean
+	if (result.outcome === 'replied') state.used = Date.now()
+	else designerChats.delete(key)
+	//Who, which project, how it went. Never what was said
+	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own})
+	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null, quota: own ? null : shared.status(who)})
+	res.end()
+})
+
+//New chat: forget the conversation for this person and project
+router.post('/api/designer/reset', express.json({limit: '1kb'}), (req, res) => {
+	if (!validID(req.body?.projectId)) return res.status(400).json({error: 'Bad id'})
+	designerChats.delete(designerKey(req, req.body.projectId))
+	res.json({ok: true})
+})
+
 router.use('/api', (req, res) => {
 	res.status(404).json({error: 'No such api route'})
 })
@@ -4682,6 +5912,41 @@ router.use('/mcp', (req, res, next) => {
 	res.status(503).json({jsonrpc: '2.0', id: null, error: {code: -32000, message: 'AI agent access is turned off on this server'}})
 })
 
+//Who the caller is, for the audit and the limits: the bearer is the same session id, so hand it to the suite's own
+//session check the way a browser would send it. Optional: a call with no session gets what a signed out browser gets
+router.use('/mcp', (req, res, next) => {
+	let sid = mcpSessionID(req)
+	if (sid && !req.get('x-session-id')) req.headers['x-session-id'] = sid
+	next()
+}, sessionCheck({optional: true, tool: 'interactives'}))
+
+//Limits per caller and per address, a minute at a time (INTERACTIVES_MCP_PER_MIN, INTERACTIVES_MCP_IP_PER_MIN). An agent
+//working normally makes a few calls a second at most; anything past this is a loop, or someone hammering the box
+let mcpWindow = {start: 0, counts: new Map()}
+const mcpLimited = (req) => {
+	let now = Date.now()
+	if (now - mcpWindow.start >= 60 * 1000) mcpWindow = {start: now, counts: new Map()}
+	let me = whoIs(req),
+		keys = [[`ip:${req.ip}`, Number(process.env.INTERACTIVES_MCP_IP_PER_MIN) || 600]]
+	if (me?.username) keys.push([`u:${me.username}`, Number(process.env.INTERACTIVES_MCP_PER_MIN) || 240])
+	let over = false
+	for (let [k, max] of keys) {
+		let n = (mcpWindow.counts.get(k) || 0) + 1
+		mcpWindow.counts.set(k, n)
+		if (n > max) over = true
+	}
+	return over ? Math.ceil((mcpWindow.start + 60 * 1000 - now) / 1000) : 0
+}
+
+//Every tool an agent runs goes in the audit log: who, which agent, which tool and project, and whether it worked. The
+//Activity Designer's in-process calls (further down) go through the same one
+const mcpAudit = (req, ctx, msg, reply) => {
+	if (msg.method !== 'tools/call') return
+	let args = msg.params?.arguments || {},
+		project = [args.project_id, args.projectId, args.project].find((x) => typeof x === 'string' && validID(x)) || null
+	audit(req, 'agent-tool', project, {agent: ctx.agent, tool: String(msg.params?.name || '').slice(0, 60), ok: !reply?.error && !reply?.result?.isError})
+}
+
 router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, res) => {
 	//A browser page on some other site has no business driving this (DNS rebinding and friends). Agents send no Origin
 	let origin = req.get('origin'),
@@ -4694,6 +5959,11 @@ router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, 
 	}
 	if (origin && originHost !== req.get('host')) {
 		return res.status(403).json({jsonrpc: '2.0', id: null, error: {code: -32000, message: 'Origin not allowed'}})
+	}
+
+	let wait = mcpLimited(req)
+	if (wait) {
+		return res.set('Retry-After', String(wait)).status(429).json({jsonrpc: '2.0', id: req.body?.id ?? null, error: {code: -32000, message: `Too many requests, try again in ${wait} s`}})
 	}
 
 	let mcp = await loadMCP(),
@@ -4739,6 +6009,7 @@ router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, 
 	}
 
 	let reply = await mcp.runAs(conn.ctx, () => mcp.respond(msg))
+	mcpAudit(req, conn.ctx, msg, reply)
 	if (!reply) return res.status(202).end()
 	res.json(reply)
 })
@@ -4790,6 +6061,7 @@ client.connect()
 		projects = db.collection('projects')
 		revisions = db.collection('revisions')
 		prefs = db.collection('prefs')
+		designerTokens = db.collection('designer-tokens')
 		libraries = db.collection('libraries')
 		templates = db.collection('templates')
 		commentRows = db.collection('comments')
@@ -4801,6 +6073,7 @@ client.connect()
 		activityData = analyticsDB.collection('interactives-activity-user-data')
 		sharedRows = db.collection('shared-responses')
 		sharedHidden = db.collection('shared-hidden')
+		roomMessages = db.collection('room-messages')
 		courseRows = analyticsDB.collection('interactives-course-collections')
 		ingest = analyticsDB.collection('ingest')
 		userLookup = analyticsDB.collection('user-lookup')
@@ -4811,9 +6084,9 @@ client.connect()
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs'), import('./shared/course.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs'), import('./shared/course.mjs'), import('./shared/rooms.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod, courseMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod, courseMod, roomsMod]) => {
 		ops = opsMod
 		store = docstoreMod.docStore(docChunks)
 		library = libraryMod
@@ -4824,6 +6097,7 @@ client.connect()
 		notesLib = notesMod
 		responses = responsesMod
 		courseLib = courseMod
+		roomsLib = roomsMod
 		markLimiter = markerMod.makeLimiter()
 		records = recordsMod
 		media = mediaMod
@@ -4835,6 +6109,10 @@ client.connect()
 		//Shared responses: how often one person may add or take back (per project), and how often they may read
 		sharedLimits.write = new commentsMod.Limiter(30, 60 * 1000)
 		sharedLimits.read = new commentsMod.Limiter(180, 60 * 1000)
+		sharedLimits.live = new commentsMod.Limiter(12, 60 * 1000)
+
+		//Rooms: sockets one person may open a minute, the same number as the live streams
+		sharedLimits.rooms = new commentsMod.Limiter(12, 60 * 1000)
 
 		//Course collections: per person, whatever the project
 		courseLimits.write = new commentsMod.Limiter(60, 60 * 1000)
@@ -4846,7 +6124,7 @@ client.connect()
 		sweep()
 		setInterval(sweep, 6 * 60 * 60 * 1000).unref()
 
-		app.listen(port, (err) => {
+		let server = app.listen(port, (err) => {
 			//Express 5 hands a failed bind to this callback instead of throwing
 			if (err) {
 				console.error(`${appName} could not listen on port ${port}:`, err.message)
@@ -4863,6 +6141,9 @@ client.connect()
 					.catch((err) => console.warn(`${appName}: making compressed copies failed (plain files are served)`, err.message))
 			}
 		})
+
+		//Rooms are a WebSocket on the same port, under /interactives so haproxy's path rule already sends it here
+		roomAttach(server)
 	})
 	.catch((err) => {
 		console.trace(`${appName} failed to start (could not connect to mongo) - Date: ${new Date()}`, err)

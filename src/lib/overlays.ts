@@ -1,8 +1,16 @@
 //Preview is a modal that sits above everything, the help drawer included, so help asked for while it is open goes to its own window
 let previewOpen = false;
 
+const previewWatchers = new Set<() => void>();
+
 export const setPreviewOpen = (open: boolean) => {
 	previewOpen = open;
+	if (open) previewWatchers.forEach((f) => f());
+};
+//the guided tutorials tick "open Preview" from this
+export const onPreviewOpened = (fn: () => void): (() => void) => {
+	previewWatchers.add(fn);
+	return () => void previewWatchers.delete(fn);
 };
 export const isPreviewOpen = () => previewOpen;
 

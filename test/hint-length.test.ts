@@ -23,6 +23,8 @@ const SCAN = [join(ROOT, 'panels'), join(ROOT, 'components', 'ProjectModals.tsx'
 const EXCEPTIONS: Record<string, string> = {
   // says plainly what the guard cannot do, in the section itself (test/word-audio-own.test.tsx holds it to that)
   'panels/GuardSection.tsx: Keeps spell check, Grammarly and other w': 'honest limits',
+  // the steps shown once Edit in Frameling has downloaded the file, a status after an action rather than an explainer
+  'panels/AnimationInspector.tsx: is in your downloads. Open it in Frameli': 'round trip steps',
 };
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -98,7 +100,8 @@ function scan(): { found: Found[]; opens: { file: string; line: number; topic: s
   for (const dir of SCAN) {
     for (const f of walk(dir)) {
       if (/PrefsModal|ShortcutsModal/.test(f)) continue;
-      const file = relative(ROOT, f);
+      //forward slashes so the EXCEPTIONS keys match on Windows too
+      const file = relative(ROOT, f).split('\\').join('/');
       const sf = ts.createSourceFile(f, readFileSync(f, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
       const lineOf = (n: ts.Node) => sf.getLineAndCharacterOfPosition(n.getStart()).line + 1;
       const visit = (n: ts.Node) => {

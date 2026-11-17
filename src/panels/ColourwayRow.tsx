@@ -4,11 +4,25 @@ import { COLOURWAYS } from '../lib/branded/looks';
 import { ColourwaySwatches } from '../components/ColourwaySwatches';
 import { CheckField } from '../components/ui';
 import { store } from '../store/store';
+import { UniSQLookPick } from '../components/UniSQLookPick';
+import { PropRow } from '../lib/prop-search';
 
 /** Switch a branded project's colourway (the theme it opens in) and say whether learners get a switcher, in the Project settings. */
 export function ColourwayRow({ project }: { project: Project }) {
   const ways = colourwayThemes(project);
-  if (!project.brandLook || !ways.length) return null;
+  //A project that did not start from a branded pack can take the look: pick a colourway, and it gets the theme and the pages get the frame
+  if (!project.brandLook)
+    return (
+      <PropRow k="UniSQ look" words={['brand', 'branding', 'colourway', 'theme', 'logo', 'master', 'frame', 'unisq', 'university']}>
+        <div className="colourway-row">
+          <span className="field-label" title="The UniSQ colourways and page frame, as the branded starter packs have them">
+            UniSQ look
+          </span>
+          <UniSQLookPick className="colourway-look-pick" />
+        </div>
+      </PropRow>
+    );
+  if (!ways.length) return null;
   const current = defaultTheme(project.themes!);
   const value = ways.find((w) => w.theme.id === current?.id)?.way.id ?? '';
   const pick = (id: string) => {

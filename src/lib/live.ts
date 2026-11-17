@@ -100,6 +100,9 @@ export class LiveSession {
   /** Set while the server can't write the room to its database: the ops reached the room, but they are not stored yet. */
   private storeError: string | null = null;
   private backingOff = false;
+  /** A fresh copy of the document is being fetched after a reset, and whether another reset came while it was. */
+  private reloading = false;
+  private reloadAgain = false;
   /** The server's document as of the last op seen (ours and everyone's), kept apart from the one on screen. */
   private shadow: unknown;
 
@@ -218,16 +221,34 @@ export class LiveSession {
     return `Not saved yet: ${this.storeError}. Your changes are kept on the server and it keeps trying`;
   }
 
-  /** Someone replaced the whole document: start again from the server's copy. */
+  /**
+   * Someone replaced the whole document (a save from a tab that isn't live, an import, a restored version): start again from
+   * the server's copy, notes and all. Resets can come close together (the save before a restore, then the restore), and the
+   * copy asked for first can arrive last. So one copy is fetched at a time, a reset that comes while one is on its way
+   * asks again once it has landed, and only the copy of the last ask is used.
+   */
   private async reload(): Promise<void> {
-    const p = await loadProjectRecord(this.projectId);
-    if (!p) return;
-    this.queue = [];
-    this.inflight = [];
-    this.pending.clear();
-    this.shadow = JSON.parse(JSON.stringify(p));
-    this.store.replaceProject(p as Project);
-    this.store.toast('The project was replaced elsewhere and has been reloaded');
+    if (this.reloading) {
+      this.reloadAgain = true;
+      return;
+    }
+    this.reloading = true;
+    try {
+      let p: Project | null;
+      do {
+        this.reloadAgain = false;
+        p = (await loadProjectRecord(this.projectId)) as Project | null;
+      } while (this.reloadAgain && !this.closed);
+      if (!p || this.closed) return;
+      this.queue = [];
+      this.inflight = [];
+      this.pending.clear();
+      this.shadow = JSON.parse(JSON.stringify(p));
+      this.store.replaceProject(p);
+      this.store.toast('The project was replaced elsewhere and has been reloaded');
+    } finally {
+      this.reloading = false;
+    }
   }
 
   private local(before: Project, after: Project): void {

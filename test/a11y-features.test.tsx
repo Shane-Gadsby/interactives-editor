@@ -267,6 +267,9 @@ describe('accessibility checker', () => {
     expect(of(build({}), 'keyboard').map((f) => f.title)).toEqual(['Only works with a mouse or touch']);
     expect(of(build({ shortcut: 'n' }), 'keyboard')).toEqual([]);
     expect(of(build({ shortcut: 'nope+' }), 'keyboard').map((f) => f.title)).toEqual(['Only works with a mouse or touch', 'Shortcut is not a key']);
+    //A button role is a tab stop with Enter and Space in the player, Tab stop left on Auto; Never takes that away again
+    expect(of(build({ role: 'button' }), 'keyboard')).toEqual([]);
+    expect(of(build({ role: 'button', focusable: false }), 'keyboard').map((f) => f.title)).toEqual(['Only works with a mouse or touch']);
   });
 });
 

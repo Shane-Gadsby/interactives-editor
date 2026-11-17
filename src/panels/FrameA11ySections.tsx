@@ -1,4 +1,4 @@
-import { a11yContext, isTabStop, walk, type Artboard, type Dialog, type FrameNode, type KeyNav, type Project, type SceneNode } from 'interactives-player';
+import { a11yContext, isTabStop, walk, type Artboard, type Dialog, type FrameNode, type KeyNav, type Project, type SceneNode, variableLabelAndName } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, ColorField, NumberField, Row, Section, SelectField } from '../components/ui';
 import { addVariableOption, withQuickAdd } from '../lib/quick-add';
@@ -71,7 +71,7 @@ export function DialogSection({ node, ab, project }: { node: FrameNode; ab: Artb
             label="Open variable"
             title="A variable that holds whether the dialog is open. While the frame's Visible is not bound, the dialog shows when the variable is on (true, not 0, not empty), and Escape turns it off. With none, Escape hides the frame"
             value={d.openVariable ?? NONE}
-            options={[{ value: NONE, label: 'None' }, ...vars.map((v) => ({ value: v.id, label: `${v.name} (${v.type})` })), addVariableOption()]}
+            options={[{ value: NONE, label: 'None' }, ...vars.map((v) => ({ value: v.id, label: `${variableLabelAndName(v)} (${v.type})` })), addVariableOption()]}
             onChange={withQuickAdd((v) => update({ openVariable: v || undefined }), { variableType: 'boolean', variableName: `${node.name.replace(/\W+/g, '')}Open` || 'dialogOpen' })}
           />
           <Row>
@@ -169,7 +169,7 @@ export function KeyNavSection({ node, project }: { node: Container; project: Pro
             label="Focused item"
             title="A number variable that holds the focused item's place, from 0. Events on the items (On focus, On pointer click, On key) also get it as event.index. Setting it moves the Tab stop"
             value={k.indexVariable ?? NONE}
-            options={[{ value: NONE, label: 'None' }, ...numberVars.map((v) => ({ value: v.id, label: v.name })), addVariableOption()]}
+            options={[{ value: NONE, label: 'None' }, ...numberVars.map((v) => ({ value: v.id, label: variableLabelAndName(v) })), addVariableOption()]}
             onChange={withQuickAdd((v) => update({ indexVariable: v || undefined }), { variableType: 'number', variableName: `${node.name.replace(/\W+/g, '')}Focus` || 'focusedItem' })}
           />
           <CheckField

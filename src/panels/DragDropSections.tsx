@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { walk, type Artboard, type Draggable, type DropZone, type Project, type SceneNode } from 'interactives-player';
+import { walk, type Artboard, type Draggable, type DropZone, type Project, type SceneNode, variableLabelAndName } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
@@ -186,7 +186,7 @@ function DraggableSection({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artb
                 label="Zone variable"
                 title="A text variable that holds the name of the drop zone this layer is in (empty when it is in none). Read it for scoring, or show it"
                 value={d!.zoneVariable ?? ''}
-                options={[{ value: '', label: 'None' }, ...textVars.map((v) => ({ value: v.id, label: v.name })), addVariableOption()]}
+                options={[{ value: '', label: 'None' }, ...textVars.map((v) => ({ value: v.id, label: variableLabelAndName(v) })), addVariableOption()]}
                 onChange={withQuickAdd((v) => set({ zoneVariable: v || undefined }), { variableType: 'string', variableName: `${n.name.replace(/\W+/g, '')}Zone` || 'zone' })}
               />
             </>
@@ -264,7 +264,7 @@ function DropZoneSection({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artbo
                 label="Contents variable"
                 title="A list variable that holds the names of the layers in the zone, oldest first. Check it for scoring"
                 value={z!.contentsVariable ?? ''}
-                options={[{ value: '', label: 'None' }, ...listVars.map((v) => ({ value: v.id, label: v.name })), addVariableOption()]}
+                options={[{ value: '', label: 'None' }, ...listVars.map((v) => ({ value: v.id, label: variableLabelAndName(v) })), addVariableOption()]}
                 onChange={withQuickAdd((v) => set({ contentsVariable: v || undefined }), { variableType: 'list', variableName: `${n.name.replace(/\W+/g, '')}Contents` || 'contents' })}
               />
             </>

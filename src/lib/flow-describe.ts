@@ -1,4 +1,4 @@
-import { ANIMATABLE_PROPS, CATALOG_BY_KIND, defaultParams, PAGE_TRANSITIONS, speedOf, TIMED_TRANSITIONS, TRANSITION_SPEEDS, walk, type Artboard, type LogicEdge, type LogicNode, type Project } from 'interactives-player';
+import { variableLabel, ANIMATABLE_PROPS, CATALOG_BY_KIND, defaultParams, PAGE_TRANSITIONS, speedOf, TIMED_TRANSITIONS, TRANSITION_SPEEDS, walk, type Artboard, type LogicEdge, type LogicNode, type Project } from 'interactives-player';
 import { conditionWords } from './condition';
 import { nodeLabel, optionLabel, pw } from './plain-words';
 
@@ -75,7 +75,9 @@ class Names {
     return id ? ((this.ab.blends ?? []).find((b) => b.id === id)?.name ?? 'a blend that is missing') : 'a blend';
   }
   variable(id: unknown): string {
-    return id ? (this.project.variables.find((v) => v.id === id)?.name ?? 'a variable that is missing') : 'a variable';
+    if (!id) return 'a variable';
+    const v = this.project.variables.find((x) => x.id === id);
+    return v ? variableLabel(v) : 'a variable that is missing';
   }
   page(id: unknown): string {
     return id ? (this.project.artboards.find((a) => a.id === id)?.name ?? 'a page that is missing') : 'a page';
@@ -179,8 +181,12 @@ export function eventPhrase(n: LogicNode, c: Names, self?: string): string {
       return `While ${subject()} is being dragged`;
     case 'event.dragOver':
       return `When ${subject()} is dragged ${p.type === 'leave' ? 'off' : 'over'} a drop zone`;
-    case 'event.drop':
-      return `When ${subject()} is dropped${p.result === 'rejected' ? ' where it does not belong' : p.result === 'accepted' ? ' where it belongs' : ''}`;
+    case 'event.drop': {
+      const where = p.result === 'rejected' ? ' where it does not belong' : p.result === 'accepted' ? ' where it belongs' : '';
+      //with a draggable layer picked the sentence is about it: "When this is dropped on Bin"
+      if (p.layer) return `When ${self && p.layer === self ? 'this layer' : c.layer(p.layer)} is dropped${p.target && p.result !== 'missed' ? ` on ${c.layer(p.target)}` : where}`;
+      return `When ${subject()} is dropped${where}`;
+    }
     case 'event.dragEnd':
       return `When ${subject()} is let go`;
     case 'event.dataLoaded':
@@ -202,14 +208,32 @@ const TIMELINE_OP: Record<string, (t: string, p: P) => string> = {
   seek: (t, p) => `jump ${t} to ${secs(p.time)}`,
 };
 
+//Set variable's sentence, with what it says to a screen reader afterwards when it has a Say it
 function setVariable(p: P, c: Names): string {
+  const what = setVariableDoes(p, c);
+  const say = String(p.say ?? '').trim();
+  return say ? `${what}, then say “${say}” to screen readers` : what;
+}
+
+function setVariableDoes(p: P, c: Names): string {
   const v = c.variable(p.variable);
   const op = String(p.op ?? 'set');
   //an easing time on a number: only worded when it is not 0
   const over = (op === 'set' || op === 'add') && String(p.over ?? '').trim() && String(p.over).trim() !== '0' ? ` over ${secs(p.over)}` : '';
   switch (op) {
-    case 'add':
+    case 'add': {
+      //Change a number's Take away writes an Add of a minus number: it reads as taking it off
+      const minus = /^-\s*(\d+(?:\.\d+)?|\(.+\))$/.exec(String(p.value ?? '').trim());
+      if (minus) return `take ${minus[1].replace(/^\((.+)\)$/, '$1')} off ${v}${over}`;
       return `add ${val(p.value)} to ${v}${over}`;
+    }
+    case 'next':
+    case 'previous': {
+      const first = String(p.first ?? '').trim() || '0';
+      const last = String(p.last ?? '').trim();
+      const range = last ? ` (${first} to ${last}, ${p.ends === 'stop' ? 'stopping at the ends' : 'going round at the ends'})` : '';
+      return `go to the ${op} ${v}${range}`;
+    }
     case 'toggle':
       return `switch ${v} on or off`;
     case 'push':
@@ -226,8 +250,17 @@ function setVariable(p: P, c: Names): string {
       return `remove ${val(p.value)} from the list ${v}`;
     case 'setItem':
       return `change an item of the list ${v}`;
-    default:
+    case 'changeWhere': {
+      const f = String(p.whereField ?? '').trim();
+      const w = String(p.whereValue ?? '').trim();
+      return f || w ? `change the items of the list ${v} where ${f ? `${f} is ` : 'the item is '}${val(p.whereValue)}` : `change every item of the list ${v}`;
+    }
+    default: {
+      //a yes/no value set to true or false reads as switching it
+      const t = String(p.value ?? '').trim();
+      if ((t === 'true' || t === 'false') && c.project.variables.find((x) => x.id === p.variable)?.type === 'boolean') return `switch ${v} ${t === 'true' ? 'on' : 'off'}`;
       return `set ${v} to ${val(p.value)}${over}`;
+    }
   }
 }
 
@@ -294,6 +327,7 @@ const ACTION: Record<string, (p: P, c: Names) => string> = {
   'action.saveUserData': () => 'save the learner’s progress',
   'action.loadUserData': () => 'bring back the learner’s saved progress',
   'action.sharedAdd': (p, c) => `add an answer to ${c.data(p.source)}`,
+  'action.roomSend': (p, c) => `send ${p.text ? val(p.text) : 'a message'} to ${c.data(p.source)}`,
   'action.sharedWithdraw': (p, c) => `take this learner’s answers back out of ${c.data(p.source)}`,
   'action.courseAdd': (p) => `${String(p.what ?? 'stamp') === 'counter' ? `raise the counter ${val(p.name)} to ${val(p.value ?? '1')}` : `add the stamp ${val(p.name)}`} in the course collection ${quoted(String(p.collection ?? '') || 'you name')}`,
   'action.courseLoad': (p) => `load the course collection ${quoted(String(p.collection ?? '') || 'you name')}`,
@@ -488,7 +522,12 @@ export function buildFlow(event: LogicNode, ctx: FlowCtx, opts: FlowOptions = {}
   const off = isOff(event);
   let when = eventPhrase(event, c, ctx.self);
   const shown = off ? turnedOn(cond) : cond;
-  if (shown) when += `, only if ${conditionWords(shown)}`;
+  //The "all of these are done" trigger reads as what it is, not as the list test it is built from
+  const doneAll = event.kind === 'event.variable' ? /^includesAll\(\s*([A-Za-z_$][\w$]*)\s*,\s*\[(.*)\]\s*\)$/.exec(shown) : null;
+  if (doneAll && doneAll[1] === c.variable(event.params.variable)) {
+    const names = [...doneAll[2].matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]);
+    when = `When all of these are done: ${names.length ? names.join(', ') : 'none yet'}`;
+  } else if (shown) when += `, only if ${conditionWords(shown)}`;
   return { event, when, off, steps, more };
 }
 
@@ -535,7 +574,7 @@ const eventsFirst = (a: LogicNode, b: LogicNode) => a.y - b.y || a.x - b.x;
 /** The flows that start on a layer (events whose layer is this one), top to bottom as the graph has them. */
 export function flowsForLayer(ctx: FlowCtx, layerId: string, opts?: FlowOptions): Flow[] {
   return ctx.ab.logic.nodes
-    .filter((n) => n.kind.startsWith('event.') && n.params.target === layerId)
+    .filter((n) => n.kind.startsWith('event.') && (n.params.target === layerId || (n.kind === 'event.drop' && n.params.layer === layerId)))
     .sort(eventsFirst)
     .map((e) => buildFlow(e, { ...ctx, self: layerId }, opts));
 }

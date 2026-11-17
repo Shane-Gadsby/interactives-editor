@@ -15,7 +15,7 @@ import { bindingsOf, keysSuspended } from '../src/lib/keymap';
 
 let root: Root;
 let host: HTMLElement;
-const reset = () => setPrefs({ ...PREF_DEFAULTS, keymap: undefined, keymapPreset: 'default', keymapSets: undefined, keymapActive: undefined, sectionOrder: undefined, toolOrder: undefined });
+const reset = () => setPrefs({ ...PREF_DEFAULTS, keymap: undefined, keymapPreset: 'default', keymapSets: undefined, keymapActive: undefined, sectionOrder: undefined, toolOrder: undefined, tutorialProgress: undefined });
 beforeEach(() => {
   reset();
   host = document.createElement('div');
@@ -484,3 +484,48 @@ describe('the pages', () => {
     expect(panel().querySelector('h2')?.textContent).toBe('General');
   });
 });
+
+describe('tutorial badges and reset', () => {
+  const resetButton = () => [...panel().querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Reset tutorial progress')!;
+
+  it('has a switch for the badges and cheers (on by default) and a quieter one for the chime (off by default)', () => {
+    open();
+    expect(PREF_DEFAULTS.tutorialBadges).toBe(true);
+    expect(PREF_DEFAULTS.tutorialSound).toBe(false);
+    expect(checkbox('Tutorial badges and cheers').checked).toBe(true);
+    expect(checkbox('Soft chime with the cheers').checked).toBe(false);
+    act(() => checkbox('Tutorial badges and cheers').click());
+    expect(prefs().tutorialBadges).toBe(false);
+    expect(checkbox('Soft chime with the cheers').disabled).toBe(true);
+  });
+
+  it('Reset tutorial progress is off with nothing started, and asks first', async () => {
+    open();
+    expect(resetButton().disabled).toBe(true);
+    act(() => setPrefs({ tutorialProgress: { 'tutorial-mcq': { steps: [1, 2], done: 5 }, 'tutorial-sort': { steps: [1] } } }));
+    expect(resetButton().disabled).toBe(false);
+    expect(panel().textContent).toContain('2 tutorials started or finished');
+    act(() => resetButton().click());
+    //Cancel leaves everything
+    act(() => dialogButton(/Cancel/).click());
+    await flush();
+    expect(Object.keys(prefs().tutorialProgress ?? {})).toHaveLength(2);
+    act(() => resetButton().click());
+    act(() => dialogButton(/Reset tutorial progress/).click());
+    await flush();
+    expect(prefs().tutorialProgress).toBeUndefined();
+    expect(resetButton().disabled).toBe(true);
+  });
+
+  it('is found by search, and leaves the badge switch alone', async () => {
+    expect(searchSettings('badges', false).map((s) => s.id)).toEqual(expect.arrayContaining(['tutorialBadges', 'tutorialReset']));
+    act(() => setPrefs({ tutorialBadges: false, tutorialProgress: { 'tutorial-mcq': { done: 5 } } }));
+    open();
+    act(() => resetButton().click());
+    act(() => dialogButton(/Reset tutorial progress/).click());
+    await flush();
+    expect(prefs().tutorialProgress).toBeUndefined();
+    expect(prefs().tutorialBadges).toBe(false);
+  });
+});
+

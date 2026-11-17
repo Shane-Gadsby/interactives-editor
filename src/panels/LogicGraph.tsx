@@ -32,6 +32,8 @@ import {
   uid,
   isContainer,
   isLive,
+  variableLabel,
+  variableLabelAndName,
   walk,
   type Artboard,
   type LogicGroup,
@@ -47,6 +49,8 @@ import { getArtboard } from '../store/doc';
 import { CheckField, NumberField, SelectField, SpeedField, TextField } from '../components/ui';
 import { ConditionField } from '../components/ConditionField';
 import { ExprField } from '../components/ExprField';
+
+const vLabel = (v: Parameters<typeof variableLabel>[0] | undefined) => (v ? variableLabel(v) : undefined);
 
 /** Names an expression in a graph node sees on top of the project's. */
 const GRAPH_LOCALS = ['event', 'ix'];
@@ -68,10 +72,12 @@ import { artboardChoices } from '../lib/variants-edit';
 import { nodeMenuItems } from '../lib/node-menu';
 import { GraphPalette } from './GraphPalette';
 import { FlowSentences } from './FlowSentences';
+import { MasterFlows } from './MasterFlows';
 import { stepArtboard } from './ArtboardPicker';
 import { CONTEXT_ORDER, commandFor, keyHints, matches, withKey } from '../lib/keymap';
 import { GraphNoteForm, GraphNoteNode, resizing as noteResizing, type GraphNoteData } from './GraphNoteNode';
 import { flashOf, useFlowVersion, wireClass } from '../lib/run-flow';
+import { foldedEdges, framesToOpen, hiddenIn, isFoldId, kitBlocks } from '../lib/graph-fold';
 import { labelOfKind, nodeAka, nodeHeading, nodeLabel, nodeTip, plainParam, pw, optionLabel, useTechnicalWording } from '../lib/plain-words';
 import { finishReveal, frameRects, onReveal, pendingReveal, reducedMotion, type RevealRequest } from '../lib/graph-reveal';
 import { setLastKeyArea } from '../lib/key-area';
@@ -111,6 +117,35 @@ function IxNode({ data, selected }: NodeProps<Node<IxNodeData>>) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+type KitFoldData = { frame: string; name: string; count: number; kinds: string; memberIds: string[]; open: boolean; onToggle: (frame: string) => void };
+
+/**
+ * One question's kit nodes: folded they are this block (connections that cross its edge are drawn to it), open it is a small tab
+ * above them with Fold. A real button, so the keyboard folds and opens it. Only drawn so, the nodes are ordinary ones.
+ */
+function KitFoldNode({ data }: NodeProps<Node<KitFoldData>>) {
+  useFlowVersion();
+  const ran = data.memberIds.some((id) => flashOf(id)?.kind === 'ran');
+  if (data.open)
+    return (
+      <button type="button" className="ix-kit-tab nodrag nopan" aria-expanded="true" title={`Fold the ${data.count} nodes the question kit made for ${data.name} back into one block`} onClick={() => data.onToggle(data.frame)}>
+        <Icons.chevronDown width={10} height={10} /> {data.name}: kit nodes ({data.count}) · Fold
+      </button>
+    );
+  return (
+    <div className={`ix-kit-block${ran ? ' ran' : ''}`}>
+      <Handle type="target" position={Position.Left} id="in" isConnectable={false} />
+      <button type="button" className="ix-kit-open nodrag nopan" aria-expanded="false" title={`The ${data.count} nodes the question kit made for ${data.name}: open them to see or change them`} onClick={() => data.onToggle(data.frame)}>
+        <strong>{data.name}</strong>
+        <span className="small">Made by the question kit · {data.count} nodes{ran ? ' · ran' : ''}</span>
+        <span className="small muted">{data.kinds}</span>
+        <span className="ix-kit-hint">Open</span>
+      </button>
+      <Handle type="source" position={Position.Right} id="out" isConnectable={false} />
     </div>
   );
 }
@@ -185,21 +220,26 @@ function GroupNode({ data, selected }: NodeProps<Node<GroupData>>) {
   );
 }
 
-const nodeTypes = { ix: IxNode, ixgroup: GroupNode, ixnote: GraphNoteNode };
+const nodeTypes = { ix: IxNode, ixgroup: GroupNode, ixnote: GraphNoteNode, ixkit: KitFoldNode };
 
 //Layer names of an artboard, kept for as long as its layers are the same objects (every node on the graph reads them)
 const layerNames = new WeakMap<object, Map<string, string>>();
 
-export function summarize(n: LogicNode, ab: Artboard, project: Project): string {
-  const def = CATALOG_BY_KIND[n.kind];
-  if (!def) return '';
-  const parts: string[] = [];
+function namesOf(ab: Artboard): Map<string, string> {
   let names = layerNames.get(ab.children);
   if (!names) {
     names = new Map<string, string>();
     walk(ab.children, (x) => names!.set(x.id, x.name));
     layerNames.set(ab.children, names);
   }
+  return names;
+}
+
+export function summarize(n: LogicNode, ab: Artboard, project: Project): string {
+  const def = CATALOG_BY_KIND[n.kind];
+  if (!def) return '';
+  const parts: string[] = [];
+  const names = namesOf(ab);
   for (const p of def.params) {
     if (p.showIf && !p.showIf.values.includes(n.params[p.showIf.key] ?? defaultParams(n.kind)[p.showIf.key])) continue;
     const v = n.params[p.key];
@@ -219,8 +259,8 @@ export function summarize(n: LogicNode, ab: Artboard, project: Project): string 
     if (p.type === 'node') text = names.get(text) ?? '(missing layer)';
     else if (p.type === 'timeline') text = ab.timelines.find((t) => t.id === v)?.name ?? '(missing timeline)';
     else if (p.type === 'blend') text = ab.blends?.find((b) => b.id === v)?.name ?? '(missing blend)';
-    else if (p.type === 'variable') text = project.variables.find((x) => x.id === v)?.name ?? '(missing variable)';
-    else if (p.type === 'variables') text = (Array.isArray(v) ? v : []).map((id) => project.variables.find((x) => x.id === id)?.name ?? '(missing variable)').join(', ');
+    else if (p.type === 'variable') text = vLabel(project.variables.find((x) => x.id === v)) ?? '(missing variable)';
+    else if (p.type === 'variables') text = (Array.isArray(v) ? v : []).map((id) => vLabel(project.variables.find((x) => x.id === id)) ?? '(missing variable)').join(', ');
     else if (p.type === 'artboard') text = project.artboards.find((x) => x.id === v)?.name ?? '(missing artboard)';
     else if (p.type === 'script') text = project.scripts.find((x) => x.id === v)?.name ?? '(missing script)';
     else if (p.type === 'data') text = project.dataSources.find((x) => x.id === v)?.name ?? '(missing data)';
@@ -274,6 +314,33 @@ export function LogicGraph() {
     const here = new Set((ab?.logic.nodes ?? []).map((n) => n.id));
     for (const id of kept.current.keys()) if (!here.has(id)) kept.current.delete(id);
   }, [ab?.logic.nodes]);
+  //Which questions' kit nodes are open. Only about how the graph is drawn (see lib/graph-fold.ts), so it is not in the document
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const openRef = useRef(open);
+  openRef.current = open;
+  const blocks = useMemo(() => kitBlocks(ab?.logic.nodes ?? []), [ab?.logic.nodes]);
+  const hidden = useMemo(() => hiddenIn(blocks, open), [blocks, open]);
+  const toggleKit = useCallback((frame: string) => {
+    const st = store().get();
+    const members = kitBlocks(getArtboard(st.project, st.activeArtboardId)?.logic.nodes ?? []).find((b) => b.frame === frame)?.members.map((m) => m.id) ?? [];
+    const was = openRef.current.has(frame);
+    //Folding picks nothing inside it any more (a Delete would otherwise reach nodes nobody can see)
+    if (was && (st.logicPicked.some((id) => members.includes(id)) || (st.logicSelection && members.includes(st.logicSelection))))
+      store().set({ logicPicked: st.logicPicked.filter((id) => !members.includes(id)), logicSelection: st.logicSelection && members.includes(st.logicSelection) ? null : st.logicSelection });
+    setOpen((cur) => {
+      const next = new Set(cur);
+      if (was) next.delete(frame);
+      else next.add(frame);
+      return next;
+    });
+  }, []);
+  //A node that is picked from somewhere else (an error, the sentences, a flow that was just added) opens the question it is in
+  const shownKey = [...(s.sel ? [s.sel] : []), ...s.picked].join(',');
+  useEffect(() => {
+    const want = framesToOpen(shownKey ? shownKey.split(',') : [], blocks, open);
+    if (want.length) setOpen((cur) => new Set([...cur, ...want]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownKey, blocks]);
   const nodes: Node<IxNodeData>[] = useMemo(
     () =>
       [
@@ -292,7 +359,25 @@ export function LogicGraph() {
               selected: chosen.includes(g.id),
             }) as unknown as Node<IxNodeData>,
         ),
-        ...(ab?.logic.nodes ?? []).map((n) => {
+        //One block per question for its kit nodes while they are folded, a Fold tab above them while they are open
+        ...(ab
+          ? blocks.map((b) => {
+              const isOpen = open.has(b.frame);
+              const kinds = [...new Set(b.members.map((m) => labelOfKind(m.kind)))];
+              return {
+                id: b.id,
+                type: 'ixkit',
+                position: { x: b.x, y: isOpen ? b.y - 34 : b.y },
+                draggable: false,
+                selectable: false,
+                deletable: false,
+                connectable: false,
+                zIndex: 1,
+                data: { frame: b.frame, name: namesOf(ab).get(b.frame) ?? 'Question', count: b.members.length, kinds: kinds.slice(0, 4).join(', ') + (kinds.length > 4 ? '…' : ''), memberIds: b.members.map((m) => m.id), open: isOpen, onToggle: toggleKit },
+              } as unknown as Node<IxNodeData>;
+            })
+          : []),
+        ...(ab?.logic.nodes ?? []).filter((n) => !hidden.has(n.id)).map((n) => {
           const summary = ab ? summarize(n, ab, s.project) : '';
           const selected = chosen.includes(n.id);
           const revealed = glow.includes(n.id);
@@ -321,7 +406,7 @@ export function LogicGraph() {
             })
           : []),
       ],
-    [ab, s.project, chosen, showNotes, glow],
+    [ab, s.project, chosen, showNotes, glow, blocks, hidden, open, toggleKit],
   );
   // Selected connections live here (the document only stores the graph), so Delete can remove them
   const [selEdges, setSelEdges] = useState<string[]>([]);
@@ -329,12 +414,12 @@ export function LogicGraph() {
   const flowVersion = useFlowVersion();
   const edges: Edge[] = useMemo(
     () =>
-      (ab?.logic.edges ?? []).map((e) => {
+      foldedEdges(ab?.logic.edges ?? [], hidden).map((e) => {
         const lit = wireClass(e.id);
-        return { id: e.id, source: e.from, sourceHandle: e.fromPort, target: e.to, targetHandle: e.toPort, animated: false, selected: selEdges.includes(e.id), ...(lit ? { className: lit } : {}) };
+        return { id: e.id, source: e.source, sourceHandle: e.sourceHandle, target: e.target, targetHandle: e.targetHandle, animated: false, selected: selEdges.includes(e.id), ...(lit ? { className: lit } : {}) };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ab, selEdges, flowVersion],
+    [ab, selEdges, flowVersion, hidden],
   );
 
   const updateLogic = useCallback(
@@ -399,7 +484,9 @@ export function LogicGraph() {
       select([node.id], node.id);
     }
   };
-  const onNodesChange = (changes: NodeChange<Node<IxNodeData>>[]) => {
+  const onNodesChange = (all: NodeChange<Node<IxNodeData>>[]) => {
+    //The folded blocks are only drawn, never selected, moved or removed
+    const changes = all.filter((c) => !('id' in c && isFoldId(c.id)));
     // Selection: a click or a marquee arrives as select changes, often several at once (a Ctrl+click is dealt with above)
     const selects = press.current?.mod ? [] : changes.filter((c) => c.type === 'select');
     if (selects.length) {
@@ -505,7 +592,7 @@ export function LogicGraph() {
       });
   };
   const onConnect = (c: Connection) => {
-    if (!c.source || !c.target || c.source === c.target) return;
+    if (!c.source || !c.target || c.source === c.target || isFoldId(c.source) || isFoldId(c.target)) return;
     updateLogic((a) => {
       if (a.logic.edges.some((e) => e.from === c.source && e.fromPort === (c.sourceHandle ?? 'out') && e.to === c.target)) return;
       a.logic.edges.push({ id: uid('e'), from: c.source!, fromPort: c.sourceHandle ?? 'out', to: c.target!, toPort: c.targetHandle ?? 'in' });
@@ -983,6 +1070,10 @@ export function LogicGraph() {
     let undo: (() => void) | undefined;
     const run = (r: RevealRequest) => {
       if (r.abId !== store().get().activeArtboardId) return;
+      //What was added may be kit nodes folded in a block: open it so there is something to frame
+      const here = getArtboard(store().get().project, r.abId)?.logic.nodes ?? [];
+      const want = framesToOpen(r.ids, kitBlocks(here), new Set());
+      if (want.length) setOpen((cur) => new Set([...cur, ...want]));
       undo?.();
       undo = reveal(r);
     };
@@ -1065,7 +1156,7 @@ export function LogicGraph() {
             store().set({ editingNote: chosenNow()[0] });
           } else if (cmd === 'graph-select-all') {
             e.preventDefault();
-            select([...(ab.logic.groups ?? []).map((g) => g.id), ...ab.logic.nodes.map((n) => n.id), ...(showNotes ? (ab.logic.notes ?? []).map((n) => n.id) : [])]);
+            select([...(ab.logic.groups ?? []).map((g) => g.id), ...ab.logic.nodes.filter((n) => !hidden.has(n.id)).map((n) => n.id), ...(showNotes ? (ab.logic.notes ?? []).map((n) => n.id) : [])]);
           } else if (cmd === 'graph-group' && chosenNow().some((id) => !isGroup(id) && !isNote(id))) {
             e.preventDefault();
             groupAround(chosenNow());
@@ -1101,6 +1192,10 @@ export function LogicGraph() {
             Read as sentences
           </button>
         </div>
+        <div className="master-flows-slot">
+          <MasterFlows ab={ab} project={s.project} />
+        </div>
+        <div className="logic-stage">
         {s.view === 'sentences' ? (
           <FlowSentences ab={ab} project={s.project} picked={s.sel} />
         ) : (
@@ -1143,6 +1238,15 @@ export function LogicGraph() {
             <ControlButton onClick={() => void addNoteAt()} title={withKey('Add a note: a sticky note for the people editing this graph (players never see it)', 'graph-add-note')} aria-label="Add a note to the graph">
               <Icons.note width={14} />
             </ControlButton>
+            {blocks.length > 0 && (
+              <ControlButton
+                onClick={() => setOpen(blocks.some((b) => !open.has(b.frame)) ? new Set(blocks.map((b) => b.frame)) : new Set())}
+                title={blocks.some((b) => !open.has(b.frame)) ? 'Open the question blocks: show the nodes the question kit made' : 'Fold the question blocks: hide the nodes the question kit made, so your own flows stand out'}
+                aria-label={blocks.some((b) => !open.has(b.frame)) ? 'Open every question block' : 'Fold every question block'}
+              >
+                <Icons.question width={14} />
+              </ControlButton>
+            )}
             <ControlButton onClick={tidy} title={withKey('Tidy up: lay the graph out in columns from its events, with as few crossing connections as possible (one undo)', 'graph-tidy')} aria-label="Tidy up the graph">
               <Icons.distH width={14} />
             </ControlButton>
@@ -1157,6 +1261,7 @@ export function LogicGraph() {
             </p>
           </div>
         )}
+        </div>
       </div>
       <div className="logic-settings">
         {chosen.length > 1 ? (
@@ -1237,10 +1342,10 @@ export function ParamForm({ node, ab, project, onChange, onNote }: { node: Logic
         const dead = node.kind === 'action.setVariable' && !!chosenVar && isLive(chosenVar);
         return (
           <div key={p.key}>
-            {pick(project.variables.map((x) => ({ value: x.id, label: node.kind === 'action.setVariable' && isLive(x) ? `${x.name} (live, read only)` : x.name })), project.variables.length ? 'Choose variable…' : 'No variables yet', [addVariableOption()], { variableType: 'number' })}
+            {pick(project.variables.map((x) => ({ value: x.id, label: node.kind === 'action.setVariable' && isLive(x) ? `${variableLabelAndName(x)} (live, read only)` : variableLabelAndName(x) })), project.variables.length ? 'Choose variable…' : 'No variables yet', [addVariableOption()], { variableType: 'number' })}
             {dead && (
               <div className="error small" role="status">
-                {chosenVar!.name} is a live variable: it is worked out from its formula, so this node does nothing to it. Turn off Keep up to date in the Variables tab to set it by hand.
+                {variableLabel(chosenVar!)} is a live variable: it is worked out from its formula, so this node does nothing to it. Turn off Keep up to date in the Variables tab to set it by hand.
               </div>
             )}
           </div>
@@ -1267,7 +1372,7 @@ export function ParamForm({ node, ab, project, onChange, onNote }: { node: Logic
               project.variables.map((x) => (
                 <CheckField
                   key={x.id}
-                  label={node.kind === 'action.resetVariables' && isLive(x) ? `${x.name} (live, left alone)` : x.name}
+                  label={node.kind === 'action.resetVariables' && isLive(x) ? `${variableLabelAndName(x)} (live, left alone)` : variableLabelAndName(x)}
                   value={chosen.includes(x.id)}
                   disabled={node.kind === 'action.resetVariables' && isLive(x)}
                   onChange={(on) => set(p.key, on ? [...chosen, x.id] : chosen.filter((id) => id !== x.id))}
@@ -1287,10 +1392,11 @@ export function ParamForm({ node, ab, project, onChange, onNote }: { node: Logic
       case 'asset':
         return pick(project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio').map((a) => ({ value: a.id, label: a.name })), 'Choose sound…', [addAssetOption('audio')], { asset: 'audio' });
       case 'data': {
-        // The shared responses nodes work on shared sources only
+        // The shared responses nodes work on shared sources only, and Send to room on rooms
         const shared = node.kind.startsWith('action.shared');
-        const list = project.dataSources.filter((d) => !shared || d.source === 'shared');
-        return pick(list.map((d) => ({ value: d.id, label: d.name })), list.length ? 'Choose data source…' : shared ? 'No shared responses yet (Data tab)' : 'No data sources yet');
+        const room = node.kind === 'action.roomSend';
+        const list = project.dataSources.filter((d) => (!shared || d.source === 'shared') && (!room || d.source === 'room'));
+        return pick(list.map((d) => ({ value: d.id, label: d.name })), list.length ? 'Choose data source…' : shared ? 'No shared responses yet (Data tab)' : room ? 'No room yet (Data tab)' : 'No data sources yet');
       }
       case 'cursor':
         return <SelectField key={p.key} label={p.label} title={p.help} value={String(v ?? 'pointer')} options={[...CURSORS]} onChange={(x) => set(p.key, x)} />;
@@ -1338,7 +1444,7 @@ export function ParamForm({ node, ab, project, onChange, onNote }: { node: Logic
             {isCondition ? (
               <ConditionField label={p.label} title={p.help} value={String(v ?? '')} locals={GRAPH_LOCALS} placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
             ) : (
-              <ExprField label={p.label} title={p.help} value={String(v ?? '')} locals={GRAPH_LOCALS} commitOnBlur placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
+              <ExprField label={p.label} title={p.help} value={String(v ?? '')} locals={GRAPH_LOCALS} commitOnBlur calc={node.kind === 'action.setVariable' && p.key === 'value'} placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
             )}
             <div className="hint">{p.help ?? 'JavaScript expression; variables by name, plus event.'}</div>
           </div>

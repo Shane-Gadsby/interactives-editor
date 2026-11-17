@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { variableOption } from '../lib/friendly-names';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { matches } from '../lib/keymap';
-import { PropRow, PropSearchProvider, PropSearchStore } from '../lib/prop-search';
+import { BoundProvider, PropRow, PropSearchProvider, PropSearchStore } from '../lib/prop-search';
 import { PropSearchBox } from './PropSearchBox';
 import { SectionOrderScope } from '../lib/section-order';
 import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
@@ -25,6 +26,7 @@ import {
   type DrawNode,
   type ImageNode,
   type ShaderNode,
+  type AnimationNode,
   type ProgressNode,
   type ChartNode,
   type ConnectorNode,
@@ -58,12 +60,16 @@ import {
   uid,
   walk,
   shownAmount,
+  variableLabelAndName,
 } from 'interactives-player';
 import { keyTime, store, useEditor, valueAt } from '../store/store';
+import { collaboratorCountOf } from '../lib/db';
+import { setLiveSync } from '../lib/live-sync';
 import { getArtboard, isIdentifier, locate } from '../store/doc';
 import { ColourwayRow } from './ColourwayRow';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, TrackField, UnitField } from '../components/ui';
-import { ExprField } from '../components/ExprField';
+import { ExprField, ExprLocals, FormulaStatusLine, useFormulaStatus } from '../components/ExprField';
+import { repeatLocals } from '../lib/repeat-locals';
 import { openBehaviours } from '../components/BehaviourDialog';
 import { revealAdded } from '../lib/graph-reveal';
 import { flowSentence, flowsForLayer } from '../lib/flow-describe';
@@ -77,7 +83,9 @@ import { assetKind } from '../lib/assets';
 import { acceptFor, pickFiles, replaceAssetFile } from '../lib/insert';
 import { updateFromFile } from '../lib/importers';
 import { pointTracks } from '../lib/path-edit';
-import { addAssetOption, createVariable, withQuickAdd } from '../lib/quick-add';
+import { addAssetOption, addVariableOption, createVariable, withQuickAdd } from '../lib/quick-add';
+import { FORMULA_ITEMS, OWN_ITEMS, defaultItems, itemExample, itemsChoiceOf, itemsChoices, itemsFor } from '../lib/repeat-items';
+import { ListTable } from '../components/ListTable';
 import { SearchPicker, type PickerOption } from '../components/SearchPicker';
 import { CodeEditor } from '../components/CodeEditor';
 import { AccessibilitySection, TabOrderSection } from './AccessibilitySections';
@@ -108,7 +116,7 @@ import { PageLinkSection } from './PageLinkSection';
 import { PageNavSection } from './PageNavSection';
 import { StepsSection } from './StepsSection';
 import { blendExample } from '../lib/blend-example';
-import { BindingsSection as BindingsSectionView } from './BindingsSection';
+import { BindingsSection as BindingsSectionView, boundFieldKeys } from './BindingsSection';
 import { AnimateSection } from './AnimateSection';
 import { TEXT_PRESETS } from '../lib/text-modifiers';
 import { applyDrawTemplate } from '../lib/draw-templates';
@@ -116,6 +124,7 @@ import { useDrawProblem } from '../lib/draw-edit';
 import { confirmDialog } from '../components/dialogs';
 import { detach as detachFromLibrary } from '../lib/library-actions';
 import { ShaderFilterFields, ShaderSection } from './ShaderInspector';
+import { AnimationSection } from './AnimationInspector';
 import { FillSection, PaintOrderSection, StrokeSection } from './PaintLayers';
 import { ChartSection, ProgressSection } from './DataLayerInspectors';
 import { ConnectorSection } from './ConnectorInspector';
@@ -152,9 +161,14 @@ export function Inspector() {
     store.setQuery(q.trim());
   };
   const ab = getArtboard(s.project, s.activeArtboardId);
+  //A layer in a repeater's template: its formulas know item and index, with the first copy's values
+  const one = s.selection.length === 1 ? s.selection[0] : '';
+  const repeated = useMemo(() => (ab && one ? repeatLocals(s.project, ab, one) : null), [s.project, ab, one]);
   if (!ab) return <aside className="inspector" />;
   const nodes = s.selection.map((id) => locate(ab, id)?.node).filter(Boolean) as SceneNode[];
   const pickedAbs = pickedArtboardIds(s);
+  //fields a binding sets get a marker (one layer only, several selected means the fields show mixed values anyway)
+  const bound = nodes.length === 1 ? boundFieldKeys(nodes[0], s.project) : null;
   // each kind of panel keeps its own section order: a layer's by its type (a rectangle, some text, ...), the page's, several pages'
   const orderScope = nodes.length ? (nodes.every((x) => x.type === nodes[0].type) ? `layer:${nodes[0].type}` : 'layers') : pickedAbs.length > 1 ? 'pages' : 'page';
   // "/" or Ctrl+F anywhere in the panel (outside a field you're typing in) goes to the search; Esc clears it
@@ -177,7 +191,13 @@ export function Inspector() {
         <PropSearchBox store={store} query={query} setQuery={setQuery} inputRef={box} />
         {s.recording && s.timelineShown && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
         <SectionOrderScope.Provider value={orderScope}>
-          {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : (
+          {nodes.length ? (
+            <ExprLocals.Provider value={repeated ?? {}}>
+              <BoundProvider value={bound}>
+                <NodeInspector nodes={nodes} ab={ab} project={s.project} />
+              </BoundProvider>
+            </ExprLocals.Provider>
+          ) : (
             // several artboards selected: what applies to all of them, instead of the active one's own settings
             pickedAbs.length > 1 ? <ArtboardsSelection ids={pickedAbs} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />
           )}
@@ -223,14 +243,17 @@ export function KeyButton({ node, prop, ids }: { node: SceneNode; prop: string; 
   );
 }
 
-export function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title, scale }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string; scale?: number }) {
+export function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title, scale, disabled }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string; scale?: number; disabled?: boolean }) {
   const shown = useShown(node);
   const set = useSetter(ids);
   const v = Number(shown(prop) ?? fallback);
+  //The view the number is read in (a timeline or the design view): a box half typed in under another view gives way to the new one
+  const st = store().get();
+  const view = st.timelineShown && st.activeTimelineId ? st.activeTimelineId : 'design';
   return (
     <div className="keyed">
-      <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} scale={scale} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
-      <KeyButton node={node} prop={prop} ids={ids} />
+      <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} scale={scale} disabled={disabled} syncKey={`${node.id}|${view}`} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
+      {!disabled && <KeyButton node={node} prop={prop} ids={ids} />}
     </div>
   );
 }
@@ -720,6 +743,15 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         />
         <ColorField label="Page background" value={project.settings.pageBackground} onChange={(c) => setProject((p) => (p.settings.pageBackground = c), 'page-bg')} />
         <CheckField
+          label="Live collaboration"
+          title="Turn on when you work on this project at the same time as the people you invite: you see each other's cursors and changes as they happen. Off (the default), the project is saved one person at a time, nothing extra is sent, and if two people have it open the second to save is asked to reload."
+          value={!!project.settings.liveSync}
+          onChange={(v) => setLiveSync(store(), v)}
+        />
+        {!project.settings.liveSync && collaboratorCountOf(project.id) > 0 && (
+          <p className="hint">Shared with others, but Live collaboration is off: you will not see their changes as they happen.</p>
+        )}
+        <CheckField
           label="Run scripts in the sandbox"
           title="Scripts run in a JavaScript VM (WASM) with only the ix API: no DOM, cookies or network. Turn off to let scripts reach the page (node.element)."
           value={!!project.settings.scriptSandbox}
@@ -816,6 +848,23 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
 
 // ---------------------------------------------------------------- nodes
 
+/**
+ * Why the X and Y of these layers can't be typed: an auto layout frame works them out (so a typed number would be shown and
+ * then ignored). Null when at least one of them is free to place (not in an auto layout, or set to Ignore).
+ */
+export function placedBy(ab: Artboard, nodes: SceneNode[]): string | null {
+  const parents = nodes.map((x) => {
+    const parent = locate(ab, x.id)?.parent;
+    const pos = x.layoutItem?.position ?? 'flow';
+    return parent && parent.type === 'frame' && parent.layout && pos !== 'ignore' ? { parent, pos } : null;
+  });
+  if (parents.some((p) => !p)) return null;
+  const names = new Set(parents.map((p) => p!.parent.id));
+  const who = names.size === 1 ? `the auto layout of ${parents[0]!.parent.name}` : 'an auto layout';
+  if (parents.every((p) => p!.pos === 'absolute')) return `Placed by its inset in ${who}. Change the Inset in Layout item, or set Position to Ignore to place it yourself.`;
+  return `Placed by ${who}. Set Position to Ignore in Layout item to place it yourself.`;
+}
+
 export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboard; project: Project }) {
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
@@ -825,6 +874,7 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
   const sameType = nodes.every((x) => x.type === n.type);
   //A connector's box is the route between the two layers it joins, so there is nothing to place, size, turn or lay out
   const isConn = sameType && n.type === 'connector';
+  const placed = placedBy(ab, nodes);
   return (
     <>
       {single && (n.type === 'image' || n.type === 'video') && <AltPromptCard node={n} projectId={project.id} />}
@@ -833,11 +883,14 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
       <Section id="layer-selection" help="fill-stroke" title={single ? 'Layer' : `${nodes.length} layers`}>
         {single && <TextField label="Name" value={n.name} onChange={(v) => set({ name: v }, `name-${n.id}`)} />}
         {!isConn && (
-          <Row className="aligned-pair">
-            <Num node={n} ids={ids} prop="x" label="X" />
-            <span className="link-toggle link-gap" aria-hidden="true" />
-            <Num node={n} ids={ids} prop="y" label="Y" />
-          </Row>
+          <>
+            <Row className="aligned-pair">
+              <Num node={n} ids={ids} prop="x" label="X" disabled={!!placed} title={placed ? 'Worked out by the auto layout' : undefined} />
+              <span className="link-toggle link-gap" aria-hidden="true" />
+              <Num node={n} ids={ids} prop="y" label="Y" disabled={!!placed} title={placed ? 'Worked out by the auto layout' : undefined} />
+            </Row>
+            {placed && <p className="hint">{placed}</p>}
+          </>
         )}
         {isConn ? (
           <Row className="aligned-pair">
@@ -1294,7 +1347,7 @@ function InputValue({ nodes, project, set }: { nodes: SceneNode[]; project: Proj
     const { value: _c, ...converters } = n.converters ?? {};
     set({ bindings: Object.keys(bindings).length ? bindings : undefined, bindingModes: Object.keys(modes).length ? modes : undefined, converters: Object.keys(converters).length ? converters : undefined }, `bind-${n.id}`);
   };
-  const options: PickerOption[] = project.variables.filter((v) => isIdentifier(v.name)).map((v) => ({ value: v.name, label: v.name, hint: v.type }));
+  const options: PickerOption[] = project.variables.filter((v) => isIdentifier(v.name)).map((v) => variableOption(v, v.type));
   const label = mode === 'both' ? '⇄ Both' : mode === 'out' ? 'Out →' : '← In';
   return (
     <>
@@ -1467,7 +1520,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           <SectionBlurb
             text={
               <>
-                Insert variables with <code>{'{name}'}</code>, or any expression like <code>{'{score * 10}'}</code>.
+                Press <b>Insert value</b> to put a variable in, or type <code>{'{name}'}</code>, or any expression like <code>{'{score * 10}'}</code>.
               </>
             }
             name="live values in text"
@@ -1694,6 +1747,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return <ChartSection nodes={nodes as ChartNode[]} project={project} ab={store().artboard()} />;
     case 'connector':
       return <ConnectorSection nodes={nodes as ConnectorNode[]} project={project} ab={store().artboard()} />;
+    case 'animation':
+      return <AnimationSection nodes={nodes as AnimationNode[]} project={project} ab={store().artboard()} />;
     case 'shader':
       return nodes.length === 1 ? <ShaderSection node={n as ShaderNode} project={project} /> : <p className="hint">Select one shader layer to edit its code and uniforms.</p>;
     case 'group':
@@ -1806,7 +1861,7 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
         <p className="hint">Nothing happens when this layer is used yet.</p>
       )}
       <Row k="Add interaction" words={['on click', 'on hover', 'event', 'action', 'trigger', 'click', 'hover', 'behaviour', 'when', 'show', 'hide', 'page', 'sound', 'counter']}>
-        <button className="btn" title="Choose what happens when this layer is clicked: go to a page, show or hide something, play a sound, count..." onClick={() => openBehaviours({ abId: ab.id, layerId: node.id, trigger: 'click' })}>
+        <button className="btn" data-tour="add-when-clicked" title="Choose what happens when this layer is clicked: go to a page, show or hide something, play a sound, count..." onClick={() => openBehaviours({ abId: ab.id, layerId: node.id, trigger: 'click' })}>
           + When clicked…
         </button>
         <button className="btn" title="Choose what happens when the pointer moves onto this layer" onClick={() => openBehaviours({ abId: ab.id, layerId: node.id, trigger: 'pointerenter' })}>
@@ -1814,7 +1869,7 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
         </button>
       </Row>
       <Row k="Add an empty event" words={['empty', 'advanced', 'graph', 'on pointer', 'on click', 'on hover']}>
-        <button className="btn small" title="Add just the On pointer event, with nothing joined to it, and build the rest in the graph" onClick={() => add('click')}>
+        <button className="btn small" data-tour="add-empty-click" title="Add just the On pointer event, with nothing joined to it, and build the rest in the graph" onClick={() => add('click')}>
           + On click (empty)
         </button>
         <button className="btn small" title="Add just the On pointer event, with nothing joined to it, and build the rest in the graph" onClick={() => add('pointerenter')}>
@@ -2002,16 +2057,57 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
   const rep = node.repeat;
   const update = (patch: Partial<Repeat>) => set({ repeat: { ...(rep as Repeat), ...patch } }, `repeat-${node.id}`);
   const lists = project.dataSources.map((d) => d.name);
+  //"A formula" stays picked while its text happens to look like a list name or a typed list, until another source is chosen
+  const [formula, setFormula] = useState(false);
+  useEffect(() => setFormula(false), [node.id]);
+  const choice = rep ? (formula ? FORMULA_ITEMS : itemsChoiceOf(rep.items, project)) : '';
+  //The line "currently 6 items" under the picker (a formula box has its own)
+  const itemsStatus = useFormulaStatus(rep?.items ?? '', [], undefined);
+  const sel = rep?.select ?? null;
+  const pickMode = async (mode: 'none' | 'one' | 'several') => {
+    if (!rep) return;
+    if (mode === 'none') return update({ select: null });
+    const type = mode === 'one' ? 'number' : 'list';
+    const have = project.variables.find((v) => v.id === sel?.variable);
+    // The variable it writes has to be the right kind (a number for one, a list for several); ask for a name when there isn't one
+    if (have && have.type === type) return update({ select: { ...sel!, mode } });
+    const id = await createVariable(type, mode === 'one' ? 'selectedIndex' : 'selectedItems', mode === 'one' ? -1 : '[]');
+    if (id) update({ select: { mode, variable: id, ...(mode === 'one' && sel?.toggle ? { toggle: true } : {}) } });
+  };
   return (
     <Section help="repeaters" title="Repeat (list)" defaultOpen={!!rep}>
       <CheckField
         label="Repeat the first child for each item"
         value={!!rep}
-        onChange={(on) => set({ repeat: on ? { items: lists[0] ?? '[1, 2, 3]', layout: 'vertical', gap: 8, columns: 2 } : null })}
+        onChange={(on) => {
+          setFormula(false);
+          set({ repeat: on ? { items: defaultItems(project), layout: 'vertical', gap: 8, columns: 2 } : null });
+        }}
       />
       {rep && (
         <>
-          <ExprField label="Items" value={rep.items} commitOnBlur placeholder="products" onChange={(v) => update({ items: v })} />
+          <SelectField
+            label="Repeat for each"
+            title="Where the items come from: a list variable, a data source, or items you type into a table here. A formula is there for anything else"
+            value={choice}
+            options={itemsChoices(project)}
+            onChange={(c) => {
+              setFormula(c === FORMULA_ITEMS);
+              update({ items: itemsFor(c, rep.items) });
+            }}
+          />
+          {choice !== FORMULA_ITEMS && <FormulaStatusLine status={itemsStatus} />}
+          {choice === OWN_ITEMS && (
+            <>
+              <PropRow k="Items table" words={['items', 'table', 'rows', 'columns', 'type my own items', 'json']}>
+                <ListTable label="Items" value={rep.items} onChange={(text) => update({ items: text })} jsonTitle="The items as JSON: an array of text or numbers, or of objects" />
+              </PropRow>
+              <div className="muted small">
+                In the layers inside, use <code>{itemExample(rep.items)}</code> for what each row holds.
+              </div>
+            </>
+          )}
+          {choice === FORMULA_ITEMS && <ExprField label="Items" value={rep.items} commitOnBlur placeholder="products" onChange={(v) => update({ items: v })} />}
           <Row>
             <SelectField
               label="Layout"
@@ -2041,6 +2137,42 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
                 onChange={(v) => update({ direction: v === 'columns' ? 'columns' : undefined })}
               />
             </Row>
+          )}
+          <SelectField<'none' | 'one' | 'several'>
+            label="Selection"
+            title="Let people pick copies. One: choosing a copy un-chooses the others. Several: each copy switches on and off. A click, Space or Enter picks, arrow keys move between the copies, and no nodes are needed"
+            value={sel ? sel.mode : 'none'}
+            options={[
+              { value: 'none', label: 'None' },
+              { value: 'one', label: 'One at a time' },
+              { value: 'several', label: 'Several' },
+            ]}
+            onChange={(m) => void pickMode(m)}
+          />
+          {sel && (
+            <>
+              <SelectField
+                label="Remember the pick in"
+                title={sel.mode === 'one' ? 'A number variable. It holds the number of the picked copy, from 0, or -1 for none' : 'A list variable. It holds the numbers of the picked copies, from 0'}
+                value={sel.variable}
+                options={[
+                  ...project.variables.filter((v) => v.type === (sel.mode === 'one' ? 'number' : 'list')).map((v) => ({ value: v.id, label: v.name })),
+                  addVariableOption(),
+                ]}
+                onChange={withQuickAdd((v) => update({ select: { ...sel, variable: v } }), { variableType: sel.mode === 'one' ? 'number' : 'list', variableName: sel.mode === 'one' ? 'selectedIndex' : 'selectedItems', variableInitial: sel.mode === 'one' ? -1 : '[]' })}
+              />
+              {sel.mode === 'one' && (
+                <CheckField
+                  label="Click again to clear"
+                  title="Clicking the picked copy again picks nothing (an accordion that can close). Off: a choice stays chosen until another is picked"
+                  value={!!sel.toggle}
+                  onChange={(on) => update({ select: { ...sel, toggle: on ? true : undefined } })}
+                />
+              )}
+              <div className="muted small">
+                In the copies, <code>isSelected</code> is true for a picked one. Bind a look to it.
+              </div>
+            </>
           )}
           <SectionBlurb
             text={
@@ -2588,7 +2720,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
     );
   const tls = [{ value: '', label: 'Choose timeline…' }, ...ab.timelines.map((t) => ({ value: t.id, label: t.name }))];
   const numberVars = project.variables.filter((v) => v.type === 'number');
-  const vars = (empty: string) => [{ value: '', label: empty }, ...numberVars.map((v) => ({ value: v.id, label: v.name }))];
+  const vars = (empty: string) => [{ value: '', label: empty }, ...numberVars.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))];
   return (
     <Section
       help="blends"

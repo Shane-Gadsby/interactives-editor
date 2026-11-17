@@ -17,6 +17,7 @@ interface Entry {
   text: string;
   lower: string;
   headLower: string;
+  titleLower: string;
 }
 
 let index: Entry[] | null = null;
@@ -32,7 +33,7 @@ function build(): Entry[] {
       const heading = i > 0 && m ? m[1] : undefined;
       const text = plain(m && i > 0 ? part.slice(m[0].length) : part);
       const head = `${t.title} ${heading ?? ''} ${i === 0 ? `${t.summary} ${t.keywords ?? ''}` : ''}`;
-      out.push({ topic: t, anchor: heading ? slug(heading) : undefined, heading, text, lower: text.toLowerCase(), headLower: head.toLowerCase() });
+      out.push({ topic: t, anchor: heading ? slug(heading) : undefined, heading, text, lower: text.toLowerCase(), headLower: head.toLowerCase(), titleLower: t.title.toLowerCase() });
     });
   }
   return out;
@@ -55,6 +56,8 @@ export function searchHelp(query: string, limit = 12): HelpHit[] {
         break;
       }
       if (inHead) score += new RegExp(`\\b${escape(w)}`).test(e.headLower) ? 10 : 6;
+      //A topic whose title starts with the word (Pages for "page") is the one about it, ahead of every page that mentions it
+      if (words.length === 1 && e.titleLower.startsWith(w)) score += 6;
       if (inBody) score += Math.min(4, e.lower.split(w).length - 1);
     }
     if (!all) continue;

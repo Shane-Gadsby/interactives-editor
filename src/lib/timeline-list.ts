@@ -1,4 +1,4 @@
-import { walk, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { animatableProp, walk, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import type { UsageReport } from './dependencies';
 
 /** What the Timeline's side list shows for one timeline. Pure, so the rules are tested without a screen. */
@@ -14,6 +14,40 @@ export interface TimelineRow {
   playedBy: string[];
   /** Nothing plays it. */
   idle: boolean;
+  /** Properties it animates that another timeline on the page animates too: if both play at once, the one further down the list wins. */
+  clashes: TimelineClash[];
+}
+
+/** One other timeline that animates the same properties of the same layers, said as "Box X". */
+export interface TimelineClash {
+  /** The other timeline. */
+  other: string;
+  /** The layer and property, readable ("Box X", "Title Opacity"). */
+  props: string[];
+}
+
+/** For each timeline, the other timelines that animate the same property of the same layer. Pure. */
+export function timelineClashes(ab: Artboard): Map<string, TimelineClash[]> {
+  const nodes = new Map<string, SceneNode>();
+  walk(ab.children, (n: SceneNode) => void nodes.set(n.id, n));
+  const out = new Map<string, TimelineClash[]>();
+  for (const t of ab.timelines) {
+    const mine = new Set(t.tracks.filter((tr) => tr.keys.length && !tr.dip).map((tr) => `${tr.nodeId}\u0000${tr.prop}`));
+    const list: TimelineClash[] = [];
+    for (const o of ab.timelines) {
+      if (o === t) continue;
+      const props: string[] = [];
+      for (const tr of o.tracks) {
+        if (!tr.keys.length || tr.dip || !mine.has(`${tr.nodeId}\u0000${tr.prop}`)) continue;
+        const node = nodes.get(tr.nodeId);
+        const name = `${node?.name ?? 'A layer'} ${animatableProp(tr.prop, node)?.label ?? tr.prop}`;
+        if (!props.includes(name)) props.push(name);
+      }
+      if (props.length) list.push({ other: o.name, props });
+    }
+    out.set(t.id, list);
+  }
+  return out;
 }
 
 export const LOOP_LABEL: Record<Timeline['loop'], string> = { once: 'Play once', loop: 'Loop', pingpong: 'Ping-pong' };
@@ -31,6 +65,7 @@ export function timelineRows(ab: Artboard, usage?: UsageReport): TimelineRow[] {
     order.push(n.id);
   });
   const used = new Map((usage?.timelines ?? []).map((u) => [u.id, u]));
+  const clashes = timelineClashes(ab);
   return ab.timelines.map((t) => {
     const ids = new Set(t.tracks.map((tr) => tr.nodeId));
     const layers = order.filter((id) => ids.has(id)).map((id) => ({ id, name: names.get(id) ?? id }));
@@ -45,6 +80,7 @@ export function timelineRows(ab: Artboard, usage?: UsageReport): TimelineRow[] {
       playedBy: (u?.usedBy ?? []).map((x) => (x.how === 'autoplays' ? 'itself (autoplay)' : x.by.name === x.how ? x.by.name : `${x.by.name} (${x.how})`)),
       // with no report to go on we don't claim anything is idle
       idle: !!u && u.usedBy.length === 0,
+      clashes: clashes.get(t.id) ?? [],
     };
   });
 }

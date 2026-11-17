@@ -32,13 +32,41 @@ describe('buildBehaviour', () => {
     for (const r of RECIPES) {
       const answers: Answers = { ...defaultAnswers(r, ctx), link: 'https://example.com', page: f.quiz.id };
       const b = buildBehaviour(ctx, r.id, 'click', answers, mk);
-      expect(b.nodes.map((n) => n.kind), r.id).toEqual(['event.pointer', expect.stringMatching(/^action\./)]);
+      //(Send a message to a room sends, then empties the box: its own test below)
+      expect(b.nodes.map((n) => n.kind), r.id).toEqual(r.id === 'room-send' ? ['event.pointer', 'action.roomSend', 'action.setVariable'] : ['event.pointer', expect.stringMatching(/^action\./)]);
       expect(b.nodes[0].params, r.id).toMatchObject({ target: f.btn.id, type: 'click' });
-      expect(b.edges, r.id).toEqual([{ id: expect.any(String), from: b.eventId, fromPort: 'out', to: b.actionId, toPort: 'in' }]);
+      if (r.id !== 'room-send') expect(b.edges, r.id).toEqual([{ id: expect.any(String), from: b.eventId, fromPort: 'out', to: b.actionId, toPort: 'in' }]);
       // only kinds the catalog has: no hidden node types
       for (const n of b.nodes) expect(CATALOG_BY_KIND[n.kind], n.kind).toBeTruthy();
-      expect(b.sentence, r.id).toMatch(/^When clicked: /);
+      //(Count what has been done has no trigger of its own, and its own tests in all-done.test.ts)
+      if (r.id !== 'count-done') expect(b.sentence, r.id).toMatch(/^When clicked: /);
     }
+  });
+
+  it('mutes, controls a video, and runs a script, making the script when it is new', () => {
+    const f = fixture();
+    const film = createNode('video', { name: 'Film', x: 200, y: 10, width: 320, height: 180 } as never);
+    f.home.children.push(film);
+    const ctx = ctxOf(f);
+    expect(buildBehaviour(ctx, 'sound-toggle', 'click', {}, mk).nodes[1]).toMatchObject({ kind: 'action.captions', params: { op: 'soundToggle' } });
+    const seek = buildBehaviour(ctx, 'video-seek', 'click', { ...defaultAnswers(RECIPE_BY_ID['video-seek'], ctx), seconds: '75' }, mk);
+    expect(seek.nodes[1]).toMatchObject({ kind: 'action.video', params: { target: film.id, op: 'seek', seconds: '75' } });
+    expect(buildBehaviour({ ...ctx, layerId: film.id }, 'video-toggle', 'click', defaultAnswers(RECIPE_BY_ID['video-toggle'], { ...ctx, layerId: film.id }), mk).nodes[1].params).toMatchObject({ target: film.id, op: 'toggle' });
+    const fresh = buildBehaviour(ctx, 'script', 'click', defaultAnswers(RECIPE_BY_ID.script, ctx), mk);
+    expect(fresh.scripts).toEqual([{ id: expect.any(String), name: 'onClick', code: expect.stringContaining('clicked'), runOnStart: false }]);
+    expect(fresh.nodes[1]).toMatchObject({ kind: 'action.script', params: { script: fresh.scripts[0].id } });
+    const store = new EditorStore(f.p);
+    applyBehaviour((r) => store.update(r), f.home.id, fresh);
+    expect(store.get().project.scripts.map((x) => x.name)).toEqual(['onClick']);
+    const g = fixture();
+    g.p.scripts.push({ id: 'sc-old', name: 'Score', code: '', runOnStart: false });
+    expect(defaultAnswers(RECIPE_BY_ID.script, ctxOf(g)).script).toBe('sc-old');
+    expect(incomplete(RECIPE_BY_ID.script, { script: 'new:' })).toBe('Name the script.');
+  });
+
+  it('cannot control a video on a page that has none', () => {
+    const f = fixture();
+    expect(unavailable(RECIPE_BY_ID['video-toggle'], ctxOf(f))).toMatch(/no video layer/);
   });
 
   it('writes the settings each recipe promises', () => {
@@ -82,7 +110,9 @@ describe('buildBehaviour', () => {
     expect(defaultAnswers(RECIPE_BY_ID.counter, ctx).counter).toBe('v1');
     const named = buildBehaviour(ctx, 'counter', 'click', { counter: 'new:count' }, mk);
     expect(named.variables[0].name).toBe('count2');
-    expect(buildBehaviour(ctx, 'counter', 'click', { counter: 'new:Number of clicks!' }, mk).variables[0].name).toBe('Number_of_clicks_');
+    //words with spaces become an identifier, and the words are kept as the label
+    const words = buildBehaviour(ctx, 'counter', 'click', { counter: 'new:Number of clicks!' }, mk).variables[0];
+    expect([words.name, words.label]).toEqual(['numberOfClicks', 'Number of clicks!']);
     const existing = buildBehaviour(ctx, 'counter', 'click', { counter: 'v1' }, mk);
     expect(existing.variables).toEqual([]);
     expect(existing.nodes[1].params.variable).toBe('v1');

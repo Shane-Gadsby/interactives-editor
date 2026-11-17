@@ -1,6 +1,6 @@
 import { Renderer, masterOf, prepareNodes, walk, type ColorResolver, type Artboard, type InstanceMount, type InstanceNode, type Project } from 'interactives-player';
 import { assetUrls } from '../lib/assets';
-import { previewScope } from '../lib/data';
+import { previewScope, previewValue } from '../lib/data';
 import { withMasterCached } from '../lib/page-master';
 
 /** Scale and offset that fit an artboard of size aw x ah into a box, per an instance's fit mode. */
@@ -81,7 +81,7 @@ export function editInstanceMount(getProject: () => Project, depth = 0, resolveA
       r.setColorResolver(colors);
       const vars = previewScope(project, ab);
       for (const [k, v] of Object.entries(n.inputs ?? {})) vars[k] = v;
-      r.render(ab, prepareNodes(withMasterCached(project.artboards, ab), { vars }), { vars });
+      r.render(ab, prepareNodes(withMasterCached(project.artboards, ab), { vars }, { variableValue: previewValue(project, vars) }), { vars });
       const f = fitInBox(n.fit, n.width, n.height, ab.width, ab.height);
       r.root.style.transform = `translate(${f.ox}px, ${f.oy}px) scale(${f.sx}, ${f.sy})`;
     };

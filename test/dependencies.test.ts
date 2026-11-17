@@ -188,3 +188,13 @@ describe('analyzeUsage', () => {
     expect(find(r.variables, 'idle').unused).toBe(true);
   });
 });
+
+describe('a repeater selection', () => {
+  it('counts as a use of the variable it writes', () => {
+    const { p, home } = base();
+    p.variables.push({ id: 'vs', name: 'picked', type: 'number', initial: -1 });
+    home.children.push(createNode('group', { name: 'Cards', repeat: { items: '[1, 2]', layout: 'vertical', gap: 4, columns: 1, select: { mode: 'one', variable: 'vs' } }, children: [createNode('rect', {})] } as never));
+    expect(how(find(analyzeUsage(p).variables, 'picked'))).toEqual(['repeater selection']);
+  });
+});
+

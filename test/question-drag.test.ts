@@ -74,6 +74,19 @@ describe('categorise question: what is built', () => {
     set({ cards: q.cards!.slice(0, 2) });
     expect(byPart('catCard')).toHaveLength(2);
   });
+  it('renaming a group renames its box layer too, unless the layer has been named by hand', () => {
+    const { frame, byPart, set, s } = make('categorise');
+    const q = frame().question!;
+    set({ groups: [{ ...q.groups![0], name: 'Renewable' }, { ...q.groups![1], name: 'Non-renewable' }] });
+    expect(byPart('catZone', 'g1')[0].name).toBe('Renewable');
+    expect(byPart('catZone', 'g2')[0].name).toBe('Non-renewable');
+    expect(byPart('catZone', 'g1')[0].dropZone?.label).toBe('Renewable');
+    //a layer somebody named themselves keeps its name
+    s.update((d) => void (partsOf(questionFrames(d.artboards[0] as Project['artboards'][0])[0]).catZone.find((n) => n.questionPart === 'catZone:g1')!.name = 'Green box'));
+    set({ groups: [{ ...frame().question!.groups![0], name: 'Clean' }, frame().question!.groups![1]] });
+    expect(byPart('catZone', 'g1')[0].name).toBe('Green box');
+    expect(byPart('catZone', 'g1')[0].dropZone?.label).toBe('Clean');
+  });
   it('feedback on each drop wires an Item dropped node to each group, and turning it off removes them', () => {
     const { set, p } = make('categorise');
     set({ dropFeedback: true });

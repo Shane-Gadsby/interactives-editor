@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { answerKey, applyCoursePlan, cleanAnswer, cleanCollection, cleanSharedSettings, courseChanged, planCourseAdd, isBlockedAnswer, tallyAnswers, type Project, type SharedValue, type SharedWho } from 'interactives-player';
+import { answerKey, applyCoursePlan, cleanAnswer, cleanCollection, cleanMessage, cleanRoomSettings, cleanSharedSettings, courseChanged, planCourseAdd, isBlockedAnswer, roomAllows, sampleRoom, tallyAnswers, type Project, type RoomMessage, type RoomValue, type SharedValue, type SharedWho } from 'interactives-player';
 /**
  * Preview's pretend learner record. The previewed project runs in a sandboxed frame with no storage of its own, so its Save user
  * data and remembered progress used to last one run: the player asked the page around it, nobody answered, and the browser
@@ -23,6 +23,9 @@ interface Ask {
   sharedSource?: unknown;
   who?: unknown;
   answers?: unknown;
+  /** Rooms: the data source's id and the message to send. */
+  roomSource?: unknown;
+  text?: unknown;
   /** Course collections: the collection's name and what to add. */
   collection?: unknown;
   stamps?: unknown;
@@ -88,6 +91,34 @@ function previewShared(m: Ask, project: Project | undefined, project0: string): 
   const answers = tallyAnswers([...others, mine], who === 'class' ? s.minCount : 1, (t) => !isBlockedAnswer(t, s.blocked));
   const value: SharedValue = { ready: true, who, answers, total: answers.reduce((n, a) => n + a.count, 0), people: others.length + (mine.length ? 1 : 0), mine, left: Math.max(0, s.perPerson - mine.length), limit: s.perPerson, problem };
   return { ok: true, available: true, data: m.op === 'shared-add' ? { ...value, kept } : value };
+}
+
+/**
+ * A room in Preview: there is no class here, so the room is the data source's sample messages (each from a person of their own) plus
+ * whatever the person previewing sends, which Preview keeps with the rest of its pretend learner. The same blocklist as the server
+ * applies, and nothing leaves this browser. The reply is the whole room, so the project needs no live link to show it.
+ */
+function previewRoom(m: Ask, project: Project | undefined, project0: string): PreviewReply {
+  const ds = project?.dataSources.find((d) => d.id === m.roomSource && d.source === 'room');
+  if (!ds) return { ok: true, available: false };
+  const s = cleanRoomSettings(ds.room);
+  const at = key(project0, `room:${ds.id}`);
+  let mine = ((read(at) as RoomMessage[] | undefined) ?? []).filter((x) => x && typeof x.id === 'string' && typeof x.text === 'string');
+  let problem = '';
+  if (m.op === 'room-send') {
+    const text = cleanMessage(m.text);
+    if (!text) problem = 'empty';
+    else if (!roomAllows(text, s.blocked)) problem = 'blocked';
+    else {
+      // ids sort after the samples' and in the order sent
+      mine = [...mine, { id: `t${Date.now().toString(36).padStart(9, '0')}${mine.length.toString(36).padStart(3, '0')}`, seat: 'You (Preview)', text, at: Date.now(), mine: true }].slice(-300);
+      write(at, mine);
+    }
+  }
+  const sample = sampleRoom(ds.room);
+  const messages = [...sample.messages, ...mine].slice(-s.show);
+  const value: RoomValue = { ready: true, up: true, here: Math.max(1, sample.here), me: 'You (Preview)', messages, count: messages.length, problem };
+  return { ok: true, available: true, data: value };
 }
 
 /**
@@ -168,6 +199,9 @@ export function answerPreviewProgress(m: Ask, doc?: Project): PreviewReply | nul
     case 'shared-add':
     case 'shared-withdraw':
       return previewShared(m, doc, project);
+    case 'room-join':
+    case 'room-send':
+      return previewRoom(m, doc, project);
     case 'course-read':
     case 'course-add':
       return previewCourse(m);
@@ -181,14 +215,14 @@ export function previewLearnerHas(project: string): boolean {
   return read(key(project, 'user')) !== undefined || read(key(project, 'progress')) !== undefined || sharedKeys(project).length > 0;
 }
 
-/** The keys of the answers Preview kept for shared responses in this project. */
+/** The keys of the answers and messages Preview kept for shared responses and rooms in this project. */
 function sharedKeys(project: string): string[] {
   const out: string[] = [];
   try {
-    const prefix = key(project, 'shared:');
+    const prefixes = [key(project, 'shared:'), key(project, 'room:')];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith(prefix)) out.push(k);
+      if (k && prefixes.some((p) => k.startsWith(p))) out.push(k);
     }
   } catch {
     /* nothing kept */

@@ -16,6 +16,19 @@ export const WHERES: { id: Where; label: string; hint: string }[] = [
   { id: 'file', label: 'As a file to download', hint: 'To send on, keep, or put on another site' },
 ];
 
+/**
+ * The first line of the Export menu: Export only makes files, so someone who wanted a link or something to paste into a
+ * StudyDesk page is sent to Share, whose first question is "Where will people use it?".
+ */
+export function ExportShareHint({ onShare }: { onShare: () => void }) {
+  return (
+    <button type="button" className="menu-share-hint" onClick={onShare} title="Share asks where people will use it, then gives you the link or code to copy">
+      Want a link instead of a file?
+      <span className="muted small">Share… asks where people will use it and gives you the link or code to copy</span>
+    </button>
+  );
+}
+
 const KEY = (projectId: string) => `ix-share-where:${projectId}`;
 
 export function rememberedWhere(projectId: string): Where {

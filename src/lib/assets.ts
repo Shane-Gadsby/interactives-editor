@@ -102,16 +102,7 @@ class AssetUrls {
 
 export const assetUrls = new AssetUrls();
 
-export type AssetKind = 'image' | 'video' | 'audio' | 'font' | 'data' | 'other';
-
-export function assetKind(mime: string, name = ''): AssetKind {
-  if (mime.startsWith('image/')) return 'image';
-  if (mime.startsWith('video/')) return 'video';
-  if (mime.startsWith('audio/')) return 'audio';
-  if (mime.startsWith('font/') || /\.(woff2?|ttf|otf)$/i.test(name)) return 'font';
-  if (/json|csv|tab-separated|text\/plain/.test(mime) || /\.(json|csv|tsv|txt)$/i.test(name)) return 'data';
-  return 'other';
-}
+export { assetKind, type AssetKind } from './asset-kind';
 
 const MAX_ASSET_BYTES = 50 * 1024 * 1024;
 
@@ -119,7 +110,8 @@ const MAX_ASSET_BYTES = 50 * 1024 * 1024;
 export async function storeFile(projectId: string, file: File): Promise<Asset> {
   if (file.size > MAX_ASSET_BYTES) throw new Error(`${file.name} is larger than 50 MB`);
   const id = uid('as');
-  const mime = file.type || guessMime(file.name);
+  //A .flplay is a zip inside, and some systems call it one: it is kept as what it is
+  const mime = /\.flplay$/i.test(file.name) ? 'application/vnd.frameling.playable+zip' : file.type || guessMime(file.name);
   await putAsset(projectId, id, file);
   assetUrls.register(id, file);
   //The canvas shows a lighter copy of a big picture from here on, made while the person carries on
@@ -150,6 +142,7 @@ function guessMime(name: string): string {
       tsv: 'text/tab-separated-values',
       txt: 'text/plain',
       ogg: 'audio/ogg',
+      flplay: 'application/vnd.frameling.playable+zip',
     }[ext] ?? 'application/octet-stream'
   );
 }

@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { recordDrawnGeometry } from '../store/doc';
 import { flushSync } from 'react-dom';
 import { Renderer, layoutConnectors, isMasterId, paintToCss, drawnDifferently, isContainer, measureCopies, measureTextBox, prepareNodes, type CopySizes, textAutoSize, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
-import { previewScope } from '../lib/data';
+import { previewScope, previewValue } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
 import { withMasterCached } from '../lib/page-master';
 import { canvasResolver, shownTheme } from '../lib/themes';
@@ -232,7 +232,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     if (!drawn) {
       const vars = previewScope(project, artboard);
       // Same bindings and repeaters the player applies, against initial variable values and the loaded data.
-      let nodes = prepareNodes(sampled, { vars }, { measured: copySizes.current });
+      let nodes = prepareNodes(sampled, { vars }, { measured: copySizes.current, variableValue: previewValue(project, vars) });
       // Script layers paint at the timeline's time (0 when none is showing), again when assets or data change
       draw.current?.configure(timeline ? time / 1000 : 0, `${assetVersion}|${dataVersion}`);
       shader.current?.configure(timeline ? time / 1000 : 0, assetVersion);
@@ -240,7 +240,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       // Auto-sized text in repeated copies only exists in what was just drawn: measure it, and draw once more with those sizes (the
       // same second pass the player makes). Only on the artboard being worked on, like the layers' own measuring below
       if (live && measureCopies(r, nodes, copySizes.current, artboard.width)) {
-        nodes = prepareNodes(sampled, { vars }, { measured: copySizes.current });
+        nodes = prepareNodes(sampled, { vars }, { measured: copySizes.current, variableValue: previewValue(project, vars) });
         r.render(artboard, nodes, { vars });
       }
       shown = nodes;

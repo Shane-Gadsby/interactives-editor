@@ -43,9 +43,9 @@ const put = (id: string, p: unknown, user: User | null = ann, extra: Record<stri
 
 describe('session and headers', () => {
   it('says who you are and whether you are a power user', async () => {
-    expect((await h.call('GET', '/api/session', { user: ann })).json).toEqual({ user: { username: 'ann', userID: 1, name: 'Ann A' }, power: false, brand: false });
+    expect((await h.call('GET', '/api/session', { user: ann })).json).toEqual({ user: { username: 'ann', userID: 1, name: 'Ann A' }, power: false, brand: false, designer: false });
     expect((await h.call('GET', '/api/session', { user: pat })).json.power).toBe(true);
-    expect((await h.call('GET', '/api/session')).json).toEqual({ user: null, power: false, brand: false });
+    expect((await h.call('GET', '/api/session')).json).toEqual({ user: null, power: false, brand: false, designer: false });
   });
 
   it('never lets an api response be sniffed into a page, and never caches it', async () => {
@@ -90,6 +90,18 @@ describe('preferences', () => {
     const bad = await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { showGrid: 'yes', snapGrid: 1, gridSize: 0, gridSubdivisions: 99 } } });
     expect(bad.json.prefs).toEqual({});
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { gridSize: 7.5 } } })).json.prefs).toEqual({});
+  });
+
+  it('keeps tutorial progress: short ids, whole step numbers in order, a finished time, and drops the rest', async () => {
+    const good = { 'tutorial-mcq': { steps: [3, 1, 2, 2], done: 1700000000000 }, 'concept-assets': { done: 5 } };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { tutorialBadges: false, tutorialSound: true, tutorialProgress: good } } })).json.prefs).toEqual({
+      tutorialBadges: false,
+      tutorialSound: true,
+      tutorialProgress: { 'tutorial-mcq': { steps: [1, 2, 3], done: 1700000000000 }, 'concept-assets': { done: 5 } },
+    });
+    const bad = { 'Bad Id!': { done: 5 }, 'tutorial-x': { steps: ['a', 0, 100, 1.5], done: 'now' }, 'tutorial-y': 'done', 'tutorial-z': [1] };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { tutorialProgress: bad } } })).json.prefs).toEqual({ tutorialProgress: {} });
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { tutorialProgress: [1], tutorialBadges: 'yes' } } })).json.prefs).toEqual({});
   });
 
   it('keeps the snapping choices: switches as booleans, the distance as a whole number from 2 to 24', async () => {

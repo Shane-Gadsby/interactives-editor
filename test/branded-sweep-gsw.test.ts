@@ -159,14 +159,20 @@ describe('games, story and writing after the sweep', () => {
       expect(count(p, 'button')).toBeLessThan(15);
     });
 
-    it('presentation: page navigation, a counter from pageNumber and pageCount, and shortcuts for the arrow keys', () => {
+    it('presentation: page navigation wired once on the masters, a counter from pageNumber and pageCount, and shortcuts for the arrow keys', () => {
       const p = build('story/course-presentation');
       expect(kinds(p, 'event.key')).toHaveLength(0);
       expect(kinds(p, 'action.artboard').map((n) => n.params.to).sort()).toContain('previous');
       expect(kinds(p, 'action.artboard').every((n) => n.params.to === 'next' || n.params.to === 'previous')).toBe(true);
-      expect((layer(p, 'Slide 4: Content', 'Next') as unknown as { shortcut: string }).shortcut).toBe('Right');
-      expect((layer(p, 'Slide 4: Content', 'Back') as unknown as { shortcut: string }).shortcut).toBe('Left');
-      expect((layer(p, 'Slide 4: Content', 'Slide counter') as unknown as { text: string }).text).toBe('Slide {pageNumber} of {pageCount}');
+      //the slide bar is on the masters, so no page has a button or a click flow of its own for it
+      const content = p.artboards.find((a) => a.id === board(p, 'Slide 4: Content').master)!;
+      const own = (name: string) => byName(content, name) as unknown as { shortcut: string; text: string };
+      expect(own('Next').shortcut).toBe('Right');
+      expect(own('Back').shortcut).toBe('Left');
+      expect(own('Slide counter').text).toBe('Slide {pageNumber} of {pageCount}');
+      expect(byName(board(p, 'Slide 4: Content'), 'Next')).toBeUndefined();
+      //over the pages: after a page's own layers in the reading and tab order
+      expect(content.masterOver).toEqual(expect.arrayContaining(['Next', 'Back', 'Slide counter'].map((n) => byName(content, n)!.id)));
     });
 
     it('memory game: live pairs found and busy, a shuffle, a set item and a key-navigation grid', () => {

@@ -12,7 +12,7 @@
  * is unlikely.
  */
 import { nodeLabel } from './plain-words';
-import { CATALOG, CATALOG_BY_KIND, converterExpressions, isContainer, liveWriters, planLive, type Artboard, type DataSource, type Id, type Paint, type Project, type SceneNode, type Timeline, type Variable } from 'interactives-player';
+import { variableLabel, CATALOG, CATALOG_BY_KIND, converterExpressions, isContainer, liveWriters, planLive, type Artboard, type DataSource, type Id, type Paint, type Project, type SceneNode, type Timeline, type Variable } from 'interactives-player';
 
 export type EntityKind = 'artboard' | 'asset' | 'variable' | 'data' | 'script' | 'timeline' | 'layer';
 
@@ -144,7 +144,7 @@ export function analyzeUsage(project: Project): UsageReport {
   // Entities
   for (const ab of project.artboards) add('artboard', ab.id, ab.name);
   for (const a of project.assets) add('asset', a.id, a.name);
-  for (const v of project.variables) add('variable', v.id, v.name);
+  for (const v of project.variables) add('variable', v.id, variableLabel(v));
   for (const d of project.dataSources) add('data', d.id, d.name);
   for (const s of project.scripts) add('script', s.id, s.name);
   for (const ab of project.artboards) for (const t of ab.timelines) add('timeline', t.id, t.name, { artboardId: ab.id, artboardName: ab.name });
@@ -198,7 +198,7 @@ export function analyzeUsage(project: Project): UsageReport {
   for (const f of project.fonts) {
     if (f.assetId) useId('asset', f.assetId, { type: 'font', id: f.family, name: f.family }, 'font file');
   }
-  for (const v of project.variables) if (v.formula) useExpr(v.formula, { type: 'project', id: v.id, name: `Variable ${v.name}` }, 'formula');
+  for (const v of project.variables) if (v.formula) useExpr(v.formula, { type: 'project', id: v.id, name: `Variable ${variableLabel(v)}` }, 'formula');
   for (const d of project.dataSources) {
     const by: UsageSource = { type: 'data', id: d.id, name: d.name };
     if (d.source === 'asset' && d.assetId) useId('asset', d.assetId, by, 'data file');
@@ -255,6 +255,7 @@ export function analyzeUsage(project: Project): UsageReport {
 
         if (n.type === 'image') useId('asset', n.assetId, by, 'image');
         if (n.type === 'video') useId('asset', n.assetId, by, 'video');
+        if (n.type === 'animation') useId('asset', n.assetId, by, 'Frameling animation');
         if (n.type === 'draw') useCode(n.code, by, 'script layer code');
         // Pictures a shader reads (image uniforms of a shader layer or an image layer's shader filter)
         for (const u of (n.type === 'shader' ? n.uniforms : n.type === 'image' ? n.shaderFilter?.uniforms : undefined) ?? []) if (u.type === 'image' && typeof u.value === 'string' && u.value) useId('asset', u.value, by, 'shader image');
@@ -287,6 +288,7 @@ export function analyzeUsage(project: Project): UsageReport {
         for (const [prop, expr] of Object.entries(n.bindings ?? {})) useExpr(expr, by, `binding on ${prop}`);
         for (const [prop, list] of Object.entries(n.converters ?? {})) for (const expr of converterExpressions(list)) useExpr(expr, by, `converter on ${prop}`);
         if (isContainer(n) && n.repeat?.items) useExpr(n.repeat.items, by, 'repeater items');
+        if (isContainer(n) && n.repeat?.select?.variable) useId('variable', n.repeat.select.variable, by, 'repeater selection');
         if (n.type === 'text' || n.type === 'link') for (const e of templateSlots(n.text)) useExpr(e, by, 'text template');
         if (n.type === 'text') for (const r of n.runs ?? []) if (r.link?.url) for (const e of templateSlots(r.link.url)) useExpr(e, by, 'link template');
         if (n.type === 'button') for (const e of templateSlots(n.label)) useExpr(e, by, 'label template');
@@ -400,7 +402,7 @@ export function analyzeUsage(project: Project): UsageReport {
     missing.push({ by: { type: 'logic', artboardId: w.artboardId, artboardName: w.artboardName, id: w.nodeId, name: shown }, what: 'variable', ref: w.variable.name, how: shown, problem: `writes ${w.variable.name}, a live variable that is worked out from its formula, so it does nothing` });
   }
   for (const v of planLive(project).cyclic) {
-    missing.push({ by: { type: 'project', id: v.id, name: `Variable ${v.name}` }, what: 'variable', ref: v.name, how: 'live formula', problem: `${v.name} reads itself, or live variables that read it, so it stays at its starting value` });
+    missing.push({ by: { type: 'project', id: v.id, name: `Variable ${variableLabel(v)}` }, what: 'variable', ref: v.name, how: 'live formula', problem: `${v.name} reads itself, or live variables that read it, so it stays at its starting value` });
   }
 
   const list = (kind: EntityKind) => [...items.values()].filter((i) => i.kind === kind);

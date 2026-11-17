@@ -48,6 +48,8 @@ export interface SessionInfo {
   power: boolean;
   /** May publish and mark brand kits (a power user, or in the server's brand group); also the brand lock override in the editor. */
   brand?: boolean;
+  /** The box has the Activity Designer (a Cogniti agent) set up, so the editor shows its button. */
+  designer?: boolean;
 }
 
 /** A request the server answered with an error (status 0: it was never reached). */
@@ -118,9 +120,47 @@ export function liveSeqOf(id: string): number {
   return liveSeqs.get(id) ?? 0;
 }
 
+/** How many people the project has been shared with to edit (not counting the owner), as of when it was loaded. */
+const collaboratorCounts = new Map<string, number>();
+export const collaboratorCountOf = (id: string): number => collaboratorCounts.get(id) ?? 0;
+/** The invite box keeps this right as people are added and removed. */
+export const setCollaboratorCount = (id: string, n: number): void => void collaboratorCounts.set(id, n);
+
+/** The revision this editor last loaded or saved (what the next whole-project save is checked against). */
+export const knownRevOf = (id: string): number | undefined => revs.get(id);
+
+/** The server's revision of a project right now, without downloading it. Null when it can't be asked (offline, no access). */
+export async function currentRevOf(id: string): Promise<number | null> {
+  try {
+    const r = await call<{ rev: number }>(`projects/${encodeURIComponent(id)}/rev`);
+    return typeof r.rev === 'number' ? r.rev : null;
+  } catch {
+    return null;
+  }
+}
+
 export function session(): Promise<SessionInfo> {
   return call<SessionInfo>('session');
 }
+
+/** The full url of an api route, for the few callers that read a stream themselves instead of going through `call`. */
+export const apiUrl = (path: string): string => API + path;
+
+/** Forget the Activity Designer's conversation for a project (New chat). The server keeps it, not the browser. */
+export function resetDesigner(projectId: string): Promise<{ ok: boolean }> {
+  return call('designer/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId }) });
+}
+
+/** What the Activity Designer says about allowances: whether this person has their own Cogniti token (never the token), or how much of the shared one is left this hour. */
+export interface DesignerStatus {
+  on: boolean;
+  mine: { connected: boolean; added: string; ends: string | null } | null;
+  shared: { limit: number; left: number; resetsIn: number } | null;
+}
+export const designerStatus = () => call<DesignerStatus>('designer/status');
+/** Add their own Cogniti token. The server checks it with Cogniti once and keeps it encrypted; it is never sent back. `ends` is the day it runs out, if they know. */
+export const setDesignerToken = (token: string, ends?: string) => call<{ ok: boolean; mine: NonNullable<DesignerStatus['mine']> }>('designer/token', json({ token, ends: ends || undefined }));
+export const removeDesignerToken = () => call<{ ok: boolean }>('designer/token', { method: 'DELETE' });
 
 export async function listProjects(all = false): Promise<ProjectMeta[]> {
   return call<ProjectMeta[]>(`projects${all ? '?all=1' : ''}`);
@@ -132,9 +172,10 @@ export const setProjectMeta = (id: string, patch: { tags?: string[]; folder?: st
 
 export async function loadProjectRecord(id: string): Promise<Project | null> {
   try {
-    const r = await call<{ project: Project; rev: number; live?: number | null }>(`projects/${encodeURIComponent(id)}`);
+    const r = await call<{ project: Project; rev: number; live?: number | null; collaborators?: number }>(`projects/${encodeURIComponent(id)}`);
     revs.set(id, r.rev);
     liveSeqs.set(id, r.live ?? null);
+    if (typeof r.collaborators === 'number') collaboratorCounts.set(id, r.collaborators);
     return normalizeProject(r.project);
   } catch (err) {
     if (err instanceof Error && /No such project/.test(err.message)) return null;
@@ -574,6 +615,44 @@ export const hideSharedAnswer = (projectId: string, source: string, course: stri
 /** Take one answer out of everyone's lists in a course, or (no text) every answer in it. */
 export const removeSharedAnswers = (projectId: string, source: string, course: string, text?: string) =>
   call<{ ok: boolean; people: number }>(`projects/${encodeURIComponent(projectId)}/shared/${encodeURIComponent(source)}/answers`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ course, ...(text ? { text } : {}) }) });
+
+/** One message in a room, as the people who moderate it see it (the one place who sent it is shown). */
+export interface RoomMessageRow {
+  id: string;
+  /** The name the others see: the made-up seat, or the first name. */
+  seat: string;
+  /** Who sent it. Only moderators are ever told. */
+  username: string;
+  text: string;
+  /** Milliseconds. */
+  at: number;
+  hidden: boolean;
+  hiddenBy: string | null;
+}
+
+export interface RoomCourse {
+  /** The course label, empty for people with no course. */
+  course: string;
+  /** How many people have the room open right now. */
+  here: number;
+  /** The latest messages, newest first, hidden ones included. */
+  messages: RoomMessageRow[];
+}
+
+export interface RoomSourceInfo {
+  /** The data source's id. */
+  source: string;
+  name: string;
+  declared: { names: 'seat' | 'first'; show: number; blocked: string[] };
+  courses: RoomCourse[];
+}
+
+/** What each course has said in each room of a project (GET projects/:id/rooms). The owner, a collaborator or a power user. */
+export const getRoomMessages = (projectId: string) => call<{ sources: RoomSourceInfo[] }>(`projects/${encodeURIComponent(projectId)}/rooms`);
+
+/** Hide a message from everybody in its room (they hear it at once), or show it again. */
+export const hideRoomMessage = (projectId: string, source: string, id: string, hidden: boolean) =>
+  call<{ ok: boolean; hidden: boolean }>(`projects/${encodeURIComponent(projectId)}/rooms/${encodeURIComponent(source)}/messages/${encodeURIComponent(id)}/hidden`, json({ hidden }));
 
 // ---------------------------------------------------------------- learner insights
 

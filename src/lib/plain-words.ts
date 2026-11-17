@@ -22,6 +22,8 @@ export const PLAIN_NODE: Record<string, string> = {
   'event.timelineEnd': 'When an animation finishes',
   'event.timelineMarker': 'When an animation reaches a marker',
   'event.videoCue': 'When a video reaches a cue point',
+  'event.animationEnd': 'When a Frameling clip ends',
+  'event.animationMarker': 'When a Frameling animation reaches a marker',
   'event.step': 'When the step changes',
   'event.message': 'When a message arrives',
   'event.scroll': 'When scrolled',
@@ -33,6 +35,9 @@ export const PLAIN_NODE: Record<string, string> = {
   'event.media': 'When the microphone or camera is used',
   'event.dataLoaded': 'When data has loaded',
   'action.timeline': 'Play or stop an animation',
+  'action.animationPlay': 'Play a Frameling clip',
+  'action.animationStop': 'Stop a Frameling animation',
+  'action.animationFrame': 'Show a Frameling frame',
   'action.blendPlay': 'Start a blend',
   'action.blendStop': 'Stop a blend',
   'action.setVariable': 'Change a value or counter',
@@ -67,6 +72,8 @@ export const PLAIN_OPTION: Record<string, string> = {
   'action.setVariable.op.remove': 'Remove from the list (by position)',
   'action.setVariable.op.toggleItem': 'Add to the list, or take out if it is there',
   'action.setVariable.op.removeValue': 'Remove from the list (by value)',
+  'action.setVariable.op.next': 'Go to the next number in a range',
+  'action.setVariable.op.previous': 'Go to the previous number in a range',
 };
 
 /** The query as typed and with artboard and page swapped, so each finds what is worded the other way. */

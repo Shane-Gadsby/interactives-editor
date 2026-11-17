@@ -1,3 +1,4 @@
+import { variableOption } from '../lib/friendly-names';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { LOCAL_SCOPE_HINTS, PLAYER_SCOPE_HINTS, type Variable } from 'interactives-player';
 import { maybeStore } from '../store/store';
@@ -39,6 +40,7 @@ export function ConditionField({
   onChange,
   locals,
   placeholder,
+  noneText = 'No condition: it always runs.',
 }: {
   label: string;
   title?: string;
@@ -47,6 +49,8 @@ export function ConditionField({
   /** Names this field sees besides the project's (event...). */
   locals?: string[];
   placeholder?: string;
+  /** What to say while there are no rows. */
+  noneText?: string;
 }) {
   const ctx = useContext(ExprLocals);
   const ps = useRowSearch(label, tipFor(label, title));
@@ -84,7 +88,7 @@ export function ConditionField({
   };
 
   const options = useMemo<PickerOption[]>(() => {
-    const out: PickerOption[] = variables.filter((v) => /^[A-Za-z_$][\w$]*$/.test(v.name)).map((v) => ({ value: v.name, label: v.name, hint: v.type === 'boolean' ? 'on/off' : v.type }));
+    const out: PickerOption[] = variables.filter((v) => /^[A-Za-z_$][\w$]*$/.test(v.name)).map((v) => variableOption(v, v.type === 'boolean' ? 'on/off' : v.type));
     for (const d of project?.dataSources ?? []) out.push({ value: d.name, label: d.name, hint: 'data' });
     for (const l of names) out.push({ value: l, label: l, hint: LOCAL_SCOPE_HINTS[l]?.type });
     for (const [n, h] of Object.entries(PLAYER_SCOPE_HINTS)) if (h.type !== 'function' && h.type !== 'object') out.push({ value: n, label: n, hint: h.type });
@@ -92,7 +96,7 @@ export function ConditionField({
   }, [variables, project?.dataSources, names]);
   const withCurrent = (current: string): PickerOption[] => (current && !options.some((o) => o.value === current) ? [{ value: current, label: current }, ...options] : options);
 
-  const status = useFormulaStatus(value, names, ctx.self);
+  const status = useFormulaStatus(value, names, ctx.self, false, ctx.values);
 
   if (mode === 'text') {
     return (
@@ -115,7 +119,7 @@ export function ConditionField({
   return (
     <div className={`cond${ps.hide ? ' ps-hide' : ''}`} role="group" aria-label={label} data-prop={ps.prop} title={tipFor(label, title)}>
       <div className="field-label block">{unbroken(label)}</div>
-      {draft.rows.length === 0 && <p className="hint cond-none">No condition: it always runs.</p>}
+      {draft.rows.length === 0 && <p className="hint cond-none">{noneText}</p>}
       {draft.rows.map((r, i) => (
         <div key={i} className="cond-block">
           {i > 0 && (

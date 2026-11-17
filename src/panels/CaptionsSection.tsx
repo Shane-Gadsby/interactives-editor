@@ -1,4 +1,4 @@
-import { createNode, cuesToSrt, cuesToVtt, overlappingSpeech, parseCaptions, uid, type CaptionSettings, type CaptionCue, type Project, type VideoNode } from 'interactives-player';
+import { createNode, cuesToSrt, cuesToVtt, overlappingSpeech, parseCaptions, uid, type CaptionSettings, type CaptionCue, type Project, type VideoNode, variableLabelAndName } from 'interactives-player';
 import { store } from '../store/store';
 import { getArtboard } from '../store/doc';
 import { CheckField, ColorField, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
@@ -78,7 +78,7 @@ export function CaptionsSection({ project }: { project: Project }) {
             label="Text variable"
             title="The variable that holds the words showing now (empty between captions). Put {name} in a text layer to show it"
             value={c.textVar ?? ''}
-            options={[{ value: '', label: 'Choose a variable' }, ...project.variables.filter((v) => v.type === 'string').map((v) => ({ value: v.id, label: v.name }))]}
+            options={[{ value: '', label: 'Choose a variable' }, ...project.variables.filter((v) => v.type === 'string').map((v) => ({ value: v.id, label: variableLabelAndName(v) }))]}
             onChange={(v) => set({ textVar: v })}
           />
           <button className="btn small-btn" title="Add a text layer to this artboard that shows the caption text" onClick={makeLayer}>

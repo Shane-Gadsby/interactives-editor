@@ -31,6 +31,9 @@ import { selectSameItems } from './layer-find';
 import { linkColoursCommand } from './link-colours-action';
 import { tidyArtboardsCommand } from './tidy-command';
 import { openHelpSearch } from '../help/Help';
+import { COLOURWAYS } from './branded/looks';
+import { lookBlocked } from './branded/unisq-look-check';
+import { unisqLook } from './branded-lazy';
 import type { BottomTab, Tool } from '../store/store';
 
 export type CommandGroup = 'Add' | 'Selection' | 'Pages' | 'Layers' | 'Animate' | 'Behaviours' | 'View' | 'Tools' | 'Panels' | 'Workspaces' | 'Questions' | 'Project';
@@ -73,6 +76,7 @@ export const NEW_LAYERS: { type: NodeType; label: string; words: string }[] = [
   { type: 'video', label: 'Video', words: 'movie clip' },
   { type: 'draw', label: 'Script layer', words: 'code generative' },
   { type: 'shader', label: 'Shader layer', words: 'gpu effect backdrop' },
+  { type: 'animation', label: 'Frameling animation', words: 'sprite flipbook character frameling flplay frame by frame' },
   { type: 'progress', label: 'Progress bar', words: 'score meter' },
   { type: 'chart', label: 'Chart', words: 'graph bar pie line data' },
 ];
@@ -227,6 +231,7 @@ export function buildCommands(): Command[] {
   const selCmd = (id: string, title: string, run: () => void, extra: Partial<Command> = {}) => add({ id: `sel:${id}`, title, group: 'Selection', disabled: noSel, run, ...extra });
   selCmd('all', 'Select all on this page', () => s.select(ab!.children.filter((l) => !l.locked).map((l) => l.id)), { hint: keyHints('select-all'), disabled: noPage });
   selCmd('duplicate', 'Duplicate', () => s.duplicateSelection(), { hint: keyHints('duplicate'), words: 'copy' });
+  selCmd('duplicate-layer', 'Duplicate layer only', () => s.duplicateSelection(10, { behaviour: false }), { hint: keyHints('duplicate-layer'), words: 'copy without interactions behaviour' });
   selCmd('delete', 'Delete', () => void deleteSelectionCommand(), { hint: keyHints('delete'), words: 'remove' });
   selCmd('group', 'Group', () => s.groupSelection(), { hint: keyHints('group'), words: 'together' });
   selCmd('ungroup', 'Ungroup', () => s.ungroupSelection(), { hint: keyHints('ungroup'), disabled: one && (one.type === 'group' || one.type === 'frame') ? undefined : 'Select a group or frame first' });
@@ -254,7 +259,7 @@ export function buildCommands(): Command[] {
   for (const r of RECIPES) {
     add({
       id: `behaviour:${r.id}`,
-      title: `When clicked: ${r.label}`,
+      title: r.id === 'count-done' ? r.label : `When clicked: ${r.label}`,
       group: 'Behaviours',
       words: `interaction recipe behaviour ${r.group} ${r.hint}`,
       disabled: noOne,
@@ -262,6 +267,7 @@ export function buildCommands(): Command[] {
     });
   }
 
+  add({ id: 'behaviour:all-done', title: 'Add an interaction: when all of these are done…', group: 'Behaviours', words: 'interaction recipe behaviour explored finished every each count trigger', disabled: noOne, run: () => openBehaviours({ abId: ab!.id, layerId: one!.id, trigger: 'all' }) });
   for (const [id, title, trigger] of [['click', 'When clicked…', 'click'], ['hover', 'When hovered…', 'pointerenter']] as const) {
     add({ id: `behaviour:${id}`, title: `Add an interaction: ${title.toLowerCase()}`, group: 'Behaviours', words: 'interaction recipe behaviour choose', disabled: noOne, run: () => openBehaviours({ abId: ab!.id, layerId: one!.id, trigger }) });
   }
@@ -325,6 +331,19 @@ export function buildCommands(): Command[] {
   add({ id: 'project:redo', title: 'Redo', group: 'Project', hint: keyHints('redo'), disabled: s.canRedo() ? undefined : 'Nothing to redo', run: () => s.redo() });
   for (const [id, title, words] of EXPORTS) {
     add({ id: `project:${id}`, title, group: 'Project', words, disabled: NO_PAGE_NEEDED.includes(id) ? undefined : noPage, run: () => requestAppAction(id as AppAction) });
+  }
+  {
+    const why = lookBlocked(p) ?? undefined;
+    for (const w of COLOURWAYS) {
+      add({
+        id: `project:unisq-look-${w.id}`,
+        title: w === COLOURWAYS[0] ? 'Apply the UniSQ look' : `Apply the UniSQ look in ${w.name}`,
+        group: 'Project',
+        words: `brand branding colourway theme master logo accent bar header footer gold purple blue green orange red unisq university frame ${w.name}`,
+        disabled: why,
+        run: () => void unisqLook.ensure().then((m) => m.applyUniSQLookCommand(w.id)),
+      });
+    }
   }
   add({ id: 'project:reference', title: 'Public interface reference…', group: 'Project', words: 'embedding page set read hear api', run: () => requestAppAction('reference') });
   add({ id: 'project:home', title: 'Back to all projects', group: 'Project', words: 'home close projects list', run: () => requestAppAction('home') });

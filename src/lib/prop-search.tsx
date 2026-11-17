@@ -370,6 +370,9 @@ const Ctx = createContext<PropSearchStore | null>(null);
 const SecCtx = createContext<{ id: string; title: string } | null>(null);
 /** The PropRow a field sits in, for a field with no label of its own. */
 const RowCtx = createContext<{ key: string; label: string } | null>(null);
+/** The row keys the selected layer has a binding on, for the "set by a binding" marker (null outside the Inspector). */
+const BoundCtx = createContext<ReadonlySet<string> | null>(null);
+export const BoundProvider = BoundCtx.Provider;
 const idleStore = { subscribe: () => () => undefined, getVersion: () => 0 };
 
 export const PropSearchProvider = Ctx.Provider;
@@ -407,7 +410,8 @@ export function SectionScope({ id, title, children }: { id: string; title: strin
  * A row's side of it: its `data-prop` key and whether it is hidden by the current search. Fields call this with their label,
  * their own tooltip and (for a label that isn't text) an explicit key.
  */
-export function useRowSearch(label: ReactNode, tip?: string, explicit?: string, extra?: string[]): { prop: string; hide: boolean } {
+export function useRowSearch(label: ReactNode, tip?: string, explicit?: string, extra?: string[]): { prop: string; hide: boolean; bound: boolean } {
+  const boundKeys = useContext(BoundCtx);
   const store = useContext(Ctx);
   const sec = useContext(SecCtx);
   const id = useId();
@@ -424,7 +428,7 @@ export function useRowSearch(label: ReactNode, tip?: string, explicit?: string, 
     store.register(id, { key, label: text || key, tip, extra: extraKey ? extraKey.split('|') : undefined }, sec?.id ?? '');
     return () => store.unregister(id);
   }, [store, id, key, text, tip, extraKey, sec?.id]);
-  return { prop: key, hide: !!store && !store.visible(id) };
+  return { prop: key, hide: !!store && !store.visible(id), bound: !!key && !!boundKeys?.has(key) };
 }
 
 /** A block in the properties panel that isn't one of the standard fields (a picker, a list, a button row), given its key and words. */

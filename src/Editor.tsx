@@ -4,8 +4,9 @@ import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName,
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
 import { ToastView } from './components/ToastView';
-import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
-import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
+import { ApiError, ConflictError, collaboratorCountOf, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
+import { LIVE_FALLBACK_EVENT, liveSession, setLiveSession } from './lib/live';
+import { openLiveIfOn, watchLiveSync, watchStale } from './lib/live-sync';
 import { assetUrls } from './lib/assets';
 import { ensureFonts } from './lib/fonts';
 import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, standaloneHtml } from './lib/export';
@@ -20,6 +21,7 @@ import { installTimelineKeys } from './lib/timeline-keys';
 import { CommandPalette } from './components/CommandPalette';
 import { ComponentPicker } from './components/ComponentPicker';
 import { BeforeYouShareModal } from './components/BeforeShare';
+import { ExportShareHint } from './components/ShareWhere';
 import { checkBeforeShare } from './lib/before-share';
 import { openPalette } from './lib/command-palette';
 import { APP_ACTION_EVENT, type AppAction } from './lib/app-actions';
@@ -40,6 +42,7 @@ import { PreviewWidth, responsiveSets, widthInside } from './components/PreviewW
 import { getArtboard, selectionBounds } from './store/doc';
 import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink } from './help/Help';
+import { DesignerPanel, useDesignerOn } from './components/DesignerPanel';
 import { setPreviewOpen, trapFocus } from './lib/overlays';
 import { installInteractionsRoom } from './lib/interactions-room';
 import { clearFlow, lastQuietHit, pushFlow, useFlowVersion } from './lib/run-flow';
@@ -97,8 +100,9 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
         if (cancelled) return;
         const s = new EditorStore(p);
         setCurrentStore(s);
-        // Live editing: ops instead of whole-document saves, and other people's changes as they happen
-        setLiveSession(new LiveSession(p.id, s, liveSeqOf(p.id)));
+        // Live collaboration (a project setting, off unless turned on): ops instead of whole-document saves, and other
+        // people's changes as they happen. Off, there is no room at all and the plain autosave does the saving
+        openLiveIfOn(s, liveSeqOf(p.id));
         // Review comments: their own stream, apart from the editing room
         comments.onNotice = (text) => prefs().commentNotices && s.toast(text, 'info');
         void comments.startEditor(p.id);
@@ -203,11 +207,14 @@ function useAutosave() {
     };
     // The live session closes (parent cleanup) before this one runs, so remember now whether changes travel as ops
     let viaOps = !!liveSession();
-    const save = async (force = false) => {
+    const save = async (force = false, wait = false): Promise<boolean> => {
       // A live session saves through ops; a whole-document PUT would reset everyone else's copy
-      if (liveSession() && !force) return;
-      if (saving) return;
+      if (liveSession() && !force) return true;
+      // Switching live collaboration on waits for a save that is already on its way, then saves again behind it
+      while (wait && saving) await new Promise((r) => setTimeout(r, 50));
+      if (saving) return false;
       saving = true;
+      let ok = false;
       const rev = s.revision;
       s.set({ saveState: 'saving' });
       try {
@@ -218,6 +225,7 @@ function useAutosave() {
         retrying = false;
         retryIn = 2000;
         lastRefusal = '';
+        ok = true;
       } catch (err) {
         if (err instanceof ConflictError) setConflict(true);
         const message = err instanceof Error ? err.message : String(err);
@@ -235,12 +243,13 @@ function useAutosave() {
         saving = false;
         if (s.revision !== rev) schedule();
       }
+      return ok;
     };
     const schedule = () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => void save(), 800);
     };
-    (window as unknown as { __ixForceSave: () => Promise<void> }).__ixForceSave = () => save(true);
+    (window as unknown as { __ixForceSave: () => Promise<void> }).__ixForceSave = async () => void (await save(true));
     const unsub = s.subscribe(() => {
       if (s.revision !== lastRev) {
         lastRev = s.revision;
@@ -273,7 +282,14 @@ function useAutosave() {
         .then(() => save());
     };
     window.addEventListener(LIVE_FALLBACK_EVENT, onLiveFallback);
+    // Live collaboration turned on or off in the project settings while the editor is open (by you, or by someone in the room)
+    const stopSwitch = watchLiveSync(
+      s,
+      () => save(false, true),
+      (live) => (viaOps = live),
+    );
     return () => {
+      stopSwitch();
       window.removeEventListener(LIVE_FALLBACK_EVENT, onLiveFallback);
       window.removeEventListener('online', onOnline);
       if (retryTimer) clearTimeout(retryTimer);
@@ -464,6 +480,7 @@ function useBrandOverride() {
 
 function Workspace({ home }: { home: () => void }) {
   const conflict = useAutosave();
+  const stale = useStaleCheck();
   useRemoteAssets();
   useThumbnails();
   useShortcuts();
@@ -502,6 +519,7 @@ function Workspace({ home }: { home: () => void }) {
       <TopBar home={home} onPreview={() => (store().set({ previewPlaying: false }), setPreview(true))} />
       <div className="banner-area">
         {conflict && <ConflictBanner />}
+        {stale && !conflict && <StaleBanner />}
         {s.brandOverride && <div className="power-banner">Power user mode: the brand lock is off for this session. Edits to brand kit items, and to the logo, colours and fonts of a branded starter project, are yours to make (F9 to turn it back on).</div>}
         <LinkBanner />
         <LinkChanges />
@@ -532,6 +550,26 @@ function Workspace({ home }: { home: () => void }) {
       <ComponentPicker />
       {s.toast && <ToastView toast={s.toast} />}
       {s.report && <ReportModal title={s.report.title} lines={s.report.lines} undo={!!s.report.undo} />}
+    </div>
+  );
+}
+
+/** With live collaboration off: has the project been changed somewhere else (another tab, an AI assistant) since this tab loaded it? */
+function useStaleCheck(): boolean {
+  const [stale, setStale] = useState(false);
+  useEffect(() => watchStale(store(), () => setStale(true)), []);
+  return stale;
+}
+
+function StaleBanner() {
+  const count = collaboratorCountOf(store().get().project.id);
+  return (
+    <div className="conflict-banner" role="status">
+      This project was changed somewhere else since you opened it (another tab, an AI assistant{count ? ' or someone you share it with' : ''}). Reload to see the latest.
+      {count > 0 && ' Turn on Live collaboration in the project settings to see each other\'s changes as they happen.'}
+      <button className="btn" onClick={() => location.reload()}>
+        Reload
+      </button>
     </div>
   );
 }
@@ -595,10 +633,15 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   //the Workspace page of Preferences is for here: panels to arrange
   useEffect(() => (setEditorShown(true), () => setEditorShown(false)), []);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const designerOn = useDesignerOn();
+  //mounted on first open and then only hidden, so the conversation survives closing the panel
+  const [designer, setDesigner] = useState<'never' | 'open' | 'closed'>('never');
   const st = store();
   const [shareOpen, setShareOpen] = useState(false);
   const [shareMenu, setShareMenu] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const liveSyncIsOn = useEditor((x) => !!x.project.settings.liveSync);
+  const sharedButNotLive = !liveSyncIsOn && collaboratorCountOf(st.get().project.id) > 0;
   const [templateOpen, setTemplateOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
   const [motionOpen, setMotionOpen] = useState(false);
@@ -681,6 +724,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       <IconButton icon={<Icons.home />} title="All projects" onClick={home} />
       <input
         className="project-title"
+        data-tour="project-name"
         value={s.name}
         onChange={(e) =>
           st.update(
@@ -733,7 +777,16 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       </div>
       <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => openPrefs()} />
       <IconButton icon={<Icons.search />} title={withKey('Find a command and do it: add a layer, go to a page, turn the grid on, share...', 'palette')} onClick={() => void openPalette(false)} />
+      {designerOn && (
+        <IconButton
+          icon={<Icons.ask />}
+          title="Ask the Activity Designer: describe what you want and it builds it in your project"
+          onClick={() => setDesigner((c) => (c === 'open' ? 'closed' : 'open'))}
+          pressed={designer === 'open'}
+        />
+      )}
       <IconButton icon={<Icons.help />} title={helpTitle} onClick={openHeaderHelp} />
+      {designerOn && designer !== 'never' && <DesignerPanel open={designer === 'open'} onClose={() => setDesigner('closed')} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
       {gate && <BeforeYouShareModal what={gate.what} onGo={gate.go} onClose={() => setGate(null)} />}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
@@ -742,15 +795,16 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       {motionOpen && <MotionExportModal onClose={() => setMotionOpen(false)} />}
       {reviewOpen && <ShareForReviewModal onClose={() => setReviewOpen(false)} />}
       {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} />}
-      <button className="btn primary" onClick={onPreview} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Play the project exactly as the exported file will">
+      <button className="btn primary" data-tour="preview" onClick={onPreview} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Play the project exactly as the exported file will">
         <Icons.preview width={14} /> Preview
       </button>
       <div className="menu-wrap">
-        <button className="btn" onClick={() => setMenu(!menu)} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Export: save the project, or a picture or animation of it, as files">
+        <button className="btn" data-tour="export" onClick={() => setMenu(!menu)} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Export: save the project, or a picture or animation of it, as files">
           <Icons.download width={14} /> Export
         </button>
         {menu && (
           <div className="menu" onMouseLeave={() => setMenu(false)}>
+            <ExportShareHint onShare={() => (setMenu(false), gated('share', () => setShareOpen(true)))} />
             <button onClick={() => (setMenu(false), gated('export', () => void run(checked(() => downloadStandalone(st.get().project)))))}>
               Single HTML file
               <span className="muted small">Player, project and assets in one file</span>
@@ -799,7 +853,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         )}
       </div>
       <div className="menu-wrap">
-        <button className="btn" onClick={() => setShareMenu(!shareMenu)} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Share the project: a link to play it, people to edit it with, reviewers to comment on it">
+        <button className="btn" data-tour="share" onClick={() => setShareMenu(!shareMenu)} onPointerEnter={warmPlayerSource} onFocus={warmPlayerSource} title="Share the project: a link to play it, people to edit it with, reviewers to comment on it">
           <Icons.share width={14} /> Share
         </button>
         {shareMenu && (
@@ -810,7 +864,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
             </button>
             <button onClick={() => (setShareMenu(false), setInviteOpen(true))}>
               Invite to collaborate…
-              <span className="muted small">People who can open and edit it with you, live</span>
+              <span className="muted small">{sharedButNotLive ? 'Live collaboration is off, so you will not see each other\'s changes as they happen. Open this to turn it on' : 'People who can open and edit it with you'}</span>
             </button>
             <button onClick={() => (setShareMenu(false), setTemplateOpen(true))}>
               Save as template…
@@ -850,6 +904,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string }[] = [
   { tool: 'text', icon: 'text', label: 'Text' },
   { tool: 'draw', icon: 'draw', label: 'Script layer (generative art, charts)' },
   { tool: 'shader', icon: 'shader', label: 'Shader layer (GPU effects, backdrops)' },
+  { tool: 'animation', icon: 'flipbook', label: 'Frameling animation (a character or effect drawn in Frameling, played from its .flplay file)' },
   { tool: 'progress', icon: 'progress', label: 'Progress bar (a bar that fills to a value, for scores, steps and timers)' },
   { tool: 'chart', icon: 'chart', label: 'Chart (bar, column, line, pie and donut charts from a list)' },
   { tool: 'bone', icon: 'bone', label: 'Bone (drag to draw one; start on a bone tip to continue the chain)' },
@@ -889,6 +944,7 @@ function AddQuestion({ reorderKey }: { reorderKey?: string }) {
       {pasteOpen && <PasteQuestionsModal onClose={() => setPasteOpen(false)} />}
       <IconButton
         reorderKey={reorderKey}
+        tour="add-question"
         icon={<Icons.question />}
         title="Add question: multiple choice, true/false, fill in the blank, ordering, matching, hotspot"
         active={!!at}
@@ -943,7 +999,7 @@ function AddQuestion({ reorderKey }: { reorderKey?: string }) {
 export const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[] = [
   { id: 'shapes', label: 'Shapes', tools: ['artboard', 'frame', 'rect', 'ellipse', 'polygon', 'star'], open: true },
   { id: 'draw', label: 'Draw', tools: ['line', 'connector', 'pen', 'pencil', 'bend'], open: true },
-  { id: 'media', label: 'Media', tools: ['text', 'draw', 'shader', 'video'], open: false },
+  { id: 'media', label: 'Media', tools: ['text', 'draw', 'shader', 'animation', 'video'], open: false },
   { id: 'data', label: 'Data', tools: ['progress', 'chart'], open: false },
   { id: 'web', label: 'Web', tools: ['button', 'input', 'link', 'embed'], open: false },
   { id: 'rig', label: 'Rig', tools: ['bone'], open: false },
@@ -1013,12 +1069,13 @@ export function Toolbar() {
     const t = all.find((x) => x.tool === id);
     if (!t) return null;
     const I = Icons[t.icon];
-    return <IconButton key={t.tool} reorderKey={t.tool} icon={<I />} title={toolTip(t.label, t.tool)} active={tool === t.tool} onClick={() => store().set({ tool: t.tool, editingPathId: null })} />;
+    return <IconButton key={t.tool} reorderKey={t.tool} tour={`tool-${t.tool}`} icon={<I />} title={toolTip(t.label, t.tool)} active={tool === t.tool} onClick={() => store().set({ tool: t.tool, editingPathId: null })} />;
   };
   const image = (
     <IconButton
       key="image"
       reorderKey="image"
+      tour="tool-image"
       icon={<Icons.image />}
       title="Image"
       onClick={async () => {
@@ -1123,6 +1180,8 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const [said, setSaid] = useState<{ text: string; politeness: string }[]>([]);
   const [buildError, setBuildError] = useState<string | null>(null);
   const [from, setFrom] = useState<'start' | 'current'>('start');
+  //Play it as if this device asked for less motion, to check the calm version without changing the computer's own setting
+  const [lessMotion, setLessMotion] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   // The Events list follows the newest entry unless this is unticked (kept in this browser)
   const [autoScroll, setAutoScroll] = useState(() => {
@@ -1254,14 +1313,14 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
     let live = true;
     setBuildError(null);
     // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show
-    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true, accessibility, context: sampleContextFor(project as Project) }).then(
+    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project) }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );
     return () => {
       live = false;
     };
-  }, [project, from, abId, nonce, accessibility]);
+  }, [project, from, abId, nonce, accessibility, lessMotion]);
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow) return;
@@ -1333,6 +1392,14 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             title="Show a strip under the preview with what a screen reader would be told by Announce nodes and ix.announce (also in Preferences). It needs Accessibility on"
           >
             Screen reader {screenReader ? 'on' : 'off'}
+          </button>
+          <button
+            className={`btn${lessMotion ? ' active' : ''}`}
+            onClick={() => setLessMotion(!lessMotion)}
+            aria-pressed={lessMotion}
+            title={`Play it as a viewer whose device asks for less motion sees it, without changing your own computer's setting. ${project.settings.reducedMotion ? 'Autoplaying timelines show their end, page changes are instant, and timelines marked Skip for less motion jump to the end' : 'Respect reduced motion is off for this project, so only timelines marked Skip for less motion change'}`}
+          >
+            Less motion {lessMotion ? 'on' : 'off'}
           </button>
           {themes?.list.length ? (
             <>
@@ -1485,9 +1552,15 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
               <div className="field-label block">Variables (live)</div>
               {project.variables.length > 8 && <input className="debug-filter" placeholder="Filter variables…" value={varFilter} onChange={(e) => setVarFilter(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />}
               {Object.keys(vars).length === 0 && <p className="muted small">This project has no variables.</p>}
-              {project.variables.filter((v) => !varFilter || v.name.toLowerCase().includes(varFilter.toLowerCase())).map((v) => (
-                <label key={v.id} className="preview-var" title={`${v.name}: change it in the running preview`}>
-                  <span className="mono">{v.name}</span>
+              {project.variables.filter((v) => !varFilter || `${v.name} ${v.label ?? ''}`.toLowerCase().includes(varFilter.toLowerCase())).map((v) => (
+                <label key={v.id} className="preview-var" title={`${v.label ? `${v.label} (${v.name})` : v.name}: change it in the running preview`}>
+                  {v.label?.trim() && v.label.trim() !== v.name ? (
+                    <span>
+                      {v.label} <small className="mono muted">{v.name}</small>
+                    </span>
+                  ) : (
+                    <span className="mono">{v.name}</span>
+                  )}
                   {v.type === 'boolean' ? (
                     <input type="checkbox" checked={!!vars[v.name]} onChange={(e) => post(v.name, e.target.checked)} />
                   ) : v.type === 'enum' ? (

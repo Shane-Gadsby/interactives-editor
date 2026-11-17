@@ -47,7 +47,7 @@ export function PageLinkSection({ node, ab, project }: { node: SceneNode; ab: Ar
 			{links.length > 0 && (
 				<SelectField
 					label="How the page changes"
-					title="The look of the change: a fade, a slide, a wipe, a push, an iris opening from this layer or a zoom into it. Learners who prefer reduced motion always get an instant change"
+					title="The look of the change: a fade, a slide, a wipe, a push, an iris opening from this layer or a zoom into it. With Respect reduced motion on (Project settings), learners who prefer reduced motion get an instant change"
 					value={look}
 					options={PAGE_TRANSITIONS}
 					onChange={how}

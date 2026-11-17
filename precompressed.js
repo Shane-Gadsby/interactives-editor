@@ -67,7 +67,8 @@ module.exports = (distDir, cacheDir, options = {}) => {
 		ready = new Map(),
 		running = null,
 
-		rel = (plain) => path.relative(distDir, plain),
+		//always / in the manifest, so it means the same thing whichever OS wrote it
+		rel = (plain) => path.relative(distDir, plain).split(path.sep).join('/'),
 
 		saveManifest = () => {
 			let out = {}

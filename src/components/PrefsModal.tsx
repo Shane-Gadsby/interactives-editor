@@ -11,13 +11,13 @@ import { resetKeymap } from '../lib/keymap-sets';
 import { ensureCommandKeys } from '../lib/command-keys';
 import { trapFocus } from '../lib/overlays';
 import { announce } from '../lib/announce';
-import { PAGES, closePrefs, searchShortcuts, setPrefsPage, usePrefsWindow, type PageId } from '../lib/prefs-window';
+import { PAGES, closePrefs, searchShortcuts, setPrefsPage, takeSetting, usePrefsWindow, type PageId } from '../lib/prefs-window';
 import { PAGE_INFO, pageIsDefault, pageKeys, pagesFor, searchSettings, sectionsOf, type SettingDef } from './PrefsPages';
 
 /** Mounted once by the app: the Preferences window, wherever it was opened from (the gear, the ? key, the command palette, a share link). */
 export function PrefsHost() {
   const w = usePrefsWindow();
-  return w.open ? <PrefsModal workspace={w.editor} page={w.page} onPage={setPrefsPage} onClose={closePrefs} /> : null;
+  return w.open ? <PrefsModal workspace={w.editor} page={w.page} setting={w.setting} onPage={setPrefsPage} onClose={closePrefs} /> : null;
 }
 
 const SIZE_KEY = 'ix-prefs-window-size';
@@ -49,7 +49,7 @@ const useNarrow = (): boolean => {
  * Personal preferences: a window with a list of pages down the left and one page of related settings at a time. Changes apply
  * as they are made (there is no OK), Esc closes it, and the search finds a setting on any page and takes you to it.
  */
-export function PrefsModal({ onClose, workspace = false, page, onPage }: { onClose: () => void; workspace?: boolean; page?: PageId; onPage?: (p: PageId) => void }) {
+export function PrefsModal({ onClose, workspace = false, page, setting, onPage }: { onClose: () => void; workspace?: boolean; page?: PageId; setting?: string | null; onPage?: (p: PageId) => void }) {
   const p = usePrefs();
   const [own, setOwn] = useState<PageId>(page ?? 'general');
   const cur: PageId = !workspace && PAGE_INFO[own].editorOnly ? 'general' : own;
@@ -71,6 +71,12 @@ export function PrefsModal({ onClose, workspace = false, page, onPage }: { onClo
     setOwn(to);
     onPage?.(to);
   };
+  //Opened from a link to one setting (the Activity Designer panel's own allowance): mark it once the page is up
+  useEffect(() => {
+    if (!setting) return;
+    const id = takeSetting();
+    if (id) setJump({ id, n: Date.now() });
+  }, [setting]);
 
   //While the window is open the editor's own keys stand down (a key press here is for the window), apart from ? which switches to the shortcuts page
   useEffect(() => {

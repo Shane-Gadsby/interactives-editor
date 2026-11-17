@@ -13,6 +13,7 @@ import { makeNote, prepareNodes, relayoutTree, startingValue, type Artboard, typ
 import { applyTidy } from '../src/lib/artboard-tidy';
 import { tidyBoardGraph } from '../src/lib/branded/graph-kit';
 import { noteHeightFor } from '../src/lib/graph-notes-core';
+import { tutorialExamples } from './tutorial-examples/kit';
 
 export const EXAMPLE_NOTE_PREFIX = 'note_example_';
 /** Graph notes (on an artboard's interaction graph, in `logic.notes`) carry this after the prefix, so a canvas note's replace never touches them. */
@@ -488,6 +489,12 @@ const UPGRADES: Record<string, Upgrade> = {
     graphNotes: [{ at: 0, text: '**Written by the importer, not by hand.** The wiring follows the original\'s state machine, so read it as a map: the timelines hold the motion and the nodes say when each one plays. [ ] Leave it alone unless you mean to change the behaviour.', w: 300 }],
   },
 };
+
+//The Build it tutorials' finished projects carry their own notes, in scripts/tutorial-examples/<slug>.ts
+for (const t of tutorialExamples()) {
+  if (UPGRADES[t.key]) throw new Error(`two examples called "${t.key}"`);
+  UPGRADES[t.key] = { notes: t.notes, graphNotes: t.graphNotes };
+}
 
 const round = (n: number) => Math.round(n * 1000) / 1000;
 

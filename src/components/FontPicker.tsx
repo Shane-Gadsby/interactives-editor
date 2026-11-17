@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import type { FontRef } from 'interactives-player';
 import { Icons } from './icons';
-import { FieldTrail, fieldClass, tipFor } from './ui';
+import { BoundMark, FieldTrail, fieldClass, tipFor } from './ui';
 import { useRowSearch } from '../lib/prop-search';
 import { CATEGORIES, filterOptions, firstFamily, fontOptions, fontStack, catalogNow, loadCatalog, previewFonts, type CatalogFont, type FontCategory, type FontOption } from '../lib/font-catalog';
 
@@ -293,8 +293,11 @@ function FontRow({ id, o, i, count, on, chosen, label, onHover, onPick }: { id: 
 export function FontField({ label, title, ...rest }: { label: string; title?: string } & Omit<Parameters<typeof FontPicker>[0], 'ariaLabel' | 'title'>) {
   const ps = useRowSearch(label, tipFor(label, title));
   return (
-    <div className={fieldClass('select-field', label, ps.hide, 'font-field-row')} data-prop={ps.prop} title={tipFor(label, title)}>
-      <span className="field-label">{label}</span>
+    <div className={fieldClass('select-field', label, ps, 'font-field-row')} data-prop={ps.prop} title={tipFor(label, title)}>
+      <span className="field-label">
+        {label}
+        {ps.bound && <BoundMark />}
+      </span>
       <FontPicker ariaLabel={label} {...rest} />
       <FieldTrail />
     </div>

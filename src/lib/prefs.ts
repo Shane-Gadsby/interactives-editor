@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { DEFAULT_GRID } from './grid';
 import { installSessionHeader, sessionUser } from './session';
 import { fetchOrEarly } from './early-fetch';
+import type { TutorialProgressMap } from './tutorial-progress';
 
 /**
  * Per-person editor preferences. The server keeps them per user (GET/PUT api/prefs), so they follow you between
@@ -97,6 +98,12 @@ export interface Prefs {
   keymapActive?: string;
   /** Single-letter shortcuts on or off (WCAG 2.1.4 Character Key Shortcuts). On by default. */
   singleKeys: boolean;
+  /** Tick boxes, badges and a little cheering in the tutorials, and progress on the projects page's Tutorials (lib/celebrate.ts). On by default; off hides them all and keeps the progress. */
+  tutorialBadges: boolean;
+  /** A soft chime with the cheers. Off by default: nothing in the editor makes a sound unless asked. */
+  tutorialSound: boolean;
+  /** Steps ticked and tutorials finished, by help topic id (lib/tutorial-progress.ts). Cleared by Preferences > Reset tutorial progress. */
+  tutorialProgress?: TutorialProgressMap;
   /** Panel arrangements saved under a name (lib/workspaces.ts checks each one before using it). */
   workspaces?: unknown[];
 }
@@ -110,7 +117,7 @@ export interface KeymapSet {
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { singleKeys: true, technicalWording: false, showNewInteractions: true, altDragHintAlways: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, attachGuides: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', codeTheme: 'follow', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
+const DEFAULTS: Prefs = { tutorialBadges: true, tutorialSound: false, singleKeys: true, technicalWording: false, showNewInteractions: true, altDragHintAlways: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, attachGuides: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', codeTheme: 'follow', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
 /** What every preference starts as, for the Preferences window's Reset buttons. */
 export const PREF_DEFAULTS: Readonly<Prefs> = DEFAULTS;
 const LAST_USER = 'ix-prefs-user';

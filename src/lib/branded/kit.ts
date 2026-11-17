@@ -242,7 +242,7 @@ export const SIDE_MARGIN = SIDE;
  * named by every page of that kind, instead of copied onto each. Masters sit after the pages in the artboard list. On the white
  * pages the logo goes over the page (`masterOver`), so a screen reader meets it last, as it did when it was a page layer.
  */
-function masterFor(ctx: BrandedCtx, kind: PageKind, width: number, height: number): Artboard {
+export function masterFor(ctx: BrandedCtx, kind: PageKind, width: number, height: number): Artboard {
   const key = `${kind}|${width}x${height}`;
   const have = ctx.masters.get(key);
   if (have) return have;
@@ -269,6 +269,18 @@ function masterFor(ctx: BrandedCtx, kind: PageKind, width: number, height: numbe
   ctx.masters.set(key, master);
   ctx.project.artboards.push(master);
   return master;
+}
+
+/** Where the content master puts its accent bar and its logo on a page this size (page coordinates), for checking an author's own layers against them. */
+export function contentFrameBoxes(width: number, height: number): { accent: Box; logo: Box } {
+  void width;
+  return { accent: { x: SIDE, y: TOP + 50, width: 56, height: 4 }, logo: { x: SIDE, y: round1(height - LOGO_BOTTOM - logoHeight(80)), width: 80, height: logoHeight(80) } };
+}
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 /**

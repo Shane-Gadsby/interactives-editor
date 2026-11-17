@@ -34,6 +34,41 @@ export function writeFlow(ab: Pick<Artboard, 'logic'>, event: { kind: string; pa
 /** `writeFlow` for the commonest event: a layer is clicked (or hovered, with `type: 'pointerenter'`). */
 export const writeClickFlow = (ab: Pick<Artboard, 'logic'>, layerId: string, steps: FlowStep[], type = 'click', note?: string): FlowWritten => writeFlow(ab, { kind: 'event.pointer', params: { target: layerId, type }, note }, steps);
 
+export interface BranchWritten {
+	event: LogicNode;
+	check: LogicNode;
+	/** What runs when the condition is true, in order. */
+	yes: LogicNode[];
+	/** What runs when it is not (the row under). */
+	no: LogicNode[];
+}
+
+/**
+ * An event, then a Check a condition on `condition`, then `yes` down its true wire and `no` down its false one. The two rows sit one
+ * under the other so the fork reads at a glance in the graph.
+ */
+export function writeBranchFlow(ab: Pick<Artboard, 'logic'>, event: { kind: string; params?: Record<string, unknown> }, condition: string, yes: FlowStep[], no: FlowStep[]): BranchWritten {
+	const y = ab.logic.nodes.reduce((m, n) => Math.max(m, n.y), -100) + 140;
+	const ev: LogicNode = { id: uid('lg'), kind: event.kind, x: 40, y, params: { ...defaultParams(event.kind), ...event.params } };
+	const check: LogicNode = { id: uid('lg'), kind: 'logic.if', x: 300, y, params: { ...defaultParams('logic.if'), condition } };
+	const row = (steps: FlowStep[], rowY: number) => steps.map((st, i): LogicNode => ({ id: uid('lg'), kind: st.kind, x: 560 + i * 260, y: rowY, params: { ...defaultParams(st.kind), ...st.params } }));
+	const yesNodes = row(yes, y);
+	const noNodes = row(no, y + 140);
+	ab.logic.nodes.push(ev, check, ...yesNodes, ...noNodes);
+	const join = (from: LogicNode, port: string, to: LogicNode) => ab.logic.edges.push({ id: uid('e'), from: from.id, fromPort: port, to: to.id, toPort: 'in' });
+	join(ev, 'out', check);
+	for (const [nodes, port] of [[yesNodes, 'true'], [noNodes, 'false']] as const) {
+		let from = check;
+		let p = port as string;
+		for (const n of nodes) {
+			join(from, p, n);
+			from = n;
+			p = 'out';
+		}
+	}
+	return { event: ev, check, yes: yesNodes, no: noNodes };
+}
+
 /** Hang one more step off a node (its first output), at the end of the row it is on. Returns the new node. */
 export function appendStep(ab: Pick<Artboard, 'logic'>, after: LogicNode, step: FlowStep): LogicNode {
 	const x = ab.logic.nodes.filter((n) => n.y === after.y).reduce((m, n) => Math.max(m, n.x), after.x) + 260;

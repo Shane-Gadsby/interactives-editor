@@ -4,3 +4,4 @@ node_modules
 storage
 dist/**/*.br
 dist/**/*.gz
+agent-docs/out

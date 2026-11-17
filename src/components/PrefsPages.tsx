@@ -5,6 +5,9 @@ import { FontField } from './FontPicker';
 import { SelectField, CheckField, NumberField } from './ui';
 import { cleanGrid, GRID_PRESETS, GRID_SIZE_RANGE, GRID_SUBDIV_RANGE } from '../lib/grid';
 import { restartTips, stripShown } from '../lib/onboarding';
+import { confirmDialog } from './dialogs';
+import { announce } from '../lib/announce';
+import { resetTutorialProgress } from '../lib/tutorial-actions';
 import { CODE_THEMES, type CodeTheme } from '../lib/code-theme-prefs';
 import { HIDE_PREF, LANE_KINDS, LANE_NAME } from '../lib/timeline-view';
 import { PAGES, type PageId } from '../lib/prefs-window';
@@ -124,6 +127,19 @@ export const SETTINGS: SettingDef[] = [
   },
   check('altDragHintAlways', 'general', 'Help and hints', 'Always show the Alt-drag hint', 'Dragging a layer, a page or a row in Layers says that holding Alt (Option on a Mac) drags a copy. It shows for your first three drags; tick this to see it on every drag', 'altDragHintAlways', { words: 'copy duplicate drag option' }),
   check('commentNotices', 'general', 'Notifications', 'Comment notices', 'Tell me (a bell on the projects page, a message while a project is open) when a review comment is handed to me, mentions me, or gets a reply in a conversation I am in', 'commentNotices', { words: 'review comments bell mentions alerts' }),
+
+  check('tutorialBadges', 'general', 'Tutorials', 'Tutorial badges and cheers', 'Tick boxes on each step of a tutorial, a short cheer when you tick one, a badge when you finish a whole tutorial or a set of them, and your progress on the Tutorials button on the projects page. Off hides all of it; your progress is kept and comes back if you turn it on again', 'tutorialBadges', { words: 'tutorials badges fanfare confetti celebrate rewards progress gamify steps tick' }),
+  check('tutorialSound', 'general', 'Tutorials', 'Soft chime with the cheers', 'A short, quiet chime with the tutorial cheers. Off by default: nothing in the editor makes a sound unless you ask', 'tutorialSound', { words: 'sound audio noise beep tutorials', disabled: (p) => p.tutorialBadges === false }),
+  {
+    id: 'tutorialReset',
+    page: 'general',
+    section: 'Tutorials',
+    label: 'Reset tutorial progress',
+    tip: 'Every tutorial goes back to not started: the steps you ticked, the finished marks and all the badges are cleared',
+    words: 'tutorials badges progress clear start again forget restart',
+    keys: [],
+    render: (p) => <TutorialReset count={Object.keys(p.tutorialProgress ?? {}).length} />,
+  },
 
   // ---- Canvas and guides
   {
@@ -367,4 +383,24 @@ export function searchSettings(query: string, editor: boolean): SettingDef[] {
     scored.push([score, s]);
   }
   return scored.sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+}
+
+/** The button under the Tutorials switches: a confirm, then every tick, finished mark and badge is gone. */
+function TutorialReset({ count }: { count: number }) {
+  const go = async () => {
+    if (!(await confirmDialog({ title: 'Reset tutorial progress?', message: 'Every tutorial goes back to not started. The steps you ticked, the finished marks and all your badges are cleared. This cannot be undone.', confirmLabel: 'Reset tutorial progress', danger: true }))) return;
+    resetTutorialProgress();
+    announce('Tutorial progress reset');
+  };
+  return (
+    <div className="field">
+      <span>Tutorial progress</span>
+      <div className="row">
+        <button type="button" className="btn small-btn" disabled={!count} title="Every tutorial goes back to not started: ticked steps, finished marks and all badges are cleared" onClick={() => void go()}>
+          Reset tutorial progress
+        </button>
+        <span className="muted small">{count ? `${count} ${count === 1 ? 'tutorial' : 'tutorials'} started or finished` : 'Nothing started yet'}</span>
+      </div>
+    </div>
+  );
 }

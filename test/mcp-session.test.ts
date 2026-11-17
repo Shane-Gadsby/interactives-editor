@@ -192,3 +192,61 @@ describe('joining and editing a live room', () => {
     mcp.sessions.delete(id);
   });
 });
+
+describe('making projects and adding files', () => {
+  it('makes a blank project in the toolbox look, in a folder, and joins it', async () => {
+    const text = await tool('create_project').run({ name: 'Study planner', folder: 'Agents' });
+    const made = /\[(pr\w+)\] and joined it/.exec(text)?.[1];
+    expect(made).toBeTruthy();
+    expect(text).toContain('## Colour tokens');
+    const p = (await h.call('GET', `/api/projects/${made}`)).json.project as Project;
+    expect(p.name).toBe('Study planner');
+    expect(p.themes!.list.map((t) => t.name)).toEqual(['Light', 'Dark', 'High contrast']);
+    expect(p.fonts.some((f) => f.family === 'Open Sans')).toBe(true);
+    const list = (await h.call('GET', '/api/projects')).json as { id: string; folder?: string | null }[];
+    expect(list.find((x) => x.id === made)?.folder).toBe('Agents');
+    expect(mcp.sessions.has(made!)).toBe(true);
+    mcp.sessions.get(made!)!.abort.abort();
+    mcp.sessions.delete(made!);
+  });
+
+  it('makes a project from a built-in starter, and refuses one it does not know', async () => {
+    const text = await tool('create_project').run({ name: 'Sorting', from: { starter: 'sorting' } });
+    const made = /\[(pr\w+)\] and joined it/.exec(text)![1];
+    const p = (await h.call('GET', `/api/projects/${made}`)).json.project as Project;
+    expect(p.template?.builtin).toBe('sorting');
+    mcp.sessions.get(made)!.abort.abort();
+    mcp.sessions.delete(made);
+    await expect(tool('create_project').run({ name: 'X', from: { starter: 'nope' } })).rejects.toThrow(/No starter nope/);
+    expect(await tool('list_starters').run({})).toContain('- sorting: Drag and drop sorting');
+  });
+
+  it('uploads a file as an asset, with its record in the document', async () => {
+    const text = await run('upload_asset', { name: 'dot.png', base64: Buffer.from('not really a png').toString('base64') });
+    const asset = /as asset (\w+)/.exec(text)![1];
+    const p = await live();
+    expect(p.assets.find((a) => a.id === asset)).toMatchObject({ name: 'dot.png', mime: 'image/png', size: 16 });
+    const file = await h.call('GET', `/api/projects/${id}/assets/${asset}`);
+    expect(file.status).toBe(200);
+    expect(file.text).toBe('not really a png');
+  });
+
+  it('turns a data source given as text into an uploaded file it reads from, and refuses JSON that is not', async () => {
+    const data = JSON.stringify({ courses: [{ code: 'SCI101' }] });
+    await run('edit', { changes: [{ op: 'add_data_source', name: 'handbook', kind: 'json', text: data }] });
+    const p = await live();
+    const ds = p.dataSources.find((d) => d.name === 'handbook')!;
+    expect(ds.source).toBe('asset');
+    expect(p.assets.find((a) => a.id === ds.assetId)).toMatchObject({ name: 'handbook.json', mime: 'application/json' });
+    expect((await h.call('GET', `/api/projects/${id}/assets/${ds.assetId}`)).text).toBe(data);
+    await expect(run('edit', { changes: [{ op: 'add_data_source', name: 'bad', kind: 'json', text: '{nope' }] })).rejects.toThrow(/not JSON/);
+  });
+
+  it('exports the document or one part of it, and gives variables in full', async () => {
+    expect(JSON.parse(await run('export_project')).id).toBe(id);
+    expect(JSON.parse(await run('export_project', { part: 'artboards' }))[0].children).toHaveLength(2);
+    expect(await run('export_project', { part: 'nope' })).toContain('The project has no nope');
+    await run('edit', { changes: [{ op: 'add_variable', name: 'score', type: 'number', initial: 3 }] });
+    expect(JSON.parse(await run('get_variables', { names: ['score'] }))[0]).toMatchObject({ name: 'score', initial: 3 });
+  });
+});

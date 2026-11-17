@@ -5,7 +5,7 @@ import { createArtboard, createNode, createProject, type Project } from 'interac
 import { EditorStore, setCurrentStore } from '../src/store/store';
 import { APP_ACTION_EVENT } from '../src/lib/app-actions';
 import { BeforeShareLine, BeforeYouShareModal } from '../src/components/BeforeShare';
-import { rememberedWhere, ShareWhere } from '../src/components/ShareWhere';
+import { ExportShareHint, rememberedWhere, ShareWhere } from '../src/components/ShareWhere';
 import type { ShareInfo } from '../src/lib/db';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -236,5 +236,22 @@ describe('Share: where will people use it', () => {
     show(share(), publish);
     click(byText(host, 'button', /Update to the latest version/));
     expect(publish).toHaveBeenCalled();
+  });
+});
+
+describe('Export points to Share', () => {
+  it('has a line at the top of the Export menu that opens Share, and says why', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onShare = vi.fn();
+    act(() => root.render(<ExportShareHint onShare={onShare} />));
+    const b = host.querySelector<HTMLButtonElement>('button.menu-share-hint')!;
+    expect(b.textContent).toContain('Want a link instead of a file?');
+    expect(b.textContent).toContain('where people will use it');
+    click(b);
+    expect(onShare).toHaveBeenCalledTimes(1);
+    act(() => root.unmount());
+    host.remove();
   });
 });

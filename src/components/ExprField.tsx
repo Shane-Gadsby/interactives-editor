@@ -5,19 +5,22 @@ import { maybeStore } from '../store/store';
 import { previewScope } from '../lib/data';
 import { accept, suggest, type SuggestEnv, type Suggestion } from '../lib/suggest';
 import { checkFormula, checkTemplate, type CheckEnv, type FormulaStatus } from '../lib/expr-check';
-import { FieldTrail, fieldClass, tipFor, unbroken } from './ui';
+import { BoundMark, FieldTrail, fieldClass, tipFor, unbroken } from './ui';
 import { useRowSearch } from '../lib/prop-search';
+import { insertAt, insertChoices } from '../lib/insert-value';
+import { SearchPicker, type PickerOption } from './SearchPicker';
+import { CalculationPicker } from './CalculationPicker';
 
 /**
  * Names an expression field sees only here, given once by whatever holds the fields: a binding's layer is `self`
  * for every formula in it. Fields add their own on top (a converter's `value`).
  */
-export const ExprLocals = createContext<{ locals?: string[]; self?: SceneNode }>({});
+export const ExprLocals = createContext<{ locals?: string[]; self?: SceneNode; values?: Record<string, unknown> }>({});
 
 const NAV_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'Home', 'End']);
 
 /** What the suggestions know about the open project, worked out only when a suggestion is asked for. */
-function envFor(locals: string[], self: SceneNode | undefined): SuggestEnv | null {
+function envFor(locals: string[], self: SceneNode | undefined, values?: Record<string, unknown>): SuggestEnv | null {
   const st = maybeStore()?.get();
   if (!st) return null;
   const project = st.project;
@@ -45,13 +48,13 @@ function envFor(locals: string[], self: SceneNode | undefined): SuggestEnv | nul
       return out;
     },
     locals,
-    localValues: self ? { self: layerScope(self) } : undefined,
+    localValues: self || values ? { ...values, ...(self ? { self: layerScope(self) } : {}) } : undefined,
   };
 }
 
 /** What the formula checker knows about the open project; the scope is only built if the formula gets as far as being worked out. */
-function checkEnvFor(locals: string[], self: SceneNode | undefined): CheckEnv | null {
-  const env = envFor(locals, self);
+function checkEnvFor(locals: string[], self: SceneNode | undefined, values?: Record<string, unknown>): CheckEnv | null {
+  const env = envFor(locals, self, values);
   if (!env) return null;
   return { variables: env.project.variables, dataNames: env.project.dataSources.map((d) => d.name), locals, localValues: env.localValues, scope: env.scope };
 }
@@ -60,7 +63,7 @@ function checkEnvFor(locals: string[], self: SceneNode | undefined): CheckEnv | 
  * What a formula says right now, or what is wrong with it, for the line under a field. Checked a moment after typing stops, and
  * again when the project's variables or data change, not on every edit to a layer (working a formula out builds the whole scope).
  */
-export function useFormulaStatus(text: string, locals: string[], self: SceneNode | undefined, template?: boolean): FormulaStatus {
+export function useFormulaStatus(text: string, locals: string[], self: SceneNode | undefined, template?: boolean, values?: Record<string, unknown>): FormulaStatus {
   const [status, setStatus] = useState<FormulaStatus>({ kind: 'empty' });
   const st = maybeStore()?.get();
   const vars = st?.project.variables;
@@ -69,12 +72,12 @@ export function useFormulaStatus(text: string, locals: string[], self: SceneNode
   useEffect(() => {
     if (!text.trim()) return setStatus((s) => (s.kind === 'empty' ? s : { kind: 'empty' }));
     const t = setTimeout(() => {
-      const env = checkEnvFor(locals, self);
+      const env = checkEnvFor(locals, self, values);
       setStatus(env ? (template ? checkTemplate(text, env) : checkFormula(text, env)) : { kind: 'empty' });
     }, 180);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, vars, data, key, self?.id, template]);
+  }, [text, vars, data, key, self?.id, template, values]);
   return status;
 }
 
@@ -124,6 +127,7 @@ export function ExprField({
   template,
   locals,
   ariaLabel,
+  calc,
 }: {
   label?: React.ReactNode;
   value: string;
@@ -140,6 +144,8 @@ export function ExprField({
   /** Names this field sees besides the project's (event, value, item, index, self...). */
   locals?: string[];
   ariaLabel?: string;
+  /** Offer "Pick a calculation" under the field: for a formula that works out a value (not a yes/no condition). */
+  calc?: boolean;
 }) {
   const ctx = useContext(ExprLocals);
   const ps = useRowSearch(label ?? ariaLabel, tipFor(label, title));
@@ -198,7 +204,7 @@ export function ExprField({
   const names = useMemo(() => [...new Set([...(ctx.locals ?? []), ...(ctx.self ? ['self'] : []), ...(locals ?? [])])], [ctx.locals, ctx.self, locals]);
 
   const refresh = (node: HTMLInputElement | HTMLTextAreaElement) => {
-    const env = envFor(names, ctx.self);
+    const env = envFor(names, ctx.self, ctx.values);
     const caret = node.selectionStart ?? node.value.length;
     setSug(env ? suggest(node.value, caret, env, template) : null);
     setActive(0);
@@ -218,6 +224,29 @@ export function ExprField({
     setSug(null);
   };
 
+  //Insert value: the menu is worked out when the button is reached (it builds the whole preview scope), not on every keystroke
+  const [menu, setMenu] = useState<{ options: PickerOption[]; exprs: Map<string, string> }>({ options: [], exprs: new Map() });
+  const openMenu = () => {
+    const env = envFor(names, ctx.self, ctx.values);
+    const choices = env ? insertChoices(env) : [];
+    const exprs = new Map<string, string>();
+    const options = choices.map((c): PickerOption => {
+      const value = `${c.group}|${c.expr}`;
+      exprs.set(value, c.expr);
+      return { value, label: c.label, hint: c.hint, group: c.group };
+    });
+    setMenu({ options, exprs });
+  };
+  const insert = (key: string) => {
+    const expr = menu.exprs.get(key);
+    const node = el.current;
+    if (!expr || !node) return;
+    const r = insertAt(node.value, node.selectionStart ?? node.value.length, node.selectionEnd ?? node.value.length, expr);
+    pending.current = r;
+    put(r.text);
+    node.focus();
+  };
+
   const shown = commitOnBlur ? text : value;
   //The easy fix is a real change: it is committed now, even in a field that waits for the blur
   const fix = (fixed: string) => {
@@ -225,7 +254,7 @@ export function ExprField({
     onChange(fixed);
     onInput?.(fixed);
   };
-  const status = useFormulaStatus(shown, names, ctx.self, template);
+  const status = useFormulaStatus(shown, names, ctx.self, template, ctx.values);
   const props = {
     ref: el as React.Ref<HTMLInputElement & HTMLTextAreaElement>,
     value: shown,
@@ -268,11 +297,33 @@ export function ExprField({
 
   return (
     <>
-      <label className={fieldClass('text-field', label, ps.hide, multiline ? 'multiline stacked' : '')} data-prop={ps.prop} title={tipFor(label, title)}>
-        {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
+      <label className={fieldClass('text-field', label, ps, multiline ? 'multiline stacked' : '')} data-prop={ps.prop} title={tipFor(label, title)}>
+        {label !== undefined && <span className="field-label">
+          {unbroken(label)}
+          {ps.bound && <BoundMark />}
+        </span>}
         {multiline ? <textarea rows={rows ?? 3} {...props} /> : <input {...props} />}
         {!multiline && <FieldTrail />}
       </label>
+      {template && (
+        <div className={`insert-value-row${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} onFocusCapture={openMenu} onPointerDownCapture={openMenu}>
+          <SearchPicker
+            className="insert-value"
+            value=""
+            options={menu.options}
+            onChange={insert}
+            buttonLabel="Insert value"
+            searchPlaceholder="Find a value to insert…"
+            title="Put a variable, a data field, the learner's name or the page number into the text. It goes in {braces} where the cursor is"
+            ariaLabel={typeof label === 'string' ? `Insert value into ${label}` : 'Insert value'}
+          />
+        </div>
+      )}
+      {calc && (
+        <div className={`calc-row${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop}>
+          <CalculationPicker value={shown} names={names} self={ctx.self} values={ctx.values} onUse={fix} />
+        </div>
+      )}
       <FormulaStatusLine status={status} onFix={fix} />
       {open &&
         sug &&
