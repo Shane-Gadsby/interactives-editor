@@ -3,6 +3,7 @@
 //Pure functions over a project draft (see store.update).
 import { createNode, defaultAutoLayout, uid, type Artboard, type FrameNode, type Project, type Variable } from 'interactives-player';
 import { lookFor } from './themes';
+import { CONTROL_H, RADIUS, SPACE, TYPE, pad } from './design-scale';
 
 const solid = (color: string) => ({ type: 'solid' as const, color });
 
@@ -26,32 +27,54 @@ export function addAccordion(d: Project, abId: string, kind: 'accordion' | 'tabs
   const v: Variable = { id: uid('v'), name: freeName(d, kind === 'tabs' ? 'openTab' : 'openSection'), label: kind === 'tabs' ? 'Tab showing' : 'Section open', type: 'number', initial: 0 };
   d.variables.push(v);
 
-  const frame = kind === 'tabs' ? tabStrip(l, width, v.id) : accordionFrame(l, width, v.id);
+  const frame = kind === 'tabs' ? tabStrip(l, width, v.id, v.name) : accordionFrame(l, width, v.id, v.name);
   frame.x = at.x;
   frame.y = at.y;
   ab.children.push(frame);
   return frame.id;
 }
 
-/** Three sections stacked, each a header with its panel under it. */
-function accordionFrame(l: Record<string, string>, width: number, variable: string): FrameNode {
+/** The look a header takes while its own section is the open one: a state, so nothing is bound and nothing is wired. */
+const openState = (variable: string, index: number, props: Record<string, unknown>) => ({ id: uid('st'), name: 'Open', when: 'expr' as const, expr: `${variable} == ${index}`, props });
+
+/**
+ * Three sections stacked, each a header with its panel under it. One card with a border, a hairline between sections,
+ * headings that read from the left like the text under them, and the open one tinted so you can see where you are.
+ */
+function accordionFrame(l: Record<string, string>, width: number, variable: string, name: string): FrameNode {
   const section = (i: number): FrameNode =>
     createNode('frame', {
       name: `Section ${i + 1}`,
       width,
       height: 96,
-      fill: null,
-      layout: { ...defaultAutoLayout('column'), gap: 0, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: 'stretch', hugHeight: true },
+      fill: solid(l.surface),
+      clip: false,
+      layout: { ...defaultAutoLayout('column'), gap: 0, padding: pad(0), align: 'stretch', hugHeight: true },
       children: [
-        createNode('button', { name: `Heading ${i + 1}`, label: `Section ${i + 1}`, width, height: 44, fill: solid(l.surfaceMuted), color: l.text, cornerRadius: 0 }),
+        createNode('button', {
+          name: `Heading ${i + 1}`,
+          label: `Section ${i + 1}`,
+          width,
+          height: CONTROL_H,
+          fill: solid(l.surface),
+          color: l.text,
+          fontSize: TYPE.body,
+          fontWeight: 600,
+          align: 'left',
+          cornerRadius: 0,
+          states: [openState(name, i, { 'fill.color': l.surfaceMuted })],
+        }),
         createNode('text', {
           name: `Panel ${i + 1}`,
           text: 'What this section is about.',
-          width,
-          height: 52,
-          fontSize: 15,
+          width: width - SPACE.m * 2,
+          height: 22,
+          fontSize: TYPE.body,
+          lineHeight: 1.45,
           color: l.text,
           autoSize: 'height',
+          //room round the words, lined up with the heading's own
+          layoutItem: { margin: pad(SPACE.m) },
         }),
       ],
     }) as FrameNode;
@@ -59,21 +82,38 @@ function accordionFrame(l: Record<string, string>, width: number, variable: stri
     name: 'Accordion',
     width,
     height: 300,
-    fill: solid(l.surface),
+    //the gap between sections shows this through, which is the hairline between them
+    fill: solid(l.border),
     stroke: { paint: solid(l.border), width: 1, align: 'inside' },
-    cornerRadius: 8,
+    cornerRadius: RADIUS.card,
     clip: true,
-    layout: { ...defaultAutoLayout('column'), gap: 1, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: 'stretch', hugHeight: true },
+    layout: { ...defaultAutoLayout('column'), gap: 1, padding: pad(0), align: 'stretch', hugHeight: true },
     disclosure: { open: 'one', variable, toggle: true },
     children: [section(0), section(1), section(2)],
   }) as FrameNode;
 }
 
-/** A row of three tabs, with the panels in a box under them. */
-function tabStrip(l: Record<string, string>, width: number, variable: string): FrameNode {
-  const tab = (i: number) => createNode('button', { name: `Tab ${i + 1}`, label: `Tab ${i + 1}`, width: Math.round(width / 3), height: 40, fill: solid(l.surfaceMuted), color: l.text, cornerRadius: 0 });
+/**
+ * A row of three tabs with the panels in a box under them. The tabs sit side by side and the panels wrap to the line
+ * below; the tab that is showing takes the button colour, so it reads as the chosen one.
+ */
+function tabStrip(l: Record<string, string>, width: number, variable: string, name: string): FrameNode {
+  const tabW = Math.floor(width / 3);
+  const tab = (i: number) =>
+    createNode('button', {
+      name: `Tab ${i + 1}`,
+      label: `Tab ${i + 1}`,
+      width: tabW,
+      height: CONTROL_H,
+      fill: solid(l.surfaceMuted),
+      color: l.text,
+      fontSize: TYPE.body,
+      fontWeight: 600,
+      cornerRadius: 0,
+      states: [openState(name, i, { 'fill.color': l.button, color: l.onButton })],
+    });
   const panel = (i: number) =>
-    createNode('text', { name: `Panel ${i + 1}`, text: `What tab ${i + 1} is about.`, x: 12, y: 12, width: width - 24, height: 60, fontSize: 15, color: l.text, autoSize: 'height' });
+    createNode('text', { name: `Panel ${i + 1}`, text: `What tab ${i + 1} is about.`, x: SPACE.l, y: SPACE.l, width: width - SPACE.l * 2, height: 60, fontSize: TYPE.body, lineHeight: 1.45, color: l.text, autoSize: 'height' });
   const panels = createNode('frame', {
     name: 'Panels',
     width,
@@ -84,9 +124,13 @@ function tabStrip(l: Record<string, string>, width: number, variable: string): F
   return createNode('frame', {
     name: 'Tabs',
     width,
-    height: 160,
-    fill: null,
-    layout: { ...defaultAutoLayout('column'), gap: 0, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: 'stretch', hugHeight: true },
+    height: 164,
+    fill: solid(l.surface),
+    stroke: { paint: solid(l.border), width: 1, align: 'inside' },
+    cornerRadius: RADIUS.card,
+    clip: true,
+    //a row that wraps: the tabs share the first line and the panels, as wide as the frame, take the next
+    layout: { ...defaultAutoLayout('row'), gap: 0, padding: pad(0), align: 'start', wrap: true, hugHeight: true },
     disclosure: { open: 'one', variable, panels: panels.id },
     children: [tab(0), tab(1), tab(2), panels],
   }) as FrameNode;
@@ -109,6 +153,7 @@ export function addSection(d: Project, abId: string, frameId: string): void {
     reid(copy);
     copy.name = `Tab ${n}`;
     (copy as unknown as { label: string }).label = `Tab ${n}`;
+    renumber(copy, n - 1);
     kids.splice(kids.indexOf(panels), 0, copy);
     const lastPanel = (panels.children as FrameNode[])[panels.children.length - 1];
     if (lastPanel) {
@@ -128,8 +173,17 @@ export function addSection(d: Project, abId: string, frameId: string): void {
   if ('children' in copy && copy.children[0]) {
     copy.children[0].name = `Heading ${n}`;
     (copy.children[0] as unknown as { label?: string }).label = `Section ${n}`;
+    renumber(copy.children[0] as FrameNode, n - 1);
   }
   kids.push(copy);
+}
+
+/** A copied header is the next one along, so its Open state asks about its own place rather than the one it was copied from. */
+function renumber(header: { states?: { id: string; expr?: string }[] }, index: number): void {
+  for (const st of header.states ?? []) {
+    st.id = uid('st');
+    if (st.expr) st.expr = st.expr.replace(/== \d+$/, `== ${index}`);
+  }
 }
 
 /** Fresh ids through a copied subtree, so nothing shares one. */

@@ -5,6 +5,7 @@
 import { createArtboard, createNode, defaultAutoLayout, uid, type Artboard, type FrameNode, type LogicNode, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { defaultParams } from 'interactives-player';
 import { lookFor } from './themes';
+import { CONTROL_H, RADIUS, SHADOW, SPACE, TYPE, pad } from './design-scale';
 
 //'input' is the prompt that takes typing: it has its own name in the file because 'prompt' used to mean the confirmation
 export type DialogKind = 'modal' | 'confirm' | 'input' | 'tooltip' | 'toast';
@@ -146,7 +147,7 @@ function fillTooltip(page: Artboard, l: Record<string, string>): void {
   const words = createNode('text', {
     name: 'Tip text',
     text: 'What this is for.',
-    fontSize: 13,
+    fontSize: TYPE.small,
     lineHeight: 1.35,
     color: l.background,
     autoSize: 'width',
@@ -162,10 +163,10 @@ function fillTooltip(page: Artboard, l: Record<string, string>): void {
     width: 118 + 20,
     height: 18 + 12,
     fill: solid(l.text),
-    cornerRadius: 6,
+    cornerRadius: RADIUS.small,
     stroke: null,
     clip: false,
-    shadow: { x: 0, y: 4, blur: 12, spread: 0, color: 'rgba(0,0,0,0.18)' },
+    shadow: SHADOW.raised,
     layout: { ...defaultAutoLayout('column'), gap: 4, padding: { top: 6, right: 10, bottom: 6, left: 10 }, align: 'start', hugWidth: true, hugHeight: true },
     children: [words],
   }) as FrameNode;
@@ -189,7 +190,7 @@ function fillToast(d: Project, page: Artboard, l: Record<string, string>): void 
   const words = createNode('text', {
     name: 'Message',
     text: `{${messageVar}}`,
-    fontSize: 14,
+    fontSize: TYPE.body,
     lineHeight: 1.4,
     color: l.text,
     autoSize: 'width',
@@ -204,11 +205,11 @@ function fillToast(d: Project, page: Artboard, l: Record<string, string>): void 
     width: 42 + 32,
     height: 20 + 24,
     fill: solid(l.surface),
-    cornerRadius: 10,
+    cornerRadius: RADIUS.card,
     stroke: { paint: solid(l.border), width: 1, align: 'inside' },
     clip: false,
-    shadow: { x: 0, y: 8, blur: 24, spread: 0, color: 'rgba(0,0,0,0.18)' },
-    layout: { ...defaultAutoLayout('row'), gap: 12, padding: { top: 12, right: 16, bottom: 12, left: 16 }, align: 'center', hugWidth: true, hugHeight: true },
+    shadow: SHADOW.raised,
+    layout: { ...defaultAutoLayout('row'), gap: SPACE.m, padding: pad(SPACE.m, SPACE.l), align: 'center', hugWidth: true, hugHeight: true },
     children: [words],
   }) as FrameNode;
   page.children = [card];
@@ -252,7 +253,7 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     width: inner,
     height: 28,
     text: `{${stem}Title}`,
-    fontSize: 20,
+    fontSize: TYPE.heading,
     fontWeight: 700,
     color: l.text,
     autoSize: 'height',
@@ -264,9 +265,10 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     width: inner,
     height: 22,
     text: `{${stem}Message}`,
-    fontSize: 15,
+    fontSize: TYPE.body,
     lineHeight: 1.45,
-    color: l.muted,
+    //the message is what you came to read, so it is the text colour: the quiet grey is for hints
+    color: l.text,
     autoSize: 'height',
   });
   const row = createNode('frame', {
@@ -276,7 +278,7 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     fill: null,
     //A row that only lays things out should never cut anything off
     clip: false,
-    layout: { ...defaultAutoLayout('row'), gap: 8, padding: { top: 8, right: 0, bottom: 0, left: 0 }, justify: 'end', align: 'center', hugHeight: true },
+    layout: { ...defaultAutoLayout('row'), gap: SPACE.s, padding: { top: SPACE.s, right: 0, bottom: 0, left: 0 }, justify: 'end', align: 'center', hugHeight: true },
   }) as FrameNode;
   const card = createNode('frame', {
     name: words.page,
@@ -285,18 +287,18 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     width: cardW,
     height: 200,
     fill: solid(l.surface),
-    cornerRadius: 12,
+    cornerRadius: RADIUS.card,
     stroke: { paint: solid(l.border), width: 1, align: 'inside' },
     clip: false,
-    shadow: { x: 0, y: 16, blur: 40, spread: 0, color: 'rgba(0,0,0,0.22)' },
-    layout: { ...defaultAutoLayout('column'), gap: 10, padding: { top: 24, right: 24, bottom: 20, left: 24 }, align: 'stretch', hugWidth: false, hugHeight: true },
+    shadow: SHADOW.floating,
+    layout: { ...defaultAutoLayout('column'), gap: SPACE.m, padding: pad(SPACE.xl), align: 'stretch', hugWidth: false, hugHeight: true },
     children: [title, body, row],
   }) as FrameNode;
   page.children = [card];
 
   const plain = (name: string, label: string) =>
-    createNode('button', { name, label, width: 96, height: 40, fill: solid(l.surface), color: l.text, cornerRadius: 8, stroke: { paint: solid(l.border), width: 1, align: 'inside' } });
-  const main = (name: string, label: string) => createNode('button', { name, label, width: 96, height: 40, fill: solid(l.button), color: l.onButton, cornerRadius: 8 });
+    createNode('button', { name, label, width: 96, height: CONTROL_H, fill: solid(l.surface), color: l.text, fontSize: TYPE.body, cornerRadius: RADIUS.control, stroke: { paint: solid(l.border), width: 1, align: 'inside' } });
+  const main = (name: string, label: string) => createNode('button', { name, label, width: 96, height: CONTROL_H, fill: solid(l.button), color: l.onButton, fontSize: TYPE.body, cornerRadius: RADIUS.control });
 
   if (kind === 'modal') {
     const close = main('Close', 'Close');
@@ -314,15 +316,15 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     const box = createNode('input', {
       name: 'Answer box',
       width: inner,
-      height: 44,
+      height: CONTROL_H,
       inputType: 'text',
       placeholder: 'Type here',
       ariaLabel: 'Your answer',
       //both ways: typing writes the variable, and clearing the variable empties the box
       bindings: { value: valueVar },
       bindingModes: { value: 'both' },
-      cornerRadius: 8,
-      fontSize: 16,
+      cornerRadius: RADIUS.control,
+      fontSize: TYPE.body,
       fill: solid(l.background),
       color: l.text,
       stroke: { paint: solid(l.border), width: 1, align: 'inside' },
@@ -350,10 +352,11 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     name: 'Answer button',
     label: 'Button',
     width: 120,
-    height: 40,
+    height: CONTROL_H,
     fill: solid(l.surface),
     color: l.text,
-    cornerRadius: 8,
+    fontSize: TYPE.body,
+    cornerRadius: RADIUS.control,
     stroke: { paint: solid(l.border), width: 1, align: 'inside' },
     bindings: {
       label: 'item.label',
