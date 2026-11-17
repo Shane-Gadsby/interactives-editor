@@ -4676,12 +4676,23 @@ button.twisty:hover {
 }
 .preview-modal header {
   display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+/* everything but Close: these wrap onto more lines, Close never goes with them */
+.preview-modal .preview-controls {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   row-gap: 6px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--line);
+}
+.preview-modal header > .icon-btn {
+  flex: none;
 }
 .preview-modal select {
   background: var(--bg);
@@ -11834,7 +11845,7 @@ body.page-link-dragging * {
   gap: 6px;
   margin: 6px 0;
 }
-.modal-backdrop.preview-backdrop.peek .preview-modal header {
+.modal-backdrop.preview-backdrop.peek .preview-modal .preview-controls {
   flex-wrap: wrap;
   row-gap: 6px;
 }

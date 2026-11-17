@@ -11,6 +11,7 @@ export { isContainer } from '../../interactives-player/src/format';
 export * from '../../interactives-player/src/format';
 export * from '../../interactives-player/src/content-form';
 export * from '../../interactives-player/src/fit-text';
+export * from '../../interactives-player/src/hug';
 export { parseShortcut, shortcutId, ariaKeyShortcuts, shortcutDuplicates, shortcutKeyEvents, type Shortcut } from '../../interactives-player/src/shortcut';
 export { closedValue as dialogClosedValue } from '../../interactives-player/src/dialog';
 export * from '../../interactives-player/src/question';
