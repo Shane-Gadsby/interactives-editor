@@ -383,6 +383,9 @@ export function Canvas() {
         holdCode.current = e.code;
         spaceDown.current = true;
         setSpaceHeld(true);
+        // Space would scroll whatever holds the canvas too (and keeps doing it on every repeat). A focused control keeps its own Space
+        const t = e.target as Element | null;
+        if (!t?.closest?.('button, [role="button"], a[href], select, summary, [role="checkbox"], [role="switch"], [role="tab"]')) e.preventDefault();
       }
       const st = store().get();
       if (penRef.current && (e.key === 'Enter' || e.key === 'Escape')) {
@@ -2391,16 +2394,19 @@ export function Canvas() {
   const baseCursor = dragCursorNow ?? (spaceHeld ? 'grab' : s.tool === 'select' || s.tool === 'bend' ? hoverCursor ?? toolCursor(s.tool) : toolCursor(s.tool));
   // the move cursor turns into the copy one while Alt is down (over something a drag would move), and for the whole of a copy drag
   const cursor = copying || (altHeld && baseCursor === 'move') ? 'copy' : baseCursor;
+  // While the Hand tool (or Space, or a middle drag) is panning, every press pans, so handles, artboard names and layers mustn't
+  // show their own resize or move cursors (.canvas.panning in styles.css makes them all take the canvas's)
 
   return (
     <div
       ref={vp}
-      className={`canvas${altHeld && s.tool === 'select' ? ' alt-held' : ''}`}
+      className={`canvas${altHeld && s.tool === 'select' ? ' alt-held' : ''}${s.tool === 'hand' || spaceHeld || dragging?.kind === 'pan' ? ' panning' : ''}`}
       style={{ cursor }}
       onPointerDown={onPointerDown}
-      // A middle press pans the canvas, so the browser mustn't start its own autoscroll as well (only cancelling mousedown stops it)
+      // A middle press (or any press with Space held) pans the canvas, so the browser mustn't start its own autoscroll or a
+      // text selection that drags the page along as well (only cancelling mousedown stops them)
       onMouseDown={(e) => {
-        if (e.button === 1) e.preventDefault();
+        if (e.button === 1 || (e.button === 0 && spaceDown.current)) e.preventDefault();
       }}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

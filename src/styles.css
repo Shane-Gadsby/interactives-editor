@@ -2034,6 +2034,10 @@ hr.item-sep {
   align-self: stretch;
   background: var(--primary-bg);
 }
+/* The Hand tool, Space and a middle drag only pan: nothing under the pointer gets to promise a move or a resize (the right-click menu is still a menu) */
+.canvas.panning *:not(.ctx-menu, .ctx-menu *) {
+  cursor: inherit !important;
+}
 body.dock-dragging,
 body.dock-dragging * {
   cursor: grabbing !important;
