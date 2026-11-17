@@ -605,10 +605,15 @@ router.put('/api/prefs', express.json({limit: '512kb'}), async (req, res) => {
 //further down by the MCP ones). COGNITI_TOKEN is the one secret, an api token from a Cogniti account (its API tokens
 //page; whoever holds that account grants it). Parked: it only runs with INTERACTIVES_DESIGNER=on as well (agent-docs/PARKED.md)
 const designer = require('./designer')
+//The same panel on Gemini instead (designer-gemini.js): GEMINI_API_KEY, a key from the Interactives project in Google AI
+//Studio (whoever owns that project grants it). When a box has it, it's the one that answers, and the model works
+//through the MCP tools itself rather than one blueprint
+const designerGemini = require('./designer-gemini')
+const designerOn = () => designer.settings().on || designerGemini.settings().on
 
 //Who the editor's talking to, for the projects list and the owner badge
 router.get('/api/session', (req, res) => {
-	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req), designer: designer.settings().on})
+	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req), designer: designerOn()})
 })
 
 //The projects list, mine only (owned or invited to). ?all=1 gets everyone's, but only for power users (god mode),
@@ -5619,6 +5624,11 @@ const designerStatus = async (req) => {
 	let cfg = designer.settings(),
 		me = whoIs(req),
 		row = me?.username && designerTokens ? await designerTokens.findOne({_id: me.username}, {projection: {added: 1, ends: 1}}) : null
+	//On Gemini there's one key and no tokens of people's own, so everyone has a share
+	if (designerGemini.settings().on) {
+		return {on: true, mine: null, shared: sharedQuota().status(me?.username || 'guest')}
+	}
+
 	return {
 		on: cfg.on,
 		mine: row ? {connected: true, added: row.added, ends: row.ends || null} : null,
@@ -5678,8 +5688,9 @@ router.delete('/api/designer/token', async (req, res) => {
 
 router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res) => {
 	let cfg = designer.settings(),
+		gem = designerGemini.settings(),
 		me = whoIs(req)
-	if (!cfg.on) return res.status(404).json({error: 'The Activity Designer is switched off here'})
+	if (!cfg.on && !gem.on) return res.status(404).json({error: 'The Activity Designer is switched off here'})
 	if (!me?.username && enforcing()) return res.status(401).json({error: 'Sign in to use the Activity Designer'})
 
 	let id = req.body?.projectId,
@@ -5696,7 +5707,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	if (designerRunning.has(who)) return res.status(409).json({error: 'The Activity Designer is still working on your last request. Wait for it to finish.'})
 
 	//Their own token when they've added one; otherwise the shared one, and a fair share of it an hour
-	let own = await ownDesignerToken(me?.username),
+	let own = gem.on ? null : await ownDesignerToken(me?.username),
 		shared = sharedQuota()
 	if (own) {
 		cfg = {...cfg, token: own, own: true}
@@ -5704,7 +5715,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	else if (!shared.take(who)) {
 		let s = shared.status(who),
 			mins = Math.max(1, Math.ceil(s.resetsIn / 60))
-		return res.status(429).json({error: `You have used your ${s.limit} shared Activity Designer requests for this hour. The next one comes back in about ${mins} ${mins === 1 ? 'minute' : 'minutes'}. You can use your own Cogniti allowance instead.`, kind: 'quota', quota: s})
+		return res.status(429).json({error: `You have used your ${s.limit} shared Activity Designer requests for this hour. The next one comes back in about ${mins} ${mins === 1 ? 'minute' : 'minutes'}.${gem.on ? '' : ' You can use your own Cogniti allowance instead.'}`, kind: gem.on ? 'wait' : 'quota', quota: s})
 	}
 
 	designerRunning.add(who)
@@ -5752,11 +5763,8 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 			return {error: !!reply?.result?.isError, text: (reply?.result?.content || []).map((c) => c.text).join('\n')}
 		}
 
-		result = await designer.run({
-			cogniti: designer.cogniti(cfg),
-			spec: designer.buildSpec(mcp.rawReference()),
-			//Where things stand: joins the live session (people there and the outline of every page), then the open page in full
-			context: async () => {
+		//Where things stand: joins the live session (people there and the outline of every page), then the open page in full
+		let context = async () => {
 				//each part is cut on its own, so a big page can't push out the rest
 				let clip = (t, n) => t.length > n ? t.slice(0, n) + '\n...(cut to fit)' : t,
 					joined = await callTool('join_session', {project_id: id})
@@ -5771,29 +5779,32 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 
 				return parts.join('\n\n')
 			},
-			//The agent's blueprint, built in the open project as one batch to the live room
-			build: async (blueprint, known) => {
+			//A blueprint, built in the open project as one batch to the live room
+			build = async (blueprint, known) => {
 				let out = await mcp.runAs(ctx, () => mcp.buildBlueprint(id, blueprint, {artboardId, known: known || undefined}))
 				mcpAudit(req, ctx, {method: 'tools/call', params: {name: 'designer_build', arguments: {project_id: id}}}, {})
 				return out
 			},
 			//A named revision of how the project is right now (the room saved first), which "Undo" restores
-			beforeEdit: async () => {
+			beforeEdit = async () => {
 				let now = await projects.findOne({_id: id}),
 					room = rooms.get(id)
 				if (room) await persist(room)
 				let current = room ? JSON.stringify(room.doc) : await store.get(now)
 				return snapshot(id, current, room ? room.rev : now.rev, whoIs(req), 'Before the Activity Designer', true, {name: 'Before the Activity Designer'})
 			},
-			emit,
-			signal: ctl.signal,
-		}, {
-			projectId: id,
-			projectName: String(doc.name || 'Untitled project').slice(0, 200),
-			firstName: String(req.sessionData?.user?.firstName || req.sessionData?.user?.firstname || (me?.name || '').split(' ')[0] || '').slice(0, 40),
-			message,
-			state,
-		})
+			input = {
+				projectId: id,
+				projectName: String(doc.name || 'Untitled project').slice(0, 200),
+				firstName: String(req.sessionData?.user?.firstName || req.sessionData?.user?.firstname || (me?.name || '').split(' ')[0] || '').slice(0, 40),
+				message,
+				state,
+			}
+
+		//Gemini runs the tools itself, step by step. Cogniti answers with one blueprint
+		result = gem.on
+			? await designerGemini.run({ai: designerGemini.client(gem), tools: mcp.TOOLS, callTool, build, context, beforeEdit, emit, signal: ctl.signal}, input)
+			: await designer.run({cogniti: designer.cogniti(cfg), spec: designer.buildSpec(mcp.rawReference()), context, build, beforeEdit, emit, signal: ctl.signal}, input)
 	}
 	catch (err) {
 		console.trace(`${appName}: designer failed`, err)
@@ -5812,7 +5823,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	if (result.outcome === 'replied') state.used = Date.now()
 	else designerChats.delete(key)
 	//Who, which project, how it went. Never what was said
-	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own})
+	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own, model: gem.on ? gem.model : 'cogniti'})
 	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null, quota: own ? null : shared.status(who)})
 	res.end()
 })

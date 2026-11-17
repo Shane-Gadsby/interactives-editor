@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **A colour picker with an opacity strip**: clicking a colour's swatch opens the editor's own picker, with the colour square, the hue strip and now an opacity strip drawn over grey and white squares, so see-through reads as see-through. It moves with the number box beside the colour, picking another colour keeps the opacity it had, and the swatch shows the squares behind anything not fully solid. The eyedropper and your browser's own picker are at its foot.
 - **Embeds: choose what the page may use, and give it a border**: a web page embed has a tick box each for Autoplay, Full screen, Clipboard, Microphone, Camera, Screen share, Location, Motion sensors, Picture in picture and Protected video, and only what's ticked is let through. Existing embeds keep the three they always had. **Border** draws a line round an embed in your project's border token, so it follows the colourway.
 - **Toasts slide in, and can show one at a time**: a toast's **Comes and goes** is **Slides and fades** (up into place, back down as it goes) or plain **Fades**, and **On its own** makes it the only toast showing, so the latest one wins instead of stacking.
 - **Toasts**: a short message in a corner of the page that goes by itself ("Plan saved", "Copied"). The new **Toast** button in the Web tools builds one, and a **Show toast** node shows it with whatever words you hand it, so one toast serves every message. It's read out to screen readers as it appears, never takes the focus, stacks with others, and one with a button in it stays until dismissed.

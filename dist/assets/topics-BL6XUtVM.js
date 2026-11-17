@@ -1,4 +1,4 @@
-import{bZ as a,b_ as o,b$ as m,c0 as r,c1 as k,c2 as V,c3 as R,c4 as M,c5 as h,c6 as s,c7 as i,c8 as U,c9 as E,ca as b,cb as n,cc as S,cd as C,ce as f,cf as w,cg as A,ch as l,ci as d,cj as T,ck as P,cl as u,cm as O,cn as x,co as Y,cp as F,cq as K,cr as D,cs as I,ct as $,cu as Q,cv as X,bl as J,a8 as Z,bv as ee,bd as te,ae as W,b0 as ae}from"./index-CNp6_Y_r.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bZ as a,b_ as o,b$ as m,c0 as r,c1 as k,c2 as V,c3 as R,c4 as M,c5 as h,c6 as s,c7 as i,c8 as U,c9 as E,ca as b,cb as n,cc as S,cd as C,ce as f,cf as w,cg as A,ch as l,ci as d,cj as T,ck as P,cl as u,cm as O,cn as x,co as Y,cp as F,cq as K,cr as D,cs as I,ct as $,cu as Q,cv as X,bl as J,a8 as Z,bv as ee,bd as te,ae as W,b0 as ae}from"./index-Ct4HRtKU.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -5041,6 +5041,18 @@ Boolean operations (union, subtract, intersect, exclude) turn several shapes int
 
 ## Fill
 Choose the type from the dropdown at the top of a fill: **None** (removes it), **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. You can type a colour as hex (such as #ffcc00), \`rgb()\`, \`hsl()\` or a colour name. The number box beside a colour is its opacity.
+
+**The colour picker.** Click a colour's swatch and the picker opens under it. It works the same wherever there's a colour: a fill, a stroke, a shadow, text.
+
+- The **square** sets how strong the colour is (across) and how bright (up). Drag in it, or use the arrow keys, with <kbd>Shift</kbd> for bigger steps.
+- The **hue** strip under it chooses which colour.
+- The **opacity** strip under that sets how see-through it is, from clear to solid. It's drawn over grey and white squares, so see-through looks see-through. It and the number box beside the colour are the same value: move one and the other follows. Both strips are sliders: arrow keys, <kbd>Home</kbd> and <kbd>End</kbd>.
+- Picking another colour **keeps the opacity** it had. It never goes back to 100 by itself.
+- The swatch itself shows the squares behind any colour that isn't fully solid.
+- At the foot are the colour as text, the **eyedropper** (pick a colour from anywhere on the screen, in browsers that have one) and a small rainbow square for your **browser's own picker**, which only knows solid colours.
+- <kbd>Esc</kbd> or a click outside closes it. One drag is one undo.
+
+**Good to know:** a colour that follows a [token](themes) shows the token's name instead, and has no opacity of its own here: the token decides the colour. To make that paint see-through, use the fill's or the layer's own **Opacity**, or detach it from the token first.
 
 #### Exact gradient points
 By default a linear gradient runs corner to corner along its angle, and a radial one from the middle of the layer to its farthest corner, so both stretch with the layer. **Set start and end points** (linear) or **Set centre and radius** (radial) pins the gradient to numbers instead: **From** and **To** (or **Centre** and **Radius**) in pixels from the layer's top-left corner. Pinned gradients stay where they are when the layer is resized, which is how Rive and Lottie place them. With the layer selected, the points also show on the canvas as dots joined by a dashed line (a radial one has a dot at its centre and one on its radius): drag them. **Use angle instead of points** (or **Use the box…**) goes back to the stretching kind. Points can be animated like any other number. In a timeline's property list choose the gradient's start, end, centre or radius (the same for strokes and for the later fills), or a stop's colour or position. While recording, dragging a point on the canvas makes the keyframe.
