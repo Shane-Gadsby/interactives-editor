@@ -1018,6 +1018,18 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
             onChange={(v) => set({ maskMode: v === 'alpha' ? undefined : v })}
           />
         )}
+        {ab.hugHeight && !isConn && (
+          <CheckField
+            label="Not counted in the page height"
+            title={
+              n.type === 'frame' && n.dialog
+                ? "Dialogs are left out of a fitted page height already, so this changes nothing here"
+                : "The page fits its height to its content, and this layer is left out of that: it floats over the page instead of growing it. For toasts, tooltips and anything else that sits on top"
+            }
+            value={!!n.hugIgnore}
+            onChange={(v) => set({ hugIgnore: v ? true : undefined })}
+          />
+        )}
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={LAYER_BLEND_OPTIONS} onChange={(v) => set({ blendMode: v })} />
       </Section>
       {single && n.type === 'frame' && n.question && <QuestionSection frame={n} ab={ab} project={project} />}
@@ -2421,14 +2433,25 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
       <SelectField
         label="Fit"
         value={node.fit}
+        title={
+          target?.hugHeight
+            ? 'Fit to page content keeps the width and lets the height follow whatever the page inside needs as it plays, easing the way that page does'
+            : undefined
+        }
         options={[
           { value: 'fill', label: 'Stretch to the box' },
           { value: 'contain', label: 'Contain' },
           { value: 'cover', label: 'Cover' },
           { value: 'none', label: 'Actual size, centred' },
+          ...(target?.hugHeight ? [{ value: 'hug' as const, label: 'Fit to page content' }] : []),
         ]}
         onChange={(v) => set({ fit: v })}
       />
+      {node.fit === 'hug' && !target?.hugHeight && (
+        <div className="hint">
+          {target ? `Turn Fit height to content on for ${target.name}, or this box keeps the size you give it.` : 'Pick a page that fits its height to its content.'}
+        </div>
+      )}
       {target && (
         <Row k="Reset size" words={['edit artboard', 'match artboard', 'original size']}>
           <button className="btn" onClick={() => set({ width: target.width, height: target.height })}>

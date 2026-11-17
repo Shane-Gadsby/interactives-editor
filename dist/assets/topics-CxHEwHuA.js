@@ -1,4 +1,4 @@
-import{bX as a,bY as o,bZ as m,b_ as r,b$ as k,c0 as V,c1 as R,c2 as L,c3 as h,c4 as s,c5 as i,c6 as U,c7 as E,c8 as b,c9 as n,ca as S,cb as C,cc as f,cd as w,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-CeOBuDLP.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bX as a,bY as o,bZ as m,b_ as r,b$ as k,c0 as V,c1 as R,c2 as L,c3 as h,c4 as s,c5 as i,c6 as U,c7 as E,c8 as b,c9 as n,ca as S,cb as C,cc as f,cd as w,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-BGzd-AcT.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -4830,6 +4830,8 @@ Turn on **Fit height to content** in the **Page** section and the page is as tal
 
 - **Space below** keeps some room under the lowest layer.
 - A hidden layer, a mask, and anything inside a frame that clips or scrolls (past the frame's own edge) take no room.
+- A **dialog** takes no room either. Dialogs open over the page, so opening one never makes the page (or the StudyDesk embed) taller. One taller than the page keeps the page the height it was, so give that dialog its own scrolling.
+- Any other layer can be left out the same way: turn on **Not counted in the page height** in its **Layer** section. That's for toasts, tooltips and anything else that floats on top.
 - **Animate height changes** eases the page to its new height instead of jumping. **Duration** is the **Project default** (**Page height time** in the project settings, 300 ms unless you change it) or **Custom**, with its own **Time**. A viewer whose device asks for less motion always gets the jump. The first height, as the page opens, never animates.
 
 ## Selecting several pages
@@ -5614,7 +5616,7 @@ What works from a master:
 - **Responsive sets**: every member is an artboard of its own, so give each its own master of the right size. A master is drawn at its own coordinates.
 
 ## Everywhere else
-Pictures (PNG, SVG, PDF, animated GIF), thumbnails, the single-file export, \`.ixp\` packages and the player all draw the master. A **Lottie** export flattens it into the animation. A library component that uses a master brings the master along (as an inner artboard). In a project made from a branded starter, the master's brand layers are locked like any other brand layer, and a page can't leave them off or drop its master.`},{id:"instances",title:"Instances (components)",group:"Design",summary:"Place one artboard inside another, with its own timelines, interactions and inputs.",keywords:"component nested artboard reuse symbol instance inputs",body:`Any page can be placed inside another as a **component**. The layer it makes is called an **instance**, and the Inspector shows it as **Component**. It is a live copy that runs its own timelines and interactions on the parent's clock. Edit the source page and every instance updates.
+Pictures (PNG, SVG, PDF, animated GIF), thumbnails, the single-file export, \`.ixp\` packages and the player all draw the master. A **Lottie** export flattens it into the animation. A library component that uses a master brings the master along (as an inner artboard). In a project made from a branded starter, the master's brand layers are locked like any other brand layer, and a page can't leave them off or drop its master.`},{id:"instances",title:"Instances (components)",group:"Design",summary:"Place one artboard inside another, with its own timelines, interactions and inputs.",keywords:"component nested artboard reuse symbol instance inputs fit height content grow shrink hug",body:`Any page can be placed inside another as a **component**. The layer it makes is called an **instance**, and the Inspector shows it as **Component**. It is a live copy that runs its own timelines and interactions on the parent's clock. Edit the source page and every instance updates.
 
 ## Placing a component
 There are four ways, and all of them make the same instance layer.
@@ -5628,6 +5630,7 @@ A component bigger than the page it goes on is shrunk to fit. Pages that would c
 
 ## Settings on an instance
 - **Fit** decides how the page sits in the instance's box: **Stretch to the box**, **Contain**, **Cover** or **Actual size, centred**.
+- **Fit to page content** is the fifth, and it only shows when the source page has [Fit height to content](artboards) on. The box keeps the width you give it, and its height follows whatever the page inside needs while the project plays: a dialog's text growing, a tooltip opening, a list filling from data. It eases if the source page does (**Animate height changes**), so there's one movement, not two. The height typed on the instance layer is ignored while this is on.
 - **Reset size** puts the box back to the page's own size.
 - **Edit** followed by the page's name jumps to the source page.
 - **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. Write them as JSON, such as \`{"level": 3}\`.
