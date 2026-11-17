@@ -6,6 +6,15 @@ question, linked from Home, from one Cogniti message in about a minute, with Und
 hourly message cap (about 30 per account, shared by everyone on one token) and replies that Cogniti drops when they take
 more than about 30 seconds to start. Board doc `activity-designer-parked` has the full story; this file is what to put back.
 
+## It also runs on Gemini now (18 Nov 2026)
+
+`designer-gemini.js` is the same panel and the same route with Gemini as the model, and no message cap to work around: the
+model runs the MCP tools itself (read, look up, edit, build, validate) until the request is done. It is still parked, and
+it runs with `INTERACTIVES_DESIGNER=on` and `GEMINI_API_KEY` (see the README's env table for where the key comes from).
+On the free tier a request takes three to five minutes. Before it comes back for people: the panel's "Use my own Cogniti
+allowance" links and the Cogniti wording below need rewording, and the key's project needs billing on (the free tier
+lets Google learn from what is sent).
+
 ## What is still in the code (off)
 
 - Server: `designer.js` (Cogniti client, blueprint loop, own-token sealing), the `/api/designer/*` routes in `index.js`.

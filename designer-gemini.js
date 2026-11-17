@@ -25,6 +25,9 @@ const settings = (env = process.env) => ({
 	key: env.GEMINI_API_KEY || '',
 	model: env.INTERACTIVES_DESIGNER_MODEL || DEFAULT_MODEL,
 	url: String(env.INTERACTIVES_GEMINI_URL || DEFAULT_URL).replace(/\/+$/, ''),
+	//How hard it thinks before each step: low, medium or high. Unset is the model's own default, which is the slowest
+	//(about 40s a step on the free tier, 18 Nov 2026) and the most careful
+	thinking: /^(minimal|low|medium|high)$/i.test(env.INTERACTIVES_DESIGNER_THINKING || '') ? env.INTERACTIVES_DESIGNER_THINKING.toLowerCase() : '',
 })
 
 const WORDS = {
@@ -78,6 +81,7 @@ const client = (cfg, fetcher = (...a) => fetch(...a), pause = wait) => {
 					...(system ? {systemInstruction: {parts: [{text: system}]}} : {}),
 					contents,
 					...(tools?.length ? {tools: [{functionDeclarations: tools}]} : {}),
+					...(cfg.thinking ? {generationConfig: {thinkingConfig: {thinkingLevel: cfg.thinking}}} : {}),
 				},
 				out = await once(body, signal)
 			//Busy, or the per minute limit: one more go after a breather. A second refusal is the answer
