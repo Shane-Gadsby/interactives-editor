@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Embeds: choose what the page may use, and give it a border**: a web page embed has a tick box each for Autoplay, Full screen, Clipboard, Microphone, Camera, Screen share, Location, Motion sensors, Picture in picture and Protected video, and only what's ticked is let through. Existing embeds keep the three they always had. **Border** draws a line round an embed in your project's border token, so it follows the colourway.
 - **Toasts**: a short message in a corner of the page that goes by itself ("Plan saved", "Copied"). The new **Toast** button in the Web tools builds one, and a **Show toast** node shows it with whatever words you hand it, so one toast serves every message. It's read out to screen readers as it appears, never takes the focus, stacks with others, and one with a button in it stays until dismissed.
 - **Dialogs that no layer opens**: a modal, confirmation or prompt now opens when its showing variable is turned on, with nothing on the page pointing at it, and a button inside a tooltip can open a modal the ordinary way. No more hidden layers added only to carry the link.
 - **Dialogs open where you're looking**: on a tall page embedded in a course, a modal, confirmation or prompt opens in the middle of the part on screen instead of the middle of the page, which could be out of sight.

@@ -4211,6 +4211,11 @@ function sanitizeNode(raw, seen) {
   }
   if ("cornerRadii" in n && !(Array.isArray(n.cornerRadii) && n.cornerRadii.length === 4 && n.cornerRadii.every(isNum))) delete n.cornerRadii;
   for (const k of ["mask", "locked", "noAssist", "noPaste", "hugIgnore"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  if (n.type === "embed" && "allow" in n) {
+    const known = new Set(EMBED_ALLOW.map((x) => x.key));
+    if (!Array.isArray(n.allow)) delete n.allow;
+    else n.allow = [...new Set(n.allow.filter((x) => typeof x === "string" && known.has(x)))];
+  }
   if ("overlay" in n && n.overlay !== null) {
     const o = n.overlay;
     if (!isObj$1(o) || !isStr(o.overlayId)) delete n.overlay;
@@ -4482,6 +4487,18 @@ const FORMAT_NAME = "interactives";
 const FORMAT_VERSION = 1;
 const BLEND_MODES = ["normal", "dissolve", "darken", "multiply", "color-burn", "lighten", "screen", "color-dodge", "plus-lighter", "overlay", "soft-light", "hard-light", "difference", "exclusion", "hue", "saturation", "color", "luminosity"];
 const PAINT_BLEND_MODES = BLEND_MODES.filter((m) => m !== "dissolve");
+const EMBED_ALLOW = [
+  { key: "autoplay", label: "Autoplay", hint: "Video and sound in the embedded page can start by themselves, without a click", policy: ["autoplay"] },
+  { key: "fullscreen", label: "Full screen", hint: "The embedded page can fill the whole screen, when the viewer presses its full screen button", policy: ["fullscreen"] },
+  { key: "clipboard", label: "Clipboard", hint: "The embedded page can copy text to the clipboard, for a Copy button. It cannot read what is already there", policy: ["clipboard-write"] },
+  { key: "microphone", label: "Microphone", hint: "The embedded page can ask to listen through the microphone. The viewer is asked first, and it needs https", policy: ["microphone"] },
+  { key: "camera", label: "Camera", hint: "The embedded page can ask to see through the camera. The viewer is asked first, and it needs https", policy: ["camera"] },
+  { key: "screen", label: "Screen share", hint: "The embedded page can ask to record or share the screen. The viewer picks what to share each time, and it needs https", policy: ["display-capture"] },
+  { key: "location", label: "Location", hint: "The embedded page can ask where the viewer is. The viewer is asked first, and it needs https", policy: ["geolocation"] },
+  { key: "motion", label: "Motion sensors", hint: "The embedded page can read how the device is being tilted and moved. Phones and tablets, over https", policy: ["accelerometer", "gyroscope", "magnetometer"] },
+  { key: "pip", label: "Picture in picture", hint: "A video in the embedded page can pop out into a small window that stays on top", policy: ["picture-in-picture"] },
+  { key: "protected", label: "Protected video", hint: "The embedded page can play video that is copy protected, which some streaming sites need", policy: ["encrypted-media"] }
+];
 function isContainer(node) {
   return node.type === "group" || node.type === "frame" || node.type === "bone";
 }
@@ -24631,6 +24648,15 @@ Text that opens a URL. **Fit text to box** works here too. For making any other 
 
 ## Embed
 An iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
+
+**The page may use** (a web page embed only) is a list of tick boxes for what the embedded page is allowed: **Autoplay**, **Full screen**, **Clipboard**, **Microphone**, **Camera**, **Screen share**, **Location**, **Motion sensors**, **Picture in picture** and **Protected video**. Only what's ticked is let through; an unticked box is a no, even for a page from the same site. Hover a box for what it really does.
+
+- An embed starts with **Autoplay**, **Full screen** and **Clipboard**, which is what every embed had before this could be chosen, so nothing that worked has stopped.
+- Ticking **Microphone**, **Camera**, **Screen share** or **Location** doesn't switch it on. It lets the embedded page *ask*, and the viewer still sees their browser's own question the first time.
+- None of it works unless the embedded page is on \`https\`. And when your interactive is itself in a course page, that page has to let the interactive use the same thing, or the embed inside it gets nothing.
+- Your own HTML takes none of these ticks. Its frame is shut tight on purpose and keeps the fixed three.
+
+**Border** draws a line round the embed, inside its box and over the embedded page's edge, so the layer stays the size you gave it. It starts on your project's **border token**, so it matches the colourway and changes with it; pick another token from the **Tokens** tab of the colour, or a plain colour that stays put. **Border width** is how thick it is, and it follows the **Radius**.
 
 ## Video
 A video file or URL.

@@ -169,6 +169,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Build it tutorials and Concepts in the help': [['build-it', 'Just want to look?'], ['concepts', 'If something "does nothing"'], ['tutorial-mcq', 'Report result']],
   "Fonts load from StudyDesk's own server again": [['text', 'served from the same place as the editor']],
   "Saved values show in Preview's Debug panel straight away": [['interface', 'starting with any saved user data']],
+  'Embeds: choose what the page may use, and give it a border': [['web-elements', '**The page may use**'], ['web-elements', "doesn't switch it on"], ['web-elements', '**border token**']],
   Toasts: [['overlays', '## Toasts'], ['overlays', '**Show toast** has a **Message**'], ['overlays', 'always stays until dismissed'], ['scripts', 'ix.toast(name, message?)']],
   'Dialogs that no layer opens': [['overlays', '## Opening one without a layer'], ['overlays', 'A layer **inside an overlay** can point at another overlay']],
   "Dialogs open where you're looking": [['overlays', 'middle of what the viewer can see']],

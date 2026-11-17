@@ -1903,6 +1903,15 @@ Text that opens a URL. **Fit text to box** works here too. For making any other 
 ## Embed
 An iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
 
+**The page may use** (a web page embed only) is a list of tick boxes for what the embedded page is allowed: **Autoplay**, **Full screen**, **Clipboard**, **Microphone**, **Camera**, **Screen share**, **Location**, **Motion sensors**, **Picture in picture** and **Protected video**. Only what's ticked is let through; an unticked box is a no, even for a page from the same site. Hover a box for what it really does.
+
+- An embed starts with **Autoplay**, **Full screen** and **Clipboard**, which is what every embed had before this could be chosen, so nothing that worked has stopped.
+- Ticking **Microphone**, **Camera**, **Screen share** or **Location** doesn't switch it on. It lets the embedded page *ask*, and the viewer still sees their browser's own question the first time.
+- None of it works unless the embedded page is on \`https\`. And when your interactive is itself in a course page, that page has to let the interactive use the same thing, or the embed inside it gets nothing.
+- Your own HTML takes none of these ticks. Its frame is shut tight on purpose and keeps the fixed three.
+
+**Border** draws a line round the embed, inside its box and over the embedded page's edge, so the layer stays the size you gave it. It starts on your project's **border token**, so it matches the colourway and changes with it; pick another token from the **Tokens** tab of the colour, or a plain colour that stays put. **Border width** is how thick it is, and it follows the **Radius**.
+
 ## Video
 A video file or URL.
 

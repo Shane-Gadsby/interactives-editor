@@ -14461,3 +14461,14 @@ body.reorder-active .ix-tooltip {
   border-color: var(--primary-bg);
   box-shadow: inset 3px 0 0 var(--primary-bg);
 }
+
+/* An embed's allow list: the tick boxes two to a row, with their heading and notes across both */
+.embed-allows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 8px;
+}
+.embed-allows > .field-label,
+.embed-allows > .hint {
+  grid-column: 1 / -1;
+}
