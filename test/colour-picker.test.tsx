@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { ColorField } from '../src/components/ui';
+import { PickerButton } from '../src/components/ColourPicker';
 import { colourOf, hsvToRgb, readColour, rgbToHsv, swatchBackground } from '../src/lib/colour-pick';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -137,5 +138,33 @@ describe('in a colour field', () => {
       native.dispatchEvent(new Event('change', { bubbles: true }));
     });
     expect(value).toBe('rgba(0, 255, 0, 0.4)');
+  });
+});
+
+describe('a button that opens the picker (the text toolbar\'s A, a style\'s swatch)', () => {
+  it('opens it, sends what is picked, and keeps the focus where it was when pressed', async () => {
+    document.body.innerHTML = '<input id="typing" />';
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const picked = vi.fn();
+    const root = createRoot(host);
+    await act(async () => root.render(<PickerButton label="Text colour" value="#ff0000" onChange={picked} className="tt-swatch">A</PickerButton>));
+    const typing = document.getElementById('typing') as HTMLInputElement;
+    typing.focus();
+    const btn = host.querySelector('button')!;
+    //a press on it doesn't take the focus from the text being edited
+    const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    btn.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+    await act(async () => btn.click());
+    expect(document.querySelector('.colour-pick')).not.toBeNull();
+    expect(btn.getAttribute('aria-expanded')).toBe('true');
+    const alpha = document.querySelector<HTMLInputElement>('.colour-pick-strip.alpha')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(alpha, '50');
+      alpha.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(picked).toHaveBeenLastCalledWith('rgba(255, 0, 0, 0.5)');
+    await act(async () => root.unmount());
   });
 });

@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { formatColor, parseColor } from 'interactives-player';
 import { Icons } from './icons';
 import { colourOf, hsvToRgb, readColour, type Hsv } from '../lib/colour-pick';
@@ -178,5 +179,56 @@ export function ColourPicker({ value, onChange, onCommit, anchor, onClose }: { v
         </label>
       </div>
     </div>
+  );
+}
+
+/**
+ * A button that opens the picker: for the places a colour is chosen that aren't a full colour field (the text toolbar's A,
+ * a style's swatch). What the button looks like is the caller's; this only adds the opening and the picker itself.
+ */
+export function PickerButton({
+  value,
+  onChange,
+  onCommit,
+  className,
+  title,
+  label,
+  disabled,
+  style,
+  children,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onCommit?: () => void;
+  className?: string;
+  title?: string;
+  label: string;
+  disabled?: boolean;
+  style?: CSSProperties;
+  children?: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  return (
+    <>
+      <button
+        ref={btn}
+        type="button"
+        className={`${className ?? ''}${open ? ' open' : ''}`}
+        style={style}
+        title={title}
+        aria-label={label}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        disabled={disabled}
+        //(the text being edited keeps its selection: a press here mustn't take the focus from it)
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {children}
+      </button>
+      {open && createPortal(<ColourPicker value={value} onChange={onChange} onCommit={onCommit} anchor={btn} onClose={close} />, document.body)}
+    </>
   );
 }

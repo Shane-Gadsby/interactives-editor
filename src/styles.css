@@ -14611,3 +14611,24 @@ body.reorder-active .ix-tooltip {
   opacity: 0;
   cursor: pointer;
 }
+
+/* The text toolbar's A and a style's swatch are buttons that open the colour picker */
+button.tt-swatch {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+button.tt-swatch:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button.style-color {
+  cursor: pointer;
+}
+button.tt-swatch.open,
+button.style-color.open {
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+}

@@ -1,3 +1,4 @@
+import { PickerButton } from '../components/ColourPicker';
 import { SectionOrderScope } from '../lib/section-order';
 import { useCallback, useEffect, useState } from 'react';
 import { type ColorStyle, type Project, type SceneNode, type TextStyleDef } from 'interactives-player';
@@ -612,7 +613,14 @@ function StylesSection({ project }: { project: Project }) {
             <span className="lib-swatch" style={{ background: c.color }} />
           ) : (
             <>
-              <input type="color" className="style-color" value={/^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#000000'} onChange={(e) => store().update((d) => void editStyle(d as Project, c.id, { color: e.target.value }), { coalesce: `style-${c.id}` })} />
+              <PickerButton
+                className="style-color"
+                label={`Colour of ${c.name}`}
+                title="Change this style's colour. Every layer that follows it changes too"
+                style={{ background: c.color }}
+                value={c.color}
+                onChange={(v) => store().update((d) => void editStyle(d as Project, c.id, { color: v }), { coalesce: `style-${c.id}` })}
+              />
               <PaletteButton value={c.color} onPick={(v) => store().update((d) => void editStyle(d as Project, c.id, { color: v }))} />
             </>
           )}

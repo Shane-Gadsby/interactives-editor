@@ -2686,7 +2686,7 @@ export function RichTextEditor({ node: n, ab, zoom, panX, panY, bounds }: { node
         onBlur={(e) => {
           // Focus moving into the toolbar or the inspector (to change colour or size of the selection) keeps editing
           const to = e.relatedTarget as HTMLElement | null;
-          if (to?.closest?.('.inspector, .text-toolbar, .palette-pop')) return;
+          if (to?.closest?.('.inspector, .text-toolbar, .palette-pop, .colour-pick')) return;
           store().commit();
           store().set({ editingTextId: null, textSelection: null });
         }}

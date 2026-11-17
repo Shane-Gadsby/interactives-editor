@@ -1,3 +1,4 @@
+import { PickerButton } from '../components/ColourPicker';
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MutableRefObject, type ReactNode, type RefObject } from 'react';
 import { formatColor, parseColor, type RunStyle, type TextNode } from 'interactives-player';
 import { store, useEditor } from '../store/store';
@@ -230,7 +231,7 @@ export function TextToolbar({ node, editor, box, bounds, commands }: { node: Tex
         if (!to0 || !root.current?.contains(to0)) setInside(false);
         // Focus going anywhere but the text, this toolbar, its palette or the inspector means editing is over
         const to = e.relatedTarget as HTMLElement | null;
-        if (!to || to.closest?.('.text-toolbar, .palette-pop, .inspector') || to === editor.current) return;
+        if (!to || to.closest?.('.text-toolbar, .palette-pop, .colour-pick, .inspector') || to === editor.current) return;
         store().commit();
         store().set({ editingTextId: null, textSelection: null });
       }}
@@ -242,17 +243,17 @@ export function TextToolbar({ node, editor, box, bounds, commands }: { node: Tex
         {toggle('strike', 'Strikethrough', 'Strikethrough (Ctrl/Cmd+Shift+X)', <s>S</s>, st.strike)}
         <span className="tt-sep" aria-hidden="true" />
         <span className="tt-color" title={st.color === 'mixed' ? 'Text colour (the selection has several)' : 'Text colour'}>
-          <label className={`tt-swatch${st.color === 'mixed' ? ' mixed' : ''}`} aria-label={st.color === 'mixed' ? 'Text colour, mixed' : `Text colour ${st.color}`}>
+          <PickerButton
+            className={`tt-swatch${st.color === 'mixed' ? ' mixed' : ''}`}
+            label={st.color === 'mixed' ? 'Text colour, mixed' : `Text colour ${st.color}`}
+            disabled={disabled}
+            value={st.color === 'mixed' ? '#000000' : hexOf(st.color)}
+            onChange={(v) => patch({ color: v }, `tt-color-${id}`)}
+            onCommit={() => store().commit()}
+          >
             <span className="tt-a" aria-hidden="true">A</span>
             <span className="tt-bar" style={st.color === 'mixed' ? undefined : { background: st.color }} aria-hidden="true" />
-            <input
-              type="color"
-              disabled={disabled}
-              value={st.color === 'mixed' ? '#000000' : hexOf(st.color)}
-              onChange={(e) => patch({ color: e.target.value }, `tt-color-${id}`)}
-              onBlur={() => store().commit()}
-            />
-          </label>
+          </PickerButton>
           <PaletteButton value={st.color === 'mixed' ? '#000000' : st.color} onPick={(v) => (patch({ color: v }), store().commit())} />
         </span>
         <span className="tt-sep" aria-hidden="true" />
