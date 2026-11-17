@@ -1,4 +1,4 @@
-import{bX as a,bY as o,bZ as m,b_ as r,b$ as k,c0 as V,c1 as R,c2 as L,c3 as h,c4 as s,c5 as i,c6 as U,c7 as E,c8 as b,c9 as n,ca as S,cb as C,cc as f,cd as w,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-nxdbEuqc.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bX as a,bY as o,bZ as m,b_ as r,b$ as k,c0 as V,c1 as R,c2 as L,c3 as h,c4 as s,c5 as i,c6 as U,c7 as E,c8 as b,c9 as n,ca as S,cb as C,cc as f,cd as w,ce as A,cf as l,cg as d,ch as T,ci as P,cj as u,ck as M,cl as x,cm as Y,cn as O,co as K,cp as W,cq as I,cr as $,cs as Q,ct as X,bk as J,a8 as Z,bc as ee,ae as j,a$ as te}from"./index-xzI06GNT.js";const ae=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -4440,6 +4440,8 @@ The layout is remembered in this browser. Whatever opens a panel for you (choosi
 ![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)
 
 When the project has [responsive pages](responsive), a **Page width** slider appears under the top bar. Drag it to resize the page the project runs in; the breakpoints are marked on the track and the player switches page as you cross them.
+
+**View at embed size** shows it the way StudyDesk shows the embed code: no wider than 800 px, and exactly as tall as the project asks the page for, changing as it runs. A page with **Fit height to content** grows and shrinks here as it would in the course, and anything the embed would cut off or leave empty shows. Scroll the preview when it's taller than the window.
 
 ## See what ran
 Press **Beside editor** in the Preview's header and Preview moves up to the right, leaving the canvas and the Interactions graph underneath showing. Then you can see what your clicks set off:

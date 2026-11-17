@@ -1004,6 +1004,8 @@ export const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: bool
   { id: 'web', label: 'Web', tools: ['button', 'input', 'link', 'embed'], open: false },
   { id: 'rig', label: 'Rig', tools: ['bone'], open: false },
 ];
+// The widest a StudyDesk page lets an embed be, for the preview's View at embed size
+const EMBED_MAX_WIDTH = 800;
 const GROUPS_KEY = 'ix-tool-groups';
 
 function useToolGroups(): [Record<string, boolean>, (id: string) => void] {
@@ -1264,6 +1266,10 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const [pageWidth, setPageWidth] = useState<number | null>(null);
   const stageBox = useRef<HTMLDivElement>(null);
   const [room, setRoom] = useState(1000);
+  // View at embed size: the frame is as wide as a StudyDesk page gives an embed (800 px at most) and as tall as the project asks
+  // for, the way si-manager sizes the embed's iframe, so what's cut off or left empty there shows here too
+  const [embedSize, setEmbedSize] = useState(false);
+  const [askedHeight, setAskedHeight] = useState<number | null>(null);
   useEffect(() => {
     const el = stageBox.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
@@ -1324,6 +1330,11 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow) return;
+      // The height the player asks the page around it for (si-manager's setILARSize message), for View at embed size
+      if (e.data && e.data.width === null && typeof e.data.height === 'number' && typeof e.data.cacheID === 'string') {
+        if (Number.isFinite(e.data.height) && e.data.height > 0) setAskedHeight(Math.min(20000, Math.ceil(e.data.height)));
+        return;
+      }
       // How the previewed project ran (the player's diagnostics): the load time, and faults for triage
       if (e.data?.source === 'interactives-diag') {
         noteProjectDiagnostic(e.data.diag, 'preview');
@@ -1510,6 +1521,14 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             Restart
           </button>
           <button
+            className={`btn${embedSize ? ' active' : ''}`}
+            aria-pressed={embedSize}
+            onClick={() => setEmbedSize(!embedSize)}
+            title="See it the way StudyDesk shows the embed code: at most 800 px wide, and as tall as the project asks for as it runs (a page with Fit height to content grows and shrinks). Scroll the preview to see all of it"
+          >
+            View at embed size
+          </button>
+          <button
             className={`btn${peek ? ' active' : ''}`}
             aria-pressed={peek}
             onClick={() => setPeek(!peek)}
@@ -1587,9 +1606,9 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
               ))}
             </aside>
           )}
-          <div className="preview-stage" ref={stageBox}>
+          <div className={`preview-stage${embedSize ? ' embed-size' : ''}`} ref={stageBox}>
           {html && frameShown !== nonce && <BuildingSpinner project={project as Project} overlay />}
-          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={{ ...(pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : {}), opacity: frameShown === nonce ? 1 : 0 }} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (setFrameShown(nonce), hitAreas && showHitAreas(true), applyTheme(), mediaSim !== 'works' && simulateMedia(mediaSim))} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <BuildingSpinner project={project as Project} />}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={{ ...(embedSize ? { flex: 'none', width: Math.min(EMBED_MAX_WIDTH, room || EMBED_MAX_WIDTH, pageWidth ?? Infinity), height: askedHeight ?? undefined } : pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : {}), opacity: frameShown === nonce ? 1 : 0 }} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (setFrameShown(nonce), hitAreas && showHitAreas(true), applyTheme(), mediaSim !== 'works' && simulateMedia(mediaSim))} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <BuildingSpinner project={project as Project} />}
           </div>
         </div>
         {accessibility && screenReader && (

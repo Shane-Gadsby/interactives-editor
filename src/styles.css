@@ -8412,6 +8412,15 @@ code {
 .preview-stage .center-msg {
   align-self: center;
 }
+/* View at embed size: the frame keeps the height the project asks for, and the stage scrolls when that's taller than the room */
+.preview-stage.embed-size {
+  align-items: flex-start;
+  overflow-y: auto;
+}
+.preview-stage.embed-size iframe {
+  min-height: 0;
+  height: 100%;
+}
 .preview-stage iframe {
   background: #fff;
 }

@@ -23009,6 +23009,8 @@ The layout is remembered in this browser. Whatever opens a panel for you (choosi
 
 When the project has [responsive pages](responsive), a **Page width** slider appears under the top bar. Drag it to resize the page the project runs in; the breakpoints are marked on the track and the player switches page as you cross them.
 
+**View at embed size** shows it the way StudyDesk shows the embed code: no wider than 800 px, and exactly as tall as the project asks the page for, changing as it runs. A page with **Fit height to content** grows and shrinks here as it would in the course, and anything the embed would cut off or leave empty shows. Scroll the preview when it's taller than the window.
+
 ## See what ran
 Press **Beside editor** in the Preview's header and Preview moves up to the right, leaving the canvas and the Interactions graph underneath showing. Then you can see what your clicks set off:
 
