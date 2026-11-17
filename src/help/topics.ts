@@ -3003,6 +3003,8 @@ Two actions have more detail elsewhere. **Play sound** (volume, speed, loop, **S
 
 **Add one:** select the layer, open **States** in the Properties panel and press **Add a state**. Pick **When** and set only the properties that change.
 
+**Buttons already respond.** Every button has a hover and a pressed look without you adding anything: a faint tint over its own colour, darker on a light button and lighter on a dark one. A hover or pressed state of your own replaces the tint, and a disabled button doesn't respond.
+
 ## When a state is on
 - **Hovered**, **Pressed**, **Focused**: the layer's own pointer and keyboard. Hovering something *inside* it doesn't count. These need the piece to be running, so they show in **Preview** and in what you share, not on the canvas.
 - **Disabled**: the layer's own **Disabled** setting (buttons and inputs).
@@ -3052,11 +3054,11 @@ Each header is marked up as a button that says whether it is expanded, so a scre
   },
   {
     id: 'overlays',
-    title: 'Tooltips, modals and prompts',
+    title: 'Tooltips, modals, confirmations and prompts',
     group: 'Interactivity',
     summary: 'Overlays: pages that belong to no screen, shown beside or over whatever layer points at them.',
-    keywords: 'overlay overlays dialog dialogue modal popup pop up prompt confirm are you sure tooltip tip hover hint balloon callout scrim backdrop target trigger side gap close escape',
-    body: `A **tooltip**, a **modal** and a **prompt** are all the same idea: a page that isn't a screen of its own, shown beside or over whatever points at it. The page is called an **overlay**.
+    keywords: 'overlay overlays dialog dialogue modal popup pop up prompt ask input type answer confirm confirmation are you sure tooltip tip hover hint balloon callout scrim backdrop target trigger side gap close escape',
+    body: `A **tooltip**, a **modal**, a **confirmation** and a **prompt** are all the same idea: a page that isn't a screen of its own, shown beside or over whatever points at it. The page is called an **overlay**.
 
 **Add one:** **Add dialog** in the **Web** group of the tool bar (it starts folded: click **Web** to open it), or the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Pick the layer it belongs to first and it's pointed at that layer straight away; the new overlay page opens so you can write its words.
 
@@ -3067,16 +3069,21 @@ Each header is marked up as a button that says whether it is expanded, so a scre
 
 That split is what lets a tooltip belong to a small icon while a much bigger area around it opens the tooltip.
 
-## The three kinds
+## The four kinds
 - **Tooltip.** Sits beside its target while the trigger is hovered or focused. **Side** chooses above, below, left or right, and **Wherever it fits** (the default) tries each in turn and keeps it on the page. **Gap** is the space between.
   - It **fades** in and out. **Fade** is the **Project default** (the project's own transition time, **Page height time** in the project settings) or **Custom** with its own **Time**. A viewer whose device asks for less motion gets no fade.
   - It has a **Tail**: a small triangle on the side facing the target, pointing at the middle of it, in the tooltip's own colour. It follows whichever side the tooltip ended up on. Untick **Tail** to go without.
   - **Stays while you're on it** keeps it open when the pointer moves from the trigger onto the tooltip, with a moment's grace to cross the gap, so a link or a button inside it can be reached. Turn it off for a plain label that should go the moment you leave. <kbd>Esc</kbd> puts a tooltip away either way.
 - **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd> or a click outside closes it.
-- **Prompt.** A modal that asks something. Its buttons are a **list**: add one by adding a row, rename one by changing its label. Picking a button writes what it stands for into a variable and closes the prompt. A click outside doesn't dismiss a prompt.
+- **Confirmation.** Asks a question and takes the answer from its buttons. The buttons are a **list**: add one by adding a row, rename one by changing its label, and mark the answer you mean with \`"main": true\` so it stands out from the ways out. Picking a button writes what it stands for into **What they chose** and closes it. A click outside doesn't dismiss a confirmation.
+- **Prompt.** Asks for something typed. **OK** keeps what was typed in **What they answered** and closes; **Cancel** closes and leaves the last answer alone. Read that variable, or start a flow when it changes.
 
 ## One overlay, many layers
 An overlay page is a definition, so any number of layers can point at the same one, each with its own **Side** and **Gap**. Its own section lists everything pointing at it, and clicking a row jumps to that layer.
+
+Each layer can also hand the overlay **its own words** as it opens. A modal, a confirmation and a prompt say what they take (**What it takes** on the overlay's page: a **Heading**, a **Message**, and for the last two a **For**), and those show as fields in the layer's **Overlay** section. So one confirmation can ask "Delete the photo?" from one button and "Leave the group?" from another.
+
+**For** is how you tell the answers apart: give each layer a word (\`photo\`, \`group\`), and the flow that reads **What they chose** can check **For** to see which layer asked. Add your own variables to **What it takes** and they become fields the same way.
 
 Overlays never appear in **Next** and **Previous**, never count in \`pageCount\`, and never make a page with [Fit height to content](artboards) any taller: they open over the page.
 
@@ -4509,7 +4516,7 @@ Open the **Themes** tab (bottom panel). For a project without themes, **Add Ligh
 The starter tokens are:
 - **color/background**, **color/surface** and **color/surface-muted** are the page, a card and a hover or quiet grey. **color/text** and **color/muted** are the copy on them.
 - **color/button** and **color/on-button** are the gold button and its black label. **color/primary** and **color/on-primary** are the accent for selections, which in the toolbox is the same gold. **color/link** is the toolbox's hyperlink blue, used by new Link layers.
-- **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus ring. The ring is two tones: this colour, with a thin black or white halo either side of it (whichever is further from it, worked out for you), so it stays visible on a white page, a gradient and a dark panel alike. You only choose the one colour.
+- **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus outline on dark items. The outline is a 1 px line tight round the focused item: near black (the palette's grey 7) on a light item, this colour on a dark one.
 - **color/success**, **color/error** and **color/warning** each come with a **-surface** tint, for the right, wrong and missed answers.
 
 ### Toolbox colours follow the shared palette
@@ -6008,7 +6015,7 @@ What you may notice:
 - A button's edge is an outline in its label colour (gold buttons in Purple have a dark one).
 - Selected outlines, bars and chart marks use the **primary** colour (purple in Purple). The button colour is kept for fills with a label on them.
 
-The keyboard focus ring is two tones, so it holds 3:1 everywhere, and there is nothing to choose. It is the **color/focus** colour (3 px) with a 2 px halo of black or white either side of it, whichever is further from that colour (white round Purple's and Blue's dark ring, black round a gold one). Whatever is behind a control, one of the two tones stands clear of it: the colour itself on the white pages, the halo on the dark ends of the Blue, Green and Purple gradients and on deep panels.
+The keyboard focus outline is a 1 px line tight round the focused item, the way the toolbox draws its own: near black (grey 7) round a light item, the **color/focus** colour round a dark one. Round a dark item on a pale page the gold line is faint against the page itself (under 3:1), and the item's own dark edge is what marks it.
 
 ## What is locked, and why
 Branded projects are held to the brand so every activity looks like it came from the same place, whoever writes it.

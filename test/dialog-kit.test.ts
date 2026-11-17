@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { Player, createNode, createProject, type Artboard, type FrameNode, type Project } from 'interactives-player';
 import { overlayId, overlayUses } from '../../interactives-player/src/overlays';
+import { sanitizeProject } from '../../interactives-player/src/sanitize';
 import { addDialog, linkOverlay, overlayTargets } from '../src/lib/dialog-kit';
 
 const withTarget = (): { p: Project; targetId: string } => {
@@ -60,9 +61,9 @@ describe('Add dialog makes an overlay page', () => {
     expect(action.params.value).toBe('false');
   });
 
-  it('a prompt keeps its buttons as a list, so adding one is adding a row', () => {
+  it('a confirmation keeps its buttons as a list, so adding one is adding a row', () => {
     const { p } = withTarget();
-    const { overlayId: id } = addDialog(p, 'prompt');
+    const { overlayId: id } = addDialog(p, 'confirm');
     const row = (pageOf(p, id).children[0] as FrameNode).children[2] as FrameNode;
     const list = p.variables.find((v) => v.type === 'list')!;
     expect(row.repeat?.items).toBe(list.name);
@@ -135,9 +136,9 @@ describe('an overlay is drawn as its card', () => {
     return player;
   };
 
-  it("a prompt's buttons are repeated from the list, labelled, and the main one looks it", async () => {
+  it("a confirmation's buttons are repeated from the list, labelled, and the main one looks it", async () => {
     const { p, targetId } = withTarget();
-    const made = addDialog(p, 'prompt', { targetId, artboardId: p.artboards[0].id });
+    const made = addDialog(p, 'confirm', { targetId, artboardId: p.artboards[0].id });
     const page = pageOf(p, made.overlayId);
     const player = await run(p);
     player.setVariable(p.variables.find((v) => v.id === page.overlay!.openVariable)!.name, true);
@@ -213,9 +214,9 @@ describe("an overlay's own interactions run while it is shown", () => {
     player.destroy();
   });
 
-  it('a prompt records which button was picked, then closes', async () => {
+  it('a confirmation records which button was picked, then closes', async () => {
     const { p, targetId } = withTarget();
-    const made = addDialog(p, 'prompt', { targetId, artboardId: p.artboards[0].id });
+    const made = addDialog(p, 'confirm', { targetId, artboardId: p.artboards[0].id });
     const page = pageOf(p, made.overlayId);
     const open = p.variables.find((v) => v.id === page.overlay!.openVariable)!;
     const choice = p.variables.find((v) => /Choice$/.test(v.name))!;
@@ -242,6 +243,116 @@ describe("an overlay's own interactions run while it is shown", () => {
     const shown = [...document.querySelectorAll<HTMLElement>('[data-ix-id^="ixov~"]')].filter((e) => !e.dataset.ixId!.endsWith('~tail') && e.style.display !== 'none');
     expect(shown).toHaveLength(1);
     player.destroy();
+  });
+});
+
+describe('the prompt that takes typing', () => {
+  const start = async (p: Project) => {
+    document.body.innerHTML = '<div id="stage" style="width:800px;height:600px"></div>';
+    const player = new Player(document.getElementById('stage')!, p, { loadData: false });
+    await new Promise((r) => setTimeout(r, 0));
+    return player;
+  };
+  const press = (id: string) => document.querySelector<HTMLElement>(`[data-ix-id="${id}"] button`)!.click();
+  const named = (p: Project, end: string) => p.variables.find((v) => v.name.endsWith(end))!;
+
+  it('is kind input in the file, with a box bound to a variable and Cancel and OK', () => {
+    const { p } = withTarget();
+    const page = pageOf(p, addDialog(p, 'input').overlayId);
+    expect(page.overlay!.kind).toBe('input');
+    const card = page.children[0] as FrameNode;
+    expect(card.children.map((c) => c.name)).toEqual(['Title', 'Message', 'Answer box', 'Buttons']);
+    const box = card.children[2];
+    expect(box.bindings?.value).toBe(named(p, 'Value').name);
+    expect(box.bindingModes?.value).toBe('both');
+    expect((card.children[3] as FrameNode).children.map((c) => c.name)).toEqual(['Cancel', 'OK']);
+  });
+
+  it('OK keeps what was typed as the answer, closes, and clears the box', async () => {
+    const { p, targetId } = withTarget();
+    const page = pageOf(p, addDialog(p, 'input', { targetId, artboardId: p.artboards[0].id }).overlayId);
+    const card = page.children[0] as FrameNode;
+    const [cancel, ok] = (card.children[3] as FrameNode).children;
+    const player = await start(p);
+    press(targetId);
+    player.step(16);
+    expect(player.getVariable(named(p, 'Open').name)).toBe(true);
+    //typed for real, in the box on screen: the box is on the overlay's page, which is what once left it unheard
+    const typed = document.querySelector<HTMLInputElement>(`[data-ix-id="${card.children[2].id}"] input`)!;
+    typed.value = 'Field trip';
+    typed.dispatchEvent(new Event('input', { bubbles: true }));
+    player.step(16);
+    expect(player.getVariable(named(p, 'Value').name)).toBe('Field trip');
+    press(ok.id);
+    player.step(16);
+    expect(player.getVariable(named(p, 'Answer').name)).toBe('Field trip');
+    expect(player.getVariable(named(p, 'Open').name)).toBe(false);
+    expect(player.getVariable(named(p, 'Value').name)).toBe('');
+    //and the box itself is empty the next time it opens
+    press(targetId);
+    player.step(16);
+    expect(document.querySelector<HTMLInputElement>(`[data-ix-id="${card.children[2].id}"] input`)!.value).toBe('');
+    player.setVariable(named(p, 'Open').name, false);
+    player.step(16);
+    //Cancel closes without touching the last answer
+    press(targetId);
+    player.step(16);
+    player.setVariable(named(p, 'Value').name, 'Something else');
+    press(cancel.id);
+    player.step(16);
+    expect(player.getVariable(named(p, 'Answer').name)).toBe('Field trip');
+    expect(player.getVariable(named(p, 'Open').name)).toBe(false);
+    player.destroy();
+  });
+});
+
+describe('one overlay, many layers', () => {
+  it('each of the three that cover the page says what it takes, so a layer gets fields for it', () => {
+    const { p } = withTarget();
+    const label = (kind: 'modal' | 'confirm' | 'input') => pageOf(p, addDialog(p, kind).overlayId).props!.map((x) => x.label);
+    expect(label('modal')).toEqual(['Heading', 'Message']);
+    expect(label('confirm')).toEqual(['Heading', 'Message', 'For']);
+    expect(label('input')).toEqual(['Heading', 'Message', 'For']);
+  });
+
+  it('two layers open the same confirmation, each with its own words and its own For', async () => {
+    const { p, targetId } = withTarget();
+    const made = addDialog(p, 'confirm', { targetId, artboardId: p.artboards[0].id });
+    const v = (end: string) => p.variables.find((x) => x.name.endsWith(end))!.name;
+    const first = p.artboards[0].children.find((c) => c.id === targetId)!;
+    first.overlay!.inputs = { [v('Title')]: 'Delete the photo?', [v('For')]: 'photo' };
+    p.artboards[0].children.push(
+      createNode('button', { id: 'btn2', x: 40, y: 40, width: 120, height: 40, label: 'Leave', overlay: { overlayId: made.overlayId, inputs: { [v('Title')]: 'Leave the group?', [v('For')]: 'group' } } }),
+    );
+    document.body.innerHTML = '<div id="stage" style="width:800px;height:600px"></div>';
+    const player = new Player(document.getElementById('stage')!, p, { loadData: false });
+    await new Promise((r) => setTimeout(r, 0));
+    const heading = () => document.querySelector(`[data-ix-id^="ixov~"]`)!.textContent;
+
+    document.querySelector<HTMLElement>(`[data-ix-id="${targetId}"] button`)!.click();
+    player.step(16);
+    expect(heading()).toContain('Delete the photo?');
+    expect(player.getVariable(v('For'))).toBe('photo');
+    player.setVariable(v('Open'), false);
+    player.step(16);
+
+    document.querySelector<HTMLElement>('[data-ix-id="btn2"] button')!.click();
+    player.step(16);
+    expect(heading()).toContain('Leave the group?');
+    expect(player.getVariable(v('For'))).toBe('group');
+    player.destroy();
+  });
+
+  it('a file saved when a confirmation was still called a prompt opens as a confirmation', () => {
+    const { p } = withTarget();
+    const id = addDialog(p, 'confirm').overlayId;
+    const raw = JSON.parse(JSON.stringify(p)) as Project;
+    (raw.artboards.find((a) => a.id === id)!.overlay as unknown as { kind: string }).kind = 'prompt';
+    const clean = sanitizeProject(raw);
+    expect(clean.artboards.find((a) => a.id === id)!.overlay!.kind).toBe('confirm');
+    //and a kind nobody knows is no overlay at all, rather than a broken one
+    (raw.artboards.find((a) => a.id === id)!.overlay as unknown as { kind: string }).kind = 'banner';
+    expect(sanitizeProject(raw).artboards.find((a) => a.id === id)!.overlay).toBeUndefined();
   });
 });
 

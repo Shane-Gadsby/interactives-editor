@@ -197,9 +197,9 @@ export function buildCommands(): Command[] {
   for (const k of DIALOG_KINDS) {
     add({
       id: `dialog:${k.value}`,
-      title: `Add ${k.value === 'tooltip' ? 'a tooltip' : k.value === 'prompt' ? 'a prompt' : 'a modal'}`,
+      title: `Add a ${k.label.toLowerCase()}`,
       group: 'Add',
-      words: `dialog modal popup overlay prompt confirm tooltip hint ${k.hint}`,
+      words: `dialog modal popup overlay prompt confirm confirmation ask input tooltip hint ${k.hint}`,
       disabled: noPage,
       run: () => {
         const target = s.get().selection[0] ?? null;

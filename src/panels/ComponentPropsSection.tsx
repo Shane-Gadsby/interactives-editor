@@ -17,7 +17,8 @@ export function ComponentPropsSection({ ab, project }: { ab: Artboard; project: 
   const spare = project.variables.filter((v) => !used.has(v.id) && !v.live);
   //A page nobody uses as a component, with nothing declared, has nothing to say here yet
   const usedAsComponent = project.artboards.some((a) => a.id !== ab.id && hasInstanceOf(a, ab.id));
-  if (ab.library || (!props.length && !usedAsComponent)) return null;
+  //An overlay takes things too: what each layer hands it as it opens
+  if (ab.library || (!props.length && !usedAsComponent && !ab.overlay)) return null;
 
   const setProps = (f: (list: ComponentProp[]) => void, coalesce?: string) =>
     store().update(
@@ -34,7 +35,7 @@ export function ComponentPropsSection({ ab, project }: { ab: Artboard; project: 
   return (
     <Section id="component-props" help="instances#what-the-component-takes" title="What it takes" defaultOpen={props.length > 0}>
       <SectionBlurb
-        text="The variables an instance of this page may set. Each becomes a field there, instead of JSON."
+        text={ab.overlay ? 'The variables a layer may set as it opens this. Each becomes a field on that layer.' : 'The variables an instance of this page may set. Each becomes a field there, instead of JSON.'}
         name="What it takes"
         help={['instances']}
       />

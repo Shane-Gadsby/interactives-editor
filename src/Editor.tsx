@@ -1011,7 +1011,7 @@ function AddQuestion({ reorderKey }: { reorderKey?: string }) {
   );
 }
 
-/** The Add dialog button: a menu of ready-made modals, prompts and tooltips; picking one builds it on the open artboard and selects it. */
+/** The Add dialog button: a menu of ready-made modals, confirmations, prompts and tooltips; picking one builds it on the open artboard and selects it. */
 function AddDialog({ reorderKey }: { reorderKey?: string }) {
   const [at, setAt] = useState<{ left: number; top: number } | null>(null);
   const add = (kind: DialogKind) => {
@@ -1035,7 +1035,7 @@ function AddDialog({ reorderKey }: { reorderKey?: string }) {
       <IconButton
         reorderKey={reorderKey}
         icon={<Icons.dialog />}
-        title="Add a modal, a prompt or a tooltip, built and wired up"
+        title="Add a tooltip, a modal, a confirmation or a prompt, built and wired up"
         active={!!at}
         onClick={(e) => {
           const r = (e.currentTarget as HTMLElement).getBoundingClientRect();

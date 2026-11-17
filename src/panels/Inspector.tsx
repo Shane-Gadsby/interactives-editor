@@ -119,6 +119,7 @@ import { SHADER_PRESETS, SHADER_PRESETS_BY_ID } from 'interactives-player';
 import { StatesSection } from './StatesSection';
 import { OverlayPageSection, OverlaySection } from './OverlaySection';
 import { DisclosureSection } from './DisclosureSection';
+import { PropFields } from './PropFields';
 import { PageLinkSection } from './PageLinkSection';
 import { PageNavSection } from './PageNavSection';
 import { StepsSection } from './StepsSection';
@@ -2483,62 +2484,6 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
 }
 
 /**
- * One field per setting the source page says it takes (`Artboard.props`), reading and writing `node.inputs` by variable name.
- * The variable's own type picks the field, and its `options` make it a dropdown.
- */
-function ComponentPropFields({ node, target, project, set }: { node: InstanceNode; target: Artboard | undefined; project: Project; set: (patch: Partial<InstanceNode>) => void }) {
-  const props = target?.props ?? [];
-  if (!props.length) return null;
-  const put = (name: string, value: number | string | boolean | undefined) => {
-    const next = { ...(node.inputs ?? {}) };
-    if (value === undefined || value === '') delete next[name];
-    else next[name] = value;
-    set({ inputs: Object.keys(next).length ? next : undefined });
-  };
-  return (
-    <>
-      {props.map((p) => {
-        const v = project.variables.find((x) => x.id === p.variable);
-        if (!v) return null;
-        const label = p.label || v.label || v.name;
-        const cur = node.inputs?.[v.name];
-        const title = p.help || `Sets ${v.name} inside the component. Empty leaves the page's own starting value`;
-        if (v.options?.length || v.type === 'enum') {
-          return (
-            <SelectField
-              key={p.variable}
-              label={label}
-              title={title}
-              value={cur === undefined ? '' : String(cur)}
-              options={[{ value: '', label: "The page's own value" }, ...(v.options ?? []).map((o) => ({ value: o, label: o }))]}
-              onChange={(val) => put(v.name, val || undefined)}
-            />
-          );
-        }
-        if (v.type === 'boolean') {
-          return <CheckField key={p.variable} label={label} title={title} value={cur === undefined ? Boolean(v.initial) : Boolean(cur)} onChange={(val) => put(v.name, val)} />;
-        }
-        if (v.type === 'number') {
-          return (
-            <NumberField
-              key={p.variable}
-              label={label}
-              title={title}
-              value={cur === undefined ? Number(v.initial) || 0 : Number(cur)}
-              onChange={(val) => put(v.name, val)}
-            />
-          );
-        }
-        if (v.type === 'color') {
-          return <ColorField key={p.variable} label={label} title={title} tokens value={cur === undefined ? String(v.initial ?? '') : String(cur)} onChange={(val) => put(v.name, val)} />;
-        }
-        return <TextField key={p.variable} label={label} title={title} value={cur === undefined ? '' : String(cur)} placeholder={String(v.initial ?? '')} onChange={(val) => put(v.name, val || undefined)} />;
-      })}
-    </>
-  );
-}
-
-/**
  * Named starting points. A page can already be the start; these are the other places worth jumping straight to while you build
  * ("From the quiz", "Straight to the summary"), and Preview's From list offers them. They change nothing a learner sees.
  */
@@ -2657,7 +2602,7 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
       )}
       {/* The page says what it takes (its What it takes list), so the instance shows real fields. The JSON box is still here
           for anything not on that list, and for a page that declares nothing */}
-      <ComponentPropFields node={node} target={target} project={project} set={set} />
+      <PropFields props={target?.props ?? []} project={project} values={node.inputs} onChange={(inputs) => set({ inputs })} />
       <TextField
         label={target?.props?.length ? 'Other inputs' : 'Inputs'}
         title={target?.props?.length ? 'Anything else to set, as JSON. The fields above are the settings this page says it takes' : undefined}

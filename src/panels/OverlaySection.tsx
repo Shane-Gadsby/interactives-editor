@@ -4,6 +4,7 @@ import { CheckField, IconButton, NumberField, Row, Section, SelectField } from '
 import { Icons } from '../components/icons';
 import { SectionBlurb } from '../components/SectionBlurb';
 import { overlayTargets } from '../lib/dialog-kit';
+import { PropFields } from './PropFields';
 
 const SIDES = [
   { value: 'auto', label: 'Wherever it fits' },
@@ -14,7 +15,7 @@ const SIDES = [
 ] as const;
 
 /**
- * The layer's **Overlay**: which tooltip, modal or prompt it shows, what makes it show, and where it sits. The layer is the
+ * The layer's **Overlay**: which tooltip, modal, confirmation or prompt it shows, what makes it show, and where it sits. The layer is the
  * target (the thing the overlay belongs to); the trigger is this layer too unless another is picked.
  */
 export function OverlaySection({ node, ab, project }: { node: SceneNode; ab: Artboard; project: Project }) {
@@ -38,12 +39,12 @@ export function OverlaySection({ node, ab, project }: { node: SceneNode; ab: Art
   const pickable = flatLayers(ab.children).filter((n) => n.id !== node.id);
   return (
     <Section id="overlay" help="overlays" title="Overlay" defaultOpen={!!link}>
-      <SectionBlurb text="A tooltip, modal or prompt shown for this layer. It lives on its own page." name="Overlay" help={['overlays']} />
+      <SectionBlurb text="A tooltip, modal, confirmation or prompt shown for this layer. It lives on its own page." name="Overlay" help={['overlays']} />
       <SelectField
         label="Shows"
         title="The overlay page this layer shows. Add one with Add dialog in the Web tools"
         value={link?.overlayId ?? ''}
-        options={[{ value: '', label: overlays.length ? 'None' : 'No overlays yet' }, ...overlays.map((a) => ({ value: a.id, label: `${a.name} (${a.overlay!.kind})` }))]}
+        options={[{ value: '', label: overlays.length ? 'None' : 'No overlays yet' }, ...overlays.map((a) => ({ value: a.id, label: a.name }))]}
         onChange={(v) => set(v ? { overlayId: v } : null)}
       />
       {link && page && (
@@ -83,6 +84,20 @@ export function OverlaySection({ node, ab, project }: { node: SceneNode; ab: Art
               />
             </Row>
           )}
+          {/* What this layer hands the overlay as it opens: the page says what it takes, so these are real fields */}
+          <PropFields
+            props={page.props ?? []}
+            project={project}
+            values={link.inputs}
+            onChange={(inputs) =>
+              store().update((d) => {
+                const n = findNode(d.artboards.find((a) => a.id === ab.id)?.children ?? [], node.id);
+                if (!n?.overlay) return;
+                if (inputs) n.overlay.inputs = inputs;
+                else delete n.overlay.inputs;
+              })
+            }
+          />
           <Row k="Edit overlay" words={['open overlay', 'edit tooltip', 'edit modal']}>
             <button className="btn" onClick={() => store().set({ activeArtboardId: page.id, artboardSelected: true, selection: [] })}>
               Edit {page.name}
@@ -116,12 +131,13 @@ export function OverlayPageSection({ ab, project }: { ab: Artboard; project: Pro
       <SectionBlurb text="This page is shown beside, or over, whatever points at it. It is never opened on its own." name="Overlay" help={['overlays']} />
       <SelectField
         label="Kind"
-        title="A tooltip sits beside its layer on hover or focus. A modal or prompt covers the page, opened by a click"
+        title="A tooltip sits beside its layer on hover or focus. The others cover the page, opened by a click: a modal says something, a confirmation asks with buttons, a prompt asks for something typed"
         value={o.kind}
         options={[
           { value: 'tooltip', label: 'Tooltip' },
           { value: 'modal', label: 'Modal' },
-          { value: 'prompt', label: 'Prompt' },
+          { value: 'confirm', label: 'Confirmation' },
+          { value: 'input', label: 'Prompt' },
         ]}
         onChange={(v) => setO({ kind: v })}
       />

@@ -6,13 +6,23 @@ import { createArtboard, createNode, defaultAutoLayout, uid, type Artboard, type
 import { defaultParams } from 'interactives-player';
 import { lookFor } from './themes';
 
-export type DialogKind = 'modal' | 'prompt' | 'tooltip';
+//'input' is the prompt that takes typing: it has its own name in the file because 'prompt' used to mean the confirmation
+export type DialogKind = 'modal' | 'confirm' | 'input' | 'tooltip';
 
 export const DIALOG_KINDS: { value: DialogKind; label: string; hint: string }[] = [
   { value: 'tooltip', label: 'Tooltip', hint: 'A small box beside the layer you point it at, while that layer is hovered or focused' },
   { value: 'modal', label: 'Modal', hint: 'A box over the whole page, opened by clicking the layer you point it at' },
-  { value: 'prompt', label: 'Prompt', hint: 'A modal that asks something, with buttons you add to and rename as a list' },
+  { value: 'confirm', label: 'Confirmation', hint: 'Asks a question and takes an answer from its buttons, which you add to and rename as a list' },
+  { value: 'input', label: 'Prompt', hint: 'Asks for something typed, and keeps the answer where your interactions can read it' },
 ];
+
+/** What each kind is called where a page or a variable is named after it. */
+const KIND_WORDS: Record<DialogKind, { page: string; stem: string; showing: string }> = {
+  tooltip: { page: 'Tooltip', stem: 'tooltip', showing: 'Tooltip showing' },
+  modal: { page: 'Dialog', stem: 'dialog', showing: 'Dialog showing' },
+  confirm: { page: 'Confirmation', stem: 'confirm', showing: 'Confirmation showing' },
+  input: { page: 'Prompt', stem: 'prompt', showing: 'Prompt showing' },
+};
 
 const solid = (color: string) => ({ type: 'solid' as const, color });
 
@@ -62,7 +72,7 @@ export function addDialog(d: Project, kind: DialogKind, opts: { targetId?: strin
   //The page is only where the card is designed: room round it so it reads on the canvas. The card is what is shown
   const size = kind === 'tooltip' ? { width: 320, height: 140 } : { width: 520, height: 320 };
   const page = createArtboard({
-    name: freeName(names, kind === 'tooltip' ? 'Tooltip' : kind === 'prompt' ? 'Prompt' : 'Dialog'),
+    name: freeName(names, KIND_WORDS[kind].page),
     ...size,
     canvasX: right + 120,
     canvasY: 0,
@@ -151,14 +161,35 @@ function fillTooltip(page: Artboard, l: Record<string, string>): void {
 }
 
 /**
- * The modal's and the prompt's card: a heading, a message and a row of buttons, stacked by auto layout so a longer message
- * pushes the buttons down rather than running into them. Rounded, bordered and lifted off the page with a shadow.
+ * The card of the three that cover the page: a heading, a message and a row of buttons, stacked by auto layout so a longer
+ * message pushes the buttons down rather than running into them. Rounded, bordered and lifted off the page with a shadow.
+ *
+ * The heading and the message come from variables, and the page says it takes them (`props`), so one of these can serve
+ * any number of layers, each handing over its own words as it opens. **For** is a word each layer can set to say what the
+ * answer is about, so one flow can tell them apart.
  */
-function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'modal' | 'prompt'): void {
-  const stem = freeStem(d, kind === 'prompt' ? 'prompt' : 'dialog');
+function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'modal' | 'confirm' | 'input'): void {
+  const words = KIND_WORDS[kind];
+  const stem = freeStem(d, words.stem);
   const openVar = `${stem}Open`;
-  const openId = addVariable(d, { name: openVar, label: kind === 'prompt' ? 'Prompt showing' : 'Dialog showing', type: 'boolean', initial: false });
+  const openId = addVariable(d, { name: openVar, label: words.showing, type: 'boolean', initial: false });
   page.overlay = { ...page.overlay!, openVariable: openId, scrim: solid('rgba(0,0,0,0.5)') };
+
+  const starts = {
+    modal: { title: 'A heading', message: 'Write what this is about here.' },
+    confirm: { title: 'Are you sure?', message: 'This cannot be undone.' },
+    input: { title: 'What should it be called?', message: 'You can change it later.' },
+  }[kind];
+  const titleId = addVariable(d, { name: `${stem}Title`, label: 'Heading', type: 'string', initial: starts.title });
+  const messageId = addVariable(d, { name: `${stem}Message`, label: 'Message', type: 'string', initial: starts.message });
+  page.props = [
+    { variable: titleId, label: 'Heading' },
+    { variable: messageId, label: 'Message' },
+  ];
+  if (kind !== 'modal') {
+    const forId = addVariable(d, { name: `${stem}For`, label: 'What it is for', type: 'string', initial: '' });
+    page.props.push({ variable: forId, label: 'For', help: 'A word for what this answer is about, so one flow can tell which layer asked' });
+  }
 
   const cardW = 440;
   const inner = cardW - 48;
@@ -166,7 +197,7 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     name: 'Title',
     width: inner,
     height: 28,
-    text: kind === 'prompt' ? 'Are you sure?' : 'A heading',
+    text: `{${stem}Title}`,
     fontSize: 20,
     fontWeight: 700,
     color: l.text,
@@ -178,7 +209,7 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     name: 'Message',
     width: inner,
     height: 22,
-    text: kind === 'prompt' ? 'This cannot be undone.' : 'Write what this is about here.',
+    text: `{${stem}Message}`,
     fontSize: 15,
     lineHeight: 1.45,
     color: l.muted,
@@ -194,7 +225,7 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     layout: { ...defaultAutoLayout('row'), gap: 8, padding: { top: 8, right: 0, bottom: 0, left: 0 }, justify: 'end', align: 'center', hugHeight: true },
   }) as FrameNode;
   const card = createNode('frame', {
-    name: kind === 'prompt' ? 'Prompt' : 'Dialog',
+    name: words.page,
     x: CARD_AT,
     y: CARD_AT,
     width: cardW,
@@ -209,24 +240,60 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
   }) as FrameNode;
   page.children = [card];
 
+  const plain = (name: string, label: string) =>
+    createNode('button', { name, label, width: 96, height: 40, fill: solid(l.surface), color: l.text, cornerRadius: 8, stroke: { paint: solid(l.border), width: 1, align: 'inside' } });
+  const main = (name: string, label: string) => createNode('button', { name, label, width: 96, height: 40, fill: solid(l.button), color: l.onButton, cornerRadius: 8 });
+
   if (kind === 'modal') {
-    const close = createNode('button', { name: 'Close', label: 'Close', width: 96, height: 40, fill: solid(l.button), color: l.onButton, cornerRadius: 8 });
+    const close = main('Close', 'Close');
     row.children.push(close);
     wire(page, { kind: 'event.pointer', params: { target: close.id, type: 'click' } }, [setVar(openId, 'false')]);
     return;
   }
 
-  //The prompt's buttons are a repeated list, so adding one is adding a row rather than copying a layer and rewiring it.
-  //A row marked main is the answer you mean, and looks it; the others are ways out
+  if (kind === 'input') {
+    //What is being typed, and what was last answered. The answer only changes on OK, so a flow can wait for it
+    const valueVar = `${stem}Value`;
+    const answerVar = `${stem}Answer`;
+    const valueId = addVariable(d, { name: valueVar, label: 'What is being typed', type: 'string', initial: '' });
+    const answerId = addVariable(d, { name: answerVar, label: 'What they answered', type: 'string', initial: '' });
+    const box = createNode('input', {
+      name: 'Answer box',
+      width: inner,
+      height: 44,
+      inputType: 'text',
+      placeholder: 'Type here',
+      ariaLabel: 'Your answer',
+      //both ways: typing writes the variable, and clearing the variable empties the box
+      bindings: { value: valueVar },
+      bindingModes: { value: 'both' },
+      cornerRadius: 8,
+      fontSize: 16,
+      fill: solid(l.background),
+      color: l.text,
+      stroke: { paint: solid(l.border), width: 1, align: 'inside' },
+    });
+    card.children = [title, body, box, row];
+    const cancel = plain('Cancel', 'Cancel');
+    const ok = main('OK', 'OK');
+    row.children.push(cancel, ok);
+    //OK keeps what was typed as the answer, closes, and clears the box for next time. Cancel just closes and clears
+    wire(page, { kind: 'event.pointer', params: { target: ok.id, type: 'click' } }, [setVar(answerId, valueVar), setVar(openId, 'false'), setVar(valueId, '""')]);
+    wire(page, { kind: 'event.pointer', params: { target: cancel.id, type: 'click' } }, [setVar(openId, 'false'), setVar(valueId, '""')]);
+    return;
+  }
+
+  //The confirmation's buttons are a repeated list, so adding one is adding a row rather than copying a layer and rewiring
+  //it. A row marked main is the answer you mean, and looks it; the others are ways out
   const buttonsVar = `${stem}Buttons`;
   const pickVar = `${stem}Pick`;
   const choiceVar = `${stem}Choice`;
-  addVariable(d, { name: buttonsVar, label: 'Prompt buttons', type: 'list', initial: JSON.stringify([{ label: 'Cancel', value: 'cancel' }, { label: 'Yes, do it', value: 'yes', main: true }]) });
+  addVariable(d, { name: buttonsVar, label: 'Confirmation buttons', type: 'list', initial: JSON.stringify([{ label: 'Cancel', value: 'cancel' }, { label: 'Yes, do it', value: 'yes', main: true }]) });
   const pickId = addVariable(d, { name: pickVar, label: 'Button picked (position)', type: 'number', initial: -1 });
   const choiceId = addVariable(d, { name: choiceVar, label: 'What they chose', type: 'string', initial: '' });
 
   const button = createNode('button', {
-    name: 'Prompt button',
+    name: 'Answer button',
     label: 'Button',
     width: 120,
     height: 40,
@@ -243,7 +310,7 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
   row.children.push(button);
   row.repeat = { items: buttonsVar, layout: 'horizontal', gap: 8, columns: 1, select: { mode: 'one', variable: pickId } };
 
-  //Picking a button writes what it stands for, closes the prompt, then puts the pick back to none so it opens clean again.
+  //Picking a button writes what it stands for, closes it, then puts the pick back to none so it opens clean again.
   //Every step guards on the pick, so the node firing again for the reset changes nothing
   wire(page, { kind: 'event.variable', params: { variable: pickId } }, [
     setVar(choiceId, `${pickVar} >= 0 ? (${buttonsVar}[${pickVar}]?.value ?? "") : ${choiceVar}`),
