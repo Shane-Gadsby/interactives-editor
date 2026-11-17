@@ -4674,7 +4674,9 @@ button.twisty:hover {
   width: min(96vw, 1600px);
   height: 92vh;
 }
-.preview-modal header {
+/* two classes, because the plain `.modal > header` further down this file has the same weight and would win on order:
+   that one centres its children, which drops Close to the middle of a header that has wrapped onto two lines */
+.modal.preview-modal > header {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -4691,7 +4693,8 @@ button.twisty:hover {
   flex-wrap: wrap;
   row-gap: 6px;
 }
-.preview-modal header > .icon-btn {
+/* Close keeps to the top line: the controls' first row and this button are both 28px tall, so their tops line up */
+.modal.preview-modal > header > .icon-btn {
   flex: none;
 }
 .preview-modal select {
