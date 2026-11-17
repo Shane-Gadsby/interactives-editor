@@ -1373,6 +1373,8 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
     <div className={`modal-backdrop preview-backdrop${peek ? ' peek' : ''}`} onPointerDown={(e) => !peek && e.target === e.currentTarget && onClose()}>
       <div className="modal preview-modal" ref={modalRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Preview">
         <header>
+          {/* The controls wrap among themselves; Close stays at the end of the top line, however many lines they take */}
+          <div className="preview-controls">
           <strong>Preview</strong>
           <select value={from} onChange={(e) => setFrom(e.target.value as 'start' | 'current')}>
             <option value="start">From the start artboard</option>
@@ -1518,6 +1520,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           <button className={`btn${showVars ? ' active' : ''}`} onClick={() => setShowVars(!showVars)} title="Debug: what's showing, running timelines, variables (editable) and the events that fire">
             Debug
           </button>
+          </div>
           <IconButton icon={<Icons.close />} title="Close (Esc)" onClick={onClose} />
         </header>
         {sets.length > 0 && <PreviewWidth sets={sets} width={pageWidth} max={room} current={dbg?.variant ? dbg.artboard : undefined} onChange={setPageWidth} />}
