@@ -1,4 +1,4 @@
-import type { Artboard, Project, SceneNode } from 'interactives-player';
+import { overlayFadeMs, type Artboard, type Project, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField } from '../components/ui';
 import { Icons } from '../components/icons';
@@ -126,10 +126,37 @@ export function OverlayPageSection({ ab, project }: { ab: Artboard; project: Pro
         onChange={(v) => setO({ kind: v })}
       />
       {o.kind === 'tooltip' && (
-        <Row>
-          <SelectField label="Side" title="Which side of the layer it sits on, unless that layer says otherwise" value={o.side ?? 'auto'} options={SIDES.map((s) => ({ value: s.value, label: s.label }))} onChange={(v) => setO({ side: v })} />
-          <NumberField label="Gap" title="Space between the layer and the tooltip" value={o.offset ?? 8} min={0} max={200} suffix="px" onChange={(v) => setO({ offset: Math.round(v) }, `overlay-gap-${ab.id}`)} />
-        </Row>
+        <>
+          <Row>
+            <SelectField label="Side" title="Which side of the layer it sits on, unless that layer says otherwise" value={o.side ?? 'auto'} options={SIDES.map((s) => ({ value: s.value, label: s.label }))} onChange={(v) => setO({ side: v })} />
+            <NumberField label="Gap" title="Space between the layer and the tooltip" value={o.offset ?? 8} min={0} max={200} suffix="px" onChange={(v) => setO({ offset: Math.round(v) }, `overlay-gap-${ab.id}`)} />
+          </Row>
+          <SelectField
+            label="Fade"
+            title="How long it takes to fade in and out: the project's own transition time (Page height time in Project settings) or its own. A viewer who asks for less motion gets none"
+            value={o.fade === undefined ? 'default' : 'custom'}
+            options={[
+              { value: 'default', label: `Project default (${overlayFadeMs({}, project.settings)} ms)` },
+              { value: 'custom', label: 'Custom' },
+            ]}
+            onChange={(v) => setO({ fade: v === 'custom' ? overlayFadeMs({}, project.settings) : undefined })}
+          />
+          {o.fade !== undefined && (
+            <NumberField label="Time" title="The fade, in milliseconds. 0 shows and hides it at once" value={o.fade} min={0} max={2000} suffix="ms" onChange={(v) => setO({ fade: Math.max(0, Math.round(v)) }, `overlay-fade-${ab.id}`)} />
+          )}
+          <CheckField
+            label="Tail"
+            title="A small triangle on the side facing the layer, pointing at the middle of it, in the tooltip's own colour"
+            value={o.tail !== false}
+            onChange={(v) => setO({ tail: v ? undefined : false })}
+          />
+          <CheckField
+            label="Stays while you're on it"
+            title="Moving from the layer onto the tooltip keeps it open, so a link or a button inside it can be reached. Turn it off for a plain label"
+            value={o.stay !== false}
+            onChange={(v) => setO({ stay: v ? undefined : false })}
+          />
+        </>
       )}
       {o.kind !== 'tooltip' && (
         <CheckField

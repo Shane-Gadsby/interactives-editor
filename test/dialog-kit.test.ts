@@ -187,3 +187,61 @@ describe('an overlay is drawn as its card', () => {
   });
 });
 
+describe("an overlay's own interactions run while it is shown", () => {
+  const start = async (p: Project) => {
+    document.body.innerHTML = '<div id="stage" style="width:800px;height:600px"></div>';
+    const player = new Player(document.getElementById('stage')!, p, { loadData: false });
+    await new Promise((r) => setTimeout(r, 0));
+    return player;
+  };
+  const press = (id: string) => document.querySelector<HTMLElement>(`[data-ix-id="${id}"] button`)!.click();
+
+  it("a modal opens from its trigger and its Close button closes it", async () => {
+    const { p, targetId } = withTarget();
+    const made = addDialog(p, 'modal', { targetId, artboardId: p.artboards[0].id });
+    const page = pageOf(p, made.overlayId);
+    const open = p.variables.find((v) => v.id === page.overlay!.openVariable)!;
+    const close = ((page.children[0] as FrameNode).children[2] as FrameNode).children[0];
+    const player = await start(p);
+    press(targetId);
+    player.step(16);
+    expect(player.getVariable(open.name)).toBe(true);
+    //the button is wired on the overlay's own page, which has to be listening while it is shown over this one
+    press(close.id);
+    player.step(16);
+    expect(player.getVariable(open.name)).toBe(false);
+    player.destroy();
+  });
+
+  it('a prompt records which button was picked, then closes', async () => {
+    const { p, targetId } = withTarget();
+    const made = addDialog(p, 'prompt', { targetId, artboardId: p.artboards[0].id });
+    const page = pageOf(p, made.overlayId);
+    const open = p.variables.find((v) => v.id === page.overlay!.openVariable)!;
+    const choice = p.variables.find((v) => /Choice$/.test(v.name))!;
+    const player = await start(p);
+    press(targetId);
+    player.step(16);
+    const frame = document.querySelector(`[data-ix-id="${overlayId(made.overlayId, targetId)}"]`)!;
+    const yes = [...frame.querySelectorAll<HTMLElement>('[data-ix-type="button"] button')].find((b) => b.textContent?.includes('Yes'))!;
+    yes.click();
+    player.step(16);
+    player.step(16);
+    expect(player.getVariable(choice.name)).toBe('yes');
+    expect(player.getVariable(open.name)).toBe(false);
+    player.destroy();
+  });
+
+  it('a modal shared by two layers is drawn once, not once for each', async () => {
+    const { p, targetId } = withTarget();
+    const made = addDialog(p, 'modal', { targetId, artboardId: p.artboards[0].id });
+    p.artboards[0].children.push(createNode('button', { id: 'btn2', x: 40, y: 40, width: 120, height: 40, label: 'Also opens it', overlay: { overlayId: made.overlayId } }));
+    const player = await start(p);
+    press('btn2');
+    player.step(16);
+    const shown = [...document.querySelectorAll<HTMLElement>('[data-ix-id^="ixov~"]')].filter((e) => !e.dataset.ixId!.endsWith('~tail') && e.style.display !== 'none');
+    expect(shown).toHaveLength(1);
+    player.destroy();
+  });
+});
+

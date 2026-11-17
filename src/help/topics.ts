@@ -3069,6 +3069,9 @@ That split is what lets a tooltip belong to a small icon while a much bigger are
 
 ## The three kinds
 - **Tooltip.** Sits beside its target while the trigger is hovered or focused. **Side** chooses above, below, left or right, and **Wherever it fits** (the default) tries each in turn and keeps it on the page. **Gap** is the space between.
+  - It **fades** in and out. **Fade** is the **Project default** (the project's own transition time, **Page height time** in the project settings) or **Custom** with its own **Time**. A viewer whose device asks for less motion gets no fade.
+  - It has a **Tail**: a small triangle on the side facing the target, pointing at the middle of it, in the tooltip's own colour. It follows whichever side the tooltip ended up on. Untick **Tail** to go without.
+  - **Stays while you're on it** keeps it open when the pointer moves from the trigger onto the tooltip, with a moment's grace to cross the gap, so a link or a button inside it can be reached. Turn it off for a plain label that should go the moment you leave. <kbd>Esc</kbd> puts a tooltip away either way.
 - **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd> or a click outside closes it.
 - **Prompt.** A modal that asks something. Its buttons are a **list**: add one by adding a row, rename one by changing its label. Picking a button writes what it stands for into a variable and closes the prompt. A click outside doesn't dismiss a prompt.
 
