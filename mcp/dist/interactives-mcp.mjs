@@ -904,7 +904,7 @@ const SPECS = [
     label: "Send analytics",
     category: "action",
     summary: "Sends a named event, with a few values, to the analytics the Toolbox keeps.",
-    details: `With nothing joined to Saved or Not saved it is sent in the background, the way every Toolbox app reports, and the flow carries straight on: quick, and it still goes if the learner is leaving the page. Join Saved (or Not saved) and it is sent the slow, sure way instead: Saved runs once the row is kept, with event.ids (and event.id, the first) to hold on to, and Not saved runs with event.reason when there is no page to keep it, nobody is signed in, it is a preview, the project records nothing or this visit has sent too many. The bottom port continues straight away either way. Data is a formula that gives a few named values, such as {level: level, time: seconds}; a single value is kept as "value". Learners' browsers send it to the page around the project (the StudyDesk learner page), so an export on its own sends nothing. Do not put anything personal in the name or the data.`,
+    details: `With nothing joined to Saved or Not saved it joins the queue every Toolbox app reports through, which is sent every few seconds, and the flow carries straight on. Join Saved (or Not saved) and it is sent at once and waited for instead: Saved runs once the row is kept, with event.ids (and event.id, the first) to hold on to, and Not saved runs with event.reason when there is no page to keep it, nobody is signed in, it is a preview, the project records nothing or this visit has sent too many. The bottom port continues straight away either way. Data is a formula that gives a few named values, such as {level: level, time: seconds}; a single value is kept as "value". Learners' browsers send it to the page around the project (the StudyDesk learner page), so an export on its own sends nothing. Do not put anything personal in the name or the data.`,
     group: "Results and data",
     outputs: [
       { id: "out", label: "" },
@@ -28028,8 +28028,8 @@ Add a **Record** action node (Interactions tab) anywhere in a flow: give it a **
 ## Send analytics
 The **Send analytics** node (Interactions tab, Results and data) sends a named event with a few values of your choosing: a **Name** ("finished level") and **Data**, a formula such as \`{level: level, time: seconds}\`. It goes to the same analytics as everything else, with the learner and the course on it, and Insights counts it by name.
 
-- **Leave Saved and Not saved alone** and it is sent in the background, the way every Toolbox app reports. The flow carries straight on, and the event still goes if the learner is closing the page.
-- **Join something to Saved** (or **Not saved**) and it is sent the slow, sure way instead. **Saved** runs once the row is kept, with \`event.ids\` and \`event.id\` to hold on to. **Not saved** runs with \`event.reason\`: nobody is signed in, it is a preview, there is no page to keep it, recording is off, or this visit has sent too many. The bottom port still continues straight away.
+- **Leave Saved and Not saved alone** and it joins the queue every Toolbox app reports through, which is sent every few seconds. The flow carries straight on.
+- **Join something to Saved** (or **Not saved**) and it is sent at once and waited for instead. **Saved** runs once the row is kept, with \`event.ids\` and \`event.id\` to hold on to. **Not saved** runs with \`event.reason\`: nobody is signed in, it is a preview, there is no page to keep it, recording is off, or this visit has sent too many. The bottom port still continues straight away.
 
 Use **Record** for a simple count. Use **Send analytics** when you want several values together, or need to know it arrived. In the editor's Preview nothing is sent: Saved runs with a pretend id so you can try what follows it.
 

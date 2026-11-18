@@ -5376,8 +5376,8 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		queue.push(rec)
 		if (known && !timer) timer = setTimeout(flushRecords, 1500)
 	}
-	//A Send analytics node that waits to hear back. A callback is what makes reportAnalytics post the ordinary way instead of
-	//by beacon, and it's called with what si-analytics answered once the row is in: one insert result per row, so the ids
+	//A Send analytics node that waits to hear back. Instant makes reportAnalytics send it now instead of on its 5 second
+	//round, and the callback gets what si-analytics answered once the row is in: one insert result per row, so the ids
 	//go back to the project. Same rules as any record: cleaned here, the project is this page's, and nothing without a
 	//signed-in StudyDesk user. One asked for before the session has answered waits for it
 	var analyticsAsks = []

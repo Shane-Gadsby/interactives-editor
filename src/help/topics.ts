@@ -5251,8 +5251,8 @@ Add a **Record** action node (Interactions tab) anywhere in a flow: give it a **
 ## Send analytics
 The **Send analytics** node (Interactions tab, Results and data) sends a named event with a few values of your choosing: a **Name** ("finished level") and **Data**, a formula such as \`{level: level, time: seconds}\`. It goes to the same analytics as everything else, with the learner and the course on it, and Insights counts it by name.
 
-- **Leave Saved and Not saved alone** and it is sent in the background, the way every Toolbox app reports. The flow carries straight on, and the event still goes if the learner is closing the page.
-- **Join something to Saved** (or **Not saved**) and it is sent the slow, sure way instead. **Saved** runs once the row is kept, with \`event.ids\` and \`event.id\` to hold on to. **Not saved** runs with \`event.reason\`: nobody is signed in, it is a preview, there is no page to keep it, recording is off, or this visit has sent too many. The bottom port still continues straight away.
+- **Leave Saved and Not saved alone** and it joins the queue every Toolbox app reports through, which is sent every few seconds. The flow carries straight on.
+- **Join something to Saved** (or **Not saved**) and it is sent at once and waited for instead. **Saved** runs once the row is kept, with \`event.ids\` and \`event.id\` to hold on to. **Not saved** runs with \`event.reason\`: nobody is signed in, it is a preview, there is no page to keep it, recording is off, or this visit has sent too many. The bottom port still continues straight away.
 
 Use **Record** for a simple count. Use **Send analytics** when you want several values together, or need to know it arrived. In the editor's Preview nothing is sent: Saved runs with a pretend id so you can try what follows it.
 

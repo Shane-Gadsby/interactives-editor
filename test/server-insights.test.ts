@@ -188,7 +188,7 @@ describe('the learner page passes records on to the suite analytics', () => {
     expect(JSON.stringify(p.reported)).not.toContain('Alex');
   });
 
-  it('a Send analytics node with nobody waiting goes out like any record, by beacon', async () => {
+  it('a Send analytics node with nobody waiting goes out like any record, on the usual round', async () => {
     const p = await run();
     p.send({ source: 'interactives-record', record: { kind: 'event', artboard: 'ab1', label: 'finished level', data: { level: 3, name: 'x', 'bad key': 1, list: [1, 2] } } });
     p.flush();
@@ -196,12 +196,12 @@ describe('the learner page passes records on to the suite analytics', () => {
     const [app, feature, featureID, meta, instant, callback] = p.reported[0] as [string, string, string, Record<string, any>, unknown, unknown];
     expect([app, feature, featureID]).toEqual(['Interactives', 'event', 'prins001']);
     expect(meta.rec).toEqual({ kind: 'event', artboard: 'ab1', label: 'finished level', data: { level: 3, name: 'x', list: [1, 2] } });
-    //no callback is what leaves reportAnalytics on its beacon
+    //no instant and no callback: it waits in reportAnalytics' queue for the next round
     expect(instant).toBeUndefined();
     expect(callback).toBeUndefined();
   });
 
-  it('one that waits is posted with a callback, and the project hears the ids once the row is saved', async () => {
+  it('one that waits is sent at once with a callback, and the project hears the ids once the row is saved', async () => {
     const p = await run();
     const calls: unknown[][] = [];
     p.ctx.reportAnalytics = (...args: unknown[]) => {
