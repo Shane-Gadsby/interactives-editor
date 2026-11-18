@@ -5196,7 +5196,8 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	}
 	//What the learner does, for the project's Insights: the project says it (postMessage), and it goes into the suite's
 	//analytics the way every toolbox app's does (reportAnalytics, si-manager's utilities.js), as a lean row with the
-	//usual user and course fields. The project is whatever this page was made for, whatever the record claims. Nothing
+	//usual user and course fields. That's every kind of record: views, clicks, steps, answers, controls changed, layers
+	//dropped, video played, sections and dialogs opened, Record nodes and Send analytics nodes. The project is whatever this page was made for, whatever the record claims. Nothing
 	//is sent without a signed-in StudyDesk user, and utilities.js drops it in a preview
 	//Remix this: only for someone signed in to StudyDesk (the copy becomes theirs), and only when the owner allowed it
 	var remixOn = ${remix ? 'true' : 'false'} && !ltiSession, remixLink = document.getElementById('remix'), remixBusy = false
@@ -5375,6 +5376,49 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		queue.push(rec)
 		if (known && !timer) timer = setTimeout(flushRecords, 1500)
 	}
+	//A Send analytics node that waits to hear back. A callback is what makes reportAnalytics post the ordinary way instead of
+	//by beacon, and it's called with what si-analytics answered once the row is in: one insert result per row, so the ids
+	//go back to the project. Same rules as any record: cleaned here, the project is this page's, and nothing without a
+	//signed-in StudyDesk user. One asked for before the session has answered waits for it
+	var analyticsAsks = []
+	var sendAnalytics = function (m) {
+		var rec = cleanRecord(m.record), done = false,
+			no = function (reason) {
+				answer(m, {ok: false, data: {reason: reason}})
+			}
+		if (!rec || rec.kind !== 'event') return no('failed')
+		if (typeof reportAnalytics !== 'function') return no('nowhere')
+		if (typeof isPreviewMode === 'function' && isPreviewMode()) return no('preview')
+		if (!known) return no('nobody')
+		if (taken >= 600) return no('limit')
+		taken++
+		var row = rowFor(project, run, rec)
+		var late = setTimeout(function () {
+			if (done) return
+			done = true
+			no('failed')
+		}, 15000)
+		var sent = reportAnalytics(row[0], row[1], row[2], row[3], true, function (err, value) {
+			if (done) return
+			done = true
+			clearTimeout(late)
+			if (err) return no('failed')
+			answer(m, {ok: true, data: {ids: (Array.isArray(value) ? value : []).map(function (v) {
+				return v && v.insertedId ? String(v.insertedId) : ''
+			}).filter(Boolean).slice(0, 50)}})
+		})
+		//Muted (a preview) hands nothing back and never calls. The promise says the same as the callback, so its own failure is swallowed
+		if (!sent) {
+			done = true
+			clearTimeout(late)
+			return no('preview')
+		}
+		if (typeof sent.catch === 'function') sent.catch(function () {
+		})
+	}
+	var settleAnalytics = function () {
+		while (analyticsAsks.length) sendAnalytics(analyticsAsks.shift())
+	}
 	if (typeof fetchActivity === 'function') {
 		window.m = window.m || {}
 		window.m.app = 'Interactives'
@@ -5383,6 +5427,8 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			contextData = err || !data ? null : contextFrom(data.user, data.activity)
 			contextReady = true
 			while (contextAsks.length) answerContext(contextAsks.shift())
+			//after this function is through, so known is settled either way
+			setTimeout(settleAnalytics, 0)
 			if (err || !data || !data.user || !data.user.username) return
 			window.m.user = data.user
 			window.m.activity = data.activity || {}
@@ -5482,6 +5528,10 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		else if (m.op === 'guard') {
 			call('POST', 'guard', {guard: m.guard}).catch(function () {
 			})
+		}
+		else if (m.op === 'analytics') {
+			if (contextReady) sendAnalytics(m)
+			else analyticsAsks.push(m)
 		}
 		else if (m.op === 'report') {
 			call('POST', 'report', {result: m.result}).catch(function () {

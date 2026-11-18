@@ -26,6 +26,8 @@ interface Ask {
   /** Rooms: the data source's id and the message to send. */
   roomSource?: unknown;
   text?: unknown;
+  /** Send analytics: the record a waiting node wants saved. */
+  record?: unknown;
   /** Course collections: the collection's name and what to add. */
   collection?: unknown;
   stamps?: unknown;
@@ -170,6 +172,8 @@ export function forgetPreviewCourse(): void {
   }
 }
 
+let previewAnalytics = 0;
+
 /** The answer to one of the player's progress messages, or null when it is not one Preview answers (no reply is sent). */
 export function answerPreviewProgress(m: Ask, doc?: Project): PreviewReply | null {
   if (!m || m.source !== 'interactives-progress' || typeof m.op !== 'string') return null;
@@ -205,6 +209,9 @@ export function answerPreviewProgress(m: Ask, doc?: Project): PreviewReply | nul
     case 'course-read':
     case 'course-add':
       return previewCourse(m);
+    // A Send analytics node that waits to hear: Preview sends nothing anywhere, and says "saved" with a pretend id so the flow after it can be tried
+    case 'analytics':
+      return { ok: true, available: true, data: { ids: [`preview-${++previewAnalytics}`] } };
     default:
       return null;
   }

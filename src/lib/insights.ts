@@ -45,6 +45,19 @@ export interface StepRow {
   steps: { step: number; title: string; learners: number }[];
 }
 
+type Acted = NonNullable<Insights['acted']>[number];
+
+/** What a learner did to a layer, as the words Insights and its CSV use. */
+export const actedWords = (kind: Acted['kind']): string => ({ input: 'control changed', drop: 'layer dropped', media: 'video', open: 'opened' })[kind];
+
+/** The rest of the line: what it was set to, where it was dropped, what the video did, which section. */
+export function actedDetail(a: Acted): string {
+  if (a.kind === 'input') return a.detail === 'true' ? 'ticked' : a.detail === 'false' ? 'unticked' : a.detail ? `set to ${a.detail}` : a.control === 'range' ? 'moved' : 'changed';
+  if (a.kind === 'drop') return a.detail.replace(/accepted$/, 'taken').replace(/refused$/, 'refused').replace(/missed$/, 'outside every zone');
+  if (a.kind === 'media') return ({ play: 'played', pause: 'paused', ended: 'watched to the end' } as Record<string, string>)[a.detail] ?? a.detail;
+  return a.control === 'accordion' || a.control === 'tabs' ? `${a.control === 'tabs' ? 'tab' : 'section'} ${a.detail}` : 'dialog';
+}
+
 const pct = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 1000) / 10 : null);
 
 /** The artboards in the project's order (start first), then any learners saw that are gone now. */
@@ -151,6 +164,11 @@ export function insightsCsv(project: Project, data: Insights): string {
   for (const c of data.custom) {
     rows.push(['record', c.name, '', c.count, c.learners, '']);
     for (const v of c.values) rows.push(['record value', c.name, v.value, v.n, '', pct(v.n, c.count) ?? '']);
+  }
+  for (const a of data.acted ?? []) rows.push([actedWords(a.kind), a.label || a.layer, [project.artboards.find((x) => x.id === a.artboard)?.name ?? a.artboard, actedDetail(a)].filter(Boolean).join(': '), a.count, a.learners, '']);
+  for (const e of data.events ?? []) {
+    rows.push(['analytics event', e.name, '', e.count, e.learners, '']);
+    for (const f of e.fields) for (const v of f.values) rows.push(['analytics event value', e.name, `${f.key} = ${v.value}`, v.n, '', pct(v.n, e.count) ?? '']);
   }
   for (const c of data.courses) rows.push(['course', c.course, '', '', c.learners, '']);
   for (const d of data.daily) rows.push(['day', d.day, '', '', d.learners, '']);

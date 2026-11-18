@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { store, useEditor } from '../store/store';
 import { getInsights, type Insights } from '../lib/db';
-import { funnel, heatFor, insightsCsv, questionRows, stepRows } from '../lib/insights';
+import { actedDetail, actedWords, funnel, heatFor, insightsCsv, questionRows, stepRows } from '../lib/insights';
 import { download } from '../lib/export';
 import { SectionBlurb } from '../components/SectionBlurb';
 
@@ -199,6 +199,45 @@ export function InsightsPanel() {
                           ))}
                         </div>
                       )}
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              {(data.acted?.length ?? 0) > 0 && (
+                <section className="ins-card">
+                  <h4>What else learners did</h4>
+                  <p className="muted small">Controls changed, layers dropped, video played, and sections and dialogs opened. What a learner typed is never here.</p>
+                  {data.acted!.slice(0, 40).map((a) => (
+                    <Bar
+                      key={`${a.kind}|${a.artboard}|${a.layer}|${a.detail}`}
+                      label={`${a.label || a.layer}: ${actedDetail(a)}`}
+                      value={a.count}
+                      of={Math.max(1, data.acted![0].count)}
+                      text={`${n(a.count)} (${n(a.learners)} learner${a.learners === 1 ? '' : 's'})`}
+                      title={`${actedWords(a.kind)}, on ${s.project?.artboards.find((x) => x.id === a.artboard)?.name ?? 'a page that has gone'}`}
+                    />
+                  ))}
+                </section>
+              )}
+
+              {(data.events?.length ?? 0) > 0 && (
+                <section className="ins-card">
+                  <h4>Your analytics events</h4>
+                  <p className="muted small">From Send analytics nodes.</p>
+                  {data.events!.map((e) => (
+                    <div key={e.name} className="ins-custom">
+                      <Bar label={e.name} value={e.count} of={Math.max(1, data.events![0].count)} text={`${n(e.count)} (${n(e.learners)} learner${e.learners === 1 ? '' : 's'})`} />
+                      {e.fields.map((f) => (
+                        <div key={f.key} className="ins-values">
+                          <span className="muted small">{f.key}</span>
+                          {f.values.map((v) => (
+                            <span key={v.value} className="ins-value">
+                              {v.value} <b>{n(v.n)}</b>
+                            </span>
+                          ))}
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </section>

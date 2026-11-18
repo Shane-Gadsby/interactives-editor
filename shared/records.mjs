@@ -4,20 +4,20 @@
 //
 //A record lands in lti-analytics.ingest the way every other toolbox app's analytics do (si-manager's reportAnalytics
 //-> si-analytics /analytics/ingest-bulk): app 'Interactives', feature the kind of record, featureID the project's id,
-//meta.rec the record itself and meta.run an id for one page load. The user and the course on the row are the suite's
+//meta.rec the record itself and meta.run an id for one page load. A Send analytics node's row is feature 'event'. The user and the course on the row are the suite's
 //usual fields. Insights only ever counts: how many rows, how many different learners. Nobody is listed.
 //
 //Anyone can post to the analytics endpoint, so what is read back is checked again and treated as the learner's own word.
 
 export const APP = 'Interactives'
-export const KINDS = ['view', 'click', 'step', 'answer', 'custom']
+export const KINDS = ['view', 'click', 'step', 'answer', 'custom', 'input', 'drop', 'media', 'open', 'event']
 export const CELL = 20
 export const MAX_ROWS = 100000
 
 //This one is written out in the learner page too (cleanRecord.toString() goes into its script), so it can't lean on
 //anything outside itself. It gives back a clean copy of a record, or null when it isn't one
 export function cleanRecord(raw) {
-	let kinds = ['view', 'click', 'step', 'answer', 'custom'],
+	let kinds = ['view', 'click', 'step', 'answer', 'custom', 'input', 'drop', 'media', 'open', 'event'],
 		qkinds = ['single', 'multiple', 'truefalse', 'blank', 'ordering', 'matching', 'categorise', 'hotspot'],
 		text = (v, max) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '',
 		id = (v, max) => typeof v === 'string' && v.length <= max && /^[\w.~:$-]+$/.test(v) ? v : '',
@@ -100,6 +100,118 @@ export function cleanRecord(raw) {
 
 		if (Array.isArray(raw.options)) {
 			out.options = raw.options.filter((o) => typeof o === 'string' && /^[\w-]{1,20}$/.test(o)).slice(0, 30)
+		}
+
+		return out
+	}
+
+	//Something on the page a learner acted on: a control changed, a layer dropped, a video played, a section or a dialog opened.
+	//It always says which layer. What was typed into a box is never here, only what a tick box, slider or dropdown was set to
+	if (raw.kind === 'input' || raw.kind === 'drop' || raw.kind === 'media' || raw.kind === 'open') {
+		let layer = id(raw.layer, 100),
+			name = text(raw.label, 80)
+
+		if (!layer) {
+			return null
+		}
+
+		out.layer = layer
+
+		if (name) {
+			out.label = name
+		}
+
+		if (raw.kind === 'input') {
+			if (['text', 'number', 'email', 'password', 'checkbox', 'range', 'textarea', 'select'].indexOf(raw.control) < 0) {
+				return null
+			}
+
+			out.control = raw.control
+
+			if (raw.control === 'checkbox' && typeof raw.value === 'boolean') {
+				out.value = raw.value
+			}
+			else if (raw.control === 'range' && typeof raw.value === 'number' && Number.isFinite(raw.value)) {
+				out.value = raw.value
+			}
+			else if (raw.control === 'select' && text(raw.value, 120)) {
+				out.value = text(raw.value, 120)
+			}
+		}
+		else if (raw.kind === 'drop') {
+			if (['accepted', 'refused', 'missed'].indexOf(raw.result) < 0) {
+				return null
+			}
+
+			out.result = raw.result
+
+			if (text(raw.zone, 80)) {
+				out.zone = text(raw.zone, 80)
+			}
+		}
+		else if (raw.kind === 'media') {
+			if (['play', 'pause', 'ended'].indexOf(raw.action) < 0) {
+				return null
+			}
+
+			out.action = raw.action
+
+			if (int(raw.time, 0, 360000) !== null) {
+				out.time = int(raw.time, 0, 360000)
+			}
+		}
+		else {
+			if (['accordion', 'tabs', 'modal', 'confirm', 'input'].indexOf(raw.control) < 0) {
+				return null
+			}
+
+			out.control = raw.control
+
+			if (int(raw.index, 0, 1000) !== null) {
+				out.index = int(raw.index, 0, 1000)
+			}
+		}
+
+		return out
+	}
+
+	//event: the Send analytics node. A name, and a few named values (short text, numbers, yes or no, short lists of those)
+	if (raw.kind === 'event') {
+		let name = text(raw.label, 60)
+
+		if (!name) {
+			return null
+		}
+
+		out.label = name
+
+		if (raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)) {
+			let one = (v) => typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v)) ? v : typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 200) : undefined,
+				data = {},
+				keys = Object.keys(raw.data).slice(0, 20)
+
+			for (let key of keys) {
+				if (!/^[\w.-]{1,40}$/.test(key)) {
+					continue
+				}
+
+				let v = raw.data[key]
+
+				if (Array.isArray(v)) {
+					let list = v.slice(0, 50).map(one).filter((x) => x !== undefined)
+
+					if (list.length) {
+						data[key] = list
+					}
+				}
+				else if (one(v) !== undefined) {
+					data[key] = one(v)
+				}
+			}
+
+			if (Object.keys(data).length && JSON.stringify(data).length <= 4000) {
+				out.data = data
+			}
 		}
 
 		return out
@@ -241,6 +353,8 @@ export const insights = (rows, opts = {}) => {
 		steps = new Map(),
 		questions = new Map(),
 		custom = new Map(),
+		acted = new Map(),
+		events = new Map(),
 		courses = new Map(),
 		days = new Map(),
 		counted = 0,
@@ -337,6 +451,36 @@ export const insights = (rows, opts = {}) => {
 				q.options.set(o, (q.options.get(o) || 0) + 1)
 			}
 		}
+		else if (rec.kind === 'input' || rec.kind === 'drop' || rec.kind === 'media' || rec.kind === 'open') {
+			//One line per layer and what was done to it. A slider's every position would be a line each, so its value is left out
+			let detail = rec.kind === 'input' ? (rec.control === 'range' || rec.value === undefined ? '' : String(rec.value))
+					: rec.kind === 'drop' ? `${rec.zone ? `${rec.zone}: ` : ''}${rec.result}`
+					: rec.kind === 'media' ? rec.action
+					: rec.index === undefined ? '' : String(rec.index + 1),
+				a = bump(acted, `${rec.kind}|${rec.artboard || ''}|${rec.layer}|${detail}`, () => ({kind: rec.kind, artboard: rec.artboard || '', layer: rec.layer, label: '', control: rec.control || '', detail, count: 0, who: new Set()}))
+
+			a.label = rec.label || a.label
+			a.count++
+			a.who.add(who)
+		}
+		else if (rec.kind === 'event') {
+			let ev = bump(events, rec.label, () => ({name: rec.label, count: 0, who: new Set(), fields: new Map()}))
+
+			ev.count++
+			ev.who.add(who)
+
+			for (let key of Object.keys(rec.data || {}).slice(0, 20)) {
+				let v = rec.data[key]
+
+				if (Array.isArray(v)) {
+					continue
+				}
+
+				let f = bump(ev.fields, key, () => new Map())
+
+				f.set(String(v), (f.get(String(v)) || 0) + 1)
+			}
+		}
 		else if (rec.kind === 'custom') {
 			let c = bump(custom, rec.label, () => ({name: rec.label, count: 0, who: new Set(), values: new Map()}))
 
@@ -384,6 +528,8 @@ export const insights = (rows, opts = {}) => {
 			options: top(q.options, 30).map(([id, n]) => ({id, n}))
 		})),
 		custom: [...custom.values()].sort((a, b) => b.count - a.count).slice(0, 100).map((c) => ({name: c.name, count: c.count, learners: c.who.size, values: top(c.values, 20).map(([value, n]) => ({value, n}))})),
+		acted: [...acted.values()].sort((a, b) => b.count - a.count).slice(0, 300).map((a) => ({kind: a.kind, artboard: a.artboard, layer: a.layer, label: a.label, control: a.control, detail: a.detail, count: a.count, learners: a.who.size})),
+		events: [...events.values()].sort((a, b) => b.count - a.count).slice(0, 100).map((ev) => ({name: ev.name, count: ev.count, learners: ev.who.size, fields: [...ev.fields.entries()].slice(0, 20).map(([key, values]) => ({key, values: top(values, 10).map(([value, n]) => ({value, n}))}))})),
 		courses: [...courses.entries()].map(([course, who]) => ({course, learners: who.size})).sort((a, b) => b.learners - a.learners).slice(0, 50),
 		daily: [...days.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([day, who]) => ({day, learners: who.size}))
 	}

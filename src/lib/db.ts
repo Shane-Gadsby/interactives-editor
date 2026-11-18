@@ -680,6 +680,10 @@ export interface Insights {
   steps: { artboard: string; name: string; step: number; steps: number; visits: number; learners: number }[];
   questions: { question: string; kind: string; checks: number; correct: number; learners: number; firstTry: number; firstTryRight: number; options: { id: string; n: number }[] }[];
   custom: { name: string; count: number; learners: number; values: { value: string; n: number }[] }[];
+  /** Controls changed, layers dropped, video played and sections or dialogs opened: one line per layer and what was done. Absent from a server older than these. */
+  acted?: { kind: 'input' | 'drop' | 'media' | 'open'; artboard: string; layer: string; label: string; control: string; detail: string; count: number; learners: number }[];
+  /** Send analytics nodes, by name, with how often each value of each of its fields came up. */
+  events?: { name: string; count: number; learners: number; fields: { key: string; values: { value: string; n: number }[] }[] }[];
   courses: { course: string; learners: number }[];
   daily: { day: string; learners: number }[];
 }

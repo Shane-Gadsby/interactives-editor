@@ -900,6 +900,24 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.analytics",
+    label: "Send analytics",
+    category: "action",
+    summary: "Sends a named event, with a few values, to the analytics the Toolbox keeps.",
+    details: `With nothing joined to Saved or Not saved it is sent in the background, the way every Toolbox app reports, and the flow carries straight on: quick, and it still goes if the learner is leaving the page. Join Saved (or Not saved) and it is sent the slow, sure way instead: Saved runs once the row is kept, with event.ids (and event.id, the first) to hold on to, and Not saved runs with event.reason when there is no page to keep it, nobody is signed in, it is a preview, the project records nothing or this visit has sent too many. The bottom port continues straight away either way. Data is a formula that gives a few named values, such as {level: level, time: seconds}; a single value is kept as "value". Learners' browsers send it to the page around the project (the StudyDesk learner page), so an export on its own sends nothing. Do not put anything personal in the name or the data.`,
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "saved", label: "Saved" },
+      { id: "failed", label: "Not saved" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "name", label: "Name", type: "text", default: "event", help: 'What happened, in a few words ("finished level", "chose a pathway"). Up to 60 characters. {braces} are filled in.' },
+      { key: "data", label: "Data", type: "expr", default: "", placeholder: "optional, e.g. {level: level, time: seconds}", help: "A few named values to keep with it: text, numbers, yes or no, or short lists of those. Up to 20 names." }
+    ]
+  },
+  {
     kind: "action.credits",
     label: "Open credits",
     category: "action",
@@ -14824,6 +14842,7 @@ const ACTION = {
   "action.startOver": () => "start over",
   "action.reportResult": (p) => p.completed === "progress" ? `report the score so far${p.score ? ` (${val(p.score)})` : ""}` : `report the result${p.score ? ` (score ${val(p.score)})` : ""}`,
   "action.record": (p) => `record ${quoted(String(p.name ?? "milestone"))}`,
+  "action.analytics": (p) => `send ${quoted(String(p.name ?? "event"))} to analytics`,
   "action.sound": (p, c2) => `play ${p.asset ? quoted(c2.asset(p.asset)) : p.source ? `the sound ${val(p.source)}` : "a sound"}${String(p.loop ?? "false") === "true" ? " on a loop" : ""}${p.soundtrack === true ? " as the soundtrack" : ""}`,
   "action.stopSound": (p, c2) => p.asset ? `stop the sound ${quoted(c2.asset(p.asset))}` : "stop all sounds",
   "action.delay": (p) => `wait ${secs(p.ms)}`,
@@ -27986,8 +28005,8 @@ User data is kept apart from remembered progress and from results, so **Clear re
     id: "insights",
     title: "Insights: what learners did",
     group: "Getting started",
-    summary: "See where learners go, click and struggle: pages reached, a click heat map, steps, answers to each question and your own records, as counts.",
-    keywords: "insights analytics records record learners activity funnel heat map heatmap clicks steps answers questions struggle csv export privacy consent studydesk",
+    summary: "See where learners go, click and struggle: pages reached, a click heat map, steps, answers to each question, what they did with every control, and your own records and events, as counts.",
+    keywords: "insights analytics records record learners activity funnel heat map heatmap clicks steps answers questions struggle csv export privacy consent studydesk send analytics event reportAnalytics beacon saved ids controls video drag drop accordion tabs dialog",
     body: `The **Insights** tab (bottom panel) answers "where do learners get stuck?" with counts. It shows nothing until learners have played the project from the **Link for StudyDesk** (see [Share link](export#share-link)) while signed in to StudyDesk.
 
 ## What you see
@@ -27996,7 +28015,9 @@ User data is kept apart from remembered progress and from results, so **Clear re
 - **Steps reached** for each step-through page, so you can see which step people stopped at.
 - **One card per question.** How many learners answered, how many checks were right, how many were right the first time, and a bar for how often each option was chosen (the right answer in green). An option nobody chose shows as zero. Typed and ordered answers are only counted as right or wrong.
 - **Where learners clicked.** The buttons, links and clickable layers learners clicked most. Tick **Click heat on the canvas** to draw every click over the page you are editing: blue is a few, red is many. Clicks that land on nothing show up too, which is how you find the thing people expected to be clickable.
+- **What else learners did.** Every other thing on a page that takes an action: a tick box, slider or dropdown changed (and what to), a text box changed, a layer dropped (where, and whether the zone took it), a video played, paused or watched to the end, and an accordion section, a tab or a dialog opened.
 - **Your records**, from the *Record* node and \`ix.record\`.
+- **Your analytics events**, from the *Send analytics* node, with how often each value came up.
 - **Courses**, when the project is used in more than one.
 
 Choose how far back to count (7 days to all time) and press **Refresh**. **Export CSV** downloads every count in a spreadsheet-friendly file.
@@ -28004,13 +28025,21 @@ Choose how far back to count (7 days to all time) and press **Refresh**. **Expor
 ## Your own records
 Add a **Record** action node (Interactions tab) anywhere in a flow: give it a **Name** ("opened hint") and, if you like, a **Value** (an expression: a choice, a level, a score band). Insights counts how often each name happened, how many learners it happened to, and how often each value came up. In scripts: \`ix.record('chose route', 'B')\`. Names are cut at 60 characters and values at 120.
 
+## Send analytics
+The **Send analytics** node (Interactions tab, Results and data) sends a named event with a few values of your choosing: a **Name** ("finished level") and **Data**, a formula such as \`{level: level, time: seconds}\`. It goes to the same analytics as everything else, with the learner and the course on it, and Insights counts it by name.
+
+- **Leave Saved and Not saved alone** and it is sent in the background, the way every Toolbox app reports. The flow carries straight on, and the event still goes if the learner is closing the page.
+- **Join something to Saved** (or **Not saved**) and it is sent the slow, sure way instead. **Saved** runs once the row is kept, with \`event.ids\` and \`event.id\` to hold on to. **Not saved** runs with \`event.reason\`: nobody is signed in, it is a preview, there is no page to keep it, recording is off, or this visit has sent too many. The bottom port still continues straight away.
+
+Use **Record** for a simple count. Use **Send analytics** when you want several values together, or need to know it arrived. In the editor's Preview nothing is sent: Saved runs with a pretend id so you can try what follows it.
+
 ## What is and is not recorded
-- Automatic records: a page was shown, a click (where, and which button or link), a step was reached, and a question was checked (right or wrong, which options were chosen).
-- Nothing a learner types is recorded. A typed answer is only marked right or wrong.
+- Automatic records: a page was shown, a click (where, and which button or link), a step was reached, a question was checked (right or wrong, which options were chosen), a control was changed, a layer was dropped, a video was played, paused or finished, and a section or dialog was opened.
+- Nothing a learner types is recorded. A typed answer is only marked right or wrong, and a text box only says that it was changed.
 - Insights shows counts and numbers of different learners. It never lists a learner. With only a handful of learners a count can be one person, so wait for more before drawing conclusions.
 - The records go to the Toolbox's usual analytics as the learner's StudyDesk session (the same way every other toolbox item is counted), so the people who read those reports can see which user they came from. Tell learners what is counted, the way you would for any other usage statistics.
 - A page load sends at most 500 records, 300 of them clicks.
-- Switch recording off, or any kind of automatic record, in **Learner records** in the Project section (click an empty part of the canvas). Off means off: Record nodes send nothing either.
+- Switch recording off, or any kind of automatic record, in **Learner records** in the Project section (click an empty part of the canvas). Off means off: Record and Send analytics nodes send nothing either.
 - The player on its own sends nothing anywhere. A standalone export, the editor's Preview and a plain share link keep no records. Only the Link for StudyDesk passes them on.
 
 ## Good to know
