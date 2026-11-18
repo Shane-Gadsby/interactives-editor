@@ -1,0 +1,11 @@
+#!/bin/sh
+# Refuses a commit that holds an env file (.env, .env.anything, anything.env), which is where keys and tokens live.
+# .gitignore already keeps them out; this catches one added with `git add -f`. Turned on per checkout with:
+#   git config core.hooksPath .githooks
+bad=$( { git diff --cached --name-only --diff-filter=ACMR; git ls-files; } | grep -E '(^|/)(\.env(\..*)?|[^/]*\.env)$' | grep -v -E '(^|/)\.env\.example$' | sort -u)
+if [ -n "$bad" ]; then
+  echo "Refused: env files must not be committed (keys and tokens live in them):" >&2
+  echo "$bad" | sed 's/^/  /' >&2
+  echo "Take them out with: git rm --cached <file>" >&2
+  exit 1
+fi

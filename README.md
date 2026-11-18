@@ -517,3 +517,7 @@ The first download is what `src/main.tsx` reaches through static imports, and a 
 | Arrows (Shift ×10) | nudge |
 | Enter / double-click | edit text, path points, or enter a group |
 | Delete | delete layers, or the selected keyframes |
+
+## Keys stay out of git
+
+Env files (`.env`, `.env.*`, `*.env`) are ignored, and `.githooks/pre-commit` refuses a commit that holds one, even a forced one. Turn the hook on once in each checkout, on each machine: `git config core.hooksPath .githooks`.
