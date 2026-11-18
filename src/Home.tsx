@@ -21,6 +21,7 @@ import { TemplatesTab } from './components/TemplatesTab';
 import { NewProjectModal } from './components/NewProjectModal';
 import { TutorialsModal } from './components/TutorialsModal';
 import { clearLeft, peekLeft } from './lib/home-return';
+import { BrandLogo } from './components/BrandLogo';
 
 declare global {
   interface Window {
@@ -424,8 +425,7 @@ export function Home({ open }: { open: (id: string) => void }) {
     <div className="home">
       <header className="home-head">
         <div className="brand">
-          <img src="./favicon.svg" alt="" width={28} height={28} />
-          <span>Ixia</span>
+          <BrandLogo />
         </div>
         <div className="home-actions">
           {(who?.user || me2) && <span className="muted home-user" title="Signed in through the toolbox">{who?.user?.name ?? me2?.name ?? who?.user?.username}</span>}

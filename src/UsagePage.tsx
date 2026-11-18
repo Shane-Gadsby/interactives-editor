@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getUsageReport, session, type EditorFault, type PlayerFault, type UsageReport, type UsageRow } from './lib/db';
+import { BrandLogo } from './components/BrandLogo';
 
 /**
  * Usage and errors, for the people who make the product (power users; the server checks too). What the editor records about
@@ -73,8 +74,7 @@ export function UsagePage() {
     <div className="home usage-page">
       <header className="home-head">
         <a className="brand" href="#/">
-          <img src="./favicon.svg" alt="" width={28} height={28} />
-          <span>Ixia</span>
+          <BrandLogo />
         </a>
         <span className="muted">Usage and errors</span>
         <div className="home-actions">

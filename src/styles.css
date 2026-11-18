@@ -1430,6 +1430,29 @@ hr.item-sep {
 .brand {
   flex: none;
 }
+/* The logo: white lettering on the dark ground, charcoal on the light one (see BrandLogo) */
+.brand-logo {
+  display: block;
+  height: 36px;
+  width: auto;
+}
+.brand-logo.on-light {
+  display: none;
+}
+:root[data-theme='light'] .brand-logo.on-dark {
+  display: none;
+}
+:root[data-theme='light'] .brand-logo.on-light {
+  display: block;
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme='auto'] .brand-logo.on-dark {
+    display: none;
+  }
+  :root[data-theme='auto'] .brand-logo.on-light {
+    display: block;
+  }
+}
 .home-user {
   max-width: 180px;
   overflow: hidden;
