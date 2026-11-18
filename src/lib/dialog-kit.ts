@@ -139,7 +139,7 @@ export function overlayTargets(d: Project, overlayId: string): { node: SceneNode
  * The close button every dismissable overlay on the web has in its corner: a small square you can press, named Close for a
  * screen reader, holding a drawn cross (not a letter x, which reads as a letter and sits wrong on its line).
  */
-export function closeButton(l: Record<string, string>): FrameNode {
+export function closeButton(l: Record<string, string>, onDark = false): FrameNode {
   const SIZE = 32;
   const ARM = 10;
   const at = (SIZE - ARM) / 2;
@@ -154,7 +154,8 @@ export function closeButton(l: Record<string, string>): FrameNode {
       { closed: false, points: [{ x: ARM, y: 0 }, { x: 0, y: ARM }] },
     ],
     fill: null,
-    stroke: { paint: solid(l.text), width: 1.75 },
+    //(on a dark card, a toast, the cross is the page's own light colour)
+    stroke: { paint: solid(onDark ? l.background : l.text), width: 1.75 },
     lineCap: 'round',
     decorative: true,
   });
@@ -162,14 +163,15 @@ export function closeButton(l: Record<string, string>): FrameNode {
     name: 'Close',
     width: SIZE,
     height: SIZE,
-    fill: solid(l.surface),
+    //nothing behind the cross until the pointer is on it, so it sits on whatever card it is in
+    fill: null,
     cornerRadius: RADIUS.control,
     clip: false,
     role: 'button',
     ariaLabel: 'Close',
     focusable: true,
     cursor: 'pointer',
-    states: [{ id: uid('st'), name: 'Hover', when: 'hover', props: { 'fill.color': l.surfaceMuted } }],
+    states: [{ id: uid('st'), name: 'Hover', when: 'hover', props: { fill: solid(onDark ? 'rgba(255,255,255,0.16)' : l.surfaceMuted) } }],
     //it keeps its own corner of a row: the title beside it takes the room, this never shrinks
     layoutItem: { position: 'flow' },
     children: [cross],
@@ -215,7 +217,9 @@ function fillTooltip(page: Artboard, l: Record<string, string>): void {
 }
 
 /**
- * The toast: one small card that hugs its words, lifted off the page with a shadow. Its words come from a variable the page
+ * The toast: one small card that hugs its words, lifted off the page with a shadow. Dark with light words whatever the
+ * page's theme, like the tooltip, which is how a plain message is drawn on most of the web: it reads as sitting on top
+ * of the page rather than being part of it. Its words come from a variable the page
  * says it takes, and the toast names that variable as where a Show toast node's Message goes, so one toast serves every
  * message.
  */
@@ -233,22 +237,22 @@ function fillToast(d: Project, page: Artboard, l: Record<string, string>): void 
     text: `{${messageVar}}`,
     fontSize: TYPE.body,
     lineHeight: 1.4,
-    color: l.text,
+    color: l.background,
     autoSize: 'width',
     maxWidth: 320,
     width: 42,
     height: 20,
   });
-  const close = closeButton(l);
+  const close = closeButton(l, true);
   const card = createNode('frame', {
     name: 'Toast',
     x: CARD_AT,
     y: CARD_AT,
     width: 42 + 32,
     height: 20 + 24,
-    fill: solid(l.surface),
-    cornerRadius: RADIUS.card,
-    stroke: { paint: solid(l.border), width: 1, align: 'inside' },
+    fill: solid(l.text),
+    cornerRadius: RADIUS.control,
+    stroke: null,
     clip: false,
     shadow: SHADOW.raised,
     layout: { ...defaultAutoLayout('row'), gap: SPACE.m, padding: { top: SPACE.s, right: SPACE.s, bottom: SPACE.s, left: SPACE.l }, align: 'center', hugWidth: true, hugHeight: true },
@@ -330,7 +334,8 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     y: CARD_AT,
     width: cardW,
     height: 200,
-    fill: solid(l.surface),
+    //the page's own ground, not the grey of a panel: a dialog is the brightest thing on a dimmed page
+    fill: solid(l.background),
     cornerRadius: RADIUS.card,
     stroke: { paint: solid(l.border), width: 1, align: 'inside' },
     clip: false,
@@ -341,8 +346,8 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
   page.children = [card];
 
   const plain = (name: string, label: string) =>
-    createNode('button', { name, label, width: 96, height: CONTROL_H, fill: solid(l.surface), color: l.text, fontSize: TYPE.body, cornerRadius: RADIUS.control, stroke: { paint: solid(l.border), width: 1, align: 'inside' } });
-  const main = (name: string, label: string) => createNode('button', { name, label, width: 96, height: CONTROL_H, fill: solid(l.button), color: l.onButton, fontSize: TYPE.body, cornerRadius: RADIUS.control });
+    createNode('button', { name, label, width: 96, height: CONTROL_H, fill: solid(l.background), color: l.text, fontSize: TYPE.body, fontWeight: 600, cornerRadius: RADIUS.control, stroke: { paint: solid(l.border), width: 1, align: 'inside' } });
+  const main = (name: string, label: string) => createNode('button', { name, label, width: 96, height: CONTROL_H, fill: solid(l.button), color: l.onButton, fontSize: TYPE.body, fontWeight: 600, cornerRadius: RADIUS.control });
 
   if (kind === 'modal') {
     //A modal has a way out in its corner as well as its button: the cross is where people look for it
@@ -414,14 +419,15 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     label: 'Button',
     width: 120,
     height: CONTROL_H,
-    fill: solid(l.surface),
+    fill: solid(l.background),
     color: l.text,
     fontSize: TYPE.body,
+    fontWeight: 600,
     cornerRadius: RADIUS.control,
     stroke: { paint: solid(l.border), width: 1, align: 'inside' },
     bindings: {
       label: 'item.label',
-      'fill.color': `item.main ? "${l.button}" : "${l.surface}"`,
+      'fill.color': `item.main ? "${l.button}" : "${l.background}"`,
       color: `item.main ? "${l.onButton}" : "${l.text}"`,
     },
   });

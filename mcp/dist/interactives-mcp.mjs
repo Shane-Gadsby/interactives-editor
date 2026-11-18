@@ -12165,6 +12165,23 @@ function optionLooks(normal, own, picked) {
   const l = lookBindings("item", normal, picked ? ALL_LOOKS : void 0, picked);
   return { bindings: { ...own, ...l.bindings }, converters: l.converters };
 }
+function tickBox(base2) {
+  const tick = createNode("path", {
+    name: "Tick",
+    x: 5,
+    y: 6,
+    width: 12,
+    height: 9,
+    paths: [{ closed: false, points: [{ x: 0, y: 4.5 }, { x: 4.5, y: 9 }, { x: 12, y: 0 }] }],
+    fill: null,
+    stroke: { paint: solid$1(L$2.background), width: 2.25 },
+    lineCap: "round",
+    lineJoin: "round",
+    decorative: true,
+    bindings: { "stroke.paint.color": 'item.selected ? "' + L$2.onPrimary + '" : "' + L$2.background + '"' }
+  });
+  return createNode("frame", { ...base2, cornerRadius: 5, clip: false, children: [tick] });
+}
 function optionTemplate(style) {
   const base2 = { height: 52, fill: solid$1(L$2.background), cornerRadius: 10, clip: false };
   if (style === "order") {
@@ -12196,7 +12213,7 @@ function optionTemplate(style) {
     layout: { ...row(12), padding: { top: 12, right: 16, bottom: 12, left: 16 } },
     ...optionLooks({ fill: L$2.background, line: L$2.border }, { ariaChecked: "item.selected", ariaLabel: "item.text", ariaDescription: STATE_DESCRIPTION }, true),
     children: [
-      checkbox ? createNode("rect", { ...markerBase, cornerRadius: 5 }) : createNode("ellipse", markerBase),
+      checkbox ? tickBox(markerBase) : createNode("ellipse", { ...markerBase, shadow: { x: 0, y: 0, blur: 0, spread: 4, color: L$2.background, inset: true } }),
       text$1("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, decorative: true, ...lookBindings("item", { text: L$2.text }, ALL_LOOKS, true) }),
       text$1("Result", "optionState", STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 110, decorative: true })
     ]
@@ -25892,10 +25909,10 @@ That split is what lets a tooltip belong to a small icon while a much bigger are
   - It has a **Tail**: a small triangle on the side facing the target, pointing at the middle of it, in the tooltip's own colour. It follows whichever side the tooltip ended up on. Give the card a border and the tail takes it too, as one outline with the card. Untick **Tail** to go without.
   - **Stays while you're on it** keeps it open when the pointer moves from the trigger onto the tooltip, with a moment's grace to cross the gap, so a link or a button inside it can be reached. Turn it off for a plain label that should go the moment you leave. <kbd>Esc</kbd> puts a tooltip away either way.
   - The **keyboard reaches what's inside** the same way. With the trigger focused, <kbd>Tab</kbd> goes to the first link or button in the tooltip, <kbd>Tab</kbd> off the last one carries on to whatever follows the trigger, and <kbd>Shift</kbd>+<kbd>Tab</kbd> from the first goes back to the trigger. <kbd>Esc</kbd> from inside puts the tooltip away and hands the focus back to the trigger. A tooltip with nothing to press in it changes nothing about <kbd>Tab</kbd>.
-- **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd>, a click outside, its **Close** button or the cross in its corner closes it. It **eases in and out** (and not at all for a viewer who asks for less motion), and when it closes the focus goes back to what opened it. It opens in the **middle of what the viewer can see**: on a tall page embedded in a course that is the part on screen, not the middle of the page, which may be out of sight. It stays where it opened if they scroll. The same goes for a confirmation and a prompt. A screen reader calls it by its **page's name**, so name the page for what it is ("Your progress", not "Dialog 2"); the same goes for a confirmation and a prompt. The dimming and the blocking of what's behind are part of being a modal, so they're there even with **Accessibility off** in Preview; only moving the focus in and keeping <kbd>Tab</kbd> inside follow that switch.
+- **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd>, a click outside, its **Close** button or the cross in its corner closes it. It **eases in and out** (and not at all for a viewer who asks for less motion), and when it closes the focus goes back to what opened it. It opens in the **middle of what the viewer can see**: on a tall page embedded in a course that is the part on screen, not the middle of the page, which may be out of sight. It stays where it opened if they scroll. The same goes for a confirmation and a prompt. A screen reader calls it by its **page's name**, so name the page for what it is ("Your progress", not "Dialog 2"); the same goes for a confirmation and a prompt. The dimming and the blocking of what's behind are part of being a modal, so they're there even with **Accessibility off** in Preview; only moving the focus in and keeping <kbd>Tab</kbd> inside follow that switch. The card of a new modal, confirmation or prompt is the page's own background colour, the brightest thing on the dimmed page.
 - **Confirmation.** Asks a question and takes the answer from its buttons. A screen reader hears it as an **alert dialog**, named by its heading and described by its message, and the focus starts on the first button, so put the safe answer (**Cancel**) first. The buttons are a **list**: add one by adding a row, rename one by changing its label, and mark the answer you mean with \`"main": true\` so it stands out from the ways out. Picking a button writes what it stands for into **What they chose** and closes it. A click outside doesn't dismiss a confirmation.
 - **Prompt.** Asks for something typed. The focus starts in the box. **OK**, or <kbd>Enter</kbd> in the box, keeps what was typed in **What they answered** and closes; **Cancel** or <kbd>Esc</kbd> closes and leaves the last answer alone. Read that variable, or start a flow when it changes.
-- **Toast.** A short message that appears over a corner of the page, stays a moment and goes by itself: "Plan saved", "Copied", "Couldn't reach the server". See [Toasts](#toasts) below.
+- **Toast.** A short message that appears over a corner of the page, stays a moment and goes by itself: "Plan saved", "Copied", "Couldn't reach the server". See [Toasts](#toasts) below. A new toast is a small dark card with light words, like a tooltip, so it reads as sitting on top of the page.
 
 ## Opening one without a layer
 A modal, a confirmation and a prompt each have a **showing** variable (**Dialog showing**, and so on). Turn it on and the overlay opens, on whichever page is open, with **no layer pointing at it**: a **Change a value** node at the end of a flow, a script, or a timer. Its page's **Overlay** section says so when nothing points at it. A tooltip always needs a layer, since it has to sit beside something.
@@ -25952,6 +25969,8 @@ An overlay page holds ordinary layers, timelines and interactions, so everything
     body: `A question that checks itself, without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open page from ordinary layers, with the variables it keeps and a few interaction nodes. The **Question** section in the Inspector then changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
 
 Already have the questions in Word, Excel or Moodle? You can [paste them in](paste-questions) or import a GIFT file instead of typing them again.
+
+A chosen option looks chosen the way it does on any form: a **tick** in a multiple-response option's box, a **dot** in a single choice's ring, with the row tinted and outlined as well.
 
 ## Add one
 

@@ -229,6 +229,28 @@ function optionLooks(normal: Partial<Record<LookSlot, string>>, own: Record<stri
   return { bindings: { ...own, ...l.bindings }, converters: l.converters };
 }
 
+//A chosen checkbox is a filled box with a tick in it, and a chosen radio a dot inside its ring, as they are everywhere:
+//a plain filled square or disc reads as a colour swatch. The tick is always there and takes the box's own colour until
+//the option is chosen, so nothing has to be shown or hidden. The radio's dot is its fill seen through a ring of the
+//page's colour drawn just inside its line, which can't be seen while the fill is the page's colour too.
+function tickBox(base: Record<string, unknown>): SceneNode {
+  const tick = createNode('path', {
+    name: 'Tick',
+    x: 5,
+    y: 6,
+    width: 12,
+    height: 9,
+    paths: [{ closed: false, points: [{ x: 0, y: 4.5 }, { x: 4.5, y: 9 }, { x: 12, y: 0 }] }],
+    fill: null,
+    stroke: { paint: solid(L.background), width: 2.25 },
+    lineCap: 'round',
+    lineJoin: 'round',
+    decorative: true,
+    bindings: { 'stroke.paint.color': 'item.selected ? "' + L.onPrimary + '" : "' + L.background + '"' },
+  });
+  return createNode('frame', { ...base, cornerRadius: 5, clip: false, children: [tick] });
+}
+
 function optionTemplate(style: Style): SceneNode {
   const base = { height: 52, fill: solid(L.background), cornerRadius: 10, clip: false };
   if (style === 'order') {
@@ -260,7 +282,7 @@ function optionTemplate(style: Style): SceneNode {
     layout: { ...row(12), padding: { top: 12, right: 16, bottom: 12, left: 16 } },
     ...optionLooks({ fill: L.background, line: L.border }, { ariaChecked: 'item.selected', ariaLabel: 'item.text', ariaDescription: STATE_DESCRIPTION }, true),
     children: [
-      checkbox ? createNode('rect', { ...markerBase, cornerRadius: 5 }) : createNode('ellipse', markerBase),
+      checkbox ? tickBox(markerBase) : createNode('ellipse', { ...markerBase, shadow: { x: 0, y: 0, blur: 0, spread: 4, color: L.background, inset: true } }),
       text('Label', 'optionLabel', '{item.text}', { layoutItem: { width: 'fill' }, decorative: true, ...lookBindings('item', { text: L.text }, ALL_LOOKS, true) }),
       text('Result', 'optionState', STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L.muted, autoSize: 'width', width: 110, decorative: true }),
     ],
