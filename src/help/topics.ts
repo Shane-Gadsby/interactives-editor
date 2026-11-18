@@ -3222,7 +3222,7 @@ An overlay page holds ordinary layers, timelines and interactions, so everything
 
 Already have the questions in Word, Excel or Moodle? You can [paste them in](paste-questions) or import a GIFT file instead of typing them again.
 
-A chosen option looks chosen the way it does on any form: a **tick** in a multiple-response option's box, a **dot** in a single choice's ring, with the row tinted and outlined as well.
+A chosen option looks chosen the way it does on any form: a **tick** in a multiple-response option's box, a **dot** in a single choice's ring, with the row tinted and outlined as well. The label over a blank is in the text colour, so it can be read; the quiet grey is kept for hints.
 
 ## Add one
 

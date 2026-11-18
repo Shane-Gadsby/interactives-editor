@@ -12049,6 +12049,8 @@ function addColourwayTheme(draft, way2) {
   return true;
 }
 const ALL_COLOURWAYS = [...COLOURWAYS, HIGH_CONTRAST];
+const RADIUS = { control: 8 };
+const TYPE = { small: 13, body: 15, heading: 18 };
 let L$2 = lookFor(void 0);
 const AREA_OFF = "#00000000";
 const AREA_ON = "#fb940033";
@@ -12146,7 +12148,7 @@ function applyLooks(frame, before, after) {
 const STATE_WORDS = '{item.state == "correct" ? "✓ Right" : item.state == "wrong" ? "✗ Wrong" : item.state == "missed" ? "← Right answer" : ""}';
 const STATE_DESCRIPTION = 'item.state == "correct" ? "Right" : item.state == "wrong" ? "Wrong" : item.state == "missed" ? "This was the right answer" : ""';
 function text$1(name, part, value, o = {}) {
-  return createNode("text", { name, questionPart: part, text: value, fontSize: 16, color: L$2.text, autoSize: "height", width: 200, height: 24, ...o });
+  return createNode("text", { name, questionPart: part, text: value, fontSize: TYPE.body, color: L$2.text, autoSize: "height", width: 200, height: 24, ...o });
 }
 function button$1(name, part, label, primary, bindings) {
   return createNode("button", {
@@ -12183,7 +12185,7 @@ function tickBox(base2) {
   return createNode("frame", { ...base2, cornerRadius: 5, clip: false, children: [tick] });
 }
 function optionTemplate(style) {
-  const base2 = { height: 52, fill: solid$1(L$2.background), cornerRadius: 10, clip: false };
+  const base2 = { height: 52, fill: solid$1(L$2.background), cornerRadius: RADIUS.control, clip: false };
   if (style === "order") {
     return createNode("frame", {
       ...base2,
@@ -12195,7 +12197,7 @@ function optionTemplate(style) {
       children: [
         text$1("Number", "optionNumber", "{item.number}.", { width: 28, color: L$2.muted, fontWeight: 600, decorative: true }),
         text$1("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, ...lookBindings("item", { text: L$2.text }) }),
-        text$1("Result", "optionState", STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, decorative: true }),
+        text$1("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, decorative: true }),
         createNode("button", { name: "Move up", questionPart: "moveUp", label: "↑", width: 40, height: 36, fill: solid$1(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
         createNode("button", { name: "Move down", questionPart: "moveDown", label: "↓", width: 40, height: 36, fill: solid$1(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } })
       ]
@@ -12215,7 +12217,7 @@ function optionTemplate(style) {
     children: [
       checkbox ? tickBox(markerBase) : createNode("ellipse", { ...markerBase, shadow: { x: 0, y: 0, blur: 0, spread: 4, color: L$2.background, inset: true } }),
       text$1("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, decorative: true, ...lookBindings("item", { text: L$2.text }, ALL_LOOKS, true) }),
-      text$1("Result", "optionState", STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 110, decorative: true })
+      text$1("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 110, decorative: true })
     ]
   });
 }
@@ -12246,7 +12248,7 @@ function blankRow(q, i, blankVar) {
     clip: false,
     layout: { ...column(6), align: "stretch" },
     children: [
-      text$1("Blank label", "blankLabel", q.blanks[i]?.label ?? "", { fontSize: 14, fontWeight: 600, color: L$2.muted, bindings: { text: `${at}?.label ?? ""` } }),
+      text$1("Blank label", "blankLabel", q.blanks[i]?.label ?? "", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
       createNode("input", {
         name: "Blank input",
         questionPart: "blankInput",
@@ -12260,7 +12262,7 @@ function blankRow(q, i, blankVar) {
         converters: line.converters,
         bindings: { value: blankVar, ...line.bindings, ariaLabel: `${at}?.label || "Answer"` }
       }),
-      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
+      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
     ]
   });
 }
@@ -12311,7 +12313,7 @@ function chip(q, o) {
     height: o.h ?? TERM_H,
     fill: solid$1(L$2.background),
     stroke: stroke$1(L$2.border, 2),
-    cornerRadius: 10,
+    cornerRadius: RADIUS.control,
     clip: false,
     layout: { ...row(8), padding: { top: 8, right: 12, bottom: 8, left: 12 }, hugHeight: false },
     ariaLabel: o.word,
@@ -12331,7 +12333,7 @@ function matchTerm(q, p, i, slot, name = `Term ${i + 1}`) {
     height: TERM_H,
     fill: solid$1(L$2.background),
     stroke: stroke$1(L$2.border, 2),
-    cornerRadius: 10,
+    cornerRadius: RADIUS.control,
     clip: false,
     layout: { ...row(8), padding: { top: 8, right: 12, bottom: 8, left: 12 }, hugHeight: false },
     ariaLabel: p.term,
@@ -12369,7 +12371,7 @@ function matchRow(q, p, i) {
             height: TERM_H,
             fill: null,
             stroke: { ...stroke$1(L$2.border, 2), dash: [6, 4] },
-            cornerRadius: 10,
+            cornerRadius: RADIUS.control,
             clip: false,
             dropZone: { accepts: [termTag(q)], capacity: 1, whenFull: "swap", snap: "center", label: p.match },
             converters: line.converters,
@@ -12378,7 +12380,7 @@ function matchRow(q, p, i) {
         ]
       }),
       text$1("Match result", "matchState", `{${at}?.state == "correct" ? "✓ Right" : ${at}?.state == "wrong" ? "✗ Wrong" + (${at}?.answer ? ". The answer is " + ${at}.answer : "") : ""}`, {
-        fontSize: 13,
+        fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.muted,
         decorative: true,
@@ -12457,7 +12459,7 @@ function catZone(q, g, i) {
     //Unlimited, and a dropped item stays where it was let go. Every group takes every item: whether it is right is for Check to say
     dropZone: { accepts: [catTag(q)], snap: "none", label: g.name },
     ariaLabel: g.name,
-    children: [text$1(`Group ${i + 1} heading`, "catHeading", g.name, { x: 12, y: 10, width: 140, fontWeight: 700, fontSize: 18, decorative: true })]
+    children: [text$1(`Group ${i + 1} heading`, "catHeading", g.name, { x: 12, y: 10, width: 140, fontWeight: 700, fontSize: TYPE.heading, decorative: true })]
   });
 }
 function catCard(q, c2, i) {
@@ -12503,7 +12505,7 @@ function categoriseBody(q) {
         })
       }),
       text$1("Right groups", "catAnswer", `{${items}.filter(i => i.answer).map(i => i.text + " goes in " + i.answer).join(". ")}`, {
-        fontSize: 14,
+        fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.warning,
         bindings: { visible: `${items}.some(i => i.answer)` }
@@ -12589,7 +12591,7 @@ function dragBlankRow(q, b, i) {
     clip: false,
     layout: { ...column(6), align: "stretch" },
     children: [
-      text$1("Blank label", "blankLabel", b.label, { fontSize: 14, fontWeight: 600, color: L$2.muted, bindings: { text: `${at}?.label ?? ""` } }),
+      text$1("Blank label", "blankLabel", b.label, { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
       createNode("frame", {
         name: `Gap ${i + 1}`,
         questionPart: `blankZone:${b.id}`,
@@ -12597,14 +12599,14 @@ function dragBlankRow(q, b, i) {
         height: CHIP_H,
         fill: null,
         stroke: { ...stroke$1(L$2.border, 2), dash: [6, 4] },
-        cornerRadius: 10,
+        cornerRadius: RADIUS.control,
         clip: false,
         dropZone: { accepts: [wordTag(q)], capacity: 1, whenFull: "swap", snap: "center", label: b.label || `Blank ${i + 1}` },
         ariaLabel: b.label || `Blank ${i + 1}`,
         converters: line.converters,
         bindings: { ...line.bindings, ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) }
       }),
-      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
+      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
     ]
   });
 }
@@ -12631,7 +12633,7 @@ function dragBlanksBody(q) {
         layout: column(14),
         children: q.blanks.map((b, i) => dragBlankRow(q, b, i))
       }),
-      text$1("Word bank label", "wordBankLabel", "Word bank", { fontSize: 14, fontWeight: 600, color: L$2.muted }),
+      text$1("Word bank label", "wordBankLabel", "Word bank", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text }),
       createNode("frame", {
         name: "Word bank",
         questionPart: "wordBank",
@@ -12766,7 +12768,7 @@ function samplePicture() {
     height: AREA_H,
     fill: solid$1("#cfe8ff"),
     stroke: null,
-    cornerRadius: 10,
+    cornerRadius: RADIUS.control,
     clip: true,
     role: "image",
     ariaLabel: "A house with a red roof and a door, a tree beside it and the sun in the sky",
@@ -12803,7 +12805,7 @@ function hotspotBody(q) {
         height: AREA_H,
         fill: null,
         stroke: stroke$1(L$2.divider, 1),
-        cornerRadius: 10,
+        cornerRadius: RADIUS.control,
         clip: false,
         role: isMultiple(q) ? "region" : "radiogroup",
         bindings: { ariaLabel: prompt },
@@ -12811,12 +12813,12 @@ function hotspotBody(q) {
         children: [samplePicture(), createNode("frame", { name: "Areas", questionPart: "spotAreas", width: AREA_W, height: AREA_H, fill: null, stroke: null, clip: false, children: areas })]
       }),
       text$1("Picks", "spotPicks", `Selected: {${items}.filter(i => i.selected).map(i => i.text + (i.state == "correct" ? " (right)" : i.state == "wrong" ? " (wrong)" : "")).join(", ")}`, {
-        fontSize: 14,
+        fontSize: TYPE.small,
         color: L$2.muted,
         bindings: { visible: `${items}.some(i => i.selected)` }
       }),
       text$1("Right areas", "spotAnswer", `Right answer: {${items}.filter(i => i.state == "missed").map(i => i.text).join(", ")}`, {
-        fontSize: 14,
+        fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.warning,
         bindings: { visible: `${items}.some(i => i.state == "missed")` }
@@ -12864,9 +12866,9 @@ function frameFor(q, blankVars, at) {
     bindings: { ariaLabel: `"Question: " + ${p("prompt")}` },
     layout: { ...defaultAutoLayout("column"), gap: 16, padding: { top: 24, right: 24, bottom: 24, left: 24 }, align: "stretch", hugHeight: true },
     children: [
-      text$1("Prompt", "prompt", `{${p("prompt")}}`, { role: "heading", headingLevel: 3, fontSize: 20, fontWeight: 600, lineHeight: 1.35 }),
+      text$1("Prompt", "prompt", `{${p("prompt")}}`, { role: "heading", headingLevel: 3, fontSize: TYPE.heading, fontWeight: 600, lineHeight: 1.35 }),
       body,
-      text$1("Hint text", "hintText", `Hint: {${p("hint")}}`, { fontSize: 14, fontStyle: "italic", color: L$2.muted, bindings: { visible: `${p("hint")} != ""` } }),
+      text$1("Hint text", "hintText", `Hint: {${p("hint")}}`, { fontSize: TYPE.small, fontStyle: "italic", color: L$2.muted, bindings: { visible: `${p("hint")} != ""` } }),
       text$1("Feedback", "feedback", `{${p("feedback")}}`, {
         fontWeight: 600,
         bindings: { visible: `${p("feedback")} != ""`, color: `${p("answered")} ? (${p("correct")} ? "${L$2.success}" : "${L$2.error}") : "${L$2.muted}"` }
@@ -13236,7 +13238,7 @@ function syncKeysHint(frame, q) {
   if (want && !has) {
     const body = parts.options?.[0];
     const at = body ? frame.children.findIndex((c2) => c2 === body) : -1;
-    const line = text$1("Number keys hint", "keysHint", `Press 1 to {${varName(q, "items")}.length} to choose`, { fontSize: 14, color: L$2.muted });
+    const line = text$1("Number keys hint", "keysHint", `Press 1 to {${varName(q, "items")}.length} to choose`, { fontSize: TYPE.small, color: L$2.muted });
     frame.children.splice(at >= 0 ? at + 1 : 2, 0, line);
   } else if (!want && has) {
     const loc = locateIn(frame, has.id);
@@ -25981,7 +25983,7 @@ An overlay page holds ordinary layers, timelines and interactions, so everything
 
 Already have the questions in Word, Excel or Moodle? You can [paste them in](paste-questions) or import a GIFT file instead of typing them again.
 
-A chosen option looks chosen the way it does on any form: a **tick** in a multiple-response option's box, a **dot** in a single choice's ring, with the row tinted and outlined as well.
+A chosen option looks chosen the way it does on any form: a **tick** in a multiple-response option's box, a **dot** in a single choice's ring, with the row tinted and outlined as well. The label over a blank is in the text colour, so it can be read; the quiet grey is kept for hints.
 
 ## Add one
 

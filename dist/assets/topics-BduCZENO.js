@@ -1,4 +1,4 @@
-import{c0 as a,c1 as o,c2 as m,c3 as r,c4 as k,c5 as V,c6 as R,c7 as E,c8 as h,c9 as s,ca as i,cb as U,cc as M,cd as b,ce as n,cf as S,cg as C,ch as f,ci as w,cj as A,ck as l,cl as d,cm as T,cn as P,co as u,cp as O,cq as x,cr as Y,cs as F,ct as K,cu as D,cv as I,cw as $,cx as Q,cy as X,bn as J,aa as Z,bx as ee,bf as te,ag as W,b2 as ae}from"./index-5CUHOXVS.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{c0 as a,c1 as o,c2 as m,c3 as r,c4 as k,c5 as V,c6 as R,c7 as E,c8 as h,c9 as s,ca as i,cb as U,cc as M,cd as b,ce as n,cf as S,cg as C,ch as f,ci as w,cj as A,ck as l,cl as d,cm as T,cn as P,co as u,cp as O,cq as x,cr as Y,cs as F,ct as K,cu as D,cv as I,cw as $,cx as Q,cy as X,bn as J,aa as Z,bx as ee,bf as te,ag as W,b2 as ae}from"./index-DKAwY52P.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -6820,7 +6820,7 @@ An overlay page holds ordinary layers, timelines and interactions, so everything
 
 Already have the questions in Word, Excel or Moodle? You can [paste them in](paste-questions) or import a GIFT file instead of typing them again.
 
-A chosen option looks chosen the way it does on any form: a **tick** in a multiple-response option's box, a **dot** in a single choice's ring, with the row tinted and outlined as well.
+A chosen option looks chosen the way it does on any form: a **tick** in a multiple-response option's box, a **dot** in a single choice's ring, with the row tinted and outlined as well. The label over a blank is in the text colour, so it can be read; the quiet grey is kept for hints.
 
 ## Add one
 
