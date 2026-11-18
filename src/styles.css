@@ -5554,6 +5554,28 @@ textarea.form-text {
     transform: translateY(-2px);
   }
 }
+/* a tip above its button with a tail pointing at it (data-tip-side="top"); the tail points up when it had to go below */
+.ix-tooltip.tail-down::after,
+.ix-tooltip.tail-up::after {
+  content: '';
+  position: absolute;
+  left: var(--tail-x, 50%);
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  border: 1px solid var(--line-2);
+  transform: translateX(-50%) rotate(45deg);
+}
+.ix-tooltip.tail-down::after {
+  bottom: -5px;
+  border-top: 0;
+  border-left: 0;
+}
+.ix-tooltip.tail-up::after {
+  top: -5px;
+  border-bottom: 0;
+  border-right: 0;
+}
 .field-label[data-tip],
 .field[data-tip] > .field-label,
 .field[data-tip] > span:not(.swatch, .field-trail, .field-control) {

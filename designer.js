@@ -40,14 +40,14 @@ class DesignerError extends Error {
 }
 
 const WORDS = {
-	limit: 'The Activity Designer has reached its hourly limit. Try again in a little while.',
+	limit: 'Ixia has reached its hourly limit. Try again in a little while.',
 	limitOwn: 'Your own Cogniti allowance has reached its hourly limit. Try again in a little while.',
 	blocked: "That was blocked by UniSQ's content safety checks. Try asking in different words.",
-	tooLong: 'This chat has got too long for the Activity Designer. Start a new chat and ask again.',
-	forbidden: "The Activity Designer isn't available right now. If it keeps happening, tell the Toolbox team.",
+	tooLong: 'This chat has got too long for Ixia. Start a new chat and ask again.',
+	forbidden: "Ixia isn't available right now. If it keeps happening, tell the Toolbox team.",
 	forbiddenOwn: "Cogniti didn't accept your own token. It may have ended, or the Activity Designer may not be shared with you yet. Check it in Preferences, or remove it to use the shared allowance.",
-	unavailable: 'The Activity Designer could not be reached. Try again in a minute.',
-	empty: "The Activity Designer didn't send anything back. Try again.",
+	unavailable: 'Ixia could not be reached. Try again in a minute.',
+	empty: "Ixia didn't send anything back. Try again.",
 	cut: 'The Activity Designer took too long to start and Cogniti gave up. Try a smaller request, or try again in a minute.',
 }
 
@@ -130,7 +130,7 @@ const cogniti = (cfg, fetcher = (...a) => fetch(...a)) => {
 			return reply
 		},
 
-		//Does this token get in, and can it chat with the Activity Designer? Asked once, when a person adds their own.
+		//Does this token get in, and can it chat with Ixia? Asked once, when a person adds their own.
 		//The list of agents is what the token's owner can see; can_chat is false (or the agent missing) when it isn't shared with them
 		async checkAccess(signal) {
 			let res
@@ -173,7 +173,7 @@ const secretKey = (storageDir, env = process.env) => {
 			fs.writeFileSync(file, secret, {mode: 0o600})
 		}
 		catch (e) {
-			console.warn(`interactives: could not keep the Activity Designer key in ${file}, tokens people added will not open after a restart`, e.message)
+			console.warn(`interactives: could not keep Ixia key in ${file}, tokens people added will not open after a restart`, e.message)
 		}
 	}
 	keyCache = {dir: storageDir, key: crypto.createHash('sha256').update(secret).digest()}
@@ -352,7 +352,7 @@ const run = async (deps, input) => {
 			around = cut((await context()) || '', CONTEXT_BUDGET)
 		}
 		catch (err) {
-			return fail(`The Activity Designer could not open the project (${String(err.message || err).slice(0, 120)}).`, 'error')
+			return fail(`Ixia could not open the project (${String(err.message || err).slice(0, 120)}).`, 'error')
 		}
 
 		if (!state.conversation) state.conversation = await ai.newConversation(signal)
@@ -406,7 +406,7 @@ const run = async (deps, input) => {
 					}
 					catch (err) {
 						console.warn('interactives: designer restore point failed', err?.message)
-						return fail("The Activity Designer could not save a copy of your project first, so it stopped before changing anything. Try again in a moment.", 'error')
+						return fail("Ixia could not save a copy of your project first, so it stopped before changing anything. Try again in a moment.", 'error')
 					}
 				}
 				emit({type: 'status', text: STATUS.build})
@@ -444,7 +444,7 @@ const run = async (deps, input) => {
 			return fail(err.message, err.kind)
 		}
 		console.warn('interactives: designer run failed', err?.message)
-		return fail('Something went wrong in the Activity Designer. Try again in a minute.', 'error')
+		return fail('Something went wrong in Ixia. Try again in a minute.', 'error')
 	}
 }
 

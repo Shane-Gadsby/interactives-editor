@@ -8,6 +8,10 @@ more than about 30 seconds to start. Board doc `activity-designer-parked` has th
 
 ## It also runs on Gemini now (18 Nov 2026)
 
+People see it as **Ask Ixia** since 18 Nov (the chat's heading, its messages, "Undo what Ixia did", the restore point
+"Before Ixia", and "Ixia (AI)" in a live session). The files, routes and env vars keep `designer` in their names, and the
+Cogniti agent is still called Activity Designer in Cogniti. The words to put back further down are from before the rename.
+
 `designer-gemini.js` is the same panel and the same route with Gemini as the model, and no message cap to work around: the
 model runs the MCP tools itself (read, look up, edit, build, validate) until the request is done. It is still parked, and
 it runs with `INTERACTIVES_DESIGNER=on` and `GEMINI_API_KEY` (see the README's env table for where the key comes from).

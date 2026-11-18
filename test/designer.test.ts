@@ -80,7 +80,7 @@ describe('the Cogniti client', () => {
   it('turns each failure into plain words, and says it differently to someone on their own token', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const say = (status: number, c = cfg) => cogniti(c, async () => new Response(JSON.stringify({ message: 'secret detail' }), { status })).send('c', 'x', []).catch((e: Error) => e);
-    expect((await say(429)).message).toBe('The Activity Designer has reached its hourly limit. Try again in a little while.');
+    expect((await say(429)).message).toBe('Ixia has reached its hourly limit. Try again in a little while.');
     expect((await say(406)).message).toBe(WORDS.blocked);
     expect((await say(413)).message).toBe(WORDS.tooLong);
     expect((await say(403)).message).toBe(WORDS.forbidden);
@@ -246,7 +246,7 @@ describe('when things go wrong', () => {
   it('says the hourly limit kindly, tells the panel what kind of error it was, and forgets a chat that got too long', async () => {
     const h = harness([new designer.DesignerError('limit', WORDS.limit)]);
     expect(await h.go()).toMatchObject({ outcome: 'limit', rounds: 0 });
-    expect(h.events.at(-1)).toEqual({ type: 'error', text: 'The Activity Designer has reached its hourly limit. Try again in a little while.', kind: 'limit' });
+    expect(h.events.at(-1)).toEqual({ type: 'error', text: 'Ixia has reached its hourly limit. Try again in a little while.', kind: 'limit' });
     const long = harness([new designer.DesignerError('tooLong', WORDS.tooLong)]);
     long.state.conversation = 'old';
     await long.go();

@@ -31,12 +31,12 @@ const settings = (env = process.env) => ({
 })
 
 const WORDS = {
-	limit: 'The Activity Designer has reached its limit for now. Try again in a little while.',
+	limit: 'Ixia has reached its limit for now. Try again in a little while.',
 	blocked: "That was blocked by the AI's content safety checks. Try asking in different words.",
-	tooLong: 'This chat has got too long for the Activity Designer. Start a new chat and ask again.',
-	forbidden: "The Activity Designer isn't available right now. If it keeps happening, tell the Toolbox team.",
-	unavailable: 'The Activity Designer could not be reached. Try again in a minute.',
-	empty: "The Activity Designer didn't send anything back. Try again.",
+	tooLong: 'This chat has got too long for Ixia. Start a new chat and ask again.',
+	forbidden: "Ixia isn't available right now. If it keeps happening, tell the Toolbox team.",
+	unavailable: 'Ixia could not be reached. Try again in a minute.',
+	empty: "Ixia didn't send anything back. Try again.",
 	steps: "That's as far as I can get in one go. Have a look at what's there, and ask me to carry on from here.",
 }
 
@@ -190,7 +190,7 @@ const run = async (deps, input) => {
 			around = (await context()) || ''
 		}
 		catch (err) {
-			return fail(`The Activity Designer could not open the project (${String(err.message || err).slice(0, 120)}).`, 'error')
+			return fail(`Ixia could not open the project (${String(err.message || err).slice(0, 120)}).`, 'error')
 		}
 
 		let declared = declarations(tools),
@@ -242,7 +242,7 @@ const run = async (deps, input) => {
 						}
 						catch (err) {
 							console.warn('interactives: designer restore point failed', err?.message)
-							return fail('The Activity Designer could not save a copy of your project first, so it stopped before changing anything. Try again in a moment.', 'error')
+							return fail('Ixia could not save a copy of your project first, so it stopped before changing anything. Try again in a moment.', 'error')
 						}
 					}
 					status(name === 'build' ? STATUS.build : READS[name] || WRITES[name])
@@ -261,9 +261,10 @@ const run = async (deps, input) => {
 					catch (err) {
 						out = {error: true, text: `Error: ${String(err?.message || err).slice(0, 300)}`}
 					}
-					if (out.changed && !changed) {
+					//the first change comes with the restore point, the rest only say there's more to show
+					if (out.changed) {
+						emit(changed ? {type: 'touched'} : {type: 'changed', revision: restore})
 						changed = true
-						emit({type: 'changed', revision: restore})
 					}
 				}
 				answers.push({functionResponse: {name, ...(id ? {id} : {}), response: out.error ? {error: cut(out.text, MAX_RESULT)} : {result: cut(out.text, MAX_RESULT)}}})
@@ -278,7 +279,7 @@ const run = async (deps, input) => {
 		if (signal?.aborted) return done('cancelled')
 		if (err instanceof DesignerError) return fail(err.message, err.kind)
 		console.warn('interactives: designer run failed', err?.message)
-		return fail('Something went wrong in the Activity Designer. Try again in a minute.', 'error')
+		return fail('Something went wrong in Ixia. Try again in a minute.', 'error')
 	}
 }
 

@@ -5576,13 +5576,13 @@ router.delete('/api/projects/:id/results', async (req, res) => {
 	res.json({ok: true, deleted: result.deletedCount})
 })
 
-//The Activity Designer's chat. The panel posts {projectId, artboardId?, conversation?, message} and gets progress back as
+//Ixia's chat. The panel posts {projectId, artboardId?, conversation?, message} and gets progress back as
 //lines of json as it happens: status (plain words about what it's doing), changed (it has changed the project, here's the
 //restore point to undo with), reply, error and done (with the chat's handle and what's left of their shared allowance). The
 //Cogniti conversation and its history stay in here per person and project, so the browser holds nothing but the handle.
 //Each request costs one Cogniti message (designer.js): the agent answers with a blueprint, which mcp.buildBlueprint compiles
 //with the editor's own code and sends to the live room as the person (same session, same audit rows, shows in the live
-//session as "Activity Designer (AI)"). Only someone who can change the project gets to use it
+//session as "Ixia (AI)"). Only someone who can change the project gets to use it
 let designerChats = new Map(),
 	designerRunning = new Set(),
 	DESIGNER_IDLE_MS = 2 * 60 * 60 * 1000,
@@ -5639,7 +5639,7 @@ const designerStatus = async (req) => {
 
 router.get('/api/designer/status', async (req, res) => {
 	if (!whoIs(req)?.username && enforcing()) {
-		return res.status(401).json({error: 'Sign in to use the Activity Designer'})
+		return res.status(401).json({error: 'Sign in to use Ixia'})
 	}
 
 	res.json(await designerStatus(req))
@@ -5649,7 +5649,7 @@ router.get('/api/designer/status', async (req, res) => {
 router.put('/api/designer/token', express.json({limit: '4kb'}), async (req, res) => {
 	let cfg = designer.settings(),
 		me = whoIs(req)
-	if (!cfg.on) return res.status(404).json({error: 'The Activity Designer is switched off here'})
+	if (!cfg.on) return res.status(404).json({error: 'Ixia is switched off here'})
 	if (!me?.username) return res.status(401).json({error: 'Sign in to add your own Cogniti token'})
 
 	let token = typeof req.body?.token === 'string' ? req.body.token.trim() : '',
@@ -5690,8 +5690,8 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	let cfg = designer.settings(),
 		gem = designerGemini.settings(),
 		me = whoIs(req)
-	if (!cfg.on && !gem.on) return res.status(404).json({error: 'The Activity Designer is switched off here'})
-	if (!me?.username && enforcing()) return res.status(401).json({error: 'Sign in to use the Activity Designer'})
+	if (!cfg.on && !gem.on) return res.status(404).json({error: 'Ixia is switched off here'})
+	if (!me?.username && enforcing()) return res.status(401).json({error: 'Sign in to use Ixia'})
 
 	let id = req.body?.projectId,
 		message = typeof req.body?.message === 'string' ? req.body.message.trim() : ''
@@ -5704,7 +5704,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	if (!mayChange(req, res, doc)) return
 
 	let who = me?.username || 'guest'
-	if (designerRunning.has(who)) return res.status(409).json({error: 'The Activity Designer is still working on your last request. Wait for it to finish.'})
+	if (designerRunning.has(who)) return res.status(409).json({error: 'Ixia is still working on your last request. Wait for it to finish.'})
 
 	//Their own token when they've added one; otherwise the shared one, and a fair share of it an hour
 	let own = gem.on ? null : await ownDesignerToken(me?.username),
@@ -5715,7 +5715,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	else if (!shared.take(who)) {
 		let s = shared.status(who),
 			mins = Math.max(1, Math.ceil(s.resetsIn / 60))
-		return res.status(429).json({error: `You have used your ${s.limit} shared Activity Designer requests for this hour. The next one comes back in about ${mins} ${mins === 1 ? 'minute' : 'minutes'}.${gem.on ? '' : ' You can use your own Cogniti allowance instead.'}`, kind: gem.on ? 'wait' : 'quota', quota: s})
+		return res.status(429).json({error: `You have used your ${s.limit} shared Ixia requests for this hour. The next one comes back in about ${mins} ${mins === 1 ? 'minute' : 'minutes'}.${gem.on ? '' : ' You can use your own Cogniti allowance instead.'}`, kind: gem.on ? 'wait' : 'quota', quota: s})
 	}
 
 	designerRunning.add(who)
@@ -5740,7 +5740,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 
 	let key = designerKey(req, id),
 		state = designerChats.get(key),
-		ctx = {base: `http://127.0.0.1:${port}/${appName}`, sessionId: mcpSessionID(req), agent: 'Activity Designer', sessions: new Map()},
+		ctx = {base: `http://127.0.0.1:${port}/${appName}`, sessionId: mcpSessionID(req), agent: 'Ixia', sessions: new Map()},
 		mcp = null,
 		artboardId = typeof req.body.artboardId === 'string' ? req.body.artboardId.slice(0, 100) : '',
 		result = {outcome: 'error', rounds: 0, changed: false}
@@ -5791,7 +5791,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 					room = rooms.get(id)
 				if (room) await persist(room)
 				let current = room ? JSON.stringify(room.doc) : await store.get(now)
-				return snapshot(id, current, room ? room.rev : now.rev, whoIs(req), 'Before the Activity Designer', true, {name: 'Before the Activity Designer'})
+				return snapshot(id, current, room ? room.rev : now.rev, whoIs(req), 'Before Ixia', true, {name: 'Before Ixia'})
 			},
 			input = {
 				projectId: id,
@@ -5808,7 +5808,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	}
 	catch (err) {
 		console.trace(`${appName}: designer failed`, err)
-		emit({type: 'error', text: 'Something went wrong in the Activity Designer. Try again in a minute.'})
+		emit({type: 'error', text: 'Something went wrong in Ixia. Try again in a minute.'})
 	}
 	finally {
 		clearInterval(beat)
@@ -5950,7 +5950,7 @@ const mcpLimited = (req) => {
 }
 
 //Every tool an agent runs goes in the audit log: who, which agent, which tool and project, and whether it worked. The
-//Activity Designer's in-process calls (further down) go through the same one
+//Ixia's in-process calls (further down) go through the same one
 const mcpAudit = (req, ctx, msg, reply) => {
 	if (msg.method !== 'tools/call') return
 	let args = msg.params?.arguments || {},

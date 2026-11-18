@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { session } from '../lib/db';
+import { loadProjectRecord, session } from '../lib/db';
 import { designerChat, type ChatState } from '../lib/designer';
 import { Markdown } from '../help/markdown';
 import { openHelp } from '../help/Help';
@@ -19,7 +19,7 @@ function savedWidth(): number {
   }
 }
 
-/** Whether this box has the Activity Designer set up (the server holds its key). */
+/** Whether this box has Ixia set up (the server holds its key). */
 export function useDesignerOn(): boolean {
   const [on, setOn] = useState(false);
   useEffect(() => {
@@ -41,6 +41,32 @@ const openProjectId = (): string => {
   }
 };
 
+let showing = false;
+let showAgain = false;
+/**
+ * Puts what Ixia has just built on the canvas. A tab in the live session is sent each change as it happens; live
+ * collaboration is off by default though, and then nothing arrives, so the tab fetches the project and swaps it in.
+ * One fetch at a time, and one more after it if changes kept coming.
+ */
+export async function showWhatChanged(): Promise<void> {
+  if (showing) {
+    showAgain = true;
+    return;
+  }
+  showing = true;
+  try {
+    do {
+      showAgain = false;
+      const st = store();
+      if (st.get().live?.status === 'live') return;
+      const p = await loadProjectRecord(st.get().project.id).catch(() => null);
+      if (p && store() === st && p.id === st.get().project.id) st.replaceProject(p);
+    } while (showAgain);
+  } finally {
+    showing = false;
+  }
+}
+
 const EXAMPLES = ['Add a page called Results with a heading and a button back to the start', 'Check my project for problems and fix them', 'Make a multiple choice question with feedback for each answer'];
 
 const openLink = (href: string) => {
@@ -48,7 +74,7 @@ const openLink = (href: string) => {
 };
 
 /**
- * The Activity Designer's way in: a round button with the Ixia bloom at the bottom right of the canvas, where people look
+ * Ixia's way in: a round button with the Ixia bloom at the bottom right of the canvas, where people look
  * for an assistant, and the chat opening above it. Nothing shows on a box that hasn't got the designer switched on.
  */
 export function DesignerDock() {
@@ -73,7 +99,8 @@ export function DesignerDock() {
         type="button"
         className={open ? 'designer-fab open' : 'designer-fab'}
         title={open ? 'Close the chat (it keeps the conversation)' : 'Having trouble? Ask me for help'}
-        aria-label="Ask the Activity Designer"
+        data-tip-side="top"
+        aria-label="Ask Ixia"
         aria-expanded={open}
         onClick={() => setState(open ? 'closed' : 'open')}
       >
@@ -84,8 +111,8 @@ export function DesignerDock() {
 }
 
 /**
- * Ask the Activity Designer: the chat in a card over the bottom right of the canvas. It builds in the open project while you
- * watch (its edits arrive like another person's, as "Activity Designer"), and one click undoes what it did. Kept mounted once
+ * Ask Ixia: the chat in a card over the bottom right of the canvas. It builds in the open project while you
+ * watch (its edits arrive like another person's, as "Ixia"), and one click undoes what it did. Kept mounted once
  * opened, and the conversation lives with the tab, so closing and reopening carries on.
  */
 export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -97,6 +124,10 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => designerChat().subscribe(setChat), []);
+  useEffect(() => {
+    designerChat().onChanged = () => void showWhatChanged();
+    return () => void (designerChat().onChanged = null);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -169,7 +200,7 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
     });
 
   return (
-    <aside className="designer-panel" hidden={!open} style={{ width }} aria-label="Ask the Activity Designer">
+    <aside className="designer-panel" hidden={!open} style={{ width }} aria-label="Ask Ixia">
       <div
         className="designer-resize"
         role="separator"
@@ -189,7 +220,7 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
       <header>
         <img src="./favicon.svg" alt="" width={20} height={20} />
         <h2 ref={headRef} tabIndex={-1}>
-          Ask the Activity Designer
+          Ask Ixia
         </h2>
         <button
           className="btn small"
@@ -250,8 +281,8 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
                   ))}
                 </ul>
                 <p className="small">
-                  <button className="btn small" disabled={chat.working} onClick={() => void designerChat().send(m.ask ?? '', openProjectId(), { force: true })} title="Send this to the Activity Designer. It uses one of your requests.">
-                    Ask the Activity Designer anyway
+                  <button className="btn small" disabled={chat.working} onClick={() => void designerChat().send(m.ask ?? '', openProjectId(), { force: true })} title="Send this to Ixia. It uses one of your requests.">
+                    Ask Ixia anyway
                   </button>
                 </p>
               </>
@@ -289,7 +320,7 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
         {!chat.working && chat.undo && (
           <div className="designer-undo">
             <button className="btn small" disabled={chat.undoing} onClick={() => void undo()} title="Put the project back as it was before this request">
-              {chat.undoing ? 'Undoing…' : 'Undo what the Activity Designer did'}
+              {chat.undoing ? 'Undoing…' : 'Undo what Ixia did'}
             </button>
           </div>
         )}

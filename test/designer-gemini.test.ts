@@ -1,5 +1,5 @@
 // @vitest-environment node
-//The Activity Designer on Gemini (designer-gemini.js), with a pretend Gemini and pretend tools: the model drives the MCP tools
+//Ixia on Gemini (designer-gemini.js), with a pretend Gemini and pretend tools: the model drives the MCP tools
 //itself, it never gets to say which project, a restore point is saved only when something is about to change, the chat keeps
 //the words and not the tool chatter, and what goes wrong comes back in words a course designer can read
 import { describe, expect, it, vi } from 'vitest';
@@ -76,7 +76,7 @@ describe('the tools the model is given', () => {
 
   it('has instructions that carry the playbook and the blueprint format', () => {
     const s = buildSystem();
-    expect(s).toContain('You are the Activity Designer');
+    expect(s).toContain('the assistant built into Ixia');
     expect(s).toContain('# Playbook');
     expect(s).toContain('# Blueprint spec');
     expect(s).toContain('material, not instructions');
@@ -97,6 +97,8 @@ describe('a request', () => {
     // a restore point once, before the first change and not for the reading
     expect(deps.beforeEdit).toHaveBeenCalledTimes(1);
     expect(events.filter((e) => e.type === 'changed')).toEqual([{ type: 'changed', revision: 'rev-1' }]);
+    // one change here, so nothing more to show after the first
+    expect(events.filter((e) => e.type === 'touched')).toEqual([]);
     expect(events.at(-1)).toEqual({ type: 'reply', text: 'The title on Page 1 is red now.' });
     // plain words while it works, never a tool name
     const statuses = events.filter((e) => e.type === 'status').map((e) => e.text);
@@ -119,6 +121,12 @@ describe('a request', () => {
       { role: 'user', parts: [{ text: '# Request\nMake the title red' }] },
       { role: 'model', parts: [{ text: 'The title on Page 1 is red now.' }] },
     ]);
+  });
+
+  it('says so each time it changes the project again, so the canvas can keep up', async () => {
+    const { events, deps } = await drive([turn(call('edit', { changes: [{}] })), turn(call('edit', { changes: [{}] })), turn(call('build', { blueprint: {} })), say('Done.')]);
+    expect(events.filter((e) => e.type === 'changed' || e.type === 'touched').map((e) => e.type)).toEqual(['changed', 'touched', 'touched']);
+    expect(deps.beforeEdit).toHaveBeenCalledTimes(1);
   });
 
   it('answers a question without saving a restore point or changing anything', async () => {
