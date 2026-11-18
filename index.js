@@ -621,6 +621,30 @@ const designerLoop = () => {
 }
 const designerOn = () => designer.settings().on || designerLoop().on
 
+//What Ask Ixia has cost today, everyone together, so a day can't run past its budget (INTERACTIVES_DESIGNER_DAILY_USD).
+//Kept in memory and added to as requests finish. The first ask of a day (or after a restart) adds up today's audit rows,
+//so restarting the server doesn't hand out a fresh budget. A day is this box's own midnight to midnight
+let designerSpend = {day: '', usd: 0}
+const designerSpentToday = async () => {
+	let start = new Date()
+	start.setHours(0, 0, 0, 0)
+	let day = start.toDateString()
+	if (designerSpend.day !== day) {
+		designerSpend = {day, usd: 0}
+		try {
+			let rows = await auditLog.find({at: {$gte: start}, event: 'designer-run'}, {projection: {'detail.usage.cost': 1}}).toArray(),
+				was = rows.reduce((sum, r) => sum + (Number(r.detail?.usage?.cost) || 0), 0)
+			//requests that finished while this was being read have already been added
+			if (designerSpend.day === day) designerSpend.usd += was
+		}
+		catch (err) {
+			console.warn(`${appName}: could not add up today's Ask Ixia spend`, err?.message)
+		}
+	}
+
+	return designerSpend.usd
+}
+
 //Who the editor's talking to, for the projects list and the owner badge
 router.get('/api/session', (req, res) => {
 	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req), designer: designerOn()})
@@ -5713,6 +5737,12 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	if (!doc) return res.status(404).json({error: 'No such project'})
 	if (!mayChange(req, res, doc)) return
 
+	//Today's budget is spent: nobody is charged for more, and it says when it's back
+	if (gem.on && gem.dailyUsd && await designerSpentToday() >= gem.dailyUsd) {
+		audit(req, 'designer-budget', doc, {dailyUsd: gem.dailyUsd})
+		return res.status(429).json({error: 'Ixia has done all it can for today. It will be back tomorrow.', kind: 'wait'})
+	}
+
 	let who = me?.username || 'guest'
 	if (designerRunning.has(who)) return res.status(409).json({error: 'Ixia is still working on your last request. Wait for it to finish.'})
 
@@ -5813,7 +5843,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 
 		//Gemini runs the tools itself, step by step. Cogniti answers with one blueprint
 		result = gem.on
-			? await designerGemini.run({ai: gem.client(), tools: mcp.TOOLS, callTool, build, context, beforeEdit, emit, signal: ctl.signal}, input)
+			? await designerGemini.run({ai: gem.client(), tools: mcp.TOOLS, callTool, build, context, beforeEdit, emit, signal: ctl.signal, budget: gem.requestUsd || 0}, input)
 			: await designer.run({cogniti: designer.cogniti(cfg), spec: designer.buildSpec(mcp.rawReference()), context, build, beforeEdit, emit, signal: ctl.signal}, input)
 	}
 	catch (err) {
@@ -5824,6 +5854,11 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 		clearInterval(beat)
 		if (mcp) mcp.closeContext(ctx)
 		designerRunning.delete(who)
+	}
+
+	if (result.usage?.cost) {
+		await designerSpentToday()
+		designerSpend.usd += result.usage.cost
 	}
 
 	//A request that never got a message to Cogniti didn't use any of the shared allowance

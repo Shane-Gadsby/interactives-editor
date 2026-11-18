@@ -9,7 +9,15 @@ const {DesignerError} = require('./designer')
 const {WORDS} = require('./designer-gemini')
 
 const DEFAULT_URL = 'https://openrouter.ai/api',
-	DEFAULT_MODEL = 'anthropic/claude-sonnet-5.5'
+	//Chosen from the trial of 18 Nov 2026: nearly as good as Sonnet on the five briefs for under a cent a request
+	DEFAULT_MODEL = 'anthropic/claude-haiku-5.5',
+	//The most everyone's requests together may cost in a day, and the most one request may, in US dollars. The account is
+	//prepaid as well, so the real ceiling is the credit on it, but these stop a bad day short of that
+	DEFAULT_DAILY_USD = 2,
+	DEFAULT_REQUEST_USD = 0.25
+
+//A dollar limit from the environment. 0, off or none is no limit, anything unreadable is the default
+const dollars = (v, fallback) => /^(0|off|no|none)$/i.test(v || '') ? 0 : v !== undefined && v !== '' && Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : fallback
 
 const settings = (env = process.env) => ({
 	on: /^(on|1|true|yes)$/i.test(env.INTERACTIVES_DESIGNER || '') && !!env.OPENROUTER_API_KEY,
@@ -20,6 +28,8 @@ const settings = (env = process.env) => ({
 	thinking: /^(minimal|low|medium|high)$/i.test(env.INTERACTIVES_DESIGNER_THINKING || '') ? env.INTERACTIVES_DESIGNER_THINKING.toLowerCase() : '',
 	//The only hosts that may run it, by OpenRouter's names ("DeepInfra,Together"). Empty is any host that refuses data collection
 	hosts: String(env.INTERACTIVES_DESIGNER_HOSTS || '').split(',').map((h) => h.trim()).filter(Boolean),
+	dailyUsd: dollars(env.INTERACTIVES_DESIGNER_DAILY_USD, DEFAULT_DAILY_USD),
+	requestUsd: dollars(env.INTERACTIVES_DESIGNER_REQUEST_USD, DEFAULT_REQUEST_USD),
 })
 
 const wait = (ms, signal) => new Promise((resolve) => {
@@ -149,4 +159,4 @@ const client = (cfg, fetcher = (...a) => fetch(...a), pause = wait) => {
 	}
 }
 
-module.exports = {settings, client, toMessages, toParts, DEFAULT_MODEL}
+module.exports = {settings, client, toMessages, toParts, DEFAULT_MODEL, DEFAULT_DAILY_USD, DEFAULT_REQUEST_USD}

@@ -161,7 +161,7 @@ const buildReport = (o) => [
 //answers in words. state is the chat so far ({history}), mutated as it goes. Returns {outcome, rounds, changed} like
 //designer.run, and every way out has told the panel through emit. rounds is how many times Gemini was asked
 //deps: ai (client), tools (the MCP bundle's TOOLS), callTool(name, args) -> {error, text}, build(blueprint, known),
-//context() -> text about the open project, beforeEdit() -> restore point id, emit(event), signal, system?
+//context() -> text about the open project, beforeEdit() -> restore point id, emit(event), signal, system?, budget? (US dollars)
 const run = async (deps, input) => {
 	let {ai, tools, callTool, build, context, beforeEdit, emit, signal} = deps,
 		{projectId, projectName, firstName, message, state} = input,
@@ -210,6 +210,9 @@ const run = async (deps, input) => {
 
 		while (rounds < MAX_STEPS) {
 			if (signal?.aborted) return done('cancelled')
+			//One request has a ceiling in dollars too (deps.budget), so a model that loops can't run up a bill. What it
+			//built is built, and it says so the same way as running out of steps
+			if (deps.budget && usage.cost >= deps.budget) return finish(WORDS.steps)
 			status(STATUS.think)
 			let turn = await ai.generate({system, contents, tools: declared}, signal)
 			rounds++

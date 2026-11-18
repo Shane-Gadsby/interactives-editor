@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 
 const req = createRequire(import.meta.url);
-const { settings, client, toMessages, toParts, DEFAULT_MODEL } = req('../designer-openrouter.js');
+const { settings, client, toMessages, toParts, DEFAULT_MODEL, DEFAULT_DAILY_USD, DEFAULT_REQUEST_USD } = req('../designer-openrouter.js');
 const { run, WORDS } = req('../designer-gemini.js');
 
 const res = (status: number, body: unknown = {}) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
@@ -19,6 +19,17 @@ describe('settings', () => {
     expect(settings({ OPENROUTER_API_KEY: 'k' }).on).toBe(false);
     expect(settings({ OPENROUTER_API_KEY: 'k', INTERACTIVES_DESIGNER: 'on' })).toMatchObject({ on: true, model: DEFAULT_MODEL, url: 'https://openrouter.ai/api', hosts: [], thinking: '' });
     expect(settings({ INTERACTIVES_DESIGNER_MODEL: 'z-ai/glm-5.3', INTERACTIVES_DESIGNER_HOSTS: 'DeepInfra, Together ,', INTERACTIVES_DESIGNER_THINKING: 'Low' })).toMatchObject({ model: 'z-ai/glm-5.3', hosts: ['DeepInfra', 'Together'], thinking: 'low' });
+  });
+});
+
+describe('the dollar limits', () => {
+  it('has a daily budget and a ceiling for one request unless told otherwise, and 0 or off is no limit', () => {
+    expect(DEFAULT_MODEL).toBe('anthropic/claude-haiku-5.5');
+    expect(settings({})).toMatchObject({ dailyUsd: DEFAULT_DAILY_USD, requestUsd: DEFAULT_REQUEST_USD });
+    expect(settings({ INTERACTIVES_DESIGNER_DAILY_USD: '10', INTERACTIVES_DESIGNER_REQUEST_USD: '0.5' })).toMatchObject({ dailyUsd: 10, requestUsd: 0.5 });
+    expect(settings({ INTERACTIVES_DESIGNER_DAILY_USD: 'off', INTERACTIVES_DESIGNER_REQUEST_USD: '0' })).toMatchObject({ dailyUsd: 0, requestUsd: 0 });
+    // something unreadable is the default, never "no limit"
+    expect(settings({ INTERACTIVES_DESIGNER_DAILY_USD: 'lots', INTERACTIVES_DESIGNER_REQUEST_USD: '-3' })).toMatchObject({ dailyUsd: DEFAULT_DAILY_USD, requestUsd: DEFAULT_REQUEST_USD });
   });
 });
 
