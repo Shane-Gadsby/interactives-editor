@@ -609,7 +609,17 @@ const designer = require('./designer')
 //Studio (whoever owns that project grants it). When a box has it, it's the one that answers, and the model works
 //through the MCP tools itself rather than one blueprint
 const designerGemini = require('./designer-gemini')
-const designerOn = () => designer.settings().on || designerGemini.settings().on
+//Or on anything OpenRouter sells (designer-openrouter.js): OPENROUTER_API_KEY, from the Ixia workspace at openrouter.ai
+//(whoever owns that account grants it), and INTERACTIVES_DESIGNER_MODEL says which. It wins over the other two
+const designerOpenRouter = require('./designer-openrouter')
+//The model that runs the tool loop on this box, if one does: OpenRouter first, then Gemini. via is for the audit row
+const designerLoop = () => {
+	let o = designerOpenRouter.settings()
+	if (o.on) return {...o, via: 'openrouter', client: () => designerOpenRouter.client(o)}
+	let g = designerGemini.settings()
+	return {...g, via: 'gemini', client: () => designerGemini.client(g)}
+}
+const designerOn = () => designer.settings().on || designerLoop().on
 
 //Who the editor's talking to, for the projects list and the owner badge
 router.get('/api/session', (req, res) => {
@@ -5625,7 +5635,7 @@ const designerStatus = async (req) => {
 		me = whoIs(req),
 		row = me?.username && designerTokens ? await designerTokens.findOne({_id: me.username}, {projection: {added: 1, ends: 1}}) : null
 	//On Gemini there's one key and no tokens of people's own, so everyone has a share
-	if (designerGemini.settings().on) {
+	if (designerLoop().on) {
 		return {on: true, mine: null, ownTokens: false, shared: sharedQuota().status(me?.username || 'guest')}
 	}
 
@@ -5688,7 +5698,7 @@ router.delete('/api/designer/token', async (req, res) => {
 
 router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res) => {
 	let cfg = designer.settings(),
-		gem = designerGemini.settings(),
+		gem = designerLoop(),
 		me = whoIs(req)
 	if (!cfg.on && !gem.on) return res.status(404).json({error: 'Ixia is switched off here'})
 	if (!me?.username && enforcing()) return res.status(401).json({error: 'Sign in to use Ixia'})
@@ -5803,7 +5813,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 
 		//Gemini runs the tools itself, step by step. Cogniti answers with one blueprint
 		result = gem.on
-			? await designerGemini.run({ai: designerGemini.client(gem), tools: mcp.TOOLS, callTool, build, context, beforeEdit, emit, signal: ctl.signal}, input)
+			? await designerGemini.run({ai: gem.client(), tools: mcp.TOOLS, callTool, build, context, beforeEdit, emit, signal: ctl.signal}, input)
 			: await designer.run({cogniti: designer.cogniti(cfg), spec: designer.buildSpec(mcp.rawReference()), context, build, beforeEdit, emit, signal: ctl.signal}, input)
 	}
 	catch (err) {
@@ -5823,8 +5833,8 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	if (result.outcome === 'replied') state.used = Date.now()
 	else designerChats.delete(key)
 	//Who, which project, how it went. Never what was said
-	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own, model: gem.on ? gem.model : 'cogniti'})
-	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null, quota: own ? null : shared.status(who)})
+	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own, model: gem.on ? gem.model : 'cogniti', ...(gem.on ? {via: gem.via} : {}), ...(result.usage?.input ? {usage: result.usage} : {})})
+	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null, quota: own ? null : shared.status(who), ...(result.usage?.input ? {usage: result.usage} : {})})
 	res.end()
 })
 

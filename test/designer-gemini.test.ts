@@ -91,7 +91,9 @@ describe('a request', () => {
       say('The title on Page 1 is red now.'),
     ]);
 
-    expect(result).toEqual({ outcome: 'replied', rounds: 3, changed: true });
+    expect(result).toMatchObject({ outcome: 'replied', rounds: 3, changed: true });
+    // Gemini's client doesn't say what a turn used, so the count stays at nothing
+    expect(result.usage).toEqual({ input: 0, cached: 0, output: 0, cost: 0, host: '' });
     expect(ran.map((r) => r.name)).toEqual(['get_overview', 'edit', 'validate']);
     expect(ran.every((r) => r.args.project_id === 'pr1')).toBe(true);
     // a restore point once, before the first change and not for the reading
@@ -131,7 +133,7 @@ describe('a request', () => {
 
   it('answers a question without saving a restore point or changing anything', async () => {
     const { result, events, deps } = await drive([say('A drag and drop would suit that.')], {}, 'What would suit a sorting task?');
-    expect(result).toEqual({ outcome: 'replied', rounds: 1, changed: false });
+    expect(result).toMatchObject({ outcome: 'replied', rounds: 1, changed: false });
     expect(deps.beforeEdit).not.toHaveBeenCalled();
     expect(events.some((e) => e.type === 'changed')).toBe(false);
   });

@@ -170,7 +170,9 @@ const run = async (deps, input) => {
 		restore = null,
 		known = null,
 		said = '',
-		done = (outcome) => ({outcome, rounds, changed}),
+		//what the request used, where the client says (OpenRouter does): tokens in, of those read again cheaply, tokens out, dollars
+		usage = {input: 0, cached: 0, output: 0, cost: 0, host: ''},
+		done = (outcome) => ({outcome, rounds, changed, usage}),
 		fail = (text, outcome) => {
 			emit({type: 'error', text, kind: outcome})
 			return done(outcome)
@@ -211,6 +213,10 @@ const run = async (deps, input) => {
 			status(STATUS.think)
 			let turn = await ai.generate({system, contents, tools: declared}, signal)
 			rounds++
+			if (turn.usage) {
+				for (let k of ['input', 'cached', 'output', 'cost']) usage[k] += Number(turn.usage[k]) || 0
+				usage.host = turn.usage.host || usage.host
+			}
 
 			let calls = turn.parts.filter((p) => p.functionCall?.name),
 				words = turn.parts.filter((p) => typeof p.text === 'string' && !p.thought).map((p) => p.text).join('').trim()
