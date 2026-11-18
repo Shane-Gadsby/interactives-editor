@@ -159,4 +159,4 @@ const client = (cfg, fetcher = (...a) => fetch(...a), pause = wait) => {
 	}
 }
 
-module.exports = {settings, client, toMessages, toParts, DEFAULT_MODEL, DEFAULT_DAILY_USD, DEFAULT_REQUEST_USD}
+module.exports = {settings, client, toMessages, toParts, dollars, DEFAULT_MODEL, DEFAULT_DAILY_USD, DEFAULT_REQUEST_USD}

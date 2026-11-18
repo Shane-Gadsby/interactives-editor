@@ -612,8 +612,13 @@ const designerGemini = require('./designer-gemini')
 //Or on anything OpenRouter sells (designer-openrouter.js): OPENROUTER_API_KEY, from the Ixia workspace at openrouter.ai
 //(whoever owns that account grants it), and INTERACTIVES_DESIGNER_MODEL says which. It wins over the other two
 const designerOpenRouter = require('./designer-openrouter')
-//The model that runs the tool loop on this box, if one does: OpenRouter first, then Gemini. via is for the audit row
+//Or on Claude straight from Anthropic (designer-anthropic.js): ANTHROPIC_API_KEY, from the Ixia workspace in the Claude
+//Console (whoever owns that organisation grants it and keeps credit on it). This is the one in use, and it wins over the rest
+const designerAnthropic = require('./designer-anthropic')
+//The model that runs the tool loop on this box, if one does: Anthropic first, then OpenRouter, then Gemini. via is for the audit row
 const designerLoop = () => {
+	let a = designerAnthropic.settings()
+	if (a.on) return {...a, via: 'anthropic', client: () => designerAnthropic.client(a)}
 	let o = designerOpenRouter.settings()
 	if (o.on) return {...o, via: 'openrouter', client: () => designerOpenRouter.client(o)}
 	let g = designerGemini.settings()
