@@ -43,6 +43,8 @@ export interface ChatState {
   quota: Quota | null;
   /** They have added their own Cogniti token, so the shared allowance doesn't apply to them. */
   own: boolean;
+  /** This box takes people's own tokens (Cogniti does, Gemini has one key for everyone), so "Use my own" is worth offering. */
+  ownTokens: boolean;
 }
 
 type Listener = (s: ChatState) => void;
@@ -59,7 +61,7 @@ interface Event {
 let counter = 0;
 const mid = () => `m${Date.now().toString(36)}${++counter}`;
 
-const initial = (): ChatState => ({ messages: [], working: false, status: '', undo: null, undoing: false, quota: null, own: false });
+const initial = (): ChatState => ({ messages: [], working: false, status: '', undo: null, undoing: false, quota: null, own: false, ownTokens: true });
 
 export class DesignerChat {
   state: ChatState = initial();
@@ -98,7 +100,7 @@ export class DesignerChat {
   async refreshStatus(): Promise<void> {
     try {
       const s = await designerStatus();
-      this.set({ quota: s.mine ? null : s.shared, own: !!s.mine });
+      this.set({ quota: s.mine ? null : s.shared, own: !!s.mine, ownTokens: s.ownTokens !== false });
     } catch {
       /* the count is a nicety, the panel works without it */
     }
@@ -114,7 +116,7 @@ export class DesignerChat {
     if (projectId !== this.projectId) {
       this.projectId = projectId;
       this.conversation = null;
-      this.state = { ...initial(), quota: this.state.quota, own: this.state.own };
+      this.state = { ...initial(), quota: this.state.quota, own: this.state.own, ownTokens: this.state.ownTokens };
     }
     if (!opts.force) {
       let free: LocalAnswer | null = null;
@@ -211,7 +213,7 @@ export class DesignerChat {
         return false;
       case 'error':
         //Cogniti's own hourly limit on the shared token: their own allowance gets round it
-        this.add({ from: 'error', text: e.text || 'Something went wrong in the Activity Designer.', allowance: e.kind === 'limit' && !this.state.own });
+        this.add({ from: 'error', text: e.text || 'Something went wrong in the Activity Designer.', allowance: e.kind === 'limit' && !this.state.own && this.state.ownTokens });
         return false;
       case 'done':
         this.conversation = e.conversation ?? null;
@@ -253,7 +255,7 @@ export class DesignerChat {
     this.stop();
     const id = this.projectId;
     this.conversation = null;
-    this.state = { ...initial(), quota: this.state.quota, own: this.state.own };
+    this.state = { ...initial(), quota: this.state.quota, own: this.state.own, ownTokens: this.state.ownTokens };
     this.listeners.forEach((l) => l(this.state));
     if (id) await resetDesigner(id).catch(() => undefined);
   }

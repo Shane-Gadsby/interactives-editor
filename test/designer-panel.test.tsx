@@ -18,7 +18,7 @@ vi.mock('../src/lib/db', () => ({
 }));
 
 import { DesignerChat, designerChat } from '../src/lib/designer';
-import { DesignerPanel } from '../src/components/DesignerPanel';
+import { DesignerDock, DesignerPanel } from '../src/components/DesignerPanel';
 
 //the client with no free answers and no open page, so what is asked goes to the server
 const mk = (f: unknown) => new DesignerChat(f as typeof fetch, () => null, () => '');
@@ -282,6 +282,39 @@ describe('the panel', () => {
     await act(async () => link.click());
     const { prefsWindow } = await import('../src/lib/prefs-window');
     expect(prefsWindow()).toMatchObject({ open: true, page: 'general', setting: 'designerAllowance' });
+  });
+
+  it('hides the offer of their own allowance on a box with one key for everyone', async () => {
+    const set = (p: object) => (designerChat() as unknown as { set: (p: object) => void }).set(p);
+    await act(async () => root.render(<DesignerPanel open onClose={() => undefined} />));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    await act(async () => set({ ownTokens: false }));
+    expect(host.querySelector('.designer-quota')?.textContent).toContain('shared requests left this hour');
+    expect([...host.querySelectorAll('button')].some((b) => b.textContent === 'Use my own Cogniti allowance')).toBe(false);
+    await act(async () => set({ ownTokens: true }));
+  });
+
+  it('opens from a round button at the bottom right of the canvas, with the Ixia icon and an offer of help', async () => {
+    await act(async () => root.render(<DesignerDock />));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    const fab = host.querySelector('.designer-fab') as HTMLButtonElement;
+    expect(fab).toBeTruthy();
+    expect(fab.title).toBe('Having trouble? Ask me for help');
+    expect(fab.getAttribute('aria-label')).toBe('Ask the Activity Designer');
+    expect(fab.querySelector('img')?.getAttribute('src')).toBe('./favicon.svg');
+    // nothing of the chat until it is asked for
+    expect(host.querySelector('.designer-panel')).toBeNull();
+    await act(async () => fab.click());
+    expect(fab.getAttribute('aria-expanded')).toBe('true');
+    expect((host.querySelector('.designer-panel') as HTMLElement).hidden).toBe(false);
+    // closing keeps it mounted, so the conversation is still there, and gives the button the focus back
+    await act(async () => fab.click());
+    expect((host.querySelector('.designer-panel') as HTMLElement).hidden).toBe(true);
+    expect(fab.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('answers a how-do-I from the help with the top topics as links and an Ask anyway button that spends a request', async () => {

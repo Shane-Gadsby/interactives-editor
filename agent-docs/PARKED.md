@@ -11,16 +11,17 @@ more than about 30 seconds to start. Board doc `activity-designer-parked` has th
 `designer-gemini.js` is the same panel and the same route with Gemini as the model, and no message cap to work around: the
 model runs the MCP tools itself (read, look up, edit, build, validate) until the request is done. It is still parked, and
 it runs with `INTERACTIVES_DESIGNER=on` and `GEMINI_API_KEY` (see the README's env table for where the key comes from).
-On the free tier a request takes three to five minutes. Before it comes back for people: the panel's "Use my own Cogniti
-allowance" links and the Cogniti wording below need rewording, and the key's project needs billing on (the free tier
+On the free tier a request takes three to five minutes. Before it comes back for people: the Cogniti wording below needs rewording (the panel already hides "Use my own
+Cogniti allowance" on a box that runs on Gemini), and the key's project needs billing on (the free tier
 lets Google learn from what is sent).
 
 ## What is still in the code (off)
 
 - Server: `designer.js` (Cogniti client, blueprint loop, own-token sealing), the `/api/designer/*` routes in `index.js`.
   Runs only with `INTERACTIVES_DESIGNER=on` **and** `COGNITI_TOKEN`; `/api/session` says `designer: false` otherwise.
-- Client: `src/components/DesignerPanel.tsx`, `DesignerAllowance.tsx`, `src/lib/designer*.ts`; the header button in
-  `Editor.tsx` only shows when the session says `designer: true`.
+- Client: `src/components/DesignerPanel.tsx`, `DesignerAllowance.tsx`, `src/lib/designer*.ts`; the round button at the
+  bottom right of the canvas (`DesignerDock`, the Ixia bloom, "Having trouble? Ask me for help") and the chat card above
+  it only show when the session says `designer: true`. It was a button in the header until 18 Nov.
 - `designer-spec.txt` (the blueprint format sent with each request), `designer-system.txt` (the Cogniti agent's system
   message), `agent-docs/playbook.md` (the agent's Knowledge), `scripts/export-agent-docs.mjs` (the help as Markdown parts
   for the agent's Resources).

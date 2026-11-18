@@ -14298,19 +14298,63 @@ body.reorder-active .ix-tooltip {
   font-size: 12px;
 }
 
-/* Ask the Activity Designer: the chat in a panel down the right, over the inspector */
+/* Ask the Activity Designer: a round button at the bottom right of the canvas, and the chat in a card above it */
+.designer-fab {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: var(--z-float);
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.designer-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.4);
+}
+.designer-fab:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 3px;
+}
+.designer-fab.open {
+  border-color: var(--primary-bg);
+}
+.designer-fab img {
+  display: block;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .designer-fab {
+    transition: none;
+  }
+  .designer-fab:hover {
+    transform: none;
+  }
+}
 .designer-panel {
-  position: fixed;
-  top: 44px;
-  right: 0;
-  bottom: 0;
+  position: absolute;
+  right: 16px;
+  bottom: 76px;
   z-index: var(--z-float);
   display: flex;
   flex-direction: column;
-  max-width: calc(100vw - 40px);
+  height: min(620px, calc(100% - 92px));
+  max-width: calc(100% - 32px);
   background: var(--panel);
-  border-left: 1px solid var(--line);
-  box-shadow: -6px 0 18px rgb(0 0 0 / 0.3);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.4);
 }
 .designer-panel[hidden] {
   display: none;
@@ -14319,8 +14363,9 @@ body.reorder-active .ix-tooltip {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px 6px 12px;
+  padding: 8px 8px 8px 12px;
   border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
 }
 .designer-panel > header h2 {
   flex: 1;
@@ -14402,6 +14447,41 @@ body.reorder-active .ix-tooltip {
 }
 .designer-progress {
   margin: 0;
+}
+.designer-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.designer-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: designer-dot 1.2s infinite ease-in-out;
+}
+.designer-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.designer-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes designer-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .designer-dots i {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 .designer-undo,
 .designer-examples {

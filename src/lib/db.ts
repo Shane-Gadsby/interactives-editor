@@ -155,6 +155,8 @@ export function resetDesigner(projectId: string): Promise<{ ok: boolean }> {
 export interface DesignerStatus {
   on: boolean;
   mine: { connected: boolean; added: string; ends: string | null } | null;
+  /** False on a box where there is one key for everyone (Gemini), so nobody is offered a token of their own. */
+  ownTokens?: boolean;
   shared: { limit: number; left: number; resetsIn: number } | null;
 }
 export const designerStatus = () => call<DesignerStatus>('designer/status');

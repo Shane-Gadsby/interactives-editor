@@ -46,7 +46,7 @@ import { PreviewWidth, responsiveSets, widthInside } from './components/PreviewW
 import { getArtboard, selectionBounds } from './store/doc';
 import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink } from './help/Help';
-import { DesignerPanel, useDesignerOn } from './components/DesignerPanel';
+import { DesignerDock } from './components/DesignerPanel';
 import { setPreviewOpen, trapFocus } from './lib/overlays';
 import { installInteractionsRoom } from './lib/interactions-room';
 import { clearFlow, lastQuietHit, pushFlow, useFlowVersion } from './lib/run-flow';
@@ -544,6 +544,7 @@ function Workspace({ home }: { home: () => void }) {
         </Guard>
         {z.left > 0 && <PanelResizeHandle side="left" width={widths.left} onWidth={(w) => setWidth('left', w)} />}
         {z.right > 0 && <PanelResizeHandle side="right" width={widths.right} onWidth={(w) => setWidth('right', w)} />}
+        <DesignerDock />
       </main>
       <DockZone zone="right" />
       <DockZone zone="bottom" />
@@ -637,9 +638,6 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   //the Workspace page of Preferences is for here: panels to arrange
   useEffect(() => (setEditorShown(true), () => setEditorShown(false)), []);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const designerOn = useDesignerOn();
-  //mounted on first open and then only hidden, so the conversation survives closing the panel
-  const [designer, setDesigner] = useState<'never' | 'open' | 'closed'>('never');
   const st = store();
   const [shareOpen, setShareOpen] = useState(false);
   const [shareMenu, setShareMenu] = useState(false);
@@ -784,16 +782,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       </div>
       <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => openPrefs()} />
       <IconButton icon={<Icons.search />} title={withKey('Find a command and do it: add a layer, go to a page, turn the grid on, share...', 'palette')} onClick={() => void openPalette(false)} />
-      {designerOn && (
-        <IconButton
-          icon={<Icons.ask />}
-          title="Ask the Activity Designer: describe what you want and it builds it in your project"
-          onClick={() => setDesigner((c) => (c === 'open' ? 'closed' : 'open'))}
-          pressed={designer === 'open'}
-        />
-      )}
       <IconButton icon={<Icons.help />} title={helpTitle} onClick={openHeaderHelp} />
-      {designerOn && designer !== 'never' && <DesignerPanel open={designer === 'open'} onClose={() => setDesigner('closed')} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
       {gate && <BeforeYouShareModal what={gate.what} onGo={gate.go} onClose={() => setGate(null)} />}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}

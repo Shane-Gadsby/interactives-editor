@@ -19,7 +19,7 @@ function savedWidth(): number {
   }
 }
 
-/** Whether this box has the Activity Designer set up (the server holds its Cogniti token). */
+/** Whether this box has the Activity Designer set up (the server holds its key). */
 export function useDesignerOn(): boolean {
   const [on, setOn] = useState(false);
   useEffect(() => {
@@ -48,7 +48,43 @@ const openLink = (href: string) => {
 };
 
 /**
- * Ask the Activity Designer: UniSQ's Cogniti agent in a panel beside the canvas. It builds in the open project while you
+ * The Activity Designer's way in: a round button with the Ixia bloom at the bottom right of the canvas, where people look
+ * for an assistant, and the chat opening above it. Nothing shows on a box that hasn't got the designer switched on.
+ */
+export function DesignerDock() {
+  const on = useDesignerOn();
+  const [state, setState] = useState<'never' | 'open' | 'closed'>('never');
+  const fab = useRef<HTMLButtonElement>(null);
+  if (!on) return null;
+  const open = state === 'open';
+  return (
+    <>
+      {state !== 'never' && (
+        <DesignerPanel
+          open={open}
+          onClose={() => {
+            setState('closed');
+            fab.current?.focus();
+          }}
+        />
+      )}
+      <button
+        ref={fab}
+        type="button"
+        className={open ? 'designer-fab open' : 'designer-fab'}
+        title={open ? 'Close the chat (it keeps the conversation)' : 'Having trouble? Ask me for help'}
+        aria-label="Ask the Activity Designer"
+        aria-expanded={open}
+        onClick={() => setState(open ? 'closed' : 'open')}
+      >
+        <img src="./favicon.svg" alt="" width={30} height={30} />
+      </button>
+    </>
+  );
+}
+
+/**
+ * Ask the Activity Designer: the chat in a card over the bottom right of the canvas. It builds in the open project while you
  * watch (its edits arrive like another person's, as "Activity Designer"), and one click undoes what it did. Kept mounted once
  * opened, and the conversation lives with the tab, so closing and reopening carries on.
  */
@@ -151,6 +187,7 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
         }}
       />
       <header>
+        <img src="./favicon.svg" alt="" width={20} height={20} />
         <h2 ref={headRef} tabIndex={-1}>
           Ask the Activity Designer
         </h2>
@@ -172,9 +209,11 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
           {chat.quota.left > 0
             ? `${chat.quota.left} of ${chat.quota.limit} shared requests left this hour`
             : `No shared requests left this hour (the next comes back in about ${Math.max(1, Math.ceil(chat.quota.resetsIn / 60))} min)`}{' '}
-          <button className="link-btn" onClick={ownAllowance} title="Add your own Cogniti token in Preferences, so your requests don't use the shared allowance">
-            Use my own Cogniti allowance
-          </button>
+          {chat.ownTokens && (
+            <button className="link-btn" onClick={ownAllowance} title="Add your own Cogniti token in Preferences, so your requests don't use the shared allowance">
+              Use my own Cogniti allowance
+            </button>
+          )}
         </p>
       )}
       <div className="designer-log" ref={listRef} role="log" aria-live="polite" aria-label="Conversation">
@@ -217,7 +256,7 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
                 </p>
               </>
             )}
-            {m.allowance && (
+            {m.allowance && chat.ownTokens && (
               <p className="small">
                 <button className="btn small" onClick={ownAllowance} title="Add your own Cogniti token in Preferences, so your requests don't use the shared allowance">
                   Use my own Cogniti allowance
@@ -236,6 +275,11 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
         ))}
         {chat.working && (
           <p className="designer-progress muted small" role="status">
+            <span className="designer-dots" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
             {chat.status || 'Working'}…{' '}
             <button className="link-btn" onClick={() => designerChat().stop()} title="Stop after the step it's on">
               Stop

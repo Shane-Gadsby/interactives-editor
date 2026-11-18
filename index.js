@@ -5626,7 +5626,7 @@ const designerStatus = async (req) => {
 		row = me?.username && designerTokens ? await designerTokens.findOne({_id: me.username}, {projection: {added: 1, ends: 1}}) : null
 	//On Gemini there's one key and no tokens of people's own, so everyone has a share
 	if (designerGemini.settings().on) {
-		return {on: true, mine: null, shared: sharedQuota().status(me?.username || 'guest')}
+		return {on: true, mine: null, ownTokens: false, shared: sharedQuota().status(me?.username || 'guest')}
 	}
 
 	return {
