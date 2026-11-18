@@ -105,3 +105,54 @@ describe('what it builds actually runs', () => {
     player.destroy();
   });
 });
+
+describe('how they are drawn', () => {
+  it('an accordion section folds: it clips, its panel fades, and nothing waits for anything', () => {
+    const p = createProject();
+    const frame = find(p, addAccordion(p, p.artboards[0].id)!);
+    //the sections glide as one opens and another shuts
+    expect(frame.layout?.animate).toMatchObject({ duration: 220 });
+    for (const section of frame.children as FrameNode[]) {
+      expect(section.clip).toBe(true);
+      expect(section.layout?.animate).toMatchObject({ enter: 'fade', exit: 'fade', hold: false });
+      //the heading and the words under it start the same distance in
+      const [head, words] = section.children as unknown as [{ paddingX: number }, { layoutItem: { margin: { left: number } } }];
+      expect(head.paddingX).toBe(words.layoutItem.margin.left);
+    }
+  });
+
+  it('tabs stand on a line, apart from each other, and the showing one is told by weight and by a line under it', () => {
+    const p = createProject();
+    const frame = find(p, addAccordion(p, p.artboards[0].id, 'tabs')!);
+    const list = (frame.children as FrameNode[]).find((c) => c.id === frame.disclosure!.tabs)!;
+    //the line the whole row stands on
+    expect(list.shadow).toMatchObject({ inset: true, y: -1, blur: 0 });
+    expect(list.layout!.gap).toBeGreaterThan(0);
+    for (const tab of list.children as unknown as { fill: unknown; fontWeight: number; states: { props: Record<string, unknown> }[] }[]) {
+      //no slab of its own: the page shows through, so three tabs can't read as one block
+      expect(tab.fill).toBeNull();
+      expect(tab.fontWeight).toBe(400);
+      //two cues, neither of them colour alone
+      expect(tab.states[0].props.fontWeight).toBe(600);
+      expect(tab.states[0].props.shadow).toMatchObject({ inset: true, y: -3 });
+    }
+  });
+
+  it('each tab panel is a box with room round its words, which is where the keyboard focus line goes', () => {
+    const p = createProject();
+    const frame = find(p, addAccordion(p, p.artboards[0].id, 'tabs')!);
+    const panels = (frame.children as FrameNode[]).find((c) => c.id === frame.disclosure!.panels)!;
+    expect(panels.layout?.animate).toMatchObject({ enter: 'fade' });
+    for (const panel of panels.children as FrameNode[]) {
+      expect(panel.type).toBe('frame');
+      expect(panel.layout!.padding.left).toBeGreaterThanOrEqual(16);
+      expect(panel.layout!.padding.top).toBeGreaterThanOrEqual(16);
+      expect(panel.children[0].type).toBe('text');
+    }
+    //a fourth tab gets a panel of the same shape, with ids of its own
+    addSection(p, p.artboards[0].id, frame.id);
+    const kids = panels.children as FrameNode[];
+    expect(kids).toHaveLength(4);
+    expect(kids[3].children[0].id).not.toBe(kids[2].children[0].id);
+  });
+});

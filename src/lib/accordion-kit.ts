@@ -27,7 +27,7 @@ export function addAccordion(d: Project, abId: string, kind: 'accordion' | 'tabs
   const v: Variable = { id: uid('v'), name: freeName(d, kind === 'tabs' ? 'openTab' : 'openSection'), label: kind === 'tabs' ? 'Tab showing' : 'Section open', type: 'number', initial: 0 };
   d.variables.push(v);
 
-  const frame = kind === 'tabs' ? tabStrip(l, width, v.id, v.name) : accordionFrame(l, width, v.id, v.name);
+  const frame = kind === 'tabs' ? tabStrip(l, width, v.id, v.name) : accordionFrame(l, width, v.id);
   frame.x = at.x;
   frame.y = at.y;
   ab.children.push(frame);
@@ -37,44 +37,52 @@ export function addAccordion(d: Project, abId: string, kind: 'accordion' | 'tabs
 /** The look a header takes while its own section is the open one: a state, so nothing is bound and nothing is wired. */
 const openState = (variable: string, index: number, props: Record<string, unknown>) => ({ id: uid('st'), name: 'Open', when: 'expr' as const, expr: `${variable} == ${index}`, props });
 
+/** How long a section takes to fold open or shut, and a tab's panel to swap: quick enough not to be waited for. */
+const FOLD = { duration: 220, ease: 'easeOut' as const };
+
+/** A header is a little taller than a plain button: it is a row you read as well as something you press. */
+const HEADER_H = CONTROL_H + SPACE.s;
+
 /**
  * Three sections stacked, each a header with its panel under it. One card with a border, a hairline between sections,
- * headings that read from the left like the text under them, and the open one tinted so you can see where you are.
+ * headings that read from the left like the text under them and a chevron that turns over. A section folds open and shut
+ * rather than blinking: its panel fades while the section, which clips, grows or closes over it, and the sections below
+ * glide to make room.
  */
-function accordionFrame(l: Record<string, string>, width: number, variable: string, name: string): FrameNode {
+function accordionFrame(l: Record<string, string>, width: number, variable: string): FrameNode {
   const section = (i: number): FrameNode =>
     createNode('frame', {
       name: `Section ${i + 1}`,
       width,
       height: 96,
-      fill: solid(l.surface),
-      clip: false,
-      layout: { ...defaultAutoLayout('column'), gap: 0, padding: pad(0), align: 'stretch', hugHeight: true },
+      fill: solid(l.background),
+      clip: true,
+      layout: { ...defaultAutoLayout('column'), gap: 0, padding: pad(0), align: 'stretch', hugHeight: true, animate: { ...FOLD, enter: 'fade', exit: 'fade', hold: false } },
       children: [
         createNode('button', {
           name: `Heading ${i + 1}`,
           label: `Section ${i + 1}`,
           width,
-          height: CONTROL_H,
-          fill: solid(l.surface),
+          height: HEADER_H,
+          fill: solid(l.background),
           color: l.text,
           fontSize: TYPE.body,
           fontWeight: 600,
           align: 'left',
+          paddingX: SPACE.l,
           cornerRadius: 0,
-          states: [openState(name, i, { 'fill.color': l.surfaceMuted })],
         }),
         createNode('text', {
           name: `Panel ${i + 1}`,
           text: 'What this section is about.',
-          width: width - SPACE.m * 2,
+          width: width - SPACE.l * 2,
           height: 22,
           fontSize: TYPE.body,
-          lineHeight: 1.45,
+          lineHeight: 1.5,
           color: l.text,
           autoSize: 'height',
-          //room round the words, lined up with the heading's own
-          layoutItem: { margin: pad(SPACE.m) },
+          //lined up with the heading's own words, close under them, with room below before the next section's line
+          layoutItem: { margin: { top: 0, right: SPACE.l, bottom: SPACE.l + SPACE.xs, left: SPACE.l } },
         }),
       ],
     }) as FrameNode;
@@ -87,60 +95,73 @@ function accordionFrame(l: Record<string, string>, width: number, variable: stri
     stroke: { paint: solid(l.border), width: 1, align: 'inside' },
     cornerRadius: RADIUS.card,
     clip: true,
-    layout: { ...defaultAutoLayout('column'), gap: 1, padding: pad(0), align: 'stretch', hugHeight: true },
+    layout: { ...defaultAutoLayout('column'), gap: 1, padding: pad(0), align: 'stretch', hugHeight: true, animate: { ...FOLD } },
     disclosure: { open: 'one', variable, toggle: true },
     children: [section(0), section(1), section(2)],
   }) as FrameNode;
 }
 
 /**
- * A row of three tabs with the panels in a box under them. The tabs sit side by side and the panels wrap to the line
- * below; the tab that is showing takes the button colour, so it reads as the chosen one.
+ * A row of tabs over the panel they show, drawn the way tabs are on most of the web: the tabs sit on a hairline that runs
+ * the full width, each one its own label with space round it, and the one showing has a heavier label and a line under
+ * it in the accent colour. The panel is plain words on the page with room round them, not a box. Changing tab fades the
+ * new panel in, and the space under the tabs eases to fit it.
  */
 function tabStrip(l: Record<string, string>, width: number, variable: string, name: string): FrameNode {
-  const tabW = Math.floor(width / 3);
+  const tabW = Math.min(128, Math.floor((width - SPACE.xs * 2) / 3));
   const tab = (i: number) =>
     createNode('button', {
       name: `Tab ${i + 1}`,
       label: `Tab ${i + 1}`,
       width: tabW,
       height: CONTROL_H,
-      fill: solid(l.surfaceMuted),
+      fill: null,
       color: l.text,
       fontSize: TYPE.body,
-      fontWeight: 600,
+      fontWeight: 400,
       cornerRadius: 0,
-      states: [openState(name, i, { 'fill.color': l.button, color: l.onButton })],
+      states: [openState(name, i, { fontWeight: 600, shadow: { x: 0, y: -3, blur: 0, spread: 0, color: l.button, inset: true } })],
     });
+  //Each panel is a box with room round its words, so there is somewhere to put a picture or a button beside them, and so
+  //the line a keyboard user sees round the panel in focus goes round that room rather than hugging the letters
   const panel = (i: number) =>
-    createNode('text', { name: `Panel ${i + 1}`, text: `What tab ${i + 1} is about.`, x: SPACE.l, y: SPACE.l, width: width - SPACE.l * 2, height: 60, fontSize: TYPE.body, lineHeight: 1.45, color: l.text, autoSize: 'height' });
+    createNode('frame', {
+      name: `Panel ${i + 1}`,
+      width,
+      height: 62,
+      fill: null,
+      clip: false,
+      layout: { ...defaultAutoLayout('column'), gap: SPACE.m, padding: pad(SPACE.l + SPACE.xs, SPACE.l), align: 'start', hugHeight: true },
+      children: [createNode('text', { name: `Words ${i + 1}`, text: `What tab ${i + 1} is about.`, width: width - SPACE.l * 2, height: 22, fontSize: TYPE.body, lineHeight: 1.5, color: l.text, autoSize: 'height' })],
+    }) as FrameNode;
   const panels = createNode('frame', {
     name: 'Panels',
     width,
     height: 120,
-    fill: solid(l.surface),
+    fill: null,
+    clip: true,
+    layout: { ...defaultAutoLayout('column'), gap: 0, padding: pad(0), align: 'stretch', hugHeight: true, animate: { ...FOLD, enter: 'fade' } },
     children: [panel(0), panel(1), panel(2)],
   }) as FrameNode;
   //The tabs sit in a list of their own, which is what lets a screen reader say "tab list, 3 tabs" and the arrow keys move
-  //along it; the panels sit under it
+  //along it; the panels sit under it. The list draws the hairline they stand on, and the chosen tab's line lies over it
   const list = createNode('frame', {
     name: 'Tab list',
     width,
     height: CONTROL_H,
-    fill: solid(l.surfaceMuted),
+    fill: null,
+    shadow: { x: 0, y: -1, blur: 0, spread: 0, color: l.border, inset: true },
     clip: false,
-    layout: { ...defaultAutoLayout('row'), gap: 0, padding: pad(0), align: 'start', hugHeight: true },
+    layout: { ...defaultAutoLayout('row'), gap: SPACE.xs, padding: pad(0), align: 'start', hugHeight: true },
     children: [tab(0), tab(1), tab(2)],
   }) as FrameNode;
   return createNode('frame', {
     name: 'Tabs',
     width,
     height: 164,
-    fill: solid(l.surface),
-    stroke: { paint: solid(l.border), width: 1, align: 'inside' },
-    cornerRadius: RADIUS.card,
-    clip: true,
-    layout: { ...defaultAutoLayout('column'), gap: 0, padding: pad(0), align: 'stretch', hugHeight: true },
+    fill: null,
+    clip: false,
+    layout: { ...defaultAutoLayout('column'), gap: 0, padding: pad(0), align: 'stretch', hugHeight: true, animate: { ...FOLD } },
     disclosure: { open: 'one', variable, panels: panels.id, tabs: list.id },
     children: [list, panels],
   }) as FrameNode;

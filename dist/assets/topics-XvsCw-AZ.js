@@ -1,4 +1,4 @@
-import{b$ as a,c0 as o,c1 as m,c2 as r,c3 as k,c4 as V,c5 as R,c6 as E,c7 as h,c8 as s,c9 as i,ca as U,cb as M,cc as b,cd as n,ce as S,cf as C,cg as f,ch as w,ci as A,cj as l,ck as d,cl as T,cm as P,cn as u,co as O,cp as x,cq as Y,cr as F,cs as K,ct as D,cu as I,cv as $,cw as Q,cx as X,bn as J,aa as Z,bx as ee,bf as te,ag as W,b2 as ae}from"./index-Bf-tU5Wi.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{b$ as a,c0 as o,c1 as m,c2 as r,c3 as k,c4 as V,c5 as R,c6 as E,c7 as h,c8 as s,c9 as i,ca as U,cb as M,cc as b,cd as n,ce as S,cf as C,cg as f,ch as w,ci as A,cj as l,ck as d,cl as T,cm as P,cn as u,co as O,cp as x,cq as Y,cr as F,cs as K,ct as D,cu as I,cv as $,cw as Q,cx as X,bn as J,aa as Z,bx as ee,bf as te,ag as W,b2 as ae}from"./index-mCNIF1sT.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -5494,6 +5494,7 @@ Turn on **Animate changes** in the frame's Auto layout section and, while the pr
 | Easing | A preset, or *Custom* to drag the curve's handles |
 | Enter | How a layer looks as it appears (a layer shown, or a new list item): *None*, *Fade*, *Scale* (grows from nothing) or *Fade and scale* (from 80%) |
 | Exit | How a layer looks as it goes (hidden, or a list item removed): it fades or shrinks where it was, then goes. Until it has gone it keeps its place in the layout, so the layers around it stay put and a frame that hugs its content keeps its size; then they glide together |
+| Keep its place while leaving | Shows when **Exit** is set, and starts on. Untick it and the others move at once while the leaving layer fades where it was, so a frame that clips its content folds shut over it. That is how an accordion's section closes |
 
 - A frame that hugs its content on an axis glides its own size along with its children when the content changes size (a layer shown or hidden, a list gaining or losing items).
 - If a layer returns while it is still leaving, it fades back in from where it had got to and nothing moves. A layer that appears while another is still leaving waits until the layout is released. A solo swaps its layers at once with no hold.
@@ -5765,6 +5766,9 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
 Press <kbd>B</kbd> to draw one. A button has a label (which can use \`{expressions}\`), fill, stroke and corner radius. Add a **When clicked or hovered** event to react to a click.
 - Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)).
 - **Disabled** (also bindable, for a Next button that waits for an answer) greys it out and takes it out of the Tab sequence.
+- **Side padding** on a button is the room between its label and its left and right edges: 12 pixels unless you change it. Give a wide button with its label on the left a little more, as an accordion's headers have.
+- An **inner shadow** on a button is drawn over its fill, so a shadow of 0 across, -3 down, no blur, in a colour, is a line along its bottom edge. That is the line under the showing tab.
+- A button's colours ease when a [state](layer-states) changes them, so a hover or a chosen look doesn't blink. With reduced motion asked for they change at once.
 - **Disabled look** sets how dimmed a disabled button or input looks: 0.5 by default, 1 for no dimming. A layer whose Opacity is bound keeps doing its own dimming.
 - **Small buttons** keep the size you draw. A button narrower than about 80 px no longer grows by its padding, so a dot-sized button really is dot-sized.
 
@@ -6694,7 +6698,7 @@ A state also beats a [binding](bindings) that sets the same property, so you can
 
 **More:** [Bindings](bindings), [Expressions](expressions), [Themes and colour tokens](themes), [Questions and quizzes](question-kit) for the right/wrong marking a **When…** state usually reads.`},{id:"accordions",title:"Accordions and tabs",group:"Interactivity",summary:"A frame whose sections open one at a time, or a row of tabs with one panel showing. No wiring.",keywords:"accordion accordions tabs tab strip panel panels sections collapse expand disclosure faq show hide one at a time toggle",body:`An **accordion** is a stack of sections where opening one closes the others. **Tabs** are the same idea lying down: a row of headers with one panel showing. Both are a setting on a frame, so there is nothing to wire up.
 
-**Add one:** **Accordion** and **Tabs** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and both are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it on the open page. You get three sections and the variable that remembers which is open.
+**Add one:** **Accordion** and **Tabs** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and both are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it on the open page. You get three sections and the variable that remembers which is open. A section of the accordion folds open and shut rather than blinking, and the ones under it glide to make room. That is **Animate changes** in each frame's [Auto layout](auto-layout#animate-changes) section, so you can change its speed or turn it off.
 
 ## How a frame becomes one
 Turn on **Make this an accordion** in the frame's **Accordion** section. Then:
@@ -6707,7 +6711,7 @@ Turn on **Make this an accordion** in the frame's **Accordion** section. Then:
 Because what's open is just a variable, anything else can read or change it: a **Next** button, a binding, a script, a [starting point](page-navigation#named-starting-points).
 
 ## Tabs
-Set **Panels** to a layer inside the frame whose own layers are the panels, and **Tab list** to the layer whose own layers are the tabs. Tabs and panels are matched in order: first tab, first panel. The **Tabs** button builds exactly this: a row of tabs, the panels under it, and the showing tab in the button colour.
+Set **Panels** to a layer inside the frame whose own layers are the panels, and **Tab list** to the layer whose own layers are the tabs. Tabs and panels are matched in order: first tab, first panel. The **Tabs** button builds exactly this, drawn the way tabs are on most of the web: a row of tabs standing on a thin line, the showing tab with a heavier label and a line under it in the button colour, and each panel a box of its own with room round its words. Changing tab fades the new panel in.
 
 ## What you get for free
 Both work the way accordions and tabs do everywhere else on the web (they follow the W3C's published patterns), without you setting anything.

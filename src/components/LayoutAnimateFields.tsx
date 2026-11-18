@@ -22,6 +22,8 @@ export function LayoutAnimateFields({ value, onChange }: { value: LayoutAnimate 
     // 'none' is the default: leave it out of the document
     if (next.enter === 'none') delete next.enter;
     if (next.exit === 'none') delete next.exit;
+    // holding the place is the default too, and it means nothing without an exit
+    if (next.hold !== false || !next.exit) delete next.hold;
     onChange(next);
   };
   return (
@@ -51,6 +53,16 @@ export function LayoutAnimateFields({ value, onChange }: { value: LayoutAnimate 
             <SelectField label="Enter" title="How a layer looks as it appears (shown, or added by a list)" value={value.enter ?? 'none'} options={TRANSITIONS} onChange={(v) => patch({ enter: v })} />
             <SelectField label="Exit" title="How a layer looks as it goes (hidden, or removed by a list); it fades where it was, then goes" value={value.exit ?? 'none'} options={TRANSITIONS} onChange={(v) => patch({ exit: v })} />
           </Row>
+          {value.exit && value.exit !== 'none' && (
+            <Row>
+              <CheckField
+                label="Keep its place while leaving"
+                title="On: a layer that goes fades out first, and only then do the others move up to fill its place. Off: the others move at once while it fades, so a frame that clips its content folds shut over it, the way an accordion's section does"
+                value={value.hold !== false}
+                onChange={(v) => patch({ hold: v })}
+              />
+            </Row>
+          )}
         </>
       )}
     </>

@@ -1724,6 +1724,17 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             </div>
           )}
           {radius}
+          <Row>
+            <NumberField
+              label="Side padding"
+              title="The room between the label and the button's left and right edges, in pixels. 12 unless you change it; a label set to the left or right sits this far in"
+              value={Number(shown('paddingX') ?? (n as { paddingX?: number }).paddingX ?? 12)}
+              min={0}
+              step={1}
+              suffix="px"
+              onChange={(v) => set({ paddingX: v }, `padx-${n.id}`)}
+            />
+          </Row>
           <div className="keyed">
             <CheckField label="Disabled" value={!!shown('disabled')} onChange={(v) => set({ disabled: v })} />
             <KeyButton node={n} ids={ids} prop="disabled" />
