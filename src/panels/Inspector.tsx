@@ -666,6 +666,8 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             label="W"
             value={ab.width}
             min={1}
+            disabled={!!ab.hugWidth}
+            title={ab.hugWidth ? 'Fit width to content is on, so the width follows the layers on the page' : undefined}
             onChange={(v) =>
               setAb((a) => {
                 if (a.lockRatio && a.width) a.height = Math.max(1, Math.round((a.height * v) / a.width));
@@ -722,6 +724,12 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <div className="field-label block">Background</div>
         <PaintField paint={ab.background} project={project} box={{ w: ab.width, h: ab.height }} onChange={(p) => setAb((a) => (a.background = p), `ab-bg-${ab.id}`)} />
         </PropRow>
+        <CheckField
+          label="Fit width to content"
+          title="The page is as wide as its furthest showing layer, and the editor keeps it so as you change what is on it. Use it for an overlay that should be as wide as its words. A page that plays in an embed is drawn at the width it had when you last saved"
+          value={!!ab.hugWidth}
+          onChange={(v) => setAb((a) => (v ? (a.hugWidth = true) : delete a.hugWidth))}
+        />
         <CheckField
           label="Fit height to content"
           title="The page is as tall as its lowest showing layer, and keeps fitting as it plays: a list filling from data, a layer shown or hidden, text growing. An embed in StudyDesk grows and shrinks with it"

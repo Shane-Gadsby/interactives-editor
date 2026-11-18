@@ -5460,7 +5460,7 @@ function nodeMatrix(n, shift) {
   return m;
 }
 const ID$1 = [1, 0, 0, 1, 0, 0];
-function contentBottom(nodes) {
+function contentBottom(nodes, axis = "y") {
   let bottom = null;
   const visit = (list2, parent) => {
     for (const n of list2) {
@@ -5468,7 +5468,7 @@ function contentBottom(nodes) {
       if (n.type === "frame" && n.dialog) continue;
       const m = multiply(parent, nodeMatrix(n));
       const corners = [apply(m, 0, 0), apply(m, n.width, 0), apply(m, n.width, n.height), apply(m, 0, n.height)];
-      const own = Math.max(...corners.map((p) => p.y));
+      const own = Math.max(...corners.map((p) => p[axis]));
       if (Number.isFinite(own)) bottom = bottom === null ? own : Math.max(bottom, own);
       const clips = n.type === "frame" && (n.clip || !!n.scroll && n.scroll !== "none");
       if (isContainer(n) && !clips) visit(n.children, m);
@@ -23586,6 +23586,7 @@ Each page has its own size, background, layers, timelines and interactions. Vari
 Turn on **Fit height to content** in the **Page** section and the page is as tall as its lowest showing layer. Its height is no longer typed in (the **H** box is greyed out): it follows the layers. That keeps going while the project plays, so the page grows and shrinks as a list fills from data, a layer is shown or hidden, or text gets longer. In StudyDesk the embed's iframe follows it, so nothing is cut off and there's no empty space under it.
 
 - **Space below** keeps some room under the lowest layer.
+- **Fit width to content** is the same idea sideways: the page is as wide as its furthest showing layer, and the **W** box is greyed out. The editor keeps it measured as you change the page; a page playing in an embed is drawn at the width it was saved with, because an embed's width is set by the page it sits in. With it on, **Space below** is kept to the right as well.
 - A hidden layer, a mask, and anything inside a frame that clips or scrolls (past the frame's own edge) take no room.
 - A **dialog** takes no room either. Dialogs open over the page, so opening one never makes the page (or the StudyDesk embed) taller. One taller than the page keeps the page the height it was, so give that dialog its own scrolling.
 - Any other layer can be left out the same way: turn on **Not counted in the page height** in its **Layer** section. That's for toasts, tooltips and anything else that floats on top.
@@ -25912,7 +25913,7 @@ That split is what lets a tooltip belong to a small icon while a much bigger are
 - **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd>, a click outside, its **Close** button or the cross in its corner closes it. It **eases in and out** (and not at all for a viewer who asks for less motion), and when it closes the focus goes back to what opened it. It opens in the **middle of what the viewer can see**: on a tall page embedded in a course that is the part on screen, not the middle of the page, which may be out of sight. It stays where it opened if they scroll. The same goes for a confirmation and a prompt. A screen reader calls it by its **page's name**, so name the page for what it is ("Your progress", not "Dialog 2"); the same goes for a confirmation and a prompt. The dimming and the blocking of what's behind are part of being a modal, so they're there even with **Accessibility off** in Preview; only moving the focus in and keeping <kbd>Tab</kbd> inside follow that switch. The card of a new modal, confirmation or prompt is the page's own background colour, the brightest thing on the dimmed page.
 - **Confirmation.** Asks a question and takes the answer from its buttons. A screen reader hears it as an **alert dialog**, named by its heading and described by its message, and the focus starts on the first button, so put the safe answer (**Cancel**) first. The buttons are a **list**: add one by adding a row, rename one by changing its label, and mark the answer you mean with \`"main": true\` so it stands out from the ways out. Picking a button writes what it stands for into **What they chose** and closes it. A click outside doesn't dismiss a confirmation.
 - **Prompt.** Asks for something typed. The focus starts in the box. **OK**, or <kbd>Enter</kbd> in the box, keeps what was typed in **What they answered** and closes; **Cancel** or <kbd>Esc</kbd> closes and leaves the last answer alone. Read that variable, or start a flow when it changes.
-- **Toast.** A short message that appears over a corner of the page, stays a moment and goes by itself: "Plan saved", "Copied", "Couldn't reach the server". See [Toasts](#toasts) below. A new toast is a small dark card with light words, like a tooltip, so it reads as sitting on top of the page.
+- **Toast.** A short message that appears over a corner of the page, stays a moment and goes by itself: "Plan saved", "Copied", "Couldn't reach the server". See [Toasts](#toasts) below. A new toast is a small card in the theme's own colours (light on a light theme, dark on a dark one), lifted off the page with a shadow.
 
 ## Opening one without a layer
 A modal, a confirmation and a prompt each have a **showing** variable (**Dialog showing**, and so on). Turn it on and the overlay opens, on whichever page is open, with **no layer pointing at it**: a **Change a value** node at the end of a flow, a script, or a timer. Its page's **Overlay** section says so when nothing points at it. A tooltip always needs a layer, since it has to sit beside something.
@@ -25949,9 +25950,19 @@ Each layer can also hand the overlay **its own words** as it opens. A modal, a c
 Overlays never appear in **Next** and **Previous**, never count in \`pageCount\`, and never make a page with [Fit height to content](artboards) any taller: they open over the page.
 
 ## The card
-What those buttons make is a page holding one **card**: a single frame with the overlay's look on it (its rounded corners, border, shadow and padding). When an overlay page holds just one frame like that, the card *is* the overlay: it's shown at the card's own size, and the page round it is only somewhere to design it.
+What those buttons make is a page holding one **card**: a single frame with the overlay's look on it (its rounded corners, border, shadow and padding). When an overlay page holds just one frame like that, the card *is* the overlay.
 
-The card uses [auto layout](auto-layout), so it sizes itself to what's in it. A tooltip's words stay on one line up to 260 wide and wrap after that, with the card hugging them. A modal's buttons sit under its message, so a longer message pushes them down rather than running into them.
+**The page sizes the overlay.** The card fills its page exactly, so there is one thing to size, not two: the page.
+
+- A modal, a confirmation or a prompt has a set **Width** and **Fit height to content** on. Change the page's width and the card follows; its height is whatever the message and buttons need.
+- A tooltip and a toast have **Fit width to content** on as well, so they are as big as their words. A tooltip's words stay on one line up to 260 wide and wrap after that.
+- Want a fixed size? Untick the page's **Fit height to content** (or width) and type one. The card stops hugging on that side and is the size you give the page.
+- Resize the card instead (its handles, or its own **W**) and the page takes that size, so either works. On a side that fits its content, the content decides and a pull springs back.
+- The card's look (corners, border, shadow, padding) is still the card's own: select it to change them.
+
+It's the **The page sizes the overlay** tick in the page's **Overlay** section. Untick it and the card is sized by itself again, with the page only somewhere to draw it. Overlays made before this keep working as they were; tick it on one and the page takes the card's size, so nothing that is shown changes.
+
+The card uses [auto layout](auto-layout), so a modal's buttons sit under its message and a longer message pushes them down rather than running into them.
 
 Put more than one layer straight on the page and the whole page is the overlay instead, at the page's size.
 

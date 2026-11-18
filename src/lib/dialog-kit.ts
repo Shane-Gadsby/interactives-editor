@@ -2,7 +2,7 @@
 //screen and is shown beside (or over) whatever layer points at it. Adding one builds that page and, when a layer is
 //selected, links it straight away. The page holds ordinary layers, so the Inspector edits it like any other page.
 //Pure functions over a project draft (see store.update).
-import { createArtboard, createNode, defaultAutoLayout, uid, type Artboard, type FrameNode, type LogicNode, type Project, type SceneNode, type Variable } from 'interactives-player';
+import { cardOf, createArtboard, createNode, defaultAutoLayout, uid, type Artboard, type FrameNode, type LogicNode, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { defaultParams } from 'interactives-player';
 import { lookFor } from './themes';
 import { CONTROL_H, RADIUS, SHADOW, SPACE, TYPE, pad } from './design-scale';
@@ -85,6 +85,8 @@ export function addDialog(d: Project, kind: DialogKind, opts: { targetId?: strin
   if (kind === 'tooltip') fillTooltip(page, l);
   else if (kind === 'toast') fillToast(d, page, l);
   else fillBox(d, page, l, kind);
+  //The page is the overlay: the card is bound to it, so the page's size is the overlay's and nobody sizes the two apart
+  bindCardToPage(page);
   d.artboards.push(page);
 
   //Nothing points at a toast: a Show toast node shows it. With a layer picked, clicking that layer is wired to show it,
@@ -107,6 +109,39 @@ export function addDialog(d: Project, kind: DialogKind, opts: { targetId?: strin
     }
   }
   return { overlayId: page.id, linked };
+}
+
+/**
+ * Bind an overlay page's card to the page, so the page is in charge of the overlay's size (`Overlay.bindCard`). The page
+ * takes the card's size as it is now, so nothing that is shown changes: it fits its content on each axis the card hugs
+ * (a tooltip is as wide as its words, a modal as tall as its message) and is a set size on the others. Its own background
+ * goes, since the card is all there is to see and its rounded corners would otherwise sit on a square. False when the page
+ * isn't an overlay or doesn't hold a single card.
+ */
+export function bindCardToPage(page: Artboard): boolean {
+  const card = cardOf(page.children);
+  if (!page.overlay || !card) return false;
+  page.overlay = { ...page.overlay, bindCard: true };
+  card.x = 0;
+  card.y = 0;
+  page.width = Math.max(1, Math.round(card.width));
+  page.height = Math.max(1, Math.round(card.height));
+  if (card.layout?.hugWidth) page.hugWidth = true;
+  else delete page.hugWidth;
+  if (card.layout?.hugHeight) page.hugHeight = true;
+  else delete page.hugHeight;
+  delete page.hugPadding;
+  page.background = null;
+  //the card's shadow falls outside the page
+  page.clip = false;
+  return true;
+}
+
+/** Let an overlay's card go from its page again: both keep the size they have, and are sized separately from here on. */
+export function unbindCard(page: Artboard): void {
+  if (!page.overlay?.bindCard) return;
+  const { bindCard: _was, ...rest } = page.overlay;
+  page.overlay = rest;
 }
 
 /** Point a layer at an overlay page, or take its link off again. */
@@ -139,7 +174,7 @@ export function overlayTargets(d: Project, overlayId: string): { node: SceneNode
  * The close button every dismissable overlay on the web has in its corner: a small square you can press, named Close for a
  * screen reader, holding a drawn cross (not a letter x, which reads as a letter and sits wrong on its line).
  */
-export function closeButton(l: Record<string, string>, onDark = false): FrameNode {
+export function closeButton(l: Record<string, string>): FrameNode {
   const SIZE = 32;
   const ARM = 10;
   const at = (SIZE - ARM) / 2;
@@ -154,8 +189,7 @@ export function closeButton(l: Record<string, string>, onDark = false): FrameNod
       { closed: false, points: [{ x: ARM, y: 0 }, { x: 0, y: ARM }] },
     ],
     fill: null,
-    //(on a dark card, a toast, the cross is the page's own light colour)
-    stroke: { paint: solid(onDark ? l.background : l.text), width: 1.75 },
+    stroke: { paint: solid(l.text), width: 1.75 },
     lineCap: 'round',
     decorative: true,
   });
@@ -171,7 +205,7 @@ export function closeButton(l: Record<string, string>, onDark = false): FrameNod
     ariaLabel: 'Close',
     focusable: true,
     cursor: 'pointer',
-    states: [{ id: uid('st'), name: 'Hover', when: 'hover', props: { fill: solid(onDark ? 'rgba(255,255,255,0.16)' : l.surfaceMuted) } }],
+    states: [{ id: uid('st'), name: 'Hover', when: 'hover', props: { fill: solid(l.surfaceMuted) } }],
     //it keeps its own corner of a row: the title beside it takes the room, this never shrinks
     layoutItem: { position: 'flow' },
     children: [cross],
@@ -217,9 +251,9 @@ function fillTooltip(page: Artboard, l: Record<string, string>): void {
 }
 
 /**
- * The toast: one small card that hugs its words, lifted off the page with a shadow. Dark with light words whatever the
- * page's theme, like the tooltip, which is how a plain message is drawn on most of the web: it reads as sitting on top
- * of the page rather than being part of it. Its words come from a variable the page
+ * The toast: one small card that hugs its words, lifted off the page with a shadow. It follows the theme like everything
+ * else on the page (light on a light theme, dark on a dark one, the colourway's colours on a colourway), on the page's own
+ * ground with a line round it. Its words come from a variable the page
  * says it takes, and the toast names that variable as where a Show toast node's Message goes, so one toast serves every
  * message.
  */
@@ -237,22 +271,22 @@ function fillToast(d: Project, page: Artboard, l: Record<string, string>): void 
     text: `{${messageVar}}`,
     fontSize: TYPE.body,
     lineHeight: 1.4,
-    color: l.background,
+    color: l.text,
     autoSize: 'width',
     maxWidth: 320,
     width: 42,
     height: 20,
   });
-  const close = closeButton(l, true);
+  const close = closeButton(l);
   const card = createNode('frame', {
     name: 'Toast',
     x: CARD_AT,
     y: CARD_AT,
     width: 42 + 32,
     height: 20 + 24,
-    fill: solid(l.text),
+    fill: solid(l.background),
     cornerRadius: RADIUS.control,
-    stroke: null,
+    stroke: { paint: solid(l.border), width: 1, align: 'inside' },
     clip: false,
     shadow: SHADOW.raised,
     layout: { ...defaultAutoLayout('row'), gap: SPACE.m, padding: { top: SPACE.s, right: SPACE.s, bottom: SPACE.s, left: SPACE.l }, align: 'center', hugWidth: true, hugHeight: true },

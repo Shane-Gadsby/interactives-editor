@@ -1,9 +1,9 @@
-import { TIP_DELAY_MS, TOAST_MS, holdsControl, overlayFadeMs, tipDelayMs, toastClosers, variableLabel, type Artboard, type Project, type SceneNode, type ToastPlace } from 'interactives-player';
+import { TIP_DELAY_MS, TOAST_MS, cardOf, holdsControl, overlayFadeMs, tipDelayMs, toastClosers, variableLabel, type Artboard, type Project, type SceneNode, type ToastPlace } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { SectionBlurb } from '../components/SectionBlurb';
-import { overlayTargets } from '../lib/dialog-kit';
+import { bindCardToPage, overlayTargets, unbindCard } from '../lib/dialog-kit';
 import { PropFields } from './PropFields';
 
 const SIDES = [
@@ -145,6 +145,21 @@ export function OverlayPageSection({ ab, project }: { ab: Artboard; project: Pro
         ]}
         onChange={(v) => setO({ kind: v })}
       />
+      {cardOf(ab.children) && (
+        <CheckField
+          label="The page sizes the overlay"
+          title="On: the overlay's card fills this page, so the page's Width, Height and Fit to content are the overlay's size and shape, and there is one thing to size instead of two. Off: the card is sized by itself and the page is only the place it is drawn on"
+          value={!!o.bindCard}
+          onChange={(v) =>
+            store().update((d) => {
+              const page = d.artboards.find((a) => a.id === ab.id);
+              if (!page) return;
+              if (v) bindCardToPage(page as Artboard);
+              else unbindCard(page as Artboard);
+            })
+          }
+        />
+      )}
       {o.kind === 'toast' && <ToastSettings ab={ab} project={project} setO={setO} />}
       {o.kind === 'tooltip' && (
         <>

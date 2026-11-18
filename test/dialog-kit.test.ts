@@ -156,7 +156,7 @@ describe('an overlay is drawn as its card', () => {
     player.destroy();
   });
 
-  it('is the size of its card, not of the page it was designed on', async () => {
+  it('is the size of its card, which is the size of its page', async () => {
     const { p, targetId } = withTarget();
     const made = addDialog(p, 'modal', { targetId, artboardId: p.artboards[0].id });
     const page = pageOf(p, made.overlayId);
@@ -166,7 +166,9 @@ describe('an overlay is drawn as its card', () => {
     player.step(16);
     const el = document.querySelector<HTMLElement>(`[data-ix-id="${overlayId(made.overlayId, targetId)}"]`)!;
     expect(el.style.width).toBe(`${card.width}px`);
-    expect(page.width).toBeGreaterThan(card.width);
+    //the card is bound to its page, so the two are one width
+    expect(page.width).toBe(card.width);
+    expect(page.overlay!.bindCard).toBe(true);
     player.destroy();
   });
 

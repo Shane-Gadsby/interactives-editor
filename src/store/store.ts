@@ -5,6 +5,10 @@ import {
   animatableProp,
   pathPointPropName,
   huggedHeight,
+  huggedWidth,
+  boundCardWants,
+  cardOf,
+  settleBoundCard,
   relayoutTree,
   createArtboard,
   frameTime,
@@ -89,7 +93,37 @@ function settleGroups(project: Project): Project {
  * Lay out the auto-layout frames of a document after a change. Only artboards that have any are walked: doing it inside
  * the change's own draft would wrap every layer of every artboard in a proxy just to find there was nothing to lay out.
  */
-function settleLayout(project: Project, fitGroups = false): Project {
+/**
+ * Someone resized a bound overlay card itself (its handles, or its own W and H) rather than its page. The page is what
+ * sizes the overlay, so the page takes the new size and the two stay one: without this the card would just spring back.
+ * Only on an axis the page doesn't fit to its content (there the card hugs, and its size isn't anyone's to set), and only
+ * when the page's own size wasn't changed in the same edit.
+ */
+function pageFollowsResizedCard(project: Project, before: Project): Project {
+  const moved: { id: string; width?: number; height?: number }[] = [];
+  for (const ab of project.artboards) {
+    if (!ab.overlay?.bindCard) continue;
+    const was = before.artboards.find((a) => a.id === ab.id);
+    const card = cardOf(ab.children);
+    const wasCard = was?.overlay?.bindCard ? cardOf(was.children) : null;
+    if (!was || !card || !wasCard || card === wasCard) continue;
+    const m: (typeof moved)[number] = { id: ab.id };
+    if (!ab.hugWidth && ab.width === was.width && card.width !== wasCard.width) m.width = Math.max(1, Math.round(card.width));
+    if (!ab.hugHeight && ab.height === was.height && card.height !== wasCard.height) m.height = Math.max(1, Math.round(card.height));
+    if (m.width !== undefined || m.height !== undefined) moved.push(m);
+  }
+  if (!moved.length) return project;
+  return produce(project, (d) => {
+    for (const m of moved) {
+      const ab = d.artboards.find((a) => a.id === m.id)!;
+      if (m.width !== undefined) ab.width = m.width;
+      if (m.height !== undefined) ab.height = m.height;
+    }
+  });
+}
+
+function settleLayout(project: Project, fitGroups = false, before?: Project): Project {
+  if (before) project = pageFollowsResizedCard(project, before);
   // Groups are only fitted on this person's own edits (which are sent), never on load or on someone else's ops: refitting
   // there would change the document here without telling anyone, and the next op about those layers would land in the
   // wrong place. Fitting moves nothing on the canvas, so a group waiting for the next edit looks the same
@@ -103,16 +137,31 @@ function settleLayout(project: Project, fitGroups = false): Project {
     if (has === undefined) layoutFlag.set(ab, (has = hasAutoLayout(ab.children)));
     if (has) withLayout.add(ab.id);
   }
+  // An overlay's card that is bound to its page takes the page's size (or starts hugging, where the page fits its content)
+  // before anything is laid out, so the layout below is of the card as the page wants it
+  if (project.artboards.some((ab) => fresh.has(ab.id) && boundCardWants(ab))) {
+    project = produce(project, (d) => {
+      for (const ab of d.artboards) if (fresh.has(ab.id)) settleBoundCard(ab as Artboard);
+    });
+    for (const ab of project.artboards) if (fresh.has(ab.id) && hasAutoLayout(ab.children)) withLayout.add(ab.id);
+  }
   let next = !withLayout.size
     ? project
     : produce(project, (d) => {
         for (const ab of d.artboards) if (withLayout.has(ab.id)) relayoutTree(ab.children as SceneNode[]);
       });
   // A page that fits its content takes the height its layers need, once they're laid out (the player works it out again as it runs)
-  const hug = new Set(next.artboards.filter((ab) => fresh.has(ab.id) && ab.hugHeight && huggedHeight(ab, ab.children) !== ab.height).map((ab) => ab.id));
+  // and one that fits its width takes the width they need, the same way
+  const hug = new Set(
+    next.artboards.filter((ab) => fresh.has(ab.id) && ((ab.hugHeight && huggedHeight(ab, ab.children) !== ab.height) || (ab.hugWidth && huggedWidth(ab, ab.children) !== ab.width))).map((ab) => ab.id),
+  );
   if (hug.size) {
     next = produce(next, (d) => {
-      for (const ab of d.artboards) if (hug.has(ab.id)) ab.height = huggedHeight(ab, ab.children as SceneNode[]);
+      for (const ab of d.artboards) {
+        if (!hug.has(ab.id)) continue;
+        ab.height = huggedHeight(ab, ab.children as SceneNode[]);
+        ab.width = huggedWidth(ab, ab.children as SceneNode[]);
+      }
     });
   }
   for (const ab of next.artboards) layoutSettled.add(ab);
@@ -438,7 +487,7 @@ export class EditorStore {
       edited = snapToBrand(before, edited);
     }
     // Auto-layout frames re-position their children after every change, in the same undo step.
-    const next = settleLayout(edited ?? produce(before, (d) => void recipe(d)), true);
+    const next = settleLayout(edited ?? produce(before, (d) => void recipe(d)), true, before);
     if (next === before) return;
     const t = Date.now();
     const merge = opts.coalesce && this.lastCoalesce && this.lastCoalesce.key === opts.coalesce && t - this.lastCoalesce.time < 1000;
@@ -463,7 +512,7 @@ export class EditorStore {
 
   /** Change the document without an undo step (derived data such as measured text size). */
   patchSilently(recipe: (draft: Draft<Project>) => void): void {
-    const next = settleLayout(produce(this.state.project, (d) => void recipe(d)), true);
+    const next = settleLayout(produce(this.state.project, (d) => void recipe(d)), true, this.state.project);
     if (next === this.state.project) return;
     this.revision++;
     const before = this.state.project;
