@@ -135,6 +135,47 @@ export function overlayTargets(d: Project, overlayId: string): { node: SceneNode
   return out;
 }
 
+/**
+ * The close button every dismissable overlay on the web has in its corner: a small square you can press, named Close for a
+ * screen reader, holding a drawn cross (not a letter x, which reads as a letter and sits wrong on its line).
+ */
+export function closeButton(l: Record<string, string>): FrameNode {
+  const SIZE = 32;
+  const ARM = 10;
+  const at = (SIZE - ARM) / 2;
+  const cross = createNode('path', {
+    name: 'Cross',
+    x: at,
+    y: at,
+    width: ARM,
+    height: ARM,
+    paths: [
+      { closed: false, points: [{ x: 0, y: 0 }, { x: ARM, y: ARM }] },
+      { closed: false, points: [{ x: ARM, y: 0 }, { x: 0, y: ARM }] },
+    ],
+    fill: null,
+    stroke: { paint: solid(l.text), width: 1.75 },
+    lineCap: 'round',
+    decorative: true,
+  });
+  return createNode('frame', {
+    name: 'Close',
+    width: SIZE,
+    height: SIZE,
+    fill: solid(l.surface),
+    cornerRadius: RADIUS.control,
+    clip: false,
+    role: 'button',
+    ariaLabel: 'Close',
+    focusable: true,
+    cursor: 'pointer',
+    states: [{ id: uid('st'), name: 'Hover', when: 'hover', props: { 'fill.color': l.surfaceMuted } }],
+    //it keeps its own corner of a row: the title beside it takes the room, this never shrinks
+    layoutItem: { position: 'flow' },
+    children: [cross],
+  }) as FrameNode;
+}
+
 /** Where the card sits on its page, so there is a margin of page round it on the canvas. */
 const CARD_AT = 24;
 
@@ -198,6 +239,7 @@ function fillToast(d: Project, page: Artboard, l: Record<string, string>): void 
     width: 42,
     height: 20,
   });
+  const close = closeButton(l);
   const card = createNode('frame', {
     name: 'Toast',
     x: CARD_AT,
@@ -209,10 +251,12 @@ function fillToast(d: Project, page: Artboard, l: Record<string, string>): void 
     stroke: { paint: solid(l.border), width: 1, align: 'inside' },
     clip: false,
     shadow: SHADOW.raised,
-    layout: { ...defaultAutoLayout('row'), gap: SPACE.m, padding: pad(SPACE.m, SPACE.l), align: 'center', hugWidth: true, hugHeight: true },
-    children: [words],
+    layout: { ...defaultAutoLayout('row'), gap: SPACE.m, padding: { top: SPACE.s, right: SPACE.s, bottom: SPACE.s, left: SPACE.l }, align: 'center', hugWidth: true, hugHeight: true },
+    children: [words, close],
   }) as FrameNode;
   page.children = [card];
+  //Being able to close it early doesn't stop it going by itself: only something else to press does that
+  wire(page, { kind: 'event.pointer', params: { target: close.id, type: 'click' } }, [{ kind: 'action.toastHide', params: { toast: page.id } }]);
 }
 
 /**
@@ -301,9 +345,24 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
   const main = (name: string, label: string) => createNode('button', { name, label, width: 96, height: CONTROL_H, fill: solid(l.button), color: l.onButton, fontSize: TYPE.body, cornerRadius: RADIUS.control });
 
   if (kind === 'modal') {
-    const close = main('Close', 'Close');
+    //A modal has a way out in its corner as well as its button: the cross is where people look for it
+    const corner = closeButton(l);
+    title.width = inner - corner.width - SPACE.s;
+    title.layoutItem = { width: 'fill' };
+    const head = createNode('frame', {
+      name: 'Header',
+      width: inner,
+      height: corner.height,
+      fill: null,
+      clip: false,
+      layout: { ...defaultAutoLayout('row'), gap: SPACE.s, padding: pad(0), align: 'start', hugHeight: true },
+      children: [title, corner],
+    }) as FrameNode;
+    card.children = [head, body, row];
+    const close = main('Close button', 'Close');
     row.children.push(close);
     wire(page, { kind: 'event.pointer', params: { target: close.id, type: 'click' } }, [setVar(openId, 'false')]);
+    wire(page, { kind: 'event.pointer', params: { target: corner.id, type: 'click' } }, [setVar(openId, 'false')]);
     return;
   }
 
@@ -336,6 +395,8 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     //OK keeps what was typed as the answer, closes, and clears the box for next time. Cancel just closes and clears
     wire(page, { kind: 'event.pointer', params: { target: ok.id, type: 'click' } }, [setVar(answerId, valueVar), setVar(openId, 'false'), setVar(valueId, '""')]);
     wire(page, { kind: 'event.pointer', params: { target: cancel.id, type: 'click' } }, [setVar(openId, 'false'), setVar(valueId, '""')]);
+    //Enter in the box is OK, as in every form with one field
+    wire(page, { kind: 'event.key', params: { key: 'Enter', target: box.id, typing: true } }, [setVar(answerId, valueVar), setVar(openId, 'false'), setVar(valueId, '""')]);
     return;
   }
 

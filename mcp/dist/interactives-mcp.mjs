@@ -4211,6 +4211,7 @@ function sanitizeNode(raw, seen) {
   }
   if ("cornerRadii" in n && !(Array.isArray(n.cornerRadii) && n.cornerRadii.length === 4 && n.cornerRadii.every(isNum))) delete n.cornerRadii;
   for (const k of ["mask", "locked", "noAssist", "noPaste", "hugIgnore"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  if ("wai" in n) delete n.wai;
   if (n.type === "embed" && "allow" in n) {
     const known = new Set(EMBED_ALLOW.map((x) => x.key));
     if (!Array.isArray(n.allow)) delete n.allow;
@@ -4239,6 +4240,8 @@ function sanitizeNode(raw, seen) {
       if (isStr(o.variable) && o.variable) out.variable = o.variable;
       if (o.toggle === true && o.open === "one") out.toggle = true;
       if (isStr(o.panels) && o.panels) out.panels = o.panels;
+      if (isStr(o.tabs)) out.tabs = o.tabs;
+      if (o.chevron === false) out.chevron = false;
       n.disclosure = out;
     }
   }
@@ -25831,10 +25834,24 @@ Turn on **Make this an accordion** in the frame's **Accordion** section. Then:
 Because what's open is just a variable, anything else can read or change it: a **Next** button, a binding, a script, a [starting point](page-navigation#named-starting-points).
 
 ## Tabs
-Set **Panels** to a layer inside the frame whose own layers are the panels. The frame's other children are then the headers alone, matched to the panels in order: first header, first panel. Lay the headers out in a row and that is a tab strip.
+Set **Panels** to a layer inside the frame whose own layers are the panels, and **Tab list** to the layer whose own layers are the tabs. Tabs and panels are matched in order: first tab, first panel. The **Tabs** button builds exactly this: a row of tabs, the panels under it, and the showing tab in the button colour.
 
 ## What you get for free
-Each header is marked up as a button that says whether it is expanded, so a screen reader reads "Section 2, button, expanded" without you setting anything. The panel of a closed section is hidden, so it is skipped by the keyboard too.
+Both work the way accordions and tabs do everywhere else on the web (they follow the W3C's published patterns), without you setting anything.
+
+**An accordion:**
+
+- Each header is a button inside a heading, and says whether its section is expanded: a screen reader reads "Section 2, button, collapsed, heading level 3".
+- Each header has a **chevron** at its far end that turns over as the section opens. Untick **Chevron on each header** to go without.
+- Only the **header** opens and closes a section. Clicking in a panel's own words does nothing, so reading a section never shuts it.
+- <kbd>Enter</kbd> and <kbd>Space</kbd> open and close. <kbd>Tab</kbd> goes from header to header and into an open panel.
+- Each panel is a named region, so a screen reader can jump to it. A closed section takes no room: the ones under it move up.
+
+**Tabs:**
+
+- A screen reader says "tab list, 3 tabs", which tab is selected, and that each panel belongs to its tab.
+- <kbd>Tab</kbd> lands on the selected tab, then goes into the panel. <kbd>←</kbd> and <kbd>→</kbd> move along the tabs and wrap round at the ends, <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last. Each tab is shown as you reach it. A column of tabs uses <kbd>↑</kbd> and <kbd>↓</kbd> instead.
+- Tabs made before **Tab list** existed keep working, with the tabs beside the panels. Set **Tab list** to get the rest.
 
 **Good to know:** the editor canvas shows the first section open, whatever the variable says, so you can style the open and closed looks without playing it. [Layer states](layer-states) are the tidy way to make an open header look different.
 
@@ -25860,13 +25877,15 @@ That split is what lets a tooltip belong to a small icon while a much bigger are
 ## The five kinds
 - **Tooltip.** Sits beside its target while the trigger is hovered or focused. **Side** chooses above, below, left or right, and **Wherever it fits** (the default) tries each in turn. A side you choose is kept unless there's no room there and there is on the opposite side, when it goes across (a tooltip below a card at the foot of the page would land on the card). Near the page's edge it slides in rather than changing side. **Gap** is the space between.
   - The **trigger is the whole layer**: point anywhere on a card made of a frame and its words, or tab to something inside it, and its tooltip shows. While a layer is being **dragged** its tooltip is put away.
+  - It shows after the pointer has rested on the trigger for a moment: **Delay**, 300 ms unless you change it, so sweeping the pointer across a page doesn't set every tooltip off. Reaching the trigger with the keyboard shows it at once, and so does moving straight from one tooltip's trigger to another's.
+  - A screen reader reads the tooltip as the **description** of its trigger.
   - It **fades** in and out. **Fade** is the **Project default** (the project's own transition time, **Page height time** in the project settings) or **Custom** with its own **Time**. A viewer whose device asks for less motion gets no fade.
   - It has a **Tail**: a small triangle on the side facing the target, pointing at the middle of it, in the tooltip's own colour. It follows whichever side the tooltip ended up on. Give the card a border and the tail takes it too, as one outline with the card. Untick **Tail** to go without.
   - **Stays while you're on it** keeps it open when the pointer moves from the trigger onto the tooltip, with a moment's grace to cross the gap, so a link or a button inside it can be reached. Turn it off for a plain label that should go the moment you leave. <kbd>Esc</kbd> puts a tooltip away either way.
   - The **keyboard reaches what's inside** the same way. With the trigger focused, <kbd>Tab</kbd> goes to the first link or button in the tooltip, <kbd>Tab</kbd> off the last one carries on to whatever follows the trigger, and <kbd>Shift</kbd>+<kbd>Tab</kbd> from the first goes back to the trigger. <kbd>Esc</kbd> from inside puts the tooltip away and hands the focus back to the trigger. A tooltip with nothing to press in it changes nothing about <kbd>Tab</kbd>.
-- **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd> or a click outside closes it. It opens in the **middle of what the viewer can see**: on a tall page embedded in a course that is the part on screen, not the middle of the page, which may be out of sight. It stays where it opened if they scroll. The same goes for a confirmation and a prompt. A screen reader calls it by its **page's name**, so name the page for what it is ("Your progress", not "Dialog 2"); the same goes for a confirmation and a prompt. The dimming and the blocking of what's behind are part of being a modal, so they're there even with **Accessibility off** in Preview; only moving the focus in and keeping <kbd>Tab</kbd> inside follow that switch.
-- **Confirmation.** Asks a question and takes the answer from its buttons. The buttons are a **list**: add one by adding a row, rename one by changing its label, and mark the answer you mean with \`"main": true\` so it stands out from the ways out. Picking a button writes what it stands for into **What they chose** and closes it. A click outside doesn't dismiss a confirmation.
-- **Prompt.** Asks for something typed. **OK** keeps what was typed in **What they answered** and closes; **Cancel** closes and leaves the last answer alone. Read that variable, or start a flow when it changes.
+- **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd>, a click outside, its **Close** button or the cross in its corner closes it. It **eases in and out** (and not at all for a viewer who asks for less motion), and when it closes the focus goes back to what opened it. It opens in the **middle of what the viewer can see**: on a tall page embedded in a course that is the part on screen, not the middle of the page, which may be out of sight. It stays where it opened if they scroll. The same goes for a confirmation and a prompt. A screen reader calls it by its **page's name**, so name the page for what it is ("Your progress", not "Dialog 2"); the same goes for a confirmation and a prompt. The dimming and the blocking of what's behind are part of being a modal, so they're there even with **Accessibility off** in Preview; only moving the focus in and keeping <kbd>Tab</kbd> inside follow that switch.
+- **Confirmation.** Asks a question and takes the answer from its buttons. A screen reader hears it as an **alert dialog**, named by its heading and described by its message, and the focus starts on the first button, so put the safe answer (**Cancel**) first. The buttons are a **list**: add one by adding a row, rename one by changing its label, and mark the answer you mean with \`"main": true\` so it stands out from the ways out. Picking a button writes what it stands for into **What they chose** and closes it. A click outside doesn't dismiss a confirmation.
+- **Prompt.** Asks for something typed. The focus starts in the box. **OK**, or <kbd>Enter</kbd> in the box, keeps what was typed in **What they answered** and closes; **Cancel** or <kbd>Esc</kbd> closes and leaves the last answer alone. Read that variable, or start a flow when it changes.
 - **Toast.** A short message that appears over a corner of the page, stays a moment and goes by itself: "Plan saved", "Copied", "Couldn't reach the server". See [Toasts](#toasts) below.
 
 ## Opening one without a layer
@@ -25879,8 +25898,8 @@ A layer **inside an overlay** can point at another overlay too. A **More informa
 
 - **Show toast** has a **Message**: the words it says this time, as an expression (\`"Plan saved"\`, or \`"Saved " + name\`). They go into the toast's own text variable, so **one toast serves every message**. Leave it empty and the toast keeps the words it had.
 - **Place** is a corner, or the middle of the top or bottom edge, and **Gap** is how far in from the edge. On a tall page it is the corner of the part the viewer can see. A bar the course page keeps fixed across its top can't be seen from inside the piece, so a toast at the top can end up under it: the bottom places are the safe ones.
-- **Stays** is **For a time** (4 seconds unless you change **Time**) or **Until dismissed**. The time waits while the pointer or the keyboard is on the toast. A toast with a **button in it always stays until dismissed**, so nobody has to race a timer to press it.
-- **Hide toast** puts one away. To give a toast a close button, add a button to its card and wire **When clicked** to **Hide toast** on the toast's own page.
+- **Stays** is **For a time** (4 seconds unless you change **Time**) or **Until dismissed**. The time waits while the pointer or the keyboard is on the toast. A toast with **something to press besides its close button always stays until dismissed**, so nobody has to race a timer to press it.
+- A new toast has a **close button** (a cross, named Close) wired to **Hide toast**, so whoever is reading it can put it away early. Delete the layer if you don't want one. Its own close button doesn't stop a toast going by itself: only something else to press does.
 - **Comes and goes** is **Slides and fades** (what a new toast starts with: it moves up into place as it fades in and back down as it goes, or the other way up at the top of the page) or plain **Fades**. Both take the **Fade** time, the same setting a tooltip has, and a viewer who asks for less motion gets neither.
 - It's **read out** to a screen reader as it appears, so it needs no **Announce** node beside it. Tick **It's an error** for something that has gone wrong and it interrupts instead of waiting its turn. It **never takes the focus**.
 - Showing a toast that's already up gives it the new words and its full time again. Different toasts **stack**, the newest nearest the edge.

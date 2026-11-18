@@ -1,4 +1,4 @@
-import { TOAST_MS, holdsControl, overlayFadeMs, variableLabel, type Artboard, type Project, type SceneNode, type ToastPlace } from 'interactives-player';
+import { TIP_DELAY_MS, TOAST_MS, holdsControl, overlayFadeMs, tipDelayMs, toastClosers, variableLabel, type Artboard, type Project, type SceneNode, type ToastPlace } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField } from '../components/ui';
 import { Icons } from '../components/icons';
@@ -165,6 +165,16 @@ export function OverlayPageSection({ ab, project }: { ab: Artboard; project: Pro
           {o.fade !== undefined && (
             <NumberField label="Time" title="The fade, in milliseconds. 0 shows and hides it at once" value={o.fade} min={0} max={2000} suffix="ms" onChange={(v) => setO({ fade: Math.max(0, Math.round(v)) }, `overlay-fade-${ab.id}`)} />
           )}
+          <NumberField
+            label="Delay"
+            title="How long the pointer rests on the layer before the tooltip shows. 300 is the usual small delay, so sweeping across a page doesn't set them all off. The keyboard always gets it at once"
+            value={tipDelayMs(o)}
+            min={0}
+            max={2000}
+            step={50}
+            suffix="ms"
+            onChange={(v) => setO({ delay: Math.max(0, Math.round(v)) === TIP_DELAY_MS ? undefined : Math.max(0, Math.round(v)) }, `overlay-delay-${ab.id}`)}
+          />
           <CheckField
             label="Tail"
             title="A small triangle on the side facing the layer, pointing at the middle of it, in the tooltip's own colour"
@@ -219,7 +229,8 @@ const PLACES: { value: ToastPlace; label: string }[] = [
 /** A toast's own settings: where it sits, how long it stays, its fade, where its words go, and whether it is an error. */
 function ToastSettings({ ab, project, setO }: { ab: Artboard; project: Project; setO: (patch: Partial<NonNullable<Artboard['overlay']>>, coalesce?: string) => void }) {
   const o = ab.overlay!;
-  const held = holdsControl(ab.children);
+  //(its own close button is no reason for it to wait: only something else to press is)
+  const held = holdsControl(ab.children, toastClosers(ab));
   const ms = o.duration ?? TOAST_MS;
   const texts = project.variables.filter((v) => v.type === 'string');
   return (
@@ -246,9 +257,9 @@ function ToastSettings({ ab, project, setO }: { ab: Artboard; project: Project; 
         onChange={(v) => setO({ duration: v === 'until' ? 0 : TOAST_MS })}
       />
       {held ? (
-        <div className="hint">It has a button in it, so it stays until dismissed. Wire the button to a Hide toast node.</div>
+        <div className="hint">It has something to press besides its close button, so it stays until dismissed.</div>
       ) : ms === 0 ? (
-        <div className="hint">Nothing puts it away by itself. Wire a Close button to a Hide toast node, or hide it from a flow.</div>
+        <div className="hint">Nothing puts it away by itself: its close button does, or a Hide toast node.</div>
       ) : (
         <NumberField label="Time" title="How long it stays, in seconds" value={ms / 1000} min={1} max={60} step={0.5} suffix="s" onChange={(v) => setO({ duration: Math.max(1000, Math.round(v * 1000)) }, `toast-time-${ab.id}`)} />
       )}

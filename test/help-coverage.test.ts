@@ -178,6 +178,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Pictures stay on the other pages': [['media-catalogue', 'never see a page with its photos missing']],
   'Tooltip tails are joined on': [['overlays', 'as one outline with the card']],
   "An agent knows who it's working for": [['ai-agents', '| who_am_i |']],
+  'Accordions, tabs, dialogs, tooltips and toasts work the way they do everywhere else': [['accordions', 'tab list, 3 tabs'], ['accordions', 'Only the **header** opens and closes a section'], ['overlays', '**eases in and out**'], ['overlays', '**alert dialog**'], ['overlays', '<kbd>Enter</kbd> in the box'], ['overlays', '**Delay**, 300 ms'], ['overlays', 'A new toast has a **close button**']],
   Toasts: [['overlays', '## Toasts'], ['overlays', '**Show toast** has a **Message**'], ['overlays', 'always stays until dismissed'], ['scripts', 'ix.toast(name, message?)']],
   'Dialogs that no layer opens': [['overlays', '## Opening one without a layer'], ['overlays', 'A layer **inside an overlay** can point at another overlay']],
   "Dialogs open where you're looking": [['overlays', 'middle of what the viewer can see']],

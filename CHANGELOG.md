@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Accordions, tabs, dialogs, tooltips and toasts work the way they do everywhere else**: all seven now follow the W3C's published patterns. Accordion headers have a chevron and only the header opens a section; tabs are a real tab list you move along with the arrow keys; dialogs ease in and out, are named by their own heading, and a confirmation is announced as an alert; a prompt takes Enter as OK; a modal has a close cross in its corner; a tooltip waits a moment under the pointer and is read out as its trigger's description; a toast has a close button.
 - **An agent knows who it's working for**: an AI agent editing through MCP (and Ask Ixia) is told the name of the person whose session it holds, whether they can change the project, and which page and layers they have open, so "this" means theirs. It is only ever told their name and what they can do.
 - **Tooltip tails are joined on**: a tooltip with a border used to draw its tail behind the card with the border running across the join, so the tail looked stuck on. The tail now takes the card's border and the card's border opens where they meet, so the two are one outline.
 - **Pictures stay on the other pages**: clicking another page made the Media Catalogue photos on the page you left disappear, because the still picture the canvas shows for a page you aren't on left them out. They're in it now, and a page whose photo can't be read stays drawn live instead of losing it.

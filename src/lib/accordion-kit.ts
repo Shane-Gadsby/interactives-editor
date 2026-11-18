@@ -121,6 +121,17 @@ function tabStrip(l: Record<string, string>, width: number, variable: string, na
     fill: solid(l.surface),
     children: [panel(0), panel(1), panel(2)],
   }) as FrameNode;
+  //The tabs sit in a list of their own, which is what lets a screen reader say "tab list, 3 tabs" and the arrow keys move
+  //along it; the panels sit under it
+  const list = createNode('frame', {
+    name: 'Tab list',
+    width,
+    height: CONTROL_H,
+    fill: solid(l.surfaceMuted),
+    clip: false,
+    layout: { ...defaultAutoLayout('row'), gap: 0, padding: pad(0), align: 'start', hugHeight: true },
+    children: [tab(0), tab(1), tab(2)],
+  }) as FrameNode;
   return createNode('frame', {
     name: 'Tabs',
     width,
@@ -129,10 +140,9 @@ function tabStrip(l: Record<string, string>, width: number, variable: string, na
     stroke: { paint: solid(l.border), width: 1, align: 'inside' },
     cornerRadius: RADIUS.card,
     clip: true,
-    //a row that wraps: the tabs share the first line and the panels, as wide as the frame, take the next
-    layout: { ...defaultAutoLayout('row'), gap: 0, padding: pad(0), align: 'start', wrap: true, hugHeight: true },
-    disclosure: { open: 'one', variable, panels: panels.id },
-    children: [tab(0), tab(1), tab(2), panels],
+    layout: { ...defaultAutoLayout('column'), gap: 0, padding: pad(0), align: 'stretch', hugHeight: true },
+    disclosure: { open: 'one', variable, panels: panels.id, tabs: list.id },
+    children: [list, panels],
   }) as FrameNode;
 }
 
@@ -142,10 +152,13 @@ export function addSection(d: Project, abId: string, frameId: string): void {
   const frame = ab && find(ab.children, frameId);
   if (!frame || !('children' in frame) || !frame.disclosure) return;
   const kids = frame.children as FrameNode[];
-  //The panels container isn't a section, so a tab strip copies a tab and adds a panel beside the others
+  //The panels container isn't a section, so tabs copy a tab (into the tab list, or beside the panels in tabs made before
+  //there was one) and add a panel beside the others
   if (frame.disclosure.panels) {
     const panels = kids.find((c) => c.id === frame.disclosure!.panels);
-    const tabs = kids.filter((c) => c.id !== frame.disclosure!.panels);
+    const list = frame.disclosure.tabs ? kids.find((c) => c.id === frame.disclosure!.tabs) : undefined;
+    const home = (list?.children as FrameNode[] | undefined) ?? kids;
+    const tabs = home.filter((c) => c.id !== frame.disclosure!.panels);
     const last = tabs[tabs.length - 1];
     if (!last || !panels) return;
     const n = tabs.length + 1;
@@ -154,7 +167,8 @@ export function addSection(d: Project, abId: string, frameId: string): void {
     copy.name = `Tab ${n}`;
     (copy as unknown as { label: string }).label = `Tab ${n}`;
     renumber(copy, n - 1);
-    kids.splice(kids.indexOf(panels), 0, copy);
+    if (list) home.push(copy);
+    else home.splice(home.indexOf(panels), 0, copy);
     const lastPanel = (panels.children as FrameNode[])[panels.children.length - 1];
     if (lastPanel) {
       const p = JSON.parse(JSON.stringify(lastPanel)) as FrameNode;

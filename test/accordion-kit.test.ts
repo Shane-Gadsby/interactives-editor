@@ -35,8 +35,10 @@ describe('Add accordion', () => {
     const panels = frame.children.find((c) => c.id === frame.disclosure!.panels) as ContainerNode;
     expect(panels).toBeTruthy();
     expect(panels.children).toHaveLength(3);
-    //three tabs plus the panels box
-    expect(frame.children).toHaveLength(4);
+    //the tabs sit in a tab list of their own (what lets a screen reader say "tab list, 3 tabs"), beside the panels box
+    const list = frame.children.find((c) => c.id === frame.disclosure!.tabs) as ContainerNode;
+    expect(frame.children.map((c) => c.name)).toEqual(['Tab list', 'Panels']);
+    expect(list.children.map((c) => c.type)).toEqual(['button', 'button', 'button']);
     expect(frame.disclosure!.toggle).toBeUndefined();
   });
 
@@ -78,9 +80,12 @@ describe('adding a section', () => {
     addSection(p, p.artboards[0].id, id);
     const frame = find(p, id);
     const panels = frame.children.find((c) => c.id === frame.disclosure!.panels) as ContainerNode;
-    expect(frame.children.filter((c) => c.id !== panels.id)).toHaveLength(4);
+    const list = frame.children.find((c) => c.id === frame.disclosure!.tabs) as ContainerNode;
+    expect(list.children).toHaveLength(4);
     expect(panels.children).toHaveLength(4);
     expect(frame.children[frame.children.length - 1].id).toBe(panels.id);
+    //the new tab knows it is the fourth: its chosen look asks about its own place
+    expect((list.children[3] as unknown as { states: { expr: string }[] }).states[0].expr).toMatch(/== 3$/);
   });
 });
 

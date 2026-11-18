@@ -1,4 +1,4 @@
-import { isContainer, type ContainerNode, type Project, type SceneNode } from 'interactives-player';
+import { isContainer, sectionsOf, type ContainerNode, type Project, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, Row, Section, SelectField } from '../components/ui';
 import { SectionBlurb } from '../components/SectionBlurb';
@@ -23,6 +23,8 @@ export function DisclosureSection({ node, project }: { node: SceneNode; project:
   const wanted = d?.open === 'many' ? lists : numbers;
   const containers = (node as ContainerNode).children.filter(isContainer);
 
+  //the tabs, or the sections: what the pattern counts, wherever they sit
+  const count = d ? sectionsOf(node as SceneNode & ContainerNode).list.length : 0;
   return (
     <Section id="disclosure" help="accordions" title="Accordion" defaultOpen={!!d}>
       <SectionBlurb text="Each layer in here becomes a section: its first layer is the header, the rest is the panel." name="Accordion" help={['accordions']} />
@@ -65,13 +67,28 @@ export function DisclosureSection({ node, project }: { node: SceneNode; project:
             title="Tabs: a layer in here whose own layers are the panels, matched to the headers in order. Empty: each section holds its own panel"
             value={d.panels ?? ''}
             options={[{ value: '', label: 'Inside each section' }, ...containers.map((c) => ({ value: c.id, label: c.name }))]}
-            onChange={(v) => set({ panels: v || undefined })}
+            onChange={(v) => set({ panels: v || undefined, tabs: v ? d.tabs : undefined })}
           />
+          {d.panels ? (
+            <SelectField
+              label="Tab list"
+              title="Tabs: the layer in here whose own layers are the tabs. With it a screen reader says tab list and how many tabs, and the arrow keys move along them. Empty: the tabs sit beside the panels"
+              value={d.tabs ?? ''}
+              options={[{ value: '', label: 'Beside the panels' }, ...containers.filter((c) => c.id !== d.panels).map((c) => ({ value: c.id, label: c.name }))]}
+              onChange={(v) => set({ tabs: v || undefined })}
+            />
+          ) : (
+            <CheckField
+              label="Chevron on each header"
+              title="A small arrow at the end of each header that turns over as its section opens, the way every accordion shows which way it goes"
+              value={d.chevron !== false}
+              onChange={(v) => set({ chevron: v ? undefined : false })}
+            />
+          )}
           {!d.variable && <div className="hint">Pick a variable, or the sections never change.</div>}
           <Row k="Sections" words={['accordion sections', 'tabs', 'panels']}>
             <span className="muted small">
-              {(node as ContainerNode).children.length} section{(node as ContainerNode).children.length === 1 ? '' : 's'}
-              {d.panels ? ' (headers)' : ''}
+              {count} {d.panels ? `tab${count === 1 ? '' : 's'}` : `section${count === 1 ? '' : 's'}`}
             </span>
           </Row>
         </>

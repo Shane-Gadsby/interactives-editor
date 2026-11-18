@@ -1,7 +1,7 @@
 //The ready-made overlays (Tooltip, Modal, Confirmation, Prompt in the Web tools): each one is an overlay page of its own, pointed at by a layer, not a pile of layers dropped on the page
 import { describe, expect, it } from 'vitest';
 import { Player, createNode, createProject, type Artboard, type FrameNode, type Project } from 'interactives-player';
-import { overlayId, overlayUses } from '../../interactives-player/src/overlays';
+import { overlayId, overlayUses, toastClosers, toastStays } from '../../interactives-player/src/overlays';
 import { sanitizeProject } from '../../interactives-player/src/sanitize';
 import { addDialog, linkOverlay, overlayTargets } from '../src/lib/dialog-kit';
 
@@ -122,7 +122,10 @@ describe('what the editor builds actually runs', () => {
     const drawn = () => document.querySelector(`[data-ix-id="${overlayId(made.overlayId, targetId)}"]`);
     expect(drawn()).toBeNull();
     document.querySelector(`[data-ix-id="${targetId}"]`)!.dispatchEvent(new Event('pointerover', { bubbles: true }));
+    //it waits the small delay every tooltip has, then shows
     player.step(16);
+    expect(drawn()).toBeNull();
+    for (let i = 0; i < 25; i++) player.step(16);
     expect(drawn()!.textContent).toContain('What this is for');
     player.destroy();
   });
@@ -410,5 +413,74 @@ describe('the toast', () => {
     for (let i = 0; i < 80; i++) player.step(16);
     expect(drawn()).toBeNull();
     player.destroy();
+  });
+});
+
+describe('the conventions every overlay on the web follows', () => {
+  const all = (page: Artboard) => {
+    const out: { name: string; role?: string; ariaLabel?: string; type: string; id: string }[] = [];
+    const walk = (l: Artboard['children']) => l.forEach((n) => (out.push(n as never), 'children' in n && Array.isArray(n.children) && walk(n.children as Artboard['children'])));
+    walk(page.children);
+    return out;
+  };
+
+  it('a modal has a close button in its corner, named Close, as well as its Close button', () => {
+    const { p } = withTarget();
+    const page = pageOf(p, addDialog(p, 'modal').overlayId);
+    const corner = all(page).find((n) => n.name === 'Close')!;
+    expect(corner).toMatchObject({ type: 'frame', role: 'button', ariaLabel: 'Close' });
+    //both ways out turn the showing variable off
+    const targets = page.logic.nodes.filter((n) => n.kind === 'event.pointer').map((n) => n.params.target);
+    expect(targets).toContain(corner.id);
+    expect(targets).toHaveLength(2);
+    //and the title is still the dialog's heading, beside it
+    const head = (page.children[0] as FrameNode).children[0] as FrameNode;
+    expect(head.children.map((c) => c.name)).toEqual(['Title', 'Close']);
+  });
+
+  it('the cross is drawn, not typed: a letter x reads as a letter', () => {
+    const { p } = withTarget();
+    const page = pageOf(p, addDialog(p, 'modal').overlayId);
+    const cross = all(page).find((n) => n.name === 'Cross')!;
+    expect(cross.type).toBe('path');
+    expect(JSON.stringify(page)).not.toMatch(/"label":"[×xX✕]"/);
+  });
+
+  it('Enter in a prompt\'s box is OK', async () => {
+    document.body.innerHTML = '<div id="stage" style="width:800px;height:600px"></div>';
+    const { p, targetId } = withTarget();
+    const made = addDialog(p, 'input', { targetId, artboardId: p.artboards[0].id });
+    const page = pageOf(p, made.overlayId);
+    const key = page.logic.nodes.find((n) => n.kind === 'event.key')!;
+    expect(key.params).toMatchObject({ key: 'Enter', typing: true });
+    const player = new Player(document.getElementById('stage')!, p, { loadData: false });
+    await new Promise((r) => setTimeout(r, 0));
+    document.querySelector<HTMLElement>(`[data-ix-id="${targetId}"] button`)!.click();
+    for (let i = 0; i < 14; i++) player.step(16);
+    const v = (end: string) => p.variables.find((x) => x.name.endsWith(end))!.name;
+    player.setVariable(v('Value'), 'Pumpkin');
+    const box = document.querySelector<HTMLInputElement>('[data-ix-id^="ixov~"] input')!;
+    box.focus();
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await new Promise((r) => setTimeout(r, 0));
+    player.step(16);
+    expect(player.getVariable(v('Answer'))).toBe('Pumpkin');
+    expect(player.getVariable(v('Open'))).toBe(false);
+    player.destroy();
+  });
+
+  it('a toast can be closed by whoever is reading it, and still goes by itself', () => {
+    const { p } = withTarget();
+    const page = pageOf(p, addDialog(p, 'toast').overlayId);
+    const close = all(page).find((n) => n.name === 'Close')!;
+    expect(close).toMatchObject({ role: 'button', ariaLabel: 'Close' });
+    const ev = page.logic.nodes.find((n) => n.kind === 'event.pointer' && n.params.target === close.id)!;
+    const act = page.logic.nodes.find((n) => n.id === page.logic.edges.find((e) => e.from === ev.id)!.to)!;
+    expect(act).toMatchObject({ kind: 'action.toastHide', params: { toast: page.id } });
+    //its own close button is no reason for it to wait: only something else to press is
+    expect(toastClosers(page)).toEqual(new Set([close.id]));
+    expect(toastStays(page)).toBe(4000);
+    (page.children[0] as FrameNode).children.push(createNode('button', { id: 'undo', label: 'Undo' }));
+    expect(toastStays(page)).toBeNull();
   });
 });
