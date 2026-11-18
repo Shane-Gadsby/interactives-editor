@@ -70,6 +70,7 @@ import { snapAny, snapSettings } from './lib/snapping';
 import { SnapMenu } from './components/SnapMenu';
 import { gridMenu } from './components/grid-menu';
 import { MediaCatalogueModal } from './components/MediaCatalogueModal';
+import { ImageSwapHost } from './components/ImageSwap';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
 import { LinkChanges } from './components/LinkChanges';
@@ -1149,6 +1150,7 @@ export function Toolbar() {
     >
       {menu && <ContextMenu x={menu.x} y={menu.y} items={toolsMenu(toolOrderMenu(nav.current, menu.target, horizontal))} onClose={() => setMenu(null)} />}
       {catalogueOpen && <MediaCatalogueModal onClose={() => setCatalogueOpen(false)} />}
+      <ImageSwapHost />
       {gridMenuAt && <ContextMenu x={gridMenuAt.x} y={gridMenuAt.y} items={gridMenu()} onClose={() => setGridMenuAt(null)} />}
       {snapMenuAt && <SnapMenu x={snapMenuAt.x} y={snapMenuAt.y} onClose={() => setSnapMenuAt(null)} />}
       <ToolsHead />

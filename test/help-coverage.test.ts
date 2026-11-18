@@ -172,6 +172,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Embeds: choose what the page may use, and give it a border': [['web-elements', '**The page may use**'], ['web-elements', "doesn't switch it on"], ['web-elements', '**border token**']],
   'Toasts slide in, and can show one at a time': [['overlays', '**Slides and fades**'], ['overlays', '**On its own** makes a toast show alone']],
   'A colour picker with an opacity strip': [['fill-stroke', '**The colour picker.**'], ['fill-stroke', 'keeps the opacity'], ['fill-stroke', 'has no opacity of its own here']],
+  'Swap picture': [['images-media', '### Swap a picture'], ['images-media', 'One already in this project…'], ['images-media', 'One undo puts the old picture back']],
   Toasts: [['overlays', '## Toasts'], ['overlays', '**Show toast** has a **Message**'], ['overlays', 'always stays until dismissed'], ['scripts', 'ix.toast(name, message?)']],
   'Dialogs that no layer opens': [['overlays', '## Opening one without a layer'], ['overlays', 'A layer **inside an overlay** can point at another overlay']],
   "Dialogs open where you're looking": [['overlays', 'middle of what the viewer can see']],

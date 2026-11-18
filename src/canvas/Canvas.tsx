@@ -1,3 +1,4 @@
+import { SWAP_CHOICES, swapPicture } from '../components/ImageSwap';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { parked } from '../lib/parked';
 import { keyHints, runCommand } from '../lib/keymap';
@@ -2306,6 +2307,8 @@ export function Canvas() {
               } as MenuItem,
               ...(one.type === 'text' || one.type === 'button' || one.type === 'link' ? [{ label: 'Edit text', hint: keyHints('enter'), onClick: () => s2.set({ editingTextId: one.id }) } as MenuItem] : []),
               ...(one.type === 'image' && canCrop(one) ? [{ label: 'Crop picture', hint: keyHints('enter'), onClick: () => s2.set({ croppingId: one.id }) } as MenuItem] : []),
+              //Another picture in the same layer: the menu asks where from
+              ...(one.type === 'image' ? [{ label: 'Swap picture', items: SWAP_CHOICES.map((c) => ({ label: c.label, title: c.title, onClick: () => void swapPicture(one.id, c.from) })) } as MenuItem] : []),
             ]
           : []),
         { separator: true },

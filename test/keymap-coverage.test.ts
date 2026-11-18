@@ -181,6 +181,7 @@ const MENUS: Record<string, Record<string, string>> = {
     Cut: 'cut',
     Paste: 'paste',
     'Crop picture': 'enter',
+    'Swap picture': '!A submenu on the picture that was right-clicked: it asks where the new picture comes from',
     'Edit text': 'enter',
     Delete: 'delete',
     Duplicate: 'duplicate',

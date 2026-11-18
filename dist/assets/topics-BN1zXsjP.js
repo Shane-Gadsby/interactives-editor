@@ -1,4 +1,4 @@
-import{bZ as a,b_ as o,b$ as m,c0 as r,c1 as k,c2 as V,c3 as R,c4 as M,c5 as h,c6 as s,c7 as i,c8 as U,c9 as E,ca as b,cb as n,cc as S,cd as C,ce as f,cf as w,cg as A,ch as l,ci as d,cj as T,ck as P,cl as u,cm as O,cn as x,co as Y,cp as F,cq as K,cr as D,cs as I,ct as $,cu as Q,cv as X,bl as J,a8 as Z,bv as ee,bd as te,ae as W,b0 as ae}from"./index-BAsGfJZ3.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bZ as a,b_ as o,b$ as m,c0 as r,c1 as k,c2 as V,c3 as R,c4 as M,c5 as h,c6 as s,c7 as i,c8 as U,c9 as E,ca as b,cb as n,cc as S,cd as C,ce as f,cf as w,cg as A,ch as l,ci as d,cj as T,ck as P,cl as u,cm as O,cn as x,co as Y,cp as F,cq as K,cr as D,cs as I,ct as $,cu as Q,cv as X,bl as J,a8 as Z,bv as ee,bd as te,ae as W,b0 as ae}from"./index-DxIZa-vK.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -5344,6 +5344,18 @@ The crop belongs to the layer, not the file, and the frame (with its corner radi
 
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
+
+
+### Swap a picture
+To show a different picture in the same place, right-click the picture and open **Swap picture**. It asks where the new one comes from:
+
+- **One already in this project…** opens the project's pictures as a grid. Click one. The one showing now is marked.
+- **From the Media Catalogue…** opens the photo library. Pick a photo and press **Insert**. It's linked, not copied, like any other catalogue photo.
+- **Upload a new one…** opens your computer's file picker. The picture is added to **Assets** and shown in the layer.
+
+The layer keeps its place, its size, its corners, and every interaction and keyframe on it. Only the **crop** goes, since it was framed for the old picture, and you're asked for a new description, because the old one described the old picture. One undo puts the old picture back.
+
+This changes one layer. To change a picture **everywhere** it's used, use **Replace file…** on it in Assets instead.
 
 ## Video
 Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.

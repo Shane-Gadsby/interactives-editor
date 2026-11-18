@@ -1410,6 +1410,18 @@ The crop belongs to the layer, not the file, and the frame (with its corner radi
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
 
+
+### Swap a picture
+To show a different picture in the same place, right-click the picture and open **Swap picture**. It asks where the new one comes from:
+
+- **One already in this project…** opens the project's pictures as a grid. Click one. The one showing now is marked.
+- **From the Media Catalogue…** opens the photo library. Pick a photo and press **Insert**. It's linked, not copied, like any other catalogue photo.
+- **Upload a new one…** opens your computer's file picker. The picture is added to **Assets** and shown in the layer.
+
+The layer keeps its place, its size, its corners, and every interaction and keyframe on it. Only the **crop** goes, since it was framed for the old picture, and you're asked for a new description, because the old one described the old picture. One undo puts the old picture back.
+
+This changes one layer. To change a picture **everywhere** it's used, use **Replace file…** on it in Assets instead.
+
 ## Video
 Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.
 
