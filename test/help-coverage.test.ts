@@ -173,6 +173,8 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Toasts slide in, and can show one at a time': [['overlays', '**Slides and fades**'], ['overlays', '**On its own** makes a toast show alone']],
   'A colour picker with an opacity strip': [['fill-stroke', '**The colour picker.**'], ['fill-stroke', 'keeps the opacity'], ['fill-stroke', 'has no opacity of its own here']],
   'Swap picture': [['images-media', '### Swap a picture'], ['images-media', 'One already in this project…'], ['images-media', 'One undo puts the old picture back']],
+  'Zoom and a focal spot for pictures': [['images-media', '### Zoom and the focal spot'], ['images-media', 'Click the part that matters most']],
+  'Crop corners point the right way': [['images-media', '### Cropping a picture']],
   Toasts: [['overlays', '## Toasts'], ['overlays', '**Show toast** has a **Message**'], ['overlays', 'always stays until dismissed'], ['scripts', 'ix.toast(name, message?)']],
   'Dialogs that no layer opens': [['overlays', '## Opening one without a layer'], ['overlays', 'A layer **inside an overlay** can point at another overlay']],
   "Dialogs open where you're looking": [['overlays', 'middle of what the viewer can see']],

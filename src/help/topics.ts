@@ -1411,6 +1411,14 @@ The crop belongs to the layer, not the file, and the frame (with its corner radi
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
 
 
+### Zoom and the focal spot
+The same crop, from the picture's settings, when you'd rather point than drag. Under **Crop** in the **Image** section:
+
+- **Focal spot** is a small picture of the whole photo. **Click the part that matters most** (a face, a label on a diagram) and that part moves to the middle of the frame. The dot marks it, and the bright outline is the part the frame shows. Drag the dot, or use the arrow keys with <kbd>Shift</kbd> for bigger steps.
+- **Zoom** is a slider. It brings the picture closer about the focal spot, so what you chose stays in the middle while it grows. The number under it is the same zoom, to type.
+
+**Good to know:** the frame is never left uncovered, so the spot goes as far towards the middle as the picture can move. With no zoom, a picture only moves the way it overflows its frame: a wide photo in a square frame moves left and right. Zoom in a little and it can move both ways.
+
 ### Swap a picture
 To show a different picture in the same place, right-click the picture and open **Swap picture**. It asks where the new one comes from:
 

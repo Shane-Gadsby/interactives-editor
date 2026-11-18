@@ -12660,7 +12660,6 @@ button.flow-text:focus-visible {
   stroke: var(--primary-fg);
   stroke-width: 1;
   pointer-events: all;
-  cursor: nwse-resize;
 }
 .crop-layer:focus-visible .crop-frame polygon {
   stroke-dasharray: 6 3;
@@ -15032,4 +15031,55 @@ button.style-color.open {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* A picture's focal spot: a small map of the whole picture, the part the frame shows outlined, and a dot on its middle */
+.focal-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+.focal-map {
+  position: relative;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+  background: var(--panel);
+}
+.focal-map:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+}
+.focal-map img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+.focal-part {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7), 0 0 0 999px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+.focal-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: var(--primary-bg);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+.crop-zoom-slider {
+  width: 100%;
+  accent-color: var(--primary-bg);
 }

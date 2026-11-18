@@ -2,6 +2,8 @@
 
 ## Unreleased: Symposium 3
 
+- **Zoom and a focal spot for pictures**: a picture's settings have a small map of the whole photo: click the part that matters most and it moves to the middle of the frame. A **Zoom** slider beside it brings the picture closer about that spot. It's the same crop the canvas edits, so the two stay in step.
+- **Crop corners point the right way**: in crop mode the arrow on each corner now lies along the way that corner pulls. All four used to show the same diagonal, so two of them pointed the wrong way.
 - **Swap picture**: right-click a picture and **Swap picture** asks where the new one comes from: one already in the project, the Media Catalogue, or a new upload. The layer keeps its place, size and everything wired to it, and one undo puts the old picture back.
 - **A colour picker with an opacity strip**: clicking a colour's swatch opens the editor's own picker, with the colour square, the hue strip and now an opacity strip drawn over grey and white squares, so see-through reads as see-through. It moves with the number box beside the colour, picking another colour keeps the opacity it had, and the swatch shows the squares behind anything not fully solid. The eyedropper and your browser's own picker are at its foot.
 - **Embeds: choose what the page may use, and give it a border**: a web page embed has a tick box each for Autoplay, Full screen, Clipboard, Microphone, Camera, Screen share, Location, Motion sensors, Picture in picture and Protected video, and only what's ticked is let through. Existing embeds keep the three they always had. **Border** draws a line round an embed in your project's border token, so it follows the colourway.

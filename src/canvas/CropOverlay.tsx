@@ -4,6 +4,7 @@ import { store } from '../store/store';
 import { drawnBox, locate, nodeToArtboard } from '../store/doc';
 import { useNaturalSize } from '../lib/natural-size';
 import { REST, clampCrop, cropOf, panBy, stored, zoomAt, type Size } from '../lib/crop';
+import { resizeCursorForAngle } from './cursors';
 
 /**
  * Crop mode on the canvas. The picture's frame is outlined; drag inside it to move the picture, scroll (or pull a corner, or
@@ -170,7 +171,9 @@ export function CropOverlay({ ab, id, zoom, panX, panY }: { ab: Artboard; id: st
       <svg className="crop-frame" aria-hidden="true">
         <polygon points={corners.map((p) => `${p.x},${p.y}`).join(' ')} />
         {corners.map((p, i) => (
-          <rect key={i} x={p.x - 5} y={p.y - 5} width={10} height={10} data-corner={i} />
+          //Pulling a corner zooms about the middle, so its arrow lies along the line from the middle to that corner:
+          //the two diagonals differ, and a turned picture's arrows turn with it
+          <rect key={i} x={p.x - 5} y={p.y - 5} width={10} height={10} data-corner={i} style={{ cursor: resizeCursorForAngle((Math.atan2(p.y - centre.y, p.x - centre.x) * 180) / Math.PI) }} />
         ))}
       </svg>
       <div className="crop-bar" style={barAt} onPointerDown={(e) => e.stopPropagation()}>

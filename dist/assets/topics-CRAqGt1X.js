@@ -1,4 +1,4 @@
-import{bZ as a,b_ as o,b$ as m,c0 as r,c1 as k,c2 as V,c3 as R,c4 as M,c5 as h,c6 as s,c7 as i,c8 as U,c9 as E,ca as b,cb as n,cc as S,cd as C,ce as f,cf as w,cg as A,ch as l,ci as d,cj as T,ck as P,cl as u,cm as O,cn as x,co as Y,cp as F,cq as K,cr as D,cs as I,ct as $,cu as Q,cv as X,bl as J,a8 as Z,bv as ee,bd as te,ae as W,b0 as ae}from"./index-DxIZa-vK.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bZ as a,b_ as o,b$ as m,c0 as r,c1 as k,c2 as V,c3 as R,c4 as M,c5 as h,c6 as s,c7 as i,c8 as U,c9 as E,ca as b,cb as n,cc as S,cd as C,ce as f,cf as w,cg as A,ch as l,ci as d,cj as T,ck as P,cl as u,cm as O,cn as x,co as Y,cp as F,cq as K,cr as D,cs as I,ct as $,cu as Q,cv as X,bl as J,a8 as Z,bv as ee,bd as te,ae as W,b0 as ae}from"./index-r-oUvYkY.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -5345,6 +5345,14 @@ The crop belongs to the layer, not the file, and the frame (with its corner radi
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
 
+
+### Zoom and the focal spot
+The same crop, from the picture's settings, when you'd rather point than drag. Under **Crop** in the **Image** section:
+
+- **Focal spot** is a small picture of the whole photo. **Click the part that matters most** (a face, a label on a diagram) and that part moves to the middle of the frame. The dot marks it, and the bright outline is the part the frame shows. Drag the dot, or use the arrow keys with <kbd>Shift</kbd> for bigger steps.
+- **Zoom** is a slider. It brings the picture closer about the focal spot, so what you chose stays in the middle while it grows. The number under it is the same zoom, to type.
+
+**Good to know:** the frame is never left uncovered, so the spot goes as far towards the middle as the picture can move. With no zoom, a picture only moves the way it overflows its frame: a wide photo in a square frame moves left and right. Zoom in a little and it can move both ways.
 
 ### Swap a picture
 To show a different picture in the same place, right-click the picture and open **Swap picture**. It asks where the new one comes from:
