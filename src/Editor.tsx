@@ -638,6 +638,15 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   const [menu, setMenu] = useState(false);
   //the Workspace page of Preferences is for here: panels to arrange
   useEffect(() => (setEditorShown(true), () => setEditorShown(false)), []);
+  //the browser tab says which project this is, so two open side by side can be told apart, and goes back to the app's
+  //name on the way out
+  useEffect(() => {
+    const name = s.name?.trim();
+    document.title = name ? `${name} - Ixia` : 'Ixia';
+    return () => {
+      document.title = 'Ixia';
+    };
+  }, [s.name]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const st = store();
   const [shareOpen, setShareOpen] = useState(false);

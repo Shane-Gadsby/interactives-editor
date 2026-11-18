@@ -1,4 +1,4 @@
-import{c0 as a,c1 as o,c2 as m,c3 as r,c4 as k,c5 as V,c6 as R,c7 as E,c8 as h,c9 as s,ca as i,cb as U,cc as M,cd as b,ce as n,cf as S,cg as C,ch as f,ci as w,cj as A,ck as l,cl as d,cm as T,cn as P,co as u,cp as O,cq as x,cr as Y,cs as F,ct as K,cu as D,cv as I,cw as $,cx as Q,cy as X,bn as J,aa as Z,bx as ee,bf as te,ag as W,b2 as ae}from"./index-wr94s2vd.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{c0 as a,c1 as o,c2 as m,c3 as r,c4 as k,c5 as V,c6 as R,c7 as E,c8 as h,c9 as s,ca as i,cb as U,cc as M,cd as b,ce as n,cf as S,cg as C,ch as f,ci as w,cj as A,ck as l,cl as d,cm as T,cn as P,co as u,cp as O,cq as x,cr as Y,cs as F,ct as K,cu as D,cv as I,cw as $,cx as Q,cy as X,bn as J,aa as Z,bx as ee,bf as te,ag as W,b2 as ae}from"./index-Bfqrr69r.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -4295,6 +4295,7 @@ A deleted project goes to the **Bin** for 30 days. The **Bin** shows at the bott
 
 - The **Search name or tag** box shows only projects whose name or tags contain what you type. **Clear filters** appears if nothing matches.
 - **Sort** orders the cards by **Last updated** (newest first, the default) or **Name**. The choice is remembered in this browser.
+- While a project is open, the browser tab is named after it (**Pumpkin parts - Ixia**), so two projects open side by side can be told apart.
 - **Thumbnails** and **Details** switch between cards with a picture and a one-row-per-project list. In Thumbnails, the slider next to them makes the pictures bigger or smaller. Both choices are remembered in this browser, the same as in the Assets tab. The page lays out at any window width: the header and folder list wrap instead of squeezing.
 
 ## Folders
@@ -6719,6 +6720,7 @@ Both work the way accordions and tabs do everywhere else on the web (they follow
 **An accordion:**
 
 - Each header is a button inside a heading, and says whether its section is expanded: a screen reader reads "Section 2, button, collapsed, heading level 3".
+- The pointer turns to a hand over a header, whatever kind of layer the header is.
 - Each header has a **chevron** at its far end that turns over as the section opens. Untick **Chevron on each header** to go without.
 - Only the **header** opens and closes a section. Clicking in a panel's own words does nothing, so reading a section never shuts it.
 - <kbd>Enter</kbd> and <kbd>Space</kbd> open and close. <kbd>Tab</kbd> goes from header to header and into an open panel.
@@ -6742,6 +6744,8 @@ Both work the way accordions and tabs do everywhere else on the web (they follow
 - To pick a trigger, choose it in the **Trigger** list, or press the button beside that list and click a layer on the canvas.
 
 That split is what lets a tooltip belong to a small icon while a much bigger area around it opens the tooltip.
+
+**The pointer says what will happen.** Over a trigger that opens a modal, a confirmation or a prompt it turns to a hand, whatever kind of layer the trigger is, because a click does something. Over a tooltip's trigger it stays as it was: resting there is enough, and a hand would promise a click that does nothing. A layer with a **Cursor** of its own keeps it, and a disabled button never shows the hand.
 
 ## The five kinds
 - **Tooltip.** Sits beside its target while the trigger is hovered or focused. **Side** chooses above, below, left or right, and **Wherever it fits** (the default) tries each in turn. A side you choose is kept unless there's no room there and there is on the opposite side, when it goes across (a tooltip below a card at the foot of the page would land on the card). Near the page's edge it slides in rather than changing side. **Gap** is the space between.
