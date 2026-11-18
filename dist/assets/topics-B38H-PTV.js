@@ -1,4 +1,4 @@
-import{bZ as a,b_ as o,b$ as m,c0 as r,c1 as k,c2 as V,c3 as R,c4 as M,c5 as h,c6 as s,c7 as i,c8 as U,c9 as E,ca as b,cb as n,cc as S,cd as C,ce as f,cf as w,cg as A,ch as l,ci as d,cj as T,ck as P,cl as u,cm as O,cn as x,co as Y,cp as F,cq as K,cr as D,cs as I,ct as $,cu as Q,cv as X,bl as J,a8 as Z,bv as ee,bd as te,ae as W,b0 as ae}from"./index-r-oUvYkY.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{b$ as a,c0 as o,c1 as m,c2 as r,c3 as k,c4 as V,c5 as R,c6 as M,c7 as h,c8 as s,c9 as i,ca as U,cb as E,cc as b,cd as n,ce as S,cf as C,cg as f,ch as w,ci as A,cj as l,ck as d,cl as T,cm as P,cn as u,co as O,cp as x,cq as Y,cr as F,cs as K,ct as D,cu as I,cv as $,cw as Q,cx as X,bn as J,aa as Z,bx as ee,bf as te,ag as W,b2 as ae}from"./index-BStb-Hcd.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -5556,6 +5556,8 @@ Where the older **Photography catalogue** still answers at that address (StudyDe
 
 ## How it is stored
 The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
+
+On the canvas, a page you aren't working on is drawn as a picture of itself to keep the editor quick, and its catalogue photos are in that picture like everything else. If a photo can't be reached just then, that page simply stays drawn live, so you never see a page with its photos missing.
 
 ## Exporting
 Files that must work without a network fetch the picture when they are made and put it inside:

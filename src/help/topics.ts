@@ -1663,6 +1663,8 @@ Where the older **Photography catalogue** still answers at that address (StudyDe
 ## How it is stored
 The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
 
+On the canvas, a page you aren't working on is drawn as a picture of itself to keep the editor quick, and its catalogue photos are in that picture like everything else. If a photo can't be reached just then, that page simply stays drawn live, so you never see a page with its photos missing.
+
 ## Exporting
 Files that must work without a network fetch the picture when they are made and put it inside:
 - **Download** the single-file page: the picture is embedded as data, and the address and where it was found in the catalogue are left out.
