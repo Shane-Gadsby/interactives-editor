@@ -605,7 +605,7 @@ router.put('/api/prefs', express.json({limit: '512kb'}), async (req, res) => {
 //further down by the MCP ones). COGNITI_TOKEN is the one secret, an api token from a Cogniti account (its API tokens
 //page; whoever holds that account grants it). Parked: it only runs with INTERACTIVES_DESIGNER=on as well (agent-docs/PARKED.md)
 const designer = require('./designer')
-//The same panel on Gemini instead (designer-gemini.js): GEMINI_API_KEY, a key from the Interactives project in Google AI
+//The same panel on Gemini instead (designer-gemini.js): GEMINI_API_KEY, a key from the Ixia project in Google AI
 //Studio (whoever owns that project grants it). When a box has it, it's the one that answers, and the model works
 //through the MCP tools itself rather than one blueprint
 const designerGemini = require('./designer-gemini')

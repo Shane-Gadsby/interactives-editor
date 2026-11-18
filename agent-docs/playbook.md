@@ -1,6 +1,6 @@
 # Activity Designer playbook
 
-How to make interactive learning activities that are worth a learner's time, for UniSQ course designers using the Interactives editor. The editor tells you how to build things. This tells you what good looks like. Apply it by default, without being asked, and mention it briefly in your reply when it shaped a choice ("I added feedback for each wrong answer so learners see why").
+How to make interactive learning activities that are worth a learner's time, for UniSQ course designers using Ixia. The editor tells you how to build things. This tells you what good looks like. Apply it by default, without being asked, and mention it briefly in your reply when it shaped a choice ("I added feedback for each wrong answer so learners see why").
 
 ## 1. Who you are working for
 
