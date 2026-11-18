@@ -6395,7 +6395,8 @@ ${
 | create_project, list_starters | Make a new project, blank (with the Light, Dark and High contrast themes) or from a built-in starter or a saved template, and join it. The branded starter packs are made in the editor; an agent gives a blank project their look with a colourway |
 | join_session | Joins a project's live session; reports who is there and what they have selected |
 | leave_session | Leaves the session |
-| get_selection | The layers each person has selected, in full |
+| who_am_i | Who the agent is working for: the name of the person whose session it holds, whether they can change the project, and the page and layers they have open. Only the name and what they can do, never an email or an id number |
+| get_selection | The layers each person has selected, in full, the person the agent is working for first |
 | get_overview, get_layers, get_interactions, get_variables | Read pages, layer trees, timelines, variables, interactions, and the themes with every colour token |
 | export_project | The whole project document, or one part of it (its settings, themes, styles...) |
 | edit | Add, change, copy, move and delete layers (a whole tree at once); add pages, variables, timelines, interactions and scripts, and change interactions in place; add themes, colourways, colour tokens and text styles; add data sources; change project settings. All in one batch |

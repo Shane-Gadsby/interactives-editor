@@ -46,6 +46,12 @@ export interface McpContext {
   sessionId: string;
   agent: string;
   sessions: Map<string, Session>;
+  /**
+   * The person this agent is working for: whose session it holds, so whose edits these are. Their name and sign-in name
+   * and nothing else (no email, no staff or student number). Absent when the session is nobody's (a guest, or stdio with
+   * no session id).
+   */
+  who?: { username?: string | null; name?: string | null };
 }
 const envContext: McpContext = {
   base: (process.env.INTERACTIVES_URL ?? 'http://127.0.0.1:3048/interactives').replace(/\/$/, ''),
@@ -1204,7 +1210,20 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       const s = join(String(a.project_id));
       await s.ready;
       const p = await loadProject(s.projectId);
-      return `Joined "${p.name}" as ${ctx().agent} (AI).\n\n${people(s, p)}\n\n${overview(p, {})}`;
+      return `Joined "${p.name}" as ${ctx().agent} (AI).\n\n${whoLine(await accessOf(s.projectId), s, p)}\n\n${people(s, p)}\n\n${overview(p, {})}`;
+    },
+  },
+  {
+    name: 'who_am_i',
+    description:
+      'Who you are working for: the name of the person whose session you hold, so whose edits yours are. With a project, also whether they can change it and which page they have open. Only their name and what they can do: never an email or an id number.',
+    inputSchema: S({ project_id: str('Optional: a project, to say whether they can change it and what they have open') }),
+    run: async (a) => {
+      if (!a.project_id) return whoLine();
+      const id = String(a.project_id);
+      const s = ctx().sessions.get(id);
+      const p = s ? await loadProject(id).catch(() => undefined) : undefined;
+      return whoLine(await accessOf(id), s, p);
     },
   },
   {
@@ -1215,11 +1234,12 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       const s = join(String(a.project_id));
       await s.ready;
       const p = await loadProject(s.projectId);
-      const out: string[] = [people(s, p)];
-      for (const peer of s.peers.values())
+      const out: string[] = [whoLine(undefined, s, p), people(s, p)];
+      //(the person the agent is working for first: theirs is the selection "this" means)
+      for (const peer of peersOf(s))
         for (const id of peer.selection ?? []) {
           const loc = locate(p, id);
-          if (loc) out.push(`\n${peer.name} selected ${loc.node.name} on ${loc.ab.name}:\n${JSON.stringify(loc.node, null, 1)}`);
+          if (loc) out.push(`\n${peer.name}${isMine(peer) ? ' (the person you are working for)' : ''} selected ${loc.node.name} on ${loc.ab.name}:\n${JSON.stringify(loc.node, null, 1)}`);
         }
       return out.join('\n');
     },
@@ -1407,8 +1427,46 @@ async function buildBlueprint(projectId: string, bp: Blueprint, opts: { artboard
   return { changed: ops.length > 0, notes: out.notes, warnings: out.warnings, problems, known, created: out.created, ops: ops.length };
 }
 
+/** Is this person in the room the one the agent is working for? (The room shows people by name, or sign-in name when they have none.) */
+function isMine(peer: Peer): boolean {
+  const w = ctx().who;
+  if (!w) return false;
+  return (!!w.name && peer.name === w.name) || (!!w.username && peer.name === w.username);
+}
+
+/** The people in the room, the one the agent is working for first, so "this" and "here" mean theirs. */
+const peersOf = (s: Session): Peer[] => [...s.peers.values()].filter((x) => !x.left).sort((a, b) => Number(isMine(b)) - Number(isMine(a)));
+
+/**
+ * Who the agent is working for, in a line or two: their name, whether they can change this project, and the page they have
+ * open. Only ever the name and what they can do.
+ */
+function whoLine(access?: { owner?: { username?: string | null } | null; collaborators?: { username?: string | null; role?: string }[] } | null, s?: Session, p?: Project): string {
+  const w = ctx().who;
+  if (!w || (!w.name && !w.username)) return "You aren't working for a signed-in person: this session is a guest's, or has no session id.";
+  const name = w.name || w.username;
+  const out = [`You are working for ${name}${w.name && w.username && w.name !== w.username ? ` (signs in as ${w.username})` : ''}. Their session is the one you hold, so your edits are made as them.`];
+  if (access) {
+    const mine = !!w.username && access.owner?.username === w.username;
+    const shared = !!w.username && (access.collaborators ?? []).find((c) => c.username === w.username);
+    out.push(mine ? 'They own this project and can change anything in it.' : shared ? (shared.role === 'view' ? 'This project is shared with them to look at: they cannot change it, so neither can you.' : 'This project is shared with them and they can change it.') : !access.owner?.username ? 'This project has no owner (made without signing in), so anyone with it open can change it.' : `This project belongs to ${access.owner.username}; it isn't shared with them by name.`);
+  }
+  if (s && p) {
+    const me = peersOf(s).find(isMine);
+    if (me) {
+      const ab = p.artboards.find((a) => a.id === me.artboardId);
+      const sel = (me.selection ?? []).map((id) => locate(p, id)?.node.name ?? id);
+      out.push(`They have ${ab ? `the page "${ab.name}"` : 'the project'} open${sel.length ? `, with ${sel.join(', ')} selected` : ', with nothing selected'}. When they say "this" or "here", that is what they mean.`);
+    } else out.push("They don't have this project open in the editor right now.");
+  }
+  return out.join(' ');
+}
+
+/** The project with who owns it and who it is shared with, for saying what the person can do. Null when it can't be read. */
+const accessOf = async (id: string) => api<{ owner?: { username?: string | null } | null; collaborators?: { username?: string | null; role?: string }[] }>(`/api/projects/${encodeURIComponent(id)}`).catch(() => null);
+
 function people(s: Session, p: Project): string {
-  const list = [...s.peers.values()].filter((x) => !x.left);
+  const list = peersOf(s);
   if (!list.length) return 'Nobody else is in this project right now.';
   return (
     'In the session:\n' +
@@ -1416,7 +1474,7 @@ function people(s: Session, p: Project): string {
       .map((x) => {
         const ab = p.artboards.find((a) => a.id === x.artboardId);
         const sel = (x.selection ?? []).map((id) => locate(p, id)?.node.name ?? id);
-        return `- ${x.name}${ab ? ` on ${ab.name}` : ''}${sel.length ? `, selected: ${sel.join(', ')}` : ''}`;
+        return `- ${x.name}${isMine(x) ? ' (the person you are working for)' : ''}${ab ? ` on ${ab.name}` : ''}${sel.length ? `, selected: ${sel.join(', ')}` : ''}`;
       })
       .join('\n')
   );
@@ -1440,7 +1498,7 @@ async function respond(msg: RpcMessage): Promise<RpcReply | undefined> {
         capabilities: { tools: {} },
         serverInfo: { name: 'ixia', version: VERSION },
         instructions:
-          'Ixia is a 2D interactive builder. Start with list_projects and join_session on the project the person is editing (so your edits show live and you can see their selection), or create_project for a new one (list_starters says what it can start from). Read read_reference("layers"), ("interactions"), ("colours") and ("runtime") before editing, make changes with edit (themes, tokens, data sources and text styles included), upload files with upload_asset, and check them with validate.',
+          'Ixia is a 2D interactive builder. Start with list_projects and join_session on the project the person is editing (so your edits show live and you can see their selection), or create_project for a new one (list_starters says what it can start from). Read read_reference("layers"), ("interactions"), ("colours") and ("runtime") before editing, make changes with edit (themes, tokens, data sources and text styles included), upload files with upload_asset, and check them with validate.' + `\n\n${whoLine()} Call who_am_i with a project for what they can do there.`,
       });
     case 'notifications/initialized':
     case 'notifications/cancelled':

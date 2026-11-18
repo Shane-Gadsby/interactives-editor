@@ -177,6 +177,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Crop corners point the right way': [['images-media', '### Cropping a picture']],
   'Pictures stay on the other pages': [['media-catalogue', 'never see a page with its photos missing']],
   'Tooltip tails are joined on': [['overlays', 'as one outline with the card']],
+  "An agent knows who it's working for": [['ai-agents', '| who_am_i |']],
   Toasts: [['overlays', '## Toasts'], ['overlays', '**Show toast** has a **Message**'], ['overlays', 'always stays until dismissed'], ['scripts', 'ix.toast(name, message?)']],
   'Dialogs that no layer opens': [['overlays', '## Opening one without a layer'], ['overlays', 'A layer **inside an overlay** can point at another overlay']],
   "Dialogs open where you're looking": [['overlays', 'middle of what the viewer can see']],

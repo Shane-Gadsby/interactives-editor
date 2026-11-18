@@ -83,6 +83,52 @@ describe('joining and editing a live room', () => {
     await run('leave_session');
   });
 
+  describe('who it is working for', () => {
+    //The agent's context, as the server makes it for a signed-in person's request
+    const forHannah = () => ({ base: h.base, sessionId: '', agent: 'Tester', sessions: mcp.sessions, who: { username: 'hsmith', name: 'Hannah' } });
+
+    it('with no signed-in person it says so, and never makes one up', async () => {
+      expect(await tool('who_am_i').run({})).toMatch(/aren't working for a signed-in person/);
+    });
+
+    it('says the name of the person whose session it holds, and nothing more about them', async () => {
+      const text = await mcp.runAs(forHannah(), () => tool('who_am_i').run({}));
+      expect(text).toContain('You are working for Hannah (signs in as hsmith).');
+      expect(text).toContain('your edits are made as them');
+      expect(text).not.toMatch(/@|email|student|staff/i);
+    });
+
+    it('in a project, marks that person in the room, puts them first, and says what they have open and selected', async () => {
+      const other = await h.stream(`/api/projects/${id}/live?clientId=human0&name=Aaron`);
+      streams.push(other);
+      await other.waitFor((e) => e.event === 'hello');
+      const hannah = await human();
+      await mcp.runAs(forHannah(), () => run('join_session'));
+      await h.call('POST', `/api/projects/${id}/presence`, { json: { clientId: 'human1', presence: { artboardId: project.artboards[0].id, selection: ['r1'] } } });
+      await hannah.waitFor((e) => e.event === 'presence' && e.data.selection?.length);
+      await vi.waitFor(async () => expect(await mcp.runAs(forHannah(), () => run('get_selection'))).toContain('Hannah (the person you are working for) selected Box'), { timeout: 2000 });
+      const sel = await mcp.runAs(forHannah(), () => run('get_selection'));
+      //theirs comes before anyone else's, and "this" is said to be theirs
+      expect(sel.indexOf('- Hannah (the person you are working for)')).toBeLessThan(sel.indexOf('- Aaron'));
+      expect(sel).toMatch(/They have the page ".+" open, with Box selected\. When they say "this" or "here", that is what they mean\./);
+      const who = await mcp.runAs(forHannah(), () => tool('who_am_i').run({ project_id: id }));
+      expect(who).toContain('You are working for Hannah');
+      expect(who).toContain('with Box selected');
+      await mcp.runAs(forHannah(), () => run('leave_session'));
+    });
+
+    it('says when they do not have the project open', async () => {
+      const text = await mcp.runAs(forHannah(), () => run('join_session'));
+      expect(text).toContain("They don't have this project open in the editor right now.");
+      await mcp.runAs(forHannah(), () => run('leave_session'));
+    });
+
+    it('tells an outside agent who it is for as it connects', async () => {
+      const r = (await mcp.runAs(forHannah(), () => mcp.respond({ id: 1, method: 'initialize', params: {} })))!;
+      expect((r.result as { instructions: string }).instructions).toContain('You are working for Hannah');
+    });
+  });
+
   it('says nobody else is there when it is alone, and joining twice reuses the session', async () => {
     const text = await run('join_session');
     expect(text).toContain('Nobody else is in this project right now.');

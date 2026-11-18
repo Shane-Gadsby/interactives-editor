@@ -311,6 +311,14 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	//Never one of storage/'s own folder names (shares, thumbs, _libraries), see shared/safety.mjs
 	validID = (id) => safety.validID(id),
 
+	//Who an agent on this request is working for, as the mcp tools may say it: the name and the sign-in name, and
+	//nothing else about them (no email, no id number)
+	mcpWho = (req) => {
+		let me = whoIs(req)
+
+		return me && (me.name || me.username) ? {username: me.username || null, name: me.name || null} : undefined
+	},
+
 	whoIs = (req) => {
 		let user = req.sessionData?.user
 
@@ -5785,7 +5793,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 
 	let key = designerKey(req, id),
 		state = designerChats.get(key),
-		ctx = {base: `http://127.0.0.1:${port}/${appName}`, sessionId: mcpSessionID(req), agent: 'Ixia', sessions: new Map()},
+		ctx = {base: `http://127.0.0.1:${port}/${appName}`, sessionId: mcpSessionID(req), agent: 'Ixia', sessions: new Map(), who: mcpWho(req)},
 		mcp = null,
 		artboardId = typeof req.body.artboardId === 'string' ? req.body.artboardId.slice(0, 100) : '',
 		result = {outcome: 'error', rounds: 0, changed: false}
@@ -6053,6 +6061,7 @@ router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, 
 				sessionId: mcpSessionID(req),
 				agent: String(req.query.agent || req.get('x-agent-name') || 'Agent').replace(/[^\w .'()-]/g, '').slice(0, 40) || 'Agent',
 				sessions: new Map(),
+				who: mcpWho(req),
 			},
 		}
 		mcpConnections.set(id, conn)

@@ -24158,6 +24158,26 @@ The crop belongs to the layer, not the file, and the frame (with its corner radi
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
 
+
+### Zoom and the focal spot
+The same crop, from the picture's settings, when you'd rather point than drag. Under **Crop** in the **Image** section:
+
+- **Focal spot** is a small picture of the whole photo. **Click the part that matters most** (a face, a label on a diagram) and that part moves to the middle of the frame. The dot marks it, and the bright outline is the part the frame shows. Drag the dot, or use the arrow keys with <kbd>Shift</kbd> for bigger steps.
+- **Zoom** is a slider. It brings the picture closer about the focal spot, so what you chose stays in the middle while it grows. The number under it is the same zoom, to type.
+
+**Good to know:** the frame is never left uncovered, so the spot goes as far towards the middle as the picture can move. With no zoom, a picture only moves the way it overflows its frame: a wide photo in a square frame moves left and right. Zoom in a little and it can move both ways.
+
+### Swap a picture
+To show a different picture in the same place, right-click the picture and open **Swap picture**. It asks where the new one comes from:
+
+- **One already in this project…** opens the project's pictures as a grid. Click one. The one showing now is marked.
+- **From the Media Catalogue…** opens the photo library. Pick a photo and press **Insert**. It's linked, not copied, like any other catalogue photo.
+- **Upload a new one…** opens your computer's file picker. The picture is added to **Assets** and shown in the layer.
+
+The layer keeps its place, its size, its corners, and every interaction and keyframe on it. Only the **crop** goes, since it was framed for the old picture, and you're asked for a new description, because the old one described the old picture. One undo puts the old picture back.
+
+This changes one layer. To change a picture **everywhere** it's used, use **Replace file…** on it in Assets instead.
+
 ## Video
 Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.
 
@@ -24390,6 +24410,8 @@ Where the older **Photography catalogue** still answers at that address (StudyDe
 
 ## How it is stored
 The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
+
+On the canvas, a page you aren't working on is drawn as a picture of itself to keep the editor quick, and its catalogue photos are in that picture like everything else. If a photo can't be reached just then, that page simply stays drawn live, so you never see a page with its photos missing.
 
 ## Exporting
 Files that must work without a network fetch the picture when they are made and put it inside:
@@ -25839,7 +25861,7 @@ That split is what lets a tooltip belong to a small icon while a much bigger are
 - **Tooltip.** Sits beside its target while the trigger is hovered or focused. **Side** chooses above, below, left or right, and **Wherever it fits** (the default) tries each in turn. A side you choose is kept unless there's no room there and there is on the opposite side, when it goes across (a tooltip below a card at the foot of the page would land on the card). Near the page's edge it slides in rather than changing side. **Gap** is the space between.
   - The **trigger is the whole layer**: point anywhere on a card made of a frame and its words, or tab to something inside it, and its tooltip shows. While a layer is being **dragged** its tooltip is put away.
   - It **fades** in and out. **Fade** is the **Project default** (the project's own transition time, **Page height time** in the project settings) or **Custom** with its own **Time**. A viewer whose device asks for less motion gets no fade.
-  - It has a **Tail**: a small triangle on the side facing the target, pointing at the middle of it, in the tooltip's own colour. It follows whichever side the tooltip ended up on. Untick **Tail** to go without.
+  - It has a **Tail**: a small triangle on the side facing the target, pointing at the middle of it, in the tooltip's own colour. It follows whichever side the tooltip ended up on. Give the card a border and the tail takes it too, as one outline with the card. Untick **Tail** to go without.
   - **Stays while you're on it** keeps it open when the pointer moves from the trigger onto the tooltip, with a moment's grace to cross the gap, so a link or a button inside it can be reached. Turn it off for a plain label that should go the moment you leave. <kbd>Esc</kbd> puts a tooltip away either way.
   - The **keyboard reaches what's inside** the same way. With the trigger focused, <kbd>Tab</kbd> goes to the first link or button in the tooltip, <kbd>Tab</kbd> off the last one carries on to whatever follows the trigger, and <kbd>Shift</kbd>+<kbd>Tab</kbd> from the first goes back to the trigger. <kbd>Esc</kbd> from inside puts the tooltip away and hands the focus back to the trigger. A tooltip with nothing to press in it changes nothing about <kbd>Tab</kbd>.
 - **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd> or a click outside closes it. It opens in the **middle of what the viewer can see**: on a tall page embedded in a course that is the part on screen, not the middle of the page, which may be out of sight. It stays where it opened if they scroll. The same goes for a confirmation and a prompt. A screen reader calls it by its **page's name**, so name the page for what it is ("Your progress", not "Dialog 2"); the same goes for a confirmation and a prompt. The dimming and the blocking of what's behind are part of being a modal, so they're there even with **Accessibility off** in Preview; only moving the focus in and keeping <kbd>Tab</kbd> inside follow that switch.
@@ -29092,7 +29114,8 @@ ${sid ? `> The \`X-Session-ID\` above is **your** sign-in for this tab. The agen
 | create_project, list_starters | Make a new project, blank (with the Light, Dark and High contrast themes) or from a built-in starter or a saved template, and join it. The branded starter packs are made in the editor; an agent gives a blank project their look with a colourway |
 | join_session | Joins a project's live session; reports who is there and what they have selected |
 | leave_session | Leaves the session |
-| get_selection | The layers each person has selected, in full |
+| who_am_i | Who the agent is working for: the name of the person whose session it holds, whether they can change the project, and the page and layers they have open. Only the name and what they can do, never an email or an id number |
+| get_selection | The layers each person has selected, in full, the person the agent is working for first |
 | get_overview, get_layers, get_interactions, get_variables | Read pages, layer trees, timelines, variables, interactions, and the themes with every colour token |
 | export_project | The whole project document, or one part of it (its settings, themes, styles...) |
 | edit | Add, change, copy, move and delete layers (a whole tree at once); add pages, variables, timelines, interactions and scripts, and change interactions in place; add themes, colourways, colour tokens and text styles; add data sources; change project settings. All in one batch |
@@ -30341,9 +30364,23 @@ ${overview(p, {})}`;
       const p = await loadProject(s.projectId);
       return `Joined "${p.name}" as ${ctx().agent} (AI).
 
+${whoLine(await accessOf(s.projectId), s, p)}
+
 ${people(s, p)}
 
 ${overview(p, {})}`;
+    }
+  },
+  {
+    name: "who_am_i",
+    description: "Who you are working for: the name of the person whose session you hold, so whose edits yours are. With a project, also whether they can change it and which page they have open. Only their name and what they can do: never an email or an id number.",
+    inputSchema: S({ project_id: str("Optional: a project, to say whether they can change it and what they have open") }),
+    run: async (a) => {
+      if (!a.project_id) return whoLine();
+      const id = String(a.project_id);
+      const s = ctx().sessions.get(id);
+      const p = s ? await loadProject(id).catch(() => void 0) : void 0;
+      return whoLine(await accessOf(id), s, p);
     }
   },
   {
@@ -30354,12 +30391,12 @@ ${overview(p, {})}`;
       const s = join(String(a.project_id));
       await s.ready;
       const p = await loadProject(s.projectId);
-      const out = [people(s, p)];
-      for (const peer of s.peers.values())
+      const out = [whoLine(void 0, s, p), people(s, p)];
+      for (const peer of peersOf(s))
         for (const id of peer.selection ?? []) {
           const loc = locate(p, id);
           if (loc) out.push(`
-${peer.name} selected ${loc.node.name} on ${loc.ab.name}:
+${peer.name}${isMine(peer) ? " (the person you are working for)" : ""} selected ${loc.node.name} on ${loc.ab.name}:
 ${JSON.stringify(loc.node, null, 1)}`);
         }
       return out.join("\n");
@@ -30511,13 +30548,40 @@ async function buildBlueprint(projectId, bp, opts2 = {}) {
   const problems = [...out.problems, ...validate(out.project).filter((x) => !had.has(x))];
   return { changed: ops.length > 0, notes: out.notes, warnings: out.warnings, problems, known, created: out.created, ops: ops.length };
 }
+function isMine(peer) {
+  const w = ctx().who;
+  if (!w) return false;
+  return !!w.name && peer.name === w.name || !!w.username && peer.name === w.username;
+}
+const peersOf = (s) => [...s.peers.values()].filter((x) => !x.left).sort((a, b) => Number(isMine(b)) - Number(isMine(a)));
+function whoLine(access, s, p) {
+  const w = ctx().who;
+  if (!w || !w.name && !w.username) return "You aren't working for a signed-in person: this session is a guest's, or has no session id.";
+  const name = w.name || w.username;
+  const out = [`You are working for ${name}${w.name && w.username && w.name !== w.username ? ` (signs in as ${w.username})` : ""}. Their session is the one you hold, so your edits are made as them.`];
+  if (access) {
+    const mine = !!w.username && access.owner?.username === w.username;
+    const shared = !!w.username && (access.collaborators ?? []).find((c2) => c2.username === w.username);
+    out.push(mine ? "They own this project and can change anything in it." : shared ? shared.role === "view" ? "This project is shared with them to look at: they cannot change it, so neither can you." : "This project is shared with them and they can change it." : !access.owner?.username ? "This project has no owner (made without signing in), so anyone with it open can change it." : `This project belongs to ${access.owner.username}; it isn't shared with them by name.`);
+  }
+  if (s && p) {
+    const me = peersOf(s).find(isMine);
+    if (me) {
+      const ab = p.artboards.find((a) => a.id === me.artboardId);
+      const sel = (me.selection ?? []).map((id) => locate(p, id)?.node.name ?? id);
+      out.push(`They have ${ab ? `the page "${ab.name}"` : "the project"} open${sel.length ? `, with ${sel.join(", ")} selected` : ", with nothing selected"}. When they say "this" or "here", that is what they mean.`);
+    } else out.push("They don't have this project open in the editor right now.");
+  }
+  return out.join(" ");
+}
+const accessOf = async (id) => api(`/api/projects/${encodeURIComponent(id)}`).catch(() => null);
 function people(s, p) {
-  const list2 = [...s.peers.values()].filter((x) => !x.left);
+  const list2 = peersOf(s);
   if (!list2.length) return "Nobody else is in this project right now.";
   return "In the session:\n" + list2.map((x) => {
     const ab = p.artboards.find((a) => a.id === x.artboardId);
     const sel = (x.selection ?? []).map((id) => locate(p, id)?.node.name ?? id);
-    return `- ${x.name}${ab ? ` on ${ab.name}` : ""}${sel.length ? `, selected: ${sel.join(", ")}` : ""}`;
+    return `- ${x.name}${isMine(x) ? " (the person you are working for)" : ""}${ab ? ` on ${ab.name}` : ""}${sel.length ? `, selected: ${sel.join(", ")}` : ""}`;
   }).join("\n");
 }
 const send = (msg) => process.stdout.write(JSON.stringify(msg) + "\n");
@@ -30530,7 +30594,9 @@ async function respond(msg) {
         protocolVersion: msg.params?.protocolVersion ?? "2025-06-18",
         capabilities: { tools: {} },
         serverInfo: { name: "ixia", version: VERSION },
-        instructions: 'Ixia is a 2D interactive builder. Start with list_projects and join_session on the project the person is editing (so your edits show live and you can see their selection), or create_project for a new one (list_starters says what it can start from). Read read_reference("layers"), ("interactions"), ("colours") and ("runtime") before editing, make changes with edit (themes, tokens, data sources and text styles included), upload files with upload_asset, and check them with validate.'
+        instructions: `Ixia is a 2D interactive builder. Start with list_projects and join_session on the project the person is editing (so your edits show live and you can see their selection), or create_project for a new one (list_starters says what it can start from). Read read_reference("layers"), ("interactions"), ("colours") and ("runtime") before editing, make changes with edit (themes, tokens, data sources and text styles included), upload files with upload_asset, and check them with validate.
+
+${whoLine()} Call who_am_i with a project for what they can do there.`
       });
     case "notifications/initialized":
     case "notifications/cancelled":
