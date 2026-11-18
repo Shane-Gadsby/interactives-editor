@@ -125,3 +125,15 @@ describe('fit width to content', () => {
     expect(huggedWidth({ width: 500, hugWidth: false }, ab().children)).toBe(500);
   });
 });
+
+describe('a confirmation\'s buttons differ by job', () => {
+  it('an answer marked danger is red, the one you mean is the button colour, and a way out is plain', () => {
+    const { card } = make('confirm');
+    const find = (n: { name?: string; children?: unknown[] }): { bindings: Record<string, string> } | null =>
+      n.name === 'Answer button' ? (n as never) : ((n.children ?? []) as { name?: string }[]).map(find).find(Boolean) ?? null;
+    const b = find(card())!.bindings;
+    expect(b['fill.color']).toMatch(/^item\.danger \? ".+" : item\.main \? ".+" : ".+"$/);
+    expect(b.color).toContain('item.danger');
+    expect(b['stroke.paint.color']).toContain('item.danger');
+  });
+});

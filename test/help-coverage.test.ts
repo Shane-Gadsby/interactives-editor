@@ -178,6 +178,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Pictures stay on the other pages': [['media-catalogue', 'never see a page with its photos missing']],
   'Tooltip tails are joined on': [['overlays', 'as one outline with the card']],
   "An agent knows who it's working for": [['ai-agents', '| who_am_i |']],
+  'A red button for an answer that destroys something': [['overlays', 'and the button is red']],
   "An overlay's page is its size": [['overlays', '**The page sizes the overlay.**'], ['artboards', '**Fit width to content** is the same idea sideways']],
   'Dialogs, toasts and question options, from the same review': [['overlays', 'the brightest thing on the dimmed page'], ['overlays', "a small card in the theme's own colours"], ['question-kit', 'a **tick** in a multiple-response option']],
   'The pointer and the browser tab say more': [['overlays', '**The pointer says what will happen.**'], ['accordions', 'The pointer turns to a hand over a header'], ['projects', 'the browser tab is named after it']],

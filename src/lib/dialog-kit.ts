@@ -461,8 +461,11 @@ function fillBox(d: Project, page: Artboard, l: Record<string, string>, kind: 'm
     stroke: { paint: solid(l.border), width: 1, align: 'inside' },
     bindings: {
       label: 'item.label',
-      'fill.color': `item.main ? "${l.button}" : "${l.background}"`,
-      color: `item.main ? "${l.onButton}" : "${l.text}"`,
+      //three jobs, three looks: the answer you mean, the one that destroys something (red, so it can't be pressed in
+      //passing), and the ways out
+      'fill.color': `item.danger ? "${l.error}" : item.main ? "${l.button}" : "${l.background}"`,
+      color: `item.danger ? "${l.background}" : item.main ? "${l.onButton}" : "${l.text}"`,
+      'stroke.paint.color': `item.danger ? "${l.error}" : "${l.border}"`,
     },
   });
   row.children.push(button);
