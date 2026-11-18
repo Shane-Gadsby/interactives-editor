@@ -65,7 +65,7 @@ describe("Ask Ixia's spending guards", () => {
     expect(r.status).toBe(200);
     expect(asked).toBe(2);
     expect(r.events.find((e: any) => e.type === 'reply').text).toContain("as far as I can get in one go");
-    const row = runs().at(-1);
+    const row = runs().at(-1)!;
     expect(row.detail).toMatchObject({ via: 'openrouter', model: 'anthropic/claude-haiku-5.5', usage: { input: 2000, output: 200, host: 'Test host' } });
     expect(row.detail.usage.cost).toBeCloseTo(0.04);
     // never the key or the words
