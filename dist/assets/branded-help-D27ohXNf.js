@@ -1,1 +1,0 @@
-import{BRANDED_STARTERS as a}from"./index-DKtjAcrf.js";import{p as m}from"./topics-Cu3Z6LJU.js";import{dF as i,dG as o,dD as s}from"./index-CqO7yRqA.js";m(()=>({colourways:s.map(e=>({name:e.name,description:e.description})),sets:i.filter(e=>a.some(r=>r.set===e)).map(e=>({name:o[e],starters:a.filter(r=>r.set===e).map(r=>({name:r.name,description:r.description}))}))}));
