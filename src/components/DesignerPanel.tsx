@@ -67,7 +67,26 @@ export async function showWhatChanged(): Promise<void> {
   }
 }
 
-const EXAMPLES = ['Add a page called Results with a heading and a button back to the start', 'Check my project for problems and fix them', 'Make a multiple choice question with feedback for each answer'];
+/** One of each thing it does: builds, makes an activity, checks, and answers a how-do-I from the help (which costs nothing). */
+const EXAMPLES: { icon: keyof typeof Icons; text: string }[] = [
+  { icon: 'plus', text: 'Add a page called Results with a heading and a button back to the start' },
+  { icon: 'question', text: 'Make a multiple choice question with feedback for each answer' },
+  { icon: 'check', text: 'Check my project for problems and fix them' },
+  { icon: 'help', text: 'How do I make a layer fade in when the page opens?' },
+];
+
+/** Past this far from the bottom, new messages stop pulling the list down (you scrolled up to read). */
+const NEAR_BOTTOM = 48;
+/** How many finished steps show above the one it's on. */
+const STEPS_SHOWN = 3;
+
+const took = (seconds: number) => (seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`);
+
+const SendIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 19V5M5.5 11.5L12 5l6.5 6.5" />
+  </svg>
+);
 
 const openLink = (href: string) => {
   if (/^https?:\/\//i.test(href)) window.open(href, '_blank', 'noopener,noreferrer');
@@ -122,6 +141,10 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
   const headRef = useRef<HTMLHeadingElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  // Whether the list is at its end. A ref for the effect that follows new messages, state for the "Latest" button
+  const stuck = useRef(true);
+  const [away, setAway] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => designerChat().subscribe(setChat), []);
   useEffect(() => {
@@ -136,24 +159,59 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
     void designerChat().refreshStatus();
   }, [open]);
 
-  useEffect(() => {
+  const toEnd = () => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [chat.messages.length, chat.working, chat.status, chat.undo, open]);
+    stuck.current = true;
+    setAway(false);
+  };
 
+  // New messages and steps pull the list down only while you're at its end: scroll up to read and it stays put
+  useEffect(() => {
+    if (stuck.current) toEnd();
+  }, [chat.messages.length, chat.working, chat.status, chat.undo, chat.lastRun, open]);
+
+  // The clock beside the step it's on
+  useEffect(() => {
+    if (!chat.working) return;
+    setNow(Date.now());
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [chat.working]);
+
+  // The box grows with what you type, up to its max-height (then it scrolls)
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el || !el.scrollHeight) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [draft, open, width]);
+
+  // Escape stops a request that is running; with nothing running it closes the card
+  const working = chat.working;
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && document.activeElement?.closest('.designer-panel')) onClose();
+      if (e.key !== 'Escape' || !document.activeElement?.closest('.designer-panel')) return;
+      if (working) designerChat().stop();
+      else onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, working]);
 
   const send = (text: string) => {
     if (!text.trim() || chat.working) return;
+    stuck.current = true;
     void designerChat().send(text, openProjectId());
     setDraft('');
+  };
+
+  const copy = (text: string) => {
+    void navigator.clipboard
+      ?.writeText(text)
+      .then(() => store().toast('Copied', 'info'))
+      .catch(() => undefined);
   };
 
   const ownAllowance = () => openPrefsSetting('general', 'designerAllowance');
@@ -199,6 +257,10 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
       return n;
     });
 
+  const elapsed = chat.working ? Math.max(0, Math.round((now - chat.startedAt) / 1000)) : 0;
+  const done = chat.steps.slice(0, -1);
+  const quota = !chat.own && chat.quota ? chat.quota : null;
+
   return (
     <aside className="designer-panel" hidden={!open} style={{ width }} aria-label="Ask Ixia">
       <div
@@ -222,107 +284,156 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
         <h2 ref={headRef} tabIndex={-1}>
           Ask Ixia
         </h2>
-        <button
-          className="btn small"
-          title="Start a new conversation (this one is cleared)"
+        <IconButton
+          icon={<Icons.plus />}
+          title="New chat (this conversation is cleared)"
+          disabled={chat.messages.length === 0 && !chat.working}
           onClick={() => {
             void designerChat().newChat();
+            stuck.current = true;
             inputRef.current?.focus();
           }}
-        >
-          New chat
-        </button>
+        />
         <IconButton icon={<Icons.close />} title="Close the chat (it keeps the conversation)" onClick={onClose} />
       </header>
-      <p className="designer-note muted small">It builds in your project as you watch. Check what it made; you can undo it.</p>
-      {!chat.own && chat.quota && (
-        <p className="designer-quota muted small" role="status">
-          {chat.quota.left > 0
-            ? `${chat.quota.left} of ${chat.quota.limit} shared requests left this hour`
-            : `No shared requests left this hour (the next comes back in about ${Math.max(1, Math.ceil(chat.quota.resetsIn / 60))} min)`}{' '}
-          {chat.ownTokens && (
-            <button className="link-btn" onClick={ownAllowance} title="Add your own Cogniti token in Preferences, so your requests don't use the shared allowance">
-              Use my own Cogniti allowance
-            </button>
+      <div className="designer-body">
+        <div
+          className="designer-log"
+          ref={listRef}
+          role="log"
+          aria-live="polite"
+          aria-label="Conversation"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const far = el.scrollHeight - el.scrollTop - el.clientHeight > NEAR_BOTTOM;
+            stuck.current = !far;
+            setAway(far);
+          }}
+        >
+          {chat.messages.length === 0 && (
+            <div className="designer-empty">
+              <img src="./favicon.svg" alt="" width={36} height={36} />
+              <h3>What would you like to build?</h3>
+              <p className="muted">It builds in your project as you watch. Check what it made; you can undo it.</p>
+              <div className="designer-examples">
+                {EXAMPLES.map((ex) => {
+                  const Icon = Icons[ex.icon];
+                  return (
+                    <button
+                      key={ex.text}
+                      type="button"
+                      className="designer-example"
+                      onClick={() => {
+                        setDraft(ex.text);
+                        inputRef.current?.focus();
+                      }}
+                    >
+                      <Icon />
+                      <span>{ex.text}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
-        </p>
-      )}
-      <div className="designer-log" ref={listRef} role="log" aria-live="polite" aria-label="Conversation">
-        {chat.messages.length === 0 && (
-          <div className="designer-examples">
-            <p className="muted small">Say what you want in your own words, for example:</p>
-            {EXAMPLES.map((ex) => (
-              <button
-                key={ex}
-                className="btn small"
-                onClick={() => {
-                  setDraft(ex);
-                  inputRef.current?.focus();
-                }}
-              >
-                {ex}
-              </button>
-            ))}
-          </div>
-        )}
-        {chat.messages.map((m) => (
-          <div key={m.id} className={`designer-msg ${m.from}${m.failed ? ' failed' : ''}`}>
-            {m.from === 'agent' ? <Markdown text={m.text} onLink={openLink} /> : <p>{m.text}</p>}
-            {m.from === 'help' && (
-              <>
-                <ul className="designer-topics">
-                  {(m.topics ?? []).map((t) => (
-                    <li key={`${t.id}#${t.anchor ?? ''}`}>
-                      <button className="link-btn" onClick={() => openHelp(t.id, t.anchor)} title={t.snippet}>
-                        {t.title}
-                        {t.heading ? `: ${t.heading}` : ''}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+          {chat.messages.map((m) => (
+            <div key={m.id} className={`designer-msg ${m.from}${m.failed ? ' failed' : ''}`}>
+              {m.from === 'agent' ? <Markdown text={m.text} onLink={openLink} /> : <p>{m.text}</p>}
+              {m.from === 'agent' && (
+                <div className="designer-acts">
+                  <button type="button" className="designer-act" title="Copy this reply" aria-label="Copy this reply" onClick={() => copy(m.text)}>
+                    <Icons.copy />
+                  </button>
+                </div>
+              )}
+              {m.from === 'help' && (
+                <>
+                  <ul className="designer-topics">
+                    {(m.topics ?? []).map((t) => (
+                      <li key={`${t.id}#${t.anchor ?? ''}`}>
+                        <button className="link-btn" onClick={() => openHelp(t.id, t.anchor)} title={t.snippet}>
+                          {t.title}
+                          {t.heading ? `: ${t.heading}` : ''}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="small">
+                    <button className="btn small" disabled={chat.working} onClick={() => void designerChat().send(m.ask ?? '', openProjectId(), { force: true })} title="Send this to Ixia. It uses one of your requests.">
+                      Ask Ixia anyway
+                    </button>
+                  </p>
+                </>
+              )}
+              {m.allowance && chat.ownTokens && (
                 <p className="small">
-                  <button className="btn small" disabled={chat.working} onClick={() => void designerChat().send(m.ask ?? '', openProjectId(), { force: true })} title="Send this to Ixia. It uses one of your requests.">
-                    Ask Ixia anyway
+                  <button className="btn small" onClick={ownAllowance} title="Add your own Cogniti token in Preferences, so your requests don't use the shared allowance">
+                    Use my own Cogniti allowance
                   </button>
                 </p>
-              </>
-            )}
-            {m.allowance && chat.ownTokens && (
-              <p className="small">
-                <button className="btn small" onClick={ownAllowance} title="Add your own Cogniti token in Preferences, so your requests don't use the shared allowance">
-                  Use my own Cogniti allowance
-                </button>
-              </p>
-            )}
-            {m.failed && (
-              <p className="small">
-                Not sent.{' '}
-                <button className="link-btn" onClick={() => send(m.text)}>
-                  Try again
-                </button>
-              </p>
-            )}
-          </div>
-        ))}
-        {chat.working && (
-          <p className="designer-progress muted small" role="status">
-            <span className="designer-dots" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-            {chat.status || 'Working'}…{' '}
-            <button className="link-btn" onClick={() => designerChat().stop()} title="Stop after the step it's on">
-              Stop
-            </button>
-          </p>
-        )}
-        {!chat.working && chat.undo && (
-          <div className="designer-undo">
-            <button className="btn small" disabled={chat.undoing} onClick={() => void undo()} title="Put the project back as it was before this request">
-              {chat.undoing ? 'Undoing…' : 'Undo what Ixia did'}
-            </button>
-          </div>
+              )}
+              {m.failed && (
+                <p className="small">
+                  Not sent.{' '}
+                  <button className="link-btn" onClick={() => send(m.text)}>
+                    Try again
+                  </button>
+                </p>
+              )}
+            </div>
+          ))}
+          {chat.working && (
+            <div className="designer-run">
+              {done.length > 0 && (
+                <ol className="designer-steps" aria-label="Done so far">
+                  {done.length > STEPS_SHOWN && <li className="more">{done.length - STEPS_SHOWN} earlier</li>}
+                  {done.slice(-STEPS_SHOWN).map((step, i) => (
+                    <li key={`${done.length}-${i}`}>
+                      <Icons.check />
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              )}
+              <div className="designer-progress">
+                <span className="designer-spin" aria-hidden="true" />
+                <span className="designer-now" role="status">
+                  {chat.status || 'Working'}…
+                </span>
+                <span className="designer-time" aria-hidden="true">
+                  {took(elapsed)}
+                </span>
+              </div>
+            </div>
+          )}
+          {!chat.working && chat.lastRun && (
+            <details className="designer-worked">
+              <summary>
+                Worked for {took(chat.lastRun.seconds)}, {chat.lastRun.steps.length} {chat.lastRun.steps.length === 1 ? 'step' : 'steps'}
+              </summary>
+              <ol className="designer-steps">
+                {chat.lastRun.steps.map((step, i) => (
+                  <li key={i}>
+                    <Icons.check />
+                    {step}
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
+          {!chat.working && chat.undo && (
+            <div className="designer-undo">
+              <span>Ixia changed your project.</span>
+              <button className="btn small" disabled={chat.undoing} onClick={() => void undo()} title="Put the project back as it was before this request">
+                {chat.undoing ? 'Undoing…' : 'Undo what Ixia did'}
+              </button>
+            </div>
+          )}
+        </div>
+        {away && (
+          <button type="button" className="designer-latest" title="Go to the newest message" aria-label="Go to the newest message" onClick={toEnd}>
+            <Icons.chevronDown />
+          </button>
         )}
       </div>
       <form
@@ -332,23 +443,49 @@ export function DesignerPanel({ open, onClose }: { open: boolean; onClose: () =>
           send(draft);
         }}
       >
-        <textarea
-          ref={inputRef}
-          value={draft}
-          rows={2}
-          aria-label="Your message"
-          placeholder="Say what you would like built"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              send(draft);
-            }
+        <div
+          className="designer-box"
+          onMouseDown={(e) => {
+            // anywhere in the box that isn't the button or the text itself puts the caret in the text
+            if (e.target === e.currentTarget) (e.preventDefault(), inputRef.current?.focus());
           }}
-        />
-        <button className="btn primary" type="submit" disabled={!draft.trim() || chat.working} title="Send (Enter; Shift+Enter for a new line)">
-          Send
-        </button>
+        >
+          <textarea
+            ref={inputRef}
+            value={draft}
+            rows={1}
+            aria-label="Your message"
+            placeholder="Say what you would like built"
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                send(draft);
+              }
+            }}
+          />
+          {chat.working ? (
+            <button type="button" className="designer-go stop" title="Stop after the step it's on (Esc)" aria-label="Stop" onClick={() => designerChat().stop()}>
+              <Icons.stop />
+            </button>
+          ) : (
+            <button type="submit" className="designer-go" disabled={!draft.trim()} title="Send (Enter; Shift+Enter for a new line)" aria-label="Send">
+              <SendIcon />
+            </button>
+          )}
+        </div>
+        {quota ? (
+          <p className="designer-quota designer-foot" role="status">
+            {quota.left > 0 ? `${quota.left} of ${quota.limit} shared requests left this hour` : `No shared requests left this hour (the next comes back in about ${Math.max(1, Math.ceil(quota.resetsIn / 60))} min)`}{' '}
+            {chat.ownTokens && (
+              <button type="button" className="link-btn" onClick={ownAllowance} title="Add your own Cogniti token in Preferences, so your requests don't use the shared allowance">
+                Use my own Cogniti allowance
+              </button>
+            )}
+          </p>
+        ) : (
+          <p className="designer-foot">Ixia can make mistakes, so check what it made.</p>
+        )}
       </form>
     </aside>
   );

@@ -251,12 +251,19 @@ describe('the panel', () => {
     expect(bodies[0]).toEqual({ projectId: 'proj1', artboardId: st.artboard()!.id, message: 'Add a Results page' });
     expect(host.querySelector('.designer-progress')?.textContent).toContain('Changing the project…');
     expect(host.textContent).not.toContain('Undo what Ixia did');
+    // while it works Send is Stop, in the same place
+    expect(host.querySelector('button[type=submit]')).toBeNull();
+    expect(host.querySelector('.designer-go.stop')?.getAttribute('aria-label')).toBe('Stop');
     await act(async () => {
       release();
       await new Promise((r) => setTimeout(r, 20));
     });
     expect(host.querySelector('.designer-progress')).toBeNull();
     expect(host.querySelector('.designer-msg.agent')?.innerHTML).toContain('<strong>Results</strong>');
+    // what it did stays under the reply, folded away
+    expect(host.querySelector('.designer-worked summary')?.textContent).toMatch(/^Worked for \d+s, 1 step$/);
+    expect(host.querySelector('.designer-worked li')?.textContent).toBe('Changing the project');
+    expect(host.querySelector('button[type=submit]')).toBeTruthy();
     const undoBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Undo what Ixia did')!;
     expect(undoBtn).toBeTruthy();
     // a live tab hears about the restore from the server, so give it a live status and it doesn't reload itself
@@ -266,7 +273,7 @@ describe('the panel', () => {
     expect(host.textContent).not.toContain('Undo what Ixia did');
     expect(host.textContent).toContain('Your project is back as it was');
 
-    await act(async () => ([...host.querySelectorAll('button')].find((b) => b.textContent === 'New chat') as HTMLButtonElement).click());
+    await act(async () => (host.querySelector('button[aria-label^="New chat"]') as HTMLButtonElement).click());
     expect(host.querySelectorAll('.designer-msg')).toHaveLength(0);
     expect(resetDesigner).toHaveBeenCalledWith('proj1');
     vi.unstubAllGlobals();

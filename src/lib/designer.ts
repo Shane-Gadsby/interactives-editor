@@ -36,6 +36,12 @@ export interface ChatState {
   working: boolean;
   /** What the agent is doing right now, in words ("Reading the project"). */
   status: string;
+  /** Each thing it has said it was doing in this request, in order, the newest last. */
+  steps: string[];
+  /** When this request was sent (ms), so the panel can say how long it has been. */
+  startedAt: number;
+  /** The last request once it has finished: what it did and how long it took. Null before one has, and while one runs. */
+  lastRun: { steps: string[]; seconds: number } | null;
   /** The restore point from before the agent's first change in the last request, while it can still be undone. */
   undo: { revision: string } | null;
   undoing: boolean;
@@ -61,7 +67,7 @@ interface Event {
 let counter = 0;
 const mid = () => `m${Date.now().toString(36)}${++counter}`;
 
-const initial = (): ChatState => ({ messages: [], working: false, status: '', undo: null, undoing: false, quota: null, own: false, ownTokens: true });
+const initial = (): ChatState => ({ messages: [], working: false, status: '', steps: [], startedAt: 0, lastRun: null, undo: null, undoing: false, quota: null, own: false, ownTokens: true });
 
 export class DesignerChat {
   state: ChatState = initial();
@@ -148,7 +154,7 @@ export class DesignerChat {
       }
     }
     this.abort = new AbortController();
-    this.set({ working: true, status: 'Sending', undo: null, messages: [...this.state.messages.filter((m) => !m.failed), { id: mid(), from: 'me', text: message }] });
+    this.set({ working: true, status: 'Sending', steps: [], startedAt: Date.now(), lastRun: null, undo: null, messages: [...this.state.messages.filter((m) => !m.failed), { id: mid(), from: 'me', text: message }] });
     let finished = false;
     try {
       const res = await this.fetcher(apiUrl('designer/chat'), {
@@ -205,7 +211,8 @@ export class DesignerChat {
       //whatever it got to, the canvas ends on what is really there
       if (this.sawChange) this.onChanged?.();
       this.sawChange = false;
-      this.set({ working: false, status: '' });
+      const { steps, startedAt } = this.state;
+      this.set({ working: false, status: '', steps: [], lastRun: steps.length ? { steps, seconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)) } : null });
     }
   }
 
@@ -213,7 +220,7 @@ export class DesignerChat {
   private handle(e: Event): boolean {
     switch (e.type) {
       case 'status':
-        if (e.text) this.set({ status: e.text });
+        if (e.text) this.set({ status: e.text, steps: this.state.steps[this.state.steps.length - 1] === e.text ? this.state.steps : [...this.state.steps, e.text] });
         return false;
       case 'changed':
         if (e.revision) this.set({ undo: { revision: e.revision } });
