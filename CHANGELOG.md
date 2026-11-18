@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Tooltip tails are joined on**: a tooltip with a border used to draw its tail behind the card with the border running across the join, so the tail looked stuck on. The tail now takes the card's border and the card's border opens where they meet, so the two are one outline.
 - **Pictures stay on the other pages**: clicking another page made the Media Catalogue photos on the page you left disappear, because the still picture the canvas shows for a page you aren't on left them out. They're in it now, and a page whose photo can't be read stays drawn live instead of losing it.
 - **Zoom and a focal spot for pictures**: a picture's settings have a small map of the whole photo: click the part that matters most and it moves to the middle of the frame. A **Zoom** slider beside it brings the picture closer about that spot. It's the same crop the canvas edits, so the two stay in step.
 - **Crop corners point the right way**: in crop mode the arrow on each corner now lies along the way that corner pulls. All four used to show the same diagonal, so two of them pointed the wrong way.
