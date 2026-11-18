@@ -234,11 +234,11 @@ input[type='range'] {
   border-radius: 4px;
   padding: 2px 6px;
 }
-:where(select:not([multiple]):not([size]):focus, input:focus, textarea:focus) {
+/* A text box or select you are in: its one border turns gold, and that is all. No ring or halo on top of it, which read as three borders.
+   Not :where(), so a box with a class and a border of its own turns gold too */
+:is(select:not([multiple]):not([size]), input:not([type]), input[type='text'], input[type='search'], input[type='number'], input[type='url'], input[type='email'], input[type='password'], textarea):focus:not(.tag-input, .quick-help input) {
   border-color: var(--focus-ring);
-  outline: var(--focus-outline);
-  outline-offset: 1px;
-  box-shadow: var(--focus-halo);
+  outline: none;
 }
 code,
 .mono {
@@ -386,7 +386,7 @@ code,
   background: #c23b3b;
   color: #fff;
 }
-:focus-visible {
+:focus-visible:not(:where(select:not([multiple]):not([size]), input:not([type]), input[type='text'], input[type='search'], input[type='number'], input[type='url'], input[type='email'], input[type='password'], textarea)) {
   outline: var(--focus-outline);
   outline-offset: 1px;
   box-shadow: var(--focus-halo);
@@ -475,9 +475,6 @@ div.cm-editor.cm-focused {
 .field select:focus,
 .field textarea:focus {
   border-color: var(--focus-ring);
-  outline: var(--focus-outline);
-  outline-offset: 1px;
-  box-shadow: var(--focus-halo);
 }
 .text-field.multiline {
   align-items: flex-start;
@@ -5318,9 +5315,6 @@ textarea.data-cell {
 }
 .form-text:focus {
   border-color: var(--focus-ring);
-  outline: var(--focus-outline);
-  outline-offset: -2px;
-  box-shadow: var(--focus-inset);
 }
 .form-text {
   box-sizing: border-box;
@@ -6288,9 +6282,7 @@ kbd {
   font: inherit;
 }
 .ctx-search:focus {
-  outline: var(--focus-outline);
-  outline-offset: -2px;
-  box-shadow: var(--focus-inset);
+  border-color: var(--focus-ring);
 }
 .ctx-empty {
   padding: 5px 8px;
@@ -7112,9 +7104,6 @@ code {
   font: inherit;
 }
 .dialog-field input:focus {
-  outline: var(--focus-outline);
-  outline-offset: 1px;
-  box-shadow: var(--focus-halo);
   border-color: var(--focus-ring);
 }
 .dialog-field input[aria-invalid='true'] {
@@ -8918,9 +8907,7 @@ code {
   padding: 6px 8px;
 }
 .cm-composer textarea:focus {
-  outline: var(--focus-outline);
-  outline-offset: -2px;
-  box-shadow: var(--focus-inset);
+  border-color: var(--focus-ring);
 }
 .cm-actions {
   display: flex;

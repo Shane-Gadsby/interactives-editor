@@ -316,7 +316,8 @@ export function HelpPage({ id, anchor }: { id: string; anchor?: string }) {
     <div className="help-page">
       <header className="home-head">
         <a className="brand" href="#/">
-          Ixia
+          <img src="./favicon.svg" alt="" width={28} height={28} />
+          <span>Ixia</span>
         </a>
         <span className="muted help-page-label">
           Help <VersionInfo />

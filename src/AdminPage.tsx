@@ -137,7 +137,8 @@ export function AdminPage() {
     <div className="home usage-page admin-page">
       <header className="home-head">
         <a className="brand" href="#/">
-          Ixia
+          <img src="./favicon.svg" alt="" width={28} height={28} />
+          <span>Ixia</span>
         </a>
         <span className="muted">Admin</span>
         <div className="home-actions">
