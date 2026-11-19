@@ -6532,8 +6532,8 @@ function layoutCloud(input, width, height, options) {
   memo$1.set(key, JSON.stringify(result2));
   return result2;
 }
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const SHORT$1 = MONTHS.map((m) => m.slice(0, 3));
+const MONTHS$1 = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const SHORT$1 = MONTHS$1.map((m) => m.slice(0, 3));
 const num$1 = (v, fallback2) => {
   const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
   return Number.isFinite(n) ? n : fallback2;
@@ -6557,7 +6557,7 @@ function parseDate(v) {
 const yearText = (y) => y < 0 ? `${-y} BCE` : String(y);
 function dateText(d) {
   const y = yearText(d.year);
-  return d.precision === "day" ? `${d.day} ${MONTHS[d.month - 1]} ${y}` : d.precision === "month" ? `${MONTHS[d.month - 1]} ${y}` : y;
+  return d.precision === "day" ? `${d.day} ${MONTHS$1[d.month - 1]} ${y}` : d.precision === "month" ? `${MONTHS$1[d.month - 1]} ${y}` : y;
 }
 const rowsOf = (v) => Array.isArray(v) ? v.filter((r3) => !!r3 && typeof r3 === "object" && !Array.isArray(r3)) : [];
 const STEPS = [1 / 12, 1 / 4, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4];
@@ -6756,7 +6756,7 @@ function timelineLayout(eventsIn, erasIn, fromIn, toIn, options) {
 const round = (v) => Math.round(v * 10) / 10;
 function monthYear(t2) {
   const m = Math.min(11, Math.max(0, Math.floor((t2 - Math.floor(t2)) * 12 + 1e-9)));
-  return `${MONTHS[m]} ${yearText(Math.floor(t2 + 1e-9))}`;
+  return `${MONTHS$1[m]} ${yearText(Math.floor(t2 + 1e-9))}`;
 }
 class ListHelperError extends Error {
 }
@@ -7997,6 +7997,40 @@ function hasEach(list2, items, all2) {
   const has = (w) => have.some((h) => Object.is(h, w) || h === w);
   return all2 ? wanted.every(has) : wanted.some(has);
 }
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+function formatDate(d, format) {
+  const f2 = typeof format === "string" && format ? format.slice(0, 100) : "yyyy-mm-dd";
+  const two = (n) => String(n).padStart(2, "0");
+  return f2.replace(/yyyy|yy|mmmm|mmm|mm|m|dddd|ddd|dd|d|HH|nn/g, (t2) => {
+    switch (t2) {
+      case "yyyy":
+        return String(d.getFullYear());
+      case "yy":
+        return two(d.getFullYear() % 100);
+      case "mmmm":
+        return MONTHS[d.getMonth()];
+      case "mmm":
+        return MONTHS[d.getMonth()].slice(0, 3);
+      case "mm":
+        return two(d.getMonth() + 1);
+      case "m":
+        return String(d.getMonth() + 1);
+      case "dddd":
+        return DAYS[d.getDay()];
+      case "ddd":
+        return DAYS[d.getDay()].slice(0, 3);
+      case "dd":
+        return two(d.getDate());
+      case "d":
+        return String(d.getDate());
+      case "HH":
+        return two(d.getHours());
+      default:
+        return two(d.getMinutes());
+    }
+  });
+}
 const FORMULA_HELPERS = {
   fmt(n, decimals = 0, thousands = false) {
     const d = Math.max(0, Math.min(20, Math.round(decimals)));
@@ -8073,6 +8107,13 @@ const FORMULA_HELPERS = {
     const v = Number(value);
     for (let i = 0; i < t2.length; i++) if (v >= Number(t2[i])) return l[i];
     return l[t2.length] ?? l[l.length - 1];
+  },
+  /** Today's date as text, in the viewer's own time zone: `today('dd-mm-yyyy')`. See `formatDate` for the letters. */
+  today: (format) => formatDate(/* @__PURE__ */ new Date(), format),
+  /** A date (milliseconds, or text a browser can read such as "2026-11-19") as text: `date(due, 'd mmmm yyyy')`. Empty when it can't be read. */
+  date: (value, format) => {
+    const d = typeof value === "number" ? new Date(value) : value instanceof Date ? value : new Date(String(value ?? ""));
+    return Number.isFinite(d.getTime()) ? formatDate(d, format) : "";
   },
   /** Seconds as m:ss (h:mm:ss from an hour). */
   clock: (seconds) => {
@@ -25785,11 +25826,21 @@ Two buckets, four cards. Dropping a card in the right bucket keeps it there; dro
 ## Events and actions
 - **When dragging starts**, **When dragged over a drop zone** (moves over / off), **When dropped** (taken, refused, or dropped on no zone) and **When dragging ends** (always fires, after On drop, and also when the pick-up is cancelled). Leave the layer empty to hear every draggable layer or zone. Each fires once per drag, however it ends.
 - **While dragging** fires over and over while a layer is held and moving (dragged, nudged with Shift+arrows, or sent between zones with the arrow keys), at most once a frame. \`event.layerX\`/\`event.layerY\` say where the layer is, \`event.dx\`/\`event.dy\` how far it has come since it was picked up: set a variable from them to drive a gauge, move another layer along, or play a sound as it crosses a line.
-- Their \`event\` holds \`layer\` (the draggable layer's name), \`zone\` (the zone it is in now), \`from\` (where it was), \`accepted\`, \`reason\` (\`tags\` or \`full\`), \`swapped\`, \`tags\`, \`result\` (accepted, rejected, missed or cancelled) and \`keyboard\` (true when it was not dragged).
+- Every one of their \`event\`s holds \`type\`, \`layer\` (the draggable layer's name), \`tags\` (its tags), \`x\` and \`y\` (the pointer) and \`zone\`. The rest depends on the event, so a script can tell them apart by \`event.type\`:
+
+| Event | \`type\` | Also holds |
+|---|---|---|
+| When dragging starts | \`dragStart\` | \`from\` (the zone it was in), \`keyboard\` |
+| When dragged over a drop zone | \`enter\` or \`leave\` | \`accepted\` (whether that zone would take it) |
+| While dragging | \`dragMove\` | \`layerX\`, \`layerY\`, \`dx\`, \`dy\`, \`keyboard\` |
+| When dropped | \`drop\` | \`from\`, \`result\` (accepted, rejected or missed), \`accepted\`, \`reason\` (\`tags\` or \`full\` when refused), \`swapped\`, \`keyboard\` |
+| When dragging ends | \`dragEnd\` | \`from\`, \`result\` (as When dropped, or cancelled), \`dropped\` (true when a zone took it), \`cancelled\`, \`keyboard\` |
+
+\`keyboard\` is true when it was moved without dragging (keys, or a tap to pick up).
 - **Put layer in drop zone** moves a layer into a zone as if it had been dropped there; **Reset draggable** sends one (or all of them, for *Start again*) back to where it started; **Allow dragging** switches a draggable layer or a drop zone on and off. None of them fires the drag events, so they cannot start a loop.
 - **Allow dragging** and **Put layer in drop zone** also work in bulk: leave the layer empty for every draggable layer, or pick a container (a group or frame) to change everything inside it, and fill **Only tagged** to keep just the layers that carry that tag. **Changes** on Allow dragging adds the drop zones (or only them). One Allow dragging node with the layer empty locks every answer at once; scripts do the same with \`ix.drag.enable(undefined, false)\` and \`{ tag, what }\` as a third argument.
 - The older **On pointer → Dragging** events still work for scripted drags. Use the draggable settings when the point is to move a layer and drop it somewhere.
-- Scripts have \`ix.drag.zoneOf('Dog')\`, \`ix.drag.contents('Mammals')\`, \`ix.drag.state()\` (every layer and its zone), \`ix.drag.put(layer, zone)\`, \`ix.drag.reset(layer?)\` and \`ix.drag.enable(layer, on, { tag, what }?)\` (no layer: all of them, or everything inside a container). The page that holds the player can read \`player.dragState()\`.
+- Scripts have \`ix.drag.zoneOf('Dog')\`, \`ix.drag.contents('Mammals')\`, \`ix.drag.state()\` (every layer and its zone), \`ix.drag.put(layer, zone)\`, \`ix.drag.reset(layer?)\` (both glide there for the layer's glide time; add \`{ instant: true }\` to put it there now, so the script can move it again straight away) and \`ix.drag.enable(layer, on, { tag, what }?)\` (no layer: all of them, or everything inside a container). The page that holds the player can read \`player.dragState()\`.
 
 ## Keyboard, touch and screen readers
 Everyone should be able to finish the activity, so every drag has two ways that need no dragging.
@@ -25972,6 +26023,8 @@ An overlay page is a definition, so any number of layers can point at the same o
 Each layer can also hand the overlay **its own words** as it opens. A modal, a confirmation and a prompt say what they take (**What it takes** on the overlay's page: a **Heading**, a **Message**, and for the last two a **For**), and those show as fields in the layer's **Overlay** section. So one confirmation can ask "Delete the photo?" from one button and "Leave the group?" from another.
 
 **For** is how you tell the answers apart: give each layer a word (\`photo\`, \`group\`), and the flow that reads **What they chose** can check **For** to see which layer asked. Add your own variables to **What it takes** and they become fields the same way.
+
+An overlay can open another: a button inside a tooltip can open a modal, and the tooltip goes as the modal comes.
 
 Overlays never appear in **Next** and **Previous**, never count in \`pageCount\`, and never make a page with [Fit height to content](artboards) any taller: they open over the page.
 
@@ -26823,6 +26876,8 @@ Helpers are ready-made functions for common jobs: showing a number as text, mapp
 | \`wordCount(text)\` | How many words a text has (runs of anything but spaces). \`wordCount("one two  three")\` is 3 |
 | \`band(value, thresholds, labels)\` | A label for where a value falls. Thresholds go from the highest down and there is one more label than thresholds: \`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\` |
 | \`clock(seconds)\` | Seconds as \`m:ss\` (\`h:mm:ss\` from an hour): \`clock(95)\` is \`1:35\` |
+| \`today(format)\` | Today's date as text: \`today('dd-mm-yyyy')\` is \`19-11-2026\`. The letters are \`yyyy\` and \`yy\`, \`mmmm\` (November), \`mmm\` (Nov), \`mm\` and \`m\`, \`dddd\` (Thursday), \`ddd\` (Thu), \`dd\` and \`d\`, \`HH\` for hours and \`nn\` for minutes. With no format it's \`2026-11-19\`, which sorts |
+| \`date(value, format)\` | Any date as text, the same way: \`date(dueDate, 'd mmmm')\`. Empty when the value isn't a date |
 | \`shuffle(list, seed)\` | The list in a new order. Give a seed (a number) to get the same order every time |
 | \`randInt(a, b)\` | A whole number from \`a\` to \`b\`, both included. \`randInt(6)\` is 0 to 6 |
 | \`count(list)\`, \`count(list, field, value)\` | How many items a list has, or how many match: \`count(tasks)\`, \`count(tasks, "state", "done")\`. For a list of plain words or numbers leave the field out: \`count(answers, "yes")\` |
@@ -26983,8 +27038,11 @@ ${""}| \`ix.onFrame((dt, t) => …)\` | Run every frame |
 | \`ix.link.program\` | A value from the address the project was opened with (\`?program=GCSC\`), as text, read only ([Values on the link](course-context#values-on-the-link)) |
 | \`await ix.course.stamp(collection, 'Gold star')\`, \`await ix.course.count(collection, 'quizzes', 3)\`, \`await ix.course.read(collection)\` | Stamps and counters shared by every interactive in the learner's course ([Course collections](course-collections)) |
 | \`ix.setCursor('grab')\`, \`ix.log(…)\` | Cursor, logging |
+| \`ix.reducedMotion\` | True when the viewer's device asks for less motion, the same as \`reducedMotion\` in expressions |
+| \`await ix.saveFile('plan.csv', text, 'text/csv')\` | Hand the viewer a file the script made, like **Download a file**; true when it was handed over |
+| \`ix.today('dd-mm-yyyy')\` | Today's date as text, with the letters the \`today\` expression takes |
 
-\`.set()\` and \`.animate()\` change the properties in the [Animatable properties](animatable-properties) (position, size, colour, text, visibility, link URL…) and a layer's \`fill\`, \`stroke\`, \`shadow\` and auto layout. Anything else, such as an embed's \`html\`, \`className\`, \`bindings\` or a layer's \`repeat\`, is part of how the project was built: the call throws an error saying so. Links only go to \`http(s)\`, \`mailto\`, \`tel\` or relative addresses.
+A \`.set()\` wins over an \`.animate()\` or a drag's glide still on its way to the same property: the move stops where it is and the value you set stays. \`.set()\` and \`.animate()\` change the properties in the [Animatable properties](animatable-properties) (position, size, colour, text, visibility, link URL…) and a layer's \`fill\`, \`stroke\`, \`shadow\` and auto layout. Anything else, such as an embed's \`html\`, \`className\`, \`bindings\` or a layer's \`repeat\`, is part of how the project was built: the call throws an error saying so. Links only go to \`http(s)\`, \`mailto\`, \`tel\` or relative addresses.
 
 To paint a layer from a script every frame (generative art, particles, charts), use a [Script layer](script-layers).
 
