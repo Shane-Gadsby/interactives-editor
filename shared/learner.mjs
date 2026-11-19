@@ -244,10 +244,15 @@ export const userDataUpdate = (existing, clean, who, now) => {
 //The names a load asks for, off the query string (a,b,c). Anything that isn't a variable name is dropped
 export const userDataNames = (raw) => String(raw || '').split(',').filter((n) => NAME.test(n) && n !== '__proto__').slice(0, MAX_VARIABLES)
 
-//What a load gets back: only the names asked for, and only the ones that were saved
+//What a load gets back: only the names asked for, and only the ones that were saved. No names (null) is all of them, which is
+//what the learner page fetches early, before the project has said what it wants
 export const userDataOut = (doc, names) => {
 	let all = userDataOf(doc),
 		out = {}
+
+	if (names === null) {
+		names = Object.keys(all).filter((n) => NAME.test(n) && n !== '__proto__')
+	}
 
 	for (let name of names) {
 		if (Object.prototype.hasOwnProperty.call(all, name)) {

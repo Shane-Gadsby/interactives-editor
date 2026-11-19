@@ -181,6 +181,13 @@ describe('user data (Save user data / Load user data)', () => {
     expect((await loadUD(sam, 'answer')).json.variables).toEqual({});
   });
 
+  it('gives everything saved with all=1 (the learner page asking early), still only the session learner\'s', async () => {
+    await saveUD(sam, { answer: 'blue', tries: 2 });
+    await saveUD(lee, { answer: 'red' });
+    expect((await h.call('GET', `/learn/${token}/user-data?all=1`, { user: sam })).json).toEqual({ available: true, variables: { answer: 'blue', tries: 2 } });
+    expect((await h.call('GET', `/learn/${token}/user-data?all=1`, { user: null })).json).toEqual({ available: false });
+  });
+
   it('keeps nothing without a session, so the player uses the browser', async () => {
     expect((await saveUD(null, { a: 1 })).json).toEqual({ available: false });
     expect((await loadUD(null, 'a')).json).toEqual({ available: false });

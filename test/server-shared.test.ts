@@ -404,7 +404,8 @@ describe('the learner page passes the player\'s requests on', () => {
     await new Promise((r) => setTimeout(r, 50));
     //a read of the class also opens the page's live link (its own test is in server-shared-live)
     expect(calls.filter((c) => c.url.endsWith('/shared-live'))).toHaveLength(1);
-    calls.splice(0, calls.length, ...calls.filter((c) => !c.url.endsWith('/shared-live')));
+    //and the page fetches what was saved as it loads (learner-page-slow has those)
+    calls.splice(0, calls.length, ...calls.filter((c) => !c.url.endsWith('/shared-live') && !c.url.endsWith('/progress') && !c.url.endsWith('/user-data?all=1')));
     expect(calls.map((c) => [c.method, c.url.replace(/^.*\/learn\//, '')])).toEqual([
       ['GET', `${token}/shared/ds1?who=class`],
       ['POST', `${token}/shared/ds1`],

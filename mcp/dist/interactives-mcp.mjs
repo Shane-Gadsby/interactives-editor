@@ -8694,7 +8694,7 @@ const PLAYER_SCOPE_HINTS = {
   recordingSeconds: { type: "number", hint: "Seconds recorded so far" },
   recordings: { type: "object", hint: "The recording slots, by name" },
   mediaMessage: { type: "text", hint: "The last microphone or camera problem, in words" },
-  userData: { type: "object", hint: "userData.loaded: saved variables have been looked for; userData.restored: how many came back" },
+  userData: { type: "object", hint: "userData.loaded: saved variables have been looked for; userData.restored: how many came back; userData.failed: they could not be loaded this visit (nothing is saved over them)" },
   context: { type: "object", hint: "The course and the learner (context.firstName...)" },
   quiz: { type: "object", hint: "All the questions together: quiz.score, max, percent, passed, passMark, count, finished, right, done and quiz.questions (one entry each: prefix, page, score, points, correct, locked)" },
   data: { type: "object", hint: "Every data source by name" },
@@ -26680,7 +26680,7 @@ Tick **Save as user data** on a variable (under **Options**) and the player look
 
 It is saved a moment after it changes (a burst of typing is one save), and straight away when the learner moves to another page or leaves. It goes to the same place as the *Save progress* and *Load saved progress* nodes (see [Results and resume](results)), so you no longer need a *Save progress* node before every Next and Back.
 
-In expressions, \`userData.loaded\` is true once the saved values have been looked for (for a "Welcome back" panel that should not flash on a first visit), and \`userData.restored\` is how many variables came back. A live variable cannot be saved. Embedded pages (instances) keep nothing: tick it in the main project.
+In expressions, \`userData.loaded\` is true once the saved values have been looked for (for a "Welcome back" panel that should not flash on a first visit), and \`userData.restored\` is how many variables came back. \`userData.failed\` is true when they couldn't be loaded on this visit (the server was down, say): the project starts from its starting values, and **nothing is saved over the learner's saved work** until they come back, so you can show a "Your saved work couldn't be loaded, try again soon" message. A live variable cannot be saved. Embedded pages (instances) keep nothing: tick it in the main project.
 
 ## Putting variables back
 **Change a value or counter** with **Do** set to *Back to its starting value* puts one variable back. The **Put values back to the start** node puts several back in one go (tick them in the node's list, or **All**).
@@ -27981,6 +27981,10 @@ Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](exp
 The same link tells the project which course it is in and the learner's first name, for [Course and learner context](course-context). It never passes a username or email, and none of it goes into results or Insights. It also counts what learners do, for [Insights](insights).
 
 Someone opening it with no session plays as normal, and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
+
+A slow server is waited for: the project stays on its loading screen until the saved values arrive, however busy the StudyDesk page is. If the server fails to give them back at all, the project starts from its starting values and saves nothing over what was kept, so the learner's work is there on their next visit. A save that doesn't get through is tried again.
+
+Projects shared before 19 November 2026 gave up on a slow server after a second and a half, and could start a returning learner over with an empty plan. The Link for StudyDesk now fetches the saved values as soon as it opens, which makes that much rarer, but to fix it for good, open the project and press **Update** in [Share link](export#share-link) once.
 
 ## Save user data and Load user data
 **Remember** keeps a variable's value all the time, on its own. When you'd rather choose the moment, use the two action nodes instead: **Save progress** keeps the variables you tick, as they are right then (say, when the learner presses *Submit*), and **Load saved progress** puts them back on a later visit. Put the load in **Before activity loads** so the values are in place before anything shows. *Load saved progress* goes on from **Loaded** when anything came back, and from **Nothing saved** on a first visit, so you can set up a fresh start there.

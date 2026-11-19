@@ -3934,8 +3934,9 @@ router.get('/learn/:token/user-data', async (req, res) => {
 		return res.json({available: false})
 	}
 
-	let names = learner.userDataNames(req.query.names),
-		doc = names.length ? await activityData.findOne({project: project._id, username: who.username, course: who.course}) : null
+	//all=1 is the learner page asking early, before the project has said which names it wants
+	let names = req.query.all === '1' ? null : learner.userDataNames(req.query.names),
+		doc = names === null || names.length ? await activityData.findOne({project: project._id, username: who.username, course: who.course}) : null
 
 	res.json({available: true, variables: learner.userDataOut(doc, names)})
 })
@@ -5183,7 +5184,12 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			return fetch(base + '/learn/' + token + '/' + path, {method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body), keepalive: body !== undefined}).then(function (r) {
 				//Saving and reporting results is this page's own job, so when it fails that is worth knowing (the route and status, nothing else)
 				if (!r.ok && r.status >= 500) takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), status: r.status, fingerprint: 'learn-' + method.toLowerCase() + '-' + r.status})
-				return r.ok ? r.json() : {available: false}
+				if (r.ok) return r.json()
+				//No session or the link turned off is nowhere to keep anything. The server turning it down (too much, the wrong shape) is
+				//refused, and anything else is the server failing, which a project has to be able to tell apart from no session, or it takes
+				//an empty copy for the learner's own and saves over what's kept
+				if (r.status === 401 || r.status === 403 || r.status === 404) return {available: false}
+				return r.status === 400 || r.status === 413 ? {available: true, refused: true} : {available: true, failed: true}
 			}, function () {
 				takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), fingerprint: 'learn-' + method.toLowerCase() + '-network'})
 				throw new Error('network')
@@ -5193,6 +5199,27 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		chain = done.catch(function () {
 		})
 		return done
+	}
+	//What was saved for this learner, fetched now while the project is still loading, so it's here (or nearly) when the project asks.
+	//Projects shared before the player waited for a slow page give up on it after a second and a half and start the learner over from
+	//nothing, and on a busy StudyDesk page the server can take longer than that. Each is used once, for the project's first load, and
+	//only if nothing has been saved since; anything that went wrong with it and the project's own ask goes to the server as before
+	var saved = {progress: false, userData: false}, fetched = {}
+	if ((sessionID && sessionID !== 'null') || ltiSession) {
+		fetched.progress = call('GET', 'progress')
+		fetched.userData = call('GET', 'user-data?all=1')
+		fetched.progress.catch(function () {
+		})
+		fetched.userData.catch(function () {
+		})
+	}
+	var early = function (kind, fresh) {
+		var got = fetched[kind]
+		fetched[kind] = null
+		if (!got || saved[kind]) return fresh()
+		return got.then(function (j) {
+			return j.failed || j.refused ? fresh() : j
+		}, fresh)
 	}
 	//What the learner does, for the project's Insights: the project says it (postMessage), and it goes into the suite's
 	//analytics the way every toolbox app's does (reportAnalytics, si-manager's utilities.js), as a lean row with the
@@ -5454,32 +5481,60 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			return
 		}
 		if (!m || m.source !== 'interactives-progress') return
+		//A player that says acks hears at once that its answer is coming, so it waits for a slow server instead of giving up after a
+		//second and a half and starting the learner over from nothing. It also hears a failure as a failure. An older one (a page shared
+		//before this) gets neither, since it would take both for an empty answer, and gets the old replies
+		if (m.acks && m.rid) frame.contentWindow.postMessage({target: 'interactives', type: 'progress-pending', rid: m.rid}, '*')
 		var failed = function () {
-			answer(m, {ok: false, available: false})
+			answer(m, m.acks ? {ok: false, available: true, failed: true} : {ok: false, available: false})
+		}
+		//The answer to a load or save, or the failure when it didn't work
+		var settle = function (j, good) {
+			if (j.failed || j.refused) return answer(m, m.acks ? {ok: false, available: true, failed: !!j.failed} : {ok: false, available: false})
+			answer(m, good(j))
 		}
 		if (m.op === 'context') {
 			if (contextReady) answerContext(m)
 			else contextAsks.push(m)
 		}
 		else if (m.op === 'load') {
-			call('GET', 'progress').then(function (j) {
-				answer(m, {ok: true, available: !!j.available, data: j.progress || null})
+			early('progress', function () {
+				return call('GET', 'progress')
+			}).then(function (j) {
+				settle(j, function (j) {
+					return {ok: true, available: !!j.available, data: j.progress || null}
+				})
 			}, failed)
 		}
 		else if (m.op === 'save') {
+			saved.progress = true
 			call('PUT', 'progress', m.data).then(function (j) {
-				answer(m, {ok: true, available: !!j.available})
+				settle(j, function (j) {
+					return {ok: true, available: !!j.available}
+				})
 			}, failed)
 		}
 		else if (m.op === 'userdata-save') {
+			saved.userData = true
 			call('PUT', 'user-data', {variables: m.variables}).then(function (j) {
-				answer(m, {ok: !!j.ok, available: !!j.available})
+				settle(j, function (j) {
+					return {ok: !!j.ok, available: !!j.available}
+				})
 			}, failed)
 		}
 		else if (m.op === 'userdata-load') {
 			var names = Array.isArray(m.names) ? m.names.filter(function (n) { return typeof n === 'string' }) : []
-			call('GET', 'user-data?names=' + encodeURIComponent(names.join(','))).then(function (j) {
-				answer(m, {ok: true, available: !!j.available, data: j.variables || null})
+			early('userData', function () {
+				return call('GET', 'user-data?names=' + encodeURIComponent(names.join(',')))
+			}).then(function (j) {
+				settle(j, function (j) {
+					//The early fetch has everything saved, so only the names asked for go back
+					var out = {}, all = j.variables || {}
+					names.forEach(function (n) {
+						if (Object.prototype.hasOwnProperty.call(all, n)) out[n] = all[n]
+					})
+					return {ok: true, available: !!j.available, data: j.variables ? out : null}
+				})
 			}, failed)
 		}
 		else if (m.op === 'shared-read') {
@@ -5522,7 +5577,9 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		else if (m.op === 'mark') {
 			//A question marked on the server: the project sends the answer, the server marks it and says how it went
 			call('POST', 'check', {question: m.question, action: m.action, answer: m.answer}).then(function (j) {
-				answer(m, {ok: true, available: !!j.available, data: j})
+				settle(j, function (j) {
+					return {ok: true, available: !!j.available, data: j}
+				})
 			}, failed)
 		}
 		else if (m.op === 'guard') {
