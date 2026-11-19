@@ -479,6 +479,8 @@ export interface ShareInfo {
   remix?: boolean;
   /** What the project declared it uses of the learner's device when this page was published (the learner page only allows these). */
   sensors?: { microphone?: boolean; camera?: boolean; photos?: boolean } | null;
+  /** Whether the page now showing waits for the StudyDesk session before the project starts (the project's setting when it was published). Absent on a page shared before the setting. */
+  waitSession?: boolean;
   /** Who published the page now showing. */
   by?: { username: string | null; name: string | null } | null;
   /** The page an update replaced, kept for one-click revert. */

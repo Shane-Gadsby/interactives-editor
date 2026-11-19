@@ -2030,6 +2030,28 @@ const prepareMarkedShare = (html, oldSalt) => {
 	}
 }
 
+//Project > Wait for user session before start, read out of the page being shared and kept on the share record, so the learner page
+//does what the project meant when it was shared. The editor writes it into the page as a plain true or false. Null when the page
+//doesn't say (one shared before the setting, or built by something else), and the learner page then waits a while but not forever
+const declaredWait = (html) => {
+	let open = html.indexOf('id="ix-project">'),
+		start = open + 'id="ix-project">'.length,
+		end = open < 0 ? -1 : html.indexOf('</script>', start)
+
+	if (end < 0 || !html.includes('"waitForSession":')) {
+		return null
+	}
+
+	try {
+		let wait = JSON.parse(html.slice(start, end)).settings?.waitForSession
+
+		return typeof wait === 'boolean' ? wait : null
+	}
+	catch (err) {
+		return null
+	}
+}
+
 //What the project says it uses of the learner's device (Project > Microphone and camera), read out of the page being shared the same way and
 //kept on the share record. The learner page builds its consent screen and its limits from this copy, so what a project asks for over
 //postMessage is held to what the owner declared when they shared it, never to what the project says now. Null when it declares nothing.
@@ -2118,13 +2140,14 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 		sensors = declaredSensors(html),
 		shared = responses.declaredShared(html),
 		roomsDeclared = roomsLib.declaredRooms(html),
-		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {}), ...(Object.keys(roomsDeclared).length ? {rooms: roomsDeclared} : {})}
+		waitSession = declaredWait(html),
+		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(waitSession === null ? {} : {waitSession}), ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {}), ...(Object.keys(roomsDeclared).length ? {rooms: roomsDeclared} : {})}
 
 	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
 	//An update keeps the page it replaces (one, not a history), so a bad publish can be undone in a click
 	let prevKept = false
 	if (doc.share?.token && await moveIfThere(shareFile(token), sharePrevFile(token))) {
-		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {})}
+		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(typeof doc.share.waitSession === 'boolean' ? {waitSession: doc.share.waitSession} : {}), ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {})}
 		prevKept = true
 	}
 	await fs.promises.writeFile(shareFile(token), prepared ? prepared.html : html)
@@ -2164,8 +2187,16 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 	await fs.promises.rename(sharePrevFile(token), shareFile(token))
 	await fs.promises.rename(swap, sharePrevFile(token))
 
-	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
+	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(typeof doc.share.waitSession === 'boolean' ? {waitSession: doc.share.waitSession} : {}), ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
 		set = {share}, unset = {}
+
+	//The page that came back waits for the session, or doesn't, as it did when it was shared
+	if (typeof doc.share.previous.waitSession === 'boolean') {
+		share.waitSession = doc.share.previous.waitSession
+	}
+	else {
+		delete share.waitSession
+	}
 
 	//The page that came back has the sensors it was shared with
 	if (doc.share.previous.sensors) {
@@ -5136,13 +5167,13 @@ const scriptJson = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/>/
 //asks it by postMessage. Only what was declared when the link was shared is allowed. The frame's address carries a nonce the bridge expects
 //on every request (#ixm=<nonce>), since the frame's own origin is opaque and a window is not proof enough: a frame that navigated away
 //keeps the window but loses the address. Without a declaration none of it is in the page
-const learnerPage = (token, base, nonce, project, remix, sensors, mediaNonce, link = '') => `<!doctype html>
+const learnerPage = (token, base, nonce, project, remix, sensors, mediaNonce, link = '', wait = null) => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ixia</title>
-<style>html,body{margin:0;height:100%;background:#111}iframe{border:0;display:block;width:100%;height:100%}#remix{position:fixed;right:12px;bottom:12px;z-index:2;display:none;font:600 13px/1 system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);text-decoration:none}#remix:hover,#remix:focus-visible{background:#2f49d0}#remix[aria-disabled=true]{opacity:.7;cursor:progress}#remix.err{background:#b3261e}</style>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#111}iframe{border:0;display:block;width:100%;height:100%}#remix{position:fixed;right:12px;bottom:12px;z-index:2;display:none;font:600 13px/1 system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);text-decoration:none}#remix:hover,#remix:focus-visible{background:#2f49d0}#remix[aria-disabled=true]{opacity:.7;cursor:progress}#remix.err{background:#b3261e}</style>
 </head>
 <body>
 <iframe id="project" src="${base}/s/${token}${frameHash(sensors ? `ixm=${mediaNonce}` : '', link)}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen; autoplay" title="Interactive"></iframe>
@@ -5151,12 +5182,25 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 <script nonce="${nonce}">
 (function () {
 	var token = ${JSON.stringify(token)}, base = ${JSON.stringify(base)}, frame = document.getElementById('project'), sessionID = null
-	try {
-		sessionID = new URLSearchParams(location.search).get('sessionID') || sessionStorage.getItem('sessionID')
-		if (sessionID && sessionID !== 'null') sessionStorage.setItem('sessionID', sessionID)
+	//The session id is looked for where fetchActivity and the rest of the toolbox look: the url, then the sessionStorage that
+	//si-manager's handshake (set-session.js) writes it into. On a StudyDesk page that write often lands after this page has loaded,
+	//so it's looked for again every time it's needed, never just the once
+	var findSession = function () {
+		if (sessionID && sessionID !== 'null') return true
+		try {
+			var found = new URLSearchParams(location.search).get('sessionID') || sessionStorage.getItem('sessionID')
+			if (found && found !== 'null') {
+				sessionID = found
+				sessionStorage.setItem('sessionID', found)
+				return true
+			}
+		}
+		catch (e) {
+		}
+		sessionID = null
+		return false
 	}
-	catch (e) {
-	}
+	findSession()
 	//Launched from another LMS over LTI 1.3: the launch hands its session over in the url fragment, which goes into sessionStorage
 	//and off the address bar. It stands in for the StudyDesk session (and there is no StudyDesk account to remix into)
 	var ltiSession = null
@@ -5170,6 +5214,47 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	}
 	catch (e) {
 	}
+	//Nothing is loaded, saved or reported until it's known who this is. Inside another page with no session yet, that's the StudyDesk
+	//handshake still on its way, so this waits for it the way fetchActivity does (every 200ms, and the storage event when the browser
+	//sends one) instead of asking the server as nobody. That race is how a learner's saved work was there on one load and gone on the
+	//next: asked as nobody, the server has no record, and the project started over in the browser's own storage.
+	//How long is the project's own choice (Project > Wait for user session before start, as it was when this was shared). On, it
+	//waits for as long as it takes, since a project that needs the session has nothing right to show without one. Off, it doesn't
+	//wait at all and the project starts at once with whatever is known. A page shared before the setting gets 15 seconds, then
+	//carries on without one. In its own tab there's no handshake to wait for, whatever the setting
+	var sessionWait = ${wait === true ? "'forever'" : wait === false ? "'never'" : "'while'"}
+	var sessionSettled = false, sessionDone = null, sessionBegan = Date.now(), held = []
+	var sessionReady = new Promise(function (resolve) {
+		sessionDone = resolve
+	})
+	var settleSession = function () {
+		if (sessionSettled) return
+		sessionSettled = true
+		sessionDone()
+	}
+	var sessionCame = function () {
+		if (!sessionSettled && findSession()) settleSession()
+	}
+	var lookForSession = function () {
+		if (sessionSettled) return
+		if (findSession() || (sessionWait !== 'forever' && Date.now() - sessionBegan >= 15000)) return settleSession()
+		setTimeout(lookForSession, 200)
+	}
+	//The player takes 20 seconds of quiet after "it's coming" for a page that failed, so while this waits it says so again for
+	//everything it's holding
+	var stillComing = function () {
+		if (sessionSettled) return
+		held.forEach(function (rid) {
+			if (frame.contentWindow) frame.contentWindow.postMessage({target: 'interactives', type: 'progress-pending', rid: rid}, '*')
+		})
+		setTimeout(stillComing, 5000)
+	}
+	if (sessionID || ltiSession || window.parent === window || sessionWait === 'never') settleSession()
+	else {
+		window.addEventListener('storage', sessionCame)
+		setTimeout(lookForSession, 200)
+		setTimeout(stillComing, 5000)
+	}
 	var answer = function (m, reply) {
 		if (m.rid) frame.contentWindow.postMessage(Object.assign({target: 'interactives', type: 'progress', rid: m.rid}, reply), '*')
 	}
@@ -5177,10 +5262,11 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	var chain = Promise.resolve()
 	var diagQueue = [], diagTaken = 0, diagSettled = false, diagTimer = null, lastHeight = 0
 	var call = function (method, path, body) {
-		var headers = {'Content-Type': 'application/json'}
-		if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
-		else if (ltiSession) headers['X-LTI-Session'] = ltiSession
 		var run = function () {
+			//worked out as it's sent, so a session that turned up late still goes with it
+			var headers = {'Content-Type': 'application/json'}
+			if (findSession()) headers['X-Session-ID'] = sessionID
+			else if (ltiSession) headers['X-LTI-Session'] = ltiSession
 			return fetch(base + '/learn/' + token + '/' + path, {method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body), keepalive: body !== undefined}).then(function (r) {
 				//Saving and reporting results is this page's own job, so when it fails that is worth knowing (the route and status, nothing else)
 				if (!r.ok && r.status >= 500) takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), status: r.status, fingerprint: 'learn-' + method.toLowerCase() + '-' + r.status})
@@ -5204,18 +5290,25 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	//Projects shared before the player waited for a slow page give up on it after a second and a half and start the learner over from
 	//nothing, and on a busy StudyDesk page the server can take longer than that. Each is used once, for the project's first load, and
 	//only if nothing has been saved since; anything that went wrong with it and the project's own ask goes to the server as before
-	var saved = {progress: false, userData: false}, fetched = {}
-	if ((sessionID && sessionID !== 'null') || ltiSession) {
-		fetched.progress = call('GET', 'progress')
-		fetched.userData = call('GET', 'user-data?all=1')
-		fetched.progress.catch(function () {
-		})
-		fetched.userData.catch(function () {
-		})
-	}
+	//It goes once the session is known (straight away when it came in the url), and not for anything the project has asked for by then
+	var saved = {progress: false, userData: false}, fetched = {}, asked = {}
+	sessionReady.then(function () {
+		if (!findSession() && !ltiSession) return
+		if (!asked.progress) {
+			fetched.progress = call('GET', 'progress')
+			fetched.progress.catch(function () {
+			})
+		}
+		if (!asked.userData) {
+			fetched.userData = call('GET', 'user-data?all=1')
+			fetched.userData.catch(function () {
+			})
+		}
+	})
 	var early = function (kind, fresh) {
 		var got = fetched[kind]
 		fetched[kind] = null
+		asked[kind] = true
 		if (!got || saved[kind]) return fresh()
 		return got.then(function (j) {
 			return j.failed || j.refused ? fresh() : j
@@ -5239,7 +5332,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			remixLink.setAttribute('aria-disabled', 'true')
 			remixLink.textContent = 'Copying...'
 			var headers = {}
-			if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
+			if (findSession()) headers['X-Session-ID'] = sessionID
 			fetch(base + '/remix/' + token, {method: 'POST', headers: headers}).then(function (r) {
 				return r.json().then(function (j) {
 					return {ok: r.ok, body: j}
@@ -5278,7 +5371,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		if (live.gone || typeof AbortController === 'undefined') return
 		var ctl = new AbortController(), headers = {}, up = false
 		live.ctl = ctl
-		if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
+		if (findSession()) headers['X-Session-ID'] = sessionID
 		else if (ltiSession) headers['X-LTI-Session'] = ltiSession
 		var ended = function () {
 			if (up) tellLive({up: false})
@@ -5341,7 +5434,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			url: (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + base + '/rooms/ws',
 			WS: window.WebSocket,
 			hello: function () {
-				return {token: token, session: sessionID && sessionID !== 'null' ? sessionID : null, lti: ltiSession}
+				return {token: token, session: findSession() ? sessionID : null, lti: ltiSession}
 			},
 			onFrame: function (f) {
 				tellRoom({frame: f})
@@ -5456,6 +5549,8 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			while (contextAsks.length) answerContext(contextAsks.shift())
 			//after this function is through, so known is settled either way
 			setTimeout(settleAnalytics, 0)
+			//fetchActivity has the session, so the wait above is over whether or not its own look has come round yet
+			if (!err && data && data.sessionID) sessionCame()
 			if (err || !data || !data.user || !data.user.username) return
 			window.m.user = data.user
 			window.m.activity = data.activity || {}
@@ -5465,7 +5560,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		})
 	}
 	else contextReady = true
-	window.addEventListener('message', function (e) {
+	window.addEventListener('message', function takeMessage(e, late) {
 		if (e.source !== frame.contentWindow) return
 		var m = e.data
 		if (m && m.source === 'interactives-record') return takeRecord(m.record)
@@ -5484,7 +5579,17 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		//A player that says acks hears at once that its answer is coming, so it waits for a slow server instead of giving up after a
 		//second and a half and starting the learner over from nothing. It also hears a failure as a failure. An older one (a page shared
 		//before this) gets neither, since it would take both for an empty answer, and gets the old replies
-		if (m.acks && m.rid) frame.contentWindow.postMessage({target: 'interactives', type: 'progress-pending', rid: m.rid}, '*')
+		if (m.acks && m.rid && late !== true) frame.contentWindow.postMessage({target: 'interactives', type: 'progress-pending', rid: m.rid}, '*')
+		//Asked before it's known who this is: it's taken up again, in the order it came, once the session is settled. The player has
+		//heard its answer is coming, so the project holds its start for it rather than opening on nothing. Context and analytics
+		//wait on fetchActivity themselves
+		if (!sessionSettled && m.op !== 'context' && m.op !== 'analytics') {
+			if (m.acks && m.rid) held.push(m.rid)
+			sessionReady.then(function () {
+				takeMessage(e, true)
+			})
+			return
+		}
 		var failed = function () {
 			answer(m, m.acks ? {ok: false, available: true, failed: true} : {ok: false, available: false})
 		}
@@ -5493,9 +5598,14 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			if (j.failed || j.refused) return answer(m, m.acks ? {ok: false, available: true, failed: !!j.failed} : {ok: false, available: false})
 			answer(m, good(j))
 		}
-		if (m.op === 'context') {
+		//A project set to wait for the session asks this and holds its start for the answer, which is only that the wait is over
+		if (m.op === 'session') answer(m, {ok: true, available: !!(findSession() || ltiSession)})
+		else if (m.op === 'context') {
 			if (contextReady) answerContext(m)
-			else contextAsks.push(m)
+			else {
+				if (m.acks && m.rid && !sessionSettled) held.push(m.rid)
+				contextAsks.push(m)
+			}
 		}
 		else if (m.op === 'load') {
 			early('progress', function () {
@@ -5627,7 +5737,7 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	}
 
 	//The project the link is for, so the records its learners make are filed under it
-	let project = await projects.findOne({'share.token': token}, {projection: {_id: 1, 'share.remix': 1, 'share.sensors': 1, 'share.rooms': 1}})
+	let project = await projects.findOne({'share.token': token}, {projection: {_id: 1, 'share.remix': 1, 'share.sensors': 1, 'share.rooms': 1, 'share.waitSession': 1}})
 
 	if (!project) {
 		return res.status(404).send('This share link has been turned off, or never existed')
@@ -5646,7 +5756,7 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('Referrer-Policy', 'no-referrer')
 	res.setHeader('X-Robots-Tag', 'noindex')
-	res.type('html').send(learnerPage(token, req.baseUrl, nonce, project._id, !!project.share?.remix, project.share?.sensors || null, crypto.randomBytes(16).toString('hex'), linkValues(req.query)))
+	res.type('html').send(learnerPage(token, req.baseUrl, nonce, project._id, !!project.share?.remix, project.share?.sensors || null, crypto.randomBytes(16).toString('hex'), linkValues(req.query), typeof project.share?.waitSession === 'boolean' ? project.share.waitSession : null))
 })
 
 //The link's own values (?program=GCSC on the StudyDesk embed) handed on to the project in its frame's #, since the frame can't see

@@ -63,6 +63,7 @@ import {
   variableLabelAndName,
   HUG_DURATION_MS,
   hugDuration,
+  waitsForSession,
 } from 'interactives-player';
 import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { collaboratorCountOf } from '../lib/db';
@@ -859,6 +860,18 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         />
         <ColorField label="Page background" value={project.settings.pageBackground} onChange={(c) => setProject((p) => (p.settings.pageBackground = c), 'page-bg')} />
         <CheckField
+          label="Hide sideways scrollbar"
+          title="When the project plays inside a frame (StudyDesk, an embedded link or file), the page never shows a horizontal scrollbar. Opened in its own tab it scrolls as usual. Share again (Update) after changing it."
+          value={project.settings.hideScrollbarX === true}
+          onChange={(v) => setProject((p) => (v ? (p.settings.hideScrollbarX = true) : delete p.settings.hideScrollbarX))}
+        />
+        <CheckField
+          label="Hide up-down scrollbar"
+          title="On to begin with: the frame grows to fit the project, so a vertical scrollbar would only flicker while it does. Left on from the start, it comes back if nothing sizes the frame. Share again (Update) after changing it."
+          value={project.settings.hideScrollbarY !== false}
+          onChange={(v) => setProject((p) => (p.settings.hideScrollbarY = v))}
+        />
+        <CheckField
           label="Live collaboration"
           title="Turn on when you work on this project at the same time as the people you invite: you see each other's cursors and changes as they happen. Off (the default), the project is saved one person at a time, nothing extra is sent, and if two people have it open the second to save is asked to reload."
           value={!!project.settings.liveSync}
@@ -894,6 +907,12 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           title="Share artboards marked Publish to library, plus this project's styles and assets, as components other projects can use (Libraries tab)"
           value={!!project.settings.library}
           onChange={(v) => setProject((p) => (p.settings.library = v))}
+        />
+        <CheckField
+          label="Wait for user session before start"
+          title="On the Link for StudyDesk, the project stays on its loading screen until StudyDesk has said who the learner is, however long that takes, so their saved work is always there when it starts. Turn off for a project that needs nothing from the learner's session, and it starts at once. On to begin with for a project that saves user data, remembers variables or reports a result. Share again (Update) after changing it."
+          value={waitsForSession(project)}
+          onChange={(v) => setProject((p) => (p.settings.waitForSession = v))}
         />
         <CheckField
           label="Respect reduced motion"

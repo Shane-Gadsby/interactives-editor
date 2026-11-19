@@ -1,5 +1,5 @@
 import { loadPlayerSource } from './player-source';
-import { buildStandaloneHtml, PACKAGE_EXTENSION, withPublishedCredits, type Asset, type ContextValues, type Project } from 'interactives-player';
+import { buildStandaloneHtml, PACKAGE_EXTENSION, waitsForSession, withPublishedCredits, type Asset, type ContextValues, type Project } from 'interactives-player';
 import { hasScriptLayers } from './draw-templates';
 import { assetBytes, exportPackage } from './db';
 import { withOptimisedAssets } from './asset-variants';
@@ -69,7 +69,9 @@ export async function standaloneHtml(
   // Where a picture was found in the catalogue is the author's business, not something a page for learners carries
   const unfound = unsampled.assets.some((a) => a.catalogue) ? { ...unsampled, assets: unsampled.assets.map(({ catalogue: _c, ...a }) => a) } : unsampled;
   const clean = withPublishedCredits(unfound as Project);
-  const named = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
+  // Wait for user session is written out as a plain yes or no, so the server can read what the project meant off the page it's given
+  const settled = { ...clean, settings: { ...clean.settings, waitForSession: waitsForSession(clean) } };
+  const named = opts.startArtboardId ? { ...settled, settings: { ...settled.settings, startArtboardId: opts.startArtboardId } } : settled;
   // The swapped assets carry their bytes as data: urls, which the builder embeds as they are (assetBytes reads them too)
   const p = opts.optimise && !opts.bytesFor ? await withOptimisedAssets(named) : named;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;

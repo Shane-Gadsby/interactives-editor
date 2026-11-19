@@ -93,11 +93,8 @@ function NoteCard({ project, note, owner, x, y, scale, zoom, detached, picked, e
     if (t.closest('button, textarea, [data-nodrag]') && kind === 'move') return;
     pick();
     if (editing && kind === 'move') return;
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      // synthetic or already released pointer
-    }
+    // The pointer is only captured once the note actually moves (in move). Captured on the press, the browser sends the
+    // click and double-click that follow to the note itself, so a double-click on the title bar opened the text instead
     drag.current = { kind, sx: e.clientX, sy: e.clientY, x0: notePlace(project, owner, note).x, y0: notePlace(project, owner, note).y, w0: note.w, h0: note.h, moved: false };
   };
   const move = (e: ReactPointerEvent) => {
@@ -106,6 +103,13 @@ function NoteCard({ project, note, owner, x, y, scale, zoom, detached, picked, e
     const dx = e.clientX - d.sx;
     const dy = e.clientY - d.sy;
     if (!d.moved && Math.hypot(dx, dy) < 3) return;
+    if (!d.moved) {
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // synthetic or already released pointer
+      }
+    }
     d.moved = true;
     e.stopPropagation();
     if (d.kind === 'move') moveNote(note.id, d.x0 + dx / zoom, d.y0 + dy / zoom, `note-move:${note.id}`);
