@@ -4195,6 +4195,7 @@ ${parked.frameling ? '' : FRAMELING_API_ROW}| \`ix.onFrame((dt, t) => …)\` | R
 | \`ix.pointer\`, \`ix.artboard\` | Pointer \`{x, y, down}\`, artboard \`{name, width, height}\` |
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
 | \`ix.context.firstName\`, \`ix.context.courseCode\`, \`ix.context.isStaff\` | The course and learner, read only ([Course and learner context](course-context)) |
+| \`ix.link.program\` | A value from the address the project was opened with (\`?program=GCSC\`), as text, read only ([Values on the link](course-context#values-on-the-link)) |
 | \`await ix.course.stamp(collection, 'Gold star')\`, \`await ix.course.count(collection, 'quizzes', 3)\`, \`await ix.course.read(collection)\` | Stamps and counters shared by every interactive in the learner's course ([Course collections](course-collections)) |
 | \`ix.setCursor('grab')\`, \`ix.log(…)\` | Cursor, logging |
 
@@ -5110,6 +5111,18 @@ Results are already kept per course, so each course's learners start clean witho
 
 After changing per-course values, press **Update to the latest version** in [Share link](export#share-link) so the Link for StudyDesk plays the new version.
 
+## Values on the link
+**link** sits beside context: it holds the values on the address the project was opened with, so one project can serve several programs or courses from different links. Add \`&program=GCSC\` to the end of the address in the embed code (or \`?program=GCSC\` to a link with nothing after it), and the project reads:
+
+- Text and bindings: \`{link.program}\`, \`link.program == 'GCSC'\`.
+- Scripts: \`ix.link.program\`, whether or not they run in the sandbox.
+
+Every value is text, and a name that isn't there is empty, so give it a fallback: \`link.program || 'MSCN'\`. A name is letters, digits, \`.\`, \`_\` and \`-\` (up to 40), a value is up to 200 letters, and there are 20 at most. \`title\` and \`cdtID\` (the embed code's own), \`sessionID\`, \`ixm\` and \`lti\` are never handed on.
+
+It works from the Link for StudyDesk and from a plain share link. In the editor and Preview **link** is empty. A project shared before 19 November 2026 needs **Update** in Share to get it.
+
+Anyone can change what's on an address they open, so use a value to pick what to show, never to decide what someone may do or to set a score.
+
 ## Privacy
 Only the course, the learner's first name and display name, and whether they are a student or staff go to the project. Never a username, email, student number or anything that could look a person up. Nothing from \`context\` is sent to analytics, results or diagnostics by the player or the Link for StudyDesk page. A project that records a name itself (a script saving \`ix.context.firstName\` with **Record**) is doing that on purpose, so don't.`,
   },
@@ -5839,7 +5852,7 @@ That link opens the **learner page**: a small page around your project that know
 
 A project that uses a microphone, camera or photos (see [Microphone, camera and photos](sensors)) only works through the **Link for StudyDesk**, and the iframe that holds that link on the StudyDesk page needs \`allow="microphone; camera"\`. The **Embed code** below writes that for you. Update the link after changing what the project declares.
 
-**Values on the link.** Anything you add to the link's address, like \`?program=GCSC\` (or \`&program=GCSC\` after what the embed code already has), is handed on to the project: it arrives on the end of the project frame's own address after a \`#\`, as \`#program=GCSC\`. A script with **Run scripts in the sandbox** off reads it from \`location.hash\`. The embed code's own \`title\` and \`cdtID\`, and the StudyDesk session, are kept back. Names are letters, digits, \`.\`, \`_\` and \`-\` (up to 40), values up to 200 letters, and 20 of them at most. A learner can change what's on an address they open, so treat a value as a choice, never as a permission.
+**Values on the link.** Anything you add to the link's address, like \`&program=GCSC\` on the end of the embed code's, reaches the project as \`link.program\` (\`ix.link.program\` in a script). See [Values on the link](course-context#values-on-the-link).
 
 ### Embed code
 Under the Link for StudyDesk, **Embed code** is the link already wrapped in the iframe the Toolbox writes for its own items, ready to paste. Press **Copy embed code**, then in StudyDesk, StaffDesk or the open site edit the page, open the editor's **Source code** view (the \`<>\` button), paste where it should go and save. The page treats it like any other Toolbox item.
