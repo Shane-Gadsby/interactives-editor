@@ -5,6 +5,7 @@ import { Icons } from '../components/icons';
 import { SectionBlurb } from '../components/SectionBlurb';
 import { bindCardToPage, overlayTargets, unbindCard } from '../lib/dialog-kit';
 import { PropFields } from './PropFields';
+import { ExprField, ExprLocals } from '../components/ExprField';
 
 const SIDES = [
   { value: 'auto', label: 'Wherever it fits' },
@@ -99,6 +100,37 @@ export function OverlaySection({ node, ab, project }: { node: SceneNode; ab: Art
               })
             }
           />
+          {/* The same inputs as formulas, worked out as it opens: one line serves every copy of a repeater */}
+          {(page.props ?? []).length > 0 && (
+            <ExprLocals.Provider value={{ locals: ['layer', 'item', 'index'] }}>
+              {(page.props ?? []).map((p) => {
+                const v = project.variables.find((x) => x.id === p.variable);
+                if (!v) return null;
+                const label = p.label || v.label || v.name;
+                return (
+                  <ExprField
+                    key={`x-${p.variable}`}
+                    label={`${label} from a formula`}
+                    title={`Worked out as it opens, and used instead of the value above: layer.name, item.title, "Delete " + item.name + "?". In a repeater, item and index are the copy that opened it`}
+                    value={link.inputExprs?.[v.name] ?? ''}
+                    commitOnBlur
+                    placeholder="e.g. item.name"
+                    onChange={(src) =>
+                      store().update((d) => {
+                        const n = findNode(d.artboards.find((a) => a.id === ab.id)?.children ?? [], node.id);
+                        if (!n?.overlay) return;
+                        const next = { ...(n.overlay.inputExprs ?? {}) };
+                        if (src.trim()) next[v.name] = src;
+                        else delete next[v.name];
+                        if (Object.keys(next).length) n.overlay.inputExprs = next;
+                        else delete n.overlay.inputExprs;
+                      })
+                    }
+                  />
+                );
+              })}
+            </ExprLocals.Provider>
+          )}
           <Row k="Edit overlay" words={['open overlay', 'edit tooltip', 'edit modal']}>
             <button className="btn" onClick={() => store().set({ activeArtboardId: page.id, artboardSelected: true, selection: [] })}>
               Edit {page.name}

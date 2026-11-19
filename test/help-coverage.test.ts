@@ -11,6 +11,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'What a layer hands its overlay can be a formula, and an overlay hears itself open': [['overlays', 'From a formula'], ['overlays', 'On overlay open']],
   'A button on a draggable card is pressed, not picked up': [['drag-and-drop', 'Buttons on a card'], ['drag-and-drop', 'a **group** rather than a button']],
   'Scripts get what they had to reach past ix for': [['scripts', 'ix.reducedMotion'], ['scripts', 'ix.today('], ['expressions', 'today(format)'], ['drag-and-drop', '{ instant: true }'], ['drag-and-drop', 'Also holds']],
   'Fit height to content fits on the canvas too': [['artboards', 'The page is measured as it\'s drawn']],

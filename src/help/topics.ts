@@ -3202,6 +3202,10 @@ An overlay page is a definition, so any number of layers can point at the same o
 
 Each layer can also hand the overlay **its own words** as it opens. A modal, a confirmation and a prompt say what they take (**What it takes** on the overlay's page: a **Heading**, a **Message**, and for the last two a **For**), and those show as fields in the layer's **Overlay** section. So one confirmation can ask "Delete the photo?" from one button and "Leave the group?" from another.
 
+**From a formula.** Under each of those fields is the same one as a formula, worked out as the overlay opens, and used instead of the typed value. \`layer.name\` is the name of the layer that opened it, and on a layer in a repeater \`item\` and \`index\` are that copy's own. So one link on a course card's info button serves every card: \`item.title\` fills the heading with the course it was opened from.
+
+**On overlay open** and **On overlay close** go in the overlay page's own **Interactions**. They run however it was opened (a layer, its variable, a flow), after what it was handed is set and before it has faded in, so a flow there can fill the page for this opening. \`event.layer\`, \`event.index\` and \`event.inputs\` say who opened it and what it was given.
+
 **For** is how you tell the answers apart: give each layer a word (\`photo\`, \`group\`), and the flow that reads **What they chose** can check **For** to see which layer asked. Add your own variables to **What it takes** and they become fields the same way.
 
 An overlay can open another: a button inside a tooltip can open a modal, and the tooltip goes as the modal comes.
