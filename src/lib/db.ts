@@ -11,6 +11,8 @@ import type { TemplateInfo } from './templates';
 import { reportError, routePattern, track } from './analytics';
 import { fetchOrEarly } from './early-fetch';
 import { normalizeProject, readPackage, uid, writePackage, type Asset, type Project } from 'interactives-player';
+import { relinkPackagedFonts } from './font-embed';
+import { fontsBase } from './fonts';
 
 export interface ProjectMeta {
   id: string;
@@ -429,8 +431,12 @@ async function importPackageInner(file: Blob): Promise<Project> {
     project = normalizeProject(JSON.parse(new TextDecoder().decode(bytes)));
     for (const a of project.assets) if (a.src?.startsWith('data:')) blobs.set(a.id, await (await fetch(a.src)).blob());
   }
+  // A package carries its Google fonts so it can play offline: here they're linked from the font server again where it
+  // has them, and the copies left out of the new project
+  const relinked = await relinkPackagedFonts(project, fontsBase());
+  for (const id of relinked.drop) blobs.delete(id);
   const now = new Date().toISOString();
-  project = { ...project, id: uid('pr'), updated: now };
+  project = { ...project, fonts: relinked.fonts, id: uid('pr'), updated: now };
   project.assets = project.assets.filter((a) => blobs.has(a.id)).map(({ src: _src, ...a }) => ({ ...a }));
   // The project has to exist on the server before assets can be attached to it (the asset routes check its owner)
   revs.set(project.id, 0);

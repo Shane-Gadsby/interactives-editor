@@ -28,7 +28,7 @@ export async function publishLatest(openShare: () => void, busy: (on: boolean) =
   if (!(await confirmDialog({ title: 'Publish this version?', message: PUBLISH_MESSAGE, confirmLabel: 'Publish' }))) return 'cancelled';
   busy(true);
   try {
-    await publishShare(id, await standaloneHtml(st.get().project, { embedFonts: true, optimise: true, onWarning: warnInEditor }), (notes) => st.toast(notes.join(' '), 'error'));
+    await publishShare(id, await standaloneHtml(st.get().project, { optimise: true, onWarning: warnInEditor }), (notes) => st.toast(notes.join(' '), 'error'));
     track('feature', 'share-publish', { detail: { from: 'top-bar' } });
     st.toast('Published. Every link and embed shows this version now.');
     return 'published';

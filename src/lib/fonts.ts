@@ -21,6 +21,25 @@ export function ensureFonts(project: Project): void {
         loaded.add(key);
         continue;
       }
+      // Imported from a package and the font server didn't have it: the copy the package brought, read as text
+      const packed = f.embedded ? assetUrls.resolve(f.embedded) : undefined;
+      if (packed) {
+        loaded.add(key);
+        const id = link.id;
+        const arrived = fetch(packed)
+          .then((r) => (r.ok ? r.text() : ''))
+          .catch(() => '')
+          .then((css) => {
+            if (!css.includes('@font-face') || document.getElementById(id)) return;
+            const style = document.createElement('style');
+            style.id = id;
+            style.textContent = css.replace(/<\/style/gi, '');
+            document.head.appendChild(style);
+          });
+        sheets.set(f.family.toLowerCase(), arrived);
+        void arrived.then(() => sheets.delete(f.family.toLowerCase()));
+        continue;
+      }
       link.rel = 'stylesheet';
       const weights = fontWeights(f.weights);
       // From this server's font route (Google is asked once, there, and never by a browser); Google's own if the route is down

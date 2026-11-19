@@ -28645,7 +28645,10 @@ The files are named after the project (and the page, for pictures, Lottie and vi
 ## About the single HTML file
 - Big pictures go in as their [optimised copies](export#optimised-pictures).
 - Every file is inside it, so a lesson offered in lighter versions still sends all of them in the first download. See [Download size](download-size#what-the-player-loads-and-when).
-- Google fonts are copied into the file, so opening it never calls Google. If a font can't be fetched when you export, a message says so and that font loads from Google instead.
+- Google fonts load from this server, the same place as the editor, so the file stays small and opening it never calls Google. Opened with no network, text shows in a standard font instead.
+
+## About the project package
+A **Project package** (\`${PACKAGE_EXTENSION}\`) carries a copy of every Google font the project draws with, so it plays with no network. Importing a package links each font from this server again whenever the server has it, and leaves the copy out, so the project doesn't carry the font twice. A font the server can't give keeps its copy. If a font can't be fetched when you export, a message says so, and opened online it still loads from the server.
 
 ## Video, GIF and frames
 **Export → Video, GIF or frames…** turns one timeline of the open page into moving pictures you can put in a slide deck, an email or a lecture recording. It plays the timeline once through, from the start, and draws every frame at its exact time: the result is smooth however slow or busy your computer is, and it is the same drawing as **PNG image**, so a frame looks like the canvas with the playhead there.
@@ -28712,7 +28715,7 @@ At the top of the dialog a line says whether there is anything to look at first:
 ## Share link
 **Share → Share…**, under **More ways to share**, publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it). Links are long and random so they can't be guessed. **Copy** copies the link and **Open** opens it in a new tab.
 
-The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google. A message tells you if a font couldn't be fetched, and that font loads from Google instead.
+The page loads the project's Google fonts from this server, the same place as the editor, so viewers' browsers never call Google and the page stays small (the fonts used to be copied into it, which made a page several times bigger).
 
 ### Updating, reverting and turning off
 The link is a snapshot of the project when you published it.
