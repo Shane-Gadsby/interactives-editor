@@ -33,7 +33,12 @@ const settle = async () => {
 type Answer = { status: number; body?: unknown };
 
 /** Run the page's own script with a fake fetch: `server` answers each request by path. */
-const run = async (server: (path: string, method: string) => Answer, opts: { session?: boolean; framed?: boolean } = {}) => {
+const run = async (server: (path: string, method: string) => Answer, opts: { session?: boolean; framed?: boolean; wait?: boolean } = {}) => {
+  //Shared again with the project's Wait for user session setting written into the page, the way the editor writes it
+  if (opts.wait !== undefined) {
+    const page = `<html><body><script type="application/json" id="ix-project">${JSON.stringify({ ...project('prslow001'), settings: { waitForSession: opts.wait } })}</script></body></html>`;
+    expect((await h.call('PUT', '/api/projects/prslow001/share', { user: ann, body: page, type: 'text/plain' })).json.share.waitSession).toBe(opts.wait);
+  }
   const html = (await h.call('GET', `/play/${token}`)).text;
   const script = [...html.matchAll(/<script nonce="[^"]+">([\s\S]*?)<\/script>/g)][0][1];
   const listeners: Record<string, (e: unknown) => void> = {};
@@ -42,7 +47,7 @@ const run = async (server: (path: string, method: string) => Answer, opts: { ses
   //What the StudyDesk handshake writes into, a clock and the page's timers, so a test can have the session turn up late
   const stored: Record<string, string> = {};
   const clock = { now: 1000 };
-  const timers: (() => void)[] = [];
+  let timers: { at: number; fn: () => void }[] = [];
   class FakeDate extends Date {
     static now = () => clock.now;
   }
@@ -63,16 +68,18 @@ const run = async (server: (path: string, method: string) => Answer, opts: { ses
     Math,
     Date: FakeDate,
     JSON,
-    setTimeout: (fn: () => void) => timers.push(fn),
+    setTimeout: (fn: () => void, ms = 0) => timers.push({ at: clock.now + ms, fn }),
     clearTimeout: () => undefined,
   };
   ctx.window = { parent: {}, addEventListener: (type: string, fn: (e: unknown) => void) => (listeners[type] = fn) };
   if (!opts.framed) (ctx.window as Record<string, unknown>).parent = ctx.window;
   vm.runInNewContext(script, ctx);
-  /** Let this much time pass, running the timers that were waiting (and any they set, next time). */
+  /** Let this much time pass, running the timers that come due (ones they set wait for the next tick). */
   const tick = (ms: number) => {
     clock.now += ms;
-    for (const fn of timers.splice(0)) fn();
+    const due = timers.filter((t) => t.at <= clock.now);
+    timers = timers.filter((t) => t.at > clock.now);
+    for (const t of due) t.fn();
   };
   const ask = (data: Record<string, unknown>) => listeners.message({ source: frame.contentWindow, data: { source: 'interactives-progress', project: 'p', ...data } });
   const replies = () => frame.contentWindow.postMessage.mock.calls.map((c: unknown[]) => c[0] as Record<string, any>);
@@ -182,10 +189,10 @@ describe('the learner page, framed in a page whose session has not arrived yet',
   it('carries on without one after 15 seconds, for a page that is never handed a session', async () => {
     const p = await run((path) => (path.startsWith('user-data') ? { status: 200, body: { available: false } } : fine(path)), { session: false, framed: true });
     p.ask({ op: 'userdata-load', rid: 'u1', names: ['program'], acks: true });
-    p.tick(14000);
+    for (let i = 0; i < 70; i++) p.tick(200);
     await settle();
     expect(p.requests).toEqual([]);
-    p.tick(1000);
+    for (let i = 0; i < 6; i++) p.tick(200);
     await settle();
     expect(p.requests).toEqual([{ method: 'GET', path: 'user-data?names=program', session: null }]);
     expect(p.replies().find((r) => r.rid === 'u1' && r.type === 'progress')).toMatchObject({ ok: true, available: false });
@@ -196,6 +203,53 @@ describe('the learner page, framed in a page whose session has not arrived yet',
     p.ask({ op: 'userdata-load', rid: 'u1', names: ['program'] });
     await settle();
     expect(p.requests).toEqual([{ method: 'GET', path: 'user-data?names=program', session: null }]);
+  });
+});
+
+//Project > Wait for user session before start, as it was when the link was shared
+describe('the learner page, for a project that says whether to wait for the session', () => {
+  it('set to wait, it waits for as long as it takes and keeps telling the player the answer is coming', async () => {
+    const p = await run(fine, { session: false, framed: true, wait: true });
+    p.ask({ op: 'session', rid: 'w1', acks: true });
+    p.ask({ op: 'userdata-load', rid: 'u1', names: ['program'], acks: true });
+    for (let i = 0; i < 1500; i++) p.tick(200);
+    await settle();
+    expect(p.requests).toEqual([]);
+    expect(p.replies().filter((r) => r.type === 'progress')).toEqual([]);
+    expect(p.replies().filter((r) => r.type === 'progress-pending' && r.rid === 'w1').length).toBeGreaterThan(50);
+    expect(p.replies().filter((r) => r.type === 'progress-pending' && r.rid === 'u1').length).toBeGreaterThan(50);
+    p.stored.sessionID = 's-late';
+    p.tick(200);
+    await settle();
+    expect(p.replies().find((r) => r.rid === 'w1' && r.type === 'progress')).toEqual({ target: 'interactives', type: 'progress', rid: 'w1', ok: true, available: true });
+    expect(p.replies().find((r) => r.rid === 'u1' && r.type === 'progress')).toMatchObject({ ok: true, available: true, data: { program: 'MSCN' } });
+    const said = p.replies().length;
+    p.tick(5000);
+    expect(p.replies()).toHaveLength(said);
+  });
+
+  it('set not to wait, it starts at once with whatever is known, and still uses a session that turns up later', async () => {
+    const p = await run(fine, { session: false, framed: true, wait: false });
+    p.ask({ op: 'session', rid: 'w1', acks: true });
+    p.ask({ op: 'userdata-load', rid: 'u1', names: ['program'], acks: true });
+    await settle();
+    expect(p.replies().find((r) => r.rid === 'w1' && r.type === 'progress')).toEqual({ target: 'interactives', type: 'progress', rid: 'w1', ok: true, available: false });
+    expect(p.requests).toEqual([{ method: 'GET', path: 'user-data?names=program', session: null }]);
+    p.stored.sessionID = 's-late';
+    p.ask({ op: 'userdata-save', rid: 's1', variables: { program: 'GCSC' }, acks: true });
+    await settle();
+    expect(p.requests.at(-1)).toEqual({ method: 'PUT', path: 'user-data', session: 's-late' });
+  });
+
+  it('in a tab of its own it does not wait even when set to, since no handshake is coming', async () => {
+    const p = await run(fine, { session: false, wait: true });
+    p.ask({ op: 'session', rid: 'w1', acks: true });
+    await settle();
+    expect(p.replies().find((r) => r.rid === 'w1' && r.type === 'progress')).toMatchObject({ ok: true, available: false });
+  });
+
+  it('a page that does not say (shared before the setting) keeps no waitSession on its share record', async () => {
+    expect((await h.call('GET', '/api/projects/prslow001/share', { user: ann })).json.share.waitSession).toBeUndefined();
   });
 });
 

@@ -191,6 +191,9 @@ export function answerPreviewProgress(m: Ask, doc?: Project): PreviewReply | nul
       for (const n of names) if (Object.prototype.hasOwnProperty.call(kept, n)) out[n] = kept[n];
       return { ok: true, available: true, data: out };
     }
+    // Wait for user session: there is no session to wait for in Preview, so it's over at once
+    case 'session':
+      return { ok: true, available: true };
     case 'load':
       return { ok: true, available: true, data: read(key(project, 'progress')) ?? null };
     case 'save':

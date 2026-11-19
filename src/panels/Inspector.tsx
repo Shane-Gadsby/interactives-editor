@@ -63,6 +63,7 @@ import {
   variableLabelAndName,
   HUG_DURATION_MS,
   hugDuration,
+  waitsForSession,
 } from 'interactives-player';
 import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { collaboratorCountOf } from '../lib/db';
@@ -894,6 +895,12 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           title="Share artboards marked Publish to library, plus this project's styles and assets, as components other projects can use (Libraries tab)"
           value={!!project.settings.library}
           onChange={(v) => setProject((p) => (p.settings.library = v))}
+        />
+        <CheckField
+          label="Wait for user session before start"
+          title="On the Link for StudyDesk, the project stays on its loading screen until StudyDesk has said who the learner is, however long that takes, so their saved work is always there when it starts. Turn off for a project that needs nothing from the learner's session, and it starts at once. On to begin with for a project that saves user data, remembers variables or reports a result. Share again (Update) after changing it."
+          value={waitsForSession(project)}
+          onChange={(v) => setProject((p) => (p.settings.waitForSession = v))}
         />
         <CheckField
           label="Respect reduced motion"
