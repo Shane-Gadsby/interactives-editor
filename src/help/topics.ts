@@ -6570,7 +6570,7 @@ The variable needs to exist with exactly that name (it's case sensitive). Make i
 Formulas use a variable's **Name in formulas**, so that one can't contain spaces or dashes. Type your own words in the name field (**Quiz score**) and the editor offers \`quizScore\`; if you changed that box to something with a space or a dash, try \`high_score\`. Data source names must be plain like this too. A name that is empty or not valid is not saved: it stays in the field as a draft, with the message, and the project keeps the last good name until you fix it.
 
 **The tops of some letters were cut off until I selected the text.**
-That was Chrome leaving part of a line unpainted after its words changed, in a project fitted to a frame at a size like 1.05 (StudyDesk). The player now paints changed text again a moment later, so it doesn't happen any more. If you still see it, say where.
+That was Chrome leaving part of a line unpainted in a project fitted to a frame at a size like 1.05 (StudyDesk), after the page appeared or its frame was resized to fit. The player now paints every text layer as a group of its own, which Chrome always draws whole, so it doesn't happen any more. If you still see it, say where.
 
 **A script does nothing.**
 Open **Preview** and look at the **Events** list for an error message. Scripts in the sandbox can only use \`ix\`, timers and \`console\`. See [Scripts](scripts).
