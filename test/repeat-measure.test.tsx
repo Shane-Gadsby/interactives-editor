@@ -76,3 +76,39 @@ describe('repeater copies on the canvas', () => {
     expect(height('t~1')).toBe(20);
   });
 });
+
+describe('a fit-height page holding a repeater', () => {
+  //The Course Pathway's start page: a column with a list of auto-height rows in the middle and a row of buttons under it
+  function page(items: string[]): EditorStore {
+    const p = createProject('T');
+    p.variables.push({ id: 'rows', name: 'rows', type: 'list', initial: JSON.stringify(items) } as never);
+    const text = createNode('text', { id: 't', name: 't', text: '{item}', width: 100, height: 20, autoSize: 'height' } as Partial<SceneNode>);
+    const zero = { top: 0, right: 0, bottom: 0, left: 0 };
+    const list = createNode('frame', { id: 'list', name: 'list', width: 300, height: 20, layout: { ...defaultAutoLayout('column'), gap: 4, padding: zero, hugHeight: true }, repeat: { items: 'rows', layout: 'none', gap: 0, columns: 1 }, children: [text] } as Partial<SceneNode>);
+    const build = createNode('rect', { id: 'build', name: 'build', width: 300, height: 40 });
+    p.artboards[0].children.push(createNode('frame', { id: 'content', name: 'content', width: 300, height: 100, layout: { ...defaultAutoLayout('column'), gap: 10, padding: zero, hugHeight: true }, children: [list, build] } as Partial<SceneNode>) as FrameNode);
+    p.artboards[0].hugHeight = true;
+    const s = new EditorStore(p);
+    setCurrentStore(s);
+    return s;
+  }
+  const draw = async (s: EditorStore) => {
+    const p = s.get().project;
+    act(() => root.render(<ArtboardView artboard={p.artboards[0]} project={p} timeline={null} time={0} active live assetVersion={0} dataVersion={0} />));
+    await act(async () => void (await Promise.resolve()));
+  };
+
+  it('ends below the last row the canvas draws, not the one the document has', async () => {
+    const s = page(['one', 'two', 'three', 'a rather longer line of words that wraps']);
+    //the document counts the list as its one template row
+    expect(s.get().project.artboards[0].height).toBe(20 + 10 + 40);
+    for (let i = 0; i < 4; i++) await draw(s);
+    //three short rows, one of four lines, the gaps, then the button row
+    const drawn = 20 * 3 + 80 + 4 * 3 + 10 + 40;
+    expect(s.get().project.artboards[0].height).toBe(drawn);
+    //an unrelated edit starts from the document again, and the next draw puts it back
+    s.setProps(['build'], { height: 50 });
+    for (let i = 0; i < 4; i++) await draw(s);
+    expect(s.get().project.artboards[0].height).toBe(drawn + 10);
+  });
+});

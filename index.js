@@ -737,6 +737,34 @@ router.get('/api/projects/:id/rev', async (req, res) => {
 
 //Save. The editor sends the rev it loaded, and a mismatch means someone else saved in between,
 //so it gets a 409 instead of quietly flattening their work. rev 0 (or none) is a brand new project
+//Compiles (never runs) every script in a project the way the player wraps them, an async function body, and lists the
+//ones that don't. Covers the project's scripts and every Run code node, wherever it sits in the document
+const scriptVm = require('node:vm')
+function scriptErrors(project) {
+	let out = [],
+		check = (where, code) => {
+			if (typeof code !== 'string' || !code.trim()) return
+			try {
+				new scriptVm.Script(`(async function (ix, event, vars) {"use strict";\n${code}\n})`, {filename: where})
+			} catch (err) {
+				//Line numbers come back one past the script's own, because of the wrapper line
+				let line = /:(\d+)\s*$/m.exec(String(err.stack || '').split('\n')[0])
+				out.push({where, error: String(err.message || err), line: line ? Math.max(1, Number(line[1]) - 1) : undefined})
+			}
+		},
+		seen = 0,
+		walk = (v, depth) => {
+			if (!v || typeof v !== 'object' || depth > 60 || ++seen > 500000) return
+			if (Array.isArray(v)) return v.forEach((x) => walk(x, depth + 1))
+			if (v.kind === 'action.code' && v.params) check(`Run code node ${v.id || ''}`.trim(), v.params.code)
+			for (let k in v) walk(v[k], depth + 1)
+		}
+	for (let sc of Array.isArray(project.scripts) ? project.scripts : []) check(`Script "${sc?.name || sc?.id}"`, sc?.code)
+	walk(project.artboards, 0)
+	walk(project.flows, 0)
+	return out.slice(0, 50)
+}
+
 router.put('/api/projects/:id', express.json({limit: saveLimit}), async (req, res) => {
 	let id = req.params.id,
 		project = req.body.project,
@@ -822,7 +850,9 @@ router.put('/api/projects/:id', express.json({limit: saveLimit}), async (req, re
 		broadcast(room, 'reset', {rev: next})
 	}
 
-	res.json({ok: true, rev: next})
+	//A script with a syntax error stops its page without a word, so whoever saved it hears which one (it is still saved)
+	let broken = scriptErrors(project)
+	res.json(broken.length ? {ok: true, rev: next, scriptErrors: broken} : {ok: true, rev: next})
 })
 
 //Tags and folder for the projects page. Only touches those two fields, no rev bump and no revision, so it can't

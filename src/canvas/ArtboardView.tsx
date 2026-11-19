@@ -2,7 +2,7 @@ import { isChromeNode } from '../lib/branded/lock';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { recordDrawnGeometry } from '../store/doc';
 import { flushSync } from 'react-dom';
-import { Renderer, layoutConnectors, isMasterId, paintToCss, drawnDifferently, isContainer, measureCopies, measureTextBox, prepareNodes, type CopySizes, textAutoSize, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, layoutConnectors, isMasterId, paintToCss, drawnDifferently, isContainer, measureCopies, measureTextBox, prepareNodes, huggedHeight, huggedWidth, type CopySizes, textAutoSize, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope, previewValue } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
 import { withMasterCached } from '../lib/page-master';
@@ -10,7 +10,7 @@ import { canvasResolver, shownTheme } from '../lib/themes';
 import { createEditorDraw, type EditorDraw } from '../lib/draw-edit';
 import { createEditorShader, type EditorShader } from '../lib/shader-edit';
 import { assetUrls } from '../lib/assets';
-import { store } from '../store/store';
+import { noteDrawnHug, store } from '../store/store';
 import { usePrefs } from '../lib/prefs';
 import { ghostLayers, outsideClipPath, setGhostExtent } from './ghost';
 import { fontsReadyFor, fontsReadyNow } from '../lib/fonts';
@@ -217,6 +217,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     // The page master's layers go around the page's own (the same copies until the master changes, so a drag redraws only the page)
     const sampled: SceneNode[] = withMasterCached(project.artboards, artboard, timeline ? sampleArtboard(artboard.children, timeline, time) : artboard.children);
     let drawn = false;
+    let hugFromDrawn: { width: number; height: number } | null = null;
     // What got drawn (bindings, repeaters and layout applied), which the ghost layers are picked from
     let shown: SceneNode[] = sampled;
     // Nothing derived from the whole tree (bindings, repeaters, constraints, layout, script layers, instances) and nothing
@@ -244,6 +245,9 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
         r.render(artboard, nodes, { vars });
       }
       shown = nodes;
+      // A page that fits its content takes its size from what was just drawn (every copy of a repeater, bound text as it reads),
+      // the way the player works it out, not from the document's layers. Once text measuring has nothing left to write
+      if (live && !timeline && (artboard.hugHeight || artboard.hugWidth)) hugFromDrawn = { height: huggedHeight(artboard, nodes), width: huggedWidth(artboard, nodes) };
       // Where layers ended up after bindings, repeaters and layout, for the selection outline and hit testing (only for the
       // design view: a timeline's pose is not where the document has the layer)
       if (!timeline) recordDrawnGeometry(artboard.id, artboard.children, layoutConnectors(nodes).nodes);
@@ -330,6 +334,19 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
           });
         }),
       );
+    } else if (hugFromDrawn && (Math.abs(hugFromDrawn.height - artboard.height) >= 1 || Math.abs(hugFromDrawn.width - artboard.width) >= 1)) {
+      const size = hugFromDrawn;
+      const children = artboard.children;
+      noteDrawnHug(children, { height: artboard.hugHeight ? size.height : undefined, width: artboard.hugWidth ? size.width : undefined });
+      queueMicrotask(() => {
+        // Only while the page is still the one that was drawn
+        if (store().get().project.artboards.find((a) => a.id === artboard.id)?.children !== children) return;
+        store().patchSilently((d) => {
+          const ab = d.artboards.find((a) => a.id === artboard.id);
+          if (ab?.hugHeight) ab.height = size.height;
+          if (ab?.hugWidth) ab.width = size.width;
+        });
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion, depsKey, started, live, ghostOutside, resolver]);

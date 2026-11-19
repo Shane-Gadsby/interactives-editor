@@ -77,6 +77,20 @@ const fitChecked = new WeakSet<object>();
 // Artboards already laid out (a second layout changes nothing, so the same object never needs another one)
 const layoutSettled = new WeakSet<object>();
 
+/**
+ * The size a fit-content page came out at on the canvas, by the layers array it was drawn from. The document's own layers
+ * count a repeater as its one template row and a bound text as its typed text, while the canvas (and the player) draw every
+ * copy and the bound value, so the canvas is the one that knows how tall the page really is. Kept by the layers array: when
+ * the canvas writes the size back nothing else changed, so the same array comes back here and the size sticks, and the next
+ * real change to the layers starts from the document again until the canvas has drawn it.
+ */
+const drawnHug = new WeakMap<object, { width?: number; height?: number }>();
+export function noteDrawnHug(children: SceneNode[], size: { width?: number; height?: number }): void {
+  drawnHug.set(children, size);
+}
+const hugHeightOf = (ab: Artboard): number => (ab.hugHeight ? (drawnHug.get(ab.children)?.height ?? huggedHeight(ab, ab.children)) : ab.height);
+const hugWidthOf = (ab: Artboard): number => (ab.hugWidth ? (drawnHug.get(ab.children)?.width ?? huggedWidth(ab, ab.children)) : ab.width);
+
 /** Groups that size to their contents (fit-groups.ts), before auto layout so frames lay out the groups' real sizes. */
 function settleGroups(project: Project): Project {
   const need = project.artboards.filter((ab) => !fitChecked.has(ab) && artboardNeedsFit(ab)).map((ab) => ab.id);
@@ -153,14 +167,16 @@ function settleLayout(project: Project, fitGroups = false, before?: Project): Pr
   // A page that fits its content takes the height its layers need, once they're laid out (the player works it out again as it runs)
   // and one that fits its width takes the width they need, the same way
   const hug = new Set(
-    next.artboards.filter((ab) => fresh.has(ab.id) && ((ab.hugHeight && huggedHeight(ab, ab.children) !== ab.height) || (ab.hugWidth && huggedWidth(ab, ab.children) !== ab.width))).map((ab) => ab.id),
+    next.artboards.filter((ab) => fresh.has(ab.id) && (hugHeightOf(ab) !== ab.height || hugWidthOf(ab) !== ab.width)).map((ab) => ab.id),
   );
   if (hug.size) {
+    const sizes = new Map(next.artboards.filter((ab) => hug.has(ab.id)).map((ab) => [ab.id, { width: hugWidthOf(ab), height: hugHeightOf(ab) }]));
     next = produce(next, (d) => {
       for (const ab of d.artboards) {
-        if (!hug.has(ab.id)) continue;
-        ab.height = huggedHeight(ab, ab.children as SceneNode[]);
-        ab.width = huggedWidth(ab, ab.children as SceneNode[]);
+        const s = sizes.get(ab.id);
+        if (!s) continue;
+        ab.height = s.height;
+        ab.width = s.width;
       }
     });
   }
@@ -577,7 +593,8 @@ export class EditorStore {
     this.remoteLog = [];
     this.remoteBase = this.remoteTotal;
     this.lastCoalesce = null;
-    this.state = { ...this.state, project: 'guides' in p ? produce(p, (d) => void migrateProjectGuides(d)) : p, saveState: 'saved' };
+    // Laid out like a project being opened: positions inside auto layout are the editor's to work out, not whoever wrote the JSON
+    this.state = { ...this.state, project: settleLayout(lockBrandChrome('guides' in p ? produce(p, (d) => void migrateProjectGuides(d)) : p)), saveState: 'saved' };
     this.sanitize();
     this.emit();
   }

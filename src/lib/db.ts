@@ -128,6 +128,8 @@ export const setCollaboratorCount = (id: string, n: number): void => void collab
 
 /** The revision this editor last loaded or saved (what the next whole-project save is checked against). */
 export const knownRevOf = (id: string): number | undefined => revs.get(id);
+/** Put back the revision a tab had, when a copy it fetched was not used after all (its next save is checked against this). */
+export const restoreKnownRev = (id: string, rev: number | undefined): void => void (rev === undefined ? revs.delete(id) : revs.set(id, rev));
 
 /** The server's revision of a project right now, without downloading it. Null when it can't be asked (offline, no access). */
 export async function currentRevOf(id: string): Promise<number | null> {
@@ -201,20 +203,28 @@ async function gzipText(text: string): Promise<Blob | null> {
   }
 }
 
-export async function saveProject(p: Project, opts: { force?: boolean } = {}): Promise<void> {
+/** A script the server could not compile when the project was saved (it is saved anyway): which one, why, and the line. */
+export interface ScriptError {
+  where: string;
+  error: string;
+  line?: number;
+}
+
+export async function saveProject(p: Project, opts: { force?: boolean } = {}): Promise<{ scriptErrors: ScriptError[] }> {
   const path = `projects/${encodeURIComponent(p.id)}`;
   const text = JSON.stringify({ project: p, rev: revs.get(p.id) ?? 0, force: opts.force });
   const packed = text.length >= GZIP_FROM ? await gzipText(text) : null;
-  let r: { rev: number };
+  let r: { rev: number; scriptErrors?: ScriptError[] };
   try {
-    r = await call<{ rev: number }>(path, packed ? { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' }, body: packed } : { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: text });
+    r = await call<{ rev: number; scriptErrors?: ScriptError[] }>(path, packed ? { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' }, body: packed } : { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: text });
   } catch (err) {
     // A server or proxy that won't take an encoded body: say it once, then send plain from here on
     if (!(packed && err instanceof ApiError && err.status === 415)) throw err;
     gzipSaves = false;
-    r = await call<{ rev: number }>(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: text });
+    r = await call<{ rev: number; scriptErrors?: ScriptError[] }>(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: text });
   }
   revs.set(p.id, r.rev);
+  return { scriptErrors: Array.isArray(r.scriptErrors) ? r.scriptErrors : [] };
 }
 
 /** Moves the project to the bin (kept 30 days; restore it from the projects page's Bin). */
