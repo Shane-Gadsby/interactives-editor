@@ -5151,12 +5151,25 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 <script nonce="${nonce}">
 (function () {
 	var token = ${JSON.stringify(token)}, base = ${JSON.stringify(base)}, frame = document.getElementById('project'), sessionID = null
-	try {
-		sessionID = new URLSearchParams(location.search).get('sessionID') || sessionStorage.getItem('sessionID')
-		if (sessionID && sessionID !== 'null') sessionStorage.setItem('sessionID', sessionID)
+	//The session id is looked for where fetchActivity and the rest of the toolbox look: the url, then the sessionStorage that
+	//si-manager's handshake (set-session.js) writes it into. On a StudyDesk page that write often lands after this page has loaded,
+	//so it's looked for again every time it's needed, never just the once
+	var findSession = function () {
+		if (sessionID && sessionID !== 'null') return true
+		try {
+			var found = new URLSearchParams(location.search).get('sessionID') || sessionStorage.getItem('sessionID')
+			if (found && found !== 'null') {
+				sessionID = found
+				sessionStorage.setItem('sessionID', found)
+				return true
+			}
+		}
+		catch (e) {
+		}
+		sessionID = null
+		return false
 	}
-	catch (e) {
-	}
+	findSession()
 	//Launched from another LMS over LTI 1.3: the launch hands its session over in the url fragment, which goes into sessionStorage
 	//and off the address bar. It stands in for the StudyDesk session (and there is no StudyDesk account to remix into)
 	var ltiSession = null
@@ -5170,6 +5183,34 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	}
 	catch (e) {
 	}
+	//Nothing is loaded, saved or reported until it's known who this is. Inside another page with no session yet, that's the StudyDesk
+	//handshake still on its way, so this waits for it the way fetchActivity does (every 200ms, and the storage event when the browser
+	//sends one) instead of asking the server as nobody. That race is how a learner's saved work was there on one load and gone on the
+	//next: asked as nobody, the server has no record, and the project started over in the browser's own storage. A page that's
+	//framed by something that never hands a session over gets 15 seconds, then carries on without one. In its own tab there's no
+	//handshake to wait for
+	var sessionSettled = false, sessionDone = null, sessionBegan = Date.now()
+	var sessionReady = new Promise(function (resolve) {
+		sessionDone = resolve
+	})
+	var settleSession = function () {
+		if (sessionSettled) return
+		sessionSettled = true
+		sessionDone()
+	}
+	var sessionCame = function () {
+		if (!sessionSettled && findSession()) settleSession()
+	}
+	var lookForSession = function () {
+		if (sessionSettled) return
+		if (findSession() || Date.now() - sessionBegan >= 15000) return settleSession()
+		setTimeout(lookForSession, 200)
+	}
+	if (sessionID || ltiSession || window.parent === window) settleSession()
+	else {
+		window.addEventListener('storage', sessionCame)
+		setTimeout(lookForSession, 200)
+	}
 	var answer = function (m, reply) {
 		if (m.rid) frame.contentWindow.postMessage(Object.assign({target: 'interactives', type: 'progress', rid: m.rid}, reply), '*')
 	}
@@ -5177,10 +5218,11 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	var chain = Promise.resolve()
 	var diagQueue = [], diagTaken = 0, diagSettled = false, diagTimer = null, lastHeight = 0
 	var call = function (method, path, body) {
-		var headers = {'Content-Type': 'application/json'}
-		if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
-		else if (ltiSession) headers['X-LTI-Session'] = ltiSession
 		var run = function () {
+			//worked out as it's sent, so a session that turned up late still goes with it
+			var headers = {'Content-Type': 'application/json'}
+			if (findSession()) headers['X-Session-ID'] = sessionID
+			else if (ltiSession) headers['X-LTI-Session'] = ltiSession
 			return fetch(base + '/learn/' + token + '/' + path, {method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body), keepalive: body !== undefined}).then(function (r) {
 				//Saving and reporting results is this page's own job, so when it fails that is worth knowing (the route and status, nothing else)
 				if (!r.ok && r.status >= 500) takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), status: r.status, fingerprint: 'learn-' + method.toLowerCase() + '-' + r.status})
@@ -5204,18 +5246,25 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	//Projects shared before the player waited for a slow page give up on it after a second and a half and start the learner over from
 	//nothing, and on a busy StudyDesk page the server can take longer than that. Each is used once, for the project's first load, and
 	//only if nothing has been saved since; anything that went wrong with it and the project's own ask goes to the server as before
-	var saved = {progress: false, userData: false}, fetched = {}
-	if ((sessionID && sessionID !== 'null') || ltiSession) {
-		fetched.progress = call('GET', 'progress')
-		fetched.userData = call('GET', 'user-data?all=1')
-		fetched.progress.catch(function () {
-		})
-		fetched.userData.catch(function () {
-		})
-	}
+	//It goes once the session is known (straight away when it came in the url), and not for anything the project has asked for by then
+	var saved = {progress: false, userData: false}, fetched = {}, asked = {}
+	sessionReady.then(function () {
+		if (!findSession() && !ltiSession) return
+		if (!asked.progress) {
+			fetched.progress = call('GET', 'progress')
+			fetched.progress.catch(function () {
+			})
+		}
+		if (!asked.userData) {
+			fetched.userData = call('GET', 'user-data?all=1')
+			fetched.userData.catch(function () {
+			})
+		}
+	})
 	var early = function (kind, fresh) {
 		var got = fetched[kind]
 		fetched[kind] = null
+		asked[kind] = true
 		if (!got || saved[kind]) return fresh()
 		return got.then(function (j) {
 			return j.failed || j.refused ? fresh() : j
@@ -5239,7 +5288,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			remixLink.setAttribute('aria-disabled', 'true')
 			remixLink.textContent = 'Copying...'
 			var headers = {}
-			if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
+			if (findSession()) headers['X-Session-ID'] = sessionID
 			fetch(base + '/remix/' + token, {method: 'POST', headers: headers}).then(function (r) {
 				return r.json().then(function (j) {
 					return {ok: r.ok, body: j}
@@ -5278,7 +5327,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		if (live.gone || typeof AbortController === 'undefined') return
 		var ctl = new AbortController(), headers = {}, up = false
 		live.ctl = ctl
-		if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
+		if (findSession()) headers['X-Session-ID'] = sessionID
 		else if (ltiSession) headers['X-LTI-Session'] = ltiSession
 		var ended = function () {
 			if (up) tellLive({up: false})
@@ -5341,7 +5390,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			url: (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + base + '/rooms/ws',
 			WS: window.WebSocket,
 			hello: function () {
-				return {token: token, session: sessionID && sessionID !== 'null' ? sessionID : null, lti: ltiSession}
+				return {token: token, session: findSession() ? sessionID : null, lti: ltiSession}
 			},
 			onFrame: function (f) {
 				tellRoom({frame: f})
@@ -5456,6 +5505,8 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			while (contextAsks.length) answerContext(contextAsks.shift())
 			//after this function is through, so known is settled either way
 			setTimeout(settleAnalytics, 0)
+			//fetchActivity has the session, so the wait above is over whether or not its own look has come round yet
+			if (!err && data && data.sessionID) sessionCame()
 			if (err || !data || !data.user || !data.user.username) return
 			window.m.user = data.user
 			window.m.activity = data.activity || {}
@@ -5465,7 +5516,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		})
 	}
 	else contextReady = true
-	window.addEventListener('message', function (e) {
+	window.addEventListener('message', function takeMessage(e, late) {
 		if (e.source !== frame.contentWindow) return
 		var m = e.data
 		if (m && m.source === 'interactives-record') return takeRecord(m.record)
@@ -5484,7 +5535,16 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		//A player that says acks hears at once that its answer is coming, so it waits for a slow server instead of giving up after a
 		//second and a half and starting the learner over from nothing. It also hears a failure as a failure. An older one (a page shared
 		//before this) gets neither, since it would take both for an empty answer, and gets the old replies
-		if (m.acks && m.rid) frame.contentWindow.postMessage({target: 'interactives', type: 'progress-pending', rid: m.rid}, '*')
+		if (m.acks && m.rid && late !== true) frame.contentWindow.postMessage({target: 'interactives', type: 'progress-pending', rid: m.rid}, '*')
+		//Asked before it's known who this is: it's taken up again, in the order it came, once the session is settled. The player has
+		//heard its answer is coming, so the project holds its start for it rather than opening on nothing. Context and analytics
+		//wait on fetchActivity themselves
+		if (!sessionSettled && m.op !== 'context' && m.op !== 'analytics') {
+			sessionReady.then(function () {
+				takeMessage(e, true)
+			})
+			return
+		}
 		var failed = function () {
 			answer(m, m.acks ? {ok: false, available: true, failed: true} : {ok: false, available: false})
 		}

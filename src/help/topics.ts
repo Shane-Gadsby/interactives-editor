@@ -5218,7 +5218,7 @@ The same link tells the project which course it is in and the learner's first na
 
 Someone opening it with no session plays as normal, and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
 
-A slow server is waited for: the project stays on its loading screen until the saved values arrive, however busy the StudyDesk page is. If the server fails to give them back at all, the project starts from its starting values and saves nothing over what was kept, so the learner's work is there on their next visit. A save that doesn't get through is tried again.
+A slow server is waited for: the project stays on its loading screen until the saved values arrive, however busy the StudyDesk page is. So is StudyDesk itself: the page waits to know who the learner is before it loads or saves anything, so their work is there on every load and not only the ones where StudyDesk was quick. If the server fails to give them back at all, the project starts from its starting values and saves nothing over what was kept, so the learner's work is there on their next visit. A save that doesn't get through is tried again.
 
 Projects shared before 19 November 2026 gave up on a slow server after a second and a half, and could start a returning learner over with an empty plan. The Link for StudyDesk now fetches the saved values as soon as it opens, which makes that much rarer, but to fix it for good, open the project and press **Update** in [Share link](export#share-link) once.
 
