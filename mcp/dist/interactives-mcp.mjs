@@ -25871,7 +25871,7 @@ Two buckets, four cards. Dropping a card in the right bucket keeps it there; dro
 - Scripts have \`ix.drag.zoneOf('Dog')\`, \`ix.drag.contents('Mammals')\`, \`ix.drag.state()\` (every layer and its zone), \`ix.drag.put(layer, zone)\`, \`ix.drag.reset(layer?)\` (both glide there for the layer's glide time; add \`{ instant: true }\` to put it there now, so the script can move it again straight away) and \`ix.drag.enable(layer, on, { tag, what }?)\` (no layer: all of them, or everything inside a container). The page that holds the player can read \`player.dragState()\`.
 
 ## Buttons on a card
-A draggable layer can hold its own controls: an info button on a course card, a link, a layer with a click flow or an overlay link. A press on one of those is the control's, so the button opens its dialog and the card stays where it is. Press anywhere else on the card to drag it or pick it up. While a card is picked up, its own buttons still work, and it stays picked up.
+A draggable layer can hold its own controls: an info button on a course card, a link, a layer with a click flow or an overlay link. A press on one of those is the control's, so the button opens its dialog and the card stays where it is. Press anywhere else on the card to drag it or pick it up. While a card is picked up, its own buttons still work, and it stays picked up. A picked-up card rides over the rest of the page, but a dialog, tooltip or toast it opens is always drawn on top of it.
 
 To a screen reader a card holding buttons is a **group** rather than a button, so the buttons inside are read and pressed as they are. Space on the card itself still picks it up.
 
@@ -29405,6 +29405,9 @@ The variable needs to exist with exactly that name (it's case sensitive). Make i
 
 **It says "Formulas need a name with letters, digits and _ only".**
 Formulas use a variable's **Name in formulas**, so that one can't contain spaces or dashes. Type your own words in the name field (**Quiz score**) and the editor offers \`quizScore\`; if you changed that box to something with a space or a dash, try \`high_score\`. Data source names must be plain like this too. A name that is empty or not valid is not saved: it stays in the field as a draft, with the message, and the project keeps the last good name until you fix it.
+
+**The tops of some letters were cut off until I selected the text.**
+That was Chrome leaving part of a line unpainted after its words changed, in a project fitted to a frame at a size like 1.05 (StudyDesk). The player now paints changed text again on the next frame, so it doesn't happen any more. If you still see it, say where.
 
 **A script does nothing.**
 Open **Preview** and look at the **Events** list for an error message. Scripts in the sandbox can only use \`ix\`, timers and \`console\`. See [Scripts](scripts).

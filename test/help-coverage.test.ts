@@ -12,6 +12,8 @@ import { getTopic, topicBody } from '../src/help/topics';
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'What a layer hands its overlay can be a formula, and an overlay hears itself open': [['overlays', 'From a formula'], ['overlays', 'On overlay open']],
+  'Text no longer loses the tops of its letters': [['troubleshooting', 'cut off until I selected the text']],
+  'A dialog opened while a card is picked up covers the card': [['drag-and-drop', 'always drawn on top of it']],
   'A button on a draggable card is pressed, not picked up': [['drag-and-drop', 'Buttons on a card'], ['drag-and-drop', 'a **group** rather than a button']],
   'Scripts get what they had to reach past ix for': [['scripts', 'ix.reducedMotion'], ['scripts', 'ix.today('], ['expressions', 'today(format)'], ['drag-and-drop', '{ instant: true }'], ['drag-and-drop', 'Also holds']],
   'Fit height to content fits on the canvas too': [['artboards', 'The page is measured as it\'s drawn']],
