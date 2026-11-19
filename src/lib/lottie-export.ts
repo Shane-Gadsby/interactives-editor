@@ -1,5 +1,5 @@
 /**
- * Interactives artboard -> Lottie (Bodymovin JSON), the 2D subset Lottie can
+ * Ixia artboard -> Lottie (Bodymovin JSON), the 2D subset Lottie can
  * hold: shapes, paths, groups/frames (as parented null layers), images, text,
  * solid/gradient fills, strokes, and one timeline's keyframes. Interactions,
  * variables, scripts, bindings and web elements are not representable in
@@ -356,6 +356,6 @@ export function exportLottie(project: Project, artboard: Artboard, opts: { timel
 
 /** dotLottie package: manifest + the animation JSON. */
 export function toDotLottie(json: Json, id = 'animation'): Uint8Array {
-  const manifest = { version: '2', generator: 'Interactives', animations: [{ id }] };
+  const manifest = { version: '2', generator: 'Ixia', animations: [{ id }] };
   return zipSync({ 'manifest.json': strToU8(JSON.stringify(manifest)), [`animations/${id}.json`]: strToU8(JSON.stringify(json)) });
 }

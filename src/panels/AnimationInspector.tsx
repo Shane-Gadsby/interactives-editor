@@ -5,6 +5,7 @@ import { CheckField, NumberField, Row, Section, SelectField, TextField } from '.
 import { Icons } from '../components/icons';
 import { assetKind, assetUrls } from '../lib/assets';
 import { addAssetOption, withQuickAdd } from '../lib/quick-add';
+import { framelingBlurbHelp, framelingHelp, parked } from '../lib/parked';
 import { clipLength, downloadForFrameling, framelingFileName, manifestOf, startSize, updateAnimationFile } from '../lib/frameling-import';
 import { pickFiles } from '../lib/insert';
 import { inRepeaterTemplate } from '../canvas/connect';
@@ -146,13 +147,13 @@ export function AnimationSection({ nodes, project, ab }: { nodes: AnimationNode[
   const failed = !!url && peekFrameling(url) === null;
   const repeated = !!ab && nodes.some((x) => inRepeaterTemplate(ab, x.id));
   return (
-    <Section help="frameling-animations" title="Frameling animation">
+    <Section help={framelingHelp()} title="Frameling animation">
       <SelectField
         label="Animation"
         title="The .flplay file it plays. Make one in Frameling with File > Export for Interactives"
         value={n.assetId ?? ''}
         onChange={withQuickAdd((v) => set({ assetId: v || null }), { asset: 'animation' })}
-        options={[{ value: '', label: 'None' }, ...files.map((a) => ({ value: a.id, label: a.name })), addAssetOption('animation')]}
+        options={[{ value: '', label: 'None' }, ...files.map((a) => ({ value: a.id, label: a.name })), ...(parked.frameling ? [] : [addAssetOption('animation')])]}
       />
       {!n.assetId ? (
         <p className="hint">Choose a .flplay file. In Frameling: File &gt; Export for Interactives. Or drop the file on the canvas.</p>
@@ -168,7 +169,7 @@ export function AnimationSection({ nodes, project, ab }: { nodes: AnimationNode[
           </p>
         </>
       )}
-      {n.assetId && <FramelingRoundTrip n={n} m={m} />}
+      {n.assetId && !parked.frameling && <FramelingRoundTrip n={n} m={m} />}
       <Row>
         {m ? (
           <SelectField
@@ -233,7 +234,7 @@ export function AnimationSection({ nodes, project, ab }: { nodes: AnimationNode[
           </>
         }
         name="Frameling animation controls"
-        help={['frameling-animations', 'control-it']}
+        help={framelingBlurbHelp()}
       />
     </Section>
   );

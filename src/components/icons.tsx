@@ -23,6 +23,7 @@ export const Icons = {
   button: P('M3 8h18v8H3zM8 12h8'),
   input: P('M3 7h18v10H3zM7 10v4'),
   link: P('M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1'),
+  eyedropper: P('M14 6l4 4M12.5 7.5l4 4-8 8H5v-3.500zM16 4.500a2.100 2.100 0 013 3L17.500 9l-3-3z'),
   // the same chain pulled apart, with the gap marked
   unlink: P('M15 9l3.3-3.3a2.8 2.8 0 00-4-4L11 5M9 15l-3.3 3.3a2.8 2.8 0 004 4L13 19M4 9h3M9 4v3M20 15h-3M15 20v-3'),
   embed: P('M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14'),
@@ -125,6 +126,7 @@ export const Icons = {
   modal: P('M3 4h18v16H3zM7 8h10v8H7zM14 13.5h1'),
   confirm: P('M4 5h16v14H4zM8.5 12.5l2.5 2.5 4.5-5'),
   prompt: P('M4 5h16v14H4zM7 10.5h10v4.5H7zM9.5 12v1.5'),
+  toast: P('M3 4h18v16H3zM11 13h8v5h-8zM13 15.5h4'),
   tabs: P('M3 9V5h6v4M9 5h6v4M3 9h18v10H3z'),
   accordion: P('M4 4h16v4H4zM4 10h16v7H4zM4 19h16M15.5 5.3l1.2 1.2 1.2-1.2'),
   plug: P('M9 3v5M15 3v5M6 8h12v4a6 6 0 01-12 0zM12 18v3'),

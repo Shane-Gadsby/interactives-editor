@@ -97,6 +97,7 @@ describe('the learner page passes records on to the suite analytics', () => {
       Date,
       JSON,
       setTimeout: (fn: () => void) => (timers.push(fn), timers.length),
+      clearTimeout: () => undefined,
       reportAnalytics: (...args: unknown[]) => reported.push(args),
       fetchActivity: (cb: (err: unknown, data: unknown) => void) => cb(null, opts.user === null ? {} : { user: opts.user ?? { username: 'sam', userID: 7 }, activity: { courseLabel: 'MAT1000_2026_S1' } }),
     };
@@ -168,6 +169,78 @@ describe('the learner page passes records on to the suite analytics', () => {
     expect(p.reported).toHaveLength(600);
   });
 
+  it('passes on what a learner did with a control, a drop, a video and a section, and never what was typed', async () => {
+    const p = await run();
+    p.send({ source: 'interactives-record', record: { kind: 'input', artboard: 'ab1', layer: 'tick', label: 'Agree', control: 'checkbox', value: true } });
+    p.send({ source: 'interactives-record', record: { kind: 'input', artboard: 'ab1', layer: 'name', label: 'Your name', control: 'text', value: 'Alex Nguyen' } });
+    p.send({ source: 'interactives-record', record: { kind: 'drop', artboard: 'ab1', layer: 'card', label: 'Card A', zone: 'Bin 1', result: 'accepted' } });
+    p.send({ source: 'interactives-record', record: { kind: 'media', artboard: 'ab1', layer: 'vid', label: 'Intro', action: 'ended', time: 61 } });
+    p.send({ source: 'interactives-record', record: { kind: 'open', artboard: 'ab1', layer: 'acc', label: 'Topics', control: 'accordion', index: 2 } });
+    p.send({ source: 'interactives-record', record: { kind: 'media', artboard: 'ab1', layer: 'vid', action: 'rewound' } });
+    p.flush();
+    expect(p.reported.map((r) => [r[1], (r[3] as { rec: unknown }).rec])).toEqual([
+      ['input', { kind: 'input', artboard: 'ab1', layer: 'tick', label: 'Agree', control: 'checkbox', value: true }],
+      ['input', { kind: 'input', artboard: 'ab1', layer: 'name', label: 'Your name', control: 'text' }],
+      ['drop', { kind: 'drop', artboard: 'ab1', layer: 'card', label: 'Card A', result: 'accepted', zone: 'Bin 1' }],
+      ['media', { kind: 'media', artboard: 'ab1', layer: 'vid', label: 'Intro', action: 'ended', time: 61 }],
+      ['open', { kind: 'open', artboard: 'ab1', layer: 'acc', label: 'Topics', control: 'accordion', index: 2 }],
+    ]);
+    expect(JSON.stringify(p.reported)).not.toContain('Alex');
+  });
+
+  it('a Send analytics node with nobody waiting goes out like any record, on the usual round', async () => {
+    const p = await run();
+    p.send({ source: 'interactives-record', record: { kind: 'event', artboard: 'ab1', label: 'finished level', data: { level: 3, name: 'x', 'bad key': 1, list: [1, 2] } } });
+    p.flush();
+    expect(p.reported).toHaveLength(1);
+    const [app, feature, featureID, meta, instant, callback] = p.reported[0] as [string, string, string, Record<string, any>, unknown, unknown];
+    expect([app, feature, featureID]).toEqual(['Interactives', 'event', 'prins001']);
+    expect(meta.rec).toEqual({ kind: 'event', artboard: 'ab1', label: 'finished level', data: { level: 3, name: 'x', list: [1, 2] } });
+    //no instant and no callback: it waits in reportAnalytics' queue for the next round
+    expect(instant).toBeUndefined();
+    expect(callback).toBeUndefined();
+  });
+
+  it('one that waits is sent at once with a callback, and the project hears the ids once the row is saved', async () => {
+    const p = await run();
+    const calls: unknown[][] = [];
+    p.ctx.reportAnalytics = (...args: unknown[]) => {
+      calls.push(args);
+      (args[5] as (err: unknown, value: unknown) => void)(null, [{ acknowledged: true, insertedId: '6740aa11bb22cc33dd44ee55' }]);
+      return Promise.resolve(true);
+    };
+    p.send({ source: 'interactives-progress', op: 'analytics', rid: 'a1', project: 'someone-elses', record: { kind: 'event', project: 'someone-elses', label: 'done', data: { score: 7 } } });
+    expect(calls).toHaveLength(1);
+    const [app, feature, featureID, meta, instant, callback] = calls[0] as [string, string, string, Record<string, any>, unknown, unknown];
+    expect([app, feature, featureID, instant, typeof callback]).toEqual(['Interactives', 'event', 'prins001', true, 'function']);
+    expect(meta.rec).toEqual({ kind: 'event', label: 'done', data: { score: 7 } });
+    expect(p.frame.contentWindow.postMessage).toHaveBeenCalledWith({ target: 'interactives', type: 'progress', rid: 'a1', ok: true, data: { ids: ['6740aa11bb22cc33dd44ee55'] } }, '*');
+    expect(JSON.stringify(calls[0].slice(0, 4))).not.toContain('someone-elses');
+  });
+
+  it('says why when it could not be saved: nobody signed in, not an event, or the post failed', async () => {
+    const said = (p: Awaited<ReturnType<typeof run>>, rid: string) => p.frame.contentWindow.postMessage.mock.calls.map((c) => c[0]).find((m) => m.rid === rid);
+    const nobody = await run({ user: null });
+    nobody.send({ source: 'interactives-progress', op: 'analytics', rid: 'n1', record: { kind: 'event', label: 'done' } });
+    expect(said(nobody, 'n1')).toMatchObject({ ok: false, data: { reason: 'nobody' } });
+    expect(nobody.reported).toEqual([]);
+
+    const p = await run();
+    p.send({ source: 'interactives-progress', op: 'analytics', rid: 'x1', record: { kind: 'click', artboard: 'ab1', x: 1, y: 2 } });
+    expect(said(p, 'x1')).toMatchObject({ ok: false, data: { reason: 'failed' } });
+    p.ctx.reportAnalytics = (...args: unknown[]) => {
+      (args[5] as (err: unknown, value: unknown) => void)('412', null);
+      return Promise.reject(new Error('412'));
+    };
+    p.send({ source: 'interactives-progress', op: 'analytics', rid: 'x2', record: { kind: 'event', label: 'done' } });
+    expect(said(p, 'x2')).toMatchObject({ ok: false, data: { reason: 'failed' } });
+    //a preview mutes reportAnalytics: it hands nothing back and never calls
+    p.ctx.reportAnalytics = () => undefined;
+    p.send({ source: 'interactives-progress', op: 'analytics', rid: 'x3', record: { kind: 'event', label: 'done' } });
+    expect(said(p, 'x3')).toMatchObject({ ok: false, data: { reason: 'preview' } });
+    await new Promise((r) => setTimeout(r, 0));
+  });
+
   it('still answers the progress requests it always did', async () => {
     const p = await run();
     p.send({ source: 'interactives-progress', op: 'load', rid: 'r1' });
@@ -197,6 +270,7 @@ describe('how a published project ran (diagnostics), for bug triage', () => {
       Date,
       JSON,
       setTimeout: (fn: () => void) => (timers.push(fn), timers.length),
+      clearTimeout: () => undefined,
       reportAnalytics: (...args: unknown[]) => reported.push(args),
       fetchActivity: (cb: (err: unknown, data: unknown) => void) => cb(null, opts.user === null ? {} : { user: opts.user ?? { username: 'sam', userID: 7 }, activity: { courseLabel: 'MAT1000_2026_S1' } }),
     };
@@ -307,6 +381,29 @@ describe('Insights counts', () => {
     expect(out.steps).toEqual([{ artboard: 'ab1', name: 'Main', step: 2, steps: 4, visits: 2, learners: 2 }]);
     expect(out.questions).toEqual([{ question: 'q1', kind: 'single', checks: 3, correct: 2, learners: 2, firstTry: 2, firstTryRight: 1, options: [{ id: 'o2', n: 2 }, { id: 'o1', n: 1 }] }]);
     expect(out.custom).toEqual([{ name: 'chose route', count: 3, learners: 2, values: [{ value: 'B', n: 2 }, { value: 'A', n: 1 }] }]);
+  });
+  it('counts what was done to each layer, and Send analytics events by name with their values', () => {
+    const out = insights([
+      row('sam', { kind: 'input', artboard: 'ab1', layer: 'tick', label: 'Agree', control: 'checkbox', value: true }),
+      row('lee', { kind: 'input', artboard: 'ab1', layer: 'tick', label: 'Agree', control: 'checkbox', value: true }),
+      row('lee', { kind: 'input', artboard: 'ab1', layer: 'vol', label: 'Volume', control: 'range', value: 3 }),
+      row('lee', { kind: 'input', artboard: 'ab1', layer: 'vol', label: 'Volume', control: 'range', value: 9 }),
+      row('sam', { kind: 'drop', artboard: 'ab1', layer: 'card', label: 'Card A', zone: 'Bin 1', result: 'accepted' }),
+      row('sam', { kind: 'media', artboard: 'ab1', layer: 'vid', label: 'Intro', action: 'ended', time: 60 }),
+      row('sam', { kind: 'open', artboard: 'ab1', layer: 'acc', label: 'Topics', control: 'accordion', index: 2 }),
+      row('sam', { kind: 'event', label: 'finished level', data: { level: 3, tags: ['a', 'b'] } }),
+      row('lee', { kind: 'event', label: 'finished level', data: { level: 3 } }),
+      row('lee', { kind: 'event', label: 'finished level', data: { level: 4 } }),
+    ]);
+    expect(out.acted).toEqual([
+      { kind: 'input', artboard: 'ab1', layer: 'tick', label: 'Agree', control: 'checkbox', detail: 'true', count: 2, learners: 2 },
+      { kind: 'input', artboard: 'ab1', layer: 'vol', label: 'Volume', control: 'range', detail: '', count: 2, learners: 1 },
+      { kind: 'drop', artboard: 'ab1', layer: 'card', label: 'Card A', control: '', detail: 'Bin 1: accepted', count: 1, learners: 1 },
+      { kind: 'media', artboard: 'ab1', layer: 'vid', label: 'Intro', control: '', detail: 'ended', count: 1, learners: 1 },
+      { kind: 'open', artboard: 'ab1', layer: 'acc', label: 'Topics', control: 'accordion', detail: '3', count: 1, learners: 1 },
+    ]);
+    expect(out.events).toEqual([{ name: 'finished level', count: 3, learners: 2, fields: [{ key: 'level', values: [{ value: '3', n: 2 }, { value: '4', n: 1 }] }] }]);
+    expect(out.records).toBe(10);
   });
   it('ignores rows that are not valid records, and the feature the row is filed under decides what the record is', () => {
     const bad = row('sam', { kind: 'view', artboard: 'ab1' });

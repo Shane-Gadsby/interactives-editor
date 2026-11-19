@@ -17,7 +17,7 @@ type Item = { kind: 'project'; p: ProjectMeta } | { kind: 'saved'; t: TemplateIn
 const CHOICES: { key: NewChoice; label: string; hint: string }[] = [
   { key: 'blank', label: 'Blank project', hint: 'One empty artboard' },
   { key: 'copy', label: 'Copy a project or template', hint: 'One of mine, or shared with me' },
-  { key: 'builtin', label: 'Built-in template', hint: 'Starters that come with Interactives' },
+  { key: 'builtin', label: 'Built-in template', hint: 'Starters that come with Ixia' },
   { key: 'example', label: 'Copy an example', hint: 'Finished projects to change' },
 ];
 

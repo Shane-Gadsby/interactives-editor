@@ -1,4 +1,5 @@
-import { CONTEXT_FIELDS, courseMatches, sampleContextFor, uid, type ContextValues, type CourseValueRow, type Variable, variableLabelAndName } from 'interactives-player';
+import { CONTEXT_FIELDS, courseMatches, linkNameOk, LINK_MAX_LENGTH, LINK_MAX_VALUES, sampleContextFor, uid, type ContextValues, type CourseValueRow, type Variable, variableLabelAndName } from 'interactives-player';
+import { useState } from 'react';
 import { store, useEditor } from '../store/store';
 import { Icons } from '../components/icons';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
@@ -70,6 +71,8 @@ export function ContextPanel() {
         <SectionBlurb text="Sample values are for designing: the canvas and Preview use them. Learners never see them." name="sample values" help={['course-context', 'where-the-values-come-from']} />
       </div>
 
+      <SampleLink />
+
       <div className="context-block">
         <h3>Per-course values</h3>
         <SectionBlurb text="One project for several courses: a row whose course label matches sets its variables' starting values." name="per-course values" help={['course-context', 'per-course-values']} />
@@ -82,6 +85,86 @@ export function ContextPanel() {
         {!s.variables.length && <p className="hint">Variables are made in the Variables panel. A course row sets the ones you pick.</p>}
       </div>
     </div>
+  );
+}
+
+/** Made-up `link` values: as if the project were opened with `?program=GCSC` on its address. The canvas and Preview use them. */
+function SampleLink() {
+  const sample = useEditor((st) => st.project.sampleLink);
+  const entries = Object.entries(sample ?? {});
+  const clash = useEditor((st) => st.project.variables.some((v) => v.name === 'link'));
+  //Rebuilt in order each time, so renaming a value keeps its place in the list
+  const write = (next: [string, string][]) =>
+    store().update((d) => {
+      if (next.length) d.sampleLink = Object.fromEntries(next);
+      else delete d.sampleLink;
+    });
+  const add = () => {
+    let name = 'program';
+    for (let i = 2; name in (sample ?? {}); i++) name = `value${i}`;
+    write([...entries, [name, '']]);
+  };
+  return (
+    <div className="context-block">
+      <h3>
+        <code>link</code> <span className="badge">built in, read only</span>
+      </h3>
+      <SectionBlurb text="Values on the address it was opened with (&program=GCSC is link.program). Samples here are for the canvas and Preview." name="link" help={['course-context', 'values-on-the-link']} />
+      {clash && <p className="error small">A variable named link hides this one in expressions.</p>}
+      {entries.length > 0 && (
+        <table className="var-table context-table link-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th title="Made up, for the canvas and Preview only. Never saved into an export or seen by a learner">Sample value</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map(([name, value], i) => (
+              <LinkRow
+                key={i}
+                name={name}
+                value={value}
+                taken={(n) => entries.some(([other], j) => j !== i && other === n)}
+                rename={(n) => write(entries.map((e, j) => (j === i ? [n, e[1]] : e)))}
+                setValue={(v) => write(entries.map((e, j) => (j === i ? [e[0], v.slice(0, LINK_MAX_LENGTH)] : e)))}
+                remove={() => write(entries.filter((_, j) => j !== i))}
+              />
+            ))}
+          </tbody>
+        </table>
+      )}
+      <button className="btn" disabled={entries.length >= LINK_MAX_VALUES} onClick={add} title={entries.length >= LINK_MAX_VALUES ? `A link carries ${LINK_MAX_VALUES} values at most` : 'Add a made-up value, as if it were on the address'}>
+        + Add a link value
+      </button>
+    </div>
+  );
+}
+
+function LinkRow({ name, value, taken, rename, setValue, remove }: { name: string; value: string; taken: (name: string) => boolean; rename: (name: string) => void; setValue: (v: string) => void; remove: () => void }) {
+  const [problem, setProblem] = useState<string | null>(null);
+  const tryName = (raw: string) => {
+    const n = raw.trim();
+    if (n === name) return setProblem(null);
+    if (!linkNameOk(n)) return setProblem('Letters, digits, . _ and - only, starting with a letter (and not title, cdtID, sessionID, ixm or lti)');
+    if (taken(n)) return setProblem(`There is already a ${n}`);
+    setProblem(null);
+    rename(n);
+  };
+  return (
+    <tr>
+      <td>
+        <TextField value={name} mono commitOnBlur title="The name on the address: program for &program=GCSC" onChange={tryName} />
+        {problem && <p className="error small">{problem}</p>}
+      </td>
+      <td>
+        <TextField value={value} commitOnBlur title={`A made-up value for link.${name}`} onChange={setValue} />
+      </td>
+      <td>
+        <IconButton icon={<Icons.trash />} title={`Delete link.${name}`} onClick={remove} />
+      </td>
+    </tr>
   );
 }
 

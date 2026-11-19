@@ -900,6 +900,24 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.analytics",
+    label: "Send analytics",
+    category: "action",
+    summary: "Sends a named event, with a few values, to the analytics the Toolbox keeps.",
+    details: `With nothing joined to Saved or Not saved it joins the queue every Toolbox app reports through, which is sent every few seconds, and the flow carries straight on. Join Saved (or Not saved) and it is sent at once and waited for instead: Saved runs once the row is kept, with event.ids (and event.id, the first) to hold on to, and Not saved runs with event.reason when there is no page to keep it, nobody is signed in, it is a preview, the project records nothing or this visit has sent too many. The bottom port continues straight away either way. Data is a formula that gives a few named values, such as {level: level, time: seconds}; a single value is kept as "value". Learners' browsers send it to the page around the project (the StudyDesk learner page), so an export on its own sends nothing. Do not put anything personal in the name or the data.`,
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "saved", label: "Saved" },
+      { id: "failed", label: "Not saved" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "name", label: "Name", type: "text", default: "event", help: 'What happened, in a few words ("finished level", "chose a pathway"). Up to 60 characters. {braces} are filled in.' },
+      { key: "data", label: "Data", type: "expr", default: "", placeholder: "optional, e.g. {level: level, time: seconds}", help: "A few named values to keep with it: text, numbers, yes or no, or short lists of those. Up to 20 names." }
+    ]
+  },
+  {
     kind: "action.credits",
     label: "Open credits",
     category: "action",
@@ -1555,6 +1573,31 @@ const SPECS = [
         default: "captionsToggle"
       }
     ]
+  },
+  {
+    kind: "action.toast",
+    label: "Show toast",
+    category: "action",
+    summary: "Shows a toast: a short message over a corner of the page that goes by itself.",
+    details: "Make the toast first with the Toast button in the Web tools. It is read out to screen readers as it appears, so it needs no Announce node beside it. Showing one that is already up gives it the new words and its full time again; different toasts stack.",
+    group: "Layers and looks",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "toast", label: "Toast", type: "artboard", help: "The toast page to show" },
+      { key: "text", label: "Message", type: "expr", default: "", placeholder: '"Plan saved"', help: 'The words it says this time, as an expression, e.g. "Saved " + name. Empty leaves the words the toast already has' }
+    ]
+  },
+  {
+    kind: "action.toastHide",
+    label: "Hide toast",
+    category: "action",
+    summary: "Puts a toast away before its time is up, or one that stays until dismissed.",
+    details: "A Close button inside a toast is a click wired to this. With no toast chosen it puts every toast away.",
+    group: "Layers and looks",
+    outputs: OUT,
+    hasInput: true,
+    params: [{ key: "toast", label: "Toast", type: "artboard", help: "The toast to put away. None chosen puts them all away" }]
   },
   {
     kind: "action.announce",
@@ -3917,6 +3960,7 @@ const NOTE_DEFAULT_H = 120;
 const NOTE_MIN_W = 80;
 const NOTE_MIN_H = 48;
 const NOTE_MAX_TEXT = 4e3;
+const NOTE_MAX_TITLE = 80;
 const isObj$2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const num$4 = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
 function cleanNote(raw) {
@@ -3931,6 +3975,7 @@ function cleanNote(raw) {
   };
   if (NOTE_COLOURS.includes(raw.colour)) n.colour = raw.colour;
   if (typeof raw.author === "string" && raw.author) n.author = raw.author.slice(0, 120);
+  if (typeof raw.title === "string" && raw.title.trim()) n.title = raw.title.trim().slice(0, NOTE_MAX_TITLE);
   if (typeof raw.created === "string") n.created = raw.created.slice(0, 40);
   const a = raw.anchor;
   if (isObj$2(a) && typeof a.layerId === "string" && a.layerId) n.anchor = { layerId: a.layerId, lx: num$4(a.lx, 0), ly: num$4(a.ly, 0) };
@@ -3952,6 +3997,7 @@ function makeNote(partial) {
   const n = { id: partial.id ?? uid("note_"), x: partial.x, y: partial.y, w: partial.w ?? NOTE_DEFAULT_W, h: partial.h ?? NOTE_DEFAULT_H, text: partial.text ?? "" };
   if (partial.colour) n.colour = partial.colour;
   if (partial.author) n.author = partial.author;
+  if (partial.title) n.title = partial.title;
   if (partial.created) n.created = partial.created;
   if (partial.anchor) n.anchor = partial.anchor;
   return cleanNote(n);
@@ -4186,6 +4232,12 @@ function sanitizeNode(raw, seen) {
   }
   if ("cornerRadii" in n && !(Array.isArray(n.cornerRadii) && n.cornerRadii.length === 4 && n.cornerRadii.every(isNum))) delete n.cornerRadii;
   for (const k of ["mask", "locked", "noAssist", "noPaste", "hugIgnore"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  if ("wai" in n) delete n.wai;
+  if (n.type === "embed" && "allow" in n) {
+    const known = new Set(EMBED_ALLOW.map((x) => x.key));
+    if (!Array.isArray(n.allow)) delete n.allow;
+    else n.allow = [...new Set(n.allow.filter((x) => typeof x === "string" && known.has(x)))];
+  }
   if ("overlay" in n && n.overlay !== null) {
     const o = n.overlay;
     if (!isObj$1(o) || !isStr(o.overlayId)) delete n.overlay;
@@ -4209,6 +4261,8 @@ function sanitizeNode(raw, seen) {
       if (isStr(o.variable) && o.variable) out.variable = o.variable;
       if (o.toggle === true && o.open === "one") out.toggle = true;
       if (isStr(o.panels) && o.panels) out.panels = o.panels;
+      if (isStr(o.tabs)) out.tabs = o.tabs;
+      if (o.chevron === false) out.chevron = false;
       n.disclosure = out;
     }
   }
@@ -4276,6 +4330,7 @@ function sanitizeNode(raw, seen) {
   if ("cursorHotspot" in n && !(isObj$1(n.cursorHotspot) && isNum(n.cursorHotspot.x) && isNum(n.cursorHotspot.y))) delete n.cursorHotspot;
   if ("disabled" in n && typeof n.disabled !== "boolean") delete n.disabled;
   if ("disabledOpacity" in n && !isNum(n.disabledOpacity)) delete n.disabledOpacity;
+  if ("paddingX" in n && !(isNum(n.paddingX) && n.paddingX >= 0)) delete n.paddingX;
   if ("slice" in n && n.slice !== null && !(isObj$1(n.slice) && ["top", "right", "bottom", "left"].every((k) => isNum(n.slice[k])))) delete n.slice;
   if ("sliceTile" in n && n.sliceTile !== "stretch" && n.sliceTile !== "repeat") delete n.sliceTile;
   if ("crop" in n) {
@@ -4457,6 +4512,18 @@ const FORMAT_NAME = "interactives";
 const FORMAT_VERSION = 1;
 const BLEND_MODES = ["normal", "dissolve", "darken", "multiply", "color-burn", "lighten", "screen", "color-dodge", "plus-lighter", "overlay", "soft-light", "hard-light", "difference", "exclusion", "hue", "saturation", "color", "luminosity"];
 const PAINT_BLEND_MODES = BLEND_MODES.filter((m) => m !== "dissolve");
+const EMBED_ALLOW = [
+  { key: "autoplay", label: "Autoplay", hint: "Video and sound in the embedded page can start by themselves, without a click", policy: ["autoplay"] },
+  { key: "fullscreen", label: "Full screen", hint: "The embedded page can fill the whole screen, when the viewer presses its full screen button", policy: ["fullscreen"] },
+  { key: "clipboard", label: "Clipboard", hint: "The embedded page can copy text to the clipboard, for a Copy button. It cannot read what is already there", policy: ["clipboard-write"] },
+  { key: "microphone", label: "Microphone", hint: "The embedded page can ask to listen through the microphone. The viewer is asked first, and it needs https", policy: ["microphone"] },
+  { key: "camera", label: "Camera", hint: "The embedded page can ask to see through the camera. The viewer is asked first, and it needs https", policy: ["camera"] },
+  { key: "screen", label: "Screen share", hint: "The embedded page can ask to record or share the screen. The viewer picks what to share each time, and it needs https", policy: ["display-capture"] },
+  { key: "location", label: "Location", hint: "The embedded page can ask where the viewer is. The viewer is asked first, and it needs https", policy: ["geolocation"] },
+  { key: "motion", label: "Motion sensors", hint: "The embedded page can read how the device is being tilted and moved. Phones and tablets, over https", policy: ["accelerometer", "gyroscope", "magnetometer"] },
+  { key: "pip", label: "Picture in picture", hint: "A video in the embedded page can pop out into a small window that stays on top", policy: ["picture-in-picture"] },
+  { key: "protected", label: "Protected video", hint: "The embedded page can play video that is copy protected, which some streaming sites need", policy: ["encrypted-media"] }
+];
 function isContainer(node) {
   return node.type === "group" || node.type === "frame" || node.type === "bone";
 }
@@ -5414,7 +5481,7 @@ function nodeMatrix(n, shift) {
   return m;
 }
 const ID$1 = [1, 0, 0, 1, 0, 0];
-function contentBottom(nodes) {
+function contentBottom(nodes, axis = "y") {
   let bottom = null;
   const visit = (list2, parent) => {
     for (const n of list2) {
@@ -5422,7 +5489,7 @@ function contentBottom(nodes) {
       if (n.type === "frame" && n.dialog) continue;
       const m = multiply(parent, nodeMatrix(n));
       const corners = [apply(m, 0, 0), apply(m, n.width, 0), apply(m, n.width, n.height), apply(m, 0, n.height)];
-      const own = Math.max(...corners.map((p) => p.y));
+      const own = Math.max(...corners.map((p) => p[axis]));
       if (Number.isFinite(own)) bottom = bottom === null ? own : Math.max(bottom, own);
       const clips = n.type === "frame" && (n.clip || !!n.scroll && n.scroll !== "none");
       if (isContainer(n) && !clips) visit(n.children, m);
@@ -8630,8 +8697,9 @@ const PLAYER_SCOPE_HINTS = {
   recordingSeconds: { type: "number", hint: "Seconds recorded so far" },
   recordings: { type: "object", hint: "The recording slots, by name" },
   mediaMessage: { type: "text", hint: "The last microphone or camera problem, in words" },
-  userData: { type: "object", hint: "userData.loaded: saved variables have been looked for; userData.restored: how many came back" },
+  userData: { type: "object", hint: "userData.loaded: saved variables have been looked for; userData.restored: how many came back; userData.failed: they could not be loaded this visit (nothing is saved over them)" },
   context: { type: "object", hint: "The course and the learner (context.firstName...)" },
+  link: { type: "object", hint: "Values on the address it was opened with: link.program from ?program=GCSC (text; anyone can change them)" },
   quiz: { type: "object", hint: "All the questions together: quiz.score, max, percent, passed, passMark, count, finished, right, done and quiz.questions (one entry each: prefix, page, score, points, correct, locked)" },
   data: { type: "object", hint: "Every data source by name" },
   enums: { type: "object", hint: "The options of each choice variable" },
@@ -12003,6 +12071,8 @@ function addColourwayTheme(draft, way2) {
   return true;
 }
 const ALL_COLOURWAYS = [...COLOURWAYS, HIGH_CONTRAST];
+const RADIUS = { control: 8 };
+const TYPE = { small: 13, body: 15, heading: 18 };
 let L$2 = lookFor(void 0);
 const AREA_OFF = "#00000000";
 const AREA_ON = "#fb940033";
@@ -12100,7 +12170,7 @@ function applyLooks(frame, before, after) {
 const STATE_WORDS = '{item.state == "correct" ? "✓ Right" : item.state == "wrong" ? "✗ Wrong" : item.state == "missed" ? "← Right answer" : ""}';
 const STATE_DESCRIPTION = 'item.state == "correct" ? "Right" : item.state == "wrong" ? "Wrong" : item.state == "missed" ? "This was the right answer" : ""';
 function text$1(name, part, value, o = {}) {
-  return createNode("text", { name, questionPart: part, text: value, fontSize: 16, color: L$2.text, autoSize: "height", width: 200, height: 24, ...o });
+  return createNode("text", { name, questionPart: part, text: value, fontSize: TYPE.body, color: L$2.text, autoSize: "height", width: 200, height: 24, ...o });
 }
 function button$1(name, part, label, primary, bindings) {
   return createNode("button", {
@@ -12119,8 +12189,25 @@ function optionLooks(normal, own, picked) {
   const l = lookBindings("item", normal, picked ? ALL_LOOKS : void 0, picked);
   return { bindings: { ...own, ...l.bindings }, converters: l.converters };
 }
+function tickBox(base2) {
+  const tick = createNode("path", {
+    name: "Tick",
+    x: 5,
+    y: 6,
+    width: 12,
+    height: 9,
+    paths: [{ closed: false, points: [{ x: 0, y: 4.5 }, { x: 4.5, y: 9 }, { x: 12, y: 0 }] }],
+    fill: null,
+    stroke: { paint: solid$1(L$2.background), width: 2.25 },
+    lineCap: "round",
+    lineJoin: "round",
+    decorative: true,
+    bindings: { "stroke.paint.color": 'item.selected ? "' + L$2.onPrimary + '" : "' + L$2.background + '"' }
+  });
+  return createNode("frame", { ...base2, cornerRadius: 5, clip: false, children: [tick] });
+}
 function optionTemplate(style) {
-  const base2 = { height: 52, fill: solid$1(L$2.background), cornerRadius: 10, clip: false };
+  const base2 = { height: 52, fill: solid$1(L$2.background), cornerRadius: RADIUS.control, clip: false };
   if (style === "order") {
     return createNode("frame", {
       ...base2,
@@ -12132,7 +12219,7 @@ function optionTemplate(style) {
       children: [
         text$1("Number", "optionNumber", "{item.number}.", { width: 28, color: L$2.muted, fontWeight: 600, decorative: true }),
         text$1("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, ...lookBindings("item", { text: L$2.text }) }),
-        text$1("Result", "optionState", STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, decorative: true }),
+        text$1("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, decorative: true }),
         createNode("button", { name: "Move up", questionPart: "moveUp", label: "↑", width: 40, height: 36, fill: solid$1(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
         createNode("button", { name: "Move down", questionPart: "moveDown", label: "↓", width: 40, height: 36, fill: solid$1(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } })
       ]
@@ -12150,9 +12237,9 @@ function optionTemplate(style) {
     layout: { ...row(12), padding: { top: 12, right: 16, bottom: 12, left: 16 } },
     ...optionLooks({ fill: L$2.background, line: L$2.border }, { ariaChecked: "item.selected", ariaLabel: "item.text", ariaDescription: STATE_DESCRIPTION }, true),
     children: [
-      checkbox ? createNode("rect", { ...markerBase, cornerRadius: 5 }) : createNode("ellipse", markerBase),
+      checkbox ? tickBox(markerBase) : createNode("ellipse", { ...markerBase, shadow: { x: 0, y: 0, blur: 0, spread: 4, color: L$2.background, inset: true } }),
       text$1("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, decorative: true, ...lookBindings("item", { text: L$2.text }, ALL_LOOKS, true) }),
-      text$1("Result", "optionState", STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 110, decorative: true })
+      text$1("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 110, decorative: true })
     ]
   });
 }
@@ -12183,7 +12270,7 @@ function blankRow(q, i, blankVar) {
     clip: false,
     layout: { ...column(6), align: "stretch" },
     children: [
-      text$1("Blank label", "blankLabel", q.blanks[i]?.label ?? "", { fontSize: 14, fontWeight: 600, color: L$2.muted, bindings: { text: `${at}?.label ?? ""` } }),
+      text$1("Blank label", "blankLabel", q.blanks[i]?.label ?? "", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
       createNode("input", {
         name: "Blank input",
         questionPart: "blankInput",
@@ -12197,7 +12284,7 @@ function blankRow(q, i, blankVar) {
         converters: line.converters,
         bindings: { value: blankVar, ...line.bindings, ariaLabel: `${at}?.label || "Answer"` }
       }),
-      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
+      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
     ]
   });
 }
@@ -12248,7 +12335,7 @@ function chip(q, o) {
     height: o.h ?? TERM_H,
     fill: solid$1(L$2.background),
     stroke: stroke$1(L$2.border, 2),
-    cornerRadius: 10,
+    cornerRadius: RADIUS.control,
     clip: false,
     layout: { ...row(8), padding: { top: 8, right: 12, bottom: 8, left: 12 }, hugHeight: false },
     ariaLabel: o.word,
@@ -12268,7 +12355,7 @@ function matchTerm(q, p, i, slot, name = `Term ${i + 1}`) {
     height: TERM_H,
     fill: solid$1(L$2.background),
     stroke: stroke$1(L$2.border, 2),
-    cornerRadius: 10,
+    cornerRadius: RADIUS.control,
     clip: false,
     layout: { ...row(8), padding: { top: 8, right: 12, bottom: 8, left: 12 }, hugHeight: false },
     ariaLabel: p.term,
@@ -12306,7 +12393,7 @@ function matchRow(q, p, i) {
             height: TERM_H,
             fill: null,
             stroke: { ...stroke$1(L$2.border, 2), dash: [6, 4] },
-            cornerRadius: 10,
+            cornerRadius: RADIUS.control,
             clip: false,
             dropZone: { accepts: [termTag(q)], capacity: 1, whenFull: "swap", snap: "center", label: p.match },
             converters: line.converters,
@@ -12315,7 +12402,7 @@ function matchRow(q, p, i) {
         ]
       }),
       text$1("Match result", "matchState", `{${at}?.state == "correct" ? "✓ Right" : ${at}?.state == "wrong" ? "✗ Wrong" + (${at}?.answer ? ". The answer is " + ${at}.answer : "") : ""}`, {
-        fontSize: 13,
+        fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.muted,
         decorative: true,
@@ -12394,7 +12481,7 @@ function catZone(q, g, i) {
     //Unlimited, and a dropped item stays where it was let go. Every group takes every item: whether it is right is for Check to say
     dropZone: { accepts: [catTag(q)], snap: "none", label: g.name },
     ariaLabel: g.name,
-    children: [text$1(`Group ${i + 1} heading`, "catHeading", g.name, { x: 12, y: 10, width: 140, fontWeight: 700, fontSize: 18, decorative: true })]
+    children: [text$1(`Group ${i + 1} heading`, "catHeading", g.name, { x: 12, y: 10, width: 140, fontWeight: 700, fontSize: TYPE.heading, decorative: true })]
   });
 }
 function catCard(q, c2, i) {
@@ -12440,7 +12527,7 @@ function categoriseBody(q) {
         })
       }),
       text$1("Right groups", "catAnswer", `{${items}.filter(i => i.answer).map(i => i.text + " goes in " + i.answer).join(". ")}`, {
-        fontSize: 14,
+        fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.warning,
         bindings: { visible: `${items}.some(i => i.answer)` }
@@ -12526,7 +12613,7 @@ function dragBlankRow(q, b, i) {
     clip: false,
     layout: { ...column(6), align: "stretch" },
     children: [
-      text$1("Blank label", "blankLabel", b.label, { fontSize: 14, fontWeight: 600, color: L$2.muted, bindings: { text: `${at}?.label ?? ""` } }),
+      text$1("Blank label", "blankLabel", b.label, { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
       createNode("frame", {
         name: `Gap ${i + 1}`,
         questionPart: `blankZone:${b.id}`,
@@ -12534,14 +12621,14 @@ function dragBlankRow(q, b, i) {
         height: CHIP_H,
         fill: null,
         stroke: { ...stroke$1(L$2.border, 2), dash: [6, 4] },
-        cornerRadius: 10,
+        cornerRadius: RADIUS.control,
         clip: false,
         dropZone: { accepts: [wordTag(q)], capacity: 1, whenFull: "swap", snap: "center", label: b.label || `Blank ${i + 1}` },
         ariaLabel: b.label || `Blank ${i + 1}`,
         converters: line.converters,
         bindings: { ...line.bindings, ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) }
       }),
-      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
+      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
     ]
   });
 }
@@ -12568,7 +12655,7 @@ function dragBlanksBody(q) {
         layout: column(14),
         children: q.blanks.map((b, i) => dragBlankRow(q, b, i))
       }),
-      text$1("Word bank label", "wordBankLabel", "Word bank", { fontSize: 14, fontWeight: 600, color: L$2.muted }),
+      text$1("Word bank label", "wordBankLabel", "Word bank", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text }),
       createNode("frame", {
         name: "Word bank",
         questionPart: "wordBank",
@@ -12703,7 +12790,7 @@ function samplePicture() {
     height: AREA_H,
     fill: solid$1("#cfe8ff"),
     stroke: null,
-    cornerRadius: 10,
+    cornerRadius: RADIUS.control,
     clip: true,
     role: "image",
     ariaLabel: "A house with a red roof and a door, a tree beside it and the sun in the sky",
@@ -12740,7 +12827,7 @@ function hotspotBody(q) {
         height: AREA_H,
         fill: null,
         stroke: stroke$1(L$2.divider, 1),
-        cornerRadius: 10,
+        cornerRadius: RADIUS.control,
         clip: false,
         role: isMultiple(q) ? "region" : "radiogroup",
         bindings: { ariaLabel: prompt },
@@ -12748,12 +12835,12 @@ function hotspotBody(q) {
         children: [samplePicture(), createNode("frame", { name: "Areas", questionPart: "spotAreas", width: AREA_W, height: AREA_H, fill: null, stroke: null, clip: false, children: areas })]
       }),
       text$1("Picks", "spotPicks", `Selected: {${items}.filter(i => i.selected).map(i => i.text + (i.state == "correct" ? " (right)" : i.state == "wrong" ? " (wrong)" : "")).join(", ")}`, {
-        fontSize: 14,
+        fontSize: TYPE.small,
         color: L$2.muted,
         bindings: { visible: `${items}.some(i => i.selected)` }
       }),
       text$1("Right areas", "spotAnswer", `Right answer: {${items}.filter(i => i.state == "missed").map(i => i.text).join(", ")}`, {
-        fontSize: 14,
+        fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.warning,
         bindings: { visible: `${items}.some(i => i.state == "missed")` }
@@ -12801,9 +12888,9 @@ function frameFor(q, blankVars, at) {
     bindings: { ariaLabel: `"Question: " + ${p("prompt")}` },
     layout: { ...defaultAutoLayout("column"), gap: 16, padding: { top: 24, right: 24, bottom: 24, left: 24 }, align: "stretch", hugHeight: true },
     children: [
-      text$1("Prompt", "prompt", `{${p("prompt")}}`, { role: "heading", headingLevel: 3, fontSize: 20, fontWeight: 600, lineHeight: 1.35 }),
+      text$1("Prompt", "prompt", `{${p("prompt")}}`, { role: "heading", headingLevel: 3, fontSize: TYPE.heading, fontWeight: 600, lineHeight: 1.35 }),
       body,
-      text$1("Hint text", "hintText", `Hint: {${p("hint")}}`, { fontSize: 14, fontStyle: "italic", color: L$2.muted, bindings: { visible: `${p("hint")} != ""` } }),
+      text$1("Hint text", "hintText", `Hint: {${p("hint")}}`, { fontSize: TYPE.small, fontStyle: "italic", color: L$2.muted, bindings: { visible: `${p("hint")} != ""` } }),
       text$1("Feedback", "feedback", `{${p("feedback")}}`, {
         fontWeight: 600,
         bindings: { visible: `${p("feedback")} != ""`, color: `${p("answered")} ? (${p("correct")} ? "${L$2.success}" : "${L$2.error}") : "${L$2.muted}"` }
@@ -13173,7 +13260,7 @@ function syncKeysHint(frame, q) {
   if (want && !has) {
     const body = parts.options?.[0];
     const at = body ? frame.children.findIndex((c2) => c2 === body) : -1;
-    const line = text$1("Number keys hint", "keysHint", `Press 1 to {${varName(q, "items")}.length} to choose`, { fontSize: 14, color: L$2.muted });
+    const line = text$1("Number keys hint", "keysHint", `Press 1 to {${varName(q, "items")}.length} to choose`, { fontSize: TYPE.small, color: L$2.muted });
     frame.children.splice(at >= 0 ? at + 1 : 2, 0, line);
   } else if (!want && has) {
     const loc = locateIn(frame, has.id);
@@ -14759,6 +14846,7 @@ const ACTION = {
   "action.startOver": () => "start over",
   "action.reportResult": (p) => p.completed === "progress" ? `report the score so far${p.score ? ` (${val(p.score)})` : ""}` : `report the result${p.score ? ` (score ${val(p.score)})` : ""}`,
   "action.record": (p) => `record ${quoted(String(p.name ?? "milestone"))}`,
+  "action.analytics": (p) => `send ${quoted(String(p.name ?? "event"))} to analytics`,
   "action.sound": (p, c2) => `play ${p.asset ? quoted(c2.asset(p.asset)) : p.source ? `the sound ${val(p.source)}` : "a sound"}${String(p.loop ?? "false") === "true" ? " on a loop" : ""}${p.soundtrack === true ? " as the soundtrack" : ""}`,
   "action.stopSound": (p, c2) => p.asset ? `stop the sound ${quoted(c2.asset(p.asset))}` : "stop all sounds",
   "action.delay": (p) => `wait ${secs(p.ms)}`,
@@ -14766,6 +14854,8 @@ const ACTION = {
   "action.log": () => "write a note to the browser console",
   "action.script": (p, c2) => `run the script ${quoted(c2.script(p.script))}`,
   "action.code": () => "run a code snippet",
+  "action.toast": (p) => p.text ? `show a toast saying ${val(p.text)}` : "show a toast",
+  "action.toastHide": (p) => p.toast ? "put the toast away" : "put every toast away",
   "action.announce": (p) => `tell screen readers ${val(p.text)}`,
   "action.setTheme": (p) => `switch to the theme ${val(p.theme)}`,
   "action.cursor": (p, c2) => `change the mouse pointer to ${String(p.cursor ?? "pointer")} over ${p.target ? c2.layer(p.target) : "the whole player"}`,
@@ -16800,6 +16890,11 @@ function compileBlueprint(p0, bp, opts2 = {}) {
   for (const ab of run2.p.artboards) relayoutTree(ab.children);
   return { project: run2.p, created: run2.created, notes: run2.notes, warnings: run2.warnings, problems: run2.problems, touched: [...new Set(run2.touched)], artboardId: run2.firstAb };
 }
+const FRAMELING_NODES = /* @__PURE__ */ new Set(["event.animationEnd", "event.animationMarker", "action.animationPlay", "action.animationStop", "action.animationFrame"]);
+function hasAnimationLayer(project) {
+  return false;
+}
+const nodeKindParked = (kind, project) => FRAMELING_NODES.has(kind) && !hasAnimationLayer();
 function allNodes(p) {
   return (p.artboards ?? []).flatMap(artboardNodes);
 }
@@ -16894,7 +16989,7 @@ This is how it looks when it is done:
 
 ## 1. Make a project
 
-1. Open the Interactives page and press **New project**. A window called **Start a new project** asks how to begin: keep **Blank project**, leave the name as it is (or type your own) and press **Create project**. The editor opens with one page called **Home**, 800 by 600.
+1. Open the Ixia page and press **New project**. A window called **Start a new project** asks how to begin: keep **Blank project**, leave the name as it is (or type your own) and press **Create project**. The editor opens with one page called **Home**, 800 by 600.
 2. Click the project name at the top left (it says *Untitled project*), type **My first animation** and press <kbd>Enter</kbd>. Everything saves by itself. The label next to the name says **Saved** when it has.
 
 ## 2. Draw the box
@@ -17023,7 +17118,7 @@ The graph can do much more than the list, and it helps to have drawn one flow yo
     group: "Getting started",
     summary: "Build a lamp that switches on and off, with a tap counter, using variables, a data binding and Set variable nodes.",
     keywords: "tutorial state machine variable boolean number toggle binding set variable counter lamp switch text expression braces state",
-    body: `A *state machine* is a thing that is always in one state, and moves to another when something happens. In Interactives the state lives in **variables**, the things that happen are **events**, and the look of each state comes from **bindings**.
+    body: `A *state machine* is a thing that is always in one state, and moves to another when something happens. In Ixia the state lives in **variables**, the things that happen are **events**, and the look of each state comes from **bindings**.
 
 You will build a lamp. A button switches it on and off, and a counter shows how many times you pressed. It takes about ten minutes.
 
@@ -22741,11 +22836,13 @@ const TOPICS = [
   // ---------------------------------------------------------------- getting started
   {
     id: "welcome",
-    title: "Welcome to Interactives",
+    title: "Welcome to Ixia",
     group: "Getting started",
-    summary: "What Interactives is, how a project fits together, and where to start.",
-    keywords: "intro overview start getting started tutorial beginner first learn new user onboarding glossary words",
-    body: `Interactives builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on pages, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
+    summary: "What Ixia is, how a project fits together, and where to start.",
+    keywords: "intro overview start getting started tutorial beginner first learn new user onboarding glossary words interactives old name renamed ixia",
+    body: `Ixia builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on pages, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
+
+Ixia used to be called Interactives. Only the name changed: your projects, links and embeds are as they were, the address still says \`/interactives\`, scripts still use \`ix\` and packages are still \`.ixp\` files.
 
 ![The editor: tools down the left edge, then Layers, Assets, Libraries and Comments, the pages in the middle, the Properties panel on the right, and the Timeline, Interactions, Scripts, Variables, Data and other tabs along the bottom. Share and Export are at the top right.](help/editor-overview.png)
 
@@ -22759,7 +22856,7 @@ Under the top bar, the **Getting started** strip lists five jobs that tick thems
 
 ## Getting started as a beta tester
 
-Thank you for trying Interactives 0.5. It is a beta: the main parts work, a few edges are rough, and what you find now decides what gets fixed next. You don't need to read anything first. Follow the list below, and open the help page it links to when you want the detail.
+Thank you for trying Ixia 0.5. It is a beta: the main parts work, a few edges are rough, and what you find now decides what gets fixed next. You don't need to read anything first. Follow the list below, and open the help page it links to when you want the detail.
 
 ### What to try first
 
@@ -22891,7 +22988,7 @@ See [Using this help](help) for the detail.
 - **New project** (top right, or the **+** card) opens **Start a new project**, one window with four ways to begin. Pick one on the left (<kbd>Up</kbd> and <kbd>Down</kbd> move between them), then give the project a name and a folder at the bottom and press **Create project**. It opens straight away.
   - **Blank project**: one empty page called **Home**, with the Light, Dark and High contrast themes. Your default font (Open Sans unless you changed it) is added to it. See [Preferences](preferences).
   - **Copy a project or template**: a list of your own projects, your own templates and the ones shared with you. A project is copied whole, with its pictures, and the copy is called **Copy of ...**. A template opens with its checklist, as under [Templates](templates).
-  - **Built-in template**: the starters that come with Interactives, shown with their pictures.
+  - **Built-in template**: the starters that come with Ixia, shown with their pictures.
   - **Copy an example**: the finished examples, shown with their pictures. You get your own copy to change.
   
   The search box above each list filters it as you type. Press <kbd>Down</kbd> to move from the search box to the list, the arrow keys to move through it, and <kbd>Enter</kbd> to create the project from the one you picked. <kbd>Esc</kbd> closes the window without making anything. The name starts as something sensible and follows what you pick until you type your own. The folder starts as the one you were looking at, and you can change it.
@@ -22920,6 +23017,7 @@ A deleted project goes to the **Bin** for 30 days. The **Bin** shows at the bott
 
 - The **Search name or tag** box shows only projects whose name or tags contain what you type. **Clear filters** appears if nothing matches.
 - **Sort** orders the cards by **Last updated** (newest first, the default) or **Name**. The choice is remembered in this browser.
+- While a project is open, the browser tab is named after it (**Pumpkin parts - Ixia**), so two projects open side by side can be told apart.
 - **Thumbnails** and **Details** switch between cards with a picture and a one-row-per-project list. In Thumbnails, the slider next to them makes the pictures bigger or smaller. Both choices are remembered in this browser, the same as in the Assets tab. The page lays out at any window width: the header and folder list wrap instead of squeezing.
 
 ## Folders
@@ -23065,7 +23163,7 @@ Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock
 The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
-**Preview** runs the project exactly as the exported file will, from the start page or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. **Less motion** plays it as a viewer whose device asks for less motion sees it (calm timelines at their end, and with Respect reduced motion on, autoplay at its end, Frameling animations on their still frame and instant page changes), without changing your own computer; it's off each time Preview opens. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
+**Preview** runs the project exactly as the exported file will, from the start page or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. **Less motion** plays it as a viewer whose device asks for less motion sees it (calm timelines at their end, and with Respect reduced motion on, autoplay at its end${""} and instant page changes), without changing your own computer; it's off each time Preview opens. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
 
 - **Now showing**: the page on screen and how many instances it contains.
 - **Timelines**: the ones running, with a progress bar (green dot = playing).
@@ -23163,7 +23261,7 @@ Preferences are your own settings for the editor. Open **Preferences** from the 
 
 It is one window with a list of **pages** down the left and the settings of one page on the right. Your settings are saved with your account, so they follow you to any browser you sign in on.
 
-The small **(i)** icon in the title bar shows the version of Interactives you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. Put it in every problem report. The same icon is beside **Help** on the help and projects pages.
+The small **(i)** icon in the title bar shows the version of Ixia you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. Put it in every problem report. The same icon is beside **Help** on the help and projects pages.
 
 ## Using the window
 - **Changes apply at once.** There is no OK and no Cancel: tick a box and the editor changes. <kbd>Esc</kbd> or the **×** closes the window.
@@ -23513,6 +23611,7 @@ Each page has its own size, background, layers, timelines and interactions. Vari
 Turn on **Fit height to content** in the **Page** section and the page is as tall as its lowest showing layer. Its height is no longer typed in (the **H** box is greyed out): it follows the layers. That keeps going while the project plays, so the page grows and shrinks as a list fills from data, a layer is shown or hidden, or text gets longer. In StudyDesk the embed's iframe follows it, so nothing is cut off and there's no empty space under it.
 
 - **Space below** keeps some room under the lowest layer.
+- **Fit width to content** is the same idea sideways: the page is as wide as its furthest showing layer, and the **W** box is greyed out. The editor keeps it measured as you change the page; a page playing in an embed is drawn at the width it was saved with, because an embed's width is set by the page it sits in. With it on, **Space below** is kept to the right as well.
 - A hidden layer, a mask, and anything inside a frame that clips or scrolls (past the frame's own edge) take no room.
 - A **dialog** takes no room either. Dialogs open over the page, so opening one never makes the page (or the StudyDesk embed) taller. One taller than the page keeps the page the height it was, so give that dialog its own scrolling.
 - Any other layer can be left out the same way: turn on **Not counted in the page height** in its **Layer** section. That's for toasts, tooltips and anything else that floats on top.
@@ -23757,6 +23856,18 @@ Boolean operations (union, subtract, intersect, exclude) turn several shapes int
 
 ## Fill
 Choose the type from the dropdown at the top of a fill: **None** (removes it), **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. You can type a colour as hex (such as #ffcc00), \`rgb()\`, \`hsl()\` or a colour name. The number box beside a colour is its opacity.
+
+**The colour picker.** Click a colour's swatch and the picker opens under it. It works the same wherever there's a colour: a fill, a stroke, a shadow, text.
+
+- The **square** sets how strong the colour is (across) and how bright (up). Drag in it, or use the arrow keys, with <kbd>Shift</kbd> for bigger steps.
+- The **hue** strip under it chooses which colour.
+- The **opacity** strip under that sets how see-through it is, from clear to solid. It's drawn over grey and white squares, so see-through looks see-through. It and the number box beside the colour are the same value: move one and the other follows. Both strips are sliders: arrow keys, <kbd>Home</kbd> and <kbd>End</kbd>.
+- Picking another colour **keeps the opacity** it had. It never goes back to 100 by itself.
+- The swatch itself shows the squares behind any colour that isn't fully solid.
+- At the foot are the colour as text, the **eyedropper** (pick a colour from anywhere on the screen, in browsers that have one) and a small rainbow square for your **browser's own picker**, which only knows solid colours.
+- <kbd>Esc</kbd> or a click outside closes it. One drag is one undo.
+
+**Good to know:** a colour that follows a [token](themes) shows the token's name instead, and has no opacity of its own here: the token decides the colour. To make that paint see-through, use the fill's or the layer's own **Opacity**, or detach it from the token first.
 
 #### Exact gradient points
 By default a linear gradient runs corner to corner along its angle, and a radial one from the middle of the layer to its farthest corner, so both stretch with the layer. **Set start and end points** (linear) or **Set centre and radius** (radial) pins the gradient to numbers instead: **From** and **To** (or **Centre** and **Radius**) in pixels from the layer's top-left corner. Pinned gradients stay where they are when the layer is resized, which is how Rive and Lottie place them. With the layer selected, the points also show on the canvas as dots joined by a dashed line (a radial one has a dot at its centre and one on its radius): drag them. **Use angle instead of points** (or **Use the box…**) goes back to the stretching kind. Points can be animated like any other number. In a timeline's property list choose the gradient's start, end, centre or radius (the same for strokes and for the later fills), or a stop's colour or position. While recording, dragging a point on the canvas makes the keyframe.
@@ -24095,6 +24206,26 @@ The crop belongs to the layer, not the file, and the frame (with its corner radi
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
 
+
+### Zoom and the focal spot
+The same crop, from the picture's settings, when you'd rather point than drag. Under **Crop** in the **Image** section:
+
+- **Focal spot** is a small picture of the whole photo. **Click the part that matters most** (a face, a label on a diagram) and that part moves to the middle of the frame. The dot marks it, and the bright outline is the part the frame shows. Drag the dot, or use the arrow keys with <kbd>Shift</kbd> for bigger steps.
+- **Zoom** is a slider. It brings the picture closer about the focal spot, so what you chose stays in the middle while it grows. The number under it is the same zoom, to type.
+
+**Good to know:** the frame is never left uncovered, so the spot goes as far towards the middle as the picture can move. With no zoom, a picture only moves the way it overflows its frame: a wide photo in a square frame moves left and right. Zoom in a little and it can move both ways.
+
+### Swap a picture
+To show a different picture in the same place, right-click the picture and open **Swap picture**. It asks where the new one comes from:
+
+- **One already in this project…** opens the project's pictures as a grid. Click one. The one showing now is marked.
+- **From the Media Catalogue…** opens the photo library. Pick a photo and press **Insert**. It's linked, not copied, like any other catalogue photo.
+- **Upload a new one…** opens your computer's file picker. The picture is added to **Assets** and shown in the layer.
+
+The layer keeps its place, its size, its corners, and every interaction and keyframe on it. Only the **crop** goes, since it was framed for the old picture, and you're asked for a new description, because the old one described the old picture. One undo puts the old picture back.
+
+This changes one layer. To change a picture **everywhere** it's used, use **Replace file…** on it in Assets instead.
+
 ## Video
 Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.
 
@@ -24240,6 +24371,7 @@ Turn on **Animate changes** in the frame's Auto layout section and, while the pr
 | Easing | A preset, or *Custom* to drag the curve's handles |
 | Enter | How a layer looks as it appears (a layer shown, or a new list item): *None*, *Fade*, *Scale* (grows from nothing) or *Fade and scale* (from 80%) |
 | Exit | How a layer looks as it goes (hidden, or a list item removed): it fades or shrinks where it was, then goes. Until it has gone it keeps its place in the layout, so the layers around it stay put and a frame that hugs its content keeps its size; then they glide together |
+| Keep its place while leaving | Shows when **Exit** is set, and starts on. Untick it and the others move at once while the leaving layer fades where it was, so a frame that clips its content folds shut over it. That is how an accordion's section closes |
 
 - A frame that hugs its content on an axis glides its own size along with its children when the content changes size (a layer shown or hidden, a list gaining or losing items).
 - If a layer returns while it is still leaving, it fades back in from where it had got to and nothing moves. A layer that appears while another is still leaving waits until the layout is released. A solo swaps its layers at once with no hold.
@@ -24327,6 +24459,8 @@ Where the older **Photography catalogue** still answers at that address (StudyDe
 
 ## How it is stored
 The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
+
+On the canvas, a page you aren't working on is drawn as a picture of itself to keep the editor quick, and its catalogue photos are in that picture like everything else. If a photo can't be reached just then, that page simply stays drawn live, so you never see a page with its photos missing.
 
 ## Exporting
 Files that must work without a network fetch the picture when they are made and put it inside:
@@ -24583,6 +24717,9 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
 Press <kbd>B</kbd> to draw one. A button has a label (which can use \`{expressions}\`), fill, stroke and corner radius. Add a **When clicked or hovered** event to react to a click.
 - Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)).
 - **Disabled** (also bindable, for a Next button that waits for an answer) greys it out and takes it out of the Tab sequence.
+- **Side padding** on a button is the room between its label and its left and right edges: 12 pixels unless you change it. Give a wide button with its label on the left a little more, as an accordion's headers have.
+- An **inner shadow** on a button is drawn over its fill, so a shadow of 0 across, -3 down, no blur, in a colour, is a line along its bottom edge. That is the line under the showing tab.
+- A button's colours ease when a [state](layer-states) changes them, so a hover or a chosen look doesn't blink. With reduced motion asked for they change at once.
 - **Disabled look** sets how dimmed a disabled button or input looks: 0.5 by default, 1 for no dimming. A layer whose Opacity is bound keeps doing its own dimming.
 - **Small buttons** keep the size you draw. A button narrower than about 80 px no longer grows by its padding, so a dot-sized button really is dot-sized.
 
@@ -24599,6 +24736,15 @@ Text that opens a URL. **Fit text to box** works here too. For making any other 
 
 ## Embed
 An iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
+
+**The page may use** (a web page embed only) is a list of tick boxes for what the embedded page is allowed: **Autoplay**, **Full screen**, **Clipboard**, **Microphone**, **Camera**, **Screen share**, **Location**, **Motion sensors**, **Picture in picture** and **Protected video**. Only what's ticked is let through; an unticked box is a no, even for a page from the same site. Hover a box for what it really does.
+
+- An embed starts with **Autoplay**, **Full screen** and **Clipboard**, which is what every embed had before this could be chosen, so nothing that worked has stopped.
+- Ticking **Microphone**, **Camera**, **Screen share** or **Location** doesn't switch it on. It lets the embedded page *ask*, and the viewer still sees their browser's own question the first time.
+- None of it works unless the embedded page is on \`https\`. And when your interactive is itself in a course page, that page has to let the interactive use the same thing, or the embed inside it gets nothing.
+- Your own HTML takes none of these ticks. Its frame is shut tight on purpose and keeps the fixed three.
+
+**Border** draws a line round the embed, inside its box and over the embedded page's edge, so the layer stays the size you gave it. It starts on your project's **border token**, so it matches the colourway and changes with it; pick another token from the **Tokens** tab of the colour, or a plain colour that stays put. **Border width** is how thick it is, and it follows the **Radius**.
 
 ## Video
 A video file or URL.
@@ -25669,7 +25815,7 @@ Everyone should be able to finish the activity, so every drag has two ways that 
     body: () => {
       const section = (title, cat) => `## ${title}
 
-` + CATALOG.filter((d) => d.category === cat).map((d) => {
+` + CATALOG.filter((d) => d.category === cat && !nodeKindParked(d.kind)).map((d) => {
         const params = d.params.map((raw) => plainParam(d.kind, raw, false)).map((p) => `- **${p.label}**${p.help ? `: ${p.help}` : p.options ? `: ${p.options.map((o) => o.label).join(", ")}` : ""}`).join("\n");
         const outs = d.outputs.filter((o) => o.label).map((o) => pw(o.label, false));
         const rest = pw(`${d.details ?? ""}${outs.length ? `${d.details ? " " : ""}Outputs: ${outs.join(", ")}.` : ""}`, false);
@@ -25724,7 +25870,7 @@ A state also beats a [binding](bindings) that sets the same property, so you can
     keywords: "accordion accordions tabs tab strip panel panels sections collapse expand disclosure faq show hide one at a time toggle",
     body: `An **accordion** is a stack of sections where opening one closes the others. **Tabs** are the same idea lying down: a row of headers with one panel showing. Both are a setting on a frame, so there is nothing to wire up.
 
-**Add one:** **Accordion** and **Tabs** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and both are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it on the open page. You get three sections and the variable that remembers which is open.
+**Add one:** **Accordion** and **Tabs** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and both are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it on the open page. You get three sections and the variable that remembers which is open. A section of the accordion folds open and shut rather than blinking, and the ones under it glide to make room. That is **Animate changes** in each frame's [Auto layout](auto-layout#animate-changes) section, so you can change its speed or turn it off.
 
 ## How a frame becomes one
 Turn on **Make this an accordion** in the frame's **Accordion** section. Then:
@@ -25737,10 +25883,25 @@ Turn on **Make this an accordion** in the frame's **Accordion** section. Then:
 Because what's open is just a variable, anything else can read or change it: a **Next** button, a binding, a script, a [starting point](page-navigation#named-starting-points).
 
 ## Tabs
-Set **Panels** to a layer inside the frame whose own layers are the panels. The frame's other children are then the headers alone, matched to the panels in order: first header, first panel. Lay the headers out in a row and that is a tab strip.
+Set **Panels** to a layer inside the frame whose own layers are the panels, and **Tab list** to the layer whose own layers are the tabs. Tabs and panels are matched in order: first tab, first panel. The **Tabs** button builds exactly this, drawn the way tabs are on most of the web: a row of tabs standing on a thin line, the showing tab with a heavier label and a line under it in the button colour, and each panel a box of its own with room round its words. Changing tab fades the new panel in.
 
 ## What you get for free
-Each header is marked up as a button that says whether it is expanded, so a screen reader reads "Section 2, button, expanded" without you setting anything. The panel of a closed section is hidden, so it is skipped by the keyboard too.
+Both work the way accordions and tabs do everywhere else on the web (they follow the W3C's published patterns), without you setting anything.
+
+**An accordion:**
+
+- Each header is a button inside a heading, and says whether its section is expanded: a screen reader reads "Section 2, button, collapsed, heading level 3".
+- The pointer turns to a hand over a header, whatever kind of layer the header is.
+- Each header has a **chevron** at its far end that turns over as the section opens. Untick **Chevron on each header** to go without.
+- Only the **header** opens and closes a section. Clicking in a panel's own words does nothing, so reading a section never shuts it.
+- <kbd>Enter</kbd> and <kbd>Space</kbd> open and close. <kbd>Tab</kbd> goes from header to header and into an open panel.
+- Each panel is a named region, so a screen reader can jump to it. A closed section takes no room: the ones under it move up.
+
+**Tabs:**
+
+- A screen reader says "tab list, 3 tabs", which tab is selected, and that each panel belongs to its tab.
+- <kbd>Tab</kbd> lands on the selected tab, then goes into the panel. <kbd>←</kbd> and <kbd>→</kbd> move along the tabs and wrap round at the ends, <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last. Each tab is shown as you reach it. A column of tabs uses <kbd>↑</kbd> and <kbd>↓</kbd> instead.
+- Tabs made before **Tab list** existed keep working, with the tabs beside the panels. Set **Tab list** to get the rest.
 
 **Good to know:** the editor canvas shows the first section open, whatever the variable says, so you can style the open and closed looks without playing it. [Layer states](layer-states) are the tidy way to make an open header look different.
 
@@ -25748,13 +25909,13 @@ Each header is marked up as a button that says whether it is expanded, so a scre
   },
   {
     id: "overlays",
-    title: "Tooltips, modals, confirmations and prompts",
+    title: "Tooltips, modals, confirmations, prompts and toasts",
     group: "Interactivity",
     summary: "Overlays: pages that belong to no screen, shown beside or over whatever layer points at them.",
-    keywords: "overlay overlays dialog dialogue modal popup pop up prompt ask input type answer confirm confirmation are you sure tooltip tip hover hint balloon callout scrim backdrop target trigger side gap close escape",
-    body: `A **tooltip**, a **modal**, a **confirmation** and a **prompt** are all the same idea: a page that isn't a screen of its own, shown beside or over whatever points at it. The page is called an **overlay**.
+    keywords: "overlay overlays dialog dialogue modal popup pop up prompt ask input type answer confirm confirmation are you sure tooltip tip hover hint balloon callout scrim backdrop target trigger side gap close escape toast snackbar notification saved copied message corner show toast hide toast tab order keyboard open variable",
+    body: `A **tooltip**, a **modal**, a **confirmation**, a **prompt** and a **toast** are all the same idea: a page that isn't a screen of its own, shown beside or over the page you're on. The page is called an **overlay**.
 
-**Add one:** **Tooltip**, **Modal**, **Confirmation** and **Prompt** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and all four are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it, wired up. Pick the layer it belongs to first and it's pointed at that layer straight away; the new overlay page opens so you can write its words.
+**Add one:** **Tooltip**, **Modal**, **Confirmation**, **Prompt** and **Toast** each have a button of their own in the **Web** group of the tool bar (it starts folded: click **Web** to open it), and all five are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). One click builds it, wired up. Pick the layer it belongs to first and it's pointed at that layer straight away; the new overlay page opens so you can write its words.
 
 ## Target and trigger
 - The **target** is the layer the overlay belongs to: a tooltip appears beside it, and the link lives on it. It's whichever layer's **Overlay** section names the page.
@@ -25763,14 +25924,41 @@ Each header is marked up as a button that says whether it is expanded, so a scre
 
 That split is what lets a tooltip belong to a small icon while a much bigger area around it opens the tooltip.
 
-## The four kinds
-- **Tooltip.** Sits beside its target while the trigger is hovered or focused. **Side** chooses above, below, left or right, and **Wherever it fits** (the default) tries each in turn and keeps it on the page. **Gap** is the space between.
+**The pointer says what will happen.** Over a trigger that opens a modal, a confirmation or a prompt it turns to a hand, whatever kind of layer the trigger is, because a click does something. Over a tooltip's trigger it stays as it was: resting there is enough, and a hand would promise a click that does nothing. A layer with a **Cursor** of its own keeps it, and a disabled button never shows the hand.
+
+## The five kinds
+- **Tooltip.** Sits beside its target while the trigger is hovered or focused. **Side** chooses above, below, left or right, and **Wherever it fits** (the default) tries each in turn. A side you choose is kept unless there's no room there and there is on the opposite side, when it goes across (a tooltip below a card at the foot of the page would land on the card). Near the page's edge it slides in rather than changing side. **Gap** is the space between.
+  - The **trigger is the whole layer**: point anywhere on a card made of a frame and its words, or tab to something inside it, and its tooltip shows. While a layer is being **dragged** its tooltip is put away.
+  - It shows after the pointer has rested on the trigger for a moment: **Delay**, 300 ms unless you change it, so sweeping the pointer across a page doesn't set every tooltip off. Reaching the trigger with the keyboard shows it at once, and so does moving straight from one tooltip's trigger to another's.
+  - A screen reader reads the tooltip as the **description** of its trigger.
   - It **fades** in and out. **Fade** is the **Project default** (the project's own transition time, **Page height time** in the project settings) or **Custom** with its own **Time**. A viewer whose device asks for less motion gets no fade.
-  - It has a **Tail**: a small triangle on the side facing the target, pointing at the middle of it, in the tooltip's own colour. It follows whichever side the tooltip ended up on. Untick **Tail** to go without.
+  - It has a **Tail**: a small triangle on the side facing the target, pointing at the middle of it, in the tooltip's own colour. It follows whichever side the tooltip ended up on. Give the card a border and the tail takes it too, as one outline with the card. Untick **Tail** to go without.
   - **Stays while you're on it** keeps it open when the pointer moves from the trigger onto the tooltip, with a moment's grace to cross the gap, so a link or a button inside it can be reached. Turn it off for a plain label that should go the moment you leave. <kbd>Esc</kbd> puts a tooltip away either way.
-- **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd> or a click outside closes it.
-- **Confirmation.** Asks a question and takes the answer from its buttons. The buttons are a **list**: add one by adding a row, rename one by changing its label, and mark the answer you mean with \`"main": true\` so it stands out from the ways out. Picking a button writes what it stands for into **What they chose** and closes it. A click outside doesn't dismiss a confirmation.
-- **Prompt.** Asks for something typed. **OK** keeps what was typed in **What they answered** and closes; **Cancel** closes and leaves the last answer alone. Read that variable, or start a flow when it changes.
+  - The **keyboard reaches what's inside** the same way. With the trigger focused, <kbd>Tab</kbd> goes to the first link or button in the tooltip, <kbd>Tab</kbd> off the last one carries on to whatever follows the trigger, and <kbd>Shift</kbd>+<kbd>Tab</kbd> from the first goes back to the trigger. <kbd>Esc</kbd> from inside puts the tooltip away and hands the focus back to the trigger. A tooltip with nothing to press in it changes nothing about <kbd>Tab</kbd>.
+- **Modal.** Covers the page, opened by clicking the trigger. The page behind it is dimmed, the keyboard stays inside, and <kbd>Esc</kbd>, a click outside, its **Close** button or the cross in its corner closes it. It **eases in and out** (and not at all for a viewer who asks for less motion), and when it closes the focus goes back to what opened it. It opens in the **middle of what the viewer can see**: on a tall page embedded in a course that is the part on screen, not the middle of the page, which may be out of sight. It stays where it opened if they scroll. The same goes for a confirmation and a prompt. A screen reader calls it by its **page's name**, so name the page for what it is ("Your progress", not "Dialog 2"); the same goes for a confirmation and a prompt. The dimming and the blocking of what's behind are part of being a modal, so they're there even with **Accessibility off** in Preview; only moving the focus in and keeping <kbd>Tab</kbd> inside follow that switch. The card of a new modal, confirmation or prompt is the page's own background colour, the brightest thing on the dimmed page.
+- **Confirmation.** Asks a question and takes the answer from its buttons. A screen reader hears it as an **alert dialog**, named by its heading and described by its message, and the focus starts on the first button, so put the safe answer (**Cancel**) first. The buttons are a **list**: add one by adding a row, rename one by changing its label, and mark the answer you mean with \`"main": true\` so it stands out from the ways out. For an answer that deletes or can't be undone, use \`"danger": true\` instead and the button is red (label it **Delete**, not **Yes**: say what it does). Picking a button writes what it stands for into **What they chose** and closes it. A click outside doesn't dismiss a confirmation.
+- **Prompt.** Asks for something typed. The focus starts in the box. **OK**, or <kbd>Enter</kbd> in the box, keeps what was typed in **What they answered** and closes; **Cancel** or <kbd>Esc</kbd> closes and leaves the last answer alone. Read that variable, or start a flow when it changes.
+- **Toast.** A short message that appears over a corner of the page, stays a moment and goes by itself: "Plan saved", "Copied", "Couldn't reach the server". See [Toasts](#toasts) below. A new toast is a small card in the theme's own colours (light on a light theme, dark on a dark one), lifted off the page with a shadow.
+
+## Opening one without a layer
+A modal, a confirmation and a prompt each have a **showing** variable (**Dialog showing**, and so on). Turn it on and the overlay opens, on whichever page is open, with **no layer pointing at it**: a **Change a value** node at the end of a flow, a script, or a timer. Its page's **Overlay** section says so when nothing points at it. A tooltip always needs a layer, since it has to sit beside something.
+
+A layer **inside an overlay** can point at another overlay too. A **More information** button in a tooltip opens a modal the ordinary way: select the button on the tooltip's page and choose the modal under **Overlay**.
+
+## Toasts
+**Add one:** the **Toast** button in the **Web** tools. Pick a button first (a **Save**, a **Copy**) and clicking that button is wired to show the toast. Otherwise add a **Show toast** node to any flow and choose the toast in it.
+
+- **Show toast** has a **Message**: the words it says this time, as an expression (\`"Plan saved"\`, or \`"Saved " + name\`). They go into the toast's own text variable, so **one toast serves every message**. Leave it empty and the toast keeps the words it had.
+- **Place** is a corner, or the middle of the top or bottom edge, and **Gap** is how far in from the edge. On a tall page it is the corner of the part the viewer can see. A bar the course page keeps fixed across its top can't be seen from inside the piece, so a toast at the top can end up under it: the bottom places are the safe ones.
+- **Stays** is **For a time** (4 seconds unless you change **Time**) or **Until dismissed**. The time waits while the pointer or the keyboard is on the toast. A toast with **something to press besides its close button always stays until dismissed**, so nobody has to race a timer to press it.
+- A new toast has a **close button** (a cross, named Close) wired to **Hide toast**, so whoever is reading it can put it away early. Delete the layer if you don't want one. Its own close button doesn't stop a toast going by itself: only something else to press does.
+- **Comes and goes** is **Slides and fades** (what a new toast starts with: it moves up into place as it fades in and back down as it goes, or the other way up at the top of the page) or plain **Fades**. Both take the **Fade** time, the same setting a tooltip has, and a viewer who asks for less motion gets neither.
+- It's **read out** to a screen reader as it appears, so it needs no **Announce** node beside it. Tick **It's an error** for something that has gone wrong and it interrupts instead of waiting its turn. It **never takes the focus**.
+- Showing a toast that's already up gives it the new words and its full time again. Different toasts **stack**, the newest nearest the edge.
+- **On its own** makes a toast show alone: showing it puts any other toast away, and showing another puts it away. Tick it on every toast and there is only ever one at a time, the latest.
+- Nothing points at a toast, so it has no target or trigger and no lines on the canvas.
+
+From a script: \`ix.toast('Toast', 'Plan saved')\` and \`ix.hideToast('Toast')\`.
 
 ## Seeing what it's linked to
 An overlay lives on a page of its own, so the canvas draws its links for you. Open the overlay's page and a line runs from it to every layer it's linked to: a **solid blue** line to its **Target** (the layer a tooltip sits beside) and a **dashed gold** line to its **Trigger** (the layer that shows it), each with its word on it. Where the target is its own trigger there is one line, marked **Target and trigger**. A modal, a confirmation and a prompt aren't placed beside anything, so they show only what opens them.
@@ -25787,9 +25975,19 @@ Each layer can also hand the overlay **its own words** as it opens. A modal, a c
 Overlays never appear in **Next** and **Previous**, never count in \`pageCount\`, and never make a page with [Fit height to content](artboards) any taller: they open over the page.
 
 ## The card
-What those buttons make is a page holding one **card**: a single frame with the overlay's look on it (its rounded corners, border, shadow and padding). When an overlay page holds just one frame like that, the card *is* the overlay: it's shown at the card's own size, and the page round it is only somewhere to design it.
+What those buttons make is a page holding one **card**: a single frame with the overlay's look on it (its rounded corners, border, shadow and padding). When an overlay page holds just one frame like that, the card *is* the overlay.
 
-The card uses [auto layout](auto-layout), so it sizes itself to what's in it. A tooltip's words stay on one line up to 260 wide and wrap after that, with the card hugging them. A modal's buttons sit under its message, so a longer message pushes them down rather than running into them.
+**The page sizes the overlay.** The card fills its page exactly, so there is one thing to size, not two: the page.
+
+- A modal, a confirmation or a prompt has a set **Width** and **Fit height to content** on. Change the page's width and the card follows; its height is whatever the message and buttons need.
+- A tooltip and a toast have **Fit width to content** on as well, so they are as big as their words. A tooltip's words stay on one line up to 260 wide and wrap after that.
+- Want a fixed size? Untick the page's **Fit height to content** (or width) and type one. The card stops hugging on that side and is the size you give the page.
+- Resize the card instead (its handles, or its own **W**) and the page takes that size, so either works. On a side that fits its content, the content decides and a pull springs back.
+- The card's look (corners, border, shadow, padding) is still the card's own: select it to change them.
+
+It's the **The page sizes the overlay** tick in the page's **Overlay** section. Untick it and the card is sized by itself again, with the page only somewhere to draw it. Overlays made before this keep working as they were; tick it on one and the page takes the card's size, so nothing that is shown changes.
+
+The card uses [auto layout](auto-layout), so a modal's buttons sit under its message and a longer message pushes them down rather than running into them.
 
 Put more than one layer straight on the page and the whole page is the overlay instead, at the page's size.
 
@@ -25807,6 +26005,8 @@ An overlay page holds ordinary layers, timelines and interactions, so everything
     body: `A question that checks itself, without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open page from ordinary layers, with the variables it keeps and a few interaction nodes. The **Question** section in the Inspector then changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
 
 Already have the questions in Word, Excel or Moodle? You can [paste them in](paste-questions) or import a GIFT file instead of typing them again.
+
+A chosen option looks chosen the way it does on any form: a **tick** in a multiple-response option's box, a **dot** in a single choice's ring, with the row tinted and outlined as well. The label over a blank is in the text colour, so it can be read; the quiet grey is kept for hints.
 
 ## Add one
 
@@ -26484,7 +26684,7 @@ Tick **Save as user data** on a variable (under **Options**) and the player look
 
 It is saved a moment after it changes (a burst of typing is one save), and straight away when the learner moves to another page or leaves. It goes to the same place as the *Save progress* and *Load saved progress* nodes (see [Results and resume](results)), so you no longer need a *Save progress* node before every Next and Back.
 
-In expressions, \`userData.loaded\` is true once the saved values have been looked for (for a "Welcome back" panel that should not flash on a first visit), and \`userData.restored\` is how many variables came back. A live variable cannot be saved. Embedded pages (instances) keep nothing: tick it in the main project.
+In expressions, \`userData.loaded\` is true once the saved values have been looked for (for a "Welcome back" panel that should not flash on a first visit), and \`userData.restored\` is how many variables came back. \`userData.failed\` is true when they couldn't be loaded on this visit (the server was down, say): the project starts from its starting values, and **nothing is saved over the learner's saved work** until they come back, so you can show a "Your saved work couldn't be loaded, try again soon" message. A live variable cannot be saved. Embedded pages (instances) keep nothing: tick it in the main project.
 
 ## Putting variables back
 **Change a value or counter** with **Do** set to *Back to its starting value* puts one variable back. The **Put values back to the start** node puts several back in one go (tick them in the node's list, or **All**).
@@ -26770,15 +26970,16 @@ The same buttons are above the raw text in the Data tab, and the setting reaches
 | \`await ix.moveView('Layer', {padding, maxZoom, duration, ease})\` / \`ix.resetView({duration, ease})\` | Pan and zoom the page to frame a layer / back to the whole page (see [Moving the view](moving-the-view)) |
 | \`ix.emit(name, data)\` / \`ix.on(name, fn)\` | Send messages to the host page / react to them |
 | \`ix.announce(text, 'polite' | 'assertive')\` | Say something to screen readers (see [Accessibility](accessibility)) |
+| \`ix.toast(name, message?)\` / \`ix.hideToast(name?)\` | Show a [toast](overlays#toasts) by its page's name, with the words it says this time, or put it (or every toast) away |
 | \`ix.soundPlaying(name?)\` / \`ix.soundsPlaying()\` | Is a Play sound sound going (any, or one asset by name or id), and the names of the ones going |
 | \`ix.setTheme(name)\` / \`ix.getTheme()\` / \`ix.themes()\` | Show a [theme](themes) by name (\`'auto'\` follows the viewer), read the one showing, list them |
 | \`ix.record(name, value?)\` | Count that something happened, for [Insights](insights) (a name up to 60 characters, a short value) |
 | \`ix.setInstanceInput(layer, name, v)\` / \`ix.getInstanceInput(layer, name)\` / \`ix.fireInstanceTrigger(layer, name, data)\` | Set or read a variable inside an [instance](instances), or send a message into it only |
-| \`ix.playClip(layer, clip?, {from, loop, speed})\` / \`ix.stopAnimation(layer, reset?)\` / \`ix.goToFrame(layer, frame, play?)\` / \`ix.animation(layer)\` | Play, stop or move a [Frameling animation](frameling-animations) layer, and read what it is doing |
-| \`ix.onFrame((dt, t) => …)\` | Run every frame |
+${""}| \`ix.onFrame((dt, t) => …)\` | Run every frame |
 | \`ix.pointer\`, \`ix.artboard\` | Pointer \`{x, y, down}\`, artboard \`{name, width, height}\` |
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
 | \`ix.context.firstName\`, \`ix.context.courseCode\`, \`ix.context.isStaff\` | The course and learner, read only ([Course and learner context](course-context)) |
+| \`ix.link.program\` | A value from the address the project was opened with (\`?program=GCSC\`), as text, read only ([Values on the link](course-context#values-on-the-link)) |
 | \`await ix.course.stamp(collection, 'Gold star')\`, \`await ix.course.count(collection, 'quizzes', 3)\`, \`await ix.course.read(collection)\` | Stamps and counters shared by every interactive in the learner's course ([Course collections](course-collections)) |
 | \`ix.setCursor('grab')\`, \`ix.log(…)\` | Cursor, logging |
 
@@ -27691,6 +27892,18 @@ Results are already kept per course, so each course's learners start clean witho
 
 After changing per-course values, press **Update to the latest version** in [Share link](export#share-link) so the Link for StudyDesk plays the new version.
 
+## Values on the link
+**link** sits beside context: it holds the values on the address the project was opened with, so one project can serve several programs or courses from different links. Add \`&program=GCSC\` to the end of the address in the embed code (or \`?program=GCSC\` to a link with nothing after it), and the project reads:
+
+- Text and bindings: \`{link.program}\`, \`link.program == 'GCSC'\`.
+- Scripts: \`ix.link.program\`, whether or not they run in the sandbox.
+
+Every value is text, and a name that isn't there is empty, so give it a fallback: \`link.program || 'MSCN'\`. A name is letters, digits, \`.\`, \`_\` and \`-\` (up to 40), a value is up to 200 letters, and there are 20 at most. \`title\` and \`cdtID\` (the embed code's own), \`sessionID\`, \`ixm\` and \`lti\` are never handed on.
+
+It works from the Link for StudyDesk and from a plain share link. To see the project with values on its address while you build it, open **Data**, pick **context**, and under **link** press **+ Add a link value**: give it a name (\`program\`) and a sample value (\`GCSC\`). The canvas and Preview then behave as if the project were opened with \`&program=GCSC\`. Sample values are for designing only: a share link, an embed or an export never carries them, and leaving a name out of the samples is how you check what the project does with no value. A project shared before 19 November 2026 needs **Update** in Share to get it.
+
+Anyone can change what's on an address they open, so use a value to pick what to show, never to decide what someone may do or to set a score.
+
 ## Privacy
 Only the course, the learner's first name and display name, and whether they are a student or staff go to the project. Never a username, email, student number or anything that could look a person up. Nothing from \`context\` is sent to analytics, results or diagnostics by the player or the Link for StudyDesk page. A project that records a name itself (a script saving \`ix.context.firstName\` with **Record**) is doing that on purpose, so don't.`
   },
@@ -27786,6 +27999,10 @@ The same link tells the project which course it is in and the learner's first na
 
 Someone opening it with no session plays as normal, and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
 
+A slow server is waited for: the project stays on its loading screen until the saved values arrive, however busy the StudyDesk page is. If the server fails to give them back at all, the project starts from its starting values and saves nothing over what was kept, so the learner's work is there on their next visit. A save that doesn't get through is tried again.
+
+Projects shared before 19 November 2026 gave up on a slow server after a second and a half, and could start a returning learner over with an empty plan. The Link for StudyDesk now fetches the saved values as soon as it opens, which makes that much rarer, but to fix it for good, open the project and press **Update** in [Share link](export#share-link) once.
+
 ## Save user data and Load user data
 **Remember** keeps a variable's value all the time, on its own. When you'd rather choose the moment, use the two action nodes instead: **Save progress** keeps the variables you tick, as they are right then (say, when the learner presses *Submit*), and **Load saved progress** puts them back on a later visit. Put the load in **Before activity loads** so the values are in place before anything shows. *Load saved progress* goes on from **Loaded** when anything came back, and from **Nothing saved** on a first visit, so you can set up a fresh start there.
 
@@ -27809,8 +28026,8 @@ User data is kept apart from remembered progress and from results, so **Clear re
     id: "insights",
     title: "Insights: what learners did",
     group: "Getting started",
-    summary: "See where learners go, click and struggle: pages reached, a click heat map, steps, answers to each question and your own records, as counts.",
-    keywords: "insights analytics records record learners activity funnel heat map heatmap clicks steps answers questions struggle csv export privacy consent studydesk",
+    summary: "See where learners go, click and struggle: pages reached, a click heat map, steps, answers to each question, what they did with every control, and your own records and events, as counts.",
+    keywords: "insights analytics records record learners activity funnel heat map heatmap clicks steps answers questions struggle csv export privacy consent studydesk send analytics event reportAnalytics beacon saved ids controls video drag drop accordion tabs dialog",
     body: `The **Insights** tab (bottom panel) answers "where do learners get stuck?" with counts. It shows nothing until learners have played the project from the **Link for StudyDesk** (see [Share link](export#share-link)) while signed in to StudyDesk.
 
 ## What you see
@@ -27819,7 +28036,9 @@ User data is kept apart from remembered progress and from results, so **Clear re
 - **Steps reached** for each step-through page, so you can see which step people stopped at.
 - **One card per question.** How many learners answered, how many checks were right, how many were right the first time, and a bar for how often each option was chosen (the right answer in green). An option nobody chose shows as zero. Typed and ordered answers are only counted as right or wrong.
 - **Where learners clicked.** The buttons, links and clickable layers learners clicked most. Tick **Click heat on the canvas** to draw every click over the page you are editing: blue is a few, red is many. Clicks that land on nothing show up too, which is how you find the thing people expected to be clickable.
+- **What else learners did.** Every other thing on a page that takes an action: a tick box, slider or dropdown changed (and what to), a text box changed, a layer dropped (where, and whether the zone took it), a video played, paused or watched to the end, and an accordion section, a tab or a dialog opened.
 - **Your records**, from the *Record* node and \`ix.record\`.
+- **Your analytics events**, from the *Send analytics* node, with how often each value came up.
 - **Courses**, when the project is used in more than one.
 
 Choose how far back to count (7 days to all time) and press **Refresh**. **Export CSV** downloads every count in a spreadsheet-friendly file.
@@ -27827,13 +28046,21 @@ Choose how far back to count (7 days to all time) and press **Refresh**. **Expor
 ## Your own records
 Add a **Record** action node (Interactions tab) anywhere in a flow: give it a **Name** ("opened hint") and, if you like, a **Value** (an expression: a choice, a level, a score band). Insights counts how often each name happened, how many learners it happened to, and how often each value came up. In scripts: \`ix.record('chose route', 'B')\`. Names are cut at 60 characters and values at 120.
 
+## Send analytics
+The **Send analytics** node (Interactions tab, Results and data) sends a named event with a few values of your choosing: a **Name** ("finished level") and **Data**, a formula such as \`{level: level, time: seconds}\`. It goes to the same analytics as everything else, with the learner and the course on it, and Insights counts it by name.
+
+- **Leave Saved and Not saved alone** and it joins the queue every Toolbox app reports through, which is sent every few seconds. The flow carries straight on.
+- **Join something to Saved** (or **Not saved**) and it is sent at once and waited for instead. **Saved** runs once the row is kept, with \`event.ids\` and \`event.id\` to hold on to. **Not saved** runs with \`event.reason\`: nobody is signed in, it is a preview, there is no page to keep it, recording is off, or this visit has sent too many. The bottom port still continues straight away.
+
+Use **Record** for a simple count. Use **Send analytics** when you want several values together, or need to know it arrived. In the editor's Preview nothing is sent: Saved runs with a pretend id so you can try what follows it.
+
 ## What is and is not recorded
-- Automatic records: a page was shown, a click (where, and which button or link), a step was reached, and a question was checked (right or wrong, which options were chosen).
-- Nothing a learner types is recorded. A typed answer is only marked right or wrong.
+- Automatic records: a page was shown, a click (where, and which button or link), a step was reached, a question was checked (right or wrong, which options were chosen), a control was changed, a layer was dropped, a video was played, paused or finished, and a section or dialog was opened.
+- Nothing a learner types is recorded. A typed answer is only marked right or wrong, and a text box only says that it was changed.
 - Insights shows counts and numbers of different learners. It never lists a learner. With only a handful of learners a count can be one person, so wait for more before drawing conclusions.
 - The records go to the Toolbox's usual analytics as the learner's StudyDesk session (the same way every other toolbox item is counted), so the people who read those reports can see which user they came from. Tell learners what is counted, the way you would for any other usage statistics.
 - A page load sends at most 500 records, 300 of them clicks.
-- Switch recording off, or any kind of automatic record, in **Learner records** in the Project section (click an empty part of the canvas). Off means off: Record nodes send nothing either.
+- Switch recording off, or any kind of automatic record, in **Learner records** in the Project section (click an empty part of the canvas). Off means off: Record and Send analytics nodes send nothing either.
 - The player on its own sends nothing anywhere. A standalone export, the editor's Preview and a plain share link keep no records. Only the Link for StudyDesk passes them on.
 
 ## Good to know
@@ -28404,6 +28631,8 @@ That link opens the **learner page**: a small page around your project that know
 
 A project that uses a microphone, camera or photos (see [Microphone, camera and photos](sensors)) only works through the **Link for StudyDesk**, and the iframe that holds that link on the StudyDesk page needs \`allow="microphone; camera"\`. The **Embed code** below writes that for you. Update the link after changing what the project declares.
 
+**Values on the link.** Anything you add to the link's address, like \`&program=GCSC\` on the end of the embed code's, reaches the project as \`link.program\` (\`ix.link.program\` in a script). See [Values on the link](course-context#values-on-the-link).
+
 ### Embed code
 Under the Link for StudyDesk, **Embed code** is the link already wrapped in the iframe the Toolbox writes for its own items, ready to paste. Press **Copy embed code**, then in StudyDesk, StaffDesk or the open site edit the page, open the editor's **Source code** view (the \`<>\` button), paste where it should go and save. The page treats it like any other Toolbox item.
 
@@ -28592,7 +28821,7 @@ Untick anything you do not want, then **Update**. It is one undo step (Ctrl+Z). 
 A template made from a project that already has a [brand kit](brand-kits) added, with some of its items placed, is a **pre-branded template**. Its card says **Brand kit**, and projects made from it start with the kit's logos and headers in place and locked, so they stay on brand. Everything else in the project is the author's to change.
 
 ## Examples
-**Examples** are finished projects that ship with Interactives: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. Every example's pages and graphs are laid out neatly and carry a [note](notes#notes-in-starters-and-examples) or two saying what to look at. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
+**Examples** are finished projects that ship with Ixia: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. Every example's pages and graphs are laid out neatly and carry a [note](notes#notes-in-starters-and-examples) or two saying what to look at. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
 
 ## Allow remix on a share link
 In **Share > Share link**, tick **Allow remix**. People who open the **Link for StudyDesk** while signed in to the editor get a **Remix this** button; pressing it copies the project into their own projects and opens it. The copy is theirs: it does not change your project, and it is not tied to it. A remix copies the project **as it is now** (not the version last published to the link), with every page, layer and picture, including parts the page does not show, so only allow it for projects you are happy to give away. Turn it off at any time; copies already made stay.
@@ -28799,7 +29028,7 @@ Turning it on saves your project first and then joins the others; turning it off
 
 ## When a save fails
 The label next to the project name says **Save failed**; hover it for the reason.
-- **Could not reach the Interactives server**, or **The server could not save this project**: the network or the server had a problem. The editor tries again by itself, waiting a little longer each time (up to a minute), and straight away when your computer is back online. Keep the tab open; nothing you did is lost.
+- **Could not reach the Ixia server**, or **The server could not save this project**: the network or the server had a problem. The editor tries again by itself, waiting a little longer each time (up to a minute), and straight away when your computer is back online. Keep the tab open; nothing you did is lost.
 - **This project is too big to save**: the project is over 64 MB. Large pictures or data pasted straight into layers are the usual cause. Put pictures in the [Assets panel](assets) and point layers at them instead; then the next change saves.
 - The red conflict bar: someone else saved first (below).
 
@@ -28850,6 +29079,8 @@ Pick the **Note** tool (<kbd>S</kbd>, in the tools bar next to **Comment**) and 
 - **Move** it by dragging it, **resize** it from its bottom right corner.
 - **Double-click** it, or press <kbd>Enter</kbd> with it focused, to change the text.
 - With a note picked, a small bar above it sets the **colour** (yellow, orange, green, blue, purple or pink), **attaches** it to the layer you have selected on the same page, and **deletes** it. <kbd>Delete</kbd> removes a picked note too.
+- **Right-click** a note for its own menu: **Edit text**, **Add a title** (or **Rename**), **Colour**, following the selected layer, and **Delete note**. Right-clicking inside the text while you type still gives the browser's menu, for spelling and paste.
+- **A title**: the bar across the top of a note says who wrote it until you give it a title. Double-click the bar (or use **Add a title** in the menu), type, and press <kbd>Enter</kbd>. <kbd>Esc</kbd> leaves it as it was, and emptying it goes back to the author's name. Graph notes take a title the same way.
 - Notes are small on purpose. They grow with the zoom but never get tiny or huge, and a picked note has a gold outline.
 
 Keyboard: <kbd>Tab</kbd> reaches every note on the canvas. With one focused, the arrow keys move it (<kbd>Shift</kbd> for 10), <kbd>Alt</kbd>+arrows resize it, <kbd>Enter</kbd> edits it, <kbd>Delete</kbd> removes it and <kbd>Esc</kbd> lets go. Every button on the bar has a label for a screen reader.
@@ -28997,7 +29228,8 @@ ${sid ? `> The \`X-Session-ID\` above is **your** sign-in for this tab. The agen
 | create_project, list_starters | Make a new project, blank (with the Light, Dark and High contrast themes) or from a built-in starter or a saved template, and join it. The branded starter packs are made in the editor; an agent gives a blank project their look with a colourway |
 | join_session | Joins a project's live session; reports who is there and what they have selected |
 | leave_session | Leaves the session |
-| get_selection | The layers each person has selected, in full |
+| who_am_i | Who the agent is working for: the name of the person whose session it holds, whether they can change the project, and the page and layers they have open. Only the name and what they can do, never an email or an id number |
+| get_selection | The layers each person has selected, in full, the person the agent is working for first |
 | get_overview, get_layers, get_interactions, get_variables | Read pages, layer trees, timelines, variables, interactions, and the themes with every colour token |
 | export_project | The whole project document, or one part of it (its settings, themes, styles...) |
 | edit | Add, change, copy, move and delete layers (a whole tree at once); add pages, variables, timelines, interactions and scripts, and change interactions in place; add themes, colourways, colour tokens and text styles; add data sources; change project settings. All in one batch |
@@ -29030,7 +29262,7 @@ The first column is the technical name of the property. Scripts use it: \`ix.nod
 
 | Path | Property | Kind |
 |---|---|---|
-` + ANIMATABLE_PROPS.map((p) => `| \`${p.prop}\` | ${p.label} | ${p.kind} |`).join("\n")
+` + ANIMATABLE_PROPS.filter((p) => !p.label.startsWith("Frameling")).map((p) => `| \`${p.prop}\` | ${p.label} | ${p.kind} |`).join("\n")
   },
   {
     id: "troubleshooting",
@@ -29207,6 +29439,7 @@ Preview sits above the help drawer so it never covers its controls. Asking for h
 - **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).`
   }
 ];
+TOPICS.splice(TOPICS.findIndex((t2) => t2.id === "frameling-animations"), 1);
 function topicBody(t2) {
   return typeof t2.body === "function" ? t2.body() : t2.body;
 }
@@ -30136,7 +30369,7 @@ const runEdit = (a, changes, explain) => {
 const TOOLS = [
   {
     name: "list_projects",
-    description: "List the Interactives projects this session can see (id, name, last change).",
+    description: "List the Ixia projects this session can see (id, name, last change).",
     inputSchema: S({}),
     run: async () => {
       const list2 = await api("projects");
@@ -30245,9 +30478,23 @@ ${overview(p, {})}`;
       const p = await loadProject(s.projectId);
       return `Joined "${p.name}" as ${ctx().agent} (AI).
 
+${whoLine(await accessOf(s.projectId), s, p)}
+
 ${people(s, p)}
 
 ${overview(p, {})}`;
+    }
+  },
+  {
+    name: "who_am_i",
+    description: "Who you are working for: the name of the person whose session you hold, so whose edits yours are. With a project, also whether they can change it and which page they have open. Only their name and what they can do: never an email or an id number.",
+    inputSchema: S({ project_id: str("Optional: a project, to say whether they can change it and what they have open") }),
+    run: async (a) => {
+      if (!a.project_id) return whoLine();
+      const id = String(a.project_id);
+      const s = ctx().sessions.get(id);
+      const p = s ? await loadProject(id).catch(() => void 0) : void 0;
+      return whoLine(await accessOf(id), s, p);
     }
   },
   {
@@ -30258,12 +30505,12 @@ ${overview(p, {})}`;
       const s = join(String(a.project_id));
       await s.ready;
       const p = await loadProject(s.projectId);
-      const out = [people(s, p)];
-      for (const peer of s.peers.values())
+      const out = [whoLine(void 0, s, p), people(s, p)];
+      for (const peer of peersOf(s))
         for (const id of peer.selection ?? []) {
           const loc = locate(p, id);
           if (loc) out.push(`
-${peer.name} selected ${loc.node.name} on ${loc.ab.name}:
+${peer.name}${isMine(peer) ? " (the person you are working for)" : ""} selected ${loc.node.name} on ${loc.ab.name}:
 ${JSON.stringify(loc.node, null, 1)}`);
         }
       return out.join("\n");
@@ -30415,13 +30662,40 @@ async function buildBlueprint(projectId, bp, opts2 = {}) {
   const problems = [...out.problems, ...validate(out.project).filter((x) => !had.has(x))];
   return { changed: ops.length > 0, notes: out.notes, warnings: out.warnings, problems, known, created: out.created, ops: ops.length };
 }
+function isMine(peer) {
+  const w = ctx().who;
+  if (!w) return false;
+  return !!w.name && peer.name === w.name || !!w.username && peer.name === w.username;
+}
+const peersOf = (s) => [...s.peers.values()].filter((x) => !x.left).sort((a, b) => Number(isMine(b)) - Number(isMine(a)));
+function whoLine(access, s, p) {
+  const w = ctx().who;
+  if (!w || !w.name && !w.username) return "You aren't working for a signed-in person: this session is a guest's, or has no session id.";
+  const name = w.name || w.username;
+  const out = [`You are working for ${name}${w.name && w.username && w.name !== w.username ? ` (signs in as ${w.username})` : ""}. Their session is the one you hold, so your edits are made as them.`];
+  if (access) {
+    const mine = !!w.username && access.owner?.username === w.username;
+    const shared = !!w.username && (access.collaborators ?? []).find((c2) => c2.username === w.username);
+    out.push(mine ? "They own this project and can change anything in it." : shared ? shared.role === "view" ? "This project is shared with them to look at: they cannot change it, so neither can you." : "This project is shared with them and they can change it." : !access.owner?.username ? "This project has no owner (made without signing in), so anyone with it open can change it." : `This project belongs to ${access.owner.username}; it isn't shared with them by name.`);
+  }
+  if (s && p) {
+    const me = peersOf(s).find(isMine);
+    if (me) {
+      const ab = p.artboards.find((a) => a.id === me.artboardId);
+      const sel = (me.selection ?? []).map((id) => locate(p, id)?.node.name ?? id);
+      out.push(`They have ${ab ? `the page "${ab.name}"` : "the project"} open${sel.length ? `, with ${sel.join(", ")} selected` : ", with nothing selected"}. When they say "this" or "here", that is what they mean.`);
+    } else out.push("They don't have this project open in the editor right now.");
+  }
+  return out.join(" ");
+}
+const accessOf = async (id) => api(`/api/projects/${encodeURIComponent(id)}`).catch(() => null);
 function people(s, p) {
-  const list2 = [...s.peers.values()].filter((x) => !x.left);
+  const list2 = peersOf(s);
   if (!list2.length) return "Nobody else is in this project right now.";
   return "In the session:\n" + list2.map((x) => {
     const ab = p.artboards.find((a) => a.id === x.artboardId);
     const sel = (x.selection ?? []).map((id) => locate(p, id)?.node.name ?? id);
-    return `- ${x.name}${ab ? ` on ${ab.name}` : ""}${sel.length ? `, selected: ${sel.join(", ")}` : ""}`;
+    return `- ${x.name}${isMine(x) ? " (the person you are working for)" : ""}${ab ? ` on ${ab.name}` : ""}${sel.length ? `, selected: ${sel.join(", ")}` : ""}`;
   }).join("\n");
 }
 const send = (msg) => process.stdout.write(JSON.stringify(msg) + "\n");
@@ -30433,8 +30707,10 @@ async function respond(msg) {
       return reply({
         protocolVersion: msg.params?.protocolVersion ?? "2025-06-18",
         capabilities: { tools: {} },
-        serverInfo: { name: "interactives", version: VERSION },
-        instructions: 'Interactives is a 2D interactive builder. Start with list_projects and join_session on the project the person is editing (so your edits show live and you can see their selection), or create_project for a new one (list_starters says what it can start from). Read read_reference("layers"), ("interactions"), ("colours") and ("runtime") before editing, make changes with edit (themes, tokens, data sources and text styles included), upload files with upload_asset, and check them with validate.'
+        serverInfo: { name: "ixia", version: VERSION },
+        instructions: `Ixia is a 2D interactive builder. Start with list_projects and join_session on the project the person is editing (so your edits show live and you can see their selection), or create_project for a new one (list_starters says what it can start from). Read read_reference("layers"), ("interactions"), ("colours") and ("runtime") before editing, make changes with edit (themes, tokens, data sources and text styles included), upload files with upload_asset, and check them with validate.
+
+${whoLine()} Call who_am_i with a project for what they can do there.`
       });
     case "notifications/initialized":
     case "notifications/cancelled":

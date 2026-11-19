@@ -5,3 +5,9 @@ storage
 dist/**/*.br
 dist/**/*.gz
 agent-docs/out
+
+# Keys and tokens. Never commit one: .githooks/pre-commit refuses them even when forced
+.env
+.env.*
+*.env
+!.env.example

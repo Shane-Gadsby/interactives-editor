@@ -6,6 +6,8 @@ import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { ArtboardPicker } from './ArtboardPicker';
 import { CATEGORIES, allSet, filterPalette, isFiltering, isOpen, loadFolds, onlyOpen, paletteGroups, saveFolds, toggled, type Folds } from '../lib/graph-palette';
 import { suggestNode } from '../lib/node-search';
+import { offeredNodes } from '../lib/parked';
+import { useEditor } from '../store/store';
 
 const CAT_COLOR: Record<string, string> = { event: 'var(--event)', action: 'var(--action)', logic: 'var(--logic)' };
 
@@ -28,8 +30,9 @@ export function GraphPalette({ onAdd, inputRef }: { onAdd: (kind: string) => voi
   };
   const filter = { query, categories, topics };
   const filtering = isFiltering(filter);
-  const { groups, count } = useMemo(() => filterPalette(filter), [query, categories, topics, technical]); // eslint-disable-line react-hooks/exhaustive-deps
-  const allKeys = useMemo(() => paletteGroups().map((g) => g.key), []);
+  const offered = offeredNodes(useEditor((st) => st.project));
+  const { groups, count } = useMemo(() => filterPalette(filter, offered), [query, categories, topics, technical, offered]); // eslint-disable-line react-hooks/exhaustive-deps
+  const allKeys = useMemo(() => paletteGroups(offered).map((g) => g.key), [offered]);
   const first = groups[0]?.defs[0];
   const flip = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -78,7 +81,7 @@ export function GraphPalette({ onAdd, inputRef }: { onAdd: (kind: string) => voi
 
   const typed = query.trim();
   const status = !filtering ? '' : count ? `${count} ${count === 1 ? 'node' : 'nodes'}` : '';
-  const sug = filtering && !count && typed ? suggestNode(typed) : null;
+  const sug = filtering && !count && typed ? suggestNode(typed, offered) : null;
   let lastCat: string | null = null;
 
   return (

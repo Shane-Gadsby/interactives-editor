@@ -4,8 +4,8 @@
  */
 export function Shell({ label = 'Opening project…', plain = false }: { label?: string; plain?: boolean }) {
   return (
-    <div className={plain ? 'ix-shell ix-plain' : 'ix-shell'} role="status" aria-label="Loading Interactives">
-      <div className="ix-shell-top">Interactives</div>
+    <div className={plain ? 'ix-shell ix-plain' : 'ix-shell'} role="status" aria-label="Loading Ixia">
+      <div className="ix-shell-top">Ixia</div>
       <div className="ix-shell-tools" />
       <div className="ix-shell-left" />
       <div className="ix-shell-stage">

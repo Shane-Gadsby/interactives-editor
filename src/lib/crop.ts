@@ -70,6 +70,41 @@ export function zoomAt(c: ImageCrop, zoom: number, at: { x: number; y: number },
   };
 }
 
+/** A spot on the picture itself: 0, 0 is its top left corner and 1, 1 its bottom right. */
+export interface Spot {
+  u: number;
+  v: number;
+}
+
+/**
+ * The focal spot: the point of the picture that sits in the middle of the frame. 0.5, 0.5 (the picture's own middle) for
+ * a picture that hasn't been moved.
+ */
+export function focalOf(c: ImageCrop, fit: ImageFit, frame: Size, natural: Size): Spot {
+  const p = fittedSize(fit, frame, natural);
+  const along = (move: number, box: number, picture: number) => 0.5 - (move * box) / Math.max(1, picture * c.zoom);
+  return { u: along(c.x, frame.w, p.w), v: along(c.y, frame.h, p.h) };
+}
+
+/**
+ * The crop that puts this spot of the picture in the middle of the frame, at the zoom it has. The spot is only reached as
+ * far as the picture can move without uncovering the frame, so near an edge it comes as close as it can (`clampCrop`).
+ */
+export function withFocal(c: ImageCrop, spot: Spot, fit: ImageFit, frame: Size, natural: Size): ImageCrop {
+  const p = fittedSize(fit, frame, natural);
+  const move = (at: number, box: number, picture: number) => ((0.5 - at) * picture * c.zoom) / Math.max(1, box);
+  return clampCrop({ zoom: c.zoom, x: move(spot.u, frame.w, p.w), y: move(spot.v, frame.h, p.h) }, fit, frame, natural);
+}
+
+/** The part of the picture the frame shows, as fractions of the picture: what a small map of the whole picture outlines. */
+export function shownPart(c: ImageCrop, fit: ImageFit, frame: Size, natural: Size): { u: number; v: number; w: number; h: number } {
+  const p = fittedSize(fit, frame, natural);
+  const mid = focalOf(c, fit, frame, natural);
+  const w = Math.min(1, frame.w / Math.max(1, p.w * c.zoom));
+  const h = Math.min(1, frame.h / Math.max(1, p.h * c.zoom));
+  return { u: mid.u - w / 2, v: mid.v - h / 2, w, h };
+}
+
 /** What gets stored: nothing at all for a crop that is back at rest. */
 export function stored(c: ImageCrop): ImageCrop | undefined {
   return isCropped(c) ? c : undefined;

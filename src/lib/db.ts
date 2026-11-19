@@ -89,7 +89,7 @@ async function call<T>(path: string, init: RequestInit = {}, as?: 'blob'): Promi
     res = await (method === 'GET' && !init.body ? fetchOrEarly(API + path, { credentials: 'same-origin', ...init }) : fetch(API + path, { credentials: 'same-origin', ...init }));
   } catch (err) {
     reportError({ kind: 'api', error: err, where: route, detail: { method, status: 0 } });
-    throw new ApiError('Could not reach the Interactives server', 0);
+    throw new ApiError('Could not reach the Ixia server', 0);
   }
   // Which parts of the server get used (the route with its ids taken out), how long they take, and what it refused or broke on
   if (res.ok) track('api', 'call', { thing: route, ms: Date.now() - started, detail: { method } });
@@ -155,6 +155,8 @@ export function resetDesigner(projectId: string): Promise<{ ok: boolean }> {
 export interface DesignerStatus {
   on: boolean;
   mine: { connected: boolean; added: string; ends: string | null } | null;
+  /** False on a box where there is one key for everyone (Gemini), so nobody is offered a token of their own. */
+  ownTokens?: boolean;
   shared: { limit: number; left: number; resetsIn: number } | null;
 }
 export const designerStatus = () => call<DesignerStatus>('designer/status');
@@ -678,6 +680,10 @@ export interface Insights {
   steps: { artboard: string; name: string; step: number; steps: number; visits: number; learners: number }[];
   questions: { question: string; kind: string; checks: number; correct: number; learners: number; firstTry: number; firstTryRight: number; options: { id: string; n: number }[] }[];
   custom: { name: string; count: number; learners: number; values: { value: string; n: number }[] }[];
+  /** Controls changed, layers dropped, video played and sections or dialogs opened: one line per layer and what was done. Absent from a server older than these. */
+  acted?: { kind: 'input' | 'drop' | 'media' | 'open'; artboard: string; layer: string; label: string; control: string; detail: string; count: number; learners: number }[];
+  /** Send analytics nodes, by name, with how often each value of each of its fields came up. */
+  events?: { name: string; count: number; learners: number; fields: { key: string; values: { value: string; n: number }[] }[] }[];
   courses: { course: string; learners: number }[];
   daily: { day: string; learners: number }[];
 }

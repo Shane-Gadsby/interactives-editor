@@ -1,7 +1,7 @@
 import { NodeResizer, type Node, type NodeProps } from '@xyflow/react';
 import { labelOfKind } from '../lib/plain-words';
 import { NOTE_COLOURS, NOTE_MIN_H, NOTE_MIN_W, type LogicGraph, type Note, type NoteColour } from 'interactives-player';
-import { NoteText } from '../canvas/NotesLayer';
+import { NoteHead, NoteText } from '../canvas/NotesLayer';
 import { SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { store, useEditor } from '../store/store';
@@ -22,7 +22,7 @@ export function GraphNoteNode({ data, selected }: NodeProps<Node<GraphNoteData>>
   const { note, detached, hostName } = data;
   const editing = useEditor((s) => s.editingNote === note.id);
   const colour = note.colour ?? 'gold';
-  const label = `Graph note${note.author ? ` by ${note.author}` : ''}: ${plainNoteText(note.text) || 'empty'}`;
+  const label = `Graph note${note.title ? ` ${note.title}` : ''}${note.author ? ` by ${note.author}` : ''}: ${plainNoteText(note.text) || 'empty'}`;
   return (
     <div
       className={`note note-${colour} graph-note${selected ? ' picked' : ''}${editing ? ' editing' : ''}${detached ? ' detached' : ''}`}
@@ -45,10 +45,7 @@ export function GraphNoteNode({ data, selected }: NodeProps<Node<GraphNoteData>>
           store().commit();
         }}
       />
-      <div className="note-head">
-        <span className="note-grip" aria-hidden="true" />
-        <span className="note-by">{note.anchor ? (hostName ?? 'Node removed') : note.author || 'Note'}</span>
-      </div>
+      <NoteHead note={note} fallback={note.anchor ? (hostName ?? 'Node removed') : note.author || 'Note'} rename={(title) => patchGraphNote(note.id, { title })} />
       <div className="note-body nowheel">
         {editing ? (
           <textarea

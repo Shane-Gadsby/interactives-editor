@@ -12,6 +12,13 @@ import { diff, apply } from '../shared/ops.mjs';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+//Frameling is parked (lib/parked.ts, agent-docs/PARKED.md): these tests switch it back on for themselves
+vi.mock('../src/lib/parked', async (orig) => {
+  const m = await orig<typeof import('../src/lib/parked')>();
+  m.parked.frameling = false;
+  return m;
+});
+
 vi.mock('../src/lib/db', async (orig) => ({
   ...(await orig<typeof import('../src/lib/db')>()),
   putAsset: async () => undefined,

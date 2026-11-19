@@ -1,4 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { ColourPicker } from './ColourPicker';
 import { createPortal } from 'react-dom';
 import { formatColor, isTokenRef, parseColor, speedOf, TRANSITION_SPEEDS, type GridTrack, type Project } from 'interactives-player';
 import { HelpLink } from '../help/Help';
@@ -641,6 +642,10 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
   const alpha = Math.round(rgba[3] * 100);
   const [text, setText] = useState(value);
   useEffect(() => setText(value), [value]);
+  // Our own picker, opened from the swatch: the browser's only knows solid colours
+  const [picking, setPicking] = useState(false);
+  const swatch = useRef<HTMLButtonElement>(null);
+  const closePicker = useCallback(() => setPicking(false), []);
   const tokenTab = (tokens || locked) && ts ? { ts, onToken: (ref: string) => (onChange(ref), onCommit?.()) } : undefined;
   // The label is a real one for the hex box when there is one
   const hexId = useId();
@@ -699,17 +704,18 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
     <div className={fieldClass('color-field', label, ps)} data-prop={ps.prop}>
       {labelEl(true)}
       <span className="field-control">
-        <span className="swatch" style={{ background: value }}>
-          <input
-            type="color"
-            value={hex}
-            onChange={(e) => {
-              const c = parseColor(e.target.value)!;
-              onChange(formatColor([c[0], c[1], c[2], rgba[3]]));
-            }}
-            onBlur={onCommit}
-          />
-        </span>
+        <button
+          ref={swatch}
+          type="button"
+          className={`swatch swatch-btn${picking ? ' open' : ''}${alpha < 100 ? ' see-through' : ''}`}
+          style={alpha < 100 ? ({ '--swatch': value } as CSSProperties) : { background: value }}
+          title={`Pick a colour: its hue, how strong and bright it is, and how see-through (now ${hex}${alpha < 100 ? `, ${alpha}% solid` : ''})`}
+          aria-label="Pick a colour"
+          aria-haspopup="dialog"
+          aria-expanded={picking}
+          onClick={() => setPicking((v) => !v)}
+        />
+        {picking && createPortal(<ColourPicker value={value} onChange={onChange} onCommit={onCommit} anchor={swatch} onClose={closePicker} />, document.body)}
         <PaletteButton
           value={value}
           tokenTab={tokenTab}

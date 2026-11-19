@@ -70,6 +70,7 @@ import { usePrefs } from '../lib/prefs';
 import { compatibleKinds, newNodePort, type DragDirection } from '../lib/graph';
 import { artboardChoices } from '../lib/variants-edit';
 import { nodeMenuItems } from '../lib/node-menu';
+import { nodeKindParked } from '../lib/parked';
 import { GraphPalette } from './GraphPalette';
 import { FlowSentences } from './FlowSentences';
 import { MasterFlows } from './MasterFlows';
@@ -858,7 +859,7 @@ export function LogicGraph() {
     );
 
   /** Node palette as menu items: categories with their nodes, each calling `pick(kind)`. */
-  const paletteItems = nodeMenuItems;
+  const paletteItems = (pick: (kind: string) => void, only?: (kind: string) => boolean) => nodeMenuItems(pick, (kind) => !nodeKindParked(kind, s.project) && (!only || only(kind)));
 
   const paneMenu = (e: React.MouseEvent | MouseEvent) => {
     e.preventDefault();
@@ -978,6 +979,7 @@ export function LogicGraph() {
       items: [
         { heading: 'Note' },
         { label: 'Edit text', hint: keyHints('graph-edit-note'), onClick: () => store().set({ editingNote: id }) },
+        { label: note.title ? 'Rename' : 'Add a title', onClick: () => store().set({ renamingNote: id }) },
         { label: 'Colour', items: NOTE_COLOURS.map((c) => ({ label: { gold: 'Yellow', orange: 'Orange', green: 'Green', sky: 'Blue', purple: 'Purple', rose: 'Pink' }[c], onClick: () => patchGraphNote(id, { colour: c }) })) },
         ...(note.anchor ? [{ label: 'Stop following', onClick: () => void attachGraphNote(id, null) } as MenuItem] : []),
         { separator: true },

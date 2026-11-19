@@ -174,7 +174,9 @@ describe('the buttons', () => {
     act(() => [...host.querySelectorAll<HTMLElement>('.tt-font [role=option]')].find((o) => o.querySelector('.font-opt-name')!.textContent === 'Lobster')!.click());
     expect(node().runs![1].fontFamily).toMatch(/Lobster/);
     expect(store.get().project.fonts.some((f) => f.family === 'Lobster')).toBe(true);
-    setValue(host.querySelector<HTMLInputElement>('.tt-swatch input')!, '#ff0000', 'input');
+    //the A opens the colour picker; the browser's own picker at its foot stands in for a pick here
+    act(() => host.querySelector<HTMLElement>('.tt-swatch')!.click());
+    setValue(document.querySelector<HTMLInputElement>('.colour-pick-native input')!, '#ff0000', 'input');
     expect(node().runs![1].color).toBe('#ff0000');
     expect(node().color).not.toBe('#ff0000');
   });
@@ -373,7 +375,8 @@ describe('the focus stays in the control being used', () => {
 
   it('a colour change keeps the focus on the colour control', () => {
     const { node } = mount('Hello world', undefined, { start: 0, end: 5 });
-    const col = host.querySelector<HTMLInputElement>('.tt-swatch input')!;
+    act(() => host.querySelector<HTMLElement>('.tt-swatch')!.click());
+    const col = document.querySelector<HTMLInputElement>('.colour-pick-native input')!;
     act(() => col.focus());
     setValue(col, '#00ff00', 'input');
     expect(node().runs![0].color).toBe('#00ff00');

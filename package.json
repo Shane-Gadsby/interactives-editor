@@ -2,7 +2,7 @@
   "name": "interactives-editor",
   "version": "0.5.0",
   "private": true,
-  "description": "Browser-based editor for Interactives: artboards, vector and web elements, timelines, node-based interactions and custom JavaScript.",
+  "description": "Browser-based editor for Ixia: artboards, vector and web elements, timelines, node-based interactions and custom JavaScript.",
   "license": "MIT",
   "scripts": {
     "player:build": "npm --prefix ../interactives-player run build",
@@ -24,6 +24,7 @@
     "export:agent-docs": "node scripts/export-agent-docs.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0",
     "express": "^5.3.0",
     "undici": "^8.10.2",
     "ws": "^8.22.2"

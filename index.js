@@ -311,6 +311,14 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	//Never one of storage/'s own folder names (shares, thumbs, _libraries), see shared/safety.mjs
 	validID = (id) => safety.validID(id),
 
+	//Who an agent on this request is working for, as the mcp tools may say it: the name and the sign-in name, and
+	//nothing else about them (no email, no id number)
+	mcpWho = (req) => {
+		let me = whoIs(req)
+
+		return me && (me.name || me.username) ? {username: me.username || null, name: me.name || null} : undefined
+	},
+
 	whoIs = (req) => {
 		let user = req.sessionData?.user
 
@@ -605,10 +613,54 @@ router.put('/api/prefs', express.json({limit: '512kb'}), async (req, res) => {
 //further down by the MCP ones). COGNITI_TOKEN is the one secret, an api token from a Cogniti account (its API tokens
 //page; whoever holds that account grants it). Parked: it only runs with INTERACTIVES_DESIGNER=on as well (agent-docs/PARKED.md)
 const designer = require('./designer')
+//The same panel on Gemini instead (designer-gemini.js): GEMINI_API_KEY, a key from the Ixia project in Google AI
+//Studio (whoever owns that project grants it). When a box has it, it's the one that answers, and the model works
+//through the MCP tools itself rather than one blueprint
+const designerGemini = require('./designer-gemini')
+//Or on anything OpenRouter sells (designer-openrouter.js): OPENROUTER_API_KEY, from the Ixia workspace at openrouter.ai
+//(whoever owns that account grants it), and INTERACTIVES_DESIGNER_MODEL says which. It wins over the other two
+const designerOpenRouter = require('./designer-openrouter')
+//Or on Claude straight from Anthropic (designer-anthropic.js): ANTHROPIC_API_KEY, from the Ixia workspace in the Claude
+//Console (whoever owns that organisation grants it and keeps credit on it). This is the one in use, and it wins over the rest
+const designerAnthropic = require('./designer-anthropic')
+//The model that runs the tool loop on this box, if one does: Anthropic first, then OpenRouter, then Gemini. via is for the audit row
+const designerLoop = () => {
+	let a = designerAnthropic.settings()
+	if (a.on) return {...a, via: 'anthropic', client: () => designerAnthropic.client(a)}
+	let o = designerOpenRouter.settings()
+	if (o.on) return {...o, via: 'openrouter', client: () => designerOpenRouter.client(o)}
+	let g = designerGemini.settings()
+	return {...g, via: 'gemini', client: () => designerGemini.client(g)}
+}
+const designerOn = () => designer.settings().on || designerLoop().on
+
+//What Ask Ixia has cost today, everyone together, so a day can't run past its budget (INTERACTIVES_DESIGNER_DAILY_USD).
+//Kept in memory and added to as requests finish. The first ask of a day (or after a restart) adds up today's audit rows,
+//so restarting the server doesn't hand out a fresh budget. A day is this box's own midnight to midnight
+let designerSpend = {day: '', usd: 0}
+const designerSpentToday = async () => {
+	let start = new Date()
+	start.setHours(0, 0, 0, 0)
+	let day = start.toDateString()
+	if (designerSpend.day !== day) {
+		designerSpend = {day, usd: 0}
+		try {
+			let rows = await auditLog.find({at: {$gte: start}, event: 'designer-run'}, {projection: {'detail.usage.cost': 1}}).toArray(),
+				was = rows.reduce((sum, r) => sum + (Number(r.detail?.usage?.cost) || 0), 0)
+			//requests that finished while this was being read have already been added
+			if (designerSpend.day === day) designerSpend.usd += was
+		}
+		catch (err) {
+			console.warn(`${appName}: could not add up today's Ask Ixia spend`, err?.message)
+		}
+	}
+
+	return designerSpend.usd
+}
 
 //Who the editor's talking to, for the projects list and the owner badge
 router.get('/api/session', (req, res) => {
-	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req), designer: designer.settings().on})
+	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req), designer: designerOn()})
 })
 
 //The projects list, mine only (owned or invited to). ?all=1 gets everyone's, but only for power users (god mode),
@@ -3366,7 +3418,7 @@ router.post('/api/notices/read', express.json({limit: '4kb'}), async (req, res) 
 
 //The review page's side. The link alone gets nobody in, it takes a signed in session as well: a StudyDesk one inside
 //StudyDesk, or the direct sign in token when the link was opened in its own tab. That one is its own tool in si-manager's
-//registry ('interactives-review', any staff member) so a reviewer doesn't need to be an Interactives beta tester, but
+//registry ('interactives-review', any staff member) so a reviewer doesn't need to be an Ixia beta tester, but
 //someone who already holds the editor's 'interactives' token gets in on that too. A token only resolves for the tool it
 //was issued for, so the lookups are tried in turn. The session is read here and refused in reviewProject, with a reply the
 //page knows how to read. That refusal doesn't wait for SUITE_SESSION_ENFORCE, the link on its own never opens anything
@@ -3882,8 +3934,9 @@ router.get('/learn/:token/user-data', async (req, res) => {
 		return res.json({available: false})
 	}
 
-	let names = learner.userDataNames(req.query.names),
-		doc = names.length ? await activityData.findOne({project: project._id, username: who.username, course: who.course}) : null
+	//all=1 is the learner page asking early, before the project has said which names it wants
+	let names = req.query.all === '1' ? null : learner.userDataNames(req.query.names),
+		doc = names === null || names.length ? await activityData.findOne({project: project._id, username: who.username, course: who.course}) : null
 
 	res.json({available: true, variables: learner.userDataOut(doc, names)})
 })
@@ -5083,16 +5136,16 @@ const scriptJson = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/>/
 //asks it by postMessage. Only what was declared when the link was shared is allowed. The frame's address carries a nonce the bridge expects
 //on every request (#ixm=<nonce>), since the frame's own origin is opaque and a window is not proof enough: a frame that navigated away
 //keeps the window but loses the address. Without a declaration none of it is in the page
-const learnerPage = (token, base, nonce, project, remix, sensors, mediaNonce) => `<!doctype html>
+const learnerPage = (token, base, nonce, project, remix, sensors, mediaNonce, link = '') => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Interactives</title>
+<title>Ixia</title>
 <style>html,body{margin:0;height:100%;background:#111}iframe{border:0;display:block;width:100%;height:100%}#remix{position:fixed;right:12px;bottom:12px;z-index:2;display:none;font:600 13px/1 system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);text-decoration:none}#remix:hover,#remix:focus-visible{background:#2f49d0}#remix[aria-disabled=true]{opacity:.7;cursor:progress}#remix.err{background:#b3261e}</style>
 </head>
 <body>
-<iframe id="project" src="${base}/s/${token}${sensors ? `#ixm=${mediaNonce}` : ''}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen; autoplay" title="Interactive"></iframe>
+<iframe id="project" src="${base}/s/${token}${frameHash(sensors ? `ixm=${mediaNonce}` : '', link)}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen; autoplay" title="Interactive"></iframe>
 ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into your own projects, to change as you like">Remix this</a>' : ''}
 <script src="/utilities.js"></script>
 <script nonce="${nonce}">
@@ -5131,7 +5184,12 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			return fetch(base + '/learn/' + token + '/' + path, {method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body), keepalive: body !== undefined}).then(function (r) {
 				//Saving and reporting results is this page's own job, so when it fails that is worth knowing (the route and status, nothing else)
 				if (!r.ok && r.status >= 500) takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), status: r.status, fingerprint: 'learn-' + method.toLowerCase() + '-' + r.status})
-				return r.ok ? r.json() : {available: false}
+				if (r.ok) return r.json()
+				//No session or the link turned off is nowhere to keep anything. The server turning it down (too much, the wrong shape) is
+				//refused, and anything else is the server failing, which a project has to be able to tell apart from no session, or it takes
+				//an empty copy for the learner's own and saves over what's kept
+				if (r.status === 401 || r.status === 403 || r.status === 404) return {available: false}
+				return r.status === 400 || r.status === 413 ? {available: true, refused: true} : {available: true, failed: true}
 			}, function () {
 				takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), fingerprint: 'learn-' + method.toLowerCase() + '-network'})
 				throw new Error('network')
@@ -5142,9 +5200,31 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		})
 		return done
 	}
+	//What was saved for this learner, fetched now while the project is still loading, so it's here (or nearly) when the project asks.
+	//Projects shared before the player waited for a slow page give up on it after a second and a half and start the learner over from
+	//nothing, and on a busy StudyDesk page the server can take longer than that. Each is used once, for the project's first load, and
+	//only if nothing has been saved since; anything that went wrong with it and the project's own ask goes to the server as before
+	var saved = {progress: false, userData: false}, fetched = {}
+	if ((sessionID && sessionID !== 'null') || ltiSession) {
+		fetched.progress = call('GET', 'progress')
+		fetched.userData = call('GET', 'user-data?all=1')
+		fetched.progress.catch(function () {
+		})
+		fetched.userData.catch(function () {
+		})
+	}
+	var early = function (kind, fresh) {
+		var got = fetched[kind]
+		fetched[kind] = null
+		if (!got || saved[kind]) return fresh()
+		return got.then(function (j) {
+			return j.failed || j.refused ? fresh() : j
+		}, fresh)
+	}
 	//What the learner does, for the project's Insights: the project says it (postMessage), and it goes into the suite's
 	//analytics the way every toolbox app's does (reportAnalytics, si-manager's utilities.js), as a lean row with the
-	//usual user and course fields. The project is whatever this page was made for, whatever the record claims. Nothing
+	//usual user and course fields. That's every kind of record: views, clicks, steps, answers, controls changed, layers
+	//dropped, video played, sections and dialogs opened, Record nodes and Send analytics nodes. The project is whatever this page was made for, whatever the record claims. Nothing
 	//is sent without a signed-in StudyDesk user, and utilities.js drops it in a preview
 	//Remix this: only for someone signed in to StudyDesk (the copy becomes theirs), and only when the owner allowed it
 	var remixOn = ${remix ? 'true' : 'false'} && !ltiSession, remixLink = document.getElementById('remix'), remixBusy = false
@@ -5323,6 +5403,49 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		queue.push(rec)
 		if (known && !timer) timer = setTimeout(flushRecords, 1500)
 	}
+	//A Send analytics node that waits to hear back. Instant makes reportAnalytics send it now instead of on its 5 second
+	//round, and the callback gets what si-analytics answered once the row is in: one insert result per row, so the ids
+	//go back to the project. Same rules as any record: cleaned here, the project is this page's, and nothing without a
+	//signed-in StudyDesk user. One asked for before the session has answered waits for it
+	var analyticsAsks = []
+	var sendAnalytics = function (m) {
+		var rec = cleanRecord(m.record), done = false,
+			no = function (reason) {
+				answer(m, {ok: false, data: {reason: reason}})
+			}
+		if (!rec || rec.kind !== 'event') return no('failed')
+		if (typeof reportAnalytics !== 'function') return no('nowhere')
+		if (typeof isPreviewMode === 'function' && isPreviewMode()) return no('preview')
+		if (!known) return no('nobody')
+		if (taken >= 600) return no('limit')
+		taken++
+		var row = rowFor(project, run, rec)
+		var late = setTimeout(function () {
+			if (done) return
+			done = true
+			no('failed')
+		}, 15000)
+		var sent = reportAnalytics(row[0], row[1], row[2], row[3], true, function (err, value) {
+			if (done) return
+			done = true
+			clearTimeout(late)
+			if (err) return no('failed')
+			answer(m, {ok: true, data: {ids: (Array.isArray(value) ? value : []).map(function (v) {
+				return v && v.insertedId ? String(v.insertedId) : ''
+			}).filter(Boolean).slice(0, 50)}})
+		})
+		//Muted (a preview) hands nothing back and never calls. The promise says the same as the callback, so its own failure is swallowed
+		if (!sent) {
+			done = true
+			clearTimeout(late)
+			return no('preview')
+		}
+		if (typeof sent.catch === 'function') sent.catch(function () {
+		})
+	}
+	var settleAnalytics = function () {
+		while (analyticsAsks.length) sendAnalytics(analyticsAsks.shift())
+	}
 	if (typeof fetchActivity === 'function') {
 		window.m = window.m || {}
 		window.m.app = 'Interactives'
@@ -5331,6 +5454,8 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			contextData = err || !data ? null : contextFrom(data.user, data.activity)
 			contextReady = true
 			while (contextAsks.length) answerContext(contextAsks.shift())
+			//after this function is through, so known is settled either way
+			setTimeout(settleAnalytics, 0)
 			if (err || !data || !data.user || !data.user.username) return
 			window.m.user = data.user
 			window.m.activity = data.activity || {}
@@ -5356,32 +5481,60 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			return
 		}
 		if (!m || m.source !== 'interactives-progress') return
+		//A player that says acks hears at once that its answer is coming, so it waits for a slow server instead of giving up after a
+		//second and a half and starting the learner over from nothing. It also hears a failure as a failure. An older one (a page shared
+		//before this) gets neither, since it would take both for an empty answer, and gets the old replies
+		if (m.acks && m.rid) frame.contentWindow.postMessage({target: 'interactives', type: 'progress-pending', rid: m.rid}, '*')
 		var failed = function () {
-			answer(m, {ok: false, available: false})
+			answer(m, m.acks ? {ok: false, available: true, failed: true} : {ok: false, available: false})
+		}
+		//The answer to a load or save, or the failure when it didn't work
+		var settle = function (j, good) {
+			if (j.failed || j.refused) return answer(m, m.acks ? {ok: false, available: true, failed: !!j.failed} : {ok: false, available: false})
+			answer(m, good(j))
 		}
 		if (m.op === 'context') {
 			if (contextReady) answerContext(m)
 			else contextAsks.push(m)
 		}
 		else if (m.op === 'load') {
-			call('GET', 'progress').then(function (j) {
-				answer(m, {ok: true, available: !!j.available, data: j.progress || null})
+			early('progress', function () {
+				return call('GET', 'progress')
+			}).then(function (j) {
+				settle(j, function (j) {
+					return {ok: true, available: !!j.available, data: j.progress || null}
+				})
 			}, failed)
 		}
 		else if (m.op === 'save') {
+			saved.progress = true
 			call('PUT', 'progress', m.data).then(function (j) {
-				answer(m, {ok: true, available: !!j.available})
+				settle(j, function (j) {
+					return {ok: true, available: !!j.available}
+				})
 			}, failed)
 		}
 		else if (m.op === 'userdata-save') {
+			saved.userData = true
 			call('PUT', 'user-data', {variables: m.variables}).then(function (j) {
-				answer(m, {ok: !!j.ok, available: !!j.available})
+				settle(j, function (j) {
+					return {ok: !!j.ok, available: !!j.available}
+				})
 			}, failed)
 		}
 		else if (m.op === 'userdata-load') {
 			var names = Array.isArray(m.names) ? m.names.filter(function (n) { return typeof n === 'string' }) : []
-			call('GET', 'user-data?names=' + encodeURIComponent(names.join(','))).then(function (j) {
-				answer(m, {ok: true, available: !!j.available, data: j.variables || null})
+			early('userData', function () {
+				return call('GET', 'user-data?names=' + encodeURIComponent(names.join(',')))
+			}).then(function (j) {
+				settle(j, function (j) {
+					//The early fetch has everything saved, so only the names asked for go back
+					var out = {}, all = j.variables || {}
+					names.forEach(function (n) {
+						if (Object.prototype.hasOwnProperty.call(all, n)) out[n] = all[n]
+					})
+					return {ok: true, available: !!j.available, data: j.variables ? out : null}
+				})
 			}, failed)
 		}
 		else if (m.op === 'shared-read') {
@@ -5424,12 +5577,18 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		else if (m.op === 'mark') {
 			//A question marked on the server: the project sends the answer, the server marks it and says how it went
 			call('POST', 'check', {question: m.question, action: m.action, answer: m.answer}).then(function (j) {
-				answer(m, {ok: true, available: !!j.available, data: j})
+				settle(j, function (j) {
+					return {ok: true, available: !!j.available, data: j}
+				})
 			}, failed)
 		}
 		else if (m.op === 'guard') {
 			call('POST', 'guard', {guard: m.guard}).catch(function () {
 			})
+		}
+		else if (m.op === 'analytics') {
+			if (contextReady) sendAnalytics(m)
+			else analyticsAsks.push(m)
 		}
 		else if (m.op === 'report') {
 			call('POST', 'report', {result: m.result}).catch(function () {
@@ -5448,6 +5607,12 @@ startBridge({frame: document.getElementById('project'), nonce: ${JSON.stringify(
 </body>
 </html>
 `
+
+//The frame's #: the media nonce (when it has sensors) then the link's values, &-joined, and escaped for the src attribute
+const frameHash = (...parts) => {
+	let h = parts.filter(Boolean).join('&')
+	return h ? '#' + h.replace(/&/g, '&amp;').replace(/"/g, '%22') : ''
+}
 
 //The trusted media bridge the learner page loads (a module, from this host, so script-src 'self' lets it in). Revalidated, never stale
 router.get('/media-bridge.mjs', cacheHeaders.document, (req, res) => {
@@ -5481,8 +5646,21 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('Referrer-Policy', 'no-referrer')
 	res.setHeader('X-Robots-Tag', 'noindex')
-	res.type('html').send(learnerPage(token, req.baseUrl, nonce, project._id, !!project.share?.remix, project.share?.sensors || null, crypto.randomBytes(16).toString('hex')))
+	res.type('html').send(learnerPage(token, req.baseUrl, nonce, project._id, !!project.share?.remix, project.share?.sensors || null, crypto.randomBytes(16).toString('hex'), linkValues(req.query)))
 })
+
+//The link's own values (?program=GCSC on the StudyDesk embed) handed on to the project in its frame's #, since the frame can't see
+//this page's address any other way: it's sandboxed off from its parent, and no-referrer above leaves document.referrer empty.
+//The toolbox's own (title, cdtID) and the session stay here. A # never reaches a server, so nothing new gets logged anywhere
+const LINK_RESERVED = new Set(['title', 'cdtid', 'sessionid', 'ixm', 'lti'])
+const linkValues = (query) => {
+	let out = new URLSearchParams()
+	for (let [k, v] of Object.entries(query || {})) {
+		if (out.size >= 20 || !/^[A-Za-z][\w.-]{0,39}$/.test(k) || LINK_RESERVED.has(k.toLowerCase()) || typeof v !== 'string') continue
+		out.append(k, v.slice(0, 200))
+	}
+	return out.toString()
+}
 
 //What the project's learners have done, for its owner (this is under /api, which is staff). Counts and averages
 //of the records, and the most recently active people
@@ -5571,13 +5749,13 @@ router.delete('/api/projects/:id/results', async (req, res) => {
 	res.json({ok: true, deleted: result.deletedCount})
 })
 
-//The Activity Designer's chat. The panel posts {projectId, artboardId?, conversation?, message} and gets progress back as
+//Ixia's chat. The panel posts {projectId, artboardId?, conversation?, message} and gets progress back as
 //lines of json as it happens: status (plain words about what it's doing), changed (it has changed the project, here's the
 //restore point to undo with), reply, error and done (with the chat's handle and what's left of their shared allowance). The
 //Cogniti conversation and its history stay in here per person and project, so the browser holds nothing but the handle.
 //Each request costs one Cogniti message (designer.js): the agent answers with a blueprint, which mcp.buildBlueprint compiles
 //with the editor's own code and sends to the live room as the person (same session, same audit rows, shows in the live
-//session as "Activity Designer (AI)"). Only someone who can change the project gets to use it
+//session as "Ixia (AI)"). Only someone who can change the project gets to use it
 let designerChats = new Map(),
 	designerRunning = new Set(),
 	DESIGNER_IDLE_MS = 2 * 60 * 60 * 1000,
@@ -5619,6 +5797,11 @@ const designerStatus = async (req) => {
 	let cfg = designer.settings(),
 		me = whoIs(req),
 		row = me?.username && designerTokens ? await designerTokens.findOne({_id: me.username}, {projection: {added: 1, ends: 1}}) : null
+	//On Gemini there's one key and no tokens of people's own, so everyone has a share
+	if (designerLoop().on) {
+		return {on: true, mine: null, ownTokens: false, shared: sharedQuota().status(me?.username || 'guest')}
+	}
+
 	return {
 		on: cfg.on,
 		mine: row ? {connected: true, added: row.added, ends: row.ends || null} : null,
@@ -5629,7 +5812,7 @@ const designerStatus = async (req) => {
 
 router.get('/api/designer/status', async (req, res) => {
 	if (!whoIs(req)?.username && enforcing()) {
-		return res.status(401).json({error: 'Sign in to use the Activity Designer'})
+		return res.status(401).json({error: 'Sign in to use Ixia'})
 	}
 
 	res.json(await designerStatus(req))
@@ -5639,7 +5822,7 @@ router.get('/api/designer/status', async (req, res) => {
 router.put('/api/designer/token', express.json({limit: '4kb'}), async (req, res) => {
 	let cfg = designer.settings(),
 		me = whoIs(req)
-	if (!cfg.on) return res.status(404).json({error: 'The Activity Designer is switched off here'})
+	if (!cfg.on) return res.status(404).json({error: 'Ixia is switched off here'})
 	if (!me?.username) return res.status(401).json({error: 'Sign in to add your own Cogniti token'})
 
 	let token = typeof req.body?.token === 'string' ? req.body.token.trim() : '',
@@ -5678,9 +5861,10 @@ router.delete('/api/designer/token', async (req, res) => {
 
 router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res) => {
 	let cfg = designer.settings(),
+		gem = designerLoop(),
 		me = whoIs(req)
-	if (!cfg.on) return res.status(404).json({error: 'The Activity Designer is switched off here'})
-	if (!me?.username && enforcing()) return res.status(401).json({error: 'Sign in to use the Activity Designer'})
+	if (!cfg.on && !gem.on) return res.status(404).json({error: 'Ixia is switched off here'})
+	if (!me?.username && enforcing()) return res.status(401).json({error: 'Sign in to use Ixia'})
 
 	let id = req.body?.projectId,
 		message = typeof req.body?.message === 'string' ? req.body.message.trim() : ''
@@ -5692,11 +5876,17 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	if (!doc) return res.status(404).json({error: 'No such project'})
 	if (!mayChange(req, res, doc)) return
 
+	//Today's budget is spent: nobody is charged for more, and it says when it's back
+	if (gem.on && gem.dailyUsd && await designerSpentToday() >= gem.dailyUsd) {
+		audit(req, 'designer-budget', doc, {dailyUsd: gem.dailyUsd})
+		return res.status(429).json({error: 'Ixia has done all it can for today. It will be back tomorrow.', kind: 'wait'})
+	}
+
 	let who = me?.username || 'guest'
-	if (designerRunning.has(who)) return res.status(409).json({error: 'The Activity Designer is still working on your last request. Wait for it to finish.'})
+	if (designerRunning.has(who)) return res.status(409).json({error: 'Ixia is still working on your last request. Wait for it to finish.'})
 
 	//Their own token when they've added one; otherwise the shared one, and a fair share of it an hour
-	let own = await ownDesignerToken(me?.username),
+	let own = gem.on ? null : await ownDesignerToken(me?.username),
 		shared = sharedQuota()
 	if (own) {
 		cfg = {...cfg, token: own, own: true}
@@ -5704,7 +5894,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	else if (!shared.take(who)) {
 		let s = shared.status(who),
 			mins = Math.max(1, Math.ceil(s.resetsIn / 60))
-		return res.status(429).json({error: `You have used your ${s.limit} shared Activity Designer requests for this hour. The next one comes back in about ${mins} ${mins === 1 ? 'minute' : 'minutes'}. You can use your own Cogniti allowance instead.`, kind: 'quota', quota: s})
+		return res.status(429).json({error: `You have used your ${s.limit} shared Ixia requests for this hour. The next one comes back in about ${mins} ${mins === 1 ? 'minute' : 'minutes'}.${gem.on ? '' : ' You can use your own Cogniti allowance instead.'}`, kind: gem.on ? 'wait' : 'quota', quota: s})
 	}
 
 	designerRunning.add(who)
@@ -5729,7 +5919,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 
 	let key = designerKey(req, id),
 		state = designerChats.get(key),
-		ctx = {base: `http://127.0.0.1:${port}/${appName}`, sessionId: mcpSessionID(req), agent: 'Activity Designer', sessions: new Map()},
+		ctx = {base: `http://127.0.0.1:${port}/${appName}`, sessionId: mcpSessionID(req), agent: 'Ixia', sessions: new Map(), who: mcpWho(req)},
 		mcp = null,
 		artboardId = typeof req.body.artboardId === 'string' ? req.body.artboardId.slice(0, 100) : '',
 		result = {outcome: 'error', rounds: 0, changed: false}
@@ -5752,11 +5942,8 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 			return {error: !!reply?.result?.isError, text: (reply?.result?.content || []).map((c) => c.text).join('\n')}
 		}
 
-		result = await designer.run({
-			cogniti: designer.cogniti(cfg),
-			spec: designer.buildSpec(mcp.rawReference()),
-			//Where things stand: joins the live session (people there and the outline of every page), then the open page in full
-			context: async () => {
+		//Where things stand: joins the live session (people there and the outline of every page), then the open page in full
+		let context = async () => {
 				//each part is cut on its own, so a big page can't push out the rest
 				let clip = (t, n) => t.length > n ? t.slice(0, n) + '\n...(cut to fit)' : t,
 					joined = await callTool('join_session', {project_id: id})
@@ -5771,38 +5958,46 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 
 				return parts.join('\n\n')
 			},
-			//The agent's blueprint, built in the open project as one batch to the live room
-			build: async (blueprint, known) => {
+			//A blueprint, built in the open project as one batch to the live room
+			build = async (blueprint, known) => {
 				let out = await mcp.runAs(ctx, () => mcp.buildBlueprint(id, blueprint, {artboardId, known: known || undefined}))
 				mcpAudit(req, ctx, {method: 'tools/call', params: {name: 'designer_build', arguments: {project_id: id}}}, {})
 				return out
 			},
 			//A named revision of how the project is right now (the room saved first), which "Undo" restores
-			beforeEdit: async () => {
+			beforeEdit = async () => {
 				let now = await projects.findOne({_id: id}),
 					room = rooms.get(id)
 				if (room) await persist(room)
 				let current = room ? JSON.stringify(room.doc) : await store.get(now)
-				return snapshot(id, current, room ? room.rev : now.rev, whoIs(req), 'Before the Activity Designer', true, {name: 'Before the Activity Designer'})
+				return snapshot(id, current, room ? room.rev : now.rev, whoIs(req), 'Before Ixia', true, {name: 'Before Ixia'})
 			},
-			emit,
-			signal: ctl.signal,
-		}, {
-			projectId: id,
-			projectName: String(doc.name || 'Untitled project').slice(0, 200),
-			firstName: String(req.sessionData?.user?.firstName || req.sessionData?.user?.firstname || (me?.name || '').split(' ')[0] || '').slice(0, 40),
-			message,
-			state,
-		})
+			input = {
+				projectId: id,
+				projectName: String(doc.name || 'Untitled project').slice(0, 200),
+				firstName: String(req.sessionData?.user?.firstName || req.sessionData?.user?.firstname || (me?.name || '').split(' ')[0] || '').slice(0, 40),
+				message,
+				state,
+			}
+
+		//Gemini runs the tools itself, step by step. Cogniti answers with one blueprint
+		result = gem.on
+			? await designerGemini.run({ai: gem.client(), tools: mcp.TOOLS, callTool, build, context, beforeEdit, emit, signal: ctl.signal, budget: gem.requestUsd || 0}, input)
+			: await designer.run({cogniti: designer.cogniti(cfg), spec: designer.buildSpec(mcp.rawReference()), context, build, beforeEdit, emit, signal: ctl.signal}, input)
 	}
 	catch (err) {
 		console.trace(`${appName}: designer failed`, err)
-		emit({type: 'error', text: 'Something went wrong in the Activity Designer. Try again in a minute.'})
+		emit({type: 'error', text: 'Something went wrong in Ixia. Try again in a minute.'})
 	}
 	finally {
 		clearInterval(beat)
 		if (mcp) mcp.closeContext(ctx)
 		designerRunning.delete(who)
+	}
+
+	if (result.usage?.cost) {
+		await designerSpentToday()
+		designerSpend.usd += result.usage.cost
 	}
 
 	//A request that never got a message to Cogniti didn't use any of the shared allowance
@@ -5812,8 +6007,8 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	if (result.outcome === 'replied') state.used = Date.now()
 	else designerChats.delete(key)
 	//Who, which project, how it went. Never what was said
-	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own})
-	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null, quota: own ? null : shared.status(who)})
+	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own, model: gem.on ? gem.model : 'cogniti', ...(gem.on ? {via: gem.via} : {}), ...(result.usage?.input ? {usage: result.usage} : {})})
+	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null, quota: own ? null : shared.status(who), ...(result.usage?.input ? {usage: result.usage} : {})})
 	res.end()
 })
 
@@ -5939,7 +6134,7 @@ const mcpLimited = (req) => {
 }
 
 //Every tool an agent runs goes in the audit log: who, which agent, which tool and project, and whether it worked. The
-//Activity Designer's in-process calls (further down) go through the same one
+//Ixia's in-process calls (further down) go through the same one
 const mcpAudit = (req, ctx, msg, reply) => {
 	if (msg.method !== 'tools/call') return
 	let args = msg.params?.arguments || {},
@@ -5992,6 +6187,7 @@ router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, 
 				sessionId: mcpSessionID(req),
 				agent: String(req.query.agent || req.get('x-agent-name') || 'Agent').replace(/[^\w .'()-]/g, '').slice(0, 40) || 'Agent',
 				sessions: new Map(),
+				who: mcpWho(req),
 			},
 		}
 		mcpConnections.set(id, conn)

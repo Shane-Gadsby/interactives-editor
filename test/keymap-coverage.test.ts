@@ -2,6 +2,7 @@
 //key. This walks the command palette, the tool list, the panels, the top bar and the right-click menus, and fails for one that is
 //not in the registry (unless it is on the allow list below, with the reason it must not be keyed).
 import { readFileSync } from 'node:fs';
+import { parked } from '../src/lib/parked';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createNode, createProject } from 'interactives-player';
@@ -81,7 +82,8 @@ describe('tools and panels', () => {
     const type = src('store/store.ts').match(/export type Tool =([^;]+);/)![1];
     const all = new Set([...bar, ...[...type.matchAll(/'(\w+)'/g)].map((m) => m[1])]);
     //(the Tool type also has the modes that are not in the bar, which have no key either way)
-    for (const t of all) keyed(`tool.${t}`);
+    //(and not the tool of something parked, which has no row while it is: lib/parked.ts)
+    for (const t of all) if (!(parked.frameling && t === 'animation')) keyed(`tool.${t}`);
   });
 
   it('has a command for every panel', () => {
@@ -171,7 +173,7 @@ const MENUS: Record<string, Record<string, string>> = {
     Rectangle: 'add.rect',
     'Script layer': 'add.draw',
     'Shader layer': 'add.shader',
-    'Frameling animation': 'add.animation',
+    'Frameling animation': '!Frameling is parked (lib/parked.ts), so the menu leaves it out and there is no command',
     Star: 'add.star',
     Text: 'add.text',
     Video: 'add.video',
@@ -179,6 +181,7 @@ const MENUS: Record<string, Record<string, string>> = {
     Cut: 'cut',
     Paste: 'paste',
     'Crop picture': 'enter',
+    'Swap picture': '!A submenu on the picture that was right-clicked: it asks where the new picture comes from',
     'Edit text': 'enter',
     Delete: 'delete',
     Duplicate: 'duplicate',

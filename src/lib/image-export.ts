@@ -1,5 +1,6 @@
 import { Renderer, createStillShaders, measureCopies, prepareNodes, withMaster, type CopySizes, sampleArtboard, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { assetBytes } from './db';
+import { fetchLinkedBytes, isLinkedAsset } from './media-catalogue';
 import { download, fileSafe } from './export';
 import { previewScope, previewValue } from './data';
 import { editInstanceMount } from '../canvas/instances';
@@ -58,7 +59,10 @@ export async function snapshotFromDom(project: Project, ab: Artboard, root: HTML
     const url = resolve(a.id);
     if (!url || !html.includes(url.replace(/&/g, '&amp;'))) continue;
     const data = await dataUrlOf(project, a);
-    if (data) html = html.split(url.replace(/&/g, '&amp;')).join(data);
+    //A still is an image, and an image can't load anything from outside itself. A picture that couldn't be put inside it
+    //would be a hole in the artboard, so there is no still: the artboard stays drawn live, with the picture showing
+    if (!data) throw new Error(`${a.name} couldn't be read for the still, so the artboard stays live`);
+    html = html.split(url.replace(/&/g, '&amp;')).join(data);
   }
   const css = await fontCssCached(project, root);
   const svg =
@@ -155,8 +159,13 @@ function dataUrlOf(project: Project, a: Project['assets'][number]): Promise<stri
   const key = `${project.id}/${a.id}`;
   let p = dataUrlCache.get(key);
   if (!p) {
-    p = assetBytes(project.id, a).then((b) => (b ? toDataUrl(b, a.mime) : null));
+    //A picture linked from the Media Catalogue has no stored file, so its bytes are fetched from where it lives. One that
+    //can't be had right now isn't remembered as missing: the next picture that wants it asks again
+    p = (isLinkedAsset(a) ? fetchLinkedBytes(a).then((r) => toDataUrl(r.bytes, r.mime || a.mime)) : assetBytes(project.id, a).then((b) => (b ? toDataUrl(b, a.mime) : null))).catch(() => null);
     dataUrlCache.set(key, p);
+    void p.then((u) => {
+      if (!u && dataUrlCache.get(key) === p) dataUrlCache.delete(key);
+    });
   }
   return p;
 }

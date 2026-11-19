@@ -1,4 +1,5 @@
 import { CATALOG_BY_KIND, type NodeType } from 'interactives-player';
+import { nodeKindParked, parked } from '../lib/parked';
 import type { Tool } from '../store/store';
 import { slug } from './markdown';
 import { nodeHeading, nodeLabel } from '../lib/plain-words';
@@ -35,7 +36,7 @@ export const LAYER_HELP: Record<NodeType, HelpTarget> = {
   embed: { to: 'web-elements', label: 'Embed layer' },
   instance: { to: 'instances', label: 'Instance' },
   draw: { to: 'script-layers', label: 'Script layer' },
-  animation: { to: 'frameling-animations', label: 'Frameling animation layer' },
+  animation: parked.frameling ? { to: 'layers-panel', label: 'Animation layer' } : { to: 'frameling-animations', label: 'Frameling animation layer' },
   progress: { to: 'progress-bars', label: 'Progress bar layer' },
   chart: { to: 'charts', label: 'Chart layer' },
   connector: { to: 'connectors', label: 'Connector layer' },
@@ -66,7 +67,7 @@ export const TOOL_HELP: Record<Tool, HelpTarget> = {
   video: { to: 'images-media#video', label: 'Video tool' },
   draw: { to: 'script-layers', label: 'Script layer tool' },
   shader: { to: 'shader-layers', label: 'Shader layer tool' },
-  animation: { to: 'frameling-animations', label: 'Frameling animation tool' },
+  animation: parked.frameling ? { to: 'layers-panel', label: 'Animation tool' } : { to: 'frameling-animations', label: 'Frameling animation tool' },
   progress: { to: 'progress-bars', label: 'Progress bar tool' },
   chart: { to: 'charts', label: 'Chart tool' },
   connector: { to: 'connectors', label: 'Connector tool' },
@@ -110,6 +111,7 @@ export const STARTER_FINDER_HELP: HelpTarget = { to: 'templates#find-and-try-a-s
 /** The help for an interaction node kind: its entry in the generated node reference. Null for a kind the catalog doesn't know. */
 export function nodeHelp(kind: string): HelpTarget | null {
   const def = CATALOG_BY_KIND[kind];
+  if (nodeKindParked(kind)) return null;
   return def ? { to: `interaction-nodes#${slug(nodeHeading(def))}`, label: `${nodeLabel(def)} node` } : null;
 }
 

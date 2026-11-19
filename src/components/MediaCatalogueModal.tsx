@@ -46,9 +46,9 @@ function selectedCatalogue(): string | null {
 /**
  * The Media Catalogue in a frame over the editor. It answers with the toolbox's insert message, which is only believed when it
  * comes from this frame and from the catalogue's own origin. Opening it with an image layer that came from there selected
- * puts it back where that photo was found.
+ * puts it back where that photo was found. With `onPick` the photo chosen is handed over rather than put on the page.
  */
-export function MediaCatalogueModal({ onClose }: { onClose: () => void }) {
+export function MediaCatalogueModal({ onClose, onPick }: { onClose: () => void; onPick?: (pick: CataloguePick) => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const origin = window.location.origin;
   useEffect(() => {
@@ -60,7 +60,9 @@ export function MediaCatalogueModal({ onClose }: { onClose: () => void }) {
       if (!m) return;
       if (m.kind === 'close') onClose();
       else {
-        void addCataloguePhoto(m.pick);
+        //(a swap hands the photo to the layer that asked, instead of making a new one)
+        if (onPick) onPick(m.pick);
+        else void addCataloguePhoto(m.pick);
         onClose();
       }
     };
@@ -69,7 +71,7 @@ export function MediaCatalogueModal({ onClose }: { onClose: () => void }) {
       window.removeEventListener('keydown', k);
       window.removeEventListener('message', onMessage);
     };
-  }, [onClose, origin]);
+  }, [onClose, onPick, origin]);
   return createPortal(
     <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal catalogue-modal" role="dialog" aria-modal="true" aria-label="Media Catalogue">

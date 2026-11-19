@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { adoptTitle, installTooltips } from '../src/components/tooltips';
+import { adoptTitle, installTooltips, placeTip } from '../src/components/tooltips';
 import { CheckField, IconButton, NumberField, SelectField } from '../src/components/ui';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -115,5 +115,26 @@ describe('tooltips keep the label for assistive technology', () => {
     act(() => b.focus());
     expect(b.hasAttribute('title')).toBe(false);
     expect(b.getAttribute('aria-label')).toBe('Show fill 1');
+  });
+});
+
+describe('where a tooltip goes', () => {
+  const box = (left: number, top: number, width: number, height: number) => ({ left, top, width, height, right: left + width, bottom: top + height });
+
+  it('goes underneath by default, above when there is no room, and beside the tool bar', () => {
+    expect(placeTip(box(100, 100, 40, 20), 80, 24, 1000, 800)).toEqual({ x: 80, y: 126 });
+    expect(placeTip(box(100, 770, 40, 20), 80, 24, 1000, 800)).toEqual({ x: 80, y: 740 });
+    expect(placeTip(box(10, 100, 30, 30), 80, 24, 1000, 800, { beside: true })).toEqual({ x: 48, y: 103 });
+  });
+
+  it('a button that asks for it gets the tip above with a tail pointing down at it', () => {
+    expect(placeTip(box(500, 700, 48, 48), 200, 26, 1000, 800, { above: true })).toEqual({ x: 424, y: 664, tail: 'down', tailX: 100 });
+  });
+
+  it('keeps the tail on the button when the bubble is pushed in from the edge, and flips below when there is no room above', () => {
+    // hard against the right edge: the bubble stops 4px short and the tail moves right to stay over the button
+    const edge = placeTip(box(940, 700, 48, 48), 200, 26, 1000, 800, { above: true });
+    expect(edge).toMatchObject({ x: 796, tail: 'down', tailX: 168 });
+    expect(placeTip(box(500, 10, 48, 48), 200, 26, 1000, 800, { above: true })).toMatchObject({ y: 68, tail: 'up' });
   });
 });

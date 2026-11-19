@@ -549,7 +549,7 @@ describe('JSON-RPC handler', () => {
 
   it('initialises with the client\'s protocol version, tools capability and instructions', async () => {
     const r = await rpc({ id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26' } });
-    expect(r).toMatchObject({ jsonrpc: '2.0', id: 1, result: { protocolVersion: '2025-03-26', capabilities: { tools: {} }, serverInfo: { name: 'interactives' } } });
+    expect(r).toMatchObject({ jsonrpc: '2.0', id: 1, result: { protocolVersion: '2025-03-26', capabilities: { tools: {} }, serverInfo: { name: 'ixia' } } });
     expect(r.result.instructions).toMatch(/list_projects/);
     expect((await rpc({ id: 2, method: 'initialize' })).result.protocolVersion).toBe('2025-06-18');
   });
@@ -564,7 +564,7 @@ describe('JSON-RPC handler', () => {
   it('lists its tools, each with a schema whose required fields exist', async () => {
     const r = await rpc({ id: 5, method: 'tools/list' });
     const tools = r.result.tools as { name: string; description: string; inputSchema: { type: string; properties: Record<string, unknown>; required: string[] } }[];
-    expect(tools.map((t) => t.name)).toEqual(['list_projects', 'list_starters', 'create_project', 'upload_asset', 'export_project', 'get_variables', 'join_session', 'get_selection', 'get_overview', 'get_layers', 'get_interactions', 'edit', 'list_notes', 'add_note', 'add_graph_note', 'edit_note', 'remove_note', 'validate', 'read_reference', 'leave_session']);
+    expect(tools.map((t) => t.name)).toEqual(['list_projects', 'list_starters', 'create_project', 'upload_asset', 'export_project', 'get_variables', 'join_session', 'who_am_i', 'get_selection', 'get_overview', 'get_layers', 'get_interactions', 'edit', 'list_notes', 'add_note', 'add_graph_note', 'edit_note', 'remove_note', 'validate', 'read_reference', 'leave_session']);
     expect(new Set(tools.map((t) => t.name)).size).toBe(tools.length);
     for (const t of tools) {
       expect(t.description.length).toBeGreaterThan(10);

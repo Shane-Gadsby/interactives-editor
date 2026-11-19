@@ -9,6 +9,7 @@ import { VersionInfo } from '../components/VersionInfo';
 import { helpTopics, helpViews, useTopic } from './lazy';
 import { hideTour, tourActive } from '../lib/tour';
 import { TourOverlay } from './TourOverlay';
+import { BrandLogo } from '../components/BrandLogo';
 
 
 // ---------------------------------------------------------------- opening help from anywhere
@@ -201,7 +202,7 @@ export function HelpPage({ id, anchor }: { id: string; anchor?: string }) {
     <div className="help-page">
       <header className="home-head">
         <a className="brand" href="#/">
-          Interactives
+          <BrandLogo />
         </a>
         <span className="muted help-page-label">
           Help <VersionInfo />

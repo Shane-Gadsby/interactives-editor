@@ -75,7 +75,11 @@ describe('Add question', () => {
   it('multiple response uses checkboxes', () => {
     const { frame } = make('multiple');
     expect(part(frame(), 'option')?.role).toBe('checkbox');
-    expect(part(frame(), 'marker')?.type).toBe('rect');
+    //a box with a tick in it, which takes the box's own colour until the option is chosen
+    const marker = part(frame(), 'marker') as unknown as { type: string; children: { name: string; type: string; bindings: Record<string, string> }[] };
+    expect(marker.type).toBe('frame');
+    expect(marker.children[0]).toMatchObject({ name: 'Tick', type: 'path' });
+    expect(marker.children[0].bindings['stroke.paint.color']).toContain('item.selected');
   });
   it('a second question gets its own prefix, variables and graph', () => {
     const { s, abId, p } = make('single');

@@ -31,6 +31,33 @@ export function adoptTitle(el: HTMLElement): string | null {
   return el.dataset.tip || null;
 }
 
+type Box = { left: number; top: number; right: number; bottom: number; width: number; height: number };
+
+/**
+ * Where a tooltip of w x h goes for a thing at r, in a window of vw x vh. The editor's dense controls put it underneath (or
+ * beside, for the tool bar). `above` is the way of the web: over the thing with a tail pointing down at it, which is what
+ * a button standing on its own wants (`data-tip-side="top"`). With no room above it goes below and the tail points up.
+ * tailX is where the tail sits along the bubble, so it still points at the thing when the bubble is pushed in from an edge.
+ */
+export function placeTip(r: Box, w: number, h: number, vw: number, vh: number, how: { above?: boolean; beside?: boolean } = {}): { x: number; y: number; tail?: 'down' | 'up'; tailX?: number } {
+  const mid = r.left + r.width / 2;
+  const clampX = (x: number) => Math.max(4, Math.min(vw - w - 4, x));
+  if (how.above) {
+    const fits = r.top - h - 10 >= 4;
+    const x = clampX(mid - w / 2);
+    return { x, y: fits ? r.top - h - 10 : r.bottom + 10, tail: fits ? 'down' : 'up', tailX: Math.max(10, Math.min(w - 10, mid - x)) };
+  }
+  let x = mid - w / 2;
+  let y = r.bottom + 6;
+  if (y + h > vh - 4) y = r.top - h - 6;
+  // Tall thin things (the tool bar) read better with the tip to the side
+  if (how.beside) {
+    x = r.right + 8;
+    y = r.top + r.height / 2 - h / 2;
+  }
+  return { x: clampX(x), y: Math.max(4, y) };
+}
+
 export function installTooltips(): void {
   if (installed || typeof document === 'undefined') return;
   installed = true;
@@ -53,18 +80,14 @@ export function installTooltips(): void {
     tip.textContent = text;
     document.body.appendChild(tip);
     const r = el.getBoundingClientRect();
-    const w = tip.offsetWidth;
-    const h = tip.offsetHeight;
-    let x = r.left + r.width / 2 - w / 2;
-    let y = r.bottom + 6;
-    if (y + h > innerHeight - 4) y = r.top - h - 6;
-    // Tall thin things (the tool bar) read better with the tip to the side
-    if (r.height > r.width * 1.5 || el.closest('.toolbar')) {
-      x = r.right + 8;
-      y = r.top + r.height / 2 - h / 2;
+    tip.classList.remove('tail-down', 'tail-up');
+    const at = placeTip(r, tip.offsetWidth, tip.offsetHeight, innerWidth, innerHeight, { above: el.dataset.tipSide === 'top', beside: r.height > r.width * 1.5 || !!el.closest('.toolbar') });
+    tip.style.left = `${at.x}px`;
+    tip.style.top = `${at.y}px`;
+    if (at.tail) {
+      tip.classList.add(`tail-${at.tail}`);
+      tip.style.setProperty('--tail-x', `${at.tailX}px`);
     }
-    tip.style.left = `${Math.max(4, Math.min(innerWidth - w - 4, x))}px`;
-    tip.style.top = `${Math.max(4, y)}px`;
   };
 
   document.addEventListener(

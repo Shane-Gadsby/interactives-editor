@@ -1,4 +1,5 @@
 import { answerPreviewProgress, forgetPreviewCourse, forgetPreviewLearner, previewCourseHas, previewLearnerHas, usesCourseCollections } from './lib/preview-learner';
+import { parked } from './lib/parked';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
@@ -45,7 +46,7 @@ import { PreviewWidth, responsiveSets, widthInside } from './components/PreviewW
 import { getArtboard, selectionBounds } from './store/doc';
 import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink } from './help/Help';
-import { DesignerPanel, useDesignerOn } from './components/DesignerPanel';
+import { DesignerDock } from './components/DesignerPanel';
 import { setPreviewOpen, trapFocus } from './lib/overlays';
 import { installInteractionsRoom } from './lib/interactions-room';
 import { clearFlow, lastQuietHit, pushFlow, useFlowVersion } from './lib/run-flow';
@@ -69,6 +70,7 @@ import { snapAny, snapSettings } from './lib/snapping';
 import { SnapMenu } from './components/SnapMenu';
 import { gridMenu } from './components/grid-menu';
 import { MediaCatalogueModal } from './components/MediaCatalogueModal';
+import { ImageSwapHost } from './components/ImageSwap';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
 import { LinkChanges } from './components/LinkChanges';
@@ -543,6 +545,7 @@ function Workspace({ home }: { home: () => void }) {
         </Guard>
         {z.left > 0 && <PanelResizeHandle side="left" width={widths.left} onWidth={(w) => setWidth('left', w)} />}
         {z.right > 0 && <PanelResizeHandle side="right" width={widths.right} onWidth={(w) => setWidth('right', w)} />}
+        <DesignerDock />
       </main>
       <DockZone zone="right" />
       <DockZone zone="bottom" />
@@ -635,10 +638,16 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   const [menu, setMenu] = useState(false);
   //the Workspace page of Preferences is for here: panels to arrange
   useEffect(() => (setEditorShown(true), () => setEditorShown(false)), []);
+  //the browser tab says which project this is, so two open side by side can be told apart, and goes back to the app's
+  //name on the way out
+  useEffect(() => {
+    const name = s.name?.trim();
+    document.title = name ? `${name} - Ixia` : 'Ixia';
+    return () => {
+      document.title = 'Ixia';
+    };
+  }, [s.name]);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const designerOn = useDesignerOn();
-  //mounted on first open and then only hidden, so the conversation survives closing the panel
-  const [designer, setDesigner] = useState<'never' | 'open' | 'closed'>('never');
   const st = store();
   const [shareOpen, setShareOpen] = useState(false);
   const [shareMenu, setShareMenu] = useState(false);
@@ -783,16 +792,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       </div>
       <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => openPrefs()} />
       <IconButton icon={<Icons.search />} title={withKey('Find a command and do it: add a layer, go to a page, turn the grid on, share...', 'palette')} onClick={() => void openPalette(false)} />
-      {designerOn && (
-        <IconButton
-          icon={<Icons.ask />}
-          title="Ask the Activity Designer: describe what you want and it builds it in your project"
-          onClick={() => setDesigner((c) => (c === 'open' ? 'closed' : 'open'))}
-          pressed={designer === 'open'}
-        />
-      )}
       <IconButton icon={<Icons.help />} title={helpTitle} onClick={openHeaderHelp} />
-      {designerOn && designer !== 'never' && <DesignerPanel open={designer === 'open'} onClose={() => setDesigner('closed')} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
       {gate && <BeforeYouShareModal what={gate.what} onGo={gate.go} onClose={() => setGate(null)} />}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
@@ -921,7 +921,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string }[] = [
   { tool: 'text', icon: 'text', label: 'Text' },
   { tool: 'draw', icon: 'draw', label: 'Script layer (generative art, charts)' },
   { tool: 'shader', icon: 'shader', label: 'Shader layer (GPU effects, backdrops)' },
-  { tool: 'animation', icon: 'flipbook', label: 'Frameling animation (a character or effect drawn in Frameling, played from its .flplay file)' },
+  ...(parked.frameling ? [] : [{ tool: 'animation' as Tool, icon: 'flipbook' as IconName, label: 'Frameling animation (a character or effect drawn in Frameling, played from its .flplay file)' }]),
   { tool: 'progress', icon: 'progress', label: 'Progress bar (a bar that fills to a value, for scores, steps and timers)' },
   { tool: 'chart', icon: 'chart', label: 'Chart (bar, column, line, pie and donut charts from a list)' },
   { tool: 'bone', icon: 'bone', label: 'Bone (drag to draw one; start on a bone tip to continue the chain)' },
@@ -1011,7 +1011,7 @@ function AddQuestion({ reorderKey }: { reorderKey?: string }) {
   );
 }
 
-/** What the ready-made Web tools are, in the order they sit: four overlays, then the two that go on the page itself. */
+/** What the ready-made Web tools are, in the order they sit: five overlays, then the two that go on the page itself. */
 export const WEB_ADDS: { key: string; label: string; hint: string; icon: keyof typeof Icons; overlay?: DialogKind; onPage?: 'tabs' | 'accordion' }[] = [
   ...DIALOG_KINDS.map((k) => ({ key: `add-${k.value === 'input' ? 'prompt' : k.value}`, label: k.label, hint: k.hint, icon: (k.value === 'input' ? 'prompt' : k.value) as keyof typeof Icons, overlay: k.value })),
   { key: 'add-tabs', label: 'Tabs', hint: 'A row of tabs with one panel showing, with no wiring', icon: 'tabs', onPage: 'tabs' },
@@ -1039,7 +1039,8 @@ export function addWebThing(which: (typeof WEB_ADDS)[number]): void {
   const { overlayId, linked } = made as { overlayId: string; linked: string | null };
   //Open the overlay page so its words can be edited straight away
   s.set({ activeArtboardId: overlayId, artboardSelected: true, selection: [] });
-  s.toast(linked ? `${which.label} added and pointed at the layer you had picked` : `${which.label} added. Pick a layer and set its Overlay to show it`, 'info');
+  if (which.overlay === 'toast') s.toast(linked ? 'Toast added, and clicking the layer you had picked shows it' : 'Toast added. Show it with a Show toast node in Interactions', 'info');
+  else s.toast(linked ? `${which.label} added and pointed at the layer you had picked` : `${which.label} added. Pick a layer and set its Overlay to show it`, 'info');
 }
 
 /** One ready-made Web thing as a tool button of its own: one click builds it, wired up. */
@@ -1053,7 +1054,7 @@ function AddWebThing({ which }: { which: (typeof WEB_ADDS)[number] }) {
 export const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[] = [
   { id: 'shapes', label: 'Shapes', tools: ['artboard', 'frame', 'rect', 'ellipse', 'polygon', 'star'], open: true },
   { id: 'draw', label: 'Draw', tools: ['line', 'connector', 'pen', 'pencil', 'bend'], open: true },
-  { id: 'media', label: 'Media', tools: ['text', 'draw', 'shader', 'animation', 'video'], open: false },
+  { id: 'media', label: 'Media', tools: ['text', 'draw', 'shader', ...(parked.frameling ? [] : ['animation' as Tool]), 'video'], open: false },
   { id: 'data', label: 'Data', tools: ['progress', 'chart'], open: false },
   { id: 'web', label: 'Web', tools: ['button', 'input', 'link', 'embed'], open: false },
   { id: 'rig', label: 'Rig', tools: ['bone'], open: false },
@@ -1158,6 +1159,7 @@ export function Toolbar() {
     >
       {menu && <ContextMenu x={menu.x} y={menu.y} items={toolsMenu(toolOrderMenu(nav.current, menu.target, horizontal))} onClose={() => setMenu(null)} />}
       {catalogueOpen && <MediaCatalogueModal onClose={() => setCatalogueOpen(false)} />}
+      <ImageSwapHost />
       {gridMenuAt && <ContextMenu x={gridMenuAt.x} y={gridMenuAt.y} items={gridMenu()} onClose={() => setGridMenuAt(null)} />}
       {snapMenuAt && <SnapMenu x={snapMenuAt.x} y={snapMenuAt.y} onClose={() => setSnapMenuAt(null)} />}
       <ToolsHead />
@@ -1380,8 +1382,9 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     let live = true;
     setBuildError(null);
-    // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show
-    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project) }).then(
+    // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show,
+    // opened with the sample link values on its address
+    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project), link: { ...(project.sampleLink ?? {}) } }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );

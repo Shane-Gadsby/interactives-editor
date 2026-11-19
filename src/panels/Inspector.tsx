@@ -115,7 +115,8 @@ import { ReadAloudSection } from './ReadAloudSection';
 import { VariantsSection } from './VariantsSection';
 import { MasterSection } from './MasterSection';
 import { ComponentPropsSection } from './ComponentPropsSection';
-import { SHADER_PRESETS, SHADER_PRESETS_BY_ID } from 'interactives-player';
+import { SHADER_PRESETS, SHADER_PRESETS_BY_ID, EMBED_ALLOW, EMBED_ALLOW_DEFAULT, type EmbedAllowKey, type EmbedNode } from 'interactives-player';
+import { lookFor } from '../lib/themes';
 import { StatesSection } from './StatesSection';
 import { OverlayPageSection, OverlaySection } from './OverlaySection';
 import { DisclosureSection } from './DisclosureSection';
@@ -665,6 +666,8 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             label="W"
             value={ab.width}
             min={1}
+            disabled={!!ab.hugWidth}
+            title={ab.hugWidth ? 'Fit width to content is on, so the width follows the layers on the page' : undefined}
             onChange={(v) =>
               setAb((a) => {
                 if (a.lockRatio && a.width) a.height = Math.max(1, Math.round((a.height * v) / a.width));
@@ -721,6 +724,12 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <div className="field-label block">Background</div>
         <PaintField paint={ab.background} project={project} box={{ w: ab.width, h: ab.height }} onChange={(p) => setAb((a) => (a.background = p), `ab-bg-${ab.id}`)} />
         </PropRow>
+        <CheckField
+          label="Fit width to content"
+          title="The page is as wide as its furthest showing layer, and the editor keeps it so as you change what is on it. Use it for an overlay that should be as wide as its words. A page that plays in an embed is drawn at the width it had when you last saved"
+          value={!!ab.hugWidth}
+          onChange={(v) => setAb((a) => (v ? (a.hugWidth = true) : delete a.hugWidth))}
+        />
         <CheckField
           label="Fit height to content"
           title="The page is as tall as its lowest showing layer, and keeps fitting as it plays: a list filling from data, a layer shown or hidden, text growing. An embed in StudyDesk grows and shrinks with it"
@@ -1105,8 +1114,8 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
       )}
       {single && n.type === 'text' && <TextModifiersSection node={n} />}
       {sameType && 'fill' in n && <FillSection nodes={nodes} project={project} />}
-      {sameType && 'stroke' in n && <StrokeSection nodes={nodes} project={project} />}
-      {sameType && single && 'stroke' in n && !isConn && <PaintOrderSection nodes={nodes} />}
+      {sameType && 'stroke' in n && n.type !== 'embed' && <StrokeSection nodes={nodes} project={project} />}
+      {sameType && single && 'stroke' in n && !isConn && n.type !== 'embed' && <PaintOrderSection nodes={nodes} />}
       <EffectsSection nodes={nodes} />
       {!isConn && <DepthSection nodes={nodes} project={project} />}
       {single && !isConn && <ConstraintsSection node={n} />}
@@ -1723,6 +1732,17 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             </div>
           )}
           {radius}
+          <Row>
+            <NumberField
+              label="Side padding"
+              title="The room between the label and the button's left and right edges, in pixels. 12 unless you change it; a label set to the left or right sits this far in"
+              value={Number(shown('paddingX') ?? (n as { paddingX?: number }).paddingX ?? 12)}
+              min={0}
+              step={1}
+              suffix="px"
+              onChange={(v) => set({ paddingX: v }, `padx-${n.id}`)}
+            />
+          </Row>
           <div className="keyed">
             <CheckField label="Disabled" value={!!shown('disabled')} onChange={(v) => set({ disabled: v })} />
             <KeyButton node={n} ids={ids} prop="disabled" />
@@ -1817,6 +1837,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             )
           )}
           {radius}
+          {n.mode === 'iframe' && <EmbedAllows nodes={nodes as EmbedNode[]} />}
+          <EmbedBorder nodes={nodes as EmbedNode[]} project={project} />
         </Section>
       );
     case 'video':
@@ -3053,5 +3075,70 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
         );
       })}
     </Section>
+  );
+}
+
+/**
+ * What an embedded web page may use: a tick box each, with what ticking it really does as its tooltip. An embed that has
+ * never been asked shows the three every embed used to get, and the first change writes the list down.
+ */
+function EmbedAllows({ nodes }: { nodes: EmbedNode[] }) {
+  const n = nodes[0];
+  const ids = nodes.map((x) => x.id);
+  const on = new Set<EmbedAllowKey>(n.allow ?? EMBED_ALLOW_DEFAULT);
+  const flip = (key: EmbedAllowKey, v: boolean) => {
+    const next = EMBED_ALLOW.map((a) => a.key).filter((k) => (k === key ? v : on.has(k)));
+    store().setProps(ids, { allow: next });
+    store().commit();
+  };
+  return (
+    <PropRow k="The page may use" words={['allow', 'permission', 'permissions', 'microphone', 'camera', 'fullscreen', 'autoplay', 'clipboard', 'screen share', 'location', 'sensors']}>
+      <div className="embed-allows">
+        <div className="field-label block">The page may use</div>
+        {EMBED_ALLOW.map((a) => (
+          <CheckField key={a.key} label={a.label} title={a.hint} value={on.has(a.key)} onChange={(v) => flip(a.key, v)} />
+        ))}
+        <div className="hint">Only what's ticked is let through. The viewer is still asked for a microphone, camera, screen or location.</div>
+        <div className="hint">In a course page, the page has to let the interactive use it too, and none of it works without https.</div>
+      </div>
+    </PropRow>
+  );
+}
+
+/**
+ * An embed's border: on or off, how wide, and its colour. It starts on the project's own border token, so it matches
+ * whatever colourway the project is in and follows it when that changes.
+ */
+function EmbedBorder({ nodes, project }: { nodes: EmbedNode[]; project: Project }) {
+  const n = nodes[0];
+  const ids = nodes.map((x) => x.id);
+  const stroke = n.stroke && n.stroke.width > 0 ? n.stroke : null;
+  const write = (next: EmbedNode['stroke'], coalesce?: string) => {
+    store().setProps(ids, { stroke: next }, coalesce);
+    if (!coalesce) store().commit();
+  };
+  const color = stroke && stroke.paint.type === 'solid' ? stroke.paint.color : '';
+  return (
+    <>
+      <CheckField
+        label="Border"
+        title="A line round the embed, drawn inside its box over the edge of the embedded page, so the layer stays the size you gave it"
+        value={!!stroke}
+        onChange={(v) => write(v ? { paint: { type: 'solid', color: lookFor(project.themes).border }, width: 1, align: 'inside' } : null)}
+      />
+      {stroke && (
+        <Row>
+          <ColorField
+            label="Border colour"
+            title="Pick a token from the Tokens tab and the border follows the project's colourway. A plain colour stays as it is"
+            tokens
+            value={color}
+            onChange={(v) => write({ ...stroke, paint: { type: 'solid', color: v } }, `embed-border-${n.id}`)}
+            onCommit={() => store().commit()}
+          />
+          <NumberField label="Border width" title="How thick the border is" value={stroke.width} min={1} max={40} suffix="px" onChange={(v) => write({ ...stroke, width: Math.max(1, Math.round(v)) }, `embed-border-w-${n.id}`)} />
+        </Row>
+      )}
+    </>
   );
 }

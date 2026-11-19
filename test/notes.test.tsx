@@ -310,6 +310,58 @@ describe('the canvas layer', () => {
     act(() => area.blur());
     expect(findNote(s.get().project, id)).toBeNull();
   });
+
+  it('double-click on the top bar gives the note a title in place of who wrote it, and emptying it goes back', () => {
+    const { s, ab } = fresh();
+    const id = addNote(ab, { x: 10, y: 10, text: 'hi' }, { author: 'Claude (AI)' })!;
+    mount(s);
+    const head = () => host!.querySelector('.note-head') as HTMLElement;
+    expect(head().textContent).toBe('Claude (AI)');
+    const type = (value: string, key: string) => {
+      act(() => head().dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+      // the text box stays shut: the bar's double-click is its own
+      expect(host!.querySelector('textarea')).toBeNull();
+      const input = host!.querySelector('.note-title') as HTMLInputElement;
+      act(() => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      act(() => input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })));
+      if (key === 'Enter') act(() => input.blur());
+    };
+    type('  Saving  ', 'Enter');
+    expect(findNote(s.get().project, id)!.note.title).toBe('Saving');
+    expect(head().textContent).toBe('Saving');
+    expect(host!.querySelector('.note')!.getAttribute('aria-label')).toContain('Saving by Claude (AI)');
+    type('Not this', 'Escape');
+    expect(findNote(s.get().project, id)!.note.title).toBe('Saving');
+    type('', 'Enter');
+    expect('title' in findNote(s.get().project, id)!.note).toBe(false);
+    expect(head().textContent).toBe('Claude (AI)');
+  });
+
+  it("right-click opens the note's own menu, not the browser's: rename, colour, delete", () => {
+    const { s, ab } = fresh();
+    const id = addNote(ab, { x: 10, y: 10, text: 'hi' }, { author: 'Ann' })!;
+    mount(s);
+    const open = () => {
+      const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 20, clientY: 20 });
+      act(() => host!.querySelector('.note-body')!.dispatchEvent(ev));
+      expect(ev.defaultPrevented).toBe(true);
+      return [...document.querySelectorAll('.ctx-menu button')] as HTMLElement[];
+    };
+    const pick = (label: string) => {
+      const b = open().find((x) => x.textContent!.startsWith(label))!;
+      act(() => b.click());
+    };
+    expect(open().map((b) => b.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('Edit text'), expect.stringContaining('Add a title'), expect.stringContaining('Colour'), expect.stringContaining('Delete note')]));
+    act(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    pick('Add a title');
+    expect(host!.querySelector('.note-title')).not.toBeNull();
+    act(() => (host!.querySelector('.note-title') as HTMLInputElement).blur());
+    pick('Delete note');
+    expect(findNote(s.get().project, id)).toBeNull();
+  });
 });
 
 describe('the Note tool on the canvas', () => {

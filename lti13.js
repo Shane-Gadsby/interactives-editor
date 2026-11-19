@@ -1,4 +1,4 @@
-//LTI 1.3 for the Interactives editor, so a project can be launched from any LMS and not just StudyDesk's LTI 1.0.
+//LTI 1.3 for the Ixia editor, so a project can be launched from any LMS and not just StudyDesk's LTI 1.0.
 //Self-contained on purpose: index.js mounts the three routers this hands back and asks it who a launched learner is.
 //
 //What's in here
@@ -664,7 +664,7 @@ module.exports = (deps) => {
 			res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}'; base-uri 'none'`)
 			res.setHeader('Cache-Control', 'no-store')
 			res.setHeader('Referrer-Policy', 'no-referrer')
-			res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Interactives</title></head><body>
+			res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Ixia</title></head><body>
 <form id="back" method="post" action="${esc(session.returnURL)}"><input type="hidden" name="JWT" value="${esc(signJwt(payload, kid, key))}"><noscript><p>Your pick is ready.</p><button type="submit">Send it to the learning platform</button></noscript></form>
 <script nonce="${nonce}">document.getElementById('back').submit()</script>
 </body></html>`)
@@ -679,7 +679,7 @@ module.exports = (deps) => {
 <style>body{font:15px/1.4 system-ui,sans-serif;margin:0;padding:16px;color:#1b1b1f;background:#fff}h1{font-size:18px;margin:0 0 12px}ul{list-style:none;margin:0 0 16px;padding:0}li{border:1px solid #c9c9d1;border-radius:6px;margin:0 0 6px}label{display:flex;gap:10px;align-items:center;padding:10px 12px;cursor:pointer}li:has(input:checked){border-color:#3b5bfd;background:#eef1ff}button{font:600 14px system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:6px;padding:10px 18px;cursor:pointer}button:focus-visible,input:focus-visible{outline:3px solid #1b1b1f;outline-offset:2px}.muted{color:#55555f}code{background:#eee;padding:1px 4px;border-radius:3px}</style></head>
 <body><h1>Pick an interactive</h1>
 ${!linked
-	? `<p>This ${esc(platform.name || 'learning platform')} account is not linked to an Interactives editor account yet. Ask an Interactives power user to link it, giving them this platform id and user id:</p><p><code>${esc(platform._id)}</code> <code>${esc(sub || '(none sent)')}</code></p>`
+	? `<p>This ${esc(platform.name || 'learning platform')} account is not linked to an Ixia editor account yet. Ask an Ixia power user to link it, giving them this platform id and user id:</p><p><code>${esc(platform._id)}</code> <code>${esc(sub || '(none sent)')}</code></p>`
 	: rows.length
 		? `<form method="post" action="${esc(base)}/lti13/pick"><input type="hidden" name="sid" value="${esc(sid)}"><ul>${rows.map((r) => `<li><label><input type="${multiple ? 'checkbox' : 'radio'}" name="project" value="${esc(r.share.token)}"${!multiple && r === rows[0] ? ' required' : ''}> <span>${esc(r.name || 'Untitled project')}</span></label></li>`).join('')}</ul><button type="submit">Use ${multiple ? 'these' : 'this one'}</button></form>`
 		: `<p>You have no projects with a Link for StudyDesk turned on. Open a project in the editor, choose Share, and make that link, then start again from here.</p><p class="muted">Only your own projects with a link are listed.</p>`}

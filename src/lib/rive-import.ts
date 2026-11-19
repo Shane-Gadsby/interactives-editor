@@ -1,5 +1,5 @@
 /**
- * Rive runtime file (.riv, format major 7) -> Interactives artboards.
+ * Rive runtime file (.riv, format major 7) -> Ixia artboards.
  *
  * Reads the documented binary container (header, property table of contents,
  * objects as typeKey + key/value properties) using the type definitions in

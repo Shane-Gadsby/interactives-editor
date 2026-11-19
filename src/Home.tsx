@@ -21,6 +21,7 @@ import { TemplatesTab } from './components/TemplatesTab';
 import { NewProjectModal } from './components/NewProjectModal';
 import { TutorialsModal } from './components/TutorialsModal';
 import { clearLeft, peekLeft } from './lib/home-return';
+import { BrandLogo } from './components/BrandLogo';
 
 declare global {
   interface Window {
@@ -313,7 +314,7 @@ export function Home({ open }: { open: (id: string) => void }) {
       const files = await pickFiles(`${PACKAGE_EXTENSION},.zip,.json,.lottie,.riv,.rev,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,.pptx`, false);
       const f = files[0];
       if (!f) return;
-      // Lottie / Rive (.riv, .rev) / Photoshop / Illustrator / PDF / VectorCraft / PhotoCraft / PowerPoint files become a new project; anything else is an Interactives package or project JSON.
+      // Lottie / Rive (.riv, .rev) / Photoshop / Illustrator / PDF / VectorCraft / PhotoCraft / PowerPoint files become a new project; anything else is an Ixia package or project JSON.
       const head = new Uint8Array(await f.slice(0, 4096).arrayBuffer());
       const text = new TextDecoder().decode(head);
       const animation = /\.(lottie|riv|rev|psd|ai|pdf|dxf|dwg|vectorcraft|drawcraft|pcraft|pptx)$/i.test(f.name) || (/\.json$/i.test(f.name) && /"layers"\s*:/.test(text) && !/"format"\s*:\s*"interactives"/.test(text));
@@ -424,8 +425,7 @@ export function Home({ open }: { open: (id: string) => void }) {
     <div className="home">
       <header className="home-head">
         <div className="brand">
-          <img src="./favicon.svg" alt="" width={28} height={28} />
-          <span>Interactives</span>
+          <BrandLogo />
         </div>
         <div className="home-actions">
           {(who?.user || me2) && <span className="muted home-user" title="Signed in through the toolbox">{who?.user?.name ?? me2?.name ?? who?.user?.username}</span>}
@@ -449,7 +449,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           <button className="btn" onClick={() => setTutorials(true)} title="Step-by-step tutorials for the things people make most, each with its finished example to open">
             <Icons.book width={14} /> Tutorials
           </button>
-          <a className="btn" href="#/help" title="How to use Interactives (F1 to search)">
+          <a className="btn" href="#/help" title="How to use Ixia (F1 to search)">
             <Icons.help width={14} /> Help
           </a>
           <VersionInfo />
@@ -636,7 +636,7 @@ export function Home({ open }: { open: (id: string) => void }) {
         {list?.length === 0 && (welcomeLeft || !!error) && (
           <div className="empty-state">
             <h2>No projects yet</h2>
-            <p>Interactives builds interactive 2D experiences for the web: vector artboards, web controls, timelines, node-based interactions and your own JavaScript, exported as a single HTML file or a {PACKAGE_EXTENSION} package.</p>
+            <p>Ixia builds interactive 2D experiences for the web: vector artboards, web controls, timelines, node-based interactions and your own JavaScript, exported as a single HTML file or a {PACKAGE_EXTENSION} package.</p>
             <button className="btn primary" onClick={() => setChoosing(true)}>
               Create your first project
             </button>

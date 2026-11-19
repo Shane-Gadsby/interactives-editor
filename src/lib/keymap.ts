@@ -3,6 +3,7 @@
 //the Preferences page all read the one list, and each person's own keys (prefs.keymap: overrides only, never in the project)
 //show up everywhere. Keys are stored platform neutral: "Mod" is Ctrl, or Cmd on a Mac.
 import { prefs } from './prefs';
+import { parked } from './parked';
 
 /** Where a command applies. A key in a more specific place wins over the same key in `canvas`, which wins over `everywhere`. */
 export type Context = 'everywhere' | 'canvas' | 'layers' | 'timeline' | 'graph' | 'inspector';
@@ -55,7 +56,7 @@ const TOOL_NAMES: [string, string, string[]][] = [
   ['video', 'Video tool', []],
   ['draw', 'Script layer tool', []],
   ['shader', 'Shader layer tool', []],
-  ['animation', 'Frameling animation tool', []],
+  ...(parked.frameling ? [] : ([['animation', 'Frameling animation tool', []]] as [string, string, string[]][])),
   ['progress', 'Progress bar tool', []],
   ['chart', 'Chart tool', []],
   ['connector', 'Connector tool', ['K']],

@@ -54,7 +54,7 @@ export function Review({ token }: { token: string }) {
         comments.startReview(token, { threads: body.threads, people: body.people, me: body.me });
         setState({ kind: 'ok', data: { id: body.id, name: body.name, project, me: body.me, threads: body.threads, people: body.people } });
       } catch {
-        if (!off) setState({ kind: 'error', message: 'Could not reach the Interactives server', signin: false });
+        if (!off) setState({ kind: 'error', message: 'Could not reach the Ixia server', signin: false });
       }
     })();
     return () => {
@@ -92,6 +92,14 @@ function ReviewPage({ token, data }: { token: string; data: Loaded }) {
   const [playing, setPlaying] = useState(false);
   const stage = useRef<HTMLDivElement>(null);
   const [room, setRoom] = useState(900);
+  //the browser tab names the project being looked at
+  useEffect(() => {
+    const name = data.name?.trim();
+    document.title = name ? `${name} - Ixia` : 'Ixia';
+    return () => {
+      document.title = 'Ixia';
+    };
+  }, [data.name]);
   useEffect(() => {
     const el = stage.current;
     if (!el) return;

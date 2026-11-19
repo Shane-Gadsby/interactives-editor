@@ -1,5 +1,5 @@
 /**
- * Lottie (Bodymovin JSON) -> Interactives artboard.
+ * Lottie (Bodymovin JSON) -> Ixia artboard.
  *
  * Covers the 2D core: shape layers (groups, rectangles, ellipses, paths, stars
  * and polygons, solid and gradient fills, strokes, group transforms), solid,

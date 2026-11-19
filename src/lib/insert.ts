@@ -1,4 +1,5 @@
 import { extOf, reportError, track } from './analytics';
+import { FRAMELING_PARKED_MESSAGE, parked } from './parked';
 import { createNode, isFramelingFile, type Asset, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { assetKind, assetUrls, imageSize, storeFile, swapAssetId, videoSize } from './assets';
@@ -61,6 +62,10 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
     // A Frameling animation is checked before it is uploaded, so a broken file says so instead of sitting in Assets
     let framePkg: import('interactives-player').FramelingPackage | null = null;
     if (isFramelingFile(file.name, file.type)) {
+      if (parked.frameling) {
+        st.toast(FRAMELING_PARKED_MESSAGE, 'info');
+        continue;
+      }
       try {
         framePkg = await (await import('./frameling-import')).readFramelingFile(file);
       } catch (err) {

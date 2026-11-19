@@ -18,7 +18,7 @@
  *   - shape layers become path layers (fill, gradient, stroke); fill layers become a rectangle over the canvas;
  *   - smart objects use their rendered pixels; drop shadows become the layer's shadow.
  * Not carried over (and reported): adjustment layers, other layer styles, pattern fills (drawn from the cached pixels when
- * there are some), blend modes Interactives lacks, mask feather and density below 100%, text warps, and documents that are not
+ * there are some), blend modes Ixia lacks, mask feather and density below 100%, text warps, and documents that are not
  * RGB, grayscale, CMYK or Lab. If nothing can be imported the flattened preview in the file is used instead.
  */
 import { PASCAL_BLENDS } from './blend-modes';

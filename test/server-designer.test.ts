@@ -190,15 +190,15 @@ describe('one request, one message', () => {
 
     // the restore point: named, saved before the build, holding the project as it was
     const changed = r.events.find((e) => e.type === 'changed');
-    const revs = h.db.revisions.docs.filter((d: any) => d.project === id && d.name === 'Before the Activity Designer');
+    const revs = h.db.revisions.docs.filter((d: any) => d.project === id && d.name === 'Before Ixia');
     expect(revs).toHaveLength(1);
     expect(changed.revision).toBe(revs[0]._id);
     const before = (await h.call('GET', `/api/projects/${id}/revisions/${changed.revision}`, { user: ann })).json.project;
     expect(before.artboards.map((a: any) => a.name)).toEqual(['Page 1']);
 
-    // the audit log: the person, the Activity Designer as the agent, and one row for the run without a word of the chat
+    // the audit log: the person, Ixia as the agent, and one row for the run without a word of the chat
     const tools = h.db.audit.docs.filter((d: any) => d.event === 'agent-tool');
-    expect(tools.every((d: any) => d.by.username === 'ann' && d.detail.agent === 'Activity Designer')).toBe(true);
+    expect(tools.every((d: any) => d.by.username === 'ann' && d.detail.agent === 'Ixia')).toBe(true);
     expect(tools.map((d: any) => d.detail.tool)).toEqual(expect.arrayContaining(['join_session', 'get_overview', 'designer_build']));
     expect(runs()).toHaveLength(1);
     expect(runs()[0]).toMatchObject({ by: { username: 'ann' }, project: id, detail: { rounds: 1, outcome: 'replied', changed: true, own: false } });
@@ -235,7 +235,7 @@ describe('one request, one message', () => {
       expect(problems.length).toBeLessThan(2000);
       expect(await validate()).toEqual([]);
       expect(r.events.filter((e) => e.type === 'changed')).toHaveLength(1);
-      expect(h.db.revisions.docs.filter((d: any) => d.project === id && d.name === 'Before the Activity Designer')).toHaveLength(1);
+      expect(h.db.revisions.docs.filter((d: any) => d.project === id && d.name === 'Before Ixia')).toHaveLength(1);
       expect(r.events.find((e) => e.type === 'reply').text).toContain('I wired the box.');
       expect(r.events.find((e) => e.type === 'reply').text).toContain('I took the unfinished step out.');
       expect(runs()[0].detail).toMatchObject({ rounds: 2, outcome: 'replied', changed: true });
@@ -258,18 +258,18 @@ describe('one request, one message', () => {
     const r = await ask('What would make a good activity for teaching the water cycle?');
     expect(types(r.events)).not.toContain('changed');
     expect(messages()).toHaveLength(1);
-    expect(h.db.revisions.docs.filter((d: any) => d.project === id && d.name === 'Before the Activity Designer')).toHaveLength(0);
+    expect(h.db.revisions.docs.filter((d: any) => d.project === id && d.name === 'Before Ixia')).toHaveLength(0);
     expect(runs()[0].detail).toMatchObject({ outcome: 'replied', changed: false, rounds: 1 });
   });
 
-  it('shows to live editors as the Activity Designer, and undo restores the project for them too', async () => {
+  it('shows to live editors as Ixia, and undo restores the project for them too', async () => {
     const live = await h.stream(`/api/projects/${id}/live?clientId=human1&name=Hannah`, { user: ann });
     await live.waitFor((e) => e.event === 'hello');
     script = [bp({ raw: [{ op: 'set_props', id: 'r1', props: { x: 99 } }] }, 'Moved it.')];
     const r = await ask('Move it');
     const revision = r.events.find((e) => e.type === 'changed').revision;
     await live.waitFor((e) => e.event === 'ops');
-    expect(live.events.some((e) => e.event === 'presence' && /Activity Designer/.test(e.data.name ?? ''))).toBe(true);
+    expect(live.events.some((e) => e.event === 'presence' && /Ixia/.test(e.data.name ?? ''))).toBe(true);
     expect(await currentX()).toBe(99);
 
     const undo = await h.call('POST', `/api/projects/${id}/revisions/${revision}/restore`, { user: ann });
@@ -314,7 +314,7 @@ describe('when Cogniti says no', () => {
   it('says the hourly limit kindly, and says what kind of error it was so the panel can offer their own allowance', async () => {
     script = [429];
     const r = await ask('Build something');
-    expect(r.events.find((e) => e.type === 'error')).toMatchObject({ text: 'The Activity Designer has reached its hourly limit. Try again in a little while.', kind: 'limit' });
+    expect(r.events.find((e) => e.type === 'error')).toMatchObject({ text: 'Ixia has reached its hourly limit. Try again in a little while.', kind: 'limit' });
     expect(runs()[0].detail.outcome).toBe('limit');
     expect(r.text).not.toContain(TOKEN);
   });
@@ -419,7 +419,7 @@ describe('a fair share of the shared token', () => {
     const third = await ask('three', { user: { username: 'quota-a' } });
     expect(third.status).toBe(429);
     expect(third.json).toMatchObject({ kind: 'quota', quota: { limit: 2, left: 0 } });
-    expect(third.json.error).toMatch(/used your 2 shared Activity Designer requests/);
+    expect(third.json.error).toMatch(/used your 2 shared Ixia requests/);
     expect(third.json.error).toMatch(/own Cogniti allowance/);
     expect(messages()).toHaveLength(before);
     //someone else still has theirs
@@ -512,7 +512,7 @@ describe('their own Cogniti allowance', () => {
     expect(tokenAudit()).toHaveLength(0);
   });
 
-  it('says plainly when the token is fine but the Activity Designer is not shared with them yet, and keeps nothing', async () => {
+  it('says plainly when the token is fine but Ixia is not shared with them yet, and keeps nothing', async () => {
     agents = { status: 200, body: [{ id: 'some-other-agent', can_chat: true }] };
     const r = await put(OWN);
     expect(r.status).toBe(400);

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nodeKindParked } from '../src/lib/parked';
 import { CATALOG } from 'interactives-player';
 import { ARTBOARD_HELP, GENERAL_HELP, GETTING_STARTED_HELP, GRAPH_GROUP_HELP, LAYER_HELP, MANY_LAYERS_HELP, MASTER_HELP, PROP_HELP, STARTER_FINDER_HELP, TIMELINE_KEY_HELP, TOOL_HELP, helpTooltip, nodeHelp, resolveHelp, type HelpFocus, type HelpTarget } from '../src/help/context';
 import { TOPICS, getTopic, topicBody } from '../src/help/topics';
@@ -29,7 +30,7 @@ describe('the help mapping covers everything', () => {
   });
   it('every interaction node kind has its entry in the node reference', () => {
     expect(CATALOG.length).toBeGreaterThan(40);
-    for (const d of CATALOG) {
+    for (const d of CATALOG.filter((x) => !nodeKindParked(x.kind))) {
       const t = nodeHelp(d.kind);
       expect(t, d.kind).toBeTruthy();
       expect(problem(t!.to), d.kind).toBeNull();

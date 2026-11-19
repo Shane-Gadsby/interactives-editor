@@ -90,6 +90,9 @@ describe('the old blue is gone from the editor', () => {
       '.cue background',
       '.cue border',
       '.cue.live background',
+      //the colour picker's hue strip, and the rainbow square for the browser's own picker: every hue, blue among them
+      '.colour-pick-strip.hue background',
+      '.colour-pick-native background',
     ]);
     const found: string[] = [];
     root.walkDecls((d) => {

@@ -1,4 +1,6 @@
+import { SWAP_CHOICES, swapPicture } from '../components/ImageSwap';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { parked } from '../lib/parked';
 import { keyHints, runCommand } from '../lib/keymap';
 import { windowCommand } from '../lib/key-area';
 import {
@@ -2194,7 +2196,7 @@ export function Canvas() {
       { type: 'video', label: 'Video' },
       { type: 'draw', label: 'Script layer' },
       { type: 'shader', label: 'Shader layer' },
-      { type: 'animation', label: 'Frameling animation' },
+      ...(parked.frameling ? [] : [{ type: 'animation' as const, label: 'Frameling animation' }]),
       { type: 'progress', label: 'Progress bar' },
       { type: 'chart', label: 'Chart' },
     ];
@@ -2305,6 +2307,8 @@ export function Canvas() {
               } as MenuItem,
               ...(one.type === 'text' || one.type === 'button' || one.type === 'link' ? [{ label: 'Edit text', hint: keyHints('enter'), onClick: () => s2.set({ editingTextId: one.id }) } as MenuItem] : []),
               ...(one.type === 'image' && canCrop(one) ? [{ label: 'Crop picture', hint: keyHints('enter'), onClick: () => s2.set({ croppingId: one.id }) } as MenuItem] : []),
+              //Another picture in the same layer: the menu asks where from
+              ...(one.type === 'image' ? [{ label: 'Swap picture', items: SWAP_CHOICES.map((c) => ({ label: c.label, title: c.title, onClick: () => void swapPicture(one.id, c.from) })) } as MenuItem] : []),
             ]
           : []),
         { separator: true },
@@ -2685,7 +2689,7 @@ export function RichTextEditor({ node: n, ab, zoom, panX, panY, bounds }: { node
         onBlur={(e) => {
           // Focus moving into the toolbar or the inspector (to change colour or size of the selection) keeps editing
           const to = e.relatedTarget as HTMLElement | null;
-          if (to?.closest?.('.inspector, .text-toolbar, .palette-pop')) return;
+          if (to?.closest?.('.inspector, .text-toolbar, .palette-pop, .colour-pick')) return;
           store().commit();
           store().set({ editingTextId: null, textSelection: null });
         }}

@@ -3,7 +3,7 @@ import { store } from '../store/store';
 import { CheckField, Row, Section } from '../components/ui';
 import { SectionBlurb } from '../components/SectionBlurb';
 
-type Auto = 'views' | 'clicks' | 'steps' | 'answers';
+type Auto = 'views' | 'clicks' | 'steps' | 'answers' | 'inputs' | 'drops' | 'media' | 'opens';
 
 /** Edit the project's record settings, dropping a key when it goes back to the default (on) so the document stays small. */
 export function patchRecords(project: Project, patch: Partial<RecordSettings>): RecordSettings | undefined {
@@ -20,6 +20,10 @@ const KINDS: { key: Auto; label: string; title: string }[] = [
   { key: 'clicks', label: 'Clicks', title: 'Where learners click, and which button or link (the click heat in Insights). At most 300 a visit' },
   { key: 'steps', label: 'Steps', title: 'Which step of a step-through artboard learners reach' },
   { key: 'answers', label: 'Question answers', title: 'Whether each check was right, and which options were chosen. What a learner types into a blank is never kept' },
+  { key: 'inputs', label: 'Controls changed', title: 'A tick box, slider or dropdown and what it was set to, and that a text box was changed. What a learner types is never kept' },
+  { key: 'drops', label: 'Drag and drop', title: 'Which layer was dropped, in which zone, and whether the zone took it' },
+  { key: 'media', label: 'Video', title: 'A video played, paused or finished, and how far in it was' },
+  { key: 'opens', label: 'Sections and dialogs opened', title: 'Which accordion section or tab was opened, and which modal, confirmation or prompt' },
 ];
 
 /** Project settings for learner activity records: the master switch and the automatic kinds. */
@@ -34,7 +38,7 @@ export function RecordsSection({ project }: { project: Project }) {
     });
   return (
     <Section help="insights" title="Learner records" defaultOpen={false}>
-      <CheckField label="Record learner activity" title="Count what learners do, for the Insights tab. Off: nothing is recorded, Record nodes included" value={on} onChange={(v) => set({ off: v ? undefined : true })} />
+      <CheckField label="Record learner activity" title="Count what learners do, for the Insights tab. Off: nothing is recorded, Record and Send analytics nodes included" value={on} onChange={(v) => set({ off: v ? undefined : true })} />
       {on &&
         KINDS.map((k) => (
           <CheckField key={k.key} label={k.label} title={k.title} value={r[k.key] !== false} onChange={(v) => set({ [k.key]: v ? undefined : false })} />

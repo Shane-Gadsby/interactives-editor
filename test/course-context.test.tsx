@@ -142,6 +142,47 @@ describe('Preview and exports', () => {
     expect(carried(real)).not.toHaveProperty('sampleContext');
     expect(carried(preview)).not.toHaveProperty('sampleContext');
   });
+
+  it('preview opens as if the sample link values were on its address; neither page carries them in the project', async () => {
+    const p = project();
+    p.sampleLink = { program: 'GCSC' };
+    const preview = await standaloneHtml(p, { debug: true, link: { ...p.sampleLink } });
+    expect(preview).toContain('link: {"program":"GCSC"}');
+    const real = await standaloneHtml(p, {});
+    expect(real).not.toContain('link: {');
+    const carried = (html: string) => JSON.parse(/<script type="application\/json" id="ix-project">([\s\S]*?)<\/script>/.exec(html)![1]) as Record<string, unknown>;
+    expect(carried(real)).not.toHaveProperty('sampleLink');
+    expect(carried(preview)).not.toHaveProperty('sampleLink');
+  });
+});
+
+describe('sample link values', () => {
+  it('the canvas sees them as link, empty without any, and a variable named link wins', () => {
+    const p = project();
+    expect(previewScope(p).link).toEqual({});
+    p.sampleLink = { program: 'GCSC' };
+    expect(template('Program {link.program}', { vars: previewScope(p) })).toBe('Program GCSC');
+    p.variables.push({ id: 'vl', name: 'link', type: 'string', initial: 'mine' });
+    expect(previewScope(p).link).toBe('mine');
+  });
+
+  it('the Data panel adds one, renames it, refuses a name the address cannot carry, sets its value and removes it', () => {
+    mount();
+    expect(host.textContent).toContain('link');
+    click([...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Add a link value'))!);
+    expect(s.get().project.sampleLink).toEqual({ program: '' });
+    const inputs = () => [...host.querySelectorAll<HTMLInputElement>('.link-table input')];
+    type(inputs()[1], 'GCSC');
+    expect(s.get().project.sampleLink).toEqual({ program: 'GCSC' });
+    type(inputs()[0], 'cdtID');
+    expect(s.get().project.sampleLink).toEqual({ program: 'GCSC' });
+    expect(host.querySelector('.link-table .error')!.textContent).toContain('not title, cdtID');
+    type(inputs()[0], 'course');
+    expect(s.get().project.sampleLink).toEqual({ course: 'GCSC' });
+    expect(host.querySelector('.link-table .error')).toBeNull();
+    click(host.querySelector('.link-table button[title^="Delete link."]')!);
+    expect('sampleLink' in s.get().project).toBe(false);
+  });
 });
 
 describe('help', () => {

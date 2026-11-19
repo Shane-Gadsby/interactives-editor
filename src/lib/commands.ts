@@ -2,6 +2,7 @@
 //menus, tool bar and key handler stay as they are; each command here calls the same function they do. Built fresh each time the
 //palette opens, from the open project and selection, so "Go to page" lists the pages and a command that cannot run now says why.
 import { clearGuidesCommand, guideCount, setGuidesLocked, universalCount } from './guides';
+import { parked } from './parked';
 import { openInsertComponentPicker } from './components';
 import { QUESTION_KINDS, createNode, walk, type NodeType, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
@@ -78,7 +79,7 @@ export const NEW_LAYERS: { type: NodeType; label: string; words: string }[] = [
   { type: 'video', label: 'Video', words: 'movie clip' },
   { type: 'draw', label: 'Script layer', words: 'code generative' },
   { type: 'shader', label: 'Shader layer', words: 'gpu effect backdrop' },
-  { type: 'animation', label: 'Frameling animation', words: 'sprite flipbook character frameling flplay frame by frame' },
+  ...(parked.frameling ? [] : [{ type: 'animation' as const, label: 'Frameling animation', words: 'sprite flipbook character frameling flplay frame by frame' }]),
   { type: 'progress', label: 'Progress bar', words: 'score meter' },
   { type: 'chart', label: 'Chart', words: 'graph bar pie line data' },
 ];
@@ -199,7 +200,7 @@ export function buildCommands(): Command[] {
       id: `dialog:${k.value}`,
       title: `Add a ${k.label.toLowerCase()}`,
       group: 'Add',
-      words: `dialog modal popup overlay prompt confirm confirmation ask input tooltip hint ${k.hint}`,
+      words: `dialog modal popup overlay prompt confirm confirmation ask input tooltip hint toast snackbar notification message ${k.hint}`,
       disabled: noPage,
       run: () => {
         const target = s.get().selection[0] ?? null;
@@ -332,7 +333,7 @@ export function buildCommands(): Command[] {
   for (const i of SNAP_ITEMS) add({ id: `snap:${i.kind}`, title: `Snap to ${i.label.toLowerCase()}`, group: 'View', hint: i.kind === 'grid' ? keyHints('snap-grid') : undefined, on: !!pr[i.pref], words: `snapping toggle ${i.tip}`, run: () => toggleSnap(i.kind) });
 
   //---- Tools
-  for (const tool of Object.keys(TOOL_HELP) as Tool[]) add({ id: `tool:${tool}`, title: `Tool: ${TOOL_HELP[tool].label.replace(/ tool$/i, '')}`, group: 'Tools', hint: keyHints(`tool.${tool}`), words: 'draw pick', run: () => s.set({ tool, editingPathId: null }) });
+  for (const tool of (Object.keys(TOOL_HELP) as Tool[]).filter((t) => !(parked.frameling && t === 'animation'))) add({ id: `tool:${tool}`, title: `Tool: ${TOOL_HELP[tool].label.replace(/ tool$/i, '')}`, group: 'Tools', hint: keyHints(`tool.${tool}`), words: 'draw pick', run: () => s.set({ tool, editingPathId: null }) });
 
   //---- Timeline
   add({ id: 'timeline:record', title: 'Record: property changes become keys', group: 'Animate', words: 'keyframe auto recording', on: st.recording, disabled: noPage, run: () => s.set({ recording: !store().get().recording }) });

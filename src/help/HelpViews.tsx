@@ -14,6 +14,7 @@ import { TutorialFoot, TutorialHead, guideFor, trackedFor, useEditorOpen } from 
 import { startGuide } from '../lib/tutorial-guide';
 import { targetsOf } from '../lib/tutorial-checks';
 import { hideTour, showMe } from '../lib/tour';
+import { BrandLogo } from '../components/BrandLogo';
 
 // The help's own screens: the drawer, quick search and the full page. Help.tsx holds the state and shortcuts and loads this
 // when something first asks to show help, so the topics (about 650 kB of prose) stay out of the editor's first download.
@@ -310,13 +311,13 @@ const pageNav: HelpNav = {
 
 export function HelpPage({ id, anchor }: { id: string; anchor?: string }) {
   useEffect(() => {
-    document.title = `${getTopic(id)?.title ?? 'Help'} · Interactives help`;
+    document.title = `${getTopic(id)?.title ?? 'Help'} · Ixia help`;
   }, [id]);
   return (
     <div className="help-page">
       <header className="home-head">
         <a className="brand" href="#/">
-          Interactives
+          <BrandLogo />
         </a>
         <span className="muted help-page-label">
           Help <VersionInfo />

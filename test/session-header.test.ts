@@ -97,7 +97,7 @@ describe('the direct sign in a review link asks for', () => {
     answers.interactives = { sessionID: 'dt_have' };
     const { sessionUser } = await import('../src/lib/session');
     await sessionUser();
-    expect(asked).toEqual([{ tool: 'interactives', options: { title: 'Interactives', prompt: false } }]);
+    expect(asked).toEqual([{ tool: 'interactives', options: { title: 'Ixia', prompt: false } }]);
   });
 
   it('otherwise asks to sign in as a reviewer, which any staff member can', async () => {

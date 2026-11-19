@@ -1,9 +1,9 @@
-import { overlayFadeMs, type Artboard, type Project, type SceneNode } from 'interactives-player';
+import { TIP_DELAY_MS, TOAST_MS, cardOf, holdsControl, overlayFadeMs, tipDelayMs, toastClosers, variableLabel, type Artboard, type Project, type SceneNode, type ToastPlace } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { SectionBlurb } from '../components/SectionBlurb';
-import { overlayTargets } from '../lib/dialog-kit';
+import { bindCardToPage, overlayTargets, unbindCard } from '../lib/dialog-kit';
 import { PropFields } from './PropFields';
 
 const SIDES = [
@@ -19,7 +19,8 @@ const SIDES = [
  * target (the thing the overlay belongs to); the trigger is this layer too unless another is picked.
  */
 export function OverlaySection({ node, ab, project }: { node: SceneNode; ab: Artboard; project: Project }) {
-  const overlays = project.artboards.filter((a) => a.overlay);
+  //(a toast isn't pointed at: a Show toast node shows it)
+  const overlays = project.artboards.filter((a) => a.overlay && a.overlay.kind !== 'toast');
   const link = node.overlay ?? null;
   const page = link ? overlays.find((a) => a.id === link.overlayId) : undefined;
   //Nothing to say until the project has an overlay to point at
@@ -68,7 +69,7 @@ export function OverlaySection({ node, ab, project }: { node: SceneNode; ab: Art
             <Row>
               <SelectField
                 label="Side"
-                title="Which side of this layer it sits on. Wherever it fits tries above, below, right, then left"
+                title="Which side of this layer it sits on. Wherever it fits tries above, below, right, then left. A side with no room goes to the opposite one"
                 value={link.side ?? page.overlay!.side ?? 'auto'}
                 options={SIDES.map((s) => ({ value: s.value, label: s.label }))}
                 onChange={(v) => set({ side: v })}
@@ -126,6 +127,8 @@ export function OverlayPageSection({ ab, project }: { ab: Artboard; project: Pro
       coalesce ? { coalesce } : undefined,
     );
   const used = overlayTargets(project, ab.id);
+  //A dialog with an open variable needs no layer: turning the variable on shows it
+  const opens = o.kind !== 'tooltip' && o.kind !== 'toast' && o.openVariable ? project.variables.find((v) => v.id === o.openVariable) : undefined;
   return (
     <Section id="overlay-page" help="overlays" title="Overlay" defaultOpen>
       <SectionBlurb text="This page is shown beside, or over, whatever points at it. It is never opened on its own." name="Overlay" help={['overlays']} />
@@ -138,9 +141,26 @@ export function OverlayPageSection({ ab, project }: { ab: Artboard; project: Pro
           { value: 'modal', label: 'Modal' },
           { value: 'confirm', label: 'Confirmation' },
           { value: 'input', label: 'Prompt' },
+          { value: 'toast', label: 'Toast' },
         ]}
         onChange={(v) => setO({ kind: v })}
       />
+      {cardOf(ab.children) && (
+        <CheckField
+          label="The page sizes the overlay"
+          title="On: the overlay's card fills this page, so the page's Width, Height and Fit to content are the overlay's size and shape, and there is one thing to size instead of two. Off: the card is sized by itself and the page is only the place it is drawn on"
+          value={!!o.bindCard}
+          onChange={(v) =>
+            store().update((d) => {
+              const page = d.artboards.find((a) => a.id === ab.id);
+              if (!page) return;
+              if (v) bindCardToPage(page as Artboard);
+              else unbindCard(page as Artboard);
+            })
+          }
+        />
+      )}
+      {o.kind === 'toast' && <ToastSettings ab={ab} project={project} setO={setO} />}
       {o.kind === 'tooltip' && (
         <>
           <Row>
@@ -160,6 +180,16 @@ export function OverlayPageSection({ ab, project }: { ab: Artboard; project: Pro
           {o.fade !== undefined && (
             <NumberField label="Time" title="The fade, in milliseconds. 0 shows and hides it at once" value={o.fade} min={0} max={2000} suffix="ms" onChange={(v) => setO({ fade: Math.max(0, Math.round(v)) }, `overlay-fade-${ab.id}`)} />
           )}
+          <NumberField
+            label="Delay"
+            title="How long the pointer rests on the layer before the tooltip shows. 300 is the usual small delay, so sweeping across a page doesn't set them all off. The keyboard always gets it at once"
+            value={tipDelayMs(o)}
+            min={0}
+            max={2000}
+            step={50}
+            suffix="ms"
+            onChange={(v) => setO({ delay: Math.max(0, Math.round(v)) === TIP_DELAY_MS ? undefined : Math.max(0, Math.round(v)) }, `overlay-delay-${ab.id}`)}
+          />
           <CheckField
             label="Tail"
             title="A small triangle on the side facing the layer, pointing at the middle of it, in the tooltip's own colour"
@@ -174,7 +204,7 @@ export function OverlayPageSection({ ab, project }: { ab: Artboard; project: Pro
           />
         </>
       )}
-      {o.kind !== 'tooltip' && (
+      {o.kind !== 'tooltip' && o.kind !== 'toast' && (
         <CheckField
           label="Dim the page behind it"
           title="A colour over everything else while it is open"
@@ -183,7 +213,13 @@ export function OverlayPageSection({ ab, project }: { ab: Artboard; project: Pro
         />
       )}
       <div className="hint">
-        {used.length ? `Shown for ${used.length} layer${used.length === 1 ? '' : 's'}: ${used.map((u) => u.node.name).slice(0, 4).join(', ')}` : 'Nothing points at this yet. Pick a layer and set its Overlay.'}
+        {o.kind === 'toast'
+          ? 'Nothing points at a toast. A Show toast node shows it, on whichever page is open.'
+          : used.length
+            ? `Shown for ${used.length} layer${used.length === 1 ? '' : 's'}: ${used.map((u) => u.node.name).slice(0, 4).join(', ')}`
+            : opens
+              ? `No layer points at this. It opens, on any page, when ${variableLabel(opens)} is turned on.`
+              : 'Nothing points at this yet. Pick a layer and set its Overlay.'}
       </div>
       {used.map((u) => (
         <Row key={u.node.id}>
@@ -193,6 +229,98 @@ export function OverlayPageSection({ ab, project }: { ab: Artboard; project: Pro
         </Row>
       ))}
     </Section>
+  );
+}
+
+const PLACES: { value: ToastPlace; label: string }[] = [
+  { value: 'top-left', label: 'Top left' },
+  { value: 'top', label: 'Top middle' },
+  { value: 'top-right', label: 'Top right' },
+  { value: 'bottom-left', label: 'Bottom left' },
+  { value: 'bottom', label: 'Bottom middle' },
+  { value: 'bottom-right', label: 'Bottom right' },
+];
+
+/** A toast's own settings: where it sits, how long it stays, its fade, where its words go, and whether it is an error. */
+function ToastSettings({ ab, project, setO }: { ab: Artboard; project: Project; setO: (patch: Partial<NonNullable<Artboard['overlay']>>, coalesce?: string) => void }) {
+  const o = ab.overlay!;
+  //(its own close button is no reason for it to wait: only something else to press is)
+  const held = holdsControl(ab.children, toastClosers(ab));
+  const ms = o.duration ?? TOAST_MS;
+  const texts = project.variables.filter((v) => v.type === 'string');
+  return (
+    <>
+      <Row>
+        <SelectField
+          label="Place"
+          title="Which corner or edge of the page it sits at. On a tall page it is the corner of the part the viewer can see"
+          value={o.place ?? 'bottom-right'}
+          options={PLACES}
+          onChange={(v) => setO({ place: v })}
+        />
+        <NumberField label="Gap" title="Space between the toast and the edge of the page" value={o.offset ?? 16} min={0} max={200} suffix="px" onChange={(v) => setO({ offset: Math.round(v) }, `toast-gap-${ab.id}`)} />
+      </Row>
+      <SelectField
+        label="Stays"
+        title="How long it shows before it goes by itself. The time waits while the pointer or the keyboard is on it"
+        value={held || ms === 0 ? 'until' : 'time'}
+        disabled={held}
+        options={[
+          { value: 'time', label: 'For a time' },
+          { value: 'until', label: 'Until dismissed' },
+        ]}
+        onChange={(v) => setO({ duration: v === 'until' ? 0 : TOAST_MS })}
+      />
+      {held ? (
+        <div className="hint">It has something to press besides its close button, so it stays until dismissed.</div>
+      ) : ms === 0 ? (
+        <div className="hint">Nothing puts it away by itself: its close button does, or a Hide toast node.</div>
+      ) : (
+        <NumberField label="Time" title="How long it stays, in seconds" value={ms / 1000} min={1} max={60} step={0.5} suffix="s" onChange={(v) => setO({ duration: Math.max(1000, Math.round(v * 1000)) }, `toast-time-${ab.id}`)} />
+      )}
+      <SelectField
+        label="Fade"
+        title="How long it takes to fade in and out: the project's own transition time (Page height time in Project settings) or its own. A viewer who asks for less motion gets none"
+        value={o.fade === undefined ? 'default' : 'custom'}
+        options={[
+          { value: 'default', label: `Project default (${overlayFadeMs({}, project.settings)} ms)` },
+          { value: 'custom', label: 'Custom' },
+        ]}
+        onChange={(v) => setO({ fade: v === 'custom' ? overlayFadeMs({}, project.settings) : undefined })}
+      />
+      {o.fade !== undefined && (
+        <NumberField label="Fade time" title="The fade, in milliseconds. 0 shows and hides it at once" value={o.fade} min={0} max={2000} suffix="ms" onChange={(v) => setO({ fade: Math.max(0, Math.round(v)) }, `overlay-fade-${ab.id}`)} />
+      )}
+      <SelectField
+        label="Comes and goes"
+        title="Fades where it sits, or also slides: up into place as it fades in and back down as it goes (the other way up at the top of the page). A viewer who asks for less motion gets neither"
+        value={o.motion === 'slide' ? 'slide' : 'fade'}
+        options={[
+          { value: 'fade', label: 'Fades' },
+          { value: 'slide', label: 'Slides and fades' },
+        ]}
+        onChange={(v) => setO({ motion: v === 'slide' ? 'slide' : undefined })}
+      />
+      <CheckField
+        label="On its own"
+        title="Showing this toast puts any other toast away, and showing another puts this one away. Tick it on every toast and there is only ever one, the latest"
+        value={!!o.alone}
+        onChange={(v) => setO({ alone: v ? true : undefined })}
+      />
+      <SelectField
+        label="Words go into"
+        title="The text variable a Show toast node's Message is put in, so one toast can say anything. Bind the toast's text to it"
+        value={o.message ?? ''}
+        options={[{ value: '', label: 'Nothing: it always says the same' }, ...texts.map((v) => ({ value: v.id, label: variableLabel(v) }))]}
+        onChange={(v) => setO({ message: v || undefined })}
+      />
+      <CheckField
+        label="It's an error"
+        title="A screen reader is interrupted to hear it, instead of hearing it when it has finished what it was saying. Keep this for things that have gone wrong"
+        value={!!o.urgent}
+        onChange={(v) => setO({ urgent: v ? true : undefined })}
+      />
+    </>
   );
 }
 

@@ -52,7 +52,7 @@ describe('help, which is a chunk of its own', () => {
     await act(async () => void (await helpViews.ensure()));
     expect(host.querySelector('.help-drawer .help-search')).not.toBeNull();
     expect(host.querySelector('.help-drawer')!.textContent).not.toContain('Loading help');
-    expect(host.querySelector('.help-drawer')!.textContent).toContain('Welcome to Interactives');
+    expect(host.querySelector('.help-drawer')!.textContent).toContain('Welcome to Ixia');
   });
 });
 

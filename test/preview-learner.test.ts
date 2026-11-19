@@ -34,6 +34,17 @@ describe('Preview learner record', () => {
   });
 });
 
+describe('Preview and Send analytics', () => {
+  it('says saved with a pretend id, so the flow after it can be tried, and sends nothing anywhere', () => {
+    const one = answerPreviewProgress({ source: 'interactives-progress', op: 'analytics', project: 'p1', record: { kind: 'event', label: 'done' } });
+    const two = answerPreviewProgress({ source: 'interactives-progress', op: 'analytics', project: 'p1', record: { kind: 'event', label: 'done' } });
+    expect(one).toMatchObject({ ok: true, available: true });
+    const id = (r: typeof one) => (r?.data as { ids: string[] }).ids[0];
+    expect(id(one)).toMatch(/^preview-\d+$/);
+    expect(id(two)).not.toBe(id(one));
+  });
+});
+
 describe('Preview and shared responses', () => {
   beforeEach(() => localStorage.clear());
   const project = (shared: Record<string, unknown>) => ({ dataSources: [{ id: 'ds1', name: 'responses', kind: 'json', source: 'shared', shared }] }) as unknown as Parameters<typeof answerPreviewProgress>[1];

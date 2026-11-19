@@ -75,7 +75,9 @@ describe('the real text editor with its toolbar', () => {
     render();
     expect(node().runs![0].fontSize).toBe(41);
     expect(document.activeElement).toBe(size);
-    const col = tb('.tt-swatch input');
+    //the A opens the colour picker, which is drawn over the page rather than inside the toolbar
+    act(() => tb('.tt-swatch').click());
+    const col = document.querySelector<HTMLInputElement>('.colour-pick-native input')!;
     act(() => col.focus());
     type(col, '#ff0000');
     render();
@@ -84,7 +86,11 @@ describe('the real text editor with its toolbar', () => {
     expect(document.activeElement).not.toBe(editor);
     // the text still shows the change, and Escape goes back to it with the selection as it was
     expect(editor.textContent).toBe('Hello world');
+    //Escape closes the picker and lands on the A; Escape again goes back to the text
     key(col, 'Escape');
+    expect(document.querySelector('.colour-pick')).toBeNull();
+    expect(document.activeElement).toBe(tb('.tt-swatch'));
+    key(tb('.tt-swatch'), 'Escape');
     expect(document.activeElement).toBe(editor);
     expect(s.get().textSelection).toMatchObject({ start: 0, end: 5 });
     expect(document.getSelection()!.toString()).toBe('Hello');

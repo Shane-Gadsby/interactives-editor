@@ -6,8 +6,8 @@ import { DIALOG_KINDS } from '../src/lib/dialog-kit';
 import { WEB_ADDS } from '../src/Editor';
 
 describe('the ready-made Web tools', () => {
-  it('are six, named as asked, in the order they sit', () => {
-    expect(WEB_ADDS.map((w) => w.label)).toEqual(['Tooltip', 'Modal', 'Confirmation', 'Prompt', 'Tabs', 'Accordion']);
+  it('are seven, named as asked, in the order they sit', () => {
+    expect(WEB_ADDS.map((w) => w.label)).toEqual(['Tooltip', 'Modal', 'Confirmation', 'Prompt', 'Toast', 'Tabs', 'Accordion']);
   });
 
   it('each has a key and an icon of its own, so they can be told apart and reordered', () => {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { deleteProject, getAdminProjects, getAudit, session, stopShareFor, type AdminProject, type AuditEvent } from './lib/db';
 import { confirmDialog } from './components/dialogs';
 import { track } from './lib/analytics';
+import { BrandLogo } from './components/BrandLogo';
 
 /**
  * Admin, for power users (the server checks too): every project in one table with its owner, size, links, library and
@@ -67,7 +68,7 @@ export function AdminPage() {
   const [auditProject, setAuditProject] = useState('');
 
   useEffect(() => {
-    document.title = 'Admin · Interactives';
+    document.title = 'Admin · Ixia';
     void session().then(
       (s) => setAllowed(!!s.power),
       () => setAllowed(false),
@@ -137,7 +138,7 @@ export function AdminPage() {
     <div className="home usage-page admin-page">
       <header className="home-head">
         <a className="brand" href="#/">
-          Interactives
+          <BrandLogo />
         </a>
         <span className="muted">Admin</span>
         <div className="home-actions">

@@ -7,6 +7,7 @@ import { EditorStore, setCurrentStore } from '../src/store/store';
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const restoreRevision = vi.fn(async () => ({ rev: 5 }));
+const loadProjectRecord = vi.fn(async (..._a: unknown[]): Promise<unknown> => null);
 const resetDesigner = vi.fn(async () => ({ ok: true }));
 vi.mock('../src/lib/db', () => ({
   apiUrl: (p: string) => `http://x.test/interactives/api/${p}`,
@@ -15,10 +16,11 @@ vi.mock('../src/lib/db', () => ({
   session: async () => ({ user: null, power: false, designer: true }),
   designerStatus: async () => ({ on: true, mine: null, shared: { limit: 6, left: 4, resetsIn: 600 } }),
   designerToken: async () => ({}),
+  loadProjectRecord: (...a: unknown[]) => (loadProjectRecord as (...a: unknown[]) => unknown)(...a),
 }));
 
 import { DesignerChat, designerChat } from '../src/lib/designer';
-import { DesignerPanel } from '../src/components/DesignerPanel';
+import { DesignerDock, DesignerPanel, showWhatChanged } from '../src/components/DesignerPanel';
 
 //the client with no free answers and no open page, so what is asked goes to the server
 const mk = (f: unknown) => new DesignerChat(f as typeof fetch, () => null, () => '');
@@ -78,9 +80,9 @@ describe('the chat client', () => {
     await chat.send('Add a page', 'p1');
     expect(chat.state.messages[0]).toMatchObject({ from: 'me', failed: true });
     expect(chat.state.messages.at(-1)).toMatchObject({ from: 'error', text: 'That project belongs to someone else' });
-    const limit = mk((async () => streamed([lines({ type: 'error', text: 'The Activity Designer has reached its hourly limit. Try again in a little while.' }, { type: 'done', conversation: null })])));
+    const limit = mk((async () => streamed([lines({ type: 'error', text: 'Ixia has reached its hourly limit. Try again in a little while.' }, { type: 'done', conversation: null })])));
     await limit.send('x', 'p1');
-    expect(limit.state.messages.at(-1)).toMatchObject({ from: 'error', text: 'The Activity Designer has reached its hourly limit. Try again in a little while.' });
+    expect(limit.state.messages.at(-1)).toMatchObject({ from: 'error', text: 'Ixia has reached its hourly limit. Try again in a little while.' });
     expect(limit.state.messages[0].failed).toBeFalsy();
   });
 
@@ -160,7 +162,7 @@ describe('free answers and the shared allowance (client)', () => {
   });
 
   it('keeps the shared allowance from the server, and offers their own when it is used up or Cogniti\'s own limit is hit', async () => {
-    const out = new DesignerChat((async () => new Response(JSON.stringify({ error: 'You have used your 6 shared Activity Designer requests for this hour.', kind: 'quota', quota: { limit: 6, left: 0, resetsIn: 300 } }), { status: 429 })) as unknown as typeof fetch, () => null, () => '');
+    const out = new DesignerChat((async () => new Response(JSON.stringify({ error: 'You have used your 6 shared Ixia requests for this hour.', kind: 'quota', quota: { limit: 6, left: 0, resetsIn: 300 } }), { status: 429 })) as unknown as typeof fetch, () => null, () => '');
     await out.send('Add a page', 'p1');
     expect(out.state.quota).toEqual({ limit: 6, left: 0, resetsIn: 300 });
     expect(out.state.messages.at(-1)).toMatchObject({ from: 'error', allowance: true });
@@ -171,7 +173,7 @@ describe('free answers and the shared allowance (client)', () => {
     await done.send('x', 'p1');
     expect(done.state.quota).toMatchObject({ left: 3 });
 
-    const limit = new DesignerChat((async () => streamed([lines({ type: 'error', text: 'The Activity Designer has reached its hourly limit.', kind: 'limit' }, { type: 'done', conversation: null })])) as unknown as typeof fetch, () => null, () => '');
+    const limit = new DesignerChat((async () => streamed([lines({ type: 'error', text: 'Ixia has reached its hourly limit.', kind: 'limit' }, { type: 'done', conversation: null })])) as unknown as typeof fetch, () => null, () => '');
     await limit.send('x', 'p1');
     expect(limit.state.messages.at(-1)).toMatchObject({ allowance: true });
 
@@ -248,23 +250,30 @@ describe('the panel', () => {
     });
     expect(bodies[0]).toEqual({ projectId: 'proj1', artboardId: st.artboard()!.id, message: 'Add a Results page' });
     expect(host.querySelector('.designer-progress')?.textContent).toContain('Changing the project…');
-    expect(host.textContent).not.toContain('Undo what the Activity Designer did');
+    expect(host.textContent).not.toContain('Undo what Ixia did');
+    // while it works Send is Stop, in the same place
+    expect(host.querySelector('button[type=submit]')).toBeNull();
+    expect(host.querySelector('.designer-go.stop')?.getAttribute('aria-label')).toBe('Stop');
     await act(async () => {
       release();
       await new Promise((r) => setTimeout(r, 20));
     });
     expect(host.querySelector('.designer-progress')).toBeNull();
     expect(host.querySelector('.designer-msg.agent')?.innerHTML).toContain('<strong>Results</strong>');
-    const undoBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Undo what the Activity Designer did')!;
+    // what it did stays under the reply, folded away
+    expect(host.querySelector('.designer-worked summary')?.textContent).toMatch(/^Worked for \d+s, 1 step$/);
+    expect(host.querySelector('.designer-worked li')?.textContent).toBe('Changing the project');
+    expect(host.querySelector('button[type=submit]')).toBeTruthy();
+    const undoBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Undo what Ixia did')!;
     expect(undoBtn).toBeTruthy();
     // a live tab hears about the restore from the server, so give it a live status and it doesn't reload itself
     st.set({ live: { status: 'live' } });
     await act(async () => undoBtn.click());
     expect(restoreRevision).toHaveBeenCalledWith('proj1', 'rev1');
-    expect(host.textContent).not.toContain('Undo what the Activity Designer did');
+    expect(host.textContent).not.toContain('Undo what Ixia did');
     expect(host.textContent).toContain('Your project is back as it was');
 
-    await act(async () => ([...host.querySelectorAll('button')].find((b) => b.textContent === 'New chat') as HTMLButtonElement).click());
+    await act(async () => (host.querySelector('button[aria-label^="New chat"]') as HTMLButtonElement).click());
     expect(host.querySelectorAll('.designer-msg')).toHaveLength(0);
     expect(resetDesigner).toHaveBeenCalledWith('proj1');
     vi.unstubAllGlobals();
@@ -282,6 +291,68 @@ describe('the panel', () => {
     await act(async () => link.click());
     const { prefsWindow } = await import('../src/lib/prefs-window');
     expect(prefsWindow()).toMatchObject({ open: true, page: 'general', setting: 'designerAllowance' });
+  });
+
+  it('hides the offer of their own allowance on a box with one key for everyone', async () => {
+    const set = (p: object) => (designerChat() as unknown as { set: (p: object) => void }).set(p);
+    await act(async () => root.render(<DesignerPanel open onClose={() => undefined} />));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    await act(async () => set({ ownTokens: false }));
+    expect(host.querySelector('.designer-quota')?.textContent).toContain('shared requests left this hour');
+    expect([...host.querySelectorAll('button')].some((b) => b.textContent === 'Use my own Cogniti allowance')).toBe(false);
+    await act(async () => set({ ownTokens: true }));
+  });
+
+  it('shows what was built without a reload when the tab is not in the live session, at each change and at the end', async () => {
+    loadProjectRecord.mockClear();
+    const built = createProject('Panel');
+    built.id = 'proj1';
+    built.artboards[0].name = 'Built by Ixia';
+    loadProjectRecord.mockResolvedValue(built);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(lines({ type: 'changed', revision: 'r1' }, { type: 'touched' }, { type: 'reply', text: 'Done.' }, { type: 'done', conversation: 'c1' }), { headers: { 'Content-Type': 'application/x-ndjson' } })),
+    );
+    await act(async () => root.render(<DesignerPanel open onClose={() => undefined} />));
+    await act(async () => {
+      await designerChat().send('Build it', 'proj1', { force: true });
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(loadProjectRecord).toHaveBeenCalledWith('proj1');
+    expect(st.get().project.artboards[0].name).toBe('Built by Ixia');
+
+    // a tab in the live session is sent the changes as they happen, so it fetches nothing
+    loadProjectRecord.mockClear();
+    st.set({ live: { status: 'live' } } as never);
+    await act(async () => showWhatChanged());
+    expect(loadProjectRecord).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+    designerChat().newChat();
+  });
+
+  it('opens from a round button at the bottom right of the canvas, with the Ixia icon and an offer of help', async () => {
+    await act(async () => root.render(<DesignerDock />));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    const fab = host.querySelector('.designer-fab') as HTMLButtonElement;
+    expect(fab).toBeTruthy();
+    expect(fab.title).toBe('Having trouble? Ask me for help');
+    // above the button with a tail, the way of the web
+    expect(fab.dataset.tipSide).toBe('top');
+    expect(fab.getAttribute('aria-label')).toBe('Ask Ixia');
+    expect(fab.querySelector('img')?.getAttribute('src')).toBe('./favicon.svg');
+    // nothing of the chat until it is asked for
+    expect(host.querySelector('.designer-panel')).toBeNull();
+    await act(async () => fab.click());
+    expect(fab.getAttribute('aria-expanded')).toBe('true');
+    expect((host.querySelector('.designer-panel') as HTMLElement).hidden).toBe(false);
+    // closing keeps it mounted, so the conversation is still there, and gives the button the focus back
+    await act(async () => fab.click());
+    expect((host.querySelector('.designer-panel') as HTMLElement).hidden).toBe(true);
+    expect(fab.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('answers a how-do-I from the help with the top topics as links and an Ask anyway button that spends a request', async () => {
@@ -307,9 +378,9 @@ describe('the panel', () => {
     //no request went to the server
     expect(bodies).toEqual([]);
     const help = host.querySelector('.designer-msg.help')!;
-    expect(help.textContent).toContain('Nothing was sent to the Activity Designer');
+    expect(help.textContent).toContain('Nothing was sent to Ixia');
     expect(help.querySelectorAll('.designer-topics button').length).toBeGreaterThan(0);
-    const anyway = [...help.querySelectorAll('button')].find((b) => b.textContent === 'Ask the Activity Designer anyway') as HTMLButtonElement;
+    const anyway = [...help.querySelectorAll('button')].find((b) => b.textContent === 'Ask Ixia anyway') as HTMLButtonElement;
     expect(anyway).toBeTruthy();
     await act(async () => {
       anyway.click();
