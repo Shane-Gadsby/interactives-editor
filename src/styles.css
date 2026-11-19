@@ -5605,10 +5605,16 @@ textarea.form-text {
   flex: 1;
 }
 .help-link {
+  /* Centred and sized the same whether it is a button or a link (the Before you share rows use an <a>, which centres nothing by itself) */
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   width: 16px;
   height: 16px;
   padding: 0;
+  text-decoration: none;
   border: 1px solid var(--line-2);
   border-radius: 50%;
   background: transparent;
