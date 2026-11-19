@@ -5119,7 +5119,7 @@ After changing per-course values, press **Update to the latest version** in [Sha
 
 Every value is text, and a name that isn't there is empty, so give it a fallback: \`link.program || 'MSCN'\`. A name is letters, digits, \`.\`, \`_\` and \`-\` (up to 40), a value is up to 200 letters, and there are 20 at most. \`title\` and \`cdtID\` (the embed code's own), \`sessionID\`, \`ixm\` and \`lti\` are never handed on.
 
-It works from the Link for StudyDesk and from a plain share link. In the editor and Preview **link** is empty. A project shared before 19 November 2026 needs **Update** in Share to get it.
+It works from the Link for StudyDesk and from a plain share link. To see the project with values on its address while you build it, open **Data**, pick **context**, and under **link** press **+ Add a link value**: give it a name (\`program\`) and a sample value (\`GCSC\`). The canvas and Preview then behave as if the project were opened with \`&program=GCSC\`. Sample values are for designing only: a share link, an embed or an export never carries them, and leaving a name out of the samples is how you check what the project does with no value. A project shared before 19 November 2026 needs **Update** in Share to get it.
 
 Anyone can change what's on an address they open, so use a value to pick what to show, never to decide what someone may do or to set a score.
 

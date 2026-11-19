@@ -1382,8 +1382,9 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     let live = true;
     setBuildError(null);
-    // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show
-    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project) }).then(
+    // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show,
+    // opened with the sample link values on its address
+    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project), link: { ...(project.sampleLink ?? {}) } }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );

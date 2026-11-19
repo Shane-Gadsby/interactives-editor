@@ -50,7 +50,7 @@ export function withoutLinks(project: Project): Project {
  */
 export async function standaloneHtml(
   project: Project,
-  opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; lessMotion?: boolean; context?: Partial<ContextValues>; bytesFor?: (asset: Asset) => Promise<Uint8Array | null>; embedFonts?: boolean; optimise?: boolean; onWarning?: (text: string) => void; embedLinked?: boolean; onLinkedFailed?: (failed: LinkedFailure[]) => void } = {},
+  opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; lessMotion?: boolean; context?: Partial<ContextValues>; link?: Record<string, string>; bytesFor?: (asset: Asset) => Promise<Uint8Array | null>; embedFonts?: boolean; optimise?: boolean; onWarning?: (text: string) => void; embedLinked?: boolean; onLinkedFailed?: (failed: LinkedFailure[]) => void } = {},
 ): Promise<string> {
   //A page for learners carries the attributions only when the Credits button or the exports option asks, and never the author's notes
   // The author's made-up context values are for designing, so a file for learners does not carry them
@@ -63,8 +63,9 @@ export async function standaloneHtml(
     fetched = e.bytes;
     if (e.failed.length) opts.onLinkedFailed?.(e.failed);
   }
-  const { sampleContext: _sample, ...unsampled } = withoutLinks(whole);
+  const { sampleContext: _sample, sampleLink: _sampleLink, ...unsampled } = withoutLinks(whole);
   void _sample;
+  void _sampleLink;
   // Where a picture was found in the catalogue is the author's business, not something a page for learners carries
   const unfound = unsampled.assets.some((a) => a.catalogue) ? { ...unsampled, assets: unsampled.assets.map(({ catalogue: _c, ...a }) => a) } : unsampled;
   const clean = withPublishedCredits(unfound as Project);
@@ -72,7 +73,7 @@ export async function standaloneHtml(
   // The swapped assets carry their bytes as data: urls, which the builder embeds as they are (assetBytes reads them too)
   const p = opts.optimise && !opts.bytesFor ? await withOptimisedAssets(named) : named;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;
-  const html = await buildStandaloneHtml(p, { playerSource: await loadPlayerSource(), sandboxSource: sandbox, bytesFor: withFetched(fetched, opts.bytesFor ?? ((a) => assetBytes(project.id, a))), debug: opts.debug, accessibility: opts.accessibility, lessMotion: opts.lessMotion, context: opts.context, preconnectFonts: !opts.embedFonts, fontsBase: opts.embedFonts ? undefined : fontsBase() });
+  const html = await buildStandaloneHtml(p, { playerSource: await loadPlayerSource(), sandboxSource: sandbox, bytesFor: withFetched(fetched, opts.bytesFor ?? ((a) => assetBytes(project.id, a))), debug: opts.debug, accessibility: opts.accessibility, lessMotion: opts.lessMotion, context: opts.context, link: opts.link, preconnectFonts: !opts.embedFonts, fontsBase: opts.embedFonts ? undefined : fontsBase() });
   // The player skips a Google font whose element id is already in the page, so these go in ahead of its script
   return opts.embedFonts ? inHead(html, await embeddedFontStyles(p, opts.onWarning)) : html;
 }

@@ -112,7 +112,7 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
   // The microphone and camera as a project that declares them starts: ready, with no recordings (the player keeps these current when it runs)
   const used = new Set(sensorsUsed(project.settings.sensors));
   const sensors = { ...NO_SENSORS, microphone: used.has('microphone') ? 'ready' : 'unavailable', camera: used.has('camera') ? 'ready' : 'unavailable', photos: used.has('photos') ? 'ready' : 'unavailable', recordings: emptySlots(slotNamesOf(project)) };
-  const vars: Record<string, unknown> = { context, link: {}, ...sensors, ...board, ...data, data, enums: enumOptions(project.variables), userData: { loaded: false, restored: 0 } };
+  const vars: Record<string, unknown> = { context, link: { ...(project.sampleLink ?? {}) }, ...sensors, ...board, ...data, data, enums: enumOptions(project.variables), userData: { loaded: false, restored: 0 } };
   // The sample course's rows in place of initial values, the way the player starts on the real course
   const perCourse = courseValuesFor(project.courseValues, context.courseLabel, project.variables);
   // A variable with a formula is worked out from the ones above it (the crossword's layout from its word list), as the player does at the start
