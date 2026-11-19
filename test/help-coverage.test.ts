@@ -11,6 +11,11 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Scripts get what they had to reach past ix for': [['scripts', 'ix.reducedMotion'], ['scripts', 'ix.today('], ['expressions', 'today(format)'], ['drag-and-drop', '{ instant: true }'], ['drag-and-drop', 'Also holds']],
+  'Fit height to content fits on the canvas too': [['artboards', 'The page is measured as it\'s drawn']],
+  'A project saved from outside the editor shows up in an open tab': [['live-editing', 'loads the newer copy by itself']],
+  "A script that won't run is named when the project saves": [['scripts', 'A script that won\'t run']],
+  'A button in a tooltip that opens a modal no longer trips a frame': [['overlays', 'a button inside a tooltip can open a modal']],
   'A script can save a file straight from the project': [['scripts', 'hand the viewer a file it has made']],
   "A tooltip's tail is one outline with the card": [['overlays', 'the same weight at any size']],
   'Renaming a note on the canvas works': [['notes', 'A title']],
