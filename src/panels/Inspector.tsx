@@ -860,6 +860,18 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         />
         <ColorField label="Page background" value={project.settings.pageBackground} onChange={(c) => setProject((p) => (p.settings.pageBackground = c), 'page-bg')} />
         <CheckField
+          label="Hide sideways scrollbar"
+          title="When the project plays inside a frame (StudyDesk, an embedded link or file), the page never shows a horizontal scrollbar. Opened in its own tab it scrolls as usual. Share again (Update) after changing it."
+          value={project.settings.hideScrollbarX === true}
+          onChange={(v) => setProject((p) => (v ? (p.settings.hideScrollbarX = true) : delete p.settings.hideScrollbarX))}
+        />
+        <CheckField
+          label="Hide up-down scrollbar"
+          title="On to begin with: the frame grows to fit the project, so a vertical scrollbar would only flicker while it does. Left on from the start, it comes back if nothing sizes the frame. Share again (Update) after changing it."
+          value={project.settings.hideScrollbarY !== false}
+          onChange={(v) => setProject((p) => (p.settings.hideScrollbarY = v))}
+        />
+        <CheckField
           label="Live collaboration"
           title="Turn on when you work on this project at the same time as the people you invite: you see each other's cursors and changes as they happen. Off (the default), the project is saved one person at a time, nothing extra is sent, and if two people have it open the second to save is asked to reload."
           value={!!project.settings.liveSync}
