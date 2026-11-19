@@ -5,13 +5,14 @@
  * see them live. Which note is picked or being typed into is interface state in the store.
  */
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { NOTE_COLOURS, type Note, type NoteColour, type Project } from 'interactives-player';
+import { NOTE_COLOURS, NOTE_MAX_TITLE, type Note, type NoteColour, type Project } from 'interactives-player';
 import { getArtboard, locate } from '../store/doc';
 import { store, useEditor } from '../store/store';
 import { usePrefs } from '../lib/prefs';
 import { allNotes, attachNote, leaveNote, moveNote, noteScale, notePlace, patchNote, removeNote, type NoteOwner } from '../lib/notes';
 import { parseNoteText, plainNoteText, toggleCheck } from '../lib/note-text';
 import { Icons } from '../components/icons';
+import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 
 const COLOUR_NAMES: Record<NoteColour, string> = { gold: 'Yellow', orange: 'Orange', green: 'Green', sky: 'Blue', purple: 'Purple', rose: 'Pink' };
 
@@ -143,8 +144,32 @@ function NoteCard({ project, note, owner, x, y, scale, zoom, detached, picked, e
     e.stopPropagation();
   };
 
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const menuItems = (): MenuItem[] => [
+    { heading: 'Note' },
+    { label: 'Edit text', hint: 'Enter', onClick: startEdit },
+    { label: note.title ? 'Rename' : 'Add a title', onClick: () => store().set({ selectedNote: note.id, renamingNote: note.id }) },
+    { label: 'Colour', items: NOTE_COLOURS.map((c) => ({ label: COLOUR_NAMES[c], onClick: () => patchNote(note.id, { colour: c }) })) },
+    ...(owner === null ? [] : note.anchor ? [{ label: 'Stop following the layer', onClick: () => attachNote(note.id, null) } as MenuItem] : [{ label: 'Follow the selected layer', disabled: !attachable(), onClick: () => attachNote(note.id, store().get().selection[0]) } as MenuItem]),
+    { separator: true },
+    {
+      label: 'Delete note',
+      hint: 'Delete',
+      danger: true,
+      onClick: () => {
+        removeNote(note.id);
+        store().set({ selectedNote: null });
+      },
+    },
+  ];
+  const attachable = () => {
+    const st = store().get();
+    const ab = owner === null ? undefined : getArtboard(project, owner);
+    return !!ab && st.activeArtboardId === owner && !!st.selection[0] && !!locate(ab, st.selection[0]);
+  };
+
   const style: CSSProperties = { left: x, top: y, width: note.w, height: note.h, transform: `scale(${scale})` };
-  const label = `Note${note.author ? ` by ${note.author}` : ''}: ${plainNoteText(note.text) || 'empty'}`;
+  const label = `Note${note.title ? ` ${note.title}` : ''}${note.author ? ` by ${note.author}` : ''}: ${plainNoteText(note.text) || 'empty'}`;
   const anchorLayer = note.anchor && owner !== null ? locate(getArtboard(project, owner)!, note.anchor.layerId)?.node : undefined;
   return (
     <div
@@ -165,16 +190,20 @@ function NoteCard({ project, note, owner, x, y, scale, zoom, detached, picked, e
         e.stopPropagation();
         startEdit();
       }}
-      onContextMenu={(e) => e.stopPropagation()}
+      onContextMenu={(e) => {
+        e.stopPropagation();
+        // the text box keeps the browser's own menu, for spelling and paste
+        if ((e.target as HTMLElement).closest('textarea, input')) return;
+        e.preventDefault();
+        pick();
+        setMenu({ x: e.clientX, y: e.clientY });
+      }}
       onFocus={(e) => {
         if (e.target === e.currentTarget && !picked) pick();
       }}
       onKeyDown={key}
     >
-      <div className="note-head">
-        <span className="note-grip" aria-hidden="true" />
-        <span className="note-by">{note.anchor ? (anchorLayer ? `On ${anchorLayer.name}` : 'Layer removed') : note.author || 'Note'}</span>
-      </div>
+      <NoteHead note={note} fallback={note.anchor ? (anchorLayer ? `On ${anchorLayer.name}` : 'Layer removed') : note.author || 'Note'} rename={(title) => patchNote(note.id, { title })} />
       {picked && !editing && <NoteTools note={note} owner={owner} project={project} />}
       <div className="note-body">
         {editing ? (
@@ -200,7 +229,67 @@ function NoteCard({ project, note, owner, x, y, scale, zoom, detached, picked, e
         )}
       </div>
       <span className="note-fold" aria-hidden="true" />
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={menuItems()} onClose={() => setMenu(null)} />}
       <span className="note-resize" data-nodrag="" aria-hidden="true" onPointerDown={(e) => down(e, 'size')} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
+    </div>
+  );
+}
+
+/**
+ * A note's top bar: its title, or without one who wrote it (or the layer or node it follows). Double-click the bar to give it a title
+ * of your own; Enter keeps it, Escape leaves it as it was, and an emptied title goes back to the default.
+ */
+export function NoteHead({ note, fallback, rename }: { note: Note; fallback: string; rename: (title: string) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const asked = useEditor((s) => s.renamingNote === note.id);
+  useEffect(() => {
+    if (!asked) return;
+    setDraft(note.title ?? '');
+    store().set({ renamingNote: null });
+  }, [asked, note.title]);
+  const shown = note.title || fallback;
+  const keep = () => {
+    if (draft !== null && draft.trim() !== (note.title ?? '')) rename(draft);
+    setDraft(null);
+  };
+  return (
+    <div
+      className="note-head"
+      title={draft === null ? `Double-click to ${note.title ? 'rename' : 'give it a title'}${note.title && note.author ? ` (by ${note.author})` : ''}` : undefined}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        setDraft(note.title ?? '');
+      }}
+    >
+      <span className="note-grip" aria-hidden="true" />
+      {draft === null ? (
+        <span className="note-by">{shown}</span>
+      ) : (
+        <input
+          autoFocus
+          className="note-title nodrag nowheel"
+          data-nodrag=""
+          aria-label="Note title"
+          placeholder={fallback}
+          maxLength={NOTE_MAX_TITLE}
+          value={draft}
+          onFocus={(e) => e.currentTarget.select()}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={keep}
+          onPointerDown={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              e.currentTarget.blur();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              setDraft(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

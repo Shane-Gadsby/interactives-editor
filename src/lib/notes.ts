@@ -3,7 +3,7 @@
  * through `EditorStore.update`, so notes undo, save, and reach collaborators as ordinary id-addressed ops. Notes are not layers: no
  * function here touches the layer tree.
  */
-import { apply, invert, makeNote, NOTE_COLOURS, NOTE_MAX_TEXT, NOTE_MIN_H, NOTE_MIN_W, type Note, type NoteColour, type Project } from 'interactives-player';
+import { apply, invert, makeNote, NOTE_COLOURS, NOTE_MAX_TEXT, NOTE_MAX_TITLE, NOTE_MIN_H, NOTE_MIN_W, type Note, type NoteColour, type Project } from 'interactives-player';
 import type { Draft } from 'immer';
 import { getArtboard, locate, nodeToArtboard } from '../store/doc';
 import { store } from '../store/store';
@@ -114,7 +114,7 @@ function anchorFor(p: Project, artboardId: string, layerId: string, x: number, y
   return { layerId, lx: round(local.x), ly: round(local.y) };
 }
 
-type NotePatch = Partial<Pick<Note, 'w' | 'h' | 'text' | 'colour'>>;
+type NotePatch = Partial<Pick<Note, 'w' | 'h' | 'text' | 'colour' | 'title'>>;
 
 /** Change a note's size, text or colour. Typing and dragging pass a `coalesce` key so a burst is one undo step. */
 export function patchNote(id: string, patch: NotePatch, coalesce?: string): void {
@@ -123,6 +123,11 @@ export function patchNote(id: string, patch: NotePatch, coalesce?: string): void
       const n = noteIn(d, id);
       if (!n) return;
       if (patch.text !== undefined) n.text = patch.text.slice(0, NOTE_MAX_TEXT);
+      if (patch.title !== undefined) {
+        const t = patch.title.trim().slice(0, NOTE_MAX_TITLE);
+        if (t) n.title = t;
+        else delete n.title;
+      }
       if (patch.colour !== undefined && NOTE_COLOURS.includes(patch.colour)) n.colour = patch.colour;
       if (patch.w !== undefined) n.w = Math.max(NOTE_MIN_W, round(patch.w));
       if (patch.h !== undefined) n.h = Math.max(NOTE_MIN_H, round(patch.h));

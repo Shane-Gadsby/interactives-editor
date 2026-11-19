@@ -11,6 +11,8 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'A value on the Link for StudyDesk reaches the project': [['export', 'Values on the link']],
+  'Notes have titles and a right-click menu': [['notes', 'Right-click'], ['notes', 'A title']],
   'Saved work no longer goes missing on a slow StudyDesk page': [['results', 'A slow server is waited for'], ['results', 'press **Update**'], ['variables', 'userData.failed']],
   'Live collaboration is a project setting, off to start with': [['live-editing', 'is a setting of each project'], ['project-settings', 'Live collaboration']],
   'Inviting offers live collaboration': [['live-editing', 'Turn on live collaboration']],

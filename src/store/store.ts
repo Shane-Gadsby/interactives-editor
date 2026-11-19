@@ -267,6 +267,8 @@ export interface EditorState {
   /** The sticky note picked on the canvas, and the one being typed into (interface state, never saved). */
   selectedNote: string | null;
   editingNote: string | null;
+  /** The note whose title is being typed (canvas or graph), when a menu asked for it. */
+  renamingNote: string | null;
   zoom: number;
   panX: number;
   panY: number;
@@ -388,6 +390,7 @@ export class EditorStore {
       tool: 'select',
       selectedNote: null,
       editingNote: null,
+      renamingNote: null,
       zoom: 1,
       panX: 80,
       panY: 80,

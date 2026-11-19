@@ -5136,7 +5136,7 @@ const scriptJson = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/>/
 //asks it by postMessage. Only what was declared when the link was shared is allowed. The frame's address carries a nonce the bridge expects
 //on every request (#ixm=<nonce>), since the frame's own origin is opaque and a window is not proof enough: a frame that navigated away
 //keeps the window but loses the address. Without a declaration none of it is in the page
-const learnerPage = (token, base, nonce, project, remix, sensors, mediaNonce) => `<!doctype html>
+const learnerPage = (token, base, nonce, project, remix, sensors, mediaNonce, link = '') => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -5145,7 +5145,7 @@ const learnerPage = (token, base, nonce, project, remix, sensors, mediaNonce) =>
 <style>html,body{margin:0;height:100%;background:#111}iframe{border:0;display:block;width:100%;height:100%}#remix{position:fixed;right:12px;bottom:12px;z-index:2;display:none;font:600 13px/1 system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);text-decoration:none}#remix:hover,#remix:focus-visible{background:#2f49d0}#remix[aria-disabled=true]{opacity:.7;cursor:progress}#remix.err{background:#b3261e}</style>
 </head>
 <body>
-<iframe id="project" src="${base}/s/${token}${sensors ? `#ixm=${mediaNonce}` : ''}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen; autoplay" title="Interactive"></iframe>
+<iframe id="project" src="${base}/s/${token}${frameHash(sensors ? `ixm=${mediaNonce}` : '', link)}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen; autoplay" title="Interactive"></iframe>
 ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into your own projects, to change as you like">Remix this</a>' : ''}
 <script src="/utilities.js"></script>
 <script nonce="${nonce}">
@@ -5608,6 +5608,12 @@ startBridge({frame: document.getElementById('project'), nonce: ${JSON.stringify(
 </html>
 `
 
+//The frame's #: the media nonce (when it has sensors) then the link's values, &-joined, and escaped for the src attribute
+const frameHash = (...parts) => {
+	let h = parts.filter(Boolean).join('&')
+	return h ? '#' + h.replace(/&/g, '&amp;').replace(/"/g, '%22') : ''
+}
+
 //The trusted media bridge the learner page loads (a module, from this host, so script-src 'self' lets it in). Revalidated, never stale
 router.get('/media-bridge.mjs', cacheHeaders.document, (req, res) => {
 	res.type('text/javascript').sendFile(path.join(__dirname, 'shared', 'media-bridge.mjs'), {headers: {'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff'}})
@@ -5640,8 +5646,21 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('Referrer-Policy', 'no-referrer')
 	res.setHeader('X-Robots-Tag', 'noindex')
-	res.type('html').send(learnerPage(token, req.baseUrl, nonce, project._id, !!project.share?.remix, project.share?.sensors || null, crypto.randomBytes(16).toString('hex')))
+	res.type('html').send(learnerPage(token, req.baseUrl, nonce, project._id, !!project.share?.remix, project.share?.sensors || null, crypto.randomBytes(16).toString('hex'), linkValues(req.query)))
 })
+
+//The link's own values (?program=GCSC on the StudyDesk embed) handed on to the project in its frame's #, since the frame can't see
+//this page's address any other way: it's sandboxed off from its parent, and no-referrer above leaves document.referrer empty.
+//The toolbox's own (title, cdtID) and the session stay here. A # never reaches a server, so nothing new gets logged anywhere
+const LINK_RESERVED = new Set(['title', 'cdtid', 'sessionid', 'ixm', 'lti'])
+const linkValues = (query) => {
+	let out = new URLSearchParams()
+	for (let [k, v] of Object.entries(query || {})) {
+		if (out.size >= 20 || !/^[A-Za-z][\w.-]{0,39}$/.test(k) || LINK_RESERVED.has(k.toLowerCase()) || typeof v !== 'string') continue
+		out.append(k, v.slice(0, 200))
+	}
+	return out.toString()
+}
 
 //What the project's learners have done, for its owner (this is under /api, which is staff). Counts and averages
 //of the records, and the most recently active people

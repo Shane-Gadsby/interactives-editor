@@ -158,3 +158,19 @@ describe('the learner page, when the server fails', () => {
     expect(got('c')!.failed).toBeUndefined();
   });
 });
+
+describe("the learner page, passing the link's values on", () => {
+  const frameSrc = async (query: string) => /<iframe id="project" src="([^"]+)"/.exec((await h.call('GET', `/play/${token}${query}`)).text)![1];
+
+  it("hands ?program=GCSC to the project in its frame's #, and keeps the toolbox's own and the session back", async () => {
+    const src = await frameSrc('?title=Pathway&program=GCSC&cdtID=1794894076383&sessionID=s-1');
+    expect(src).toBe(`/interactives/s/${token}#program=GCSC`);
+  });
+
+  it('adds nothing without values, and escapes what it hands on', async () => {
+    expect(await frameSrc('?title=Pathway&cdtID=1')).toBe(`/interactives/s/${token}`);
+    const src = await frameSrc('?a=%22%3E%3Cb%3E&b=1%262&bad%20name=x');
+    expect(src).not.toMatch(/[<>"]/);
+    expect(new URLSearchParams(src.split('#')[1].replace(/&amp;/g, '&'))).toEqual(new URLSearchParams({ a: '"><b>', b: '1&2' }));
+  });
+});

@@ -11259,10 +11259,26 @@ code {
   text-transform: uppercase;
 }
 .note-grip {
+  /* Three whole dots by two: the width and height are whole tiles, so none is cut at an edge */
   flex: none;
-  width: 14px;
-  height: 6px;
-  background: radial-gradient(circle, color-mix(in srgb, var(--u-g7) 55%, transparent) 1px, transparent 1.5px) 0 0 / 4px 3px;
+  width: 12px;
+  height: 8px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--u-g7) 55%, transparent) 1px, transparent 1.5px) 0 0 / 4px 4px;
+}
+.note-title {
+  flex: 1;
+  min-width: 0;
+  margin: -1px 0;
+  padding: 0 3px;
+  border: 1px solid var(--paper-edge);
+  border-radius: 2px;
+  background: var(--paper);
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  cursor: text;
+  user-select: text;
 }
 .note-by {
   min-width: 0;

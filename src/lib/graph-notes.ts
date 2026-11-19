@@ -4,7 +4,7 @@
  * so it moves with it. Everything that changes one goes through `EditorStore.update`, so they undo, save and reach collaborators as
  * ordinary id-addressed ops. They are not nodes: nothing here touches the graph's nodes or connections, and the player never reads them.
  */
-import { makeNote, NOTE_COLOURS, NOTE_MAX_TEXT, NOTE_MIN_H, NOTE_MIN_W, type Artboard, type Note, type NoteColour, type Project } from 'interactives-player';
+import { makeNote, NOTE_COLOURS, NOTE_MAX_TEXT, NOTE_MAX_TITLE, NOTE_MIN_H, NOTE_MIN_W, type Artboard, type Note, type NoteColour, type Project } from 'interactives-player';
 import type { Draft } from 'immer';
 import { getArtboard } from '../store/doc';
 import { anchorOrigin, graphNotePlace } from './graph-notes-core';
@@ -73,7 +73,7 @@ export function addGraphNote(artboardId: string, n: NewGraphNote, opts: { author
   return note.id;
 }
 
-type Patch = Partial<Pick<Note, 'w' | 'h' | 'text' | 'colour'>>;
+type Patch = Partial<Pick<Note, 'w' | 'h' | 'text' | 'colour' | 'title'>>;
 
 /** Change a note's size, text or colour. Typing and dragging pass a `coalesce` key so a burst is one undo step. */
 export function patchGraphNote(id: string, patch: Patch, coalesce?: string): void {
@@ -82,6 +82,11 @@ export function patchGraphNote(id: string, patch: Patch, coalesce?: string): voi
       const n = noteIn(d, id);
       if (!n) return;
       if (patch.text !== undefined) n.text = patch.text.slice(0, NOTE_MAX_TEXT);
+      if (patch.title !== undefined) {
+        const t = patch.title.trim().slice(0, NOTE_MAX_TITLE);
+        if (t) n.title = t;
+        else delete n.title;
+      }
       if (patch.colour !== undefined && NOTE_COLOURS.includes(patch.colour)) n.colour = patch.colour;
       if (patch.w !== undefined) n.w = Math.max(NOTE_MIN_W, round(patch.w));
       if (patch.h !== undefined) n.h = Math.max(NOTE_MIN_H, round(patch.h));

@@ -5839,6 +5839,8 @@ That link opens the **learner page**: a small page around your project that know
 
 A project that uses a microphone, camera or photos (see [Microphone, camera and photos](sensors)) only works through the **Link for StudyDesk**, and the iframe that holds that link on the StudyDesk page needs \`allow="microphone; camera"\`. The **Embed code** below writes that for you. Update the link after changing what the project declares.
 
+**Values on the link.** Anything you add to the link's address, like \`?program=GCSC\` (or \`&program=GCSC\` after what the embed code already has), is handed on to the project: it arrives on the end of the project frame's own address after a \`#\`, as \`#program=GCSC\`. A script with **Run scripts in the sandbox** off reads it from \`location.hash\`. The embed code's own \`title\` and \`cdtID\`, and the StudyDesk session, are kept back. Names are letters, digits, \`.\`, \`_\` and \`-\` (up to 40), values up to 200 letters, and 20 of them at most. A learner can change what's on an address they open, so treat a value as a choice, never as a permission.
+
 ### Embed code
 Under the Link for StudyDesk, **Embed code** is the link already wrapped in the iframe the Toolbox writes for its own items, ready to paste. Press **Copy embed code**, then in StudyDesk, StaffDesk or the open site edit the page, open the editor's **Source code** view (the \`<>\` button), paste where it should go and save. The page treats it like any other Toolbox item.
 
@@ -6290,6 +6292,8 @@ Pick the **Note** tool (<kbd>S</kbd>, in the tools bar next to **Comment**) and 
 - **Move** it by dragging it, **resize** it from its bottom right corner.
 - **Double-click** it, or press <kbd>Enter</kbd> with it focused, to change the text.
 - With a note picked, a small bar above it sets the **colour** (yellow, orange, green, blue, purple or pink), **attaches** it to the layer you have selected on the same page, and **deletes** it. <kbd>Delete</kbd> removes a picked note too.
+- **Right-click** a note for its own menu: **Edit text**, **Add a title** (or **Rename**), **Colour**, following the selected layer, and **Delete note**. Right-clicking inside the text while you type still gives the browser's menu, for spelling and paste.
+- **A title**: the bar across the top of a note says who wrote it until you give it a title. Double-click the bar (or use **Add a title** in the menu), type, and press <kbd>Enter</kbd>. <kbd>Esc</kbd> leaves it as it was, and emptying it goes back to the author's name. Graph notes take a title the same way.
 - Notes are small on purpose. They grow with the zoom but never get tiny or huge, and a picked note has a gold outline.
 
 Keyboard: <kbd>Tab</kbd> reaches every note on the canvas. With one focused, the arrow keys move it (<kbd>Shift</kbd> for 10), <kbd>Alt</kbd>+arrows resize it, <kbd>Enter</kbd> edits it, <kbd>Delete</kbd> removes it and <kbd>Esc</kbd> lets go. Every button on the bar has a label for a screen reader.

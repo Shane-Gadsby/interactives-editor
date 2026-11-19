@@ -979,6 +979,7 @@ export function LogicGraph() {
       items: [
         { heading: 'Note' },
         { label: 'Edit text', hint: keyHints('graph-edit-note'), onClick: () => store().set({ editingNote: id }) },
+        { label: note.title ? 'Rename' : 'Add a title', onClick: () => store().set({ renamingNote: id }) },
         { label: 'Colour', items: NOTE_COLOURS.map((c) => ({ label: { gold: 'Yellow', orange: 'Orange', green: 'Green', sky: 'Blue', purple: 'Purple', rose: 'Pink' }[c], onClick: () => patchGraphNote(id, { colour: c }) })) },
         ...(note.anchor ? [{ label: 'Stop following', onClick: () => void attachGraphNote(id, null) } as MenuItem] : []),
         { separator: true },
