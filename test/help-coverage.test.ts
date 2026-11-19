@@ -11,6 +11,8 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  "A tooltip's tail is as light as its border": [['overlays', 'the same weight at any size']],
+  'Renaming a note on the canvas works': [['notes', 'A title']],
   'No scrollbars flickering while an embedded project resizes': [['project-settings', 'Hide up-down scrollbar'], ['project-settings', 'Hide sideways scrollbar']],
   'A layer picked up with a click can still be dragged': [['drag-and-drop', 'can still be dragged']],
   'Wait for user session before start': [['project-settings', 'Wait for user session before start'], ['results', 'waits for as long as it takes']],

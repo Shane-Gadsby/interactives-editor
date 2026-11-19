@@ -340,6 +340,33 @@ describe('the canvas layer', () => {
     expect(head().textContent).toBe('Claude (AI)');
   });
 
+  it('a press on a note only captures the pointer once it moves, so a double-click on the bar still reaches the bar', () => {
+    //Captured on the press, the browser sends the double-click that follows to the whole note, which opened the text box
+    //instead of the title (jsdom doesn't redirect events for a capture, so this checks when the capture is asked for)
+    const { s, ab } = fresh();
+    const id = addNote(ab, { x: 10, y: 10, text: 'hi' }, { author: 'Sam' })!;
+    mount(s);
+    const card = host!.querySelector('.note') as HTMLElement;
+    const head = host!.querySelector('.note-head') as HTMLElement;
+    const captured: unknown[] = [];
+    card.setPointerCapture = (pid: number) => void captured.push(pid);
+    const ptr = (type: string, x: number, y: number) => {
+      const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
+      Object.defineProperty(e, 'pointerId', { value: 7 });
+      act(() => head.dispatchEvent(e));
+    };
+    ptr('pointerdown', 50, 20);
+    ptr('pointerup', 50, 20);
+    expect(captured).toEqual([]);
+    ptr('pointerdown', 50, 20);
+    ptr('pointermove', 51, 21);
+    expect(captured).toEqual([]);
+    ptr('pointermove', 90, 60);
+    expect(captured).toEqual([7]);
+    ptr('pointerup', 90, 60);
+    expect(findNote(s.get().project, id)!.note.x).not.toBe(10);
+  });
+
   it("right-click opens the note's own menu, not the browser's: rename, colour, delete", () => {
     const { s, ab } = fresh();
     const id = addNote(ab, { x: 10, y: 10, text: 'hi' }, { author: 'Ann' })!;
