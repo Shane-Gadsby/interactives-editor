@@ -21,8 +21,11 @@ export const newItemID = () => `ck${randomBytes(6).toString('hex')}`
 
 //Shared pages are whole interactives with their own scripts, served from the same origin as the editor. A sandbox
 //without allow-same-origin makes them a stranger to it: they run, open links and post forms, but they can't read the
-//editor's cookies or call its api. allow-popups-to-escape-sandbox lets a link they open in a new tab load as a normal page
-export const SHARE_CSP = 'sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms'
+//editor's cookies or call its api. allow-popups-to-escape-sandbox lets a link they open in a new tab load as a normal page.
+//allow-downloads lets a script in the page hand the learner a file it made (a pdf of their plan, say). It could already do
+//that the long way round, through a window it opened that had escaped the sandbox, so this opens nothing new,
+//it just saves the learner a window flashing up
+export const SHARE_CSP = 'sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-downloads'
 
 //What a browser can do with these without ever treating them as a page: pictures (not svg, which is a document),
 //video, audio, fonts, and the data files the player fetches

@@ -11,6 +11,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'A script can save a file straight from the project': [['scripts', 'hand the viewer a file it has made']],
   "A tooltip's tail is one outline with the card": [['overlays', 'the same weight at any size']],
   'Renaming a note on the canvas works': [['notes', 'A title']],
   'No scrollbars flickering while an embedded project resizes': [['project-settings', 'Hide up-down scrollbar'], ['project-settings', 'Hide sideways scrollbar']],

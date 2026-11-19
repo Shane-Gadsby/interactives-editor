@@ -73,6 +73,8 @@ describe('share headers', () => {
     shareHeaders(r);
     expect(r.headers['Content-Security-Policy']).toMatch(/^sandbox /);
     expect(r.headers['Content-Security-Policy']).toContain('allow-scripts');
+    //a script in the page may hand over a file it made
+    expect(r.headers['Content-Security-Policy']).toContain('allow-downloads');
     expect(r.headers['Content-Security-Policy']).not.toContain('allow-same-origin');
     expect(r.headers['X-Content-Type-Options']).toBe('nosniff');
   });
