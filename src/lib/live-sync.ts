@@ -11,7 +11,7 @@
 import type { Project } from 'interactives-player';
 import type { EditorStore } from '../store/store';
 import { track } from './analytics';
-import { currentRevOf, knownRevOf, liveSeqOf, loadProjectRecord } from './db';
+import { currentRevOf, knownRevOf, liveSeqOf, loadProjectRecord, restoreKnownRev } from './db';
 import { LiveSession, liveSession, setLiveSession } from './live';
 
 export const liveSyncOn = (p: Project): boolean => !!p.settings.liveSync;
@@ -98,10 +98,11 @@ export function watchLiveSync(s: EditorStore, save: () => Promise<boolean>, chan
 }
 
 /**
- * With live collaboration off, nothing tells a tab that the project moved on (an AI assistant edited it, or the same
- * person changed it in another tab). So when the tab comes back into view it asks the server for the revision, a few
- * bytes, and says so if it is newer than the one this tab has. Never more than once every `every` ms, never while a save
- * is on its way, and never when there are unsaved changes (saving them says it, with the choice of what to keep).
+ * With live collaboration off, nothing tells a tab that the project moved on (an AI assistant edited it, the same person
+ * changed it in another tab, or someone saved its JSON from outside the editor). So the tab asks the server for the
+ * revision, a few bytes, every `every` ms while it is in view and again when it comes back into view, and says so if it is
+ * newer than the one this tab has. Never while a save is on its way, and never when there are unsaved changes (saving them
+ * says it, with the choice of what to keep).
  */
 export function watchStale(s: EditorStore, onStale: () => void, every = 15000): () => void {
   const id = s.get().project.id;
@@ -123,8 +124,29 @@ export function watchStale(s: EditorStore, onStale: () => void, every = 15000): 
   const onVisible = () => void check();
   document.addEventListener('visibilitychange', onVisible);
   window.addEventListener('focus', onVisible);
+  const timer = setInterval(onVisible, Math.max(every, 5000));
   return () => {
+    clearInterval(timer);
     document.removeEventListener('visibilitychange', onVisible);
     window.removeEventListener('focus', onVisible);
   };
+}
+
+/**
+ * The tab is behind the server and has nothing unsaved: load the server's copy in place, laid out the way the editor lays
+ * out anything it opens. False when it couldn't (offline, or something was changed while it was loading), and then the
+ * tab says it is out of date instead.
+ */
+export async function loadNewer(s: EditorStore): Promise<boolean> {
+  const id = s.get().project.id;
+  const rev = s.revision;
+  const known = knownRevOf(id);
+  const p = await loadProjectRecord(id).catch(() => null);
+  if (!p || liveSession() || s.revision !== rev || s.get().saveState !== 'saved' || s.get().project.id !== id) {
+    // Fetching it moved the revision this tab saves against: without its document that would let the next save overwrite it
+    if (p) restoreKnownRev(id, known);
+    return false;
+  }
+  s.replaceProject(p);
+  return true;
 }

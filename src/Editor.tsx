@@ -8,7 +8,7 @@ import { ToastView } from './components/ToastView';
 import { ApiError, ConflictError, collaboratorCountOf, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
 import { publishLatest } from './lib/publish';
 import { LIVE_FALLBACK_EVENT, liveSession, setLiveSession } from './lib/live';
-import { openLiveIfOn, watchLiveSync, watchStale } from './lib/live-sync';
+import { loadNewer, openLiveIfOn, watchLiveSync, watchStale } from './lib/live-sync';
 import { assetUrls } from './lib/assets';
 import { ensureFonts } from './lib/fonts';
 import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, standaloneHtml } from './lib/export';
@@ -212,6 +212,7 @@ function useAutosave() {
     };
     // The live session closes (parent cleanup) before this one runs, so remember now whether changes travel as ops
     let viaOps = !!liveSession();
+    let lastScriptErrors = '';
     const save = async (force = false, wait = false): Promise<boolean> => {
       // A live session saves through ops; a whole-document PUT would reset everyone else's copy
       if (liveSession() && !force) return true;
@@ -223,8 +224,15 @@ function useAutosave() {
       const rev = s.revision;
       s.set({ saveState: 'saving' });
       try {
-        await saveProject(s.get().project, { force });
+        const { scriptErrors } = await saveProject(s.get().project, { force });
         s.set({ saveState: s.revision === rev ? 'saved' : 'dirty', saveError: null });
+        // A script that doesn't compile stops its page without a word: say which, once per set of errors (not on every keystroke)
+        const said = scriptErrors.map((e) => `${e.where}|${e.error}|${e.line ?? ''}`).join('\n');
+        if (said && said !== lastScriptErrors) {
+          const e = scriptErrors[0];
+          s.toast(`Saved, but ${e.where} won't run: ${e.error}${e.line ? ` (line ${e.line})` : ''}${scriptErrors.length > 1 ? `, and ${scriptErrors.length - 1} more` : ''}`, 'error');
+        }
+        lastScriptErrors = said;
         setConflict(false);
         if (retrying) s.toast('Saved again');
         retrying = false;
@@ -563,7 +571,17 @@ function Workspace({ home }: { home: () => void }) {
 /** With live collaboration off: has the project been changed somewhere else (another tab, an AI assistant) since this tab loaded it? */
 function useStaleCheck(): boolean {
   const [stale, setStale] = useState(false);
-  useEffect(() => watchStale(store(), () => setStale(true)), []);
+  // Nothing unsaved here, so the newer copy just comes in (laid out, history starting over); the banner is for when it can't
+  useEffect(
+    () =>
+      watchStale(store(), () =>
+        void loadNewer(store()).then((ok) => {
+          if (ok) store().toast('This project was changed somewhere else, so the latest is loaded. Undo starts from here');
+          else setStale(true);
+        }),
+      ),
+    [],
+  );
   return stale;
 }
 

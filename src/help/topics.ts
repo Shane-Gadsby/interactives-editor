@@ -818,6 +818,7 @@ Turn on **Fit height to content** in the **Page** section and the page is as tal
 
 - **Space below** keeps some room under the lowest layer.
 - **Fit width to content** is the same idea sideways: the page is as wide as its furthest showing layer, and the **W** box is greyed out. The editor keeps it measured as you change the page; a page playing in an embed is drawn at the width it was saved with, because an embed's width is set by the page it sits in. With it on, **Space below** is kept to the right as well.
+- The page is measured as it's drawn: every copy of a repeater and the words a bound text really shows, the same way it plays. So a list in the middle of a column pushes what's under it down the page on the canvas too.
 - A hidden layer, a mask, and anything inside a frame that clips or scrolls (past the frame's own edge) take no room.
 - A **dialog** takes no room either. Dialogs open over the page, so opening one never makes the page (or the StudyDesk embed) taller. One taller than the page keeps the page the height it was, so give that dialog its own scrolling.
 - Any other layer can be left out the same way: turn on **Not counted in the page height** in its **Layer** section. That's for toasts, tooltips and anything else that floats on top.
@@ -4203,6 +4204,9 @@ ${parked.frameling ? '' : FRAMELING_API_ROW}| \`ix.onFrame((dt, t) => …)\` | R
 
 To paint a layer from a script every frame (generative art, particles, charts), use a [Script layer](script-layers).
 
+## A script that won't run
+A script with a mistake in how it's written (a missing bracket, a stray character) never starts, and the page it's on just doesn't do what it should. So each time the project saves, every script and every **Run code** node is checked, and a red message names the first one that won't run, why, and the line. The project is still saved. It says it once for each set of mistakes, not on every keystroke.
+
 ## The sandbox
 The sandbox is a locked room for scripts, so a script can't harm the page or the learner's browser. New projects run scripts in it. It is a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped.
 
@@ -6246,7 +6250,7 @@ Power users (and the brand group) can switch the lock off while they work, with 
 
 Turning it on saves your project first and then joins the others; turning it off lets your last changes reach the server and goes back to plain saving. It is one undo step like any setting. Everyone who has the project open follows the setting. A copy of a project, or a project made from a template, starts with it off.
 
-**An AI assistant** (the MCP server) edits through the same live room whatever the setting says, and its work is saved with the project like anyone's. If you have live collaboration off, you will not see it happen. A bar at the top of the editor says **This project was changed somewhere else since you opened it** when you come back to the tab, and **Reload** shows the assistant's work. If you start changing something first, the next save is refused with the red bar below, so the assistant's work is never written over by accident.
+**An AI assistant** (the MCP server) edits through the same live room whatever the setting says, and its work is saved with the project like anyone's. If you have live collaboration off, you will not see it happen as it goes, but within about 15 seconds of it saving (or as soon as you come back to the tab) the editor loads the assistant's work by itself, as long as you have nothing unsaved. Undo starts again from there. If you start changing something first, the next save is refused with the red bar below, so the assistant's work is never written over by accident.
 
 - **Undo** only undoes your own changes.
 - If two people change the same setting at the same moment, the later change wins.
@@ -6270,7 +6274,7 @@ The server keeps saved revisions of the project: a snapshot every few minutes wh
 ![The Revision history dialog.](help/revision-history.png)
 
 ## When two copies disagree
-With live collaboration off, a second tab, a collaborator or an AI assistant can save the project while you have it open. Coming back to the tab, a bar says **This project was changed somewhere else since you opened it** with a **Reload** button, as long as you have no unsaved changes. If you do, saving shows the red bar. If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).
+With live collaboration off, a second tab, a collaborator or an AI assistant can save the project while you have it open. The editor checks every 15 seconds while the tab is in view, and again when you come back to it. With nothing unsaved, it loads the newer copy by itself and says so (undo starts again from there). If it can't load it, a bar says **This project was changed somewhere else since you opened it** with a **Reload** button. If you do, saving shows the red bar. If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).
 
 ## Inviting people
 **Share → Invite to collaborate…** lets other people open and edit the project with you.

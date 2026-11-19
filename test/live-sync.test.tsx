@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { createNode, createProject } from 'interactives-player';
 import { EditorStore, setCurrentStore } from '../src/store/store';
 import { liveSession, setLiveSession } from '../src/lib/live';
-import { liveSyncOn, openLiveIfOn, setLiveSync, watchLiveSync, watchStale } from '../src/lib/live-sync';
+import { liveSyncOn, loadNewer, openLiveIfOn, setLiveSync, watchLiveSync, watchStale } from '../src/lib/live-sync';
 import { loadProjectRecord, knownRevOf } from '../src/lib/db';
 import { InviteModal } from '../src/components/ProjectModals';
 
@@ -244,6 +244,60 @@ describe('a tab with live collaboration off hears that the project moved on', ()
     expect(stale).toHaveBeenCalledTimes(1);
     void a;
     stop();
+  });
+
+  it('asks again every so often while the tab stays in view, not only when it comes back', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    try {
+      const srv = server({ rev: 2 });
+      const { s, p } = fixture(false);
+      srv.setDoc(p);
+      await loadProjectRecord('proj1');
+      const stale = vi.fn();
+      const stop = watchStale(s, stale, 15000);
+      srv.state.rev = 3;
+      vi.advanceTimersByTime(15001);
+      await tick();
+      expect(stale).toHaveBeenCalledTimes(1);
+      stop();
+      vi.advanceTimersByTime(60000);
+      await tick();
+      expect(stale).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('with nothing unsaved, loads the newer copy in place and lays it out', async () => {
+    const srv = server({ rev: 2 });
+    const { s, p } = fixture(false);
+    srv.setDoc(p);
+    await loadProjectRecord('proj1');
+    //saved from outside: a column whose layers were left where they were written
+    const out: any = JSON.parse(JSON.stringify(p));
+    const kid = (name: string) => createNode('rect', { name, x: 0, y: 0, width: 50, height: 30 });
+    out.artboards[0].children.push(createNode('frame', { id: 'col', name: 'col', width: 100, height: 100, layout: { direction: 'column', gap: 10, padding: { top: 0, right: 0, bottom: 0, left: 0 }, justify: 'start', align: 'start', wrap: false, hugWidth: false, hugHeight: true }, children: [kid('one'), kid('two')] } as never));
+    srv.setDoc(out);
+    srv.state.rev = 5;
+    expect(await loadNewer(s)).toBe(true);
+    expect(knownRevOf('proj1')).toBe(5);
+    const col: any = s.get().project.artboards[0].children.find((n) => n.id === 'col');
+    expect(col.children.map((n: any) => n.y)).toEqual([0, 40]);
+    expect(col.height).toBe(70);
+    expect(s.get().saveState).toBe('saved');
+  });
+
+  it('does not load over a change made while it was fetching, and keeps the revision that change is saved against', async () => {
+    const srv = server({ rev: 2 });
+    const { s, p, a } = fixture(false);
+    srv.setDoc(p);
+    await loadProjectRecord('proj1');
+    srv.state.rev = 5;
+    const loading = loadNewer(s);
+    s.setProps([a.id], { x: 33 });
+    expect(await loading).toBe(false);
+    expect(knownRevOf('proj1')).toBe(2);
+    expect((s.get().project.artboards[0].children[0] as any).x).toBe(33);
   });
 
   it('never asks while live collaboration is on', async () => {

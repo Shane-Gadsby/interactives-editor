@@ -51,6 +51,28 @@ describe('projects', () => {
     expect((await db.listProjects()).some((x) => x.id === p.id)).toBe(false);
   });
 
+  it('names each script that does not compile when a project is saved, and saves it anyway', async () => {
+    const p = fresh();
+    await db.createProjectRecord(p);
+    const doc: any = (await db.loadProjectRecord(p.id))!;
+    doc.scripts = [
+      { id: 's1', name: 'Fine', code: 'const a = await Promise.resolve(1)\nix.log(a)', runOnStart: true },
+      { id: 's2', name: 'Broken', code: 'ix.log(1)\nlet x = ;', runOnStart: false },
+    ];
+    doc.artboards[0].interactions = { nodes: [{ id: 'n1', kind: 'action.code', params: { code: 'if (x {' } }] };
+    const r = await h.call('PUT', `/api/projects/${p.id}`, { json: { project: doc, rev: 1 } });
+    expect(r.status).toBe(200);
+    expect(r.json.rev).toBe(2);
+    expect(r.json.scriptErrors).toEqual([
+      { where: 'Script "Broken"', error: expect.stringMatching(/Unexpected token/), line: 2 },
+      { where: 'Run code node n1', error: expect.any(String), line: 1 },
+    ]);
+    doc.scripts.pop();
+    doc.artboards[0].interactions.nodes = [];
+    const ok = await h.call('PUT', `/api/projects/${p.id}`, { json: { project: doc, rev: 2 } });
+    expect(ok.json).toEqual({ ok: true, rev: 3 });
+  });
+
   it('raises a ConflictError with the server\'s rev when someone else saved first, and force wins', async () => {
     const p = fresh();
     await db.createProjectRecord(p);
