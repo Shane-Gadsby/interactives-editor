@@ -3013,7 +3013,7 @@ Two buckets, four cards. Dropping a card in the right bucket keeps it there; dro
 - Scripts have \`ix.drag.zoneOf('Dog')\`, \`ix.drag.contents('Mammals')\`, \`ix.drag.state()\` (every layer and its zone), \`ix.drag.put(layer, zone)\`, \`ix.drag.reset(layer?)\` (both glide there for the layer's glide time; add \`{ instant: true }\` to put it there now, so the script can move it again straight away) and \`ix.drag.enable(layer, on, { tag, what }?)\` (no layer: all of them, or everything inside a container). The page that holds the player can read \`player.dragState()\`.
 
 ## Buttons on a card
-A draggable layer can hold its own controls: an info button on a course card, a link, a layer with a click flow or an overlay link. A press on one of those is the control's, so the button opens its dialog and the card stays where it is. Press anywhere else on the card to drag it or pick it up. While a card is picked up, its own buttons still work, and it stays picked up.
+A draggable layer can hold its own controls: an info button on a course card, a link, a layer with a click flow or an overlay link. A press on one of those is the control's, so the button opens its dialog and the card stays where it is. Press anywhere else on the card to drag it or pick it up. While a card is picked up, its own buttons still work, and it stays picked up. A picked-up card rides over the rest of the page, but a dialog, tooltip or toast it opens is always drawn on top of it.
 
 To a screen reader a card holding buttons is a **group** rather than a button, so the buttons inside are read and pressed as they are. Space on the card itself still picks it up.
 
