@@ -237,7 +237,7 @@ describe('the learner page', () => {
     const r = await h.call('GET', `/play/${token}`);
     expect(r.headers.get('x-frame-options')).toBeNull();
     expect(r.headers.get('content-security-policy')).not.toContain('frame-ancestors');
-    expect(r.text).toContain('allow="fullscreen; autoplay"');
+    expect(r.text).toContain('allow="fullscreen; autoplay; clipboard-write"');
     //A bare query string, like the one the embed code adds, changes nothing
     const q = await h.call('GET', `/play/${token}?title=Hello&cdtID=1790000000000`);
     expect(q.status).toBe(200);

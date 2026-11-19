@@ -7,7 +7,7 @@ describe('embed code', () => {
   it('is the Toolbox shape: title, src with title and cdtID, data-cdt-id, allow, allowfullscreen, responsive style', () => {
     const code = embedCode({ url, title: 'Fractions lab', cdtID: 1790000000000, aspect: '1280/720' });
     expect(code).toBe(
-      `<iframe title="Interactive: Fractions lab" src="${url}?title=Fractions%20lab&cdtID=1790000000000" data-cdt-id="1790000000000" allow="autoplay; fullscreen" allowfullscreen style="border:0; width:100%; height:auto; aspect-ratio:1280/720"></iframe>`,
+      `<iframe title="Interactive: Fractions lab" src="${url}?title=Fractions%20lab&cdtID=1790000000000" data-cdt-id="1790000000000" allow="autoplay; fullscreen; clipboard-write" allowfullscreen style="border:0; width:100%; height:auto; aspect-ratio:1280/720"></iframe>`,
     );
   });
 
@@ -18,11 +18,11 @@ describe('embed code', () => {
   });
 
   it('adds the microphone and camera to allow only when the shared project declared them', () => {
-    expect(embedAllow(null)).toBe('autoplay; fullscreen');
-    expect(embedAllow({ photos: true })).toBe('autoplay; fullscreen');
-    expect(embedAllow({ microphone: true })).toBe('autoplay; fullscreen; microphone');
-    expect(embedAllow({ microphone: true, camera: true, photos: true })).toBe('autoplay; fullscreen; microphone; camera');
-    expect(embedCode({ url, title: 'Say it', cdtID: 2, sensors: { camera: true } })).toContain('allow="autoplay; fullscreen; camera"');
+    expect(embedAllow(null)).toBe('autoplay; fullscreen; clipboard-write');
+    expect(embedAllow({ photos: true })).toBe('autoplay; fullscreen; clipboard-write');
+    expect(embedAllow({ microphone: true })).toBe('autoplay; fullscreen; clipboard-write; microphone');
+    expect(embedAllow({ microphone: true, camera: true, photos: true })).toBe('autoplay; fullscreen; clipboard-write; microphone; camera');
+    expect(embedCode({ url, title: 'Say it', cdtID: 2, sensors: { camera: true } })).toContain('allow="autoplay; fullscreen; clipboard-write; camera"');
   });
 
   it('cannot be broken out of by the project name', () => {

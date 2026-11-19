@@ -177,6 +177,19 @@ export function buildCommands(): Command[] {
 
   //---- Add
   for (const l of NEW_LAYERS) add({ id: `add:${l.type}`, title: `Add ${l.label.toLowerCase()}`, group: 'Add', words: `new insert create ${l.words}`, disabled: noPage, run: () => void addLayerHere(l.type) });
+  add({
+    id: 'add:qr',
+    title: 'Add QR code',
+    group: 'Add',
+    words: 'new insert create qr code barcode scan phone link poster',
+    disabled: noPage,
+    run: () => {
+      const ab2 = s.artboard();
+      if (!ab2) return;
+      const node = createNode('image', { name: 'QR code', width: 160, height: 160, x: Math.round((ab2.width - 160) / 2), y: Math.round((ab2.height - 160) / 2), fit: 'contain', qr: { text: 'https://', level: 'M' } } as never);
+      s.addNodes([node], { artboardId: ab2.id });
+    },
+  });
   add({ id: 'add:page', title: 'Add a page', group: 'Pages', words: 'new artboard screen slide', run: () => void s.addArtboard() });
 
   //---- Questions

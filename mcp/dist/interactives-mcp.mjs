@@ -1469,6 +1469,119 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.copy",
+    label: "Copy to clipboard",
+    category: "action",
+    summary: "Puts text on the clipboard, for a Copy button beside a code, a link or a result.",
+    details: "Put it on a click: browsers only let a page copy when the person has just pressed something. Continues from Copied, or from Not copied when the page around the project refuses (an old embed without clipboard access), so you can show the text to copy by hand instead.",
+    group: "Code and messages",
+    outputs: [
+      { id: "out", label: "Copied" },
+      { id: "failed", label: "Not copied" }
+    ],
+    hasInput: true,
+    params: [{ key: "text", label: "Text", type: "expr", default: "", placeholder: "code", help: 'What to copy, e.g. a variable, or "Your code is " + code' }]
+  },
+  {
+    kind: "action.openFile",
+    label: "Open a file",
+    category: "action",
+    summary: "Asks the person for a CSV, JSON or text file from their device and puts it in a variable.",
+    details: "Put it on a click: the browser only opens its file chooser for one. A CSV or TSV becomes a list with a row per line, keyed by the first row; JSON becomes its value; anything else stays text. Up to 2 MB. Nothing is sent anywhere: the file is read in the page. Continues from Opened, or from Not opened when they cancel or the file is too big.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Opened" },
+      { id: "none", label: "Not opened" }
+    ],
+    hasInput: true,
+    params: [
+      {
+        key: "kind",
+        label: "Accepts",
+        type: "select",
+        options: [
+          { value: "any", label: "CSV, JSON or text" },
+          { value: "csv", label: "CSV" },
+          { value: "json", label: "JSON" },
+          { value: "text", label: "Text" }
+        ],
+        default: "any"
+      },
+      { key: "variable", label: "Put it in", type: "variable", help: "A list variable for a CSV, any variable for the rest" },
+      { key: "nameVariable", label: "File name into (optional)", type: "variable", help: "A text variable that gets the file's name" }
+    ]
+  },
+  {
+    kind: "action.fullscreen",
+    label: "Full screen",
+    category: "action",
+    summary: "Fills the whole screen with the project, or comes back out.",
+    details: "Put it on a click: browsers only go full screen for one. The viewer can always leave with Escape. `fullscreen` in a formula is true while it is, for a button that says Enter or Leave. Continues from Not allowed when the page around the project does not let it go full screen.",
+    group: "Navigation",
+    outputs: [
+      { id: "out", label: "Done" },
+      { id: "failed", label: "Not allowed" }
+    ],
+    hasInput: true,
+    params: [
+      {
+        key: "op",
+        label: "Do",
+        type: "select",
+        options: [
+          { value: "toggle", label: "Switch between the two" },
+          { value: "enter", label: "Go full screen" },
+          { value: "exit", label: "Leave full screen" }
+        ],
+        default: "toggle"
+      }
+    ]
+  },
+  {
+    kind: "action.print",
+    label: "Print",
+    category: "action",
+    summary: "Opens the browser's print dialog for the page, where the person can also save it as a PDF.",
+    details: "It prints what is on the page as it is now. For a file of one layer, use Download a file instead. Continues from Not allowed when the page around the project does not allow printing.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Opened" },
+      { id: "failed", label: "Not allowed" }
+    ],
+    hasInput: true,
+    params: []
+  },
+  {
+    kind: "action.sendData",
+    label: "Send to a web address",
+    category: "action",
+    summary: "Sends a value to a web address as JSON, and keeps the answer.",
+    details: "For a form that goes to your own service, a webhook or an API. It keeps to the hosts the project may load data from (Project settings, Allowed data hosts), never sends the viewer's cookies or logins, and gives up after 15 seconds. Continues from Sent when the address answers with success, and from Failed otherwise; the answer goes in the variable either way, and `event.status` holds the HTTP status.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Sent" },
+      { id: "failed", label: "Failed" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "url", label: "Address", type: "expr", default: '"https://"', help: 'An https address, e.g. "https://example.com/api/answers"' },
+      {
+        key: "method",
+        label: "Method",
+        type: "select",
+        options: [
+          { value: "POST", label: "POST (add)" },
+          { value: "PUT", label: "PUT (replace)" },
+          { value: "PATCH", label: "PATCH (change)" },
+          { value: "DELETE", label: "DELETE" }
+        ],
+        default: "POST"
+      },
+      { key: "body", label: "Value", type: "expr", default: "{ answer: answer }", help: "Sent as JSON: a variable, a list, or { name: value, ... }" },
+      { key: "variable", label: "Answer into (optional)", type: "variable", help: "What the address sends back" }
+    ]
+  },
+  {
     kind: "action.sensorsOff",
     label: "Offer: do not use my microphone or camera",
     category: "action",
@@ -1610,6 +1723,32 @@ const SPECS = [
     params: [
       { key: "toast", label: "Toast", type: "artboard", help: "The toast page to show" },
       { key: "text", label: "Message", type: "expr", default: "", placeholder: '"Plan saved"', help: 'The words it says this time, as an expression, e.g. "Saved " + name. Empty leaves the words the toast already has' }
+    ]
+  },
+  {
+    kind: "action.celebrate",
+    label: "Celebrate",
+    category: "action",
+    summary: "Throws a short burst of confetti or stars over the page, with words if you like.",
+    details: "It never takes a click or the focus, so the next button works straight away, and it clears itself in under two seconds. A viewer whose device asks for less motion sees a still badge with the same words instead. The words are read out politely to screen readers. Pick a sound to play with it.",
+    group: "Layers and looks",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      {
+        key: "look",
+        label: "Look",
+        type: "select",
+        options: [
+          { value: "confetti", label: "Confetti" },
+          { value: "stars", label: "Stars" }
+        ],
+        default: "confetti"
+      },
+      { key: "text", label: "Words", type: "expr", default: "", placeholder: '"Well done!"', help: "Shown on a badge in the middle and read out. Empty: no badge" },
+      { key: "asset", label: "Sound", type: "asset", help: "Optional. Played with it" },
+      { key: "colours", label: "Colours", type: "select", options: [{ value: "party", label: "Party colours" }, { value: "theme", label: "The project's accent colours" }], default: "party" },
+      { key: "wait", label: "Wait for it to finish", type: "boolean", default: false, help: "Off, the next node runs straight away" }
     ]
   },
   {
@@ -4175,6 +4314,18 @@ function sanitizeNode(raw, seen) {
     n.labelAt = isNum(n.labelAt) ? Math.min(1, Math.max(0, n.labelAt)) : 0.5;
     if (!isNum(n.fontSize) || n.fontSize < 4) n.fontSize = 13;
     if ("fontWeight" in n && !isNum(n.fontWeight)) delete n.fontWeight;
+  }
+  if (raw.type === "image" && "qr" in n) {
+    const q = n.qr;
+    if (!isObj$1(q) || !isStr(q.text)) delete n.qr;
+    else {
+      n.qr = {
+        text: q.text.slice(0, 4e3),
+        ...["L", "M", "Q", "H"].includes(q.level) ? { level: q.level } : {},
+        ...isStr(q.dark) ? { dark: q.dark } : {},
+        ...isStr(q.light) ? { light: q.light } : {}
+      };
+    }
   }
   if (raw.type === "image" && "shaderFilter" in n) {
     const f2 = n.shaderFilter;
@@ -8744,6 +8895,7 @@ function countLayoutFrames(nodes) {
 }
 const PLAYER_SCOPE_HINTS = {
   reducedMotion: { type: "true/false", hint: "The viewer's device asks for less motion" },
+  fullscreen: { type: "true/false", hint: "The project fills the screen (the Full screen node)" },
   token: { type: "function", hint: "token('space/gap'): a number or text theme token, in the theme being shown" },
   voiceAvailable: { type: "true/false", hint: "A voice on this device can read the project aloud" },
   speaking: { type: "true/false", hint: "A voice is reading right now" },
@@ -24273,6 +24425,14 @@ The crop belongs to the layer, not the file, and the frame (with its corner radi
 - The Lottie export shows the whole picture (it lists that in its notes).
 - Older files and players show the picture uncropped.
 
+### A QR code
+An image layer can be a **QR code** instead of a picture: choose **QR code from text** at the top of its **Image** list, or **Add QR code** from the command palette. Type what it carries under **QR code of**, usually a link. It's written like a text layer, so \`https://example.com/?id={userId}\` puts the viewer's own value in, and \`{item.link}\` gives each copy in a list its own code. The code is drawn as the page plays, so it changes when the values do.
+
+- **Error correction** is how much of the code can be covered or scuffed and still scan. **Medium** suits a screen. Pick **High** or **Highest** for a printed poster, or when a logo sits over the middle.
+- **Squares** and **Background** are its colours. Keep dark squares on a light background: plenty of phone cameras can't read light on dark.
+- Keep it to a link. A long paragraph makes a dense code that phones struggle with, and the inspector says so past about 1200 characters.
+- Give it a text alternative that says where it goes ("QR code for the course survey"). A screen reader can't scan it.
+
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
 
@@ -24806,6 +24966,20 @@ Text that opens a URL. **Fit text to box** works here too. For making any other 
 
 ## Embed
 An iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
+
+### Paste a video or slides link
+Most video and slide sites won't play in a frame at the address you copy from them: a YouTube watch page gives a grey box. Paste it anyway. The embed works out the address that plays, sets the layer's height to the shape of what it shows, and says under the box what it found (**Plays as a YouTube video**). The link you pasted stays in the box, so you can still read it.
+
+| Site | Paste |
+|---|---|
+| YouTube | a watch link, a \`youtu.be\` link, a Short or a playlist. It plays from YouTube's no-cookie address, and a start time (\`t=1m30s\`) is kept |
+| Vimeo | the video's page, an unlisted one's link with its code included |
+| Panopto | the viewer link (\`Viewer.aspx?id=...\`) |
+| Google Slides, Forms, Docs, Sheets | the link from **Share**. The file has to be open to **Anyone with the link** |
+| Microsoft Forms | the link to fill in the form |
+| Microsoft Stream | a \`stream.aspx\` link. A short link (\`/:v:/\`) has nothing in it to work from: use **Share > Embed code** in Stream and paste that |
+
+You can also paste a site's whole **embed code** (\`<iframe ...>\`): the address is taken out of it and the layer takes its shape. Anything else is used as it is.
 
 **The page may use** (a web page embed only) is a list of tick boxes for what the embedded page is allowed: **Autoplay**, **Full screen**, **Clipboard**, **Microphone**, **Camera**, **Screen share**, **Location**, **Motion sensors**, **Picture in picture** and **Protected video**. Only what's ticked is let through; an unticked box is a no, even for a page from the same site. Hover a box for what it really does.
 
@@ -25668,6 +25842,24 @@ In an expression, \`pageNumber\` is the page's place from 1 and \`pageCount\` ho
 **Go to step** is the other kind of Next: it moves through the steps of one artboard.
 
 Its **Transition** is how the page changes, and **Speed** is how long that takes: see [How the page changes](links-cursors#how-the-page-changes) for every look, **Opens from** and the speeds.
+
+## Celebrate
+The **Celebrate** node throws a short burst of **Confetti** or **Stars** over the page, with **Words** on a badge in the middle if you give it some (\`"Well done, " + name\`). Put it after a question is right or the last page is done.
+
+- It never takes a click or the focus, so the next button works straight away, and it's gone in under two seconds.
+- A viewer whose device asks for less motion sees a **still badge** with the same words instead of anything flying about.
+- The words are read out politely to screen readers, so it needs no Announce node beside it.
+- **Sound** plays a sound from Assets with it. **Colours** can be party colours or your project's accent colours, which follow its colourway.
+- **Wait for it to finish** holds the next node until it has gone. Off, the flow carries straight on.
+
+## Copy, open, full screen, print and send
+Five nodes for what people expect any app to do. The first four only work from a click, because browsers only let a page do them when the person has just pressed something, so put them on a button.
+
+- **Copy to clipboard** copies its **Text**, for a Copy button beside a code, a link or a result. It goes on from **Not copied** when the page around the project refuses, which an embed made before 20 November 2026 can: press **Update** in Share for the new embed code, or show the text so it can be copied by hand.
+- **Open a file** asks for a CSV, JSON or text file from the person's device and puts it in a variable: a CSV becomes a list with a row per line, keyed by its first row, so a repeater can show it straight away. Up to 2 MB, and it's read in the page: nothing is uploaded. **Not opened** is when they cancel.
+- **Full screen** goes in, comes out, or switches. \`fullscreen\` in a formula is true while it's in, so a button can say \`{fullscreen ? "Leave full screen" : "Full screen"}\`. Escape always comes out.
+- **Print** opens the browser's print dialog for the page as it is now, where people can also save a PDF.
+- **Send to a web address** sends a value as JSON (**POST**, **PUT**, **PATCH** or **DELETE**) and puts the answer in a variable, with \`event.status\` holding the HTTP status. It keeps to the same **Allowed data hosts** as Load data (Project settings; empty allows any https host), never sends the viewer's logins or cookies, and gives up after 15 seconds. It goes on from **Sent** for a success and **Failed** for anything else.
 
 ## Connecting and adding nodes
 Drag from an output port to the next node's input to connect them. Actions that take time (**Play or stop an animation**, **Animate a layer's setting**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away.

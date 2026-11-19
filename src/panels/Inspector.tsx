@@ -116,7 +116,7 @@ import { ReadAloudSection } from './ReadAloudSection';
 import { VariantsSection } from './VariantsSection';
 import { MasterSection } from './MasterSection';
 import { ComponentPropsSection } from './ComponentPropsSection';
-import { SHADER_PRESETS, SHADER_PRESETS_BY_ID, EMBED_ALLOW, EMBED_ALLOW_DEFAULT, type EmbedAllowKey, type EmbedNode } from 'interactives-player';
+import { SHADER_PRESETS, SHADER_PRESETS_BY_ID, EMBED_ALLOW, EMBED_ALLOW_DEFAULT, playableEmbed, srcFromEmbedCode, type EmbedAllowKey, type EmbedNode } from 'interactives-player';
 import { lookFor } from '../lib/themes';
 import { StatesSection } from './StatesSection';
 import { OverlayPageSection, OverlaySection } from './OverlaySection';
@@ -896,7 +896,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         )}
         <TextField
           label="Allowed data hosts"
-          title="Hosts that data may be loaded from, one per line, such as api.example.com or *.example.com. Leave empty to allow any http(s) host. Data sources, the Load data node and ix.loadData all follow it. Cookies are only sent to the page's own site."
+          title="Hosts that data may be loaded from, one per line, such as api.example.com or *.example.com. Leave empty to allow any http(s) host. Data sources, the Load data and Send to a web address nodes and ix.loadData all follow it. Cookies are only sent to the page's own site."
           value={(project.settings.dataAllowList ?? []).join('\n')}
           multiline
           placeholder={'api.example.com\n*.example.com'}
@@ -1699,11 +1699,37 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
         <Section help="images-media#image-settings" title="Image">
           <SelectField
             label="Image"
-            value={n.assetId ?? ''}
-            onChange={withQuickAdd((v) => set({ assetId: v || null }), { asset: 'image' })}
-            options={[{ value: '', label: images.length ? 'Choose…' : 'No image' }, ...images.map((a) => ({ value: a.id, label: a.name })), addAssetOption('image')]}
+            value={n.qr ? '~qr' : n.assetId ?? ''}
+            onChange={withQuickAdd((v) => (v === '~qr' ? set({ assetId: null, qr: n.qr ?? { text: 'https://', level: 'M' }, fit: 'contain' }) : set({ assetId: v || null, qr: null })), { asset: 'image' })}
+            options={[{ value: '', label: images.length ? 'Choose…' : 'No image' }, ...images.map((a) => ({ value: a.id, label: a.name })), { value: '~qr', label: 'QR code from text' }, addAssetOption('image')]}
           />
           {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
+          {n.qr && (
+            <>
+              <TextField
+                label="QR code of"
+                title="The link or text the code carries. Put a value in braces, like https://example.com/?id={userId}, and in a list's copy {item.link}"
+                value={n.qr.text}
+                commitOnBlur
+                onChange={(v) => set({ qr: { ...n.qr!, text: v } })}
+              />
+              <SelectField
+                label="Error correction"
+                title="How much of the code can be covered or scuffed and still scan. Higher makes a busier code"
+                value={n.qr.level ?? 'M'}
+                options={[
+                  { value: 'L', label: 'Low (7%)' },
+                  { value: 'M', label: 'Medium (15%)' },
+                  { value: 'Q', label: 'High (25%)' },
+                  { value: 'H', label: 'Highest (30%)' },
+                ]}
+                onChange={(v) => set({ qr: { ...n.qr!, level: v as 'L' | 'M' | 'Q' | 'H' } })}
+              />
+              <ColorField label="Squares" tokens value={n.qr.dark ?? '#000000'} onChange={(c) => set({ qr: { ...n.qr!, dark: c } }, `qr-dark-${n.id}`)} onCommit={() => store().commit()} />
+              <ColorField label="Background" tokens value={n.qr.light ?? '#ffffff'} onChange={(c) => set({ qr: { ...n.qr!, light: c } }, `qr-light-${n.id}`)} onCommit={() => store().commit()} />
+              {n.qr.text.length > 1200 && <p className="hint">That much text makes a code too dense for most phone cameras. Keep a QR code to a link.</p>}
+            </>
+          )}
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
           {nodes.length === 1 && canCrop(n) && <CropFields node={n} />}
           {radius}
@@ -1828,7 +1854,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
         </Section>
       );
-    case 'embed':
+    case 'embed': {
+      const playsAs = n.mode === 'iframe' ? playableEmbed(String(shown('src') ?? n.src)).host : '';
       return (
         <Section help="web-elements" title="Embed">
           <SelectField
@@ -1841,10 +1868,25 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onChange={(v) => set({ mode: v })}
           />
           {n.mode === 'iframe' ? (
+            <>
             <div className="keyed">
-              <TextField label="URL" value={String(shown('src') ?? n.src)} commitOnBlur onChange={(v) => set({ src: v })} />
+              <TextField
+                label="URL"
+                value={String(shown('src') ?? n.src)}
+                commitOnBlur
+                onChange={(v) => {
+                  // A share link from a known site, or a site's embed code: keep the link (people can read it) and take the shape of what it plays
+                  const code = srcFromEmbedCode(v);
+                  const src = code ? code.src : v.trim();
+                  const play = playableEmbed(v);
+                  const aspect = play.host || code ? play.aspect : undefined;
+                  set(aspect && n.width > 0 ? { src, height: Math.round(n.width / aspect) } : { src });
+                }}
+              />
               <KeyButton node={n} ids={ids} prop="src" />
             </div>
+            {playsAs && <p className="hint">Plays as a {playsAs}{/youtube/i.test(playsAs) ? ", from YouTube's no-cookie address" : ''}.</p>}
+            </>
           ) : (
             nodes.length === 1 && (
               <PropRow k="HTML" words={['embed code', 'iframe', 'markup', 'source', 'code']}>
@@ -1860,6 +1902,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           <EmbedBorder nodes={nodes as EmbedNode[]} project={project} />
         </Section>
       );
+    }
     case 'video':
       return (
         <Section help="images-media#video" title="Video">

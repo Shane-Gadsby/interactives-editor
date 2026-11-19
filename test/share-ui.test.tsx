@@ -187,7 +187,7 @@ describe('Share: where will people use it', () => {
 
   it('a project that uses the microphone gets the permission added, and is told no-results will not work', () => {
     show(share({ sensors: { microphone: true } }));
-    expect(host.querySelector<HTMLTextAreaElement>('textarea[aria-label="Embed code"]')!.value).toContain('allow="autoplay; fullscreen; microphone"');
+    expect(host.querySelector<HTMLTextAreaElement>('textarea[aria-label="Embed code"]')!.value).toContain('allow="autoplay; fullscreen; clipboard-write; microphone"');
     expect(text(host.querySelector('.share-thing'))).toMatch(/microphone/);
     choose(/no results needed/);
     expect(host.querySelector('textarea[aria-label="Embed code"]')).toBeNull();

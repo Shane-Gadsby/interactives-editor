@@ -11,6 +11,10 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Copy, open a file, full screen, print and send': [['interactions', 'Copy to clipboard'], ['interactions', 'Open a file'], ['interactions', 'Send to a web address'], ['interactions', 'fullscreen ?']],
+  'Paste a video or slides link and it plays': [['web-elements', 'Paste a video or slides link'], ['web-elements', 'embed code']],
+  Celebrate: [['interactions', 'still badge']],
+  'QR codes': [['images-media', 'QR code from text'], ['images-media', 'Error correction']],
   'What a layer hands its overlay can be a formula, and an overlay hears itself open': [['overlays', 'From a formula'], ['overlays', 'On overlay open']],
   'Fonts come from the server, and only a package carries its own': [['export', 'About the project package'], ['export', 'Google fonts load from this server']],
   'Text no longer loses the tops of its letters': [['troubleshooting', 'cut off until I selected the text']],

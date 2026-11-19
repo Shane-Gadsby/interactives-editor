@@ -194,7 +194,7 @@ export function PlayModal({ playing, onClose, onUse }: { playing: Playing; onClo
   return (
     <Modal title={isExample ? `Example: ${name}` : `Try it: ${name}`} help={isExample ? 'templates#examples' : STARTER_FINDER_HELP.to} onClose={onClose} className="preview-modal example-play">
       <div className="preview-body">
-        {html ? <iframe ref={progressHost} title={name} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-downloads" allow="autoplay" srcDoc={html} /> : error ? <div className="center-msg">Could not play it: {error}</div> : <div className="center-msg muted">Building…</div>}
+        {html ? <iframe ref={progressHost} title={name} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-downloads allow-modals" allow="autoplay; fullscreen; clipboard-write" srcDoc={html} /> : error ? <div className="center-msg">Could not play it: {error}</div> : <div className="center-msg muted">Building…</div>}
       </div>
       <div className="row example-bar">
         <span className="muted small">{isExample ? description : `${description} Nothing is saved until you use it.`}</span>

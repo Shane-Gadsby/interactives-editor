@@ -1410,6 +1410,14 @@ The crop belongs to the layer, not the file, and the frame (with its corner radi
 - The Lottie export shows the whole picture (it lists that in its notes).
 - Older files and players show the picture uncropped.
 
+### A QR code
+An image layer can be a **QR code** instead of a picture: choose **QR code from text** at the top of its **Image** list, or **Add QR code** from the command palette. Type what it carries under **QR code of**, usually a link. It's written like a text layer, so \`https://example.com/?id={userId}\` puts the viewer's own value in, and \`{item.link}\` gives each copy in a list its own code. The code is drawn as the page plays, so it changes when the values do.
+
+- **Error correction** is how much of the code can be covered or scuffed and still scan. **Medium** suits a screen. Pick **High** or **Highest** for a printed poster, or when a logo sits over the middle.
+- **Squares** and **Background** are its colours. Keep dark squares on a light background: plenty of phone cameras can't read light on dark.
+- Keep it to a link. A long paragraph makes a dense code that phones struggle with, and the inspector says so past about 1200 characters.
+- Give it a text alternative that says where it goes ("QR code for the course survey"). A screen reader can't scan it.
+
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
 
@@ -1945,6 +1953,20 @@ Text that opens a URL. **Fit text to box** works here too. For making any other 
 
 ## Embed
 An iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
+
+### Paste a video or slides link
+Most video and slide sites won't play in a frame at the address you copy from them: a YouTube watch page gives a grey box. Paste it anyway. The embed works out the address that plays, sets the layer's height to the shape of what it shows, and says under the box what it found (**Plays as a YouTube video**). The link you pasted stays in the box, so you can still read it.
+
+| Site | Paste |
+|---|---|
+| YouTube | a watch link, a \`youtu.be\` link, a Short or a playlist. It plays from YouTube's no-cookie address, and a start time (\`t=1m30s\`) is kept |
+| Vimeo | the video's page, an unlisted one's link with its code included |
+| Panopto | the viewer link (\`Viewer.aspx?id=...\`) |
+| Google Slides, Forms, Docs, Sheets | the link from **Share**. The file has to be open to **Anyone with the link** |
+| Microsoft Forms | the link to fill in the form |
+| Microsoft Stream | a \`stream.aspx\` link. A short link (\`/:v:/\`) has nothing in it to work from: use **Share > Embed code** in Stream and paste that |
+
+You can also paste a site's whole **embed code** (\`<iframe ...>\`): the address is taken out of it and the layer takes its shape. Anything else is used as it is.
 
 **The page may use** (a web page embed only) is a list of tick boxes for what the embedded page is allowed: **Autoplay**, **Full screen**, **Clipboard**, **Microphone**, **Camera**, **Screen share**, **Location**, **Motion sensors**, **Picture in picture** and **Protected video**. Only what's ticked is let through; an unticked box is a no, even for a page from the same site. Hover a box for what it really does.
 
@@ -2810,6 +2832,24 @@ In an expression, \`pageNumber\` is the page's place from 1 and \`pageCount\` ho
 **Go to step** is the other kind of Next: it moves through the steps of one artboard.
 
 Its **Transition** is how the page changes, and **Speed** is how long that takes: see [How the page changes](links-cursors#how-the-page-changes) for every look, **Opens from** and the speeds.
+
+## Celebrate
+The **Celebrate** node throws a short burst of **Confetti** or **Stars** over the page, with **Words** on a badge in the middle if you give it some (\`"Well done, " + name\`). Put it after a question is right or the last page is done.
+
+- It never takes a click or the focus, so the next button works straight away, and it's gone in under two seconds.
+- A viewer whose device asks for less motion sees a **still badge** with the same words instead of anything flying about.
+- The words are read out politely to screen readers, so it needs no Announce node beside it.
+- **Sound** plays a sound from Assets with it. **Colours** can be party colours or your project's accent colours, which follow its colourway.
+- **Wait for it to finish** holds the next node until it has gone. Off, the flow carries straight on.
+
+## Copy, open, full screen, print and send
+Five nodes for what people expect any app to do. The first four only work from a click, because browsers only let a page do them when the person has just pressed something, so put them on a button.
+
+- **Copy to clipboard** copies its **Text**, for a Copy button beside a code, a link or a result. It goes on from **Not copied** when the page around the project refuses, which an embed made before 20 November 2026 can: press **Update** in Share for the new embed code, or show the text so it can be copied by hand.
+- **Open a file** asks for a CSV, JSON or text file from the person's device and puts it in a variable: a CSV becomes a list with a row per line, keyed by its first row, so a repeater can show it straight away. Up to 2 MB, and it's read in the page: nothing is uploaded. **Not opened** is when they cancel.
+- **Full screen** goes in, comes out, or switches. \`fullscreen\` in a formula is true while it's in, so a button can say \`{fullscreen ? "Leave full screen" : "Full screen"}\`. Escape always comes out.
+- **Print** opens the browser's print dialog for the page as it is now, where people can also save a PDF.
+- **Send to a web address** sends a value as JSON (**POST**, **PUT**, **PATCH** or **DELETE**) and puts the answer in a variable, with \`event.status\` holding the HTTP status. It keeps to the same **Allowed data hosts** as Load data (Project settings; empty allows any https host), never sends the viewer's logins or cookies, and gives up after 15 seconds. It goes on from **Sent** for a success and **Failed** for anything else.
 
 ## Connecting and adding nodes
 Drag from an output port to the next node's input to connect them. Actions that take time (**Play or stop an animation**, **Animate a layer's setting**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away.

@@ -34,11 +34,11 @@ export const embedTitle = (name: string, label = 'Interactive') => {
 };
 
 /**
- * The iframe's allow list. Fullscreen and autoplay as the learner page's own frame has them, plus the microphone and camera only when
+ * The iframe's allow list. Fullscreen, autoplay and writing to the clipboard (a Copy button) as the learner page's own frame has them, plus the microphone and camera only when
  * the shared project declared them: the learner page owns the devices, and a cross-origin frame is only let at them by its embedder.
  * Photos are a file picker and need nothing.
  */
-export const embedAllow = (sensors?: EmbedSensors | null) => ['autoplay', 'fullscreen', ...(sensors?.microphone ? ['microphone'] : []), ...(sensors?.camera ? ['camera'] : [])].join('; ');
+export const embedAllow = (sensors?: EmbedSensors | null) => ['autoplay', 'fullscreen', 'clipboard-write', ...(sensors?.microphone ? ['microphone'] : []), ...(sensors?.camera ? ['camera'] : [])].join('; ');
 
 /** The start artboard's shape, `width/height`, which is what the player sizes itself to. 16/9 when there is nothing sensible to go on. */
 export const embedAspect = (project: Pick<Project, 'artboards' | 'settings'>) => {
