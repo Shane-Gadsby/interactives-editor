@@ -5223,6 +5223,16 @@ Use it by name anywhere expressions go, the same as any [data source](data-sourc
 
 A variable or data source that you name \`context\` hides the built-in one, and the Data tab warns about it.
 
+## Who is looking
+An app can show more to the people who look after it, such as a results view, a moderation list or editing tools:
+
+- \`context.isOwner\`: they own this project. \`context.isCollaborator\`: they help make it.
+- \`context.canEdit\`: they may change what it shows: the owner, a collaborator, a power user, or staff with StudyDesk's editing mode on.
+- \`context.isEditing\`: StudyDesk's editing mode is on for the page it's on, so editing tools can wait until someone is editing.
+- \`context.groups\`: which of the suite's groups (as si-admin keeps them) they are in, out of the ones you list in **Groups it can check** in Project settings. \`context.groups.includes("tutors")\` is true for a tutor. The app never learns about any other group, and **Update** the share after changing the list.
+
+These are worked out on the server from the person's own StudyDesk session, except \`isEditing\`, which comes from the page. They show what to show; they don't keep anything safe on their own. An admin viewing a course as a student counts as nobody special. Outside StudyDesk every one of them is false.
+
 ## Where the values come from
 - **The Link for StudyDesk** fills it in from the signed in StudyDesk session. Use that link, not the plain share link, when you want it.
 - **Preview and the canvas** use made-up **sample values**, which you edit in the Data tab under **context** (first name, course label and so on). The code, term and year follow the sample label. Clear a field to see the project with it blank. Sample values are for designing: they are never in an exported file or a share link.

@@ -82,3 +82,16 @@ describe('responses on the server', () => {
     expect(csvOf(tableOf([{ set: 's', at: new Date(0), person: 'x', values: { a: '=1+1' } }]))).toContain("'=1+1");
   });
 });
+
+describe('who is looking', () => {
+  it('says whether they own or help make the project, and only the groups it asks about', async () => {
+    const t = await share('prwho00001', '<html>{"settings":{"askGroups":["power-user","tutors"]}}</html>');
+    const who = (user: User | null) => h.call('GET', `/learn/${t}/who`, { user });
+    expect((await who(ann)).json).toMatchObject({ isOwner: true, isCollaborator: false });
+    expect((await who(sam)).json).toEqual({ isOwner: false, isCollaborator: false, isPower: false, groups: [] });
+    expect((await who({ ...sam, access: ['published', 'tutors', 'secret-club'] } as User)).json.groups).toEqual(['tutors']);
+    //an admin showing the course as a student is nobody special
+    expect((await who({ ...ann, access: ['published', 'tutors', 'presentation-mode'] } as User)).json).toMatchObject({ isOwner: false, groups: [] });
+    expect((await who(null)).json.isOwner).toBe(false);
+  });
+});

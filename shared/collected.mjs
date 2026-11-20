@@ -37,6 +37,19 @@ export const cleanSet = (v) => (typeof v === 'string' ? v.trim().replace(/[^\w .
 //The same code for the same person in the same project every time, and nothing that leads back to them
 export const personCode = (projectID, username) => crypto.createHash('sha256').update(`${projectID}|${username}`).digest('hex').slice(0, 10)
 
+//The suite groups the shared page says it asks about (Project settings > Groups it can check), so the who route only ever says
+//whether someone is in one of those, never what else they are in
+export const declaredGroups = (html) => {
+	let m = /"askGroups"\s*:\s*(\[[^\]]*\])/.exec(html)
+
+	try {
+		return m ? JSON.parse(m[1]).filter((g) => typeof g === 'string' && /^[\w-]{1,40}$/.test(g)).slice(0, 10) : []
+	}
+	catch {
+		return []
+	}
+}
+
 //Whether the shared page says responses carry names (Project settings > Responses > With names)
 export const declaredNamed = (html) => /"responses"\s*:\s*\{[^}]*"named"\s*:\s*true/.test(html)
 

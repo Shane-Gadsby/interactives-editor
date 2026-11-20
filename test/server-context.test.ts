@@ -114,8 +114,10 @@ describe('the learner page answers a context request', () => {
 
   it('answers with the course and the learner, in the progress reply shape', async () => {
     const p = await run();
+    //it waits for the server to say who this is to the project
+    await new Promise((r) => setImmediate(r));
     p.ask('r7');
-    expect(p.replies()).toEqual([{ target: 'interactives', type: 'progress', rid: 'r7', ok: true, available: true, data: contextFrom(SESSION_USER, SESSION_ACTIVITY) }]);
+    expect(p.replies()).toEqual([{ target: 'interactives', type: 'progress', rid: 'r7', ok: true, available: true, data: { ...contextFrom(SESSION_USER, SESSION_ACTIVITY), isEditing: false, isOwner: false, isCollaborator: false, groups: [], canEdit: false } }]);
   });
 
   it('keeps a request waiting until the session has come, then answers it', async () => {
@@ -123,6 +125,7 @@ describe('the learner page answers a context request', () => {
     p.ask('early');
     expect(p.replies()).toEqual([]);
     p.deliver();
+    await new Promise((r) => setImmediate(r));
     expect(p.replies()).toHaveLength(1);
     expect(p.replies()[0]).toMatchObject({ rid: 'early', available: true, data: { firstName: 'Pat', courseLabel: 'MAT1000_26S1_ONC' } });
     p.ask('later');

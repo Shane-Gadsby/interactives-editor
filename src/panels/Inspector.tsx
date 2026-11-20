@@ -872,6 +872,17 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           value={project.settings.hideScrollbarY !== false}
           onChange={(v) => setProject((p) => (p.settings.hideScrollbarY = v))}
         />
+        <TextField
+          label="Groups it can check"
+          title="Suite groups (as si-admin keeps them, such as power-user) this project may ask about. context.groups says which of these the viewer is in, never any other group they belong to. Separate them with commas, and Update the share after changing them"
+          value={(project.settings.askGroups ?? []).join(', ')}
+          placeholder="e.g. power-user"
+          commitOnBlur
+          onChange={(v) => setProject((p) => {
+            const list = [...new Set(v.split(',').map((x) => x.trim()).filter((x) => /^[\w-]{1,40}$/.test(x)))].slice(0, 10);
+            p.settings.askGroups = list.length ? list : undefined;
+          })}
+        />
         <CheckField
           label="Responses with names"
           title="Send a response keeps each person's name with what they sent. Off (the default), each person's responses are kept under a code that is the same for them every time and says nothing about who they are, which is what a survey or a card sort usually wants. Share again (Update) after changing it."

@@ -2175,7 +2175,8 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 		roomsDeclared = roomsLib.declaredRooms(html),
 		waitSession = declaredWait(html),
 		named = collected.declaredNamed(html),
-		share = {token, ...(named ? {responsesNamed: true} : {}), created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(waitSession === null ? {} : {waitSession}), ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {}), ...(Object.keys(roomsDeclared).length ? {rooms: roomsDeclared} : {})}
+		groupsAsked = collected.declaredGroups(html),
+		share = {token, ...(named ? {responsesNamed: true} : {}), ...(groupsAsked.length ? {groups: groupsAsked} : {}), created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(waitSession === null ? {} : {waitSession}), ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {}), ...(Object.keys(roomsDeclared).length ? {rooms: roomsDeclared} : {})}
 
 	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
 	//An update keeps the page it replaces (one, not a history), so a bad publish can be undone in a click
@@ -3816,6 +3817,31 @@ router.post('/learn/:token/report', express.json({limit: '16kb'}), async (req, r
 	res.json({available: true, ok: true})
 })
 
+//Who is looking, for the project's context: whether this person owns it, helps make it or may change everything (a power user),
+//and which of the groups the project said it asks about they are in. Never the full list of groups, never anyone else's. An admin
+//showing the course as a student (presentation mode) is nobody special here
+router.get('/learn/:token/who', async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let me = whoIs(req),
+		access = Array.isArray(req.sessionData?.access) ? req.sessionData.access.map(String) : [],
+		presenting = access.includes('presentation-mode')
+
+	if (!me?.username || presenting || req.ltiLearner) {
+		return res.json({isOwner: false, isCollaborator: false, isPower: false, groups: []})
+	}
+
+	let isOwner = project.owner?.username === me.username,
+		isCollaborator = Array.isArray(project.collaborators) && project.collaborators.some((c) => c.username === me.username),
+		asked = Array.isArray(project.share?.groups) ? project.share.groups : []
+
+	res.json({isOwner, isCollaborator, isPower: isPower(req), groups: asked.filter((g) => access.includes(g))})
+})
+
 //Send a response: the values an app collects (a survey's answers, where a card was sorted), one row each, filed under the
 //person (their name when the shared page says so, otherwise a code that is the same for them every time and says nothing
 //about who they are), the time and the setup. Anyone the learner page knows can send; nobody can read them back here
@@ -5328,7 +5354,8 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	//One request at a time, so a save and a report that leave together can't both try to make the learner's first record
 	var chain = Promise.resolve()
 	var diagQueue = [], diagTaken = 0, diagSettled = false, diagTimer = null, lastHeight = 0
-	var call = function (method, path, body) {
+	//quiet: a lookup the page can do without (who is looking), so its failing isn't reported as the page's own trouble
+	var call = function (method, path, body, quiet) {
 		var run = function () {
 			//worked out as it's sent, so a session that turned up late still goes with it
 			var headers = {'Content-Type': 'application/json'}
@@ -5336,7 +5363,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			else if (ltiSession) headers['X-LTI-Session'] = ltiSession
 			return fetch(base + '/learn/' + token + '/' + path, {method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body), keepalive: body !== undefined}).then(function (r) {
 				//Saving and reporting results is this page's own job, so when it fails that is worth knowing (the route and status, nothing else)
-				if (!r.ok && r.status >= 500) takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), status: r.status, fingerprint: 'learn-' + method.toLowerCase() + '-' + r.status})
+				if (!r.ok && r.status >= 500 && !quiet) takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), status: r.status, fingerprint: 'learn-' + method.toLowerCase() + '-' + r.status})
 				if (r.ok) return r.json()
 				//No session or the link turned off is nowhere to keep anything. The server turning it down (too much, the wrong shape) is
 				//refused, and anything else is the server failing, which a project has to be able to tell apart from no session, or it takes
@@ -5344,7 +5371,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 				if (r.status === 401 || r.status === 403 || r.status === 404) return {available: false}
 				return r.status === 400 || r.status === 413 ? {available: true, refused: true} : {available: true, failed: true}
 			}, function () {
-				takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), fingerprint: 'learn-' + method.toLowerCase() + '-network'})
+				if (!quiet) takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), fingerprint: 'learn-' + method.toLowerCase() + '-network'})
 				throw new Error('network')
 			})
 		}
@@ -5525,7 +5552,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	var contextFrom = ${records.contextFrom.toString()}
 	//The project's built-in context (course, first name, student or staff) is answered from the session once fetchActivity has
 	//one. Never the username, email or id, and it is not sent to analytics. A project that asks before then waits in the queue
-	var contextReady = false, contextData = null, contextAsks = []
+	var contextReady = false, whoReady = false, contextData = null, contextAsks = []
 	var answerContext = function (m) {
 		answer(m, {ok: true, available: !!contextData, data: contextData})
 	}
@@ -5613,7 +5640,35 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			settleDiags()
 			contextData = err || !data ? null : contextFrom(data.user, data.activity)
 			contextReady = true
-			while (contextAsks.length) answerContext(contextAsks.shift())
+			//a context request is answered once the server has said who this is to the project, too
+			var settleContext = function () {
+				whoReady = true
+				while (contextAsks.length) answerContext(contextAsks.shift())
+			}
+			if (!contextData) settleContext()
+			else {
+				//StudyDesk's editing mode, as si-manager's handshake keeps it for every page on this origin. A hint for showing an
+				//app's editing tools, never a key to anything: nothing on the server trusts it
+				var editing = false
+				try {
+					editing = JSON.parse(sessionStorage.getItem('isEditing') || 'false') === true
+				}
+				catch (e) {
+				}
+				contextData.isEditing = editing
+				//whether they own or help make the project, and the groups it asks about, from the server
+				call('GET', 'who', undefined, true).then(function (w) {
+					w = w || {}
+					contextData.isOwner = !!w.isOwner
+					contextData.isCollaborator = !!w.isCollaborator
+					contextData.groups = Array.isArray(w.groups) ? w.groups : []
+					contextData.canEdit = !!(w.isOwner || w.isCollaborator || w.isPower || (editing && contextData.isStaff))
+					settleContext()
+				}, function () {
+					contextData.canEdit = !!(editing && contextData.isStaff)
+					settleContext()
+				})
+			}
 			//after this function is through, so known is settled either way
 			setTimeout(settleAnalytics, 0)
 			//fetchActivity has the session, so the wait above is over whether or not its own look has come round yet
@@ -5626,7 +5681,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			if (queue.length && !timer) timer = setTimeout(flushRecords, 300)
 		})
 	}
-	else contextReady = true
+	else contextReady = whoReady = true
 	window.addEventListener('message', function takeMessage(e, late) {
 		if (e.source !== frame.contentWindow) return
 		var m = e.data
@@ -5668,7 +5723,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		//A project set to wait for the session asks this and holds its start for the answer, which is only that the wait is over
 		if (m.op === 'session') answer(m, {ok: true, available: !!(findSession() || ltiSession)})
 		else if (m.op === 'context') {
-			if (contextReady) answerContext(m)
+			if (contextReady && whoReady) answerContext(m)
 			else {
 				if (m.acks && m.rid && !sessionSettled) held.push(m.rid)
 				contextAsks.push(m)
