@@ -250,6 +250,7 @@ export class FakeDb {
   'shared-hidden' = new FakeCollection();
   'room-messages' = new FakeCollection();
   responses = new FakeCollection();
+  'setup-values' = new FakeCollection();
   ingest = new FakeCollection();
   'user-lookup' = new FakeCollection();
   'doc-chunks' = new FakeCollection();

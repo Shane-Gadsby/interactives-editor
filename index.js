@@ -111,6 +111,7 @@ let ops = null,
 	responses = null,
 	collected = null,
 	collectedRows = null,
+	setupRows = null,
 	roomsLib = null,
 	courseLib = null,
 	sharedLimits = {},
@@ -1018,6 +1019,7 @@ const purgeProject = async (row) => {
 	sharedLiveEndProject(id)
 	await sharedRows.deleteMany({project: id})
 	await collectedRows.deleteMany({project: id})
+	await setupRows.deleteMany({project: id})
 	await sharedHidden.deleteMany({project: id})
 	await commentRows.deleteMany({project: id})
 	await commentNotices.deleteMany({project: id})
@@ -3842,6 +3844,49 @@ router.get('/learn/:token/who', async (req, res) => {
 	res.json({isOwner, isCollaborator, isPower: isPower(req), groups: asked.filter((g) => access.includes(g))})
 })
 
+//Save setup: the values an app's editors chose for everyone (the tiles, the cards, a picture), per setup of the shared project.
+//Anyone the page knows can read them; only the owner, a collaborator, a power user or staff may write them. StudyDesk's editing
+//mode is the page's hint for showing the editing tools and is never trusted here
+const setupKey = (project, req) => ({project: project._id, setup: typeof (req.body?.setup ?? req.query.setup) === 'string' ? String(req.body?.setup ?? req.query.setup).slice(0, 40) : ''})
+
+router.get('/learn/:token/saved-setup', async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let row = await setupRows.findOne(setupKey(project, req))
+
+	res.json({available: true, values: row?.values ?? null})
+})
+
+router.post('/learn/:token/saved-setup', express.json({limit: '2500kb'}), async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let me = whoIs(req),
+		access = Array.isArray(req.sessionData?.access) ? req.sessionData.access.map(String) : [],
+		staff = req.sessionData?.user && req.sessionData.user.isStudent === false,
+		mayEdit = !!me?.username && !access.includes('presentation-mode') && !req.ltiLearner && (project.owner?.username === me.username || (Array.isArray(project.collaborators) && project.collaborators.some((c) => c.username === me.username)) || isPower(req) || staff)
+
+	if (!mayEdit) {
+		return res.json({available: true, ok: false, problem: 'not-allowed'})
+	}
+
+	let values = req.body?.values
+
+	if (!values || typeof values !== 'object' || Array.isArray(values) || JSON.stringify(values).length > 2000000) {
+		return res.status(400).json({error: 'Those values are not the right shape, or too big'})
+	}
+
+	await setupRows.updateOne(setupKey(project, req), {$set: {values, updated: new Date(), by: me.username}}, {upsert: true})
+	res.json({available: true, ok: true})
+})
+
 //Send a response: the values an app collects (a survey's answers, where a card was sorted), one row each, filed under the
 //person (their name when the shared page says so, otherwise a code that is the same for them every time and says nothing
 //about who they are), the time and the setup. Anyone the learner page knows can send; nobody can read them back here
@@ -5806,6 +5851,16 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
 			}, failed)
 		}
+		else if (m.op === 'setup-load') {
+			call('GET', 'saved-setup?setup=' + encodeURIComponent(m.setup || '')).then(function (j) {
+				answer(m, {ok: true, available: !!j.available, data: j.values || null})
+			}, failed)
+		}
+		else if (m.op === 'setup-save') {
+			call('POST', 'saved-setup', {setup: m.setup || '', values: m.values}).then(function (j) {
+				answer(m, {ok: !!j.ok, available: !!j.available, data: j.problem ? {problem: j.problem} : null})
+			}, failed)
+		}
 		else if (m.op === 'respond') {
 			call('POST', 'responses', {set: m.set, values: m.values, setup: m.setup}).then(function (j) {
 				answer(m, {ok: !!j.ok, available: !!j.available, data: j.problem ? {problem: j.problem} : null})
@@ -6570,6 +6625,7 @@ client.connect()
 		roomMessages = db.collection('room-messages')
 		courseRows = analyticsDB.collection('interactives-course-collections')
 		collectedRows = db.collection('responses')
+		setupRows = db.collection('setup-values')
 		ingest = analyticsDB.collection('ingest')
 		userLookup = analyticsDB.collection('user-lookup')
 		fs.mkdirSync(storageDir, {recursive: true})

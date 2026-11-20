@@ -369,7 +369,7 @@ function VariableRow({ v, others, used, circular, writers, setVar }: { v: Variab
     });
     store().toastUndo(`Deleted the variable "${variableLabel(v)}".`, mark);
   };
-  const optionsOpen = !!(v.persist || v.userData || v.live || v.shared || v.history);
+  const optionsOpen = !!(v.persist || v.userData || v.live || v.shared || v.history || v.setupValue);
   return (
     <tr>
       <td>
@@ -493,6 +493,13 @@ function VariableRow({ v, others, used, circular, writers, setVar }: { v: Variab
             onChange={(x) => setVar(v.id, { userData: x ? true : undefined })}
           />
           <SectionBlurb text="Saves the value for each person on the server, so it follows them to another device." name="user data" help={['variables', 'save-as-user-data']} />
+          <CheckField
+            label="Part of the setup"
+            title="What the people who look after the app set up for everyone: the tiles, the cards, a picture they picked. Save setup keeps its value for the setup the link plays, and everyone who opens it starts with that"
+            value={!!v.setupValue}
+            disabled={isLive(v)}
+            onChange={(x) => setVar(v.id, { setupValue: x ? true : undefined })}
+          />
           <CheckField
             label="Keeps history"
             title="The Undo and Redo nodes step this back and forward, together with every other variable that keeps history. Tick it on what a person makes: the tiles they placed, the board, their answers."

@@ -176,6 +176,7 @@ describe('Remember, Save as user data and the formula', () => {
     expect(tick(opts, 'Remember')).toBeTruthy();
     expect(tick(opts, 'Save as user data')).toBeTruthy();
     expect(tick(opts, 'Keeps history')).toBeTruthy();
+    expect(tick(opts, 'Part of the setup')).toBeTruthy();
     expect(opts.querySelectorAll('.hint').length).toBe(3);
     act(() => tick(opts, 'Remember')!.click());
     expect(vars()[0].persist).toBe(true);

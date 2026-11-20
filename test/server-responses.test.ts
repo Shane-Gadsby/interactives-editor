@@ -95,3 +95,16 @@ describe('who is looking', () => {
     expect((await who(null)).json.isOwner).toBe(false);
   });
 });
+
+describe('Save setup on the server', () => {
+  it('keeps the values for everyone, written only by those who may edit the app', async () => {
+    const t = await share('prsetup001', '<html>{"settings":{}}</html>');
+    const save = (user: User, values: unknown, setup = '') => h.call('POST', `/learn/${t}/saved-setup`, { user, json: { setup, values } });
+    //someone who neither owns it, helps make it, nor is staff
+    expect((await save(sam, { tiles: ['x'] })).json).toEqual({ available: true, ok: false, problem: 'not-allowed' });
+    expect((await save(ann, { tiles: ['x', 'y'] })).json).toEqual({ available: true, ok: true });
+    expect((await save(ann, { tiles: ['z'] }, 'st2')).json.ok).toBe(true);
+    expect((await h.call('GET', `/learn/${t}/saved-setup`, { user: sam })).json.values).toEqual({ tiles: ['x', 'y'] });
+    expect((await h.call('GET', `/learn/${t}/saved-setup?setup=st2`, { user: sam })).json.values).toEqual({ tiles: ['z'] });
+  });
+});

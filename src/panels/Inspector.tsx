@@ -733,6 +733,12 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           onChange={(v) => setAb((a) => (v ? (a.hugWidth = true) : delete a.hugWidth))}
         />
         <CheckField
+          label="Editing page"
+          title="The app's own editor: it opens instead of the start page for the people who may edit the app (context.canEdit) while StudyDesk's editing mode is on, and nobody else can be sent to it. Put a Save setup button on it"
+          value={!!ab.editingPage}
+          onChange={(v) => setAb((a) => (v ? (a.editingPage = true) : delete a.editingPage))}
+        />
+        <CheckField
           label="Fit height to content"
           title="The page is as tall as its lowest showing layer, and keeps fitting as it plays: a list filling from data, a layer shown or hidden, text growing. An embed in StudyDesk grows and shrinks with it"
           value={!!ab.hugHeight}

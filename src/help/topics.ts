@@ -5259,6 +5259,15 @@ One app, many setups. A card sort made once can run on a second set of cards wit
 
 Each setup has its own link once the project is shared: the Link for StudyDesk with \`?setup=\` and the setup's id on it, which **Copy link** copies. Put that link on the course page. A setup's values win over a per-course row's, and responses say which setup they came from. Without \`?setup=\` the project plays as you made it.
 
+## An editing mode
+An app can be set up where it sits, by the people who look after it, without opening the editor. A tiles app shows pens and a plus sign to them and plain tiles to everyone else.
+
+1. Tick **Part of the setup** (under a variable's **Options**) on what they set up: the tiles, the cards, a picture they picked with **Picture of a layer**.
+2. Make a page for it and tick **Editing page** in its **Page** section. It opens instead of the start page for anyone who may edit the app (\`context.canEdit\`) while StudyDesk's editing mode is on, and nobody else can be sent to it.
+3. Put a **Save** button on it that runs **Save setup**. It keeps those variables' values, for the setup the link plays, and everyone who opens it afterwards starts with them.
+
+Only the owner, collaborators, power users and staff can save; anyone else goes on from **Not saved**. StudyDesk's editing mode decides when the editing page shows, never who may save. In Preview the saved setup is kept in your browser, to try it out.
+
 ## Values on the link
 **link** sits beside context: it holds the values on the address the project was opened with, so one project can serve several programs or courses from different links. Add \`&program=GCSC\` to the end of the address in the embed code (or \`?program=GCSC\` to a link with nothing after it), and the project reads:
 
