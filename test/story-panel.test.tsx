@@ -50,7 +50,7 @@ describe('starting a story', () => {
     const names: string[] = [];
     walk(ab.children, (n) => {
       if (targets.has(n.id)) names.push(n.name);
-      for (const src of Object.values(n.bindings ?? {})) expect(() => evaluate(src, { vars: { story: { cast: [], choices: [] }, item: { x: 0.5, height: 0.9, lift: 0 }, [HIDE_VAR]: false } }), `${n.name}: ${src}`).not.toThrow();
+      for (const src of Object.values(n.bindings ?? {})) expect(() => evaluate(src, { vars: { story: { cast: [], choices: [], bubble: { x: 0.3, y: 0.4, tipX: 0.5, tipY: 0.3, tail: 'up' } }, item: { x: 0.5, height: 0.9, lift: 0 }, [HIDE_VAR]: false } }), `${n.name}: ${src}`).not.toThrow();
     });
     expect(names.sort()).toEqual(['Auto', 'Back', 'Choice', 'Hide', 'Show the box again', 'Skip']);
   });

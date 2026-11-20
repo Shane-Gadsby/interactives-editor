@@ -397,6 +397,7 @@ function CastEditor({ story, memberId }: { story: Story; memberId: string }) {
           onChange={(v) => set((c) => void (v ? (c.spot = v) : delete c.spot))}
         />
         <NumberField label="Height" value={Math.round((m.height ?? 0.9) * 100)} min={10} max={200} suffix="%" title="Their picture's height, as a share of the stage's" onChange={(v) => set((c) => void (c.height = v / 100), `cast-height-${m.id}`)} />
+        <NumberField label="Face at" value={Math.round((m.face ?? 0.22) * 100)} min={0} max={100} suffix="% down" title="How far down their picture their face is. Speech bubbles sit clear of it and point their tail at it" onChange={(v) => set((c) => void (c.face = Math.max(0, Math.min(100, v)) / 100), `cast-face-${m.id}`)} />
         <SelectField label="Blip" value={m.blip ?? ''} title="A short sound for each letter as their words type on" options={[{ value: '', label: 'None' }, ...sounds.map((a) => ({ value: a.id, label: a.name }))]} onChange={(v) => set((c) => void (v ? (c.blip = v) : delete c.blip))} />
         {m.blip && <NumberField label="Blip pitch" value={m.blipPitch ?? 1} step={0.05} min={0.5} max={2} title="Higher or lower than the sound as it is (1)" onChange={(v) => set((c) => void (c.blipPitch = v), `cast-pitch-${m.id}`)} />}
       </div>
@@ -490,6 +491,18 @@ function StorySettingsForm({ story }: { story: Story }) {
             { value: 'bubble', label: 'Speech bubbles' },
           ]}
           onChange={(v) => set((x) => void (v === 'bottom' ? delete x.boxLook : (x.boxLook = v)))}
+        />
+        <SelectField
+          label="Bubble sits"
+          value={s.bubblePlace ?? 'under'}
+          title="Where a speech bubble goes: under the speaker's face keeps every face on stage clear; above their head needs room over them (or it goes under); beside them needs room at their side"
+          options={[
+            { value: 'under', label: 'Under their face' },
+            { value: 'above', label: 'Above their head' },
+            { value: 'beside', label: 'Beside them' },
+            { value: 'top', label: 'Along the top' },
+          ]}
+          onChange={(v) => set((x) => void (v === 'under' ? delete x.bubblePlace : (x.bubblePlace = v as 'above' | 'beside' | 'top')))}
         />
         <NumberField label="Hint coins" value={s.coins ?? 3} min={0} max={999} suffix="to start" title="Hint coins a new game starts with. Puzzles' hints cost them; collectables in a room give more" onChange={(v) => set((x) => void (x.coins = Math.max(0, Math.round(v))), 'story-coins')} />
         <CheckField label="Dim whoever isn't speaking" value={s.dimOthers !== false} title="The others on stage go a little darker while someone talks" onChange={(v) => set((x) => void (x.dimOthers = v))} />
