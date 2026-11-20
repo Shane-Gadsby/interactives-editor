@@ -112,6 +112,8 @@ let ops = null,
 	collected = null,
 	collectedRows = null,
 	setupRows = null,
+	tablesLib = null,
+	tableRows = null,
 	roomsLib = null,
 	courseLib = null,
 	sharedLimits = {},
@@ -1020,6 +1022,7 @@ const purgeProject = async (row) => {
 	await sharedRows.deleteMany({project: id})
 	await collectedRows.deleteMany({project: id})
 	await setupRows.deleteMany({project: id})
+	await tableRows.deleteMany({project: id})
 	await sharedHidden.deleteMany({project: id})
 	await commentRows.deleteMany({project: id})
 	await commentNotices.deleteMany({project: id})
@@ -2178,13 +2181,14 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 		waitSession = declaredWait(html),
 		named = collected.declaredNamed(html),
 		groupsAsked = collected.declaredGroups(html),
-		share = {token, ...(named ? {responsesNamed: true} : {}), ...(groupsAsked.length ? {groups: groupsAsked} : {}), created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(waitSession === null ? {} : {waitSession}), ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {}), ...(Object.keys(roomsDeclared).length ? {rooms: roomsDeclared} : {})}
+		tablesDeclared = tablesLib.declaredTables(html),
+		share = {token, ...(named ? {responsesNamed: true} : {}), ...(groupsAsked.length ? {groups: groupsAsked} : {}), created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(waitSession === null ? {} : {waitSession}), ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {}), ...(Object.keys(roomsDeclared).length ? {rooms: roomsDeclared} : {}), ...(Object.keys(tablesDeclared).length ? {tables: tablesDeclared} : {})}
 
 	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
 	//An update keeps the page it replaces (one, not a history), so a bad publish can be undone in a click
 	let prevKept = false
 	if (doc.share?.token && await moveIfThere(shareFile(token), sharePrevFile(token))) {
-		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(typeof doc.share.waitSession === 'boolean' ? {waitSession: doc.share.waitSession} : {}), ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {})}
+		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(typeof doc.share.waitSession === 'boolean' ? {waitSession: doc.share.waitSession} : {}), ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {}), ...(doc.share.tables ? {tables: doc.share.tables} : {})}
 		prevKept = true
 	}
 	await fs.promises.writeFile(shareFile(token), prepared ? prepared.html : html)
@@ -2224,7 +2228,7 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 	await fs.promises.rename(sharePrevFile(token), shareFile(token))
 	await fs.promises.rename(swap, sharePrevFile(token))
 
-	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(typeof doc.share.waitSession === 'boolean' ? {waitSession: doc.share.waitSession} : {}), ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
+	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(typeof doc.share.waitSession === 'boolean' ? {waitSession: doc.share.waitSession} : {}), ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {}), ...(doc.share.tables ? {tables: doc.share.tables} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
 		set = {share}, unset = {}
 
 	//The page that came back waits for the session, or doesn't, as it did when it was shared
@@ -2257,6 +2261,13 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 	}
 	else {
 		delete share.rooms
+	}
+	//And its shared tables
+	if (doc.share.previous.tables) {
+		share.tables = doc.share.previous.tables
+	}
+	else {
+		delete share.tables
 	}
 	//The answer keys swap with their pages
 	if (doc.previousMarking) set.marking = doc.previousMarking
@@ -3842,6 +3853,98 @@ router.get('/learn/:token/who', async (req, res) => {
 		asked = Array.isArray(project.share?.groups) ? project.share.groups : []
 
 	res.json({isOwner, isCollaborator, isPower: isPower(req), groups: asked.filter((g) => access.includes(g))})
+})
+
+//Shared tables: rows people add, change and take away (a sign-up sheet, a board). The rules and limits are the ones the owner
+//declared when the project was shared, checked here, never what a browser says. Rows belong to a course, so each class has its own
+const tableAt = async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return null
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		res.json({available: false})
+		return null
+	}
+
+	let source = req.params.source,
+		decl = project.share?.tables?.[source]
+
+	if (!decl) {
+		res.status(404).json({error: 'That project has no such shared table (share it again after adding it)'})
+		return null
+	}
+
+	let me = whoIs(req),
+		access = Array.isArray(req.sessionData?.access) ? req.sessionData.access.map(String) : [],
+		staff = !access.includes('presentation-mode') && !req.ltiLearner && (req.sessionData?.user?.isStudent === false || project.owner?.username === me?.username || (Array.isArray(project.collaborators) && project.collaborators.some((c) => c.username === me?.username)) || isPower(req))
+
+	return {project, decl, source, person: {...who, staff}}
+}
+const tableRowsOf = (at) => tableRows.find({project: at.project._id, source: at.source, course: at.person.course}).sort({at: 1}).limit(tablesLib.LIMITS.maxRows).toArray()
+
+router.get('/learn/:token/table/:source', async (req, res) => {
+	let at = await tableAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	res.json({available: true, value: tablesLib.valueFor(at.decl, await tableRowsOf(at), at.person)})
+})
+
+router.post('/learn/:token/table/:source', express.json({limit: '16kb'}), async (req, res) => {
+	let at = await tableAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let {decl, person} = at,
+		op = req.body?.op,
+		answer = async (problem) => res.json({available: true, ok: !problem, value: tablesLib.valueFor(decl, await tableRowsOf(at), person, problem || '')})
+
+	if (!sharedLimits.table.hit(`${at.project._id}|${person.username}`)) {
+		return answer('busy')
+	}
+
+	let rows = await tableRowsOf(at)
+
+	if (op === 'add') {
+		let values = tablesLib.cleanValues(decl, req.body?.values)
+
+		if (!tablesLib.mayDo(decl, 'add', person)) return answer('not-allowed')
+		let over = tablesLib.overLimit(decl, rows, person, values)
+		if (over) return answer(over)
+		await tableRows.insertOne({_id: crypto.randomBytes(12).toString('hex'), project: at.project._id, source: at.source, course: person.course, username: person.username, name: person.name || '', values, at: new Date()})
+		return answer('')
+	}
+
+	let row = rows.find((r) => String(r._id) === String(req.body?.id ?? ''))
+
+	if (!row) {
+		return answer('no-such-row')
+	}
+
+	if (op === 'change') {
+		let values = {...row.values, ...tablesLib.cleanValues(decl, req.body?.values)}
+
+		if (!tablesLib.mayDo(decl, 'change', person, row)) return answer('not-allowed')
+		let over = tablesLib.overLimit(decl, rows, person, values, row._id)
+		if (over) return answer(over)
+		await tableRows.updateOne({_id: row._id}, {$set: {values, updated: new Date()}})
+		return answer('')
+	}
+	if (op === 'remove') {
+		if (!tablesLib.mayDo(decl, 'remove', person, row)) return answer('not-allowed')
+		await tableRows.deleteOne({_id: row._id})
+		return answer('')
+	}
+	res.status(400).json({error: 'No such thing to do'})
 })
 
 //Save setup: the values an app's editors chose for everyone (the tiles, the cards, a picture), per setup of the shared project.
@@ -5851,6 +5954,16 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
 			}, failed)
 		}
+		else if (m.op === 'table-read' && typeof m.tableSource === 'string') {
+			call('GET', 'table/' + encodeURIComponent(m.tableSource)).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
+			}, failed)
+		}
+		else if (m.op === 'table-write' && typeof m.tableSource === 'string') {
+			call('POST', 'table/' + encodeURIComponent(m.tableSource), {op: m.tableOp, id: m.id, values: m.values}).then(function (j) {
+				answer(m, {ok: !!j.ok, available: !!j.available && !!j.value, data: j.value || null})
+			}, failed)
+		}
 		else if (m.op === 'setup-load') {
 			call('GET', 'saved-setup?setup=' + encodeURIComponent(m.setup || '')).then(function (j) {
 				answer(m, {ok: true, available: !!j.available, data: j.values || null})
@@ -6626,6 +6739,7 @@ client.connect()
 		courseRows = analyticsDB.collection('interactives-course-collections')
 		collectedRows = db.collection('responses')
 		setupRows = db.collection('setup-values')
+		tableRows = db.collection('shared-tables')
 		ingest = analyticsDB.collection('ingest')
 		userLookup = analyticsDB.collection('user-lookup')
 		fs.mkdirSync(storageDir, {recursive: true})
@@ -6635,10 +6749,11 @@ client.connect()
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs'), import('./shared/course.mjs'), import('./shared/rooms.mjs'), import('./shared/collected.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs'), import('./shared/course.mjs'), import('./shared/rooms.mjs'), import('./shared/collected.mjs'), import('./shared/tables.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod, courseMod, roomsMod, collectedMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod, courseMod, roomsMod, collectedMod, tablesMod]) => {
 		collected = collectedMod
+		tablesLib = tablesMod
 		ops = opsMod
 		store = docstoreMod.docStore(docChunks)
 		library = libraryMod
@@ -6672,6 +6787,8 @@ client.connect()
 
 		//Send a response: per person per project, an hour at a time
 		sharedLimits.respond = new commentsMod.Limiter(collectedMod.LIMITS.perHour, 60 * 60 * 1000)
+		//Shared tables: writes per person per project a minute
+		sharedLimits.table = new commentsMod.Limiter(30, 60 * 1000)
 		cacheHeaders.watchEpoch()
 
 		//The bin, now and every 6 hours

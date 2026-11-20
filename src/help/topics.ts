@@ -5022,6 +5022,17 @@ JSON that doesn't parse is **not** saved. The interactive keeps using the last g
 - In the form, **Tab** moves through the fields and buttons in order, each card's title is a heading with a button that opens and closes it, and every field has a real label. Nothing waits to be confirmed: each change is saved a moment after you stop typing.
 - Each save leaves the earlier file on the server so Undo works. **Remove unused assets** in the Usage tab clears them.
 
+## Shared tables
+A sign-up sheet, a board, a register, a booking list: rows the people using the app add, change and take away, that everyone in the class sees. **+ Shared table** makes one. Give it its **Fields** (\`name, slot, note\`), then say:
+
+- **Who may add**: anyone signed in, or staff only.
+- **Who may change a row** and **Who may take a row away**: whoever added it (and staff), staff only, or for changing, anyone.
+- **Rows each**: how many one person may have (1 for a sign-up sheet). **Slot field** and **Rows a slot**: so many per time or group.
+- **At most**: the table's size, up to 2000 rows. Say on the page how many places are left; a table that quietly stops taking rows looks broken.
+- **Show names**: each row carries who added it as \`row.by\`. Off, nobody's name is shown.
+
+Its value is \`{ rows, count, max, mine }\`: repeat \`signups.rows\`, and each row says whether it's yours (\`item.mine\`). The **Add a row to a shared table**, **Change a row of a shared table** and **Take a row out of a shared table** nodes do the rest, with **Row** being \`item\` in a repeater. The server checks every rule and limit; a refusal goes on from **Not done** with \`event.problem\` (not-allowed, per-person, slot-full, full). Each class has its own rows. Share again after changing the settings. In Preview the table is kept in your browser, with you as its only person.
+
 ## The built-in context
 The list always starts with **context**, a read-only source that is there without adding anything: the course and the learner (\`{context.firstName}\`, \`context.courseCode\`). Pick it to see its fields, set sample values to design with, and give different courses different starting values. See [Course and learner context](course-context).
 

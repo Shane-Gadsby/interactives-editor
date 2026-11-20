@@ -108,3 +108,27 @@ describe('Save setup on the server', () => {
     expect((await h.call('GET', `/learn/${t}/saved-setup?setup=st2`, { user: sam })).json.values).toEqual({ tiles: ['z'] });
   });
 });
+
+describe('shared tables on the server', () => {
+  const page = (table: Record<string, unknown>) => `<html><script id="ix-project">${JSON.stringify({ settings: {}, dataSources: [{ id: 'signup', name: 'signups', source: 'table', table }] })}</script></html>`;
+  const write = (t: string, user: User, body: unknown) => h.call('POST', `/learn/${t}/table/signup`, { user, json: body });
+  it('keeps to its rules and limits, whatever a browser asks', async () => {
+    h.db['shared-tables'].docs = [];
+    const t = await share('prtable001', page({ fields: ['name', 'slot'], perPerson: 1, slotField: 'slot', perSlot: 1, remove: 'own' }));
+    const lee: User = { username: 'lee', fullName: 'Lee L', course: 'MAT1000_2026_S1' };
+    const one = await write(t, sam, { op: 'add', values: { name: 'Sam', slot: '9am', secret: 'x' } });
+    expect(one.json.ok).toBe(true);
+    expect(one.json.value.rows[0]).toMatchObject({ name: 'Sam', slot: '9am', mine: true });
+    expect(one.json.value.rows[0].secret).toBeUndefined();
+    //one each
+    expect((await write(t, sam, { op: 'add', values: { name: 'Sam', slot: '10am' } })).json.value.problem).toBe('per-person');
+    //the 9am slot holds one
+    expect((await write(t, lee, { op: 'add', values: { name: 'Lee', slot: '9am' } })).json.value.problem).toBe('slot-full');
+    const id = one.json.value.rows[0].id;
+    //someone else's row can't be taken away, their own can
+    expect((await write(t, lee, { op: 'remove', id })).json.value.problem).toBe('not-allowed');
+    expect((await write(t, sam, { op: 'remove', id })).json).toMatchObject({ ok: true, value: { count: 0 } });
+    //nothing declared, nothing kept
+    expect((await h.call('POST', `/learn/${t}/table/other`, { user: sam, json: { op: 'add', values: {} } })).status).toBe(404);
+  });
+});

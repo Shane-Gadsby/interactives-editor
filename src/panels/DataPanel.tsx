@@ -4,7 +4,7 @@ import { store, useEditor } from '../store/store';
 import { isIdentifier, uniqueIdentifier } from '../store/doc';
 import { dataCache } from '../lib/data';
 import { insertFiles, pickFiles } from '../lib/insert';
-import { IconButton, NumberField, SelectField, TextField } from '../components/ui';
+import { CheckField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { SplitColumns } from '../components/SplitColumns';
 import { assetKind } from '../lib/assets';
@@ -58,6 +58,13 @@ export function DataPanel() {
     });
     setActiveId(ds.id);
   };
+  const addTable = () => {
+    const ds: DataSource = { id: uid('ds'), name: uniqueIdentifier(names(), 'signups'), kind: 'json', source: 'table', table: { fields: ['name'], add: 'signed-in', change: 'own', remove: 'own', perPerson: 1, maxRows: 500 } };
+    store().update((d) => {
+      d.dataSources.push(ds);
+    });
+    setActiveId(ds.id);
+  };
   const addRoom = () => {
     const ds: DataSource = { id: uid('ds'), name: uniqueIdentifier(names(), 'chat'), kind: 'json', source: 'room', room: cleanRoomSettings({}) };
     store().update((d) => {
@@ -102,7 +109,7 @@ export function DataPanel() {
             <button key={d.id} className={`list-item${d.id === active?.id ? ' active' : ''}`} onClick={() => setActiveId(d.id)}>
               <span className={`dot ${st?.error ? 'bad' : st && 'value' in st ? 'ok' : ''}`} />
               <span className="mono">{d.name}</span>
-              <span className="badge">{d.source === 'shared' ? 'shared' : d.source === 'room' ? 'room' : d.kind}</span>
+              <span className="badge">{d.source === 'shared' ? 'shared' : d.source === 'room' ? 'room' : d.source === 'table' ? 'table' : d.kind}</span>
             </button>
           );
         })}
@@ -118,6 +125,9 @@ export function DataPanel() {
         <button className="link-btn" title="A live message list for the people in the same class: a chat or a question wall. Works on the StudyDesk learner page; Preview has a pretend room" onClick={addRoom}>
           + Room
         </button>
+        <button className="link-btn" title="Rows people add, change and take away: a sign-up sheet, a board, a register. Who may do each, and how many, is checked on the server" onClick={addTable}>
+          + Shared table
+        </button>
       </div>
       {active ? (
         <SplitColumns id="data-main" columns={[{ width: 320, min: 220, max: 640 }, 'flex']} className="data-main">
@@ -126,7 +136,7 @@ export function DataPanel() {
             {active.name === 'context' && <div className="error small">This hides the built-in context in expressions; pick another name.</div>}
             {!isIdentifier(active.name) && <div className="error small">Use letters, digits and _ only, so expressions can say {active.name.replace(/\W/g, '_')}.</div>}
             {s.variables.some((v) => v.name === active.name) && <div className="error small">A variable has the same name and wins in expressions; use data.{active.name}.</div>}
-            {active.source === 'shared' || active.source === 'room' ? null : <SelectField<DataKind> label="Format" value={active.kind} options={KINDS} onChange={(v) => setSource(active.id, { kind: v })} />}
+            {active.source === 'shared' || active.source === 'room' || active.source === 'table' ? null : <SelectField<DataKind> label="Format" value={active.kind} options={KINDS} onChange={(v) => setSource(active.id, { kind: v })} />}
             <SelectField
               label="From"
               value={active.source}
@@ -135,10 +145,13 @@ export function DataPanel() {
                 { value: 'url', label: 'URL (fetched by the player)' },
                 { value: 'shared', label: 'Shared responses (what people add)' },
                 { value: 'room', label: 'Room (a live chat for the class)' },
+                { value: 'table', label: 'Shared table (rows people add and change)' },
               ]}
-              onChange={(v) => setSource(active.id, v === 'shared' ? { source: v, kind: 'json', shared: active.shared ?? cleanSharedSettings({}) } : v === 'room' ? { source: v, kind: 'json', room: active.room ?? cleanRoomSettings({}) } : { source: v })}
+              onChange={(v) => setSource(active.id, v === 'shared' ? { source: v, kind: 'json', shared: active.shared ?? cleanSharedSettings({}) } : v === 'room' ? { source: v, kind: 'json', room: active.room ?? cleanRoomSettings({}) } : v === 'table' ? { source: v, kind: 'json', table: active.table ?? { fields: ['name'] } } : { source: v })}
             />
-            {active.source === 'room' ? (
+            {active.source === 'table' ? (
+              <TableForm source={active} setSource={(patch, coalesce) => setSource(active.id, patch, coalesce)} />
+            ) : active.source === 'room' ? (
               <RoomForm source={active} setSource={(patch, coalesce) => setSource(active.id, patch, coalesce)} />
             ) : active.source === 'shared' ? (
               <SharedForm source={active} variables={s.variables} setSource={(patch, coalesce) => setSource(active.id, patch, coalesce)} />
@@ -295,4 +308,62 @@ function fmt(v: unknown): string {
   if (v === null || v === undefined) return '';
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
+}
+
+/** A shared table's fields, who may add, change and remove, and its limits. The server holds every row to these. */
+function TableForm({ source, setSource }: { source: DataSource; setSource: (patch: Partial<DataSource>, coalesce?: string) => void }) {
+  const t = source.table ?? { fields: [] };
+  const put = (patch: Partial<NonNullable<DataSource['table']>>, coalesce?: string) => setSource({ table: { ...t, ...patch } }, coalesce);
+  return (
+    <>
+      <TextField
+        label="Fields"
+        title="What a row holds, separated by commas, such as name, slot, note. Anything else sent is dropped"
+        mono
+        value={t.fields.join(', ')}
+        commitOnBlur
+        onChange={(v) => put({ fields: [...new Set(v.split(',').map((x) => x.trim()).filter((x) => /^[A-Za-z_]\w{0,39}$/.test(x)))].slice(0, 30) })}
+      />
+      <SelectField
+        label="Who may add"
+        value={t.add ?? 'signed-in'}
+        options={[
+          { value: 'signed-in', label: 'Anyone signed in' },
+          { value: 'staff', label: 'Staff only' },
+        ]}
+        onChange={(v) => put({ add: v as 'signed-in' | 'staff' })}
+      />
+      <SelectField
+        label="Who may change a row"
+        value={t.change ?? 'own'}
+        options={[
+          { value: 'own', label: 'Whoever added it (and staff)' },
+          { value: 'staff', label: 'Staff only' },
+          { value: 'signed-in', label: 'Anyone signed in' },
+        ]}
+        onChange={(v) => put({ change: v as 'own' | 'staff' | 'signed-in' })}
+      />
+      <SelectField
+        label="Who may take a row away"
+        value={t.remove ?? 'own'}
+        options={[
+          { value: 'own', label: 'Whoever added it (and staff)' },
+          { value: 'staff', label: 'Staff only' },
+        ]}
+        onChange={(v) => put({ remove: v as 'own' | 'staff' })}
+      />
+      <NumberField label="Rows each" title="How many rows one person may have. 0 is no limit" value={t.perPerson ?? 0} min={0} onChange={(v) => put({ perPerson: Math.max(0, Math.round(v)) }, `tbl-pp-${source.id}`)} />
+      <SelectField
+        label="Slot field"
+        title="A field that is a slot, such as a time or a group, when each slot may only hold so many"
+        value={t.slotField ?? ''}
+        options={[{ value: '', label: 'None' }, ...t.fields.map((f) => ({ value: f, label: f }))]}
+        onChange={(v) => put({ slotField: v || undefined })}
+      />
+      {t.slotField && <NumberField label="Rows a slot" title="How many rows one slot may hold" value={t.perSlot ?? 0} min={0} onChange={(v) => put({ perSlot: Math.max(0, Math.round(v)) }, `tbl-ps-${source.id}`)} />}
+      <NumberField label="At most" suffix="rows" title="The most rows the table holds, at most 2000. Say how many places are left on the page: its count and max are in its value" value={t.maxRows ?? 500} min={1} max={2000} onChange={(v) => put({ maxRows: Math.min(2000, Math.max(1, Math.round(v))) }, `tbl-max-${source.id}`)} />
+      <CheckField label="Show names" title="Each row carries the name of whoever added it, as row.by. Off: nobody's name is shown" value={!!t.showNames} onChange={(v) => put({ showNames: v || undefined })} />
+      <p className="hint">Repeat its rows; the Shared table nodes add, change and take away. Share again after changing these.</p>
+    </>
+  );
 }
