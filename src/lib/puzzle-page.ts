@@ -65,7 +65,7 @@ export function puzzleFrame(w = STAGE_W, h = STAGE_H): { layers: SceneNode[]; wi
   });
   const hints = createNode('frame', { name: 'Hints', x: sx, y: 88, width: side, height: 212, fill: null, repeat: { items: 'puzzle.hints', layout: 'vertical', gap: 12, columns: 1 }, children: [hint] });
   onClick(wiring, hint, { kind: 'action.puzzleHint', params: { do: 'open', hint: 'event.index + 1' } });
-  const noHints = text('No hints', 'No hints for this one.', sx, 88, side, 30, { fontSize: 16, color: 'rgba(245, 242, 234, 0.7)', bindings: { visible: 'puzzle.hints.length == 0' } });
+  const noHints = createNode('frame', { name: 'No hints', x: sx, y: 88, width: side, height: 44, cornerRadius: 10, fill: solid(PANEL), bindings: { visible: 'puzzle.hints.length == 0' }, children: [text('No hints words', 'No hints for this one.', 14, 10, side - 28, 24, { fontSize: 16, color: INK })] } as never);
   const short = text('Not enough coins', 'Not enough hint coins. Look around for more.', sx, 310, side, 52, { fontSize: 15, lineHeight: 1.3, color: '#f2b8a0', bindings: { visible: 'puzzle.short' } });
   const memo = button('Memo', 'Memo', sx, h - 148, side, { bindings: { label: "puzzle.memo ? 'Close the memo' : 'Memo'", ariaPressed: "puzzle.memo ? 'true' : 'false'" } });
   onClick(wiring, memo, { kind: 'action.puzzleMemo', params: { to: 'toggle' } });

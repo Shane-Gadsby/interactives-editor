@@ -5994,7 +5994,7 @@ function paletteColor(spec, vars = currentPalette()) {
 }
 const t = (key, name, light, dark, highContrast) => ({ key, name, light, dark, highContrast });
 const WHITE$1 = "--ilar-swatch-off-white";
-const INK$3 = "--ilar-swatch-grey-7";
+const INK$4 = "--ilar-swatch-grey-7";
 const GREEN = "--ilar-swatch-green";
 const ERROR = "--ilar-swatch-error";
 const ORANGE = "--ilar-swatch-orange";
@@ -6002,13 +6002,13 @@ const GOLD$1 = "--ilar-swatch-yellow";
 const LINK = "--ilar-swatch-hyperlink";
 const mix = (a, pct, over) => `mix(${a} ${pct}%, ${over})`;
 const STARTER_TOKEN_DEFS = [
-  t("background", "color/background", WHITE$1, INK$3, INK$3),
-  t("surface", "color/surface", "--ilar-swatch-grey-1", "--ilar-swatch-grey-text", INK$3),
+  t("background", "color/background", WHITE$1, INK$4, INK$4),
+  t("surface", "color/surface", "--ilar-swatch-grey-1", "--ilar-swatch-grey-text", INK$4),
   t("surfaceMuted", "color/surface-muted", "--ilar-swatch-grey-2", "--ilar-swatch-grey-6", "--ilar-swatch-grey-6"),
-  t("text", "color/text", INK$3, "--ilar-swatch-grey-1", WHITE$1),
+  t("text", "color/text", INK$4, "--ilar-swatch-grey-1", WHITE$1),
   t("muted", "color/muted", "--ilar-swatch-grey-4", "--ilar-swatch-grey-3", WHITE$1),
   t("primary", "color/primary", "--ilar-primary", GOLD$1, GOLD$1),
-  t("onPrimary", "color/on-primary", INK$3, INK$3, INK$3),
+  t("onPrimary", "color/on-primary", INK$4, INK$4, INK$4),
   t("link", "color/link", LINK, mix(LINK, 70, WHITE$1), mix(LINK, 70, WHITE$1)),
   t("button", "color/button", "--ilar-btn-primary-background", "--ilar-btn-primary-background", "--ilar-btn-primary-background"),
   t("onButton", "color/on-button", "--ilar-btn-primary-text", "--ilar-btn-primary-text", "--ilar-btn-primary-text"),
@@ -6016,11 +6016,11 @@ const STARTER_TOKEN_DEFS = [
   t("divider", "color/divider", "--ilar-swatch-grey-2", "--ilar-swatch-grey-6", WHITE$1),
   t("focus", "color/focus", "--ilar-primary", GOLD$1, WHITE$1),
   t("success", "color/success", GREEN, mix(GREEN, 55, WHITE$1), mix(GREEN, 55, WHITE$1)),
-  t("successSurface", "color/success-surface", mix(GREEN, 12, WHITE$1), mix(GREEN, 25, INK$3), INK$3),
+  t("successSurface", "color/success-surface", mix(GREEN, 12, WHITE$1), mix(GREEN, 25, INK$4), INK$4),
   t("error", "color/error", ERROR, mix(ERROR, 60, WHITE$1), mix(ERROR, 60, WHITE$1)),
-  t("errorSurface", "color/error-surface", mix(ERROR, 12, WHITE$1), mix(ERROR, 25, INK$3), INK$3),
+  t("errorSurface", "color/error-surface", mix(ERROR, 12, WHITE$1), mix(ERROR, 25, INK$4), INK$4),
   t("warning", "color/warning", ORANGE, GOLD$1, GOLD$1),
-  t("warningSurface", "color/warning-surface", mix(ORANGE, 14, WHITE$1), mix(GOLD$1, 20, INK$3), INK$3)
+  t("warningSurface", "color/warning-surface", mix(ORANGE, 14, WHITE$1), mix(GOLD$1, 20, INK$4), INK$4)
 ];
 function starterHex(def, column2) {
   return paletteColor(def[column2], currentPalette()) ?? "#808080";
@@ -8097,7 +8097,7 @@ class Parser {
           const name = IDENT_NAME.get(a);
           if (name) {
             return (env) => {
-              const f2 = find(env, name);
+              const f2 = find$1(env, name);
               return f2.found ? typeof f2.value : "undefined";
             };
           }
@@ -8233,7 +8233,7 @@ class Parser {
     this.advance();
     this.names.add(name);
     const ev = (env) => {
-      const f2 = find(env, name);
+      const f2 = find$1(env, name);
       if (!f2.found) throw new ExprError(`${name} is not defined`);
       return f2.value;
     };
@@ -8248,7 +8248,7 @@ class Parser {
     this.names.add(name);
     const args = this.is("(") ? this.args() : [];
     return (env) => {
-      const f2 = find(env, name);
+      const f2 = find$1(env, name);
       const fn = f2.found ? f2.value : void 0;
       if (typeof fn !== "function" || !NEWABLE.has(fn)) throw new ExprError(`new ${name} is not supported in expressions`);
       budget(env);
@@ -8301,7 +8301,7 @@ class Parser {
           props.push({
             key,
             value: (env) => {
-              const f2 = find(env, name);
+              const f2 = find$1(env, name);
               if (!f2.found) throw new ExprError(`${name} is not defined`);
               return f2.value;
             }
@@ -8404,7 +8404,7 @@ class Parser {
 function budget(env) {
   if (++env.budget.steps > MAX_STEPS) throw new ExprError("Expression took too long");
 }
-function find(env, name) {
+function find$1(env, name) {
   for (let l = env.locals; l; l = l.parent) {
     const i = l.names.lastIndexOf(name);
     if (i >= 0) return { found: true, value: l.values[i] };
@@ -12059,14 +12059,14 @@ function plainParam(kind, p, technical = technicalWording()) {
 }
 const PURPLE = "#3c2d4d";
 const GOLD = "#ffb448";
-const INK$2 = "#2d2d2d";
+const INK$3 = "#2d2d2d";
 const WHITE = "#ffffff";
 const PEACH = "#ffe9dd";
 const CONTENT_TOKENS = {
   background: WHITE,
   surface: "#f4f3f0",
   surfaceMuted: "#dddcd7",
-  text: INK$2,
+  text: INK$3,
   //muted, border and the three status colours are as light as they can be and still clear
   //4.5:1 (text) or 3:1 (a control's outline) on the page, the cards and their own status surfaces (starter-contrast.test.ts holds them to it)
   muted: "#65605b",
@@ -12089,10 +12089,10 @@ const way = (id, name, description, start, end, button2, onButton, onGradient, a
   tokens: { primary, button: button2, onButton, focus: primary, onPrimary: primary === button2 ? onButton : WHITE },
   brand: { gradientStart: start, gradientEnd: end, onGradient, deep: PURPLE, onDeep: WHITE, accent, warm: PEACH, logoMark, logoText, logoMarkOnLight: GOLD, logoTextOnLight: PURPLE, scrim: id === "orange" || id === "red" ? SCRIM : CLEAR, ...accentButton(button2) }
 });
-const accentButton = (button2) => button2 === GOLD ? { accentButton: PURPLE, onAccentButton: WHITE } : { accentButton: GOLD, onAccentButton: INK$2 };
+const accentButton = (button2) => button2 === GOLD ? { accentButton: PURPLE, onAccentButton: WHITE } : { accentButton: GOLD, onAccentButton: INK$3 };
 const COLOURWAYS = [
   way("gold", "Gold", "Gold gradient with purple, like the UniSQ title slides.", "#f58220", GOLD, PURPLE, WHITE, PURPLE, PURPLE, PURPLE, PURPLE),
-  way("purple", "Purple", "Deep purple with gold, the UniSQ dark slides.", PURPLE, "#775d94", GOLD, INK$2, WHITE, GOLD, GOLD, WHITE, PURPLE),
+  way("purple", "Purple", "Deep purple with gold, the UniSQ dark slides.", PURPLE, "#775d94", GOLD, INK$3, WHITE, GOLD, GOLD, WHITE, PURPLE),
   way("blue", "Blue", "The palette blue gradient, gold accents.", "#00497d", "#0080a8", "#00497d", WHITE, WHITE, GOLD, GOLD, WHITE),
   way("green", "Green", "The palette green gradient, for science and health.", "#0e6a6f", "#3e8521", "#0e6a6f", WHITE, WHITE, GOLD, GOLD, WHITE),
   way("orange", "Orange", "The palette orange gradient, warm and bold.", "#d0372b", "#ed6a21", "#b52f24", WHITE, WHITE, GOLD, GOLD, WHITE),
@@ -12189,7 +12189,7 @@ function lookFor(themes) {
   }
   return out;
 }
-const solid$5 = (color) => ({ type: "solid", color });
+const solid$6 = (color) => ({ type: "solid", color });
 function lookDefaults(project, type) {
   if (!hasTokens(project.themes)) return {};
   const l = lookFor(project.themes);
@@ -12198,25 +12198,25 @@ function lookDefaults(project, type) {
     case "ellipse":
     case "polygon":
     case "star":
-      return { fill: solid$5(l.surfaceMuted) };
+      return { fill: solid$6(l.surfaceMuted) };
     case "path":
-      return { stroke: { paint: solid$5(l.text), width: 2 } };
+      return { stroke: { paint: solid$6(l.text), width: 2 } };
     case "text":
       return { color: l.text };
     case "frame":
-      return { fill: solid$5(l.background) };
+      return { fill: solid$6(l.background) };
     case "button":
-      return { fill: solid$5(l.button), color: l.onButton };
+      return { fill: solid$6(l.button), color: l.onButton };
     case "input":
-      return { fill: solid$5(l.background), stroke: { paint: solid$5(l.border), width: 1 }, color: l.text };
+      return { fill: solid$6(l.background), stroke: { paint: solid$6(l.border), width: 1 }, color: l.text };
     case "link":
       return { color: l.link };
     case "progress":
-      return { fill: solid$5(l.surfaceMuted), barFill: solid$5(l.button) };
+      return { fill: solid$6(l.surfaceMuted), barFill: solid$6(l.button) };
     case "chart":
       return { colors: [l.button, l.link, l.success, l.warning, l.error, l.muted], color: l.text };
     case "connector":
-      return { fill: solid$5(l.background), stroke: { paint: solid$5(l.muted), width: 2, cap: "round", join: "round" }, color: l.text };
+      return { fill: solid$6(l.background), stroke: { paint: solid$6(l.muted), width: 2, cap: "round", join: "round" }, color: l.text };
     default:
       return {};
   }
@@ -13011,8 +13011,8 @@ const AREA_BAD = "#b3261e40";
 const AREA_MISS = "#8a520040";
 const bodyStyle = (kind, answerBy) => kind === "multiple" ? "check" : kind === "blank" ? answerBy === "drag" ? "dragblank" : "blank" : kind === "ordering" ? "order" : kind === "matching" ? "match" : kind === "categorise" ? "categorise" : kind === "hotspot" ? "spot" : "radio";
 const RESET_LABELS = { again: "Try again", next: "Next question" };
-const solid$4 = (color) => ({ type: "solid", color });
-const stroke$1 = (color, width = 1.5) => ({ paint: solid$4(color), width });
+const solid$5 = (color) => ({ type: "solid", color });
+const stroke$1 = (color, width = 1.5) => ({ paint: solid$5(color), width });
 const row = (gap) => ({ ...defaultAutoLayout("row"), gap, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "center", hugHeight: true });
 const column = (gap) => ({ ...defaultAutoLayout("column"), gap, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "stretch" });
 const partOf = (n) => (n.questionPart ?? "").split(":")[0];
@@ -13102,14 +13102,14 @@ const STATE_DESCRIPTION = 'item.state == "correct" ? "Right" : item.state == "wr
 function text$2(name, part, value, o = {}) {
   return createNode("text", { name, questionPart: part, text: value, fontSize: TYPE.body, color: L$2.text, autoSize: "height", width: 200, height: 24, ...o });
 }
-function button$3(name, part, label, primary, bindings) {
+function button$4(name, part, label, primary, bindings) {
   return createNode("button", {
     name,
     questionPart: part,
     label,
     width: 150,
     height: 44,
-    fill: solid$4(primary ? L$2.button : L$2.surfaceMuted),
+    fill: solid$5(primary ? L$2.button : L$2.surfaceMuted),
     color: primary ? L$2.onButton : L$2.text,
     ...bindings ? { bindings } : {}
   });
@@ -13128,7 +13128,7 @@ function tickBox(base2) {
     height: 9,
     paths: [{ closed: false, points: [{ x: 0, y: 4.5 }, { x: 4.5, y: 9 }, { x: 12, y: 0 }] }],
     fill: null,
-    stroke: { paint: solid$4(L$2.background), width: 2.25 },
+    stroke: { paint: solid$5(L$2.background), width: 2.25 },
     lineCap: "round",
     lineJoin: "round",
     decorative: true,
@@ -13137,7 +13137,7 @@ function tickBox(base2) {
   return createNode("frame", { ...base2, cornerRadius: 5, clip: false, children: [tick] });
 }
 function optionTemplate(style) {
-  const base2 = { height: 52, fill: solid$4(L$2.background), cornerRadius: RADIUS.control, clip: false };
+  const base2 = { height: 52, fill: solid$5(L$2.background), cornerRadius: RADIUS.control, clip: false };
   if (style === "order") {
     return createNode("frame", {
       ...base2,
@@ -13150,13 +13150,13 @@ function optionTemplate(style) {
         text$2("Number", "optionNumber", "{item.number}.", { width: 28, color: L$2.muted, fontWeight: 600, decorative: true }),
         text$2("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, ...lookBindings("item", { text: L$2.text }) }),
         text$2("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, decorative: true }),
-        createNode("button", { name: "Move up", questionPart: "moveUp", label: "↑", width: 40, height: 36, fill: solid$4(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
-        createNode("button", { name: "Move down", questionPart: "moveDown", label: "↓", width: 40, height: 36, fill: solid$4(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } })
+        createNode("button", { name: "Move up", questionPart: "moveUp", label: "↑", width: 40, height: 36, fill: solid$5(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
+        createNode("button", { name: "Move down", questionPart: "moveDown", label: "↓", width: 40, height: 36, fill: solid$5(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } })
       ]
     });
   }
   const checkbox = style === "check";
-  const markerBase = { name: "Marker", questionPart: "marker", width: 22, height: 22, fill: solid$4(L$2.background), stroke: stroke$1(L$2.border, 2), decorative: true, bindings: { "fill.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.background + '"', "stroke.paint.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.border + '"' } };
+  const markerBase = { name: "Marker", questionPart: "marker", width: 22, height: 22, fill: solid$5(L$2.background), stroke: stroke$1(L$2.border, 2), decorative: true, bindings: { "fill.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.background + '"', "stroke.paint.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.border + '"' } };
   return createNode("frame", {
     ...base2,
     name: "Option",
@@ -13263,7 +13263,7 @@ function chip(q, o) {
     y: o.y,
     width: o.w ?? TERM_W,
     height: o.h ?? TERM_H,
-    fill: solid$4(L$2.background),
+    fill: solid$5(L$2.background),
     stroke: stroke$1(L$2.border, 2),
     cornerRadius: RADIUS.control,
     clip: false,
@@ -13283,7 +13283,7 @@ function matchTerm(q, p, i, slot, name = `Term ${i + 1}`) {
     y: slot * TERM_PITCH,
     width: TERM_W,
     height: TERM_H,
-    fill: solid$4(L$2.background),
+    fill: solid$5(L$2.background),
     stroke: stroke$1(L$2.border, 2),
     cornerRadius: RADIUS.control,
     clip: false,
@@ -13403,7 +13403,7 @@ function catZone(q, g, i) {
     questionPart: `catZone:${g.id}`,
     height: GROUP_H,
     layoutItem: { width: "fill" },
-    fill: solid$4(L$2.surface),
+    fill: solid$5(L$2.surface),
     stroke: { ...stroke$1(L$2.border, 2), dash: [8, 5] },
     cornerRadius: 12,
     clip: false,
@@ -13683,7 +13683,7 @@ const defaultBox = (k) => ({ x: 40 + k * 46 % 360, y: 40 + k * 38 % 150, w: 90, 
 function pentagon(w, h) {
   return [[0.5, 0], [1, 0.4], [0.8, 1], [0.2, 1], [0, 0.4]].map(([x, y]) => ({ x: Math.round(x * w), y: Math.round(y * h) }));
 }
-function spotArea(q, o, i, shape, box, points) {
+function spotArea(q, o, i, shape2, box, points) {
   const at = itemAt(q, i);
   const r3 = `${at}?`;
   const common = {
@@ -13696,7 +13696,7 @@ function spotArea(q, o, i, shape, box, points) {
     role: isMultiple(q) ? "checkbox" : "radio",
     focusable: true,
     ariaLabel: o.text,
-    fill: solid$4("#ffffff01"),
+    fill: solid$5("#ffffff01"),
     stroke: stroke$1(AREA_OFF, 3),
     cursor: "pointer",
     bindings: {
@@ -13707,31 +13707,31 @@ function spotArea(q, o, i, shape, box, points) {
       "stroke.paint.color": `${r3}.state == "correct" ? "${L$2.success}" : ${r3}.state == "wrong" ? "${L$2.error}" : ${r3}.state == "missed" ? "${L$2.warning}" : ${r3}.selected ? "${L$2.primary}" : "${AREA_OFF}"`
     }
   };
-  if (shape === "ellipse") return createNode("ellipse", common);
-  if (shape === "polygon") return createNode("path", { ...common, paths: [{ closed: true, points: points ? points.map(([x, y]) => ({ x, y })) : pentagon(box.w, box.h) }] });
+  if (shape2 === "ellipse") return createNode("ellipse", common);
+  if (shape2 === "polygon") return createNode("path", { ...common, paths: [{ closed: true, points: points ? points.map(([x, y]) => ({ x, y })) : pentagon(box.w, box.h) }] });
   return createNode("rect", { ...common, cornerRadius: 8 });
 }
 function samplePicture() {
-  const shape = (type, name, x, y, w, h, color, extra = {}) => createNode(type, { name, x, y, width: w, height: h, fill: solid$4(color), stroke: null, decorative: true, ...extra });
+  const shape2 = (type, name, x, y, w, h, color, extra = {}) => createNode(type, { name, x, y, width: w, height: h, fill: solid$5(color), stroke: null, decorative: true, ...extra });
   return createNode("frame", {
     name: "Picture",
     questionPart: "picture",
     width: AREA_W,
     height: AREA_H,
-    fill: solid$4("#cfe8ff"),
+    fill: solid$5("#cfe8ff"),
     stroke: null,
     cornerRadius: RADIUS.control,
     clip: true,
     role: "image",
     ariaLabel: "A house with a red roof and a door, a tree beside it and the sun in the sky",
     children: [
-      shape("ellipse", "Sun", 466, 28, 78, 78, "#ffcf33"),
-      shape("rect", "Ground", 0, 224, AREA_W, 56, "#9bd18b"),
-      shape("rect", "Walls", 150, 138, 170, 104, "#e8c9a0"),
-      createNode("path", { name: "Roof", x: 130, y: 62, width: 210, height: 76, fill: solid$4("#b5523b"), stroke: null, decorative: true, paths: [{ closed: true, points: [{ x: 0, y: 76 }, { x: 105, y: 0 }, { x: 210, y: 76 }] }] }),
-      shape("rect", "Door", 224, 178, 38, 64, "#7a4a2b"),
-      shape("rect", "Trunk", 428, 168, 20, 74, "#7a4a2b"),
-      shape("ellipse", "Leaves", 394, 98, 90, 88, "#3f9a4a")
+      shape2("ellipse", "Sun", 466, 28, 78, 78, "#ffcf33"),
+      shape2("rect", "Ground", 0, 224, AREA_W, 56, "#9bd18b"),
+      shape2("rect", "Walls", 150, 138, 170, 104, "#e8c9a0"),
+      createNode("path", { name: "Roof", x: 130, y: 62, width: 210, height: 76, fill: solid$5("#b5523b"), stroke: null, decorative: true, paths: [{ closed: true, points: [{ x: 0, y: 76 }, { x: 105, y: 0 }, { x: 210, y: 76 }] }] }),
+      shape2("rect", "Door", 224, 178, 38, 64, "#7a4a2b"),
+      shape2("rect", "Trunk", 428, 168, 20, 74, "#7a4a2b"),
+      shape2("ellipse", "Leaves", 394, 98, 90, 88, "#3f9a4a")
     ]
   });
 }
@@ -13811,7 +13811,7 @@ function frameFor(q, blankVars, at) {
     role: "region",
     question: q,
     //A flat grey card on the page, like the toolbox's cards
-    fill: solid$4(L$2.surface),
+    fill: solid$5(L$2.surface),
     stroke: null,
     cornerRadius: 8,
     clip: false,
@@ -13833,9 +13833,9 @@ function frameFor(q, blankVars, at) {
         clip: false,
         layout: { ...row(12), align: "center" },
         children: [
-          button$3("Check answer", "check", "Check answer", true, { disabled: p("locked") }),
-          button$3("Hint", "hint", "Hint", false, { visible: `${p("hintsLeft")} > 0 && !${p("locked")}` }),
-          button$3("Try again", "reset", resetLabel(q), false, { visible: resetVisible(q) }),
+          button$4("Check answer", "check", "Check answer", true, { disabled: p("locked") }),
+          button$4("Hint", "hint", "Hint", false, { visible: `${p("hintsLeft")} > 0 && !${p("locked")}` }),
+          button$4("Try again", "reset", resetLabel(q), false, { visible: resetVisible(q) }),
           text$2("Score", "score", `Score: {${p("score")}}`, { fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, bindings: { visible: p("locked") } })
         ]
       })
@@ -14175,7 +14175,7 @@ function syncListen(ab, frame, q) {
   const has = partsOf(frame).listen?.[0];
   if (q.listen && !has) {
     const at = Math.min(row2.children.length, Math.max(0, row2.children.findIndex((c2) => c2.questionPart === "hint") + 1));
-    const b = button$3(uniqueName(nodeNames(ab), "Listen"), "listen", "Listen", false, { visible: "voiceAvailable" });
+    const b = button$4(uniqueName(nodeNames(ab), "Listen"), "listen", "Listen", false, { visible: "voiceAvailable" });
     b.ariaLabel = "Listen to the question";
     row2.children.splice(at, 0, b);
   } else if (!q.listen && has) {
@@ -14237,7 +14237,7 @@ function setKitOptions(d, abId, frameId, o) {
     const g = gate(o.hintWhen);
     if (g) hint.bindings = { ...hint.bindings ?? {}, visible: `${g} && ${varName(q, "hintsLeft")} > 0 && !${varName(q, "locked")}` };
     if (o.hint === "pill") {
-      Object.assign(hint, PILL, { fill: solid$4(L$2.background), stroke: stroke$1(L$2.border), fontWeight: 600 });
+      Object.assign(hint, PILL, { fill: solid$5(L$2.background), stroke: stroke$1(L$2.border), fontWeight: 600 });
       hint.ariaLabel = "Show a hint";
       const at = locateIn(frame, hint.id);
       const row2 = promptRow(ab, frame);
@@ -14809,7 +14809,7 @@ function linesOf(text2) {
   });
 }
 const HIDE_VAR = "storyBoxHidden";
-const solid$3 = (color) => ({ type: "solid", color });
+const solid$4 = (color) => ({ type: "solid", color });
 function storyStage(hideVar, at = {}) {
   const W2 = STAGE_W;
   const H2 = STAGE_H;
@@ -14841,7 +14841,7 @@ function storyStage(hideVar, at = {}) {
     width: 240,
     height: 44,
     cornerRadius: 10,
-    fill: solid$3("#b8860b"),
+    fill: solid$4("#b8860b"),
     bindings: { "fill.color": "story.speakerColour || '#b8860b'", visible: "story.speaking" },
     children: [createNode("text", { name: "Name", x: 0, y: 0, width: 240, height: 44, text: "Name", fontSize: 22, fontWeight: 700, color: "#ffffff", align: "center", verticalAlign: "middle", autoSize: "none", bindings: { text: "story.speaker" } })]
   });
@@ -14867,7 +14867,7 @@ function storyStage(hideVar, at = {}) {
     width: 1120,
     height: 180,
     cornerRadius: 14,
-    fill: solid$3("rgba(18, 18, 28, 0.86)"),
+    fill: solid$4("rgba(18, 18, 28, 0.86)"),
     clip: false,
     bindings: { visible: `(story.text != '' || story.choosing) && !${HIDE_VAR} && (story.look == 'bottom' || (story.look == 'bubble' && !story.speaking))` },
     children: [plate, words, more]
@@ -14890,7 +14890,7 @@ function storyStage(hideVar, at = {}) {
     }
   });
   const fullList = createNode("frame", { name: "Full screen lines", x: 40, y: 36, width: 960, height: 540, fill: null, clip: true, repeat: { items: "story.page.concat(story.text != '' ? [{ current: true }] : [])", layout: "vertical", gap: 16, columns: 1 }, children: [fullLine] });
-  const full = createNode("frame", { name: "Full screen text", x: 120, y: 40, width: 1040, height: 624, cornerRadius: 16, fill: solid$3("rgba(10, 10, 16, 0.84)"), bindings: { visible: `story.look == 'full' && !${HIDE_VAR}` }, children: [fullList] });
+  const full = createNode("frame", { name: "Full screen text", x: 120, y: 40, width: 1040, height: 624, cornerRadius: 16, fill: solid$4("rgba(10, 10, 16, 0.84)"), bindings: { visible: `story.look == 'full' && !${HIDE_VAR}` }, children: [fullList] });
   const BW = 540;
   const BH = 176;
   const tail = createNode("rect", {
@@ -14900,16 +14900,16 @@ function storyStage(hideVar, at = {}) {
     width: 32,
     height: 32,
     rotation: 45,
-    fill: solid$3("#fbfaf7"),
+    fill: solid$4("#fbfaf7"),
     bindings: {
       x: `clamp((story.bubble.tipX - story.bubble.x) * ${W2} - 16, -14, ${BW - 18})`,
       y: `clamp((story.bubble.tipY - story.bubble.y) * ${H2} - 16, -14, ${BH - 18})`,
       visible: "story.bubble.tail != 'none'"
     }
   });
-  const bubbleName = createNode("text", { name: "Bubble name", x: 28, y: 18, width: 480, height: 28, text: "Name", fontSize: 18, fontWeight: 700, color: "#b8860b", autoSize: "none", bindings: { text: "story.speaker", color: "story.speakerColour || '#b8860b'" } });
+  const bubbleName = createNode("text", { name: "Bubble name", x: 28, y: 18, width: 480, height: 28, text: "Name", fontSize: 18, fontWeight: 700, color: "#7a5a06", autoSize: "none", bindings: { text: "story.speaker", color: "story.speakerColour || '#7a5a06'" } });
   const bubbleWords = createNode("text", { name: "Bubble words", x: 28, y: 50, width: 484, height: 110, text: "Words in the bubble.", fontSize: 23, lineHeight: 1.4, color: "#1b1b24", autoSize: "none", storyMarkup: true, bindings: { text: "story.marked", reveal: "story.shown" } });
-  const bubble = createNode("frame", { name: "Speech bubble", x: (W2 - BW) / 2, y: 300, width: BW, height: BH, cornerRadius: 24, clip: false, fill: solid$3("#fbfaf7"), shadow: { x: 0, y: 6, blur: 18, spread: 0, color: "rgba(0, 0, 0, 0.3)" }, bindings: { x: `story.bubble.x * ${W2}`, y: `story.bubble.y * ${H2}`, visible: `story.look == 'bubble' && story.speaking && !${HIDE_VAR}` }, children: [tail, bubbleName, bubbleWords] });
+  const bubble = createNode("frame", { name: "Speech bubble", x: (W2 - BW) / 2, y: 300, width: BW, height: BH, cornerRadius: 24, clip: false, fill: solid$4("#fbfaf7"), shadow: { x: 0, y: 6, blur: 18, spread: 0, color: "rgba(0, 0, 0, 0.3)" }, bindings: { x: `story.bubble.x * ${W2}`, y: `story.bubble.y * ${H2}`, visible: `story.look == 'bubble' && story.speaking && !${HIDE_VAR}` }, children: [tail, bubbleName, bubbleWords] });
   const choice = createNode("button", {
     name: "Choice",
     x: 0,
@@ -14919,7 +14919,7 @@ function storyStage(hideVar, at = {}) {
     label: "A choice",
     fontSize: 22,
     cornerRadius: 12,
-    fill: solid$3("#fbfaf7"),
+    fill: solid$4("#fbfaf7"),
     color: "#1b1b24",
     shadow: { x: 0, y: 4, blur: 14, spread: 0, color: "rgba(0, 0, 0, 0.35)" },
     bindings: { label: "(item.picked ? '✓ ' : '') + item.text", disabled: "!item.enabled" }
@@ -14936,12 +14936,13 @@ function storyStage(hideVar, at = {}) {
     bindings: { visible: `story.choosing && !${HIDE_VAR}`, y: "story.look == 'full' ? 380 : 120" },
     children: [choice]
   });
-  const control = (name, label, x, bind2) => createNode("button", { name, x, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid$3("rgba(18, 18, 28, 0.7)"), color: "#f5f2ea", ...bind2 ? { bindings: { label: bind2 } } : {} });
+  const control = (name, label, x, bind2) => createNode("button", { name, x, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid$4("rgba(18, 18, 28, 0.7)"), color: "#f5f2ea", ...bind2 ? { bindings: { label: bind2 } } : {} });
   const buttons = [control("Back", "Back", 0), control("Auto", "Auto", 94, "story.auto ? 'Auto on' : 'Auto'"), control("Skip", "Skip", 188, "story.skipping ? 'Skipping' : 'Skip'"), control("Hide", "Hide", 282)];
   const bar = createNode("frame", { name: "Story buttons", x: W2 - 80 - 366, y: 470, width: 366, height: 32, fill: null, bindings: { visible: `story.started && !story.ended && !${HIDE_VAR}`, y: "story.look == 'full' || (story.look == 'bubble' && story.speaking) ? 678 : 470" }, children: buttons });
-  const unhide = createNode("rect", { name: "Show the box again", x: 0, y: 0, width: W2, height: H2, fill: null, ariaLabel: "Show the words again", bindings: { visible: HIDE_VAR } });
+  const unhide = createNode("button", { name: "Show the box again", x: 0, y: 0, width: W2, height: H2, label: "", fill: null, stroke: null, ariaLabel: "Show the words again", bindings: { visible: HIDE_VAR } });
   const weather = createNode("rect", { name: "Weather", x: 0, y: 0, width: W2, height: H2, fill: null, visible: false, particles: { preset: "rain" } });
-  const ending = createNode("text", { name: "The end", x: 0, y: H2 / 2 - 40, width: W2, height: 80, text: "The end", fontSize: 44, fontWeight: 700, color: "#ffffff", align: "center", autoSize: "none", bindings: { text: "'The end' + (story.ending ? ': ' + story.ending : '')", visible: "story.ended" } });
+  const endWords = createNode("text", { name: "The end words", x: 0, y: 20, width: 880, height: 70, text: "The end", fontSize: 44, fontWeight: 700, color: "#ffffff", align: "center", autoSize: "none", bindings: { text: "'The end' + (story.ending ? ': ' + story.ending : '')" } });
+  const ending = createNode("frame", { name: "The end", x: (W2 - 880) / 2, y: H2 / 2 - 150, width: 880, height: 110, cornerRadius: 16, fill: solid$4("rgba(10, 10, 16, 0.86)"), bindings: { visible: "story.ended" }, children: [endWords] });
   const nodes = [];
   const edges = [];
   const wire = (target, action) => {
@@ -14960,20 +14961,20 @@ function storyStage(hideVar, at = {}) {
     name: "Story stage",
     width: W2,
     height: H2,
-    background: solid$3("#15141c"),
+    background: solid$4("#15141c"),
     children: [bgBefore, bg, cast, weather, box, full, bubble, choices, bar, ending, unhide],
     logic: { nodes, edges },
     ...at
   });
 }
-const INK$1 = "#f5f2ea";
-const DARK$1 = "#15141c";
+const INK$2 = "#f5f2ea";
+const DARK$2 = "#15141c";
 const BAND = "rgba(12, 11, 18, 0.88)";
 const PANEL$1 = "#232130";
-const ACCENT$1 = "#c8a24a";
-const solid$2 = (color) => ({ type: "solid", color });
+const ACCENT$2 = "#c8a24a";
+const solid$3 = (color) => ({ type: "solid", color });
 const PUZZLE_FRAME_NAME = "Puzzle bar";
-function onClick$1(w, target, ...actions) {
+function onClick$2(w, target, ...actions) {
   const y = 40 + w.nodes.length * 40;
   const ev = { id: uid("n"), kind: "event.pointer", x: 40, y, params: { type: "click", target: target.id } };
   w.nodes.push(ev);
@@ -14985,58 +14986,58 @@ function onClick$1(w, target, ...actions) {
     prev = n;
   });
 }
-const text$1 = (name, value, x, y, width, height, extra = {}) => createNode("text", { name, text: value, x, y, width, height, fontSize: 20, color: INK$1, autoSize: "none", ...extra });
-const button$2 = (name, label, x, y, width, extra = {}) => createNode("button", { name, label, x, y, width, height: 48, fontSize: 18, fontWeight: 600, cornerRadius: 12, fill: solid$2("rgba(255, 255, 255, 0.92)"), color: DARK$1, ...extra });
+const text$1 = (name, value, x, y, width, height, extra = {}) => createNode("text", { name, text: value, x, y, width, height, fontSize: 20, color: INK$2, autoSize: "none", ...extra });
+const button$3 = (name, label, x, y, width, extra = {}) => createNode("button", { name, label, x, y, width, height: 48, fontSize: 18, fontWeight: 600, cornerRadius: 12, fill: solid$3("rgba(255, 255, 255, 0.92)"), color: DARK$2, ...extra });
 function puzzleFrame(w = STAGE_W, h = STAGE_H) {
   const wiring2 = { nodes: [], edges: [] };
   const side = 220;
   const sx = w - side - 24;
-  const band = createNode("rect", { name: "Band", x: 0, y: 0, width: w, height: 64, fill: solid$2(BAND), decorative: true });
-  const label = text$1("Number", "Puzzle 1", 24, 14, 150, 36, { fontSize: 22, fontWeight: 700, color: ACCENT$1, bindings: { text: "puzzle.label" } });
+  const band = createNode("rect", { name: "Band", x: 0, y: 0, width: w, height: 64, fill: solid$3(BAND), decorative: true });
+  const label = text$1("Number", "Puzzle 1", 24, 14, 150, 36, { fontSize: 22, fontWeight: 700, color: ACCENT$2, bindings: { text: "puzzle.label" } });
   const title = text$1("Title", "The puzzle", 180, 14, w - 180 - 460, 36, { fontSize: 22, fontWeight: 600, role: "heading", headingLevel: 1, overflow: "ellipsis", bindings: { text: "puzzle.title" } });
   const value = text$1("Value", "30 points", w - 440, 18, 200, 30, { align: "right", bindings: { text: "puzzle.solved && !puzzle.right ? 'Solved: ' + puzzle.score + ' points' : puzzle.value + ' points'" } });
   const coins = text$1("Coins", "Hint coins: 3", w - 224, 18, 200, 30, { align: "right", bindings: { text: "'Hint coins: ' + puzzle.coins" } });
   const top = createNode("frame", { name: PUZZLE_FRAME_NAME, x: 0, y: 0, width: w, height: 64, fill: null, children: [band, label, title, value, coins] });
-  const hint = button$2("Hint button", "Hint 1", 0, 0, side, {
+  const hint = button$3("Hint button", "Hint 1", 0, 0, side, {
     height: 44,
     fontSize: 16,
     bindings: {
       label: "item.open ? item.label : item.label + ' (' + item.cost + (item.cost == 1 ? ' coin)' : ' coins)')",
       disabled: "!item.open && !item.canOpen",
-      "fill.color": `item.open ? '${ACCENT$1}' : 'rgba(255, 255, 255, 0.92)'`
+      "fill.color": `item.open ? '${ACCENT$2}' : 'rgba(255, 255, 255, 0.92)'`
     }
   });
   const hints = createNode("frame", { name: "Hints", x: sx, y: 88, width: side, height: 212, fill: null, repeat: { items: "puzzle.hints", layout: "vertical", gap: 12, columns: 1 }, children: [hint] });
-  onClick$1(wiring2, hint, { kind: "action.puzzleHint", params: { do: "open", hint: "event.index + 1" } });
-  const noHints = text$1("No hints", "No hints for this one.", sx, 88, side, 30, { fontSize: 16, color: "rgba(245, 242, 234, 0.7)", bindings: { visible: "puzzle.hints.length == 0" } });
+  onClick$2(wiring2, hint, { kind: "action.puzzleHint", params: { do: "open", hint: "event.index + 1" } });
+  const noHints = createNode("frame", { name: "No hints", x: sx, y: 88, width: side, height: 44, cornerRadius: 10, fill: solid$3(PANEL$1), bindings: { visible: "puzzle.hints.length == 0" }, children: [text$1("No hints words", "No hints for this one.", 14, 10, side - 28, 24, { fontSize: 16, color: INK$2 })] });
   const short2 = text$1("Not enough coins", "Not enough hint coins. Look around for more.", sx, 310, side, 52, { fontSize: 15, lineHeight: 1.3, color: "#f2b8a0", bindings: { visible: "puzzle.short" } });
-  const memo2 = button$2("Memo", "Memo", sx, h - 148, side, { bindings: { label: "puzzle.memo ? 'Close the memo' : 'Memo'", ariaPressed: "puzzle.memo ? 'true' : 'false'" } });
-  onClick$1(wiring2, memo2, { kind: "action.puzzleMemo", params: { to: "toggle" } });
-  const skip = button$2("Skip", "Skip for now", sx, h - 84, side, { fill: solid$2("rgba(255, 255, 255, 0.14)"), color: INK$1, bindings: { label: "puzzle.solved ? 'Back' : 'Skip for now'" } });
-  onClick$1(wiring2, skip, { kind: "action.puzzleLeave", params: { skip: true } });
-  const pad = createNode("rect", { name: "Memo pad", x: 0, y: 64, width: sx - 24, height: h - 64, fill: solid$2("rgba(255, 252, 235, 0.16)"), sketch: { colour: "#fff3b0", size: 4 }, ariaLabel: "Memo: draw here to work the puzzle out", bindings: { visible: "puzzle.memo" } });
+  const memo2 = button$3("Memo", "Memo", sx, h - 148, side, { bindings: { label: "puzzle.memo ? 'Close the memo' : 'Memo'", ariaPressed: "puzzle.memo ? 'true' : 'false'" } });
+  onClick$2(wiring2, memo2, { kind: "action.puzzleMemo", params: { to: "toggle" } });
+  const skip = button$3("Skip", "Skip for now", sx, h - 84, side, { fill: solid$3("rgba(255, 255, 255, 0.14)"), color: INK$2, bindings: { label: "puzzle.solved ? 'Back' : 'Skip for now'" } });
+  onClick$2(wiring2, skip, { kind: "action.puzzleLeave", params: { skip: true } });
+  const pad = createNode("rect", { name: "Memo pad", x: 0, y: 64, width: sx - 24, height: h - 64, fill: solid$3("rgba(255, 252, 235, 0.16)"), sketch: { colour: "#fff3b0", size: 4 }, ariaLabel: "Memo: draw here to work the puzzle out", bindings: { visible: "puzzle.memo" } });
   const cw = 560;
   const cx = (sx - 24 - cw) / 2;
-  const cardHead = text$1("Hint heading", "Hint 1", 24, 20, cw - 48, 32, { fontSize: 22, fontWeight: 700, color: ACCENT$1, role: "heading", headingLevel: 2, bindings: { text: "puzzle.hintLabel" } });
+  const cardHead = text$1("Hint heading", "Hint 1", 24, 20, cw - 48, 32, { fontSize: 22, fontWeight: 700, color: ACCENT$2, role: "heading", headingLevel: 2, bindings: { text: "puzzle.hintLabel" } });
   const cardText = text$1("Hint words", "The hint.", 24, 64, cw - 48, 84, { fontSize: 19, lineHeight: 1.45, autoSize: "height", bindings: { text: "puzzle.hintText" } });
-  const cardClose = button$2("Close the hint", "Got it", 24, 164, 160, { height: 44, fill: solid$2(ACCENT$1) });
-  onClick$1(wiring2, cardClose, { kind: "action.puzzleHint", params: { do: "close" } });
-  const card = createNode("frame", { name: "Hint card", x: cx, y: 150, width: cw, height: 232, fill: solid$2(PANEL$1), cornerRadius: 16, stroke: { color: ACCENT$1, width: 2 }, role: "dialog", ariaLabel: "Hint", children: [cardHead, cardText, cardClose], bindings: { visible: "puzzle.showing > 0" } });
-  const dim = (name, visible) => createNode("rect", { name, x: 0, y: 0, width: w, height: h, fill: solid$2("rgba(8, 8, 14, 0.72)"), decorative: true, bindings: { visible } });
+  const cardClose = button$3("Close the hint", "Got it", 24, 164, 160, { height: 44, fill: solid$3(ACCENT$2) });
+  onClick$2(wiring2, cardClose, { kind: "action.puzzleHint", params: { do: "close" } });
+  const card = createNode("frame", { name: "Hint card", x: cx, y: 150, width: cw, height: 232, fill: solid$3(PANEL$1), cornerRadius: 16, stroke: { color: ACCENT$2, width: 2 }, role: "dialog", ariaLabel: "Hint", children: [cardHead, cardText, cardClose], bindings: { visible: "puzzle.showing > 0" } });
+  const dim = (name, visible) => createNode("rect", { name, x: 0, y: 0, width: w, height: h, fill: solid$3("rgba(8, 8, 14, 0.72)"), decorative: true, bindings: { visible } });
   const pw2 = 520;
   const px = (w - pw2) / 2;
-  const rightHead = text$1("Right heading", "Solved!", 0, 36, pw2, 70, { fontSize: 56, fontWeight: 800, color: ACCENT$1, align: "center", role: "heading", headingLevel: 2 });
+  const rightHead = text$1("Right heading", "Solved!", 0, 36, pw2, 70, { fontSize: 56, fontWeight: 800, color: ACCENT$2, align: "center", role: "heading", headingLevel: 2 });
   const rightWords = text$1("Right words", "30 points", 0, 116, pw2, 36, { fontSize: 22, align: "center", bindings: { text: "puzzle.replay || puzzle.won == 0 ? 'Solved again. Well done.' : puzzle.won + ' points'" } });
-  const onward = button$2("Continue", "Continue", (pw2 - 220) / 2, 184, 220, { fill: solid$2(ACCENT$1) });
-  onClick$1(wiring2, onward, { kind: "action.puzzleLeave", params: { skip: false } });
-  const right = createNode("frame", { name: "Right", x: px, y: (h - 270) / 2, width: pw2, height: 270, fill: solid$2(PANEL$1), cornerRadius: 20, role: "dialog", ariaLabel: "Solved", children: [rightHead, rightWords, onward], bindings: { visible: "puzzle.right" } });
+  const onward = button$3("Continue", "Continue", (pw2 - 220) / 2, 184, 220, { fill: solid$3(ACCENT$2) });
+  onClick$2(wiring2, onward, { kind: "action.puzzleLeave", params: { skip: false } });
+  const right = createNode("frame", { name: "Right", x: px, y: (h - 270) / 2, width: pw2, height: 270, fill: solid$3(PANEL$1), cornerRadius: 20, role: "dialog", ariaLabel: "Solved", children: [rightHead, rightWords, onward], bindings: { visible: "puzzle.right" } });
   const wrongHead = text$1("Wrong heading", "Not quite.", 0, 36, pw2, 64, { fontSize: 48, fontWeight: 800, color: "#f2b8a0", align: "center", role: "heading", headingLevel: 2 });
   const wrongWords = text$1("Wrong words", "It is worth 27 points now.", 0, 110, pw2, 34, { fontSize: 20, align: "center", bindings: { text: "'It is worth ' + puzzle.value + ' points now.'" } });
-  const again = button$2("Try the puzzle again", "Try again", pw2 / 2 - 230, 178, 220, { fill: solid$2(ACCENT$1) });
-  const leave = button$2("Leave it for now", "Leave it for now", pw2 / 2 + 10, 178, 220, { fill: solid$2("rgba(255, 255, 255, 0.14)"), color: INK$1 });
-  onClick$1(wiring2, again, { kind: "action.puzzleAnswer", params: { answer: "again" } });
-  onClick$1(wiring2, leave, { kind: "action.puzzleLeave", params: { skip: true } });
-  const wrong = createNode("frame", { name: "Not quite", x: px, y: (h - 260) / 2, width: pw2, height: 260, fill: solid$2(PANEL$1), cornerRadius: 20, role: "dialog", ariaLabel: "Not quite", children: [wrongHead, wrongWords, again, leave], bindings: { visible: "puzzle.wrong" } });
+  const again = button$3("Try the puzzle again", "Try again", pw2 / 2 - 230, 178, 220, { fill: solid$3(ACCENT$2) });
+  const leave = button$3("Leave it for now", "Leave it for now", pw2 / 2 + 10, 178, 220, { fill: solid$3("rgba(255, 255, 255, 0.14)"), color: INK$2 });
+  onClick$2(wiring2, again, { kind: "action.puzzleAnswer", params: { answer: "again" } });
+  onClick$2(wiring2, leave, { kind: "action.puzzleLeave", params: { skip: true } });
+  const wrong = createNode("frame", { name: "Not quite", x: px, y: (h - 260) / 2, width: pw2, height: 260, fill: solid$3(PANEL$1), cornerRadius: 20, role: "dialog", ariaLabel: "Not quite", children: [wrongHead, wrongWords, again, leave], bindings: { visible: "puzzle.wrong" } });
   return { layers: [pad, top, hints, noHints, short2, memo2, skip, card, dim("Right dim", "puzzle.right"), right, dim("Not quite dim", "puzzle.wrong"), wrong], wiring: wiring2 };
 }
 function makePuzzle(d, abId) {
@@ -15055,7 +15056,7 @@ function addPuzzlePage(d, opts2 = {}) {
   const count2 = d.artboards.filter((a) => a.puzzle).length + 1;
   const last = d.artboards.reduce((m, a) => Math.max(m, a.canvasX + a.width), 0);
   const name = opts2.name ?? `Puzzle ${count2}`;
-  const page2 = createArtboard({ name, width: STAGE_W, height: STAGE_H, background: solid$2(DARK$1), canvasX: last + 160, canvasY: 0 });
+  const page2 = createArtboard({ name, width: STAGE_W, height: STAGE_H, background: solid$3(DARK$2), canvasX: last + 160, canvasY: 0 });
   page2.puzzle = {
     //Hints that fit the kit's own sample question (which prime), so a new puzzle plays straight away
     title: opts2.title ?? "Prime time",
@@ -15069,13 +15070,13 @@ function addPuzzlePage(d, opts2 = {}) {
   makePuzzle(d, page2.id);
   return page2.id;
 }
-const INK = "#f5f2ea";
-const DARK = "#15141c";
+const INK$1 = "#f5f2ea";
+const DARK$1 = "#15141c";
 const PANEL = "rgba(255, 255, 255, 0.07)";
-const ACCENT = "#c8a24a";
-const solid$1 = (color) => ({ type: "solid", color });
+const ACCENT$1 = "#c8a24a";
+const solid$2 = (color) => ({ type: "solid", color });
 const wiring = () => ({ nodes: [], edges: [] });
-function onClick(w, target, ...actions) {
+function onClick$1(w, target, ...actions) {
   const y = 40 + w.nodes.length * 40;
   const ev = { id: uid("n"), kind: "event.pointer", x: 40, y, params: { type: "click", target: target.id } };
   w.nodes.push(ev);
@@ -15089,45 +15090,45 @@ function onClick(w, target, ...actions) {
 }
 const go = (artboard) => ({ kind: "action.artboard", params: { to: "picked", artboard, transition: "fade", duration: 400 } });
 const back = () => ({ kind: "action.artboard", params: { to: "back", transition: "fade", duration: 300 } });
-const heading$2 = (text2, y = 48) => createNode("text", { name: "Heading", text: text2, x: 80, y, width: STAGE_W - 160, height: 60, fontSize: 44, fontWeight: 700, color: INK, autoSize: "none", role: "heading", headingLevel: 1 });
-const button$1 = (name, label, x, y, width = 280, extra = {}) => createNode("button", { name, label, x, y, width, height: 54, fontSize: 20, fontWeight: 600, cornerRadius: 12, fill: solid$1("rgba(255, 255, 255, 0.92)"), color: DARK, ...extra });
-const page = (name, children, w, at) => createArtboard({ name, width: STAGE_W, height: STAGE_H, background: solid$1(DARK), children, logic: w, canvasX: at * (STAGE_W + 160), canvasY: 0 });
+const heading$2 = (text2, y = 48) => createNode("text", { name: "Heading", text: text2, x: 80, y, width: STAGE_W - 160, height: 60, fontSize: 44, fontWeight: 700, color: INK$1, autoSize: "none", role: "heading", headingLevel: 1 });
+const button$2 = (name, label, x, y, width = 280, extra = {}) => createNode("button", { name, label, x, y, width, height: 54, fontSize: 20, fontWeight: 600, cornerRadius: 12, fill: solid$2("rgba(255, 255, 255, 0.92)"), color: DARK$1, ...extra });
+const page = (name, children, w, at) => createArtboard({ name, width: STAGE_W, height: STAGE_H, background: solid$2(DARK$1), children, logic: w, canvasX: at * (STAGE_W + 160), canvasY: 0 });
 function titlePage(stageId, savesId, settingsId, extrasId, modeVar) {
   const w = wiring();
-  const title = createNode("text", { name: "Title", text: "Your story", x: 0, y: 150, width: STAGE_W, height: 90, fontSize: 72, fontWeight: 700, color: INK, align: "center", autoSize: "none", role: "heading", headingLevel: 1 });
+  const title = createNode("text", { name: "Title", text: "Your story", x: 0, y: 150, width: STAGE_W, height: 90, fontSize: 72, fontWeight: 700, color: INK$1, align: "center", autoSize: "none", role: "heading", headingLevel: 1 });
   const sub = createNode("text", { name: "Subtitle", text: "A visual novel", x: 0, y: 248, width: STAGE_W, height: 34, fontSize: 24, color: "rgba(245, 242, 234, 0.7)", align: "center", autoSize: "none" });
   const x = (STAGE_W - 280) / 2;
-  const cont = button$1("Continue", "Continue", x, 320, 280, { bindings: { visible: "story.canContinue" } });
-  const start = button$1("New game", "New game", x, 394);
-  const load = button$1("Load", "Load", x, 468);
-  const settings = button$1("Settings", "Settings", x, 542);
-  const extras = button$1("Extras", "Extras", x, 616);
-  onClick(w, start, { kind: "action.storyStart", params: {} });
-  onClick(w, cont, { kind: "action.storyLoad", params: { slot: "'latest'" } });
-  onClick(w, load, { kind: "action.setVariable", params: { variable: modeVar, value: "'load'" } }, go(savesId));
-  onClick(w, settings, go(settingsId));
-  onClick(w, extras, go(extrasId));
+  const cont = button$2("Continue", "Continue", x, 320, 280, { bindings: { visible: "story.canContinue" } });
+  const start = button$2("New game", "New game", x, 394);
+  const load = button$2("Load", "Load", x, 468);
+  const settings = button$2("Settings", "Settings", x, 542);
+  const extras = button$2("Extras", "Extras", x, 616);
+  onClick$1(w, start, { kind: "action.storyStart", params: {} });
+  onClick$1(w, cont, { kind: "action.storyLoad", params: { slot: "'latest'" } });
+  onClick$1(w, load, { kind: "action.setVariable", params: { variable: modeVar, value: "'load'" } }, go(savesId));
+  onClick$1(w, settings, go(settingsId));
+  onClick$1(w, extras, go(extrasId));
   return page("Title", [title, sub, cont, start, load, settings, extras], w, 0);
 }
 function savesPage(modeVar, modeName) {
   const w = wiring();
-  const head = createNode("text", { name: "Heading", text: "Load", x: 80, y: 40, width: 800, height: 60, fontSize: 44, fontWeight: 700, color: INK, autoSize: "none", role: "heading", headingLevel: 1, bindings: { text: `${modeName} == 'save' ? 'Save' : 'Load'` } });
+  const head = createNode("text", { name: "Heading", text: "Load", x: 80, y: 40, width: 800, height: 60, fontSize: 44, fontWeight: 700, color: INK$1, autoSize: "none", role: "heading", headingLevel: 1, bindings: { text: `${modeName} == 'save' ? 'Save' : 'Load'` } });
   const pic = createNode("image", { name: "Picture", x: 0, y: 0, width: 180, height: 101, fit: "cover", cornerRadius: 8, bindings: { assetId: "item.picture", visible: "item.picture != ''" } });
-  const words = createNode("text", { name: "Slot words", text: "Empty", x: 196, y: 4, width: 320, height: 94, overflow: "ellipsis", fontSize: 17, lineHeight: 1.4, color: INK, align: "left", autoSize: "none", bindings: { text: "item.used ? 'Slot ' + item.slot + ': ' + item.chapter + (item.scene ? ', ' + item.scene : '') + '\\n' + item.when + '\\n' + item.text : 'Slot ' + item.slot + ': empty'" } });
-  const slot = createNode("frame", { name: "Slot", x: 0, y: 0, width: 540, height: 117, cornerRadius: 12, fill: solid$1(PANEL), clip: true, cursor: "pointer", role: "button", children: [pic, words], bindings: { ariaLabel: "'Slot ' + item.slot + (item.used ? ', ' + item.chapter + ', ' + item.when : ', empty')" } });
+  const words = createNode("text", { name: "Slot words", text: "Empty", x: 196, y: 4, width: 320, height: 94, overflow: "ellipsis", fontSize: 17, lineHeight: 1.4, color: INK$1, align: "left", autoSize: "none", bindings: { text: "item.used ? 'Slot ' + item.slot + ': ' + item.chapter + (item.scene ? ', ' + item.scene : '') + '\\n' + item.when + '\\n' + item.text : 'Slot ' + item.slot + ': empty'" } });
+  const slot = createNode("frame", { name: "Slot", x: 0, y: 0, width: 540, height: 117, cornerRadius: 12, fill: solid$2(PANEL), clip: true, cursor: "pointer", role: "button", children: [pic, words], bindings: { ariaLabel: "'Slot ' + item.slot + (item.used ? ', ' + item.chapter + ', ' + item.when : ', empty')" } });
   slot.children.forEach((c2) => {
     c2.x += 8;
     c2.y += 8;
   });
   const grid = createNode("frame", { name: "Slots", x: 80, y: 130, width: 1100, height: 420, fill: null, repeat: { items: "story.saves", layout: "grid", gap: 20, columns: 2 }, children: [slot] });
-  const done = button$1("Back", "Back", 80, 620, 200);
+  const done = button$2("Back", "Back", 80, 620, 200);
   const ifSave = { id: uid("n"), kind: "logic.if", x: 320, y: 40, params: { condition: `${modeName} == 'save'` } };
   const ev = { id: uid("n"), kind: "event.pointer", x: 40, y: 40, params: { type: "click", target: slot.id } };
   const save = { id: uid("n"), kind: "action.storySave", x: 580, y: 0, params: { slot: "event.index + 1" } };
   const load = { id: uid("n"), kind: "action.storyLoad", x: 580, y: 100, params: { slot: "event.index + 1" } };
   w.nodes.push(ev, ifSave, save, load);
   w.edges.push({ id: uid("e"), from: ev.id, fromPort: "out", to: ifSave.id, toPort: "in" }, { id: uid("e"), from: ifSave.id, fromPort: "true", to: save.id, toPort: "in" }, { id: uid("e"), from: ifSave.id, fromPort: "false", to: load.id, toPort: "in" });
-  onClick(w, done, back());
+  onClick$1(w, done, back());
   return page("Save and load", [head, grid, done], w, 3);
 }
 function settingsPage() {
@@ -15146,68 +15147,68 @@ function settingsPage() {
   const rowW = 760;
   rows.forEach(([label, pref, choices], i) => {
     const y = 112 + i * 62;
-    kids.push(createNode("text", { name: label, text: label, x: 80, y: y + 12, width: 260, height: 30, fontSize: 20, color: INK, autoSize: "none" }));
+    kids.push(createNode("text", { name: label, text: label, x: 80, y: y + 12, width: 260, height: 30, fontSize: 20, color: INK$1, autoSize: "none" }));
     const bw = (rowW - 20 * (choices.length - 1)) / choices.length;
     choices.forEach(([name, value], j) => {
       const now2 = value === "null" ? `story.prefs.${pref} === null` : `story.prefs.${pref} == ${value}`;
-      const b = button$1(`${label}: ${name}`, name, 360 + j * (bw + 20), y, bw, { height: 48, fontSize: 17, bindings: { "fill.color": `${now2} ? '${ACCENT}' : 'rgba(255, 255, 255, 0.92)'`, ariaPressed: `${now2} ? 'true' : 'false'` } });
+      const b = button$2(`${label}: ${name}`, name, 360 + j * (bw + 20), y, bw, { height: 48, fontSize: 17, bindings: { "fill.color": `${now2} ? '${ACCENT$1}' : 'rgba(255, 255, 255, 0.92)'`, ariaPressed: `${now2} ? 'true' : 'false'` } });
       kids.push(b);
-      onClick(w, b, { kind: "action.storyPref", params: { pref, value } });
+      onClick$1(w, b, { kind: "action.storyPref", params: { pref, value } });
     });
   });
-  const done = button$1("Back", "Back", 80, 640, 200);
+  const done = button$2("Back", "Back", 80, 640, 200);
   kids.push(done);
-  onClick(w, done, back());
+  onClick$1(w, done, back());
   return page("Settings", kids, w, 4);
 }
 function historyPage(stageId) {
   const w = wiring();
-  const line = createNode("text", { name: "Said", text: "Who: what they said", x: 0, y: 0, width: 1120, height: 52, fontSize: 19, lineHeight: 1.35, color: INK, autoSize: "height", cursor: "pointer", role: "button", bindings: { text: "(item.speaker ? item.speaker + ': ' : '') + item.text" } });
+  const line = createNode("text", { name: "Said", text: "Who: what they said", x: 0, y: 0, width: 1120, height: 52, fontSize: 19, lineHeight: 1.35, color: INK$1, autoSize: "height", cursor: "pointer", role: "button", bindings: { text: "(item.speaker ? item.speaker + ': ' : '') + item.text" } });
   const list2 = createNode("frame", { name: "Lines", x: 80, y: 150, width: 1120, height: 460, fill: null, clip: true, repeat: { items: "story.history.slice(-9)", layout: "vertical", gap: 10, columns: 1 }, children: [line] });
-  const done = button$1("Back to the story", "Back to the story", 80, 640, 280);
-  onClick(w, line, { kind: "action.storyRollBack", params: { steps: "story.history.length + 1 - story.history.slice(-9)[event.index].number" } }, go(stageId));
-  onClick(w, done, go(stageId));
+  const done = button$2("Back to the story", "Back to the story", 80, 640, 280);
+  onClick$1(w, line, { kind: "action.storyRollBack", params: { steps: "story.history.length + 1 - story.history.slice(-9)[event.index].number" } }, go(stageId));
+  onClick$1(w, done, go(stageId));
   const hint = createNode("text", { name: "Hint", text: "Click a line to go back to it.", x: 80, y: 100, width: 800, height: 26, fontSize: 16, color: "rgba(245, 242, 234, 0.7)", autoSize: "none" });
   return page("History", [heading$2("What was said", 28), hint, list2, done], w, 2);
 }
 function extrasPage(puzzlesId) {
   const w = wiring();
-  const pic = createNode("image", { name: "Picture", x: 0, y: 0, width: 200, height: 112, fit: "cover", cornerRadius: 8, fill: solid$1(PANEL), bindings: { assetId: "item.seen ? item.image : ''" } });
+  const pic = createNode("image", { name: "Picture", x: 0, y: 0, width: 200, height: 112, fit: "cover", cornerRadius: 8, fill: solid$2(PANEL), bindings: { assetId: "item.seen ? item.image : ''" } });
   const locked = createNode("text", { name: "Locked", text: "?", x: 0, y: 30, width: 200, height: 50, fontSize: 36, color: "rgba(245, 242, 234, 0.5)", align: "center", autoSize: "none", bindings: { visible: "!item.seen" } });
-  const cell = createNode("frame", { name: "Gallery picture", x: 0, y: 0, width: 200, height: 112, fill: solid$1(PANEL), cornerRadius: 8, clip: true, children: [pic, locked] });
+  const cell = createNode("frame", { name: "Gallery picture", x: 0, y: 0, width: 200, height: 112, fill: solid$2(PANEL), cornerRadius: 8, clip: true, children: [pic, locked] });
   const gallery = createNode("frame", { name: "Gallery", x: 80, y: 150, width: 650, height: 380, fill: null, repeat: { items: "story.gallery", layout: "grid", gap: 20, columns: 3 }, children: [cell] });
-  const ending = createNode("text", { name: "Ending", text: "An ending", x: 0, y: 0, width: 380, height: 30, fontSize: 19, color: INK, autoSize: "none", bindings: { text: "item.reached ? item.name : '???'" } });
+  const ending = createNode("text", { name: "Ending", text: "An ending", x: 0, y: 0, width: 380, height: 30, fontSize: 19, color: INK$1, autoSize: "none", bindings: { text: "item.reached ? item.name : '???'" } });
   const endings = createNode("frame", { name: "Endings", x: 800, y: 150, width: 400, height: 200, fill: null, repeat: { items: "story.endings", layout: "vertical", gap: 8, columns: 1 }, children: [ending] });
-  const chapter = button$1("Chapter", "A chapter", 0, 0, 380, { height: 44, fontSize: 17, bindings: { label: "item.reached ? item.name : '???'", disabled: "!item.reached" } });
+  const chapter = button$2("Chapter", "A chapter", 0, 0, 380, { height: 44, fontSize: 17, bindings: { label: "item.reached ? item.name : '???'", disabled: "!item.reached" } });
   const chapters = createNode("frame", { name: "Chapter select", x: 800, y: 420, width: 400, height: 200, fill: null, repeat: { items: "story.chapters", layout: "vertical", gap: 10, columns: 1 }, children: [chapter] });
-  const song = button$1("Song", "Play", 0, 0, 200, { height: 40, fontSize: 16, bindings: { label: "item.heard ? 'Track ' + item.number : '???'", disabled: "!item.heard" } });
+  const song = button$2("Song", "Play", 0, 0, 200, { height: 40, fontSize: 16, bindings: { label: "item.heard ? 'Track ' + item.number : '???'", disabled: "!item.heard" } });
   const songs = createNode("frame", { name: "Music room", x: 80, y: 580, width: 650, height: 40, fill: null, repeat: { items: "story.musicRoom", layout: "horizontal", gap: 20, columns: 1 }, children: [song] });
-  const label = (text2, x, y) => createNode("text", { name: text2, text: text2, x, y, width: 400, height: 30, fontSize: 22, fontWeight: 700, color: INK, autoSize: "none", role: "heading", headingLevel: 2 });
-  onClick(w, chapter, { kind: "action.storyStart", params: { from: "{story.chapters[event.index].name}" } });
-  onClick(w, song, { kind: "action.sound", params: { source: "story.musicRoom[event.index].sound", soundtrack: true, loop: true } });
-  const done = button$1("Back", "Back", 80, 640, 200);
-  onClick(w, done, { kind: "action.stopSound", params: {} }, back());
-  const puzzles = button$1("Puzzles", "Puzzles", 300, 640, 200);
-  onClick(w, puzzles, { kind: "action.stopSound", params: {} }, go(puzzlesId));
+  const label = (text2, x, y) => createNode("text", { name: text2, text: text2, x, y, width: 400, height: 30, fontSize: 22, fontWeight: 700, color: INK$1, autoSize: "none", role: "heading", headingLevel: 2 });
+  onClick$1(w, chapter, { kind: "action.storyStart", params: { from: "{story.chapters[event.index].name}" } });
+  onClick$1(w, song, { kind: "action.sound", params: { source: "story.musicRoom[event.index].sound", soundtrack: true, loop: true } });
+  const done = button$2("Back", "Back", 80, 640, 200);
+  onClick$1(w, done, { kind: "action.stopSound", params: {} }, back());
+  const puzzles = button$2("Puzzles", "Puzzles", 300, 640, 200);
+  onClick$1(w, puzzles, { kind: "action.stopSound", params: {} }, go(puzzlesId));
   return page("Extras", [heading$2("Extras", 32), label("Gallery", 80, 110), gallery, label("Endings", 800, 110), endings, label("Chapters", 800, 380), chapters, label("Music", 80, 540), songs, done, puzzles], w, 5);
 }
 function puzzlesPage() {
   const w = wiring();
   const sub = createNode("text", { name: "Score", text: "Score", x: 80, y: 100, width: 900, height: 28, fontSize: 18, color: "rgba(245, 242, 234, 0.75)", autoSize: "none", bindings: { text: "story.score + ' points from ' + story.puzzles.filter((p) => p.solved).length + ' of ' + story.puzzles.length + ' puzzles. Hint coins: ' + story.coins" } });
-  const row2 = button$1("Puzzle", "A puzzle", 0, 0, 1120, {
+  const row2 = button$2("Puzzle", "A puzzle", 0, 0, 1120, {
     height: 48,
     fontSize: 18,
     align: "left",
     bindings: {
       label: "item.found ? item.number + '. ' + item.title + (item.solved ? '  ·  Solved, ' + item.score + ' of ' + item.full + ' points' : item.skipped ? '  ·  Skipped' : '  ·  Not solved yet') : item.number + '. ???'",
       disabled: "!item.found",
-      "fill.color": `item.solved ? '${ACCENT}' : 'rgba(255, 255, 255, 0.92)'`
+      "fill.color": `item.solved ? '${ACCENT$1}' : 'rgba(255, 255, 255, 0.92)'`
     }
   });
   const list2 = createNode("frame", { name: "Puzzle list", x: 80, y: 150, width: 1120, height: 460, fill: null, clip: true, repeat: { items: "story.puzzles", layout: "vertical", gap: 12, columns: 1 }, children: [row2] });
-  onClick(w, row2, { kind: "action.artboard", params: { to: "expression", expr: "story.puzzles[event.index].page", transition: "fade", duration: 400 } });
-  const done = button$1("Back", "Back", 80, 640, 200);
-  onClick(w, done, back());
+  onClick$1(w, row2, { kind: "action.artboard", params: { to: "expression", expr: "story.puzzles[event.index].page", transition: "fade", duration: 400 } });
+  const done = button$2("Back", "Back", 80, 640, 200);
+  onClick$1(w, done, back());
   return page("Puzzles", [heading$2("Puzzles", 32), sub, list2, done], w, 6);
 }
 const PUZZLE_LINES = `The tables thinned out as the sun went down.
@@ -15245,7 +15246,7 @@ function visualNovel() {
     return hit2;
   };
   const bar = find2("Story buttons");
-  const more = (name, label) => createNode("button", { name, x: 0, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid$1("rgba(18, 18, 28, 0.7)"), color: INK });
+  const more = (name, label) => createNode("button", { name, x: 0, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid$2("rgba(18, 18, 28, 0.7)"), color: INK$1 });
   const extra = [more("Save", "Save"), more("Load", "Load"), more("History", "History"), more("Menu", "Menu")];
   bar.children.forEach((b, i) => b.x = (extra.length + i) * 94);
   extra.forEach((b, i) => b.x = i * 94);
@@ -15253,15 +15254,15 @@ function visualNovel() {
   bar.width = bar.children.length * 94 - 10;
   bar.x = STAGE_W - 80 - bar.width;
   const sw = stage.logic;
-  onClick(sw, extra[0], { kind: "action.setVariable", params: { variable: mode.id, value: "'save'" } }, go(saves.id));
-  onClick(sw, extra[1], { kind: "action.setVariable", params: { variable: mode.id, value: "'load'" } }, go(saves.id));
-  onClick(sw, extra[2], go(history.id));
-  onClick(sw, extra[3], { kind: "action.storySave", params: { slot: "'auto'" } }, go(title.id));
+  onClick$1(sw, extra[0], { kind: "action.setVariable", params: { variable: mode.id, value: "'save'" } }, go(saves.id));
+  onClick$1(sw, extra[1], { kind: "action.setVariable", params: { variable: mode.id, value: "'load'" } }, go(saves.id));
+  onClick$1(sw, extra[2], go(history.id));
+  onClick$1(sw, extra[3], { kind: "action.storySave", params: { slot: "'auto'" } }, go(title.id));
   const words = find2("Words");
   words.bindings = { ...words.bindings, fontSize: "26 * story.prefs.textSize", fontFamily: "story.prefs.readable ? 'Atkinson Hyperlegible' : 'Open Sans'" };
-  const toTitle = createNode("button", { name: "Back to the title", x: (STAGE_W - 280) / 2, y: STAGE_H / 2 + 60, width: 280, height: 54, label: "Back to the title", fontSize: 20, fontWeight: 600, cornerRadius: 12, fill: solid$1("rgba(255, 255, 255, 0.92)"), color: DARK, bindings: { visible: "story.ended" } });
+  const toTitle = createNode("button", { name: "Back to the title", x: (STAGE_W - 280) / 2, y: STAGE_H / 2 + 60, width: 280, height: 54, label: "Back to the title", fontSize: 20, fontWeight: 600, cornerRadius: 12, fill: solid$2("rgba(255, 255, 255, 0.92)"), color: DARK$1, bindings: { visible: "story.ended" } });
   stage.children.push(toTitle);
-  onClick(sw, toTitle, go(title.id));
+  onClick$1(sw, toTitle, go(title.id));
   title.canvasX = 0;
   project.artboards = [title, stage, history, saves, settings, extras, puzzles];
   const puzzleId = addPuzzlePage(project, {
@@ -15300,6 +15301,201 @@ function visualNovel() {
       item2("Restyle the dialogue box: its colour, the name plate and the words", find2("Dialogue box"), stage),
       item2("Write your own puzzle on Puzzle 1: the question, and its title, value and hints under Puzzle in the page settings", void 0, project.artboards.find((a) => a.id === puzzleId)),
       item2("Preview it from the title, play to an ending, and try Save, Load, History and Settings")
+    ]
+  };
+}
+const INK = "#f5f2ea";
+const DARK = "#15141c";
+const ACCENT = "#c8a24a";
+const solid$1 = (color) => ({ type: "solid", color });
+function onClick(w, target, ...actions) {
+  const y = 40 + w.nodes.length * 40;
+  const ev = { id: uid("n"), kind: "event.pointer", x: 40, y, params: { type: "click", target: target.id } };
+  w.nodes.push(ev);
+  let prev = ev;
+  actions.forEach((a, i) => {
+    const n = { id: uid("n"), kind: a.kind, x: 320 + i * 260, y, params: a.params ?? {} };
+    w.nodes.push(n);
+    w.edges.push({ id: uid("e"), from: prev.id, fromPort: "out", to: n.id, toPort: "in" });
+    prev = n;
+  });
+}
+const button$1 = (name, label, x, y, width, extra = {}) => createNode("button", { name, label, x, y, width, height: 44, fontSize: 17, fontWeight: 600, cornerRadius: 10, fill: solid$1("rgba(18, 18, 28, 0.78)"), color: INK, ...extra });
+const shape = (type, name, x, y, width, height, color, extra = {}) => createNode(type, { name, x, y, width, height, fill: solid$1(color), stroke: null, ...extra });
+function roomControls(w, width = STAGE_W, height = STAGE_H) {
+  const name = createNode("text", { name: "Room name", x: 28, y: 14, width: 600, height: 28, text: "Name", fontSize: 19, fontWeight: 700, color: ACCENT, autoSize: "none", bindings: { text: "room.speaker", visible: "room.speaking" } });
+  const words = createNode("text", { name: "Room words", x: 28, y: 46, width: width - 216, height: 80, text: "What you see.", fontSize: 23, lineHeight: 1.4, color: INK, autoSize: "none", bindings: { text: "room.text" } });
+  const more = createNode("text", { name: "Room more", x: width - 196, y: 100, width: 24, height: 24, text: "▼", fontSize: 15, color: INK, align: "center", autoSize: "none", decorative: true, bindings: { visible: "room.more" } });
+  const box = createNode("frame", { name: "Room box", x: 80, y: height - 170, width: width - 160, height: 140, cornerRadius: 14, fill: solid$1("rgba(18, 18, 28, 0.88)"), role: "status", bindings: { visible: "room.showing" }, children: [name, words, more] });
+  const carried = createNode("text", { name: "Carrying", x: 24, y: 20, width: 760, height: 26, text: "Hint coins: 3", fontSize: 16, color: INK, autoSize: "none", bindings: { text: "'Hint coins: ' + room.coins + (room.items.length ? '   Carrying: ' + room.items.map((i) => i.name).join(', ') : '')" } });
+  const leave = button$1("Leave", "Leave", width - 24 - 140, 14, 140);
+  onClick(w, leave, { kind: "action.storyBack", params: { result: "'left'" } });
+  return [carried, leave, box];
+}
+function roomPage(name = "Room") {
+  const W2 = STAGE_W;
+  const H2 = STAGE_H;
+  const w = { nodes: [], edges: [] };
+  const wall = shape("rect", "Wall", 0, 0, W2, 470, "#3b3346", { decorative: true });
+  const floor = shape("rect", "Floor", 0, 470, W2, 250, "#5a4636", { decorative: true });
+  const look = (n, examine) => Object.assign(n, { examine });
+  const window = look(shape("rect", "Window", 520, 70, 240, 180, "#8fb3d9", { cornerRadius: 6, stroke: { color: "#2a2433", width: 10 } }), { text: "Rain on the glass. The quad is empty." });
+  const shelf = look(shape("rect", "Bookshelf", 90, 120, 220, 380, "#6b4a2f", { cornerRadius: 4 }), { text: "Mostly poetry. One book is upside down.\nMillie: That one is mine. Leave it." });
+  const desk = look(shape("rect", "Desk", 860, 330, 300, 170, "#7a5a3a", { cornerRadius: 6 }), { text: "A desk with one drawer that sticks. Inside: a small brass key.", item: "Brass key", stays: true });
+  const rug = look(shape("ellipse", "Rug", 420, 540, 440, 120, "#8a3a3a"), { text: "A rug with a burn mark shaped like a duck." });
+  const door = look(shape("rect", "Door", 1180, 150, 90, 330, "#4a3a2c", { cornerRadius: 4 }), { text: "Locked. Through the keyhole: a garden shed." });
+  const glint = (n, x, y, says) => look(shape("ellipse", n, x, y, 26, 26, "#f3d27a", { opacity: 0.35 }), { coins: 1, text: says });
+  const coins = [glint("Glint on the shelf", 250, 160, "Something shines behind the books."), glint("Glint by the door", 1150, 640, "Something shines under the door.")];
+  const page2 = createArtboard({ name, width: W2, height: H2, background: solid$1(DARK), children: [wall, floor, window, shelf, desk, rug, door, ...coins], logic: w, canvasX: 0, canvasY: 0 });
+  page2.children.push(...roomControls(w, W2, H2));
+  return page2;
+}
+function mapPage(name = "Map") {
+  const W2 = STAGE_W;
+  const H2 = STAGE_H;
+  const w = { nodes: [], edges: [] };
+  const heading2 = createNode("text", { name: "Heading", text: "Where to?", x: 80, y: 48, width: 800, height: 60, fontSize: 44, fontWeight: 700, color: INK, autoSize: "none", role: "heading", headingLevel: 1 });
+  const place = button$1("Place", "A place", 0, 0, 360, { height: 56, fontSize: 20, fill: solid$1("rgba(255, 255, 255, 0.92)"), color: DARK, bindings: { label: "item" } });
+  const list2 = createNode("frame", { name: "Places", x: 80, y: 140, width: 1120, height: 440, fill: null, repeat: { items: "story.places", layout: "grid", gap: 20, columns: 3 }, children: [place] });
+  onClick(w, place, { kind: "action.storyGoTo", params: { where: "{story.places[event.index]}" } });
+  const noneWords = createNode("text", { name: "Nowhere yet words", text: "Nowhere to go yet.", x: 20, y: 14, width: 320, height: 28, fontSize: 20, color: INK, autoSize: "none" });
+  const none = createNode("frame", { name: "Nowhere yet", x: 80, y: 140, width: 360, height: 56, cornerRadius: 10, fill: solid$1("#2b3a33"), bindings: { visible: "story.places.length == 0" }, children: [noneWords] });
+  const back2 = button$1("Back", "Back", 80, H2 - 90, 200, { height: 54, fontSize: 20 });
+  onClick(w, back2, { kind: "action.storyBack", params: { result: "''" } });
+  return createArtboard({ name, width: W2, height: H2, background: solid$1("#1e2a24"), children: [heading2, list2, none, back2], logic: w, canvasX: 0, canvasY: 0 });
+}
+function addPage(d, page2) {
+  const names = new Set(d.artboards.map((a) => a.name.toLowerCase()));
+  let n = page2.name;
+  for (let i = 2; names.has(n.toLowerCase()); i++) n = `${page2.name} ${i}`;
+  page2.name = n;
+  page2.canvasX = d.artboards.reduce((m, a) => Math.max(m, a.canvasX + a.width), 0) + 160;
+  d.artboards.push(page2);
+  return page2.id;
+}
+const SCRIPT = `# The clubroom
+
+// The case: the writing club's trophy has gone from its cabinet overnight.
+Millie: It's gone. The trophy. The cabinet was locked all night.
+Olive: Then someone had a key. Let's look around before anyone tidies up.
+[call Clubroom]
+? Show Olive the brass key [if has("Brass key")]
+    Olive: The cabinet key! So it never left the room.
+    set clues += 1
+? Say you found nothing
+    Olive: Then we'll have to think instead.
+
+Millie: First, an argument from this morning. Settle it for us.
+[call Puzzle 1]
+if story.result == "solved"
+    Millie: Ha. I knew it was me.
+[place The quad]
+[place The library]
+Olive: The quad has the noticeboard. The library has the other cabinet. Where first?
+[call Map]
+
+# The quad
+
+Olive: Last night's timetable is pinned up here. If we put it in order...
+[call Puzzle 2]
+if story.result == "solved"
+    set clues += 1
+    Olive: So the caretaker swept up after the lights went out. Odd.
+else
+    Olive: It's a muddle. Let's try the library.
+-> The library
+
+# The library
+
+Millie: The library cabinet has a code lock, and the librarian left a riddle on it.
+[call Puzzle 3]
+if story.result == "solved"
+    Millie: It's open, and the trophy is behind the dictionaries!
+    if clues >= 2
+        Olive: Moved here for safe keeping, by someone with the brass key. The caretaker.
+        -> end Case closed
+    Olive: But who put it there?
+    -> end Found, not solved
+Millie: We'll crack it tomorrow.
+-> end Still missing
+`;
+const find = (ab, name) => {
+  let hit2;
+  const look = (list2) => {
+    for (const n of list2) {
+      if (!hit2 && n.name === name) hit2 = n;
+      if ("children" in n && Array.isArray(n.children)) look(n.children);
+    }
+  };
+  look(ab.children);
+  return hit2;
+};
+function puzzleMystery() {
+  const { project } = visualNovel();
+  project.settings.title = "Puzzle mystery";
+  const title = project.artboards.find((a) => a.name === "Title");
+  const heading2 = find(title, "Title");
+  if (heading2 && heading2.type === "text") heading2.text = "The missing trophy";
+  const sub = find(title, "Subtitle");
+  if (sub && sub.type === "text") sub.text = "A puzzle mystery";
+  project.variables.push({ id: uid("v"), name: "clues", type: "number", initial: 0 });
+  const p1 = project.artboards.find((a) => a.puzzle);
+  p1.puzzle.title = "Who brought the biscuits?";
+  const p2 = addPuzzlePage(project, {
+    kind: "ordering",
+    name: "Puzzle 2",
+    title: "Last night, in order",
+    value: 30,
+    hints: ["The meeting ended before anyone locked up.", "You can only sweep a room once the meeting has left it."],
+    bigHint: "The lights go out last of all.",
+    question: {
+      prompt: "Put last night in the order it happened. Use the arrows, or drag.",
+      options: [
+        { id: "o1", text: "The club meeting ends" },
+        { id: "o2", text: "Millie locks the cabinet" },
+        { id: "o3", text: "The caretaker sweeps the clubroom" },
+        { id: "o4", text: "The lights go out" }
+      ],
+      shuffle: true
+    }
+  });
+  const p3 = addPuzzlePage(project, {
+    kind: "multiple",
+    name: "Puzzle 3",
+    title: "The librarian’s lock",
+    value: 40,
+    hints: ["36 is 4 times 9.", "36 is also 3 times 12."],
+    bigHint: "Only one of them leaves something over.",
+    question: {
+      prompt: "The riddle on the lock: “Press every number that goes into 36 exactly.” Which buttons do you press?",
+      options: [
+        { id: "o1", text: "4", correct: true },
+        { id: "o2", text: "5" },
+        { id: "o3", text: "9", correct: true },
+        { id: "o4", text: "12", correct: true }
+      ],
+      shuffle: false
+    }
+  });
+  const room = roomPage("Clubroom");
+  addPage(project, room);
+  const map = mapPage("Map");
+  addPage(project, map);
+  project.artboards.forEach((a, i) => a.canvasX = i * (1280 + 160));
+  project.story.chapters = [{ id: uid("ch"), name: "The case", lines: linesOf(SCRIPT) }];
+  const page2 = (id) => project.artboards.find((a) => a.id === id);
+  const item2 = (text2, node, artboard) => ({ id: uid("ck"), text: text2, ...node ? { nodeId: node.id } : {}, ...artboard ? { artboardId: artboard.id } : {}, done: false });
+  return {
+    project,
+    checklist: [
+      item2("Give your mystery a title on the title screen", heading2, title),
+      item2("Rewrite the case in the Story tab: the sample shows a room, three puzzles and a map"),
+      item2("Put a background picture in the Clubroom and lay its places over the things in it (each has Look at)", void 0, room),
+      item2("Change the hidden coins and the key: their words, and what they give, under Look at", find(room, "Desk"), room),
+      item2("Write your own puzzles: the question on each page, and its title, value and hints under Puzzle", void 0, p1),
+      item2("Check the second and third puzzles too", void 0, page2(p2)),
+      item2("Open places on the Map from the script with [place ...], each with a # scene of the same name", void 0, map),
+      item2("Preview it from the title and play to an ending, using only the keyboard once", void 0, page2(p3))
     ]
   };
 }
@@ -15645,7 +15841,8 @@ const STARTERS = [
   { key: "sorting", name: "Drag and drop sorting", description: "Four items to drag into two groups, with feedback for a right and a wrong drop, a count and a Start again button.", tags: ["drag and drop", "assessment"], build: sorting },
   { key: "branching-story", name: "Branching story", description: "An opening scene with two choices that lead to different endings, each on its own artboard.", tags: ["scenarios", "artboards"], build: branching },
   { key: "timeline-intro", name: "Animated timeline intro", description: "A title, a line and a bar that animate in on a timeline, with a Replay button.", tags: ["animation", "timeline"], build: timelineIntro },
-  { key: "visual-novel", name: "Visual novel", description: "A story written as text, played on a stage with a dialogue box, characters and choices, with a title screen, saves, history, settings and extras.", tags: ["story", "scenarios"], build: visualNovel }
+  { key: "visual-novel", name: "Visual novel", description: "A story written as text, played on a stage with a dialogue box, characters and choices, with a title screen, saves, history, settings and extras.", tags: ["story", "scenarios"], build: visualNovel },
+  { key: "puzzle-mystery", name: "Puzzle mystery", description: "A case to solve: a story with a room to search for clues and hidden hint coins, three puzzles with hints, a map and a puzzle index.", tags: ["story", "puzzles"], build: puzzleMystery }
 ];
 const starterByKey = (key) => STARTERS.find((s) => s.key === key);
 function projectFromStarter(s, name) {
@@ -27331,7 +27528,7 @@ help:sketch-pads help:timelines`
     keywords: "story visual novel script dialogue conversation branching scenario role play choices chapters scenes narration writer screenplay characters lines jump ending",
     body: `A **story** is written as text, one line per thing that happens, the way you'd write a play. It plays on a stage page with a dialogue box, the characters and the choices, so a 50 line conversation or a 50,000 word novel needs no page per line and no boxes in the graph.
 
-**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours. For a whole game, start a new project from the **Visual novel** template instead: it adds a title screen, saves, history, settings and extras (see [Saves, settings and extras](story-game)).
+**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours. For a whole game, start a new project from the **Visual novel** template instead: it adds a title screen, saves, history, settings and extras (see [Saves, settings and extras](story-game)). The **Puzzle mystery** template adds a case to solve: a room to search, three puzzles and a map (see [Puzzles in a story](story-puzzles) and [Rooms, things you carry and a map](story-rooms)).
 
 **How lines work:**
 - \`Millie: You came!\` is Millie talking. \`Millie (smiling, left, slide): You came!\` also picks her face, where she stands (far left, left, centre, right, far right) and how she comes on (slide, fade, hop, instant), in any order.

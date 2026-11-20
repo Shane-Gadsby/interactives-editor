@@ -204,7 +204,7 @@ export function storyStage(hideVar: string, at: Partial<Artboard> = {}): Artboar
       visible: "story.bubble.tail != 'none'",
     },
   } as never);
-  const bubbleName = createNode('text', { name: 'Bubble name', x: 28, y: 18, width: 480, height: 28, text: 'Name', fontSize: 18, fontWeight: 700, color: '#b8860b', autoSize: 'none', bindings: { text: 'story.speaker', color: "story.speakerColour || '#b8860b'" } } as never);
+  const bubbleName = createNode('text', { name: 'Bubble name', x: 28, y: 18, width: 480, height: 28, text: 'Name', fontSize: 18, fontWeight: 700, color: '#7a5a06', autoSize: 'none', bindings: { text: 'story.speaker', color: "story.speakerColour || '#7a5a06'" } } as never);
   const bubbleWords = createNode('text', { name: 'Bubble words', x: 28, y: 50, width: 484, height: 110, text: 'Words in the bubble.', fontSize: 23, lineHeight: 1.4, color: '#1b1b24', autoSize: 'none', storyMarkup: true, bindings: { text: 'story.marked', reveal: 'story.shown' } } as never);
   const bubble = createNode('frame', { name: 'Speech bubble', x: (W - BW) / 2, y: 300, width: BW, height: BH, cornerRadius: 24, clip: false, fill: solid('#fbfaf7'), shadow: { x: 0, y: 6, blur: 18, spread: 0, color: 'rgba(0, 0, 0, 0.3)' }, bindings: { x: `story.bubble.x * ${W}`, y: `story.bubble.y * ${H}`, visible: `story.look == 'bubble' && story.speaking && !${HIDE_VAR}` }, children: [tail, bubbleName, bubbleWords] } as never);
 
@@ -240,10 +240,12 @@ export function storyStage(hideVar: string, at: Partial<Artboard> = {}): Artboar
   const buttons = [control('Back', 'Back', 0), control('Auto', 'Auto', 94, "story.auto ? 'Auto on' : 'Auto'"), control('Skip', 'Skip', 188, "story.skipping ? 'Skipping' : 'Skip'"), control('Hide', 'Hide', 282)];
   const bar = createNode('frame', { name: 'Story buttons', x: W - 80 - 366, y: 470, width: 366, height: 32, fill: null, bindings: { visible: `story.started && !story.ended && !${HIDE_VAR}`, y: "story.look == 'full' || (story.look == 'bubble' && story.speaking) ? 678 : 470" }, children: buttons });
 
-  const unhide = createNode('rect', { name: 'Show the box again', x: 0, y: 0, width: W, height: H, fill: null, ariaLabel: 'Show the words again', bindings: { visible: HIDE_VAR } } as never);
+  //A button the size of the stage, so Enter and Space bring the words back as well as a click
+  const unhide = createNode('button', { name: 'Show the box again', x: 0, y: 0, width: W, height: H, label: '', fill: null, stroke: null, ariaLabel: 'Show the words again', bindings: { visible: HIDE_VAR } } as never);
   //[weather rain] and the rest turn this on with that kind, [weather off] hides it
   const weather = createNode('rect', { name: 'Weather', x: 0, y: 0, width: W, height: H, fill: null, visible: false, particles: { preset: 'rain' } } as never);
-  const ending = createNode('text', { name: 'The end', x: 0, y: H / 2 - 40, width: W, height: 80, text: 'The end', fontSize: 44, fontWeight: 700, color: '#ffffff', align: 'center', autoSize: 'none', bindings: { text: "'The end' + (story.ending ? ': ' + story.ending : '')", visible: 'story.ended' } } as never);
+  const endWords = createNode('text', { name: 'The end words', x: 0, y: 20, width: 880, height: 70, text: 'The end', fontSize: 44, fontWeight: 700, color: '#ffffff', align: 'center', autoSize: 'none', bindings: { text: "'The end' + (story.ending ? ': ' + story.ending : '')" } } as never);
+  const ending = createNode('frame', { name: 'The end', x: (W - 880) / 2, y: H / 2 - 150, width: 880, height: 110, cornerRadius: 16, fill: solid('rgba(10, 10, 16, 0.86)'), bindings: { visible: 'story.ended' }, children: [endWords] } as never);
 
   const nodes: LogicNode[] = [];
   const edges: LogicEdge[] = [];

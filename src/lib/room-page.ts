@@ -75,7 +75,8 @@ export function mapPage(name = 'Map'): Artboard {
   const place = button('Place', 'A place', 0, 0, 360, { height: 56, fontSize: 20, fill: solid('rgba(255, 255, 255, 0.92)'), color: DARK, bindings: { label: 'item' } });
   const list = createNode('frame', { name: 'Places', x: 80, y: 140, width: 1120, height: 440, fill: null, repeat: { items: 'story.places', layout: 'grid', gap: 20, columns: 3 }, children: [place] });
   onClick(w, place, { kind: 'action.storyGoTo', params: { where: '{story.places[event.index]}' } });
-  const none = createNode('text', { name: 'Nowhere yet', text: 'Nowhere to go yet.', x: 80, y: 140, width: 800, height: 30, fontSize: 20, color: 'rgba(245, 242, 234, 0.7)', autoSize: 'none', bindings: { visible: 'story.places.length == 0' } } as never);
+  const noneWords = createNode('text', { name: 'Nowhere yet words', text: 'Nowhere to go yet.', x: 20, y: 14, width: 320, height: 28, fontSize: 20, color: INK, autoSize: 'none' } as never);
+  const none = createNode('frame', { name: 'Nowhere yet', x: 80, y: 140, width: 360, height: 56, cornerRadius: 10, fill: solid('#2b3a33'), bindings: { visible: 'story.places.length == 0' }, children: [noneWords] } as never);
   const back = button('Back', 'Back', 80, H - 90, 200, { height: 54, fontSize: 20 });
   onClick(w, back, { kind: 'action.storyBack', params: { result: "''" } });
   return createArtboard({ name, width: W, height: H, background: solid('#1e2a24'), children: [heading, list, none, back], logic: w, canvasX: 0, canvasY: 0 } as Partial<Artboard>);

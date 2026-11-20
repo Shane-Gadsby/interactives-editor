@@ -87,7 +87,7 @@ describe('the Templates tab', () => {
   it('counts each group and opens on yours when there is something there', async () => {
     await mountTab();
     const tabs = [...host.querySelectorAll('[role=tab]')].map((t) => t.textContent);
-    expect(tabs).toEqual(['Mine 1', 'Shared 1', 'Examples 2', 'Built-in 7'].sort((a, b) => ['Mine', 'Shared', 'Built-in', 'Examples'].indexOf(a.split(' ')[0]) - ['Mine', 'Shared', 'Built-in', 'Examples'].indexOf(b.split(' ')[0])));
+    expect(tabs).toEqual(['Mine 1', 'Shared 1', 'Examples 2', 'Built-in 8'].sort((a, b) => ['Mine', 'Shared', 'Built-in', 'Examples'].indexOf(a.split(' ')[0]) - ['Mine', 'Shared', 'Built-in', 'Examples'].indexOf(b.split(' ')[0])));
     expect(host.querySelector('[aria-selected=true]')?.textContent).toContain('Mine');
     expect(text()).toContain('My quiz');
     expect(text()).toContain('For week 3');
@@ -105,11 +105,11 @@ describe('the Templates tab', () => {
     expect(host.querySelector('[aria-label="Delete My quiz"]')).not.toBeNull();
   });
 
-  it('Built-in lists the seven starters', async () => {
+  it('Built-in lists the eight starters', async () => {
     await mountTab();
     await click(byText('[role=tab]', 'Built-in'));
     const names = [...host.querySelectorAll('.template-card .project-name')].map((e) => e.textContent);
-    expect(names).toEqual(['Quiz', 'Step-through explainer', 'Flip cards', 'Drag and drop sorting', 'Branching story', 'Animated timeline intro', 'Visual novel']);
+    expect(names).toEqual(['Quiz', 'Step-through explainer', 'Flip cards', 'Drag and drop sorting', 'Branching story', 'Animated timeline intro', 'Visual novel', 'Puzzle mystery']);
   });
 
   it('using a saved template shows its checklist, then makes the project in the folder and opens it with the checklist flag', async () => {

@@ -3070,7 +3070,7 @@ help:sketch-pads help:timelines`,
     keywords: 'story visual novel script dialogue conversation branching scenario role play choices chapters scenes narration writer screenplay characters lines jump ending',
     body: `A **story** is written as text, one line per thing that happens, the way you'd write a play. It plays on a stage page with a dialogue box, the characters and the choices, so a 50 line conversation or a 50,000 word novel needs no page per line and no boxes in the graph.
 
-**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours. For a whole game, start a new project from the **Visual novel** template instead: it adds a title screen, saves, history, settings and extras (see [Saves, settings and extras](story-game)).
+**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours. For a whole game, start a new project from the **Visual novel** template instead: it adds a title screen, saves, history, settings and extras (see [Saves, settings and extras](story-game)). The **Puzzle mystery** template adds a case to solve: a room to search, three puzzles and a map (see [Puzzles in a story](story-puzzles) and [Rooms, things you carry and a map](story-rooms)).
 
 **How lines work:**
 - \`Millie: You came!\` is Millie talking. \`Millie (smiling, left, slide): You came!\` also picks her face, where she stands (far left, left, centre, right, far right) and how she comes on (slide, fade, hop, instant), in any order.

@@ -14,7 +14,7 @@ const allNodes = (ab: Artboard): SceneNode[] => {
 
 describe('built-in starters', () => {
   it('there are seven, with distinct keys', () => {
-    expect(STARTERS.map((s) => s.key)).toEqual(['quiz', 'step-explainer', 'flip-cards', 'sorting', 'branching-story', 'timeline-intro', 'visual-novel']);
+    expect(STARTERS.map((s) => s.key)).toEqual(['quiz', 'step-explainer', 'flip-cards', 'sorting', 'branching-story', 'timeline-intro', 'visual-novel', 'puzzle-mystery']);
   });
 
   for (const s of STARTERS) {
