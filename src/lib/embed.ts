@@ -40,8 +40,11 @@ export const embedTitle = (name: string, label = 'Interactive') => {
  */
 export const embedAllow = (sensors?: EmbedSensors | null) => ['autoplay', 'fullscreen', 'clipboard-write', ...(sensors?.microphone ? ['microphone'] : []), ...(sensors?.camera ? ['camera'] : [])].join('; ');
 
-/** The start artboard's shape, `width/height`, which is what the player sizes itself to. 16/9 when there is nothing sensible to go on. */
+/** The stage shape when the project fixes one, otherwise the start artboard's shape (`width/height`), which is what the player sizes itself to. 16/9 when there is nothing sensible to go on. */
 export const embedAspect = (project: Pick<Project, 'artboards' | 'settings'>) => {
+  // a fixed stage shape is the frame's shape, whatever the first page is
+  if (project.settings.stage === '16:9') return '16/9';
+  if (project.settings.stage === '4:3') return '4/3';
   const ab = project.artboards.find((a) => a.id === project.settings.startArtboardId) ?? project.artboards[0];
   const ok = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0;
   if (!ab || !ok(ab.width) || !ok(ab.height)) return '16/9';

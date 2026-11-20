@@ -29090,7 +29090,7 @@ Off by default, so embeds that already exist keep working. Turn it on and attrib
     title: "Project settings",
     group: "Getting started",
     summary: "Start page, fit, page title, fonts, live collaboration, sandbox, reduced motion and Optimise output.",
-    keywords: "settings live collaboration start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider",
+    keywords: "settings stage shape 16:9 4:3 widescreen letterbox full screen phone sideways landscape portrait live collaboration start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider",
     body: `![The Project section of the Inspector, with Allowed data hosts filled in and the library and reduced motion boxes below it.](help/project-settings.png)
 
 The **Project** section holds the settings for the whole project, not one page. Click an empty part of the canvas, or a page's name, and it shows in the Inspector, below the page's own settings.
@@ -29102,7 +29102,8 @@ The **Project** section holds the settings for the whole project, not one page. 
 | Name | The project's name, as on the projects page |
 | Page title | The title of the browser tab for the exported page |
 | Description | A note about the project, kept in the file |
-| Fit | How the page scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
+| Stage shape | **Free** (each page sets its own size, the default), **16:9, widescreen** or **4:3**. With a shape, the stage keeps it the way a game does: letterboxed in any window, a StudyDesk frame of that shape, a full screen button at its top right when it's in a frame or on a phone, and a phone held upright asked to turn on its side (or **Play this way**). Pages of another shape are letterboxed inside it; 1280 x 720 is the usual size for 16:9 |
+| Fit | How the page scales to the space it's given (with a **Stage shape**, always letterboxed): **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
 | Page background | The colour around the page in a share link, embed or downloaded page. See-through to start with, so an embed never shows a dark box while it loads and resizes |
 | Hide sideways scrollbar | Off unless you tick it. When the project plays inside a frame (the Link for StudyDesk, an embedded share link or file), the page never shows a horizontal scrollbar. Opened in its own tab it scrolls as usual. Press **Update** in Share after changing it |
 | Hide up-down scrollbar | On to begin with. The frame grows to fit the project, so a vertical scrollbar would only flicker on and off while it resizes. Left as it starts, it comes back if nothing sizes the frame (the project stays taller than the frame for a second), so nothing is out of reach. Ticked on purpose, it stays hidden; unticked, the page scrolls as usual. Opened in its own tab it always scrolls. Press **Update** in Share after changing it |

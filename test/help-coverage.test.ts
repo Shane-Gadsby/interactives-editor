@@ -12,6 +12,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Fixed: a black box round embeds while they load': [['project-settings', 'never shows a dark box while it loads']],
+  'A fixed stage shape': [['project-settings', 'Stage shape'], ['project-settings', 'Play this way']],
   'Particles': [['particles', 'Amount'], ['particles', 'Wind'], ['particles', 'less motion']],
   'Testing an app as a prototype': [['embedding', 'report=study'], ['embedding', 'interactives-click']],
   'Fixed: rows overlapping in a dialog': [['repeaters', 'inside a dialog, tooltip or other overlay alike']],

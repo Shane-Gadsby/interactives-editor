@@ -46,6 +46,7 @@ import {
   type Blend,
   type ColorStop,
   type FitMode,
+  type StageShape,
   type InputKind,
   type Paint,
   type Project,
@@ -855,9 +856,26 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
         <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
         <TextField label="Description" value={project.settings.description} multiline onChange={(v) => setProject((p) => (p.settings.description = v), 'project-desc')} />
+        <SelectField
+          label="Stage shape"
+          title="Keep the stage 16:9 or 4:3, the way a game does: letterboxed in any window, a StudyDesk frame that shape, a full screen button in frames and on phones, and phones held upright asked to turn. Free lets each page set its own size"
+          value={project.settings.stage ?? ''}
+          onChange={(v) => setProject((p) => (v ? (p.settings.stage = v as StageShape) : delete p.settings.stage))}
+          options={[
+            { value: '', label: 'Free (pages set it)' },
+            { value: '16:9', label: '16:9, widescreen' },
+            { value: '4:3', label: '4:3' },
+          ]}
+        />
+        {project.settings.stage && (() => {
+          const [w, h] = project.settings.stage === '4:3' ? [4, 3] : [16, 9];
+          const off = project.artboards.filter((a) => !a.overlay && Math.abs(a.width / a.height - w / h) > 0.01).length;
+          return off ? <div className="muted small">{off === 1 ? '1 page isn’t' : `${off} pages aren’t`} {project.settings.stage}, so {off === 1 ? 'it’s' : 'they’re'} letterboxed inside the stage. {project.settings.stage === '4:3' ? '1024 x 768' : '1280 x 720'} is the usual size.</div> : null;
+        })()}
         <SelectField<FitMode>
           label="Fit"
-          value={project.settings.fit}
+          title={project.settings.stage ? 'A fixed stage shape always letterboxes, so this only applies with Stage shape on Free' : undefined}
+          value={project.settings.stage ? 'contain' : project.settings.fit}
           onChange={(v) => setProject((p) => (p.settings.fit = v))}
           options={[
             { value: 'contain', label: 'Contain (letterbox)' },
