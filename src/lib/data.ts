@@ -1,4 +1,4 @@
-import { sampleRoom, sampleValue, artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
+import { sampleStoryScope, sampleRoom, sampleValue, artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -126,6 +126,11 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
     const sources: QuizSource[] = [];
     for (const ab of project.artboards) walk(ab.children as SceneNode[], (n) => void (n.type === 'frame' && n.question && sources.push({ question: n.question, page: ab.name })));
     vars.quiz = quizState(sources, (prefix, suffix) => vars[`${prefix}_${suffix}`], project.settings.reporting?.passMark);
+  }
+  // A story stage shows the story's first spoken line, with its background and cast, as the player would
+  if (project.story && !('story' in vars)) {
+    const st = sampleStoryScope(project);
+    if (st) vars.story = st;
   }
   // Live variables read all of them (the ones below too), so they are worked out once everything else has its value
   const live = planLive(project);

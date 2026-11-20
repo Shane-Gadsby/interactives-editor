@@ -10,6 +10,10 @@ import { SectionBlurb } from '../components/SectionBlurb';
 import { assetKind } from '../lib/asset-kind';
 import { nextChapterName, startStory } from '../lib/story';
 import { facesFromPictures, matchVoiceFiles, voiceScript } from '../lib/story-cast';
+import { lazyModule } from '../lib/lazy-module';
+
+//The Dialogue view (React Flow) comes in when it's first opened
+const storyGraph = lazyModule(() => import('./StoryGraph'));
 
 /** Ask the editor to open Preview playing the story from a line (Editor.tsx listens). */
 export const PREVIEW_STORY_EVENT = 'ix-preview-story';
@@ -157,6 +161,8 @@ function ChapterEditor({ story, chapterId }: { story: Story; chapterId: string }
   const problems = useMemo(() => problemLines(story, chapterId, project), [story, chapterId, project.assets, project.artboards]);
   const [line, setLine] = useState(1);
   const [jump, setJump] = useState<{ line: number; n: number } | null>(null);
+  const [view, setView] = useState<'script' | 'dialogue'>('script');
+  const graph = storyGraph.use();
   const file = useRef<HTMLInputElement>(null);
   const setText = (next: string) => {
     // Matched against the lines as they are now (not a draft), so unchanged lines stay the very same objects
@@ -191,6 +197,14 @@ function ChapterEditor({ story, chapterId }: { story: Story; chapterId: string }
             })
           }
         />
+        <div className="seg" role="group" aria-label="How to show the chapter">
+          <button type="button" className={`seg-btn${view === 'script' ? ' on' : ''}`} aria-pressed={view === 'script'} title="The chapter as text, the way you'd write a play" onClick={() => setView('script')}>
+            Script
+          </button>
+          <button type="button" className={`seg-btn${view === 'dialogue' ? ' on' : ''}`} aria-pressed={view === 'dialogue'} title="The chapter as nodes and arrows: scenes, choices and where each one goes. Edits here change the script" onClick={() => setView('dialogue')}>
+            Dialogue
+          </button>
+        </div>
         <div className="spacer" />
         <button className="btn" onClick={previewHere} title="Play the story in Preview from the line the caret is on, with the background, music and cast as the lines above it leave them">
           Preview from this line
@@ -232,7 +246,22 @@ function ChapterEditor({ story, chapterId }: { story: Story; chapterId: string }
           />
         )}
       </div>
-      <CodeEditor value={text} onChange={setText} language="story" height="100%" errorLines={problems.map((p) => p.index + 1)} onCursorLine={setLine} goToLine={jump} label={`${chapter.name}, the story script`} />
+      {view === 'script' ? (
+        <CodeEditor value={text} onChange={setText} language="story" height="100%" errorLines={problems.map((p) => p.index + 1)} onCursorLine={setLine} goToLine={jump} label={`${chapter.name}, the story script`} />
+      ) : graph ? (
+        <graph.StoryGraph
+          story={story}
+          chapterId={chapterId}
+          onOpenLine={(n) => {
+            setView('script');
+            setTimeout(() => setJump({ line: n, n: Date.now() }), 0);
+          }}
+        />
+      ) : (
+        <p className="panel-empty muted" role="status">
+          Loading the Dialogue view…
+        </p>
+      )}
       {problems.length > 0 && (
         <ul className="story-problems" aria-label="Problems in this chapter">
           {problems.slice(0, 50).map((p, i) => (

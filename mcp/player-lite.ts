@@ -77,3 +77,4 @@ export * from '../../interactives-player/src/palette-sync';
 export * from '../../interactives-player/src/scope-names';
 export * from '../../interactives-player/src/fonts';
 export * from '../../interactives-player/src/story';
+export * from '../../interactives-player/src/story-sample';
