@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **One app, many setups**: **Setups** in the Context panel give one project several setups, each with its own starting values and its own data (paste the cards), played from its own link. A card sort no longer has to be copied to run on a second set of cards, and its responses say which setup they came from.
 - **Know who is looking**: \`context.isOwner\`, \`context.isCollaborator\`, \`context.canEdit\`, \`context.isEditing\` (StudyDesk's editing mode) and \`context.groups\` (only the suite groups the project lists in **Groups it can check**), worked out from the person's own session, so an app can keep a results view or its editing tools to the right people.
 - **Collect responses, one row each**: the **Send a response** node files what a person did (answers, choices, where each card went) as a row, under the person, the time and the course. **Results** has a **Responses** tab with the rows and downloads: CSV a row per response, CSV a row per item (the card sort shape) and JSON. Without names unless **Responses with names** is ticked.
 - **More charts, a ring, and numbers that count up**: **Stacked columns**, **Area**, **Scatter** and **Histogram** charts; a progress layer can be a **Ring** or a **Half ring**; and **Count up** on a text rolls its numbers to their new value.

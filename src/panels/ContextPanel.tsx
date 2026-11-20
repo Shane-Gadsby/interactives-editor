@@ -1,5 +1,6 @@
-import { CONTEXT_FIELDS, courseMatches, linkNameOk, LINK_MAX_LENGTH, LINK_MAX_VALUES, sampleContextFor, uid, type ContextValues, type CourseValueRow, type Variable, variableLabelAndName } from 'interactives-player';
-import { useState } from 'react';
+import { type Setup, CONTEXT_FIELDS, courseMatches, linkNameOk, LINK_MAX_LENGTH, LINK_MAX_VALUES, sampleContextFor, uid, type ContextValues, type CourseValueRow, type Variable, variableLabelAndName } from 'interactives-player';
+import { useEffect, useState } from 'react';
+import { getShare, learnerUrl } from '../lib/db';
 import { store, useEditor } from '../store/store';
 import { Icons } from '../components/icons';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
@@ -84,6 +85,114 @@ export function ContextPanel() {
         </button>
         {!s.variables.length && <p className="hint">Variables are made in the Variables panel. A course row sets the ones you pick.</p>}
       </div>
+
+      <Setups />
+    </div>
+  );
+}
+
+/**
+ * One app, many setups: each a name, its own starting values and its own contents for the data sources, played from a link that
+ * names it. A card sort is made once and run on a second set of cards by pasting them into a setup.
+ */
+function Setups() {
+  const s = useEditor((st) => ({ setups: st.project.setups ?? [], variables: st.project.variables, sources: st.project.dataSources.filter((d) => d.source === 'url' || d.source === 'asset'), id: st.project.id }));
+  const [token, setToken] = useState<string | null>(null);
+  useEffect(() => {
+    getShare(s.id).then((sh) => setToken(sh?.token ?? null), () => setToken(null));
+  }, [s.id]);
+  const setAll = (change: (list: Setup[]) => void) =>
+    store().update((d) => {
+      const list = d.setups ?? [];
+      change(list);
+      if (list.length) d.setups = list;
+      else delete d.setups;
+    });
+  const edit = (id: string, change: (x: Setup) => void, coalesce?: string) =>
+    store().update(
+      (d) => {
+        const x = d.setups?.find((y) => y.id === id);
+        if (x) change(x);
+      },
+      coalesce ? { coalesce } : undefined,
+    );
+  const byId = new Map(s.variables.map((v) => [v.id, v]));
+  return (
+    <div className="context-block">
+      <h3>Setups</h3>
+      <SectionBlurb text="One app, many setups: each its own values, its own data and its own link. Responses say which setup they came from." name="setups" help={['course-context', 'setups']} />
+      {s.setups.map((x) => {
+        const link = token ? `${learnerUrl(token)}?setup=${encodeURIComponent(x.id)}` : '';
+        const unset = s.variables.filter((v) => !(v.id in x.values));
+        return (
+          <div className="course-row" key={x.id}>
+            <div className="course-row-head">
+              <TextField value={x.name} commitOnBlur placeholder="Week 2 cards" title="What to call this setup. setup.name in formulas" onChange={(v) => edit(x.id, (y) => void (y.name = v.trim() || y.name))} />
+              <IconButton icon={<Icons.trash />} title="Delete this setup" onClick={() => setAll((list) => void list.splice(list.findIndex((y) => y.id === x.id), 1))} />
+            </div>
+            <table className="var-table">
+              <tbody>
+                {Object.entries(x.values).map(([id, value]) => {
+                  const v = byId.get(id);
+                  return (
+                    <tr key={id}>
+                      <td className="mono">{v ? v.name : <span className="muted">(deleted variable)</span>}</td>
+                      <td>{v ? <ValueEditor variable={v} value={value} onChange={(nv) => edit(x.id, (y) => void (y.values[id] = nv), `setup-${x.id}-${id}`)} /> : <span className="muted">{String(value)}</span>}</td>
+                      <td>
+                        <IconButton icon={<Icons.trash />} title="Stop setting this variable in the setup" onClick={() => edit(x.id, (y) => void delete y.values[id])} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {unset.length > 0 && (
+              <SelectField<string>
+                value=""
+                title="Pick a variable to give its own starting value in this setup"
+                options={[{ value: '', label: 'Set a variable…' }, ...unset.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))]}
+                onChange={(id) => {
+                  const v = byId.get(id);
+                  if (v) edit(x.id, (y) => void (y.values[id] = v.initial));
+                }}
+              />
+            )}
+            {s.sources.map((ds) => (
+              <div key={ds.id} className="setup-data">
+                <CheckField
+                  label={`Its own ${ds.name}`}
+                  title={`This setup's own contents for the ${ds.name} data source, instead of its file or address`}
+                  value={typeof x.data?.[ds.id] === 'string'}
+                  onChange={(on) => edit(x.id, (y) => {
+                    y.data ??= {};
+                    if (on) y.data[ds.id] = ds.kind === 'json' ? '[]' : '';
+                    else delete y.data[ds.id];
+                    if (!Object.keys(y.data).length) delete y.data;
+                  })}
+                />
+                {typeof x.data?.[ds.id] === 'string' && (
+                  <TextField value={x.data![ds.id]} multiline mono rows={5} commitOnBlur title={`Paste the ${ds.kind.toUpperCase()} this setup uses for ${ds.name}`} onChange={(v) => edit(x.id, (y) => void ((y.data ??= {})[ds.id] = v))} />
+                )}
+              </div>
+            ))}
+            <div className="setup-link">
+              {link ? (
+                <>
+                  <code className="small">{link}</code>
+                  <button className="btn" onClick={() => void navigator.clipboard?.writeText(link)} title="Copy the Link for StudyDesk that plays this setup">
+                    Copy link
+                  </button>
+                </>
+              ) : (
+                <span className="muted small">Share the project and each setup gets its own link here (?setup={x.id}).</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      <button className="btn" onClick={() => setAll((list) => void list.push({ id: uid('st'), name: `Setup ${list.length + 1}`, values: {} }))}>
+        + Add a setup
+      </button>
     </div>
   );
 }

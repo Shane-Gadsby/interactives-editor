@@ -9164,6 +9164,7 @@ function countLayoutFrames(nodes) {
 }
 const PLAYER_SCOPE_HINTS = {
   reducedMotion: { type: "true/false", hint: "The viewer's device asks for less motion" },
+  setup: { type: "object", hint: "The setup the link plays: setup.name and setup.id (empty without one)" },
   dataStatus: { type: "object", hint: "Each data source: loading, ready or failed (dataStatus.cards)" },
   canUndo: { type: "true/false", hint: "Undo has a step to take back (variables that keep history)" },
   canRedo: { type: "true/false", hint: "Redo has a step to put back" },
@@ -28523,6 +28524,15 @@ One project can serve several courses without being copied. In the **Data** tab,
 Results are already kept per course, so each course's learners start clean without anything here.
 
 After changing per-course values, press **Update to the latest version** in [Share link](export#share-link) so the Link for StudyDesk plays the new version.
+
+## Setups
+One app, many setups. A card sort made once can run on a second set of cards without copying the project. Under **Setups** in the **Context** panel, **+ Add a setup** and give it:
+
+- a **name** (\`setup.name\` in formulas),
+- its own starting values for any variables (**Set a variable…**),
+- its own contents for any data source: tick **Its own cards** and paste the JSON or CSV it uses instead of the file or address.
+
+Each setup has its own link once the project is shared: the Link for StudyDesk with \`?setup=\` and the setup's id on it, which **Copy link** copies. Put that link on the course page. A setup's values win over a per-course row's, and responses say which setup they came from. Without \`?setup=\` the project plays as you made it.
 
 ## Values on the link
 **link** sits beside context: it holds the values on the address the project was opened with, so one project can serve several programs or courses from different links. Add \`&program=GCSC\` to the end of the address in the embed code (or \`?program=GCSC\` to a link with nothing after it), and the project reads:
