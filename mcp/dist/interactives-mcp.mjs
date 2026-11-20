@@ -4530,6 +4530,43 @@ function sanitizeNode(raw, seen) {
   if (isObj$1(n.converters)) for (const [k, list2] of Object.entries(n.converters)) n.converters[k] = objs(list2).filter((c2) => isStr(c2.type));
   if ("constraints" in n) n.constraints = objs(n.constraints).filter((c2) => isStr(c2.type));
   if ("repeat" in n && !(isObj$1(n.repeat) && isStr(n.repeat.items))) delete n.repeat;
+  if (isObj$1(n.repeat) && "paging" in n.repeat) {
+    const g = n.repeat.paging;
+    if (isObj$1(g) && isNum(g.size) && g.size >= 1 && (g.mode === "pages" || g.mode === "more")) {
+      const out = { size: Math.min(1e3, Math.round(g.size)), mode: g.mode };
+      for (const k of ["next", "previous", "more", "variable"]) if (isStr(g[k]) && g[k]) out[k] = g[k];
+      n.repeat = { ...n.repeat, paging: out };
+    } else {
+      const { paging: _gone, ...rest } = n.repeat;
+      n.repeat = rest;
+    }
+  }
+  if (isObj$1(n.repeat) && "tree" in n.repeat) {
+    const t2 = n.repeat.tree;
+    if (isObj$1(t2) && isStr(t2.parentField) && t2.parentField.trim()) {
+      const out = { parentField: t2.parentField.trim().slice(0, 60) };
+      if (isStr(t2.idField) && t2.idField.trim()) out.idField = t2.idField.trim().slice(0, 60);
+      if (isNum(t2.indent) && t2.indent >= 0) out.indent = Math.min(200, t2.indent);
+      if (isStr(t2.openVariable) && t2.openVariable) out.openVariable = t2.openVariable;
+      if (typeof t2.startOpen === "boolean") out.startOpen = t2.startOpen;
+      n.repeat = { ...n.repeat, tree: out };
+    } else {
+      const { tree: _gone, ...rest } = n.repeat;
+      n.repeat = rest;
+    }
+  }
+  if (isObj$1(n.repeat) && "states" in n.repeat) {
+    const st = n.repeat.states;
+    const out = {};
+    if (isObj$1(st)) {
+      for (const k of ["loading", "empty", "fault"]) if (isStr(st[k]) && st[k]) out[k] = st[k];
+    }
+    if (Object.keys(out).length) n.repeat = { ...n.repeat, states: out };
+    else {
+      const { states: _gone, ...rest } = n.repeat;
+      n.repeat = rest;
+    }
+  }
   if (isObj$1(n.repeat) && "drag" in n.repeat) {
     const d = n.repeat.drag;
     if (isObj$1(d)) {
@@ -9100,6 +9137,7 @@ function countLayoutFrames(nodes) {
 }
 const PLAYER_SCOPE_HINTS = {
   reducedMotion: { type: "true/false", hint: "The viewer's device asks for less motion" },
+  dataStatus: { type: "object", hint: "Each data source: loading, ready or failed (dataStatus.cards)" },
   canUndo: { type: "true/false", hint: "Undo has a step to take back (variables that keep history)" },
   canRedo: { type: "true/false", hint: "Redo has a step to put back" },
   fullscreen: { type: "true/false", hint: "The project fills the screen (the Full screen node)" },
@@ -28498,6 +28536,18 @@ Tick **Reorder by dragging** and people can drag a copy to another place in the 
 To drag copies from one list into another, give the first a **Tag** (\`cards\`) and the second **Takes items from** \`cards\`. Two separate list variables trade items. For a card sort, keep one list of cards and show it twice: a pool repeating \`cards.filter(c => !c.group)\` and, inside a list of groups, \`cards.filter(c => c.group == outer.item.name)\`. Set **Items are in** to \`cards\` on both, **A drop writes field** \`group\`, and **To** \`outer.item.name\` on the groups (\`""\` on the pool). Dropping a card in a group writes the group's name into it, and both repeaters redraw from the one list.
 
 **On list drop** runs after a move, with \`event.item\`, \`event.from\`, \`event.to\` and \`event.index\`.
+
+## Long lists, and lists that load
+**At a time** shows so many copies at once: as **Load more**, which adds the next lot below, or as **Pages** with Next and Previous. **Add Load more and a count** (or **Add Next, Previous and a count**) puts the buttons inside the list, already wired, with a line that says how many there are. Each button hides itself when it has nothing to do.
+
+The layers round the copies can say where the list is at: \`{list.total}\`, \`{list.shown}\`, \`{list.from}\`, \`{list.to}\`, \`{list.page}\` and \`{list.pages}\`. Say how many there are: a list that is cut off without saying so looks finished.
+
+**Add loading, empty and fault looks** puts three texts in the list: one shown while its data loads, one when it's empty, and one when its data couldn't be loaded. Change their words and their look as you like. A list knows its data is loading or failed when its **Repeat for each** names a data source; \`dataStatus.cards\` says the same in any formula.
+
+## A tree that folds
+Tick **Show as a tree** and the list is drawn as an outline. Each item names its parent in the **Parent field** (\`parent\`), by the parent's **Id field** (\`id\`); items with no parent are the top level. A branch opens and closes with a click, **Enter** or **Space**, and the arrow keys move round it the way the W3C tree view pattern has them: **Right** opens a branch or goes into it, **Left** closes it or goes up to its parent, **Up**, **Down**, **Home** and **End** move between the rows. A screen reader hears a tree, with each item's level and whether it's open.
+
+In the copies, \`depth\`, \`hasChildren\` and \`isOpen\` say where each one is, for a chevron that turns (\`isOpen ? 90 : 0\`) or a line. **Open branches in** keeps the open ones in a list variable, to save or set. A course outline, a file list and a tree test are all one list with a parent field.
 
 ## Selection
 Set **Selection** under the repeater to let people pick copies without any nodes:

@@ -2425,6 +2425,7 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
             </>
           )}
           <RepeatDragFields rep={rep} project={project} onChange={(drag) => update({ drag })} />
+          <RepeatDataFields node={node} rep={rep} project={project} onChange={(patch) => update(patch)} />
           <SectionBlurb
             text={
               <>
@@ -2466,6 +2467,125 @@ function MathsPreview({ text }: { text: string }) {
         <div key={i} className="maths-preview-row" dangerouslySetInnerHTML={{ __html: latexToMathml(p.tex!, !!p.display) }} />
       ))}
     </div>
+  );
+}
+
+/** Paging, the loading, empty and fault looks, and showing the list as a tree. */
+function RepeatDataFields({ node, rep, project, onChange }: { node: SceneNode & { children: SceneNode[] }; rep: Repeat; project: Project; onChange: (patch: Partial<Repeat>) => void }) {
+  const pg = rep.paging ?? null;
+  const t = rep.tree ?? null;
+  const listVars = project.variables.filter((v) => v.type === 'list');
+  /** Layers added inside the repeater (after its template) and named on it, in one undo step. */
+  const addInside = (make: (box: { w: number; h: number }) => SceneNode[], patch: (ids: string[]) => Partial<Repeat>) =>
+    store().update((d) => {
+      let host: (SceneNode & { children: SceneNode[]; repeat?: Repeat | null }) | null = null;
+      for (const ab of d.artboards) walk(ab.children as SceneNode[], (x) => void (x.id === node.id && (host = x as never)));
+      if (!host) return;
+      const h = host as SceneNode & { children: SceneNode[]; repeat?: Repeat | null };
+      const made = make({ w: h.width, h: h.height });
+      h.children.push(...made);
+      h.repeat = { ...(h.repeat as Repeat), ...patch(made.map((m) => m.id)) };
+    });
+  /**
+   * The buttons and the count, in a row after the copies. A frame becomes an auto layout column that grows with what it holds,
+   * so Load more pushes the row down instead of the copies running under it.
+   */
+  const addControls = () =>
+    store().update((d) => {
+      let host: (SceneNode & { children: SceneNode[]; repeat?: Repeat | null; layout?: AutoLayout | null }) | null = null;
+      for (const ab of d.artboards) walk(ab.children as SceneNode[], (x) => void (x.id === node.id && (host = x as never)));
+      if (!host) return;
+      const h = host as SceneNode & { children: SceneNode[]; repeat?: Repeat | null; layout?: AutoLayout | null };
+      const pages = pg?.mode === 'pages';
+      const parts = pages
+        ? [
+            createNode('button', { name: 'Previous', label: 'Previous', width: 100, height: 36 }),
+            createNode('text', { name: 'Where the list is', text: '{list.from} to {list.to} of {list.total}', width: 160, height: 20, align: 'center' }),
+            createNode('button', { name: 'Next', label: 'Next', width: 100, height: 36 }),
+          ]
+        : [createNode('button', { name: 'Load more', label: 'Load more', width: 140, height: 36 }), createNode('text', { name: 'How many are shown', text: 'Showing {list.shown} of {list.total}', width: 200, height: 20 })];
+      const tpl = h.children[0];
+      if (h.type === 'frame') {
+        const row = createNode('frame', { name: 'List controls', width: Math.max(200, h.width - (tpl?.x ?? 0) * 2), height: 40, layout: { ...defaultAutoLayout('row'), padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: 'center', hugHeight: true, ...(pages ? { justify: 'space-between' } : {}) }, children: parts } as never);
+        h.children.push(row);
+        h.layout ??= { ...defaultAutoLayout('column'), gap: h.repeat?.gap ?? 8, padding: { top: tpl?.y ?? 12, right: tpl?.x ?? 12, bottom: tpl?.y ?? 12, left: tpl?.x ?? 12 } };
+      } else {
+        parts.forEach((p, i) => Object.assign(p, { x: i * 150, y: h.height - 40 }));
+        h.children.push(...parts);
+      }
+      const ids = parts.map((p) => p.id);
+      h.repeat = { ...(h.repeat as Repeat), paging: { ...(pg ?? { size: 10, mode: 'more' }), ...(pages ? { previous: ids[0], next: ids[2] } : { more: ids[0] }) } };
+    });
+  const addStates = () =>
+    addInside(
+      ({ w, h }) => [
+        createNode('text', { name: 'Loading', text: 'Loading…', x: 0, y: Math.max(0, h / 2 - 10), width: w, height: 20, align: 'center' }),
+        createNode('text', { name: 'Nothing here', text: 'Nothing here yet.', x: 0, y: Math.max(0, h / 2 - 10), width: w, height: 20, align: 'center' }),
+        createNode('text', { name: 'Could not load', text: "This list couldn't be loaded. Try again in a moment.", x: 0, y: Math.max(0, h / 2 - 10), width: w, height: 40, align: 'center' }),
+      ],
+      (ids) => ({ states: { loading: ids[0], empty: ids[1], fault: ids[2] } }),
+    );
+  return (
+    <>
+      <Row>
+        <NumberField
+          label="At a time"
+          title="Show so many copies at a time, as pages or with Load more. 0 shows them all. The layers round the list can say where it's at with {list.total}, {list.shown}, {list.from}, {list.to}, {list.page} and {list.pages}"
+          value={pg?.size ?? 0}
+          min={0}
+          onChange={(v) => onChange({ paging: v > 0 ? { ...(pg ?? { mode: 'more' }), size: Math.round(v) } : null })}
+        />
+        {pg && (
+          <SelectField<'pages' | 'more'>
+            label="As"
+            value={pg.mode}
+            options={[
+              { value: 'more', label: 'Load more' },
+              { value: 'pages', label: 'Pages' },
+            ]}
+            onChange={(v) => onChange({ paging: { ...pg, mode: v } })}
+          />
+        )}
+      </Row>
+      {pg && !(pg.mode === 'pages' ? pg.next : pg.more) && (
+        <Row k="Add paging buttons" words={['load more', 'next', 'previous', 'count', 'pages']}>
+          <button className="btn" title="Adds the buttons inside the list, wired to it, with a line that says how many there are" onClick={addControls}>
+            {pg.mode === 'pages' ? 'Add Next, Previous and a count' : 'Add Load more and a count'}
+          </button>
+        </Row>
+      )}
+      {!rep.states && (
+        <Row k="Add loading, empty and fault looks" words={['loading', 'empty', 'error', 'fault', 'spinner', 'nothing']}>
+          <button className="btn" title="Adds three texts inside the list: shown while its data loads, when it is empty, and when its data could not be loaded" onClick={addStates}>
+            Add loading, empty and fault looks
+          </button>
+        </Row>
+      )}
+      <CheckField
+        label="Show as a tree"
+        title="Draws the list as an outline that folds: each item names its parent, and a click, Enter or the arrow keys open and close the branches"
+        value={!!t}
+        onChange={(v) => onChange({ tree: v ? { parentField: 'parent', indent: 20 } : null })}
+      />
+      {t && (
+        <>
+          <Row>
+            <TextField label="Parent field" title="The field holding the id of the item's parent. Empty for the top level" value={t.parentField} commitOnBlur onChange={(v) => onChange({ tree: { ...t, parentField: v.trim() || 'parent' } })} />
+            <TextField label="Id field" value={t.idField ?? 'id'} commitOnBlur onChange={(v) => onChange({ tree: { ...t, idField: v.trim() && v.trim() !== 'id' ? v.trim() : undefined } })} />
+            <NumberField label="Indent" suffix="px" value={t.indent ?? 20} min={0} onChange={(v) => onChange({ tree: { ...t, indent: v } })} />
+          </Row>
+          <CheckField label="Start with every branch open" value={!!t.startOpen} onChange={(v) => onChange({ tree: { ...t, startOpen: v || undefined } })} />
+          <SelectField
+            label="Open branches in"
+            title="A list variable that holds the ids of the open branches, to read or set them. None: the player keeps them"
+            value={t.openVariable ?? ''}
+            options={[{ value: '', label: 'Nowhere (the player keeps them)' }, ...listVars.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))]}
+            onChange={(v) => onChange({ tree: { ...t, openVariable: v || undefined } })}
+          />
+          <p className="hint">In the copies, <code>depth</code>, <code>hasChildren</code> and <code>isOpen</code> say where each one is, for a chevron that turns or a line that grows.</p>
+        </>
+      )}
+    </>
   );
 }
 

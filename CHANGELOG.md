@@ -2,6 +2,8 @@
 
 ## Unreleased: Symposium 3
 
+- **Lists that cope with real data**: **At a time** shows a long list as pages or with **Load more**, with buttons and a count added in one press, and \`{list.total}\` and its kind for the words round it. **Add loading, empty and fault looks** gives a list what to show while its data loads, when there's nothing, and when the data couldn't be loaded.
+- **A tree that folds**: **Show as a tree** draws a list whose items name a parent as an outline that opens and closes, with the keys a tree should have and the open branches kept in a variable if you like.
 - **Bullets and numbers in text**: **Bulleted list** and **Numbered list** on the text toolbar, with **Tab** and **Shift+Tab** for levels. Wrapped lines hang under the words, and a screen reader hears a real list.
 - **Code in text**: **Show as code** colours the text by language, with line numbers and a Copy button if wanted.
 - **Formulas**: **Formulas between $ signs** draws maths typed the LaTeX way as maths, in a line or on its own, with a preview as you type. Screen readers read it, and it scales and recolours with the text.

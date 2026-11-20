@@ -5290,6 +5290,18 @@ To drag copies from one list into another, give the first a **Tag** (\`cards\`) 
 
 **On list drop** runs after a move, with \`event.item\`, \`event.from\`, \`event.to\` and \`event.index\`.
 
+## Long lists, and lists that load
+**At a time** shows so many copies at once: as **Load more**, which adds the next lot below, or as **Pages** with Next and Previous. **Add Load more and a count** (or **Add Next, Previous and a count**) puts the buttons inside the list, already wired, with a line that says how many there are. Each button hides itself when it has nothing to do.
+
+The layers round the copies can say where the list is at: \`{list.total}\`, \`{list.shown}\`, \`{list.from}\`, \`{list.to}\`, \`{list.page}\` and \`{list.pages}\`. Say how many there are: a list that is cut off without saying so looks finished.
+
+**Add loading, empty and fault looks** puts three texts in the list: one shown while its data loads, one when it's empty, and one when its data couldn't be loaded. Change their words and their look as you like. A list knows its data is loading or failed when its **Repeat for each** names a data source; \`dataStatus.cards\` says the same in any formula.
+
+## A tree that folds
+Tick **Show as a tree** and the list is drawn as an outline. Each item names its parent in the **Parent field** (\`parent\`), by the parent's **Id field** (\`id\`); items with no parent are the top level. A branch opens and closes with a click, **Enter** or **Space**, and the arrow keys move round it the way the W3C tree view pattern has them: **Right** opens a branch or goes into it, **Left** closes it or goes up to its parent, **Up**, **Down**, **Home** and **End** move between the rows. A screen reader hears a tree, with each item's level and whether it's open.
+
+In the copies, \`depth\`, \`hasChildren\` and \`isOpen\` say where each one is, for a chevron that turns (\`isOpen ? 90 : 0\`) or a line. **Open branches in** keeps the open ones in a list variable, to save or set. A course outline, a file list and a tree test are all one list with a parent field.
+
 ## Selection
 Set **Selection** under the repeater to let people pick copies without any nodes:
 
