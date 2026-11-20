@@ -1,5 +1,6 @@
 import { SketchSection } from './SketchSection';
 import { ParticlesSection } from './ParticlesSection';
+import { PuzzleSection } from './PuzzleSection';
 import { variableOption } from '../lib/friendly-names';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { matches } from '../lib/keymap';
@@ -847,6 +848,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <MasterSection ab={ab} project={project} />
       <TabOrderSection ab={ab} />
       <StepsSection ab={ab} project={project} />
+      <PuzzleSection ab={ab} project={project} />
       <BlendsSection ab={ab} project={project} />
       <JoysticksSection ab={ab} />
       <BonesArtboardSection ab={ab} />

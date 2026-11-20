@@ -1,4 +1,4 @@
-import { sampleStoryScope, sampleRoom, sampleValue, artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
+import { Pocket, puzzleScope, setBase, sampleStoryScope, sampleRoom, sampleValue, artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -132,6 +132,9 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
     const st = sampleStoryScope(project);
     if (st) vars.story = st;
   }
+  // A puzzle page shows its number, title, value and hints as a first go at it would (no hint open, no right or wrong yet)
+  const puzzlePage = artboard?.puzzle ? artboard : artboard ? setBase(project.artboards, artboard) : undefined;
+  if (puzzlePage?.puzzle && !('puzzle' in vars)) vars.puzzle = { active: true, ...puzzleScope(project.artboards, puzzlePage, new Pocket(project.story?.settings?.coins), null) };
   // Live variables read all of them (the ones below too), so they are worked out once everything else has its value
   const live = planLive(project);
   if (live.order.length) runLive(live, vars, null);

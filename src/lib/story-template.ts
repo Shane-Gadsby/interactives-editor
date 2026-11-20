@@ -1,6 +1,7 @@
 import { createArtboard, createNode, createProject, uid, type Artboard, type LogicEdge, type LogicNode, type Project, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { HIDE_VAR, STAGE_H, STAGE_W, linesOf, SAMPLE_CHAPTER, storyStage } from './story';
 import { starterThemes } from './themes';
+import { addPuzzlePage } from './puzzle-page';
 
 /**
  * The Visual novel starter: a title screen (New game, Continue, Load, Settings, Extras), the story stage, a page of save slots
@@ -130,7 +131,7 @@ function historyPage(stageId: string): Artboard {
   return page('History', [heading('What was said', 28), hint, list, done], w, 2);
 }
 
-function extrasPage(): Artboard {
+function extrasPage(puzzlesId: string): Artboard {
   const w = wiring();
   const pic = createNode('image', { name: 'Picture', x: 0, y: 0, width: 200, height: 112, fit: 'cover', cornerRadius: 8, fill: solid(PANEL), bindings: { assetId: "item.seen ? item.image : ''" } } as never);
   const locked = createNode('text', { name: 'Locked', text: '?', x: 0, y: 30, width: 200, height: 50, fontSize: 36, color: 'rgba(245, 242, 234, 0.5)', align: 'center', autoSize: 'none', bindings: { visible: '!item.seen' } } as never);
@@ -147,8 +148,41 @@ function extrasPage(): Artboard {
   onClick(w, song, { kind: 'action.sound', params: { source: 'story.musicRoom[event.index].sound', soundtrack: true, loop: true } });
   const done = button('Back', 'Back', 80, 640, 200);
   onClick(w, done, { kind: 'action.stopSound', params: {} }, back());
-  return page('Extras', [heading('Extras', 32), label('Gallery', 80, 110), gallery, label('Endings', 800, 110), endings, label('Chapters', 800, 380), chapters, label('Music', 80, 540), songs, done], w, 5);
+  const puzzles = button('Puzzles', 'Puzzles', 300, 640, 200);
+  onClick(w, puzzles, { kind: 'action.stopSound', params: {} }, go(puzzlesId));
+  return page('Extras', [heading('Extras', 32), label('Gallery', 80, 110), gallery, label('Endings', 800, 110), endings, label('Chapters', 800, 380), chapters, label('Music', 80, 540), songs, done, puzzles], w, 5);
 }
+
+/** The puzzle index: every puzzle, ??? until it's found, its score once solved; a found one plays again. */
+function puzzlesPage(): Artboard {
+  const w = wiring();
+  const sub = createNode('text', { name: 'Score', text: 'Score', x: 80, y: 100, width: 900, height: 28, fontSize: 18, color: 'rgba(245, 242, 234, 0.75)', autoSize: 'none', bindings: { text: "story.score + ' points from ' + story.puzzles.filter((p) => p.solved).length + ' of ' + story.puzzles.length + ' puzzles. Hint coins: ' + story.coins" } } as never);
+  const row = button('Puzzle', 'A puzzle', 0, 0, 1120, {
+    height: 48,
+    fontSize: 18,
+    align: 'left',
+    bindings: {
+      label: "item.found ? item.number + '. ' + item.title + (item.solved ? '  ·  Solved, ' + item.score + ' of ' + item.full + ' points' : item.skipped ? '  ·  Skipped' : '  ·  Not solved yet') : item.number + '. ???'",
+      disabled: '!item.found',
+      'fill.color': `item.solved ? '${ACCENT}' : 'rgba(255, 255, 255, 0.92)'`,
+    },
+  });
+  const list = createNode('frame', { name: 'Puzzle list', x: 80, y: 150, width: 1120, height: 460, fill: null, clip: true, repeat: { items: 'story.puzzles', layout: 'vertical', gap: 12, columns: 1 }, children: [row] });
+  onClick(w, row, { kind: 'action.artboard', params: { to: 'expression', expr: 'story.puzzles[event.index].page', transition: 'fade', duration: 400 } });
+  const done = button('Back', 'Back', 80, 640, 200);
+  onClick(w, done, back());
+  return page('Puzzles', [heading('Puzzles', 32), sub, list, done], w, 6);
+}
+
+/** The fair's last scene calls the sample puzzle and answers to how it went. */
+const PUZZLE_LINES = `The tables thinned out as the sun went down.
+Millie: Wait! Before you go, settle an argument for us.
+[call Puzzle 1]
+if story.result == "solved"
+    Millie: I knew it was me. You're good at this.
+else
+    Millie: We'll ask you again tomorrow.
+`;
 
 /** The whole starter. The stage is the one Start a story makes, with buttons for the menu pages added to its row. */
 export function visualNovel(): { project: Project; checklist: TemplateChecklistItem[] } {
@@ -164,7 +198,8 @@ export function visualNovel(): { project: Project; checklist: TemplateChecklistI
   const saves = savesPage(mode.id, mode.name);
   const settings = settingsPage();
   const history = historyPage(stage.id);
-  const extras = extrasPage();
+  const puzzles = puzzlesPage();
+  const extras = extrasPage(puzzles.id);
   const title = titlePage(stage.id, saves.id, settings.id, extras.id, mode.id);
 
   //The stage's row of buttons gets Save, Load, History and Menu, and its words follow the reader's text size and font
@@ -200,12 +235,28 @@ export function visualNovel(): { project: Project; checklist: TemplateChecklistI
   onClick(sw, toTitle, go(title.id));
 
   title.canvasX = 0;
-  project.artboards = [title, stage, history, saves, settings, extras];
+  project.artboards = [title, stage, history, saves, settings, extras, puzzles];
+  //A sample puzzle the chapter calls, answered by its question, with hints that cost hint coins
+  const puzzleId = addPuzzlePage(project, {
+    name: 'Puzzle 1',
+    title: 'Who brought the biscuits?',
+    hints: ["Sam's snack is already known.", 'That leaves the biscuits and the crisps for Millie and Olive.'],
+    bigHint: "Olive didn't bring the biscuits. So who did?",
+    question: {
+      prompt: 'Millie, Olive and Sam each brought one snack to the fair: biscuits, fruit or crisps. Olive didn\'t bring biscuits. Sam brought fruit. Who brought the biscuits?',
+      options: [
+        { id: 'o1', text: 'Millie', correct: true },
+        { id: 'o2', text: 'Olive' },
+        { id: 'o3', text: 'Sam' },
+      ],
+      shuffle: false,
+    },
+  });
   project.artboards.forEach((a, i) => (a.canvasX = i * (STAGE_W + 160)));
   project.settings.startArtboardId = title.id;
   project.story = {
     stage: stage.id,
-    chapters: [{ id: uid('ch'), name: 'Chapter 1', lines: linesOf(SAMPLE_CHAPTER) }],
+    chapters: [{ id: uid('ch'), name: 'Chapter 1', lines: linesOf(SAMPLE_CHAPTER.replace('The tables thinned out as the sun went down.\n', PUZZLE_LINES)) }],
     cast: [
       { id: uid('cm'), name: 'Millie', colour: '#c2410c', expressions: [] },
       { id: uid('cm'), name: 'Olive', colour: '#1d4ed8', expressions: [] },
@@ -220,6 +271,7 @@ export function visualNovel(): { project: Project; checklist: TemplateChecklistI
       item('Add your characters in the Story tab under Cast, with a picture for each face (pictures named after them fill the faces in)'),
       item('Add backgrounds to Assets and show them with a line like [bg Quad]'),
       item('Restyle the dialogue box: its colour, the name plate and the words', find('Dialogue box'), stage),
+      item('Write your own puzzle on Puzzle 1: the question, and its title, value and hints under Puzzle in the page settings', undefined, project.artboards.find((a) => a.id === puzzleId)),
       item('Preview it from the title, play to an ending, and try Save, Load, History and Settings'),
     ],
   };

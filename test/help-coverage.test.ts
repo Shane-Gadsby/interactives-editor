@@ -12,6 +12,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'The story as nodes, and story events': [['story-dialogue', 'The Dialogue view'], ['story-dialogue', '+ Choice'], ['story-dialogue', 'On story choice']],
+  'Puzzles in a story': [['story-puzzles', '+ New puzzle'], ['story-puzzles', 'hint coins']],
   'Character faces from a PSD': [['story-stage', 'Faces from a PSD']],
   'Three looks for the words': [['story-stage', 'Three looks for the words'], ['story', '[box bubble]']],
   'A Visual novel template': [['story-game', 'Save the story'], ['story-game', 'Continue'], ['story-game', 'Story setting'], ['story-game', 'Blink'], ['story-game', 'Match voice files']],

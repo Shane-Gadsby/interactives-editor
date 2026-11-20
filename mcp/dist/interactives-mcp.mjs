@@ -2130,6 +2130,89 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.puzzleAnswer",
+    label: "Puzzle answer",
+    category: "action",
+    summary: "Says the puzzle on this page was answered right or wrong, for the big moment and the score.",
+    details: "Right marks it solved for what it's worth now (puzzle.value) and shows puzzle.right; wrong takes a little off and shows puzzle.wrong. Try again clears the wrong mark. A question on a puzzle page does this by itself when it's checked, so this is for a puzzle made of anything else: drag and drop, a dial, a code lock.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Not a puzzle page" }
+    ],
+    hasInput: true,
+    params: [
+      {
+        key: "answer",
+        label: "Answer",
+        type: "select",
+        default: "right",
+        options: [
+          { value: "right", label: "Right" },
+          { value: "wrong", label: "Wrong" },
+          { value: "again", label: "Try again (clear the wrong mark)" }
+        ]
+      }
+    ]
+  },
+  {
+    kind: "action.puzzleHint",
+    label: "Open a hint",
+    category: "action",
+    summary: "Opens one of the puzzle's hints (paying hint coins the first time) and shows it, or puts it away.",
+    details: "Hints open in order, then the big hint. One already open shows again for free. puzzle.hintText is the hint showing, puzzle.coins what the reader has left. Wired to a click on a copy of a list of puzzle.hints, the default opens that one.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "short", label: "Not enough coins" },
+      { id: "none", label: "No such hint yet" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "do", label: "Do", type: "select", default: "open", options: [{ value: "open", label: "Open and show it" }, { value: "close", label: "Put it away" }] },
+      { key: "hint", label: "Hint", type: "expr", default: "event.index + 1", help: "Which hint, from 1 (the big hint comes after the others), or 'next' for the next to open", showIf: { key: "do", values: ["open"] } }
+    ]
+  },
+  {
+    kind: "action.puzzleMemo",
+    label: "Puzzle memo",
+    category: "action",
+    summary: "Shows or hides the memo, a sketch pad over the puzzle for working things out.",
+    details: "puzzle.memo says whether it is showing: bind the memo layer's Visible to it.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: [{ key: "to", label: "Turn it", type: "select", default: "toggle", options: [{ value: "toggle", label: "The other way" }, { value: "on", label: "On" }, { value: "off", label: "Off" }] }]
+  },
+  {
+    kind: "action.puzzleLeave",
+    label: "Leave the puzzle",
+    category: "action",
+    summary: "Back to the story from a puzzle, or to the page before when it was played from the index.",
+    details: "Skip it marks an unsolved puzzle skipped. story.result is 'solved', 'skipped' or empty, so the script can say if story.result == 'solved'. A skipped puzzle stays in the index to come back to.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Nowhere to go back to" }
+    ],
+    hasInput: true,
+    params: [{ key: "skip", label: "Skip it", type: "boolean", default: false, help: "Mark it skipped if it is not solved yet" }]
+  },
+  {
+    kind: "action.puzzleCoins",
+    label: "Hint coins",
+    category: "action",
+    summary: "Gives the reader hint coins, or takes some away.",
+    details: "story.coins (and puzzle.coins) is how many they have. A save keeps them, and a new game starts again from the number in the Story settings.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "do", label: "Do", type: "select", default: "give", options: [{ value: "give", label: "Give" }, { value: "take", label: "Take away" }] },
+      { key: "amount", label: "How many", type: "expr", default: "1" }
+    ]
+  },
+  {
     kind: "action.toastHide",
     label: "Hide toast",
     category: "action",
@@ -5886,7 +5969,7 @@ function paletteColor(spec, vars = currentPalette()) {
 }
 const t = (key, name, light, dark, highContrast) => ({ key, name, light, dark, highContrast });
 const WHITE$1 = "--ilar-swatch-off-white";
-const INK$2 = "--ilar-swatch-grey-7";
+const INK$3 = "--ilar-swatch-grey-7";
 const GREEN = "--ilar-swatch-green";
 const ERROR = "--ilar-swatch-error";
 const ORANGE = "--ilar-swatch-orange";
@@ -5894,13 +5977,13 @@ const GOLD$1 = "--ilar-swatch-yellow";
 const LINK = "--ilar-swatch-hyperlink";
 const mix = (a, pct, over) => `mix(${a} ${pct}%, ${over})`;
 const STARTER_TOKEN_DEFS = [
-  t("background", "color/background", WHITE$1, INK$2, INK$2),
-  t("surface", "color/surface", "--ilar-swatch-grey-1", "--ilar-swatch-grey-text", INK$2),
+  t("background", "color/background", WHITE$1, INK$3, INK$3),
+  t("surface", "color/surface", "--ilar-swatch-grey-1", "--ilar-swatch-grey-text", INK$3),
   t("surfaceMuted", "color/surface-muted", "--ilar-swatch-grey-2", "--ilar-swatch-grey-6", "--ilar-swatch-grey-6"),
-  t("text", "color/text", INK$2, "--ilar-swatch-grey-1", WHITE$1),
+  t("text", "color/text", INK$3, "--ilar-swatch-grey-1", WHITE$1),
   t("muted", "color/muted", "--ilar-swatch-grey-4", "--ilar-swatch-grey-3", WHITE$1),
   t("primary", "color/primary", "--ilar-primary", GOLD$1, GOLD$1),
-  t("onPrimary", "color/on-primary", INK$2, INK$2, INK$2),
+  t("onPrimary", "color/on-primary", INK$3, INK$3, INK$3),
   t("link", "color/link", LINK, mix(LINK, 70, WHITE$1), mix(LINK, 70, WHITE$1)),
   t("button", "color/button", "--ilar-btn-primary-background", "--ilar-btn-primary-background", "--ilar-btn-primary-background"),
   t("onButton", "color/on-button", "--ilar-btn-primary-text", "--ilar-btn-primary-text", "--ilar-btn-primary-text"),
@@ -5908,11 +5991,11 @@ const STARTER_TOKEN_DEFS = [
   t("divider", "color/divider", "--ilar-swatch-grey-2", "--ilar-swatch-grey-6", WHITE$1),
   t("focus", "color/focus", "--ilar-primary", GOLD$1, WHITE$1),
   t("success", "color/success", GREEN, mix(GREEN, 55, WHITE$1), mix(GREEN, 55, WHITE$1)),
-  t("successSurface", "color/success-surface", mix(GREEN, 12, WHITE$1), mix(GREEN, 25, INK$2), INK$2),
+  t("successSurface", "color/success-surface", mix(GREEN, 12, WHITE$1), mix(GREEN, 25, INK$3), INK$3),
   t("error", "color/error", ERROR, mix(ERROR, 60, WHITE$1), mix(ERROR, 60, WHITE$1)),
-  t("errorSurface", "color/error-surface", mix(ERROR, 12, WHITE$1), mix(ERROR, 25, INK$2), INK$2),
+  t("errorSurface", "color/error-surface", mix(ERROR, 12, WHITE$1), mix(ERROR, 25, INK$3), INK$3),
   t("warning", "color/warning", ORANGE, GOLD$1, GOLD$1),
-  t("warningSurface", "color/warning-surface", mix(ORANGE, 14, WHITE$1), mix(GOLD$1, 20, INK$2), INK$2)
+  t("warningSurface", "color/warning-surface", mix(ORANGE, 14, WHITE$1), mix(GOLD$1, 20, INK$3), INK$3)
 ];
 function starterHex(def, column2) {
   return paletteColor(def[column2], currentPalette()) ?? "#808080";
@@ -11951,14 +12034,14 @@ function plainParam(kind, p, technical = technicalWording()) {
 }
 const PURPLE = "#3c2d4d";
 const GOLD = "#ffb448";
-const INK$1 = "#2d2d2d";
+const INK$2 = "#2d2d2d";
 const WHITE = "#ffffff";
 const PEACH = "#ffe9dd";
 const CONTENT_TOKENS = {
   background: WHITE,
   surface: "#f4f3f0",
   surfaceMuted: "#dddcd7",
-  text: INK$1,
+  text: INK$2,
   //muted, border and the three status colours are as light as they can be and still clear
   //4.5:1 (text) or 3:1 (a control's outline) on the page, the cards and their own status surfaces (starter-contrast.test.ts holds them to it)
   muted: "#65605b",
@@ -11981,10 +12064,10 @@ const way = (id, name, description, start, end, button2, onButton, onGradient, a
   tokens: { primary, button: button2, onButton, focus: primary, onPrimary: primary === button2 ? onButton : WHITE },
   brand: { gradientStart: start, gradientEnd: end, onGradient, deep: PURPLE, onDeep: WHITE, accent, warm: PEACH, logoMark, logoText, logoMarkOnLight: GOLD, logoTextOnLight: PURPLE, scrim: id === "orange" || id === "red" ? SCRIM : CLEAR, ...accentButton(button2) }
 });
-const accentButton = (button2) => button2 === GOLD ? { accentButton: PURPLE, onAccentButton: WHITE } : { accentButton: GOLD, onAccentButton: INK$1 };
+const accentButton = (button2) => button2 === GOLD ? { accentButton: PURPLE, onAccentButton: WHITE } : { accentButton: GOLD, onAccentButton: INK$2 };
 const COLOURWAYS = [
   way("gold", "Gold", "Gold gradient with purple, like the UniSQ title slides.", "#f58220", GOLD, PURPLE, WHITE, PURPLE, PURPLE, PURPLE, PURPLE),
-  way("purple", "Purple", "Deep purple with gold, the UniSQ dark slides.", PURPLE, "#775d94", GOLD, INK$1, WHITE, GOLD, GOLD, WHITE, PURPLE),
+  way("purple", "Purple", "Deep purple with gold, the UniSQ dark slides.", PURPLE, "#775d94", GOLD, INK$2, WHITE, GOLD, GOLD, WHITE, PURPLE),
   way("blue", "Blue", "The palette blue gradient, gold accents.", "#00497d", "#0080a8", "#00497d", WHITE, WHITE, GOLD, GOLD, WHITE),
   way("green", "Green", "The palette green gradient, for science and health.", "#0e6a6f", "#3e8521", "#0e6a6f", WHITE, WHITE, GOLD, GOLD, WHITE),
   way("orange", "Orange", "The palette orange gradient, warm and bold.", "#d0372b", "#ed6a21", "#b52f24", WHITE, WHITE, GOLD, GOLD, WHITE),
@@ -12081,7 +12164,7 @@ function lookFor(themes) {
   }
   return out;
 }
-const solid$4 = (color) => ({ type: "solid", color });
+const solid$5 = (color) => ({ type: "solid", color });
 function lookDefaults(project, type) {
   if (!hasTokens(project.themes)) return {};
   const l = lookFor(project.themes);
@@ -12090,25 +12173,25 @@ function lookDefaults(project, type) {
     case "ellipse":
     case "polygon":
     case "star":
-      return { fill: solid$4(l.surfaceMuted) };
+      return { fill: solid$5(l.surfaceMuted) };
     case "path":
-      return { stroke: { paint: solid$4(l.text), width: 2 } };
+      return { stroke: { paint: solid$5(l.text), width: 2 } };
     case "text":
       return { color: l.text };
     case "frame":
-      return { fill: solid$4(l.background) };
+      return { fill: solid$5(l.background) };
     case "button":
-      return { fill: solid$4(l.button), color: l.onButton };
+      return { fill: solid$5(l.button), color: l.onButton };
     case "input":
-      return { fill: solid$4(l.background), stroke: { paint: solid$4(l.border), width: 1 }, color: l.text };
+      return { fill: solid$5(l.background), stroke: { paint: solid$5(l.border), width: 1 }, color: l.text };
     case "link":
       return { color: l.link };
     case "progress":
-      return { fill: solid$4(l.surfaceMuted), barFill: solid$4(l.button) };
+      return { fill: solid$5(l.surfaceMuted), barFill: solid$5(l.button) };
     case "chart":
       return { colors: [l.button, l.link, l.success, l.warning, l.error, l.muted], color: l.text };
     case "connector":
-      return { fill: solid$4(l.background), stroke: { paint: solid$4(l.muted), width: 2, cap: "round", join: "round" }, color: l.text };
+      return { fill: solid$5(l.background), stroke: { paint: solid$5(l.muted), width: 2, cap: "round", join: "round" }, color: l.text };
     default:
       return {};
   }
@@ -12903,8 +12986,8 @@ const AREA_BAD = "#b3261e40";
 const AREA_MISS = "#8a520040";
 const bodyStyle = (kind, answerBy) => kind === "multiple" ? "check" : kind === "blank" ? answerBy === "drag" ? "dragblank" : "blank" : kind === "ordering" ? "order" : kind === "matching" ? "match" : kind === "categorise" ? "categorise" : kind === "hotspot" ? "spot" : "radio";
 const RESET_LABELS = { again: "Try again", next: "Next question" };
-const solid$3 = (color) => ({ type: "solid", color });
-const stroke$1 = (color, width = 1.5) => ({ paint: solid$3(color), width });
+const solid$4 = (color) => ({ type: "solid", color });
+const stroke$1 = (color, width = 1.5) => ({ paint: solid$4(color), width });
 const row = (gap) => ({ ...defaultAutoLayout("row"), gap, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "center", hugHeight: true });
 const column = (gap) => ({ ...defaultAutoLayout("column"), gap, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "stretch" });
 const partOf = (n) => (n.questionPart ?? "").split(":")[0];
@@ -12991,17 +13074,17 @@ function applyLooks(frame, before, after) {
 }
 const STATE_WORDS = '{item.state == "correct" ? "✓ Right" : item.state == "wrong" ? "✗ Wrong" : item.state == "missed" ? "← Right answer" : ""}';
 const STATE_DESCRIPTION = 'item.state == "correct" ? "Right" : item.state == "wrong" ? "Wrong" : item.state == "missed" ? "This was the right answer" : ""';
-function text$1(name, part, value, o = {}) {
+function text$2(name, part, value, o = {}) {
   return createNode("text", { name, questionPart: part, text: value, fontSize: TYPE.body, color: L$2.text, autoSize: "height", width: 200, height: 24, ...o });
 }
-function button$2(name, part, label, primary, bindings) {
+function button$3(name, part, label, primary, bindings) {
   return createNode("button", {
     name,
     questionPart: part,
     label,
     width: 150,
     height: 44,
-    fill: solid$3(primary ? L$2.button : L$2.surfaceMuted),
+    fill: solid$4(primary ? L$2.button : L$2.surfaceMuted),
     color: primary ? L$2.onButton : L$2.text,
     ...bindings ? { bindings } : {}
   });
@@ -13020,7 +13103,7 @@ function tickBox(base2) {
     height: 9,
     paths: [{ closed: false, points: [{ x: 0, y: 4.5 }, { x: 4.5, y: 9 }, { x: 12, y: 0 }] }],
     fill: null,
-    stroke: { paint: solid$3(L$2.background), width: 2.25 },
+    stroke: { paint: solid$4(L$2.background), width: 2.25 },
     lineCap: "round",
     lineJoin: "round",
     decorative: true,
@@ -13029,7 +13112,7 @@ function tickBox(base2) {
   return createNode("frame", { ...base2, cornerRadius: 5, clip: false, children: [tick] });
 }
 function optionTemplate(style) {
-  const base2 = { height: 52, fill: solid$3(L$2.background), cornerRadius: RADIUS.control, clip: false };
+  const base2 = { height: 52, fill: solid$4(L$2.background), cornerRadius: RADIUS.control, clip: false };
   if (style === "order") {
     return createNode("frame", {
       ...base2,
@@ -13039,16 +13122,16 @@ function optionTemplate(style) {
       layout: { ...row(12), padding: { top: 10, right: 12, bottom: 10, left: 16 } },
       ...optionLooks({ fill: L$2.background, line: L$2.border }, { ariaDescription: STATE_DESCRIPTION }, false),
       children: [
-        text$1("Number", "optionNumber", "{item.number}.", { width: 28, color: L$2.muted, fontWeight: 600, decorative: true }),
-        text$1("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, ...lookBindings("item", { text: L$2.text }) }),
-        text$1("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, decorative: true }),
-        createNode("button", { name: "Move up", questionPart: "moveUp", label: "↑", width: 40, height: 36, fill: solid$3(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
-        createNode("button", { name: "Move down", questionPart: "moveDown", label: "↓", width: 40, height: 36, fill: solid$3(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } })
+        text$2("Number", "optionNumber", "{item.number}.", { width: 28, color: L$2.muted, fontWeight: 600, decorative: true }),
+        text$2("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, ...lookBindings("item", { text: L$2.text }) }),
+        text$2("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, decorative: true }),
+        createNode("button", { name: "Move up", questionPart: "moveUp", label: "↑", width: 40, height: 36, fill: solid$4(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
+        createNode("button", { name: "Move down", questionPart: "moveDown", label: "↓", width: 40, height: 36, fill: solid$4(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } })
       ]
     });
   }
   const checkbox = style === "check";
-  const markerBase = { name: "Marker", questionPart: "marker", width: 22, height: 22, fill: solid$3(L$2.background), stroke: stroke$1(L$2.border, 2), decorative: true, bindings: { "fill.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.background + '"', "stroke.paint.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.border + '"' } };
+  const markerBase = { name: "Marker", questionPart: "marker", width: 22, height: 22, fill: solid$4(L$2.background), stroke: stroke$1(L$2.border, 2), decorative: true, bindings: { "fill.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.background + '"', "stroke.paint.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.border + '"' } };
   return createNode("frame", {
     ...base2,
     name: "Option",
@@ -13060,8 +13143,8 @@ function optionTemplate(style) {
     ...optionLooks({ fill: L$2.background, line: L$2.border }, { ariaChecked: "item.selected", ariaLabel: "item.text", ariaDescription: STATE_DESCRIPTION }, true),
     children: [
       checkbox ? tickBox(markerBase) : createNode("ellipse", { ...markerBase, shadow: { x: 0, y: 0, blur: 0, spread: 4, color: L$2.background, inset: true } }),
-      text$1("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, decorative: true, ...lookBindings("item", { text: L$2.text }, ALL_LOOKS, true) }),
-      text$1("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 110, decorative: true })
+      text$2("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, decorative: true, ...lookBindings("item", { text: L$2.text }, ALL_LOOKS, true) }),
+      text$2("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 110, decorative: true })
     ]
   });
 }
@@ -13092,7 +13175,7 @@ function blankRow(q, i, blankVar) {
     clip: false,
     layout: { ...column(6), align: "stretch" },
     children: [
-      text$1("Blank label", "blankLabel", q.blanks[i]?.label ?? "", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
+      text$2("Blank label", "blankLabel", q.blanks[i]?.label ?? "", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
       createNode("input", {
         name: "Blank input",
         questionPart: "blankInput",
@@ -13106,7 +13189,7 @@ function blankRow(q, i, blankVar) {
         converters: line.converters,
         bindings: { value: blankVar, ...line.bindings, ariaLabel: `${at}?.label || "Answer"` }
       }),
-      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
+      text$2("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
     ]
   });
 }
@@ -13155,7 +13238,7 @@ function chip(q, o) {
     y: o.y,
     width: o.w ?? TERM_W,
     height: o.h ?? TERM_H,
-    fill: solid$3(L$2.background),
+    fill: solid$4(L$2.background),
     stroke: stroke$1(L$2.border, 2),
     cornerRadius: RADIUS.control,
     clip: false,
@@ -13164,7 +13247,7 @@ function chip(q, o) {
     draggable: { tags: [o.tag], onMiss: "return", label: o.word },
     shadow: { x: 0, y: 2, blur: 6, spread: 0, color: "rgba(0,0,0,0.15)" },
     ...o.marks ? lookBindings(at, { fill: L$2.background, line: L$2.border }) : {},
-    children: [text$1(`${o.name} text`, `${o.part}Text`, o.marks ? `{${at}?.state == "correct" ? "✓ " : ${at}?.state == "wrong" ? "✗ " : ""}{${at}?.text}` : o.word, { layoutItem: { width: "fill" }, decorative: true, ...o.marks ? lookBindings(at, { text: L$2.text }) : {} })]
+    children: [text$2(`${o.name} text`, `${o.part}Text`, o.marks ? `{${at}?.state == "correct" ? "✓ " : ${at}?.state == "wrong" ? "✗ " : ""}{${at}?.text}` : o.word, { layoutItem: { width: "fill" }, decorative: true, ...o.marks ? lookBindings(at, { text: L$2.text }) : {} })]
   });
 }
 function matchTerm(q, p, i, slot, name = `Term ${i + 1}`) {
@@ -13175,7 +13258,7 @@ function matchTerm(q, p, i, slot, name = `Term ${i + 1}`) {
     y: slot * TERM_PITCH,
     width: TERM_W,
     height: TERM_H,
-    fill: solid$3(L$2.background),
+    fill: solid$4(L$2.background),
     stroke: stroke$1(L$2.border, 2),
     cornerRadius: RADIUS.control,
     clip: false,
@@ -13184,7 +13267,7 @@ function matchTerm(q, p, i, slot, name = `Term ${i + 1}`) {
     draggable: { tags: [termTag(q)], onMiss: "return", label: p.term },
     shadow: { x: 0, y: 2, blur: 6, spread: 0, color: "rgba(0,0,0,0.15)" },
     ...lookBindings(itemAt(q, i), { fill: L$2.background, line: L$2.border }),
-    children: [text$1("Term text", "matchTermText", `{${itemAt(q, i)}?.text}`, { layoutItem: { width: "fill" }, decorative: true, ...lookBindings(itemAt(q, i), { text: L$2.text }) })]
+    children: [text$2("Term text", "matchTermText", `{${itemAt(q, i)}?.text}`, { layoutItem: { width: "fill" }, decorative: true, ...lookBindings(itemAt(q, i), { text: L$2.text }) })]
   });
 }
 function matchRow(q, p, i) {
@@ -13207,7 +13290,7 @@ function matchRow(q, p, i) {
         clip: false,
         layout: row(12),
         children: [
-          text$1("Definition", "matchDefinition", `{${at}?.label}`, { layoutItem: { width: "fill" } }),
+          text$2("Definition", "matchDefinition", `{${at}?.label}`, { layoutItem: { width: "fill" } }),
           createNode("frame", {
             name: `Slot ${i + 1}`,
             questionPart: `matchZone:${p.id}`,
@@ -13223,7 +13306,7 @@ function matchRow(q, p, i) {
           })
         ]
       }),
-      text$1("Match result", "matchState", `{${at}?.state == "correct" ? "✓ Right" : ${at}?.state == "wrong" ? "✗ Wrong" + (${at}?.answer ? ". The answer is " + ${at}.answer : "") : ""}`, {
+      text$2("Match result", "matchState", `{${at}?.state == "correct" ? "✓ Right" : ${at}?.state == "wrong" ? "✗ Wrong" + (${at}?.answer ? ". The answer is " + ${at}.answer : "") : ""}`, {
         fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.muted,
@@ -13295,7 +13378,7 @@ function catZone(q, g, i) {
     questionPart: `catZone:${g.id}`,
     height: GROUP_H,
     layoutItem: { width: "fill" },
-    fill: solid$3(L$2.surface),
+    fill: solid$4(L$2.surface),
     stroke: { ...stroke$1(L$2.border, 2), dash: [8, 5] },
     cornerRadius: 12,
     clip: false,
@@ -13303,7 +13386,7 @@ function catZone(q, g, i) {
     //Unlimited, and a dropped item stays where it was let go. Every group takes every item: whether it is right is for Check to say
     dropZone: { accepts: [catTag(q)], snap: "none", label: g.name },
     ariaLabel: g.name,
-    children: [text$1(`Group ${i + 1} heading`, "catHeading", g.name, { x: 12, y: 10, width: 140, fontWeight: 700, fontSize: TYPE.heading, decorative: true })]
+    children: [text$2(`Group ${i + 1} heading`, "catHeading", g.name, { x: 12, y: 10, width: 140, fontWeight: 700, fontSize: TYPE.heading, decorative: true })]
   });
 }
 function catCard(q, c2, i) {
@@ -13348,7 +13431,7 @@ function categoriseBody(q) {
           return made;
         })
       }),
-      text$1("Right groups", "catAnswer", `{${items}.filter(i => i.answer).map(i => i.text + " goes in " + i.answer).join(". ")}`, {
+      text$2("Right groups", "catAnswer", `{${items}.filter(i => i.answer).map(i => i.text + " goes in " + i.answer).join(". ")}`, {
         fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.warning,
@@ -13435,7 +13518,7 @@ function dragBlankRow(q, b, i) {
     clip: false,
     layout: { ...column(6), align: "stretch" },
     children: [
-      text$1("Blank label", "blankLabel", b.label, { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
+      text$2("Blank label", "blankLabel", b.label, { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
       createNode("frame", {
         name: `Gap ${i + 1}`,
         questionPart: `blankZone:${b.id}`,
@@ -13450,7 +13533,7 @@ function dragBlankRow(q, b, i) {
         converters: line.converters,
         bindings: { ...line.bindings, ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) }
       }),
-      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
+      text$2("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
     ]
   });
 }
@@ -13477,7 +13560,7 @@ function dragBlanksBody(q) {
         layout: column(14),
         children: q.blanks.map((b, i) => dragBlankRow(q, b, i))
       }),
-      text$1("Word bank label", "wordBankLabel", "Word bank", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text }),
+      text$2("Word bank label", "wordBankLabel", "Word bank", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text }),
       createNode("frame", {
         name: "Word bank",
         questionPart: "wordBank",
@@ -13588,7 +13671,7 @@ function spotArea(q, o, i, shape, box, points) {
     role: isMultiple(q) ? "checkbox" : "radio",
     focusable: true,
     ariaLabel: o.text,
-    fill: solid$3("#ffffff01"),
+    fill: solid$4("#ffffff01"),
     stroke: stroke$1(AREA_OFF, 3),
     cursor: "pointer",
     bindings: {
@@ -13604,13 +13687,13 @@ function spotArea(q, o, i, shape, box, points) {
   return createNode("rect", { ...common, cornerRadius: 8 });
 }
 function samplePicture() {
-  const shape = (type, name, x, y, w, h, color, extra = {}) => createNode(type, { name, x, y, width: w, height: h, fill: solid$3(color), stroke: null, decorative: true, ...extra });
+  const shape = (type, name, x, y, w, h, color, extra = {}) => createNode(type, { name, x, y, width: w, height: h, fill: solid$4(color), stroke: null, decorative: true, ...extra });
   return createNode("frame", {
     name: "Picture",
     questionPart: "picture",
     width: AREA_W,
     height: AREA_H,
-    fill: solid$3("#cfe8ff"),
+    fill: solid$4("#cfe8ff"),
     stroke: null,
     cornerRadius: RADIUS.control,
     clip: true,
@@ -13620,7 +13703,7 @@ function samplePicture() {
       shape("ellipse", "Sun", 466, 28, 78, 78, "#ffcf33"),
       shape("rect", "Ground", 0, 224, AREA_W, 56, "#9bd18b"),
       shape("rect", "Walls", 150, 138, 170, 104, "#e8c9a0"),
-      createNode("path", { name: "Roof", x: 130, y: 62, width: 210, height: 76, fill: solid$3("#b5523b"), stroke: null, decorative: true, paths: [{ closed: true, points: [{ x: 0, y: 76 }, { x: 105, y: 0 }, { x: 210, y: 76 }] }] }),
+      createNode("path", { name: "Roof", x: 130, y: 62, width: 210, height: 76, fill: solid$4("#b5523b"), stroke: null, decorative: true, paths: [{ closed: true, points: [{ x: 0, y: 76 }, { x: 105, y: 0 }, { x: 210, y: 76 }] }] }),
       shape("rect", "Door", 224, 178, 38, 64, "#7a4a2b"),
       shape("rect", "Trunk", 428, 168, 20, 74, "#7a4a2b"),
       shape("ellipse", "Leaves", 394, 98, 90, 88, "#3f9a4a")
@@ -13656,12 +13739,12 @@ function hotspotBody(q) {
         //The areas sit in one group: a single On pointer on it (only when a child is hit) feeds Choose option the child's place, so an area added later needs no flow of its own
         children: [samplePicture(), createNode("frame", { name: "Areas", questionPart: "spotAreas", width: AREA_W, height: AREA_H, fill: null, stroke: null, clip: false, children: areas })]
       }),
-      text$1("Picks", "spotPicks", `Selected: {${items}.filter(i => i.selected).map(i => i.text + (i.state == "correct" ? " (right)" : i.state == "wrong" ? " (wrong)" : "")).join(", ")}`, {
+      text$2("Picks", "spotPicks", `Selected: {${items}.filter(i => i.selected).map(i => i.text + (i.state == "correct" ? " (right)" : i.state == "wrong" ? " (wrong)" : "")).join(", ")}`, {
         fontSize: TYPE.small,
         color: L$2.muted,
         bindings: { visible: `${items}.some(i => i.selected)` }
       }),
-      text$1("Right areas", "spotAnswer", `Right answer: {${items}.filter(i => i.state == "missed").map(i => i.text).join(", ")}`, {
+      text$2("Right areas", "spotAnswer", `Right answer: {${items}.filter(i => i.state == "missed").map(i => i.text).join(", ")}`, {
         fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.warning,
@@ -13703,17 +13786,17 @@ function frameFor(q, blankVars, at) {
     role: "region",
     question: q,
     //A flat grey card on the page, like the toolbox's cards
-    fill: solid$3(L$2.surface),
+    fill: solid$4(L$2.surface),
     stroke: null,
     cornerRadius: 8,
     clip: false,
     bindings: { ariaLabel: `"Question: " + ${p("prompt")}` },
     layout: { ...defaultAutoLayout("column"), gap: 16, padding: { top: 24, right: 24, bottom: 24, left: 24 }, align: "stretch", hugHeight: true },
     children: [
-      text$1("Prompt", "prompt", `{${p("prompt")}}`, { role: "heading", headingLevel: 3, fontSize: TYPE.heading, fontWeight: 600, lineHeight: 1.35 }),
+      text$2("Prompt", "prompt", `{${p("prompt")}}`, { role: "heading", headingLevel: 3, fontSize: TYPE.heading, fontWeight: 600, lineHeight: 1.35 }),
       body,
-      text$1("Hint text", "hintText", `Hint: {${p("hint")}}`, { fontSize: TYPE.small, fontStyle: "italic", color: L$2.muted, bindings: { visible: `${p("hint")} != ""` } }),
-      text$1("Feedback", "feedback", `{${p("feedback")}}`, {
+      text$2("Hint text", "hintText", `Hint: {${p("hint")}}`, { fontSize: TYPE.small, fontStyle: "italic", color: L$2.muted, bindings: { visible: `${p("hint")} != ""` } }),
+      text$2("Feedback", "feedback", `{${p("feedback")}}`, {
         fontWeight: 600,
         bindings: { visible: `${p("feedback")} != ""`, color: `${p("answered")} ? (${p("correct")} ? "${L$2.success}" : "${L$2.error}") : "${L$2.muted}"` }
       }),
@@ -13725,10 +13808,10 @@ function frameFor(q, blankVars, at) {
         clip: false,
         layout: { ...row(12), align: "center" },
         children: [
-          button$2("Check answer", "check", "Check answer", true, { disabled: p("locked") }),
-          button$2("Hint", "hint", "Hint", false, { visible: `${p("hintsLeft")} > 0 && !${p("locked")}` }),
-          button$2("Try again", "reset", resetLabel(q), false, { visible: resetVisible(q) }),
-          text$1("Score", "score", `Score: {${p("score")}}`, { fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, bindings: { visible: p("locked") } })
+          button$3("Check answer", "check", "Check answer", true, { disabled: p("locked") }),
+          button$3("Hint", "hint", "Hint", false, { visible: `${p("hintsLeft")} > 0 && !${p("locked")}` }),
+          button$3("Try again", "reset", resetLabel(q), false, { visible: resetVisible(q) }),
+          text$2("Score", "score", `Score: {${p("score")}}`, { fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, bindings: { visible: p("locked") } })
         ]
       })
     ]
@@ -14067,7 +14150,7 @@ function syncListen(ab, frame, q) {
   const has = partsOf(frame).listen?.[0];
   if (q.listen && !has) {
     const at = Math.min(row2.children.length, Math.max(0, row2.children.findIndex((c2) => c2.questionPart === "hint") + 1));
-    const b = button$2(uniqueName(nodeNames(ab), "Listen"), "listen", "Listen", false, { visible: "voiceAvailable" });
+    const b = button$3(uniqueName(nodeNames(ab), "Listen"), "listen", "Listen", false, { visible: "voiceAvailable" });
     b.ariaLabel = "Listen to the question";
     row2.children.splice(at, 0, b);
   } else if (!q.listen && has) {
@@ -14082,7 +14165,7 @@ function syncKeysHint(frame, q) {
   if (want && !has) {
     const body = parts.options?.[0];
     const at = body ? frame.children.findIndex((c2) => c2 === body) : -1;
-    const line = text$1("Number keys hint", "keysHint", `Press 1 to {${varName(q, "items")}.length} to choose`, { fontSize: TYPE.small, color: L$2.muted });
+    const line = text$2("Number keys hint", "keysHint", `Press 1 to {${varName(q, "items")}.length} to choose`, { fontSize: TYPE.small, color: L$2.muted });
     frame.children.splice(at >= 0 ? at + 1 : 2, 0, line);
   } else if (!want && has) {
     const loc = locateIn(frame, has.id);
@@ -14129,7 +14212,7 @@ function setKitOptions(d, abId, frameId, o) {
     const g = gate(o.hintWhen);
     if (g) hint.bindings = { ...hint.bindings ?? {}, visible: `${g} && ${varName(q, "hintsLeft")} > 0 && !${varName(q, "locked")}` };
     if (o.hint === "pill") {
-      Object.assign(hint, PILL, { fill: solid$3(L$2.background), stroke: stroke$1(L$2.border), fontWeight: 600 });
+      Object.assign(hint, PILL, { fill: solid$4(L$2.background), stroke: stroke$1(L$2.border), fontWeight: 600 });
       hint.ariaLabel = "Show a hint";
       const at = locateIn(frame, hint.id);
       const row2 = promptRow(ab, frame);
@@ -14701,7 +14784,7 @@ function linesOf(text2) {
   });
 }
 const HIDE_VAR = "storyBoxHidden";
-const solid$2 = (color) => ({ type: "solid", color });
+const solid$3 = (color) => ({ type: "solid", color });
 function storyStage(hideVar, at = {}) {
   const W2 = STAGE_W;
   const H2 = STAGE_H;
@@ -14733,7 +14816,7 @@ function storyStage(hideVar, at = {}) {
     width: 240,
     height: 44,
     cornerRadius: 10,
-    fill: solid$2("#b8860b"),
+    fill: solid$3("#b8860b"),
     bindings: { "fill.color": "story.speakerColour || '#b8860b'", visible: "story.speaking" },
     children: [createNode("text", { name: "Name", x: 0, y: 0, width: 240, height: 44, text: "Name", fontSize: 22, fontWeight: 700, color: "#ffffff", align: "center", verticalAlign: "middle", autoSize: "none", bindings: { text: "story.speaker" } })]
   });
@@ -14759,7 +14842,7 @@ function storyStage(hideVar, at = {}) {
     width: 1120,
     height: 180,
     cornerRadius: 14,
-    fill: solid$2("rgba(18, 18, 28, 0.86)"),
+    fill: solid$3("rgba(18, 18, 28, 0.86)"),
     clip: false,
     bindings: { visible: `(story.text != '' || story.choosing) && !${HIDE_VAR} && (story.look == 'bottom' || (story.look == 'bubble' && !story.speaking))` },
     children: [plate, words, more]
@@ -14782,13 +14865,13 @@ function storyStage(hideVar, at = {}) {
     }
   });
   const fullList = createNode("frame", { name: "Full screen lines", x: 40, y: 36, width: 960, height: 540, fill: null, clip: true, repeat: { items: "story.page.concat(story.text != '' ? [{ current: true }] : [])", layout: "vertical", gap: 16, columns: 1 }, children: [fullLine] });
-  const full = createNode("frame", { name: "Full screen text", x: 120, y: 40, width: 1040, height: 624, cornerRadius: 16, fill: solid$2("rgba(10, 10, 16, 0.84)"), bindings: { visible: `story.look == 'full' && !${HIDE_VAR}` }, children: [fullList] });
+  const full = createNode("frame", { name: "Full screen text", x: 120, y: 40, width: 1040, height: 624, cornerRadius: 16, fill: solid$3("rgba(10, 10, 16, 0.84)"), bindings: { visible: `story.look == 'full' && !${HIDE_VAR}` }, children: [fullList] });
   const BW = 540;
   const bubbleX = `clamp(story.speakerX * ${W2} - ${BW / 2}, 24, ${W2 - BW - 24})`;
-  const tail = createNode("rect", { name: "Tail", x: BW / 2 - 16, y: 158, width: 32, height: 32, rotation: 45, fill: solid$2("#fbfaf7"), bindings: { x: `story.speakerX * ${W2} - ${bubbleX} - 16` } });
+  const tail = createNode("rect", { name: "Tail", x: BW / 2 - 16, y: 158, width: 32, height: 32, rotation: 45, fill: solid$3("#fbfaf7"), bindings: { x: `story.speakerX * ${W2} - ${bubbleX} - 16` } });
   const bubbleName = createNode("text", { name: "Bubble name", x: 28, y: 18, width: 480, height: 28, text: "Name", fontSize: 18, fontWeight: 700, color: "#b8860b", autoSize: "none", bindings: { text: "story.speaker", color: "story.speakerColour || '#b8860b'" } });
   const bubbleWords = createNode("text", { name: "Bubble words", x: 28, y: 50, width: 484, height: 110, text: "Words in the bubble.", fontSize: 23, lineHeight: 1.4, color: "#1b1b24", autoSize: "none", storyMarkup: true, bindings: { text: "story.marked", reveal: "story.shown" } });
-  const bubble = createNode("frame", { name: "Speech bubble", x: (W2 - BW) / 2, y: 60, width: BW, height: 176, cornerRadius: 24, clip: false, fill: solid$2("#fbfaf7"), shadow: { x: 0, y: 6, blur: 18, spread: 0, color: "rgba(0, 0, 0, 0.3)" }, bindings: { x: bubbleX, visible: `story.look == 'bubble' && story.speaking && !${HIDE_VAR}` }, children: [tail, bubbleName, bubbleWords] });
+  const bubble = createNode("frame", { name: "Speech bubble", x: (W2 - BW) / 2, y: 60, width: BW, height: 176, cornerRadius: 24, clip: false, fill: solid$3("#fbfaf7"), shadow: { x: 0, y: 6, blur: 18, spread: 0, color: "rgba(0, 0, 0, 0.3)" }, bindings: { x: bubbleX, visible: `story.look == 'bubble' && story.speaking && !${HIDE_VAR}` }, children: [tail, bubbleName, bubbleWords] });
   const choice = createNode("button", {
     name: "Choice",
     x: 0,
@@ -14798,7 +14881,7 @@ function storyStage(hideVar, at = {}) {
     label: "A choice",
     fontSize: 22,
     cornerRadius: 12,
-    fill: solid$2("#fbfaf7"),
+    fill: solid$3("#fbfaf7"),
     color: "#1b1b24",
     shadow: { x: 0, y: 4, blur: 14, spread: 0, color: "rgba(0, 0, 0, 0.35)" },
     bindings: { label: "(item.picked ? '✓ ' : '') + item.text", disabled: "!item.enabled" }
@@ -14815,7 +14898,7 @@ function storyStage(hideVar, at = {}) {
     bindings: { visible: `story.choosing && !${HIDE_VAR}`, y: "story.look == 'full' ? 380 : 120" },
     children: [choice]
   });
-  const control = (name, label, x, bind2) => createNode("button", { name, x, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid$2("rgba(18, 18, 28, 0.7)"), color: "#f5f2ea", ...bind2 ? { bindings: { label: bind2 } } : {} });
+  const control = (name, label, x, bind2) => createNode("button", { name, x, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid$3("rgba(18, 18, 28, 0.7)"), color: "#f5f2ea", ...bind2 ? { bindings: { label: bind2 } } : {} });
   const buttons = [control("Back", "Back", 0), control("Auto", "Auto", 94, "story.auto ? 'Auto on' : 'Auto'"), control("Skip", "Skip", 188, "story.skipping ? 'Skipping' : 'Skip'"), control("Hide", "Hide", 282)];
   const bar = createNode("frame", { name: "Story buttons", x: W2 - 80 - 366, y: 470, width: 366, height: 32, fill: null, bindings: { visible: `story.started && !story.ended && !${HIDE_VAR}`, y: "story.look == 'full' ? 678 : 470" }, children: buttons });
   const unhide = createNode("rect", { name: "Show the box again", x: 0, y: 0, width: W2, height: H2, fill: null, ariaLabel: "Show the words again", bindings: { visible: HIDE_VAR } });
@@ -14839,11 +14922,114 @@ function storyStage(hideVar, at = {}) {
     name: "Story stage",
     width: W2,
     height: H2,
-    background: solid$2("#15141c"),
+    background: solid$3("#15141c"),
     children: [bgBefore, bg, cast, weather, box, full, bubble, choices, bar, ending, unhide],
     logic: { nodes, edges },
     ...at
   });
+}
+const INK$1 = "#f5f2ea";
+const DARK$1 = "#15141c";
+const BAND = "rgba(12, 11, 18, 0.88)";
+const PANEL$1 = "#232130";
+const ACCENT$1 = "#c8a24a";
+const solid$2 = (color) => ({ type: "solid", color });
+const PUZZLE_FRAME_NAME = "Puzzle bar";
+function onClick$1(w, target, ...actions) {
+  const y = 40 + w.nodes.length * 40;
+  const ev = { id: uid("n"), kind: "event.pointer", x: 40, y, params: { type: "click", target: target.id } };
+  w.nodes.push(ev);
+  let prev = ev;
+  actions.forEach((a, i) => {
+    const n = { id: uid("n"), kind: a.kind, x: 320 + i * 260, y, params: a.params ?? {} };
+    w.nodes.push(n);
+    w.edges.push({ id: uid("e"), from: prev.id, fromPort: "out", to: n.id, toPort: "in" });
+    prev = n;
+  });
+}
+const text$1 = (name, value, x, y, width, height, extra = {}) => createNode("text", { name, text: value, x, y, width, height, fontSize: 20, color: INK$1, autoSize: "none", ...extra });
+const button$2 = (name, label, x, y, width, extra = {}) => createNode("button", { name, label, x, y, width, height: 48, fontSize: 18, fontWeight: 600, cornerRadius: 12, fill: solid$2("rgba(255, 255, 255, 0.92)"), color: DARK$1, ...extra });
+function puzzleFrame(w = STAGE_W, h = STAGE_H) {
+  const wiring2 = { nodes: [], edges: [] };
+  const side = 220;
+  const sx = w - side - 24;
+  const band = createNode("rect", { name: "Band", x: 0, y: 0, width: w, height: 64, fill: solid$2(BAND), decorative: true });
+  const label = text$1("Number", "Puzzle 1", 24, 14, 150, 36, { fontSize: 22, fontWeight: 700, color: ACCENT$1, bindings: { text: "puzzle.label" } });
+  const title = text$1("Title", "The puzzle", 180, 14, w - 180 - 460, 36, { fontSize: 22, fontWeight: 600, role: "heading", headingLevel: 1, overflow: "ellipsis", bindings: { text: "puzzle.title" } });
+  const value = text$1("Value", "30 points", w - 440, 18, 200, 30, { align: "right", bindings: { text: "puzzle.solved && !puzzle.right ? 'Solved: ' + puzzle.score + ' points' : puzzle.value + ' points'" } });
+  const coins = text$1("Coins", "Hint coins: 3", w - 224, 18, 200, 30, { align: "right", bindings: { text: "'Hint coins: ' + puzzle.coins" } });
+  const top = createNode("frame", { name: PUZZLE_FRAME_NAME, x: 0, y: 0, width: w, height: 64, fill: null, children: [band, label, title, value, coins] });
+  const hint = button$2("Hint button", "Hint 1", 0, 0, side, {
+    height: 44,
+    fontSize: 16,
+    bindings: {
+      label: "item.open ? item.label : item.label + ' (' + item.cost + (item.cost == 1 ? ' coin)' : ' coins)')",
+      disabled: "!item.open && !item.canOpen",
+      "fill.color": `item.open ? '${ACCENT$1}' : 'rgba(255, 255, 255, 0.92)'`
+    }
+  });
+  const hints = createNode("frame", { name: "Hints", x: sx, y: 88, width: side, height: 212, fill: null, repeat: { items: "puzzle.hints", layout: "vertical", gap: 12, columns: 1 }, children: [hint] });
+  onClick$1(wiring2, hint, { kind: "action.puzzleHint", params: { do: "open", hint: "event.index + 1" } });
+  const noHints = text$1("No hints", "No hints for this one.", sx, 88, side, 30, { fontSize: 16, color: "rgba(245, 242, 234, 0.7)", bindings: { visible: "puzzle.hints.length == 0" } });
+  const short2 = text$1("Not enough coins", "Not enough hint coins. Look around for more.", sx, 310, side, 52, { fontSize: 15, lineHeight: 1.3, color: "#f2b8a0", bindings: { visible: "puzzle.short" } });
+  const memo2 = button$2("Memo", "Memo", sx, h - 148, side, { bindings: { label: "puzzle.memo ? 'Close the memo' : 'Memo'", ariaPressed: "puzzle.memo ? 'true' : 'false'" } });
+  onClick$1(wiring2, memo2, { kind: "action.puzzleMemo", params: { to: "toggle" } });
+  const skip = button$2("Skip", "Skip for now", sx, h - 84, side, { fill: solid$2("rgba(255, 255, 255, 0.14)"), color: INK$1, bindings: { label: "puzzle.solved ? 'Back' : 'Skip for now'" } });
+  onClick$1(wiring2, skip, { kind: "action.puzzleLeave", params: { skip: true } });
+  const pad = createNode("rect", { name: "Memo pad", x: 0, y: 64, width: sx - 24, height: h - 64, fill: solid$2("rgba(255, 252, 235, 0.16)"), sketch: { colour: "#fff3b0", size: 4 }, ariaLabel: "Memo: draw here to work the puzzle out", bindings: { visible: "puzzle.memo" } });
+  const cw = 560;
+  const cx = (sx - 24 - cw) / 2;
+  const cardHead = text$1("Hint heading", "Hint 1", 24, 20, cw - 48, 32, { fontSize: 22, fontWeight: 700, color: ACCENT$1, role: "heading", headingLevel: 2, bindings: { text: "puzzle.hintLabel" } });
+  const cardText = text$1("Hint words", "The hint.", 24, 64, cw - 48, 84, { fontSize: 19, lineHeight: 1.45, autoSize: "height", bindings: { text: "puzzle.hintText" } });
+  const cardClose = button$2("Close the hint", "Got it", 24, 164, 160, { height: 44, fill: solid$2(ACCENT$1) });
+  onClick$1(wiring2, cardClose, { kind: "action.puzzleHint", params: { do: "close" } });
+  const card = createNode("frame", { name: "Hint card", x: cx, y: 150, width: cw, height: 232, fill: solid$2(PANEL$1), cornerRadius: 16, stroke: { color: ACCENT$1, width: 2 }, role: "dialog", ariaLabel: "Hint", children: [cardHead, cardText, cardClose], bindings: { visible: "puzzle.showing > 0" } });
+  const dim = (name, visible) => createNode("rect", { name, x: 0, y: 0, width: w, height: h, fill: solid$2("rgba(8, 8, 14, 0.72)"), decorative: true, bindings: { visible } });
+  const pw2 = 520;
+  const px = (w - pw2) / 2;
+  const rightHead = text$1("Right heading", "Solved!", 0, 36, pw2, 70, { fontSize: 56, fontWeight: 800, color: ACCENT$1, align: "center", role: "heading", headingLevel: 2 });
+  const rightWords = text$1("Right words", "30 points", 0, 116, pw2, 36, { fontSize: 22, align: "center", bindings: { text: "puzzle.replay || puzzle.won == 0 ? 'Solved again. Well done.' : puzzle.won + ' points'" } });
+  const onward = button$2("Continue", "Continue", (pw2 - 220) / 2, 184, 220, { fill: solid$2(ACCENT$1) });
+  onClick$1(wiring2, onward, { kind: "action.puzzleLeave", params: { skip: false } });
+  const right = createNode("frame", { name: "Right", x: px, y: (h - 270) / 2, width: pw2, height: 270, fill: solid$2(PANEL$1), cornerRadius: 20, role: "dialog", ariaLabel: "Solved", children: [rightHead, rightWords, onward], bindings: { visible: "puzzle.right" } });
+  const wrongHead = text$1("Wrong heading", "Not quite.", 0, 36, pw2, 64, { fontSize: 48, fontWeight: 800, color: "#f2b8a0", align: "center", role: "heading", headingLevel: 2 });
+  const wrongWords = text$1("Wrong words", "It is worth 27 points now.", 0, 110, pw2, 34, { fontSize: 20, align: "center", bindings: { text: "'It is worth ' + puzzle.value + ' points now.'" } });
+  const again = button$2("Try the puzzle again", "Try again", pw2 / 2 - 230, 178, 220, { fill: solid$2(ACCENT$1) });
+  const leave = button$2("Leave it for now", "Leave it for now", pw2 / 2 + 10, 178, 220, { fill: solid$2("rgba(255, 255, 255, 0.14)"), color: INK$1 });
+  onClick$1(wiring2, again, { kind: "action.puzzleAnswer", params: { answer: "again" } });
+  onClick$1(wiring2, leave, { kind: "action.puzzleLeave", params: { skip: true } });
+  const wrong = createNode("frame", { name: "Not quite", x: px, y: (h - 260) / 2, width: pw2, height: 260, fill: solid$2(PANEL$1), cornerRadius: 20, role: "dialog", ariaLabel: "Not quite", children: [wrongHead, wrongWords, again, leave], bindings: { visible: "puzzle.wrong" } });
+  return { layers: [pad, top, hints, noHints, short2, memo2, skip, card, dim("Right dim", "puzzle.right"), right, dim("Not quite dim", "puzzle.wrong"), wrong], wiring: wiring2 };
+}
+function makePuzzle(d, abId) {
+  const ab = d.artboards.find((a) => a.id === abId);
+  if (!ab) return;
+  if (!ab.puzzle) ab.puzzle = { value: 30, hints: [] };
+  if (ab.children.some((c2) => c2.name === PUZZLE_FRAME_NAME)) return;
+  const { layers: layers2, wiring: wiring2 } = puzzleFrame(ab.width, ab.height);
+  ab.children.push(...layers2);
+  const dy = Math.max(0, ...ab.logic.nodes.map((n) => n.y + 80));
+  for (const n of wiring2.nodes) n.y += dy;
+  ab.logic.nodes.push(...wiring2.nodes);
+  ab.logic.edges.push(...wiring2.edges);
+}
+function addPuzzlePage(d, opts2 = {}) {
+  const count2 = d.artboards.filter((a) => a.puzzle).length + 1;
+  const last = d.artboards.reduce((m, a) => Math.max(m, a.canvasX + a.width), 0);
+  const name = opts2.name ?? `Puzzle ${count2}`;
+  const page2 = createArtboard({ name, width: STAGE_W, height: STAGE_H, background: solid$2(DARK$1), canvasX: last + 160, canvasY: 0 });
+  page2.puzzle = {
+    //Hints that fit the kit's own sample question (which prime), so a new puzzle plays straight away
+    title: opts2.title ?? "Prime time",
+    value: opts2.value ?? 30,
+    hints: opts2.hints ?? ["A prime number can only be divided evenly by 1 and by itself.", "Any number ending in 5 can be divided by 5.", "9 is 3 times 3."],
+    bigHint: opts2.bigHint ?? "21 is 3 times 7, so only one is left."
+  };
+  d.artboards.push(page2);
+  const qid = addQuestion(d, page2.id, opts2.kind ?? "single", { at: { x: Math.round((STAGE_W - 244 - 640) / 2), y: 96 } });
+  if (qid) setQuestionSettings(d, page2.id, qid, { attempts: 0, hints: [], reveal: false, ...opts2.question ?? {} });
+  makePuzzle(d, page2.id);
+  return page2.id;
 }
 const INK = "#f5f2ea";
 const DARK = "#15141c";
@@ -14946,7 +15132,7 @@ function historyPage(stageId) {
   const hint = createNode("text", { name: "Hint", text: "Click a line to go back to it.", x: 80, y: 100, width: 800, height: 26, fontSize: 16, color: "rgba(245, 242, 234, 0.7)", autoSize: "none" });
   return page("History", [heading$2("What was said", 28), hint, list2, done], w, 2);
 }
-function extrasPage() {
+function extrasPage(puzzlesId) {
   const w = wiring();
   const pic = createNode("image", { name: "Picture", x: 0, y: 0, width: 200, height: 112, fit: "cover", cornerRadius: 8, fill: solid$1(PANEL), bindings: { assetId: "item.seen ? item.image : ''" } });
   const locked = createNode("text", { name: "Locked", text: "?", x: 0, y: 30, width: 200, height: 50, fontSize: 36, color: "rgba(245, 242, 234, 0.5)", align: "center", autoSize: "none", bindings: { visible: "!item.seen" } });
@@ -14963,8 +15149,37 @@ function extrasPage() {
   onClick(w, song, { kind: "action.sound", params: { source: "story.musicRoom[event.index].sound", soundtrack: true, loop: true } });
   const done = button$1("Back", "Back", 80, 640, 200);
   onClick(w, done, { kind: "action.stopSound", params: {} }, back());
-  return page("Extras", [heading$2("Extras", 32), label("Gallery", 80, 110), gallery, label("Endings", 800, 110), endings, label("Chapters", 800, 380), chapters, label("Music", 80, 540), songs, done], w, 5);
+  const puzzles = button$1("Puzzles", "Puzzles", 300, 640, 200);
+  onClick(w, puzzles, { kind: "action.stopSound", params: {} }, go(puzzlesId));
+  return page("Extras", [heading$2("Extras", 32), label("Gallery", 80, 110), gallery, label("Endings", 800, 110), endings, label("Chapters", 800, 380), chapters, label("Music", 80, 540), songs, done, puzzles], w, 5);
 }
+function puzzlesPage() {
+  const w = wiring();
+  const sub = createNode("text", { name: "Score", text: "Score", x: 80, y: 100, width: 900, height: 28, fontSize: 18, color: "rgba(245, 242, 234, 0.75)", autoSize: "none", bindings: { text: "story.score + ' points from ' + story.puzzles.filter((p) => p.solved).length + ' of ' + story.puzzles.length + ' puzzles. Hint coins: ' + story.coins" } });
+  const row2 = button$1("Puzzle", "A puzzle", 0, 0, 1120, {
+    height: 48,
+    fontSize: 18,
+    align: "left",
+    bindings: {
+      label: "item.found ? item.number + '. ' + item.title + (item.solved ? '  ·  Solved, ' + item.score + ' of ' + item.full + ' points' : item.skipped ? '  ·  Skipped' : '  ·  Not solved yet') : item.number + '. ???'",
+      disabled: "!item.found",
+      "fill.color": `item.solved ? '${ACCENT}' : 'rgba(255, 255, 255, 0.92)'`
+    }
+  });
+  const list2 = createNode("frame", { name: "Puzzle list", x: 80, y: 150, width: 1120, height: 460, fill: null, clip: true, repeat: { items: "story.puzzles", layout: "vertical", gap: 12, columns: 1 }, children: [row2] });
+  onClick(w, row2, { kind: "action.artboard", params: { to: "expression", expr: "story.puzzles[event.index].page", transition: "fade", duration: 400 } });
+  const done = button$1("Back", "Back", 80, 640, 200);
+  onClick(w, done, back());
+  return page("Puzzles", [heading$2("Puzzles", 32), sub, list2, done], w, 6);
+}
+const PUZZLE_LINES = `The tables thinned out as the sun went down.
+Millie: Wait! Before you go, settle an argument for us.
+[call Puzzle 1]
+if story.result == "solved"
+    Millie: I knew it was me. You're good at this.
+else
+    Millie: We'll ask you again tomorrow.
+`;
 function visualNovel() {
   const project = createProject("Visual novel");
   project.themes = starterThemes();
@@ -14977,7 +15192,8 @@ function visualNovel() {
   const saves = savesPage(mode.id, mode.name);
   const settings = settingsPage();
   const history = historyPage(stage.id);
-  const extras = extrasPage();
+  const puzzles = puzzlesPage();
+  const extras = extrasPage(puzzles.id);
   const title = titlePage(stage.id, saves.id, settings.id, extras.id, mode.id);
   const find2 = (name) => {
     let hit2;
@@ -15009,12 +15225,27 @@ function visualNovel() {
   stage.children.push(toTitle);
   onClick(sw, toTitle, go(title.id));
   title.canvasX = 0;
-  project.artboards = [title, stage, history, saves, settings, extras];
+  project.artboards = [title, stage, history, saves, settings, extras, puzzles];
+  const puzzleId = addPuzzlePage(project, {
+    name: "Puzzle 1",
+    title: "Who brought the biscuits?",
+    hints: ["Sam's snack is already known.", "That leaves the biscuits and the crisps for Millie and Olive."],
+    bigHint: "Olive didn't bring the biscuits. So who did?",
+    question: {
+      prompt: "Millie, Olive and Sam each brought one snack to the fair: biscuits, fruit or crisps. Olive didn't bring biscuits. Sam brought fruit. Who brought the biscuits?",
+      options: [
+        { id: "o1", text: "Millie", correct: true },
+        { id: "o2", text: "Olive" },
+        { id: "o3", text: "Sam" }
+      ],
+      shuffle: false
+    }
+  });
   project.artboards.forEach((a, i) => a.canvasX = i * (STAGE_W + 160));
   project.settings.startArtboardId = title.id;
   project.story = {
     stage: stage.id,
-    chapters: [{ id: uid("ch"), name: "Chapter 1", lines: linesOf(SAMPLE_CHAPTER) }],
+    chapters: [{ id: uid("ch"), name: "Chapter 1", lines: linesOf(SAMPLE_CHAPTER.replace("The tables thinned out as the sun went down.\n", PUZZLE_LINES)) }],
     cast: [
       { id: uid("cm"), name: "Millie", colour: "#c2410c", expressions: [] },
       { id: uid("cm"), name: "Olive", colour: "#1d4ed8", expressions: [] }
@@ -15029,6 +15260,7 @@ function visualNovel() {
       item2("Add your characters in the Story tab under Cast, with a picture for each face (pictures named after them fill the faces in)"),
       item2("Add backgrounds to Assets and show them with a line like [bg Quad]"),
       item2("Restyle the dialogue box: its colour, the name plate and the words", find2("Dialogue box"), stage),
+      item2("Write your own puzzle on Puzzle 1: the question, and its title, value and hints under Puzzle in the page settings", void 0, project.artboards.find((a) => a.id === puzzleId)),
       item2("Preview it from the title, play to an ending, and try Save, Load, History and Settings")
     ]
   };
@@ -27144,7 +27376,39 @@ help:story help:story-game help:repeaters help:bindings`
 
 **Good to know:** holding **Ctrl** skips while it's held.
 
-help:story help:story-stage`
+help:story help:story-stage help:story-puzzles`
+  },
+  {
+    id: "story-puzzles",
+    title: "Puzzles in a story",
+    group: "Interactivity",
+    summary: "A puzzle page with a number, a value that drops with each wrong try, hints bought with hint coins, a memo, and a puzzle index.",
+    keywords: "puzzle puzzles visual novel mystery adventure hint hints hint coins coins currency big hint super hint value points score wrong try memo sketch index replay skip solved story result call",
+    body: `A **puzzle** is a page the story goes to and comes back from. It has a number and a title, a value in points that drops a little with each wrong try, up to three hints and a big hint that the reader opens with **hint coins**, a memo to scribble on, and a big moment when it's right.
+
+**Make one:** in the **Story** tab press **+ New puzzle**. You get a page with a question in the middle and the puzzle frame around it, all wired. Change the question like any other, and the title, value and hints under **Puzzle** in the page's settings. Any page can become one with the **+** on its **Puzzle** section.
+
+**Call it from the story:** a line like \`[call Puzzle 1]\` goes to the page, and the story carries on when the reader leaves it. \`story.result\` says how it went:
+
+\`\`\`
+[call Puzzle 1]
+if story.result == "solved"
+    Millie: I knew you'd get it.
+else
+    Millie: We'll come back to that one.
+\`\`\`
+
+**Answering:** a question on a puzzle page answers the puzzle when it's checked, whatever kind it is (a choice, putting things in order, filling a blank, dragging into groups). For a puzzle made of anything else, wire a **Puzzle answer** node (Right or Wrong) to what decides it.
+
+**The frame** is plain layers bound to \`puzzle.*\`, so restyle it freely: \`puzzle.label\` (Puzzle 1), \`puzzle.title\`, \`puzzle.value\`, \`puzzle.coins\`, a list of \`puzzle.hints\` (\`item.label\`, \`item.open\`, \`item.cost\`, \`item.canOpen\`), \`puzzle.hintText\` for the hint being read, \`puzzle.memo\`, and \`puzzle.right\` and \`puzzle.wrong\` for the big moments. The nodes behind its buttons are **Open a hint**, **Puzzle memo**, **Puzzle answer** (Try again) and **Leave the puzzle** (with **Skip it** for Skip).
+
+**Hint coins:** a new game starts with the number in the Story tab's **Settings** (3 unless you say). The **Hint coins** node gives more (a collectable in a room, a reward). Each hint costs coins once; an open hint stays open.
+
+**The index:** \`story.puzzles\` lists every puzzle page with \`item.found\`, \`item.solved\`, \`item.skipped\` and \`item.score\`, and \`story.score\` adds them up. Going to a found puzzle's page plays it again, without changing its score. The **Visual novel** template has a **Puzzles** page under Extras that does this.
+
+**Good to know:** a save keeps the coins and the index with everything else, and a new game empties them.
+
+help:story help:story-game`
   },
   {
     id: "sketch-pads",

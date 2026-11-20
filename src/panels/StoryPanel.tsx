@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { chapterText, checkStory, matchLines, readChapter, storyCounts, storySpots, uid, type CastMember, type Project, type Story, type StoryChapter } from 'interactives-player';
+import { puzzlePages, puzzleNumber, chapterText, checkStory, matchLines, readChapter, storyCounts, storySpots, uid, type CastMember, type Project, type Story, type StoryChapter } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { confirmDialog } from '../components/dialogs';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
@@ -11,6 +11,7 @@ import { assetKind } from '../lib/asset-kind';
 import { assetUrls } from '../lib/assets';
 import { putAsset } from '../lib/db';
 import { nextChapterName, startStory } from '../lib/story';
+import { addPuzzlePage } from '../lib/puzzle-page';
 import { facesFromPictures, matchVoiceFiles, voiceScript } from '../lib/story-cast';
 import { lazyModule } from '../lib/lazy-module';
 
@@ -70,6 +71,8 @@ export function StoryPanel() {
 }
 
 function StoryList({ story, pick, onPick }: { story: Story; pick: Pick; onPick: (p: Pick) => void }) {
+  const artboards = useEditor((st) => st.project.artboards);
+  const puzzles = useMemo(() => puzzlePages(artboards), [artboards]);
   const addChapter = () => {
     const ch: StoryChapter = { id: uid('ch'), name: nextChapterName(story), lines: [{ id: uid('l'), text: '' }] };
     store().update((d) => {
@@ -123,6 +126,23 @@ function StoryList({ story, pick, onPick }: { story: Story; pick: Pick; onPick: 
       ))}
       <button className="link-btn" onClick={() => addCast()}>
         + Add someone
+      </button>
+      <div className="field-label block">Puzzles</div>
+      {puzzles.map((a) => (
+        <button key={a.id} className="list-item" title={`Show ${a.name} on the canvas. Its settings are under Puzzle in the page's settings; the story calls it with [call ${a.name}]`} onClick={() => store().set({ activeArtboardId: a.id, artboardSelected: true, selection: [] })}>
+          <Icons.grid width={14} /> {puzzleNumber(artboards, a)}. {a.puzzle?.title || a.name}
+        </button>
+      ))}
+      <button
+        className="link-btn"
+        title="A new page with a question in the middle and the puzzle frame around it (number, value, hints, coins, memo, Skip), already wired. Call it from the story with [call Puzzle 1]"
+        onClick={() => {
+          let id = '';
+          store().update((d) => void (id = addPuzzlePage(d as Project)));
+          if (id) store().set({ activeArtboardId: id, artboardSelected: true, selection: [] });
+        }}
+      >
+        + New puzzle
       </button>
       <div className="field-label block">Story</div>
       <button className={`list-item${pick.kind === 'settings' ? ' active' : ''}`} onClick={() => onPick({ kind: 'settings' })}>
@@ -471,6 +491,7 @@ function StorySettingsForm({ story }: { story: Story }) {
           ]}
           onChange={(v) => set((x) => void (v === 'bottom' ? delete x.boxLook : (x.boxLook = v)))}
         />
+        <NumberField label="Hint coins" value={s.coins ?? 3} min={0} max={999} suffix="to start" title="Hint coins a new game starts with. Puzzles' hints cost them; collectables in a room give more" onChange={(v) => set((x) => void (x.coins = Math.max(0, Math.round(v))), 'story-coins')} />
         <CheckField label="Dim whoever isn't speaking" value={s.dimOthers !== false} title="The others on stage go a little darker while someone talks" onChange={(v) => set((x) => void (x.dimOthers = v))} />
       </div>
     </div>
