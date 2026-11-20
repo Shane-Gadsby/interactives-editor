@@ -2,6 +2,8 @@
 
 ## Unreleased: Symposium 3
 
+- **Testing an app as a prototype**: add \`?report=study\` to a share link and the page around it (Sightline, or your own study page) hears each page change and every press, as a share of the page with the layer pressed, or none for a press on nothing. Off without it, so learners send none of it. See [Embedding and the player API](embedding).
+- **Fixed: rows overlapping in a dialog**: a list whose rows wrap onto two lines grew them on a page but not inside a dialog or other overlay, so the rows ran into each other.
 - **Sketch pads**: any rectangle can be one, so people draw on it as it plays, with a smoothed pen that feels a stylus's pressure, an eraser, and **Undo a stroke**, **Redo a stroke** and **Clear a sketch pad** nodes. The strokes go in a list variable, so a drawing is saved with the rest of someone's work.
 - **Data people share and change**: **+ Shared table** in the Data panel holds rows the people using an app add, change and take away (a sign-up sheet, a board, a booking list), with who may do each, rows per person and per slot, and a size you can see, all checked on the server. Three nodes add, change and take away a row.
 - **An editing mode**: tick **Part of the setup** on the variables an app's editors set up, give the app an **Editing page** that opens for them while StudyDesk's editing mode is on, and a **Save setup** node keeps their choices for everyone who opens the setup. Only owners, collaborators, power users and staff can save.

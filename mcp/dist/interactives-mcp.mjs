@@ -28735,7 +28735,7 @@ Inside the copies, \`item\` is the current item and \`index\` is its position, c
 A grid has a **Fill** direction. *Rows first* goes across each row and then down (1 2 3 / 4 5 6 / 7). *Columns first* goes down each column and then across (1 4 7 / 2 5 / 3 6). **Cols** is still the number of columns.
 
 ## Text in the copies sizes itself
-A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there. A long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow. You don't need to guess a height from the number of characters.
+A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there. A long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow, on a page and inside a dialog, tooltip or other overlay alike. You don't need to guess a height from the number of characters.
 
 A height or width you bind on the template layer still wins. Only copies whose text changed are measured again.
 
@@ -29533,7 +29533,14 @@ player.timeline('Intro').play();
 player.goTo('Checkout', 'fade');
 player.setTheme('Dark');   // or null to follow the viewer
 player.setData('products', [...]);
-\`\`\``
+\`\`\`
+
+## Testing it as a prototype
+A study tool (Sightline, or your own page) can watch where people go and what they press, to see whether they find their way. Add \`?report=study\` to the share link (or the single HTML file's address), or post \`{ source: 'interactives-report', on: true }\` into the frame. The page around it then hears:
+- \`{ source: 'interactives-page', from, to, name }\` each time the page on show changes, with the pages' ids and the name you gave the new one (\`from\` is null for the first).
+- \`{ source: 'interactives-click', page, x, y, element }\` for every press, with \`x\` and \`y\` as shares (0 to 1) of the page's width and height, and \`element\` the id of the layer that does something when pressed, or null for a press on nothing that does anything.
+
+Without the flag nothing is sent, so learners never send any of it, and neither carries what anyone typed or any variable's value. From JavaScript it's \`player.setReporting(true)\` with \`studypage\` and \`studyclick\` events. A share link published before 20 Nov 2026 needs **Publish** again first.`
   },
   // ---------------------------------------------------------------- together
   {

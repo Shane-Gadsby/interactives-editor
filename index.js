@@ -5830,11 +5830,22 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		})
 	}
 	else contextReady = whoReady = true
+	//and the study turning that on or off from outside, passed down to the project as it is
+	window.addEventListener('message', function (e) {
+		var d = e.data
+		if (window.parent !== window && e.source === window.parent && d && d.source === 'interactives-report' && frame.contentWindow) frame.contentWindow.postMessage({source: 'interactives-report', on: d.on !== false}, '*')
+	})
 	window.addEventListener('message', function takeMessage(e, late) {
 		if (e.source !== frame.contentWindow) return
 		var m = e.data
 		if (m && m.source === 'interactives-record') return takeRecord(m.record)
 		if (m && m.source === 'interactives-diag') return takeDiag(m.diag)
+		//A study testing the project as a prototype (Sightline) frames this page and hears page changes and presses. The player only
+		//sends them when the link says ?report=study or the study asks below, and only these two kinds go up, field by field
+		if (m && (m.source === 'interactives-page' || m.source === 'interactives-click')) {
+			if (window.parent !== window) window.parent.postMessage(m.source === 'interactives-page' ? {source: m.source, from: m.from, to: m.to, name: m.name} : {source: m.source, page: m.page, x: m.x, y: m.y, element: m.element}, '*')
+			return
+		}
 		//The player's height for its width, handed on to the page around this one the way every toolbox app does (setILARSize), so
 		//the embed code's iframe in StudyDesk tracks the project. The player's own message goes to the top window, where si-manager
 		//can't tell which iframe it came from, since it came out of two frames down. Only a sane number is passed on
