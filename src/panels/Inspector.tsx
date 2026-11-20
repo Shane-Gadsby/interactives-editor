@@ -1,6 +1,7 @@
 import { SketchSection } from './SketchSection';
 import { ParticlesSection } from './ParticlesSection';
 import { PuzzleSection } from './PuzzleSection';
+import { ExamineSection } from './ExamineSection';
 import { variableOption } from '../lib/friendly-names';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { matches } from '../lib/keymap';
@@ -1172,6 +1173,7 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
       {single && <StatesSection node={n} />}
       {single && n.type === 'rect' && <SketchSection node={n} project={project} />}
       {single && n.type === 'rect' && <ParticlesSection node={n} project={project} />}
+      {single && <ExamineSection node={n} />}
       {single && n.type === 'frame' && n.question && <QuestionSection frame={n} ab={ab} project={project} />}
       {single && n.questionPart && <QuestionPartNote node={n} ab={ab} />}
       {!isConn && <LayoutItemSection nodes={nodes} ab={ab} />}

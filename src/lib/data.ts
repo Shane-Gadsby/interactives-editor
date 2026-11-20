@@ -135,6 +135,8 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
   // A puzzle page shows its number, title, value and hints as a first go at it would (no hint open, no right or wrong yet)
   const puzzlePage = artboard?.puzzle ? artboard : artboard ? setBase(project.artboards, artboard) : undefined;
   if (puzzlePage?.puzzle && !('puzzle' in vars)) vars.puzzle = { active: true, ...puzzleScope(project.artboards, puzzlePage, new Pocket(project.story?.settings?.coins), null) };
+  // A room shows its box with a sample line, so it can be styled
+  if (artboard && !('room' in vars) && JSON.stringify(artboard.children).includes('"examine":{')) vars.room = { showing: true, text: 'What you see when you look at something.', speaker: '', speaking: false, more: false, coins: project.story?.settings?.coins ?? 3, items: [] };
   // Live variables read all of them (the ones below too), so they are worked out once everything else has its value
   const live = planLive(project);
   if (live.order.length) runLive(live, vars, null);

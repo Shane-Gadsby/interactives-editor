@@ -12,6 +12,7 @@ import { assetUrls } from '../lib/assets';
 import { putAsset } from '../lib/db';
 import { nextChapterName, startStory } from '../lib/story';
 import { addPuzzlePage } from '../lib/puzzle-page';
+import { addPage, mapPage, roomPage } from '../lib/room-page';
 import { facesFromPictures, matchVoiceFiles, voiceScript } from '../lib/story-cast';
 import { lazyModule } from '../lib/lazy-module';
 
@@ -127,7 +128,7 @@ function StoryList({ story, pick, onPick }: { story: Story; pick: Pick; onPick: 
       <button className="link-btn" onClick={() => addCast()}>
         + Add someone
       </button>
-      <div className="field-label block">Puzzles</div>
+      <div className="field-label block">Puzzles, rooms and maps</div>
       {puzzles.map((a) => (
         <button key={a.id} className="list-item" title={`Show ${a.name} on the canvas. Its settings are under Puzzle in the page's settings; the story calls it with [call ${a.name}]`} onClick={() => store().set({ activeArtboardId: a.id, artboardSelected: true, selection: [] })}>
           <Icons.grid width={14} /> {puzzleNumber(artboards, a)}. {a.puzzle?.title || a.name}
@@ -143,6 +144,28 @@ function StoryList({ story, pick, onPick }: { story: Story; pick: Pick; onPick: 
         }}
       >
         + New puzzle
+      </button>
+      <button
+        className="link-btn"
+        title="A room to look around: five places with words, two hidden hint coins and a key, the room box, what you carry and Leave. Swap the shapes for a background picture. Call it with [call Room]"
+        onClick={() => {
+          let id = '';
+          store().update((d) => void (id = addPage(d as Project, roomPage())));
+          if (id) store().set({ activeArtboardId: id, artboardSelected: true, selection: [] });
+        }}
+      >
+        + New room
+      </button>
+      <button
+        className="link-btn"
+        title="A map: a button for each place the story opens with [place Library], going to the scene of that name. Call it with [call Map]"
+        onClick={() => {
+          let id = '';
+          store().update((d) => void (id = addPage(d as Project, mapPage())));
+          if (id) store().set({ activeArtboardId: id, artboardSelected: true, selection: [] });
+        }}
+      >
+        + New map
       </button>
       <div className="field-label block">Story</div>
       <button className={`list-item${pick.kind === 'settings' ? ' active' : ''}`} onClick={() => onPick({ kind: 'settings' })}>

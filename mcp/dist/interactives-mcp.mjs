@@ -2130,6 +2130,20 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.storyGoTo",
+    label: "Go to a scene",
+    category: "action",
+    summary: "Carries the story on from a scene or chapter you name, and shows the stage.",
+    details: "For a map: a place's button goes to its scene. Unlike Start the story nothing is forgotten (values, coins, things carried stay), and a page the story called is left behind. {values} work, so a list of story.places can say {story.places[event.index]}.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "No such scene" }
+    ],
+    hasInput: true,
+    params: [{ key: "where", label: "Scene or chapter", type: "text", placeholder: "The library", help: "A scene title (a # line) or a chapter name. {values} work" }]
+  },
+  {
     kind: "action.puzzleAnswer",
     label: "Puzzle answer",
     category: "action",
@@ -5183,6 +5197,17 @@ function sanitizeNode(raw, seen) {
     for (const k of ["min", "max", "step"]) if (k in n && !isNum(n[k])) delete n[k];
   }
   if ("cursorImage" in n && n.cursorImage !== null && !isStr(n.cursorImage)) delete n.cursorImage;
+  if ("examine" in n && n.examine !== null) {
+    const ex = n.examine;
+    if (!isObj$1(ex)) delete n.examine;
+    else {
+      const o = ex;
+      if ("text" in o && !isStr(o.text)) delete o.text;
+      if ("item" in o && !isStr(o.item)) delete o.item;
+      if ("coins" in o && !(isNum(o.coins) && o.coins >= 0)) delete o.coins;
+      if ("stays" in o && typeof o.stays !== "boolean") delete o.stays;
+    }
+  }
   if ("depth" in n && !isNum(n.depth)) delete n.depth;
   else if (typeof n.depth === "number") n.depth = Math.max(-100, Math.min(100, n.depth));
   if ("cursorHotspot" in n && !(isObj$1(n.cursorHotspot) && isNum(n.cursorHotspot.x) && isNum(n.cursorHotspot.y))) delete n.cursorHotspot;
@@ -27423,7 +27448,32 @@ else
 
 **Good to know:** a save keeps the coins and the index with everything else, and a new game empties them.
 
-help:story help:story-game`
+help:story help:story-game help:story-rooms`
+  },
+  {
+    id: "story-rooms",
+    title: "Rooms, things you carry and a map",
+    group: "Interactivity",
+    summary: "Scenes to look around, hidden hint coins, things to pick up and show people, and a map of the places the story has opened.",
+    keywords: "room rooms look around investigate investigation examine magnifier hotspot point and click collectable collectables hint coins item items inventory carry give take show key map places travel location mystery adventure",
+    body: `A **room** is a page the reader looks around: they click things to hear about them, find hidden hint coins, and pick up things to carry. A **map** takes them between places as the story opens them.
+
+**Make one:** in the **Story** tab press **+ New room**. You get a room drawn from shapes with five places to look at, two hidden hint coins, a key in the desk, the room box their words show in, what the reader carries, and **Leave**. Swap the shapes for a background picture and keep invisible layers on top as the places. Call it with \`[call Room]\`.
+
+**Something to look at:** select any layer and press **+** on its **Look at** section. **Words** is what's said when it's clicked, a line each (\`Millie: Too tidy.\` works). **Hint coins** and **Gives** make it a collectable: it gives them the first time and then disappears, unless **Stays when picked up** is on (a desk with a key in it). It gets a magnifier cursor and is a button for the keyboard too.
+
+**Things you carry** come from collectables and from the script: \`[give Brass key]\`, \`[take Brass key]\` and \`[coins 2]\`. Ask about them in an if or a choice, which is how you show someone a thing:
+
+\`\`\`
+? Show the brass key [if has("Brass key")]
+    Olive: That opens the shed!
+\`\`\`
+
+**The map:** \`[place Library]\` opens a place (\`[place Library, off]\` closes it), and **+ New map** makes a page with a button for each open place that goes to the scene of that name (**Go to a scene**). Call it with \`[call Map]\`.
+
+**Good to know:** \`story.items\`, \`story.coins\` and \`story.places\` are there for pages of your own (an inventory, say), and a save keeps all of them. On a room, \`room.text\`, \`room.speaker\` and \`room.showing\` drive the room box.
+
+help:story help:story-puzzles`
   },
   {
     id: "sketch-pads",
