@@ -117,7 +117,7 @@ import { ReadAloudSection } from './ReadAloudSection';
 import { VariantsSection } from './VariantsSection';
 import { MasterSection } from './MasterSection';
 import { ComponentPropsSection } from './ComponentPropsSection';
-import { SHADER_PRESETS, SHADER_PRESETS_BY_ID, EMBED_ALLOW, EMBED_ALLOW_DEFAULT, playableEmbed, srcFromEmbedCode, type EmbedAllowKey, type EmbedNode } from 'interactives-player';
+import { SHADER_PRESETS, SHADER_PRESETS_BY_ID, EMBED_ALLOW, EMBED_ALLOW_DEFAULT, latexToMathml, splitMaths, playableEmbed, srcFromEmbedCode, type EmbedAllowKey, type EmbedNode } from 'interactives-player';
 import { lookFor } from '../lib/themes';
 import { StatesSection } from './StatesSection';
 import { OverlayPageSection, OverlaySection } from './OverlaySection';
@@ -1689,6 +1689,27 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onCommit={() => store().commit()}
           />
           <TextSelectionHint id={n.id} />
+          <SelectField
+            label="Show as code"
+            title="Shows the text as code: a fixed-width font, coloured by language, with line numbers and a Copy button if you want them"
+            value={n.code ? n.code.language : ''}
+            options={[{ value: '', label: 'No (ordinary text)' }, ...CODE_LANGUAGES]}
+            onChange={(v) => set({ code: v ? { ...(n.code ?? { lineNumbers: true, copyButton: true }), language: v } : null })}
+          />
+          {n.code && (
+            <Row>
+              <CheckField label="Line numbers" value={!!n.code.lineNumbers} onChange={(v) => set({ code: { ...n.code!, lineNumbers: v || undefined } })} />
+              <CheckField label="Copy button" title="A Copy button in the corner while it plays" value={!!n.code.copyButton} onChange={(v) => set({ code: { ...n.code!, copyButton: v || undefined } })} />
+              <SelectField<'light' | 'dark'> label="Colours" value={n.code.scheme ?? 'light'} options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} onChange={(v) => set({ code: { ...n.code!, scheme: v === 'light' ? undefined : v } })} />
+            </Row>
+          )}
+          <CheckField
+            label="Formulas between $ signs"
+            title="Maths typed the LaTeX way: $\frac{a}{b}$ in a line, $$x^2 + y^2 = r^2$$ on a line of its own. It's drawn by the browser and read out by screen readers. \$ is a dollar sign"
+            value={!!n.maths}
+            onChange={(v) => set({ maths: v || undefined })}
+          />
+          {n.maths && nodes.length === 1 && <MathsPreview text={String(shown('text') ?? n.text)} />}
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           <SectionBlurb
             text={
@@ -2417,6 +2438,34 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
         </>
       )}
     </Section>
+  );
+}
+
+const CODE_LANGUAGES = [
+  { value: 'plain', label: 'Code, no colours' },
+  { value: 'js', label: 'JavaScript' },
+  { value: 'ts', label: 'TypeScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
+  { value: 'json', label: 'JSON' },
+  { value: 'sql', label: 'SQL' },
+  { value: 'java', label: 'Java' },
+  { value: 'c', label: 'C' },
+  { value: 'bash', label: 'Shell' },
+];
+
+/** Each formula in the text as it will look, as you type it. */
+function MathsPreview({ text }: { text: string }) {
+  const parts = splitMaths(text).filter((p) => p.tex !== undefined);
+  if (!parts.length) return <p className="hint">Put a formula between dollar signs, like $\frac{1}{2}$, to see it here.</p>;
+  return (
+    <div className="maths-preview" aria-label="How the formulas look">
+      {parts.map((p, i) => (
+        // our own converter's output: every piece of the source is escaped in it
+        <div key={i} className="maths-preview-row" dangerouslySetInnerHTML={{ __html: latexToMathml(p.tex!, !!p.display) }} />
+      ))}
+    </div>
   );
 }
 

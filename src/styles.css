@@ -15137,3 +15137,17 @@ button.style-color.open {
   width: 100%;
   accent-color: var(--primary-bg);
 }
+
+/* Formulas as they'll look, under a text that has maths on */
+.maths-preview {
+  margin: 4px 0 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--panel-2, transparent);
+  font-size: 16px;
+  overflow-x: auto;
+}
+.maths-preview-row + .maths-preview-row {
+  margin-top: 6px;
+}

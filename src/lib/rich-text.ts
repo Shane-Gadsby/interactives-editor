@@ -1,4 +1,4 @@
-import { runsInRange, runsPatch, type RunStyle, type TextRun, type TextStyle } from 'interactives-player';
+import { runsInRange, runsPatch, type RunStyle, type TextRun, type TextStyle , retextParagraphs, type ParagraphStyle } from 'interactives-player';
 
 /**
  * Editor side of rich text: turning inspector changes and keyboard shortcuts into run styles.
@@ -100,8 +100,14 @@ export function runStyleAtRange(runs: readonly TextRun[], start: number, end: nu
 }
 
 /** Store runs on a text layer (or draft of one): `text` follows, and plain runs remove `runs` altogether. */
-export function applyRuns(n: { text: string; runs?: TextRun[] }, runs: readonly TextRun[]): void {
+export function applyRuns(n: { text: string; runs?: TextRun[]; paragraphs?: (ParagraphStyle | null)[] }, runs: readonly TextRun[]): void {
   const p = runsPatch(runs);
+  // list paragraphs stay with their lines as lines are added and taken away
+  if (n.paragraphs?.length) {
+    const kept = retextParagraphs(n.text, p.text, n.paragraphs);
+    if (kept) n.paragraphs = kept;
+    else delete n.paragraphs;
+  }
   n.text = p.text;
   if (p.runs) n.runs = p.runs;
   else delete n.runs;

@@ -2,6 +2,9 @@
 
 ## Unreleased: Symposium 3
 
+- **Bullets and numbers in text**: **Bulleted list** and **Numbered list** on the text toolbar, with **Tab** and **Shift+Tab** for levels. Wrapped lines hang under the words, and a screen reader hears a real list.
+- **Code in text**: **Show as code** colours the text by language, with line numbers and a Copy button if wanted.
+- **Formulas**: **Formulas between $ signs** draws maths typed the LaTeX way as maths, in a line or on its own, with a preview as you type. Screen readers read it, and it scales and recolours with the text.
 - **Save a layer as a picture or a PDF**: **Download a file** has **Picture of a layer (.png)** and **PDF of a layer (.pdf)**, with a footer line and an A4 page, and a new **Picture of a layer** node keeps the picture in a variable for an image to show. **Not in downloads** on a layer leaves it out. The Course Pathway planner's hand-written PDF script can go.
 - **Layer states for dragging**: **Being dragged**, **Picked up**, **A place it could go**, **The place it is over** and **A place that refuses it**, with **Line width** and **Line style** among what a state changes. A layer with one of these loses the player's own ring for it. The Course Pathway planner's held card and its dashed places no longer need a style tag injected by a script.
 - **A zone's own rules, with a reason**: **Takes it when** on a drop zone, a formula that can say why not, read out and handed to a new **On refused** event; **Only these zones** on a draggable. Only the zones that would take what's held are marked, so the marks follow the rules.

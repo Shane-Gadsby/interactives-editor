@@ -4493,6 +4493,20 @@ function sanitizeNode(raw, seen) {
     if (!isNum(n.fontSize) || n.fontSize < 4) n.fontSize = 13;
     if ("fontWeight" in n && !isNum(n.fontWeight)) delete n.fontWeight;
   }
+  if (raw.type === "text") {
+    if ("paragraphs" in n) {
+      const list2 = Array.isArray(n.paragraphs) ? n.paragraphs.slice(0, 5e3) : [];
+      const clean2 = list2.map((p) => isObj$1(p) && (p.list === "bullet" || p.list === "number") ? { list: p.list, ...isNum(p.level) && p.level > 0 ? { level: Math.min(5, Math.round(p.level)) } : {} } : null);
+      if (clean2.some(Boolean)) n.paragraphs = clean2;
+      else delete n.paragraphs;
+    }
+    if ("code" in n) {
+      const c2 = n.code;
+      if (!isObj$1(c2) || !isStr(c2.language)) delete n.code;
+      else n.code = { language: c2.language.slice(0, 20), ...typeof c2.lineNumbers === "boolean" ? { lineNumbers: c2.lineNumbers } : {}, ...typeof c2.copyButton === "boolean" ? { copyButton: c2.copyButton } : {}, ...c2.scheme === "dark" || c2.scheme === "light" ? { scheme: c2.scheme } : {} };
+    }
+    if ("maths" in n && typeof n.maths !== "boolean") delete n.maths;
+  }
   if (raw.type === "image" && "qr" in n) {
     const q = n.qr;
     if (!isObj$1(q) || !isStr(q.text)) delete n.qr;
@@ -24424,6 +24438,19 @@ Things to know:
 - Sizing, alignment, line height, case and the shadow belong to the whole layer, not to runs. Line height is one value for the whole layer, so a much bigger run makes its lines taller but not by a different multiplier.
 - A **binding** on Text (or a timeline, tween or *Change a layer's setting* action that sets Text) replaces the runs with that plain text for as long as it applies. Variables in braces like \`{score}\` still work inside each run, but a \`{...}\` slot should sit within one run.
 - Lottie export writes the text in the layer's own style (Lottie text has one style per layer). SVG and PNG export, the player and the single-file export keep every run. Rive files with several text runs import as runs.
+
+## Bullets and numbers
+Double-click a text and the toolbar over it has **Bulleted list** and **Numbered list**: they put a bullet or a number on the paragraphs the cursor or the selection is in, and press again to take it off. **Tab** moves a list paragraph in a level and **Shift+Tab** out (the arrows on the toolbar do the same). Numbers go 1, 2, 3, then a, b, c a level in, then i, ii, iii. Wrapped lines line up under the words, not under the marker.
+
+A screen reader hears a list, with how many items it has and where each one is, which typed dashes never gave it. Pressing Enter in a list item starts another item; a line with no list on it ends the list, and numbering starts again after it.
+
+## Code
+**Show as code** in the **Text** section shows the text as code: a fixed-width font, coloured by language (JavaScript, TypeScript, Python, HTML, CSS, JSON, SQL, Java, C, Shell, or **Code, no colours**), on a light or dark panel. Tick **Line numbers** to number the lines, and **Copy button** for a button in the corner that copies the code when it plays. The line numbers aren't copied or read out.
+
+## Formulas
+Tick **Formulas between $ signs** and maths typed the LaTeX way is drawn as maths: \`$\\frac{a}{b}$\` in a line, \`$$x^2 + y^2 = r^2$$\` on a line of its own. A preview under the box shows each formula as you type. It knows fractions (\`\\frac\`), roots (\`\\sqrt\`, \`\\sqrt[3]{x}\`), powers and indices (\`^\`, \`_\`), Greek letters (\`\\alpha\`, \`\\pi\`), \`\\sum\`, \`\\int\`, \`\\lim\`, \`\\sin\` and the other functions, \`\\times\`, \`\\le\`, \`\\neq\` and their kind, brackets that grow (\`\\left( ... \\right)\`), \`\\text{}\` and matrices (\`\\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}\`). A command it doesn't know shows up in red as typed.
+
+The browser draws it, so it scales with the text and follows its colour, and a screen reader reads it as maths. Write \`\\$\` for a dollar sign. A dollar sign on its own, as in \`$5\`, stays as it is.
 
 ## Live values in text
 Anything in braces is an [expression](expressions): \`Score: {score}\`, \`{name.toUpperCase()}\`, \`{items.length} items\`. Write \`{{\` for a literal brace.

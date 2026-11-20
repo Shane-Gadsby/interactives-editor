@@ -11,6 +11,9 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Bullets and numbers in text': [['text', 'Bulleted list'], ['text', 'Shift+Tab']],
+  'Code in text': [['text', 'Show as code'], ['text', 'Copy button']],
+  Formulas: [['text', 'Formulas between $ signs'], ['text', 'reads it as maths']],
   'Save a layer as a picture or a PDF': [['sensors', 'A picture or a PDF of a layer'], ['sensors', 'Not in downloads'], ['sensors', 'Picture of a layer']],
   'Layer states for dragging': [['layer-states', 'A place it could go'], ['layer-states', 'Line style']],
   "A zone's own rules, with a reason": [['drag-and-drop', 'Takes it when'], ['drag-and-drop', 'Only these zones'], ['drag-and-drop', 'On refused']],

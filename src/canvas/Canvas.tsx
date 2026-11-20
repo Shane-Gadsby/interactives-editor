@@ -2704,6 +2704,11 @@ export function RichTextEditor({ node: n, ab, zoom, panX, panY, bounds }: { node
             commands.current?.enter();
             return;
           }
+          // Tab in a list paragraph moves it in a level, Shift+Tab out (elsewhere Tab is left alone)
+          if (e.key === 'Tab' && !e.ctrlKey && !e.altKey && commands.current?.indentList?.(e.shiftKey ? -1 : 1)) {
+            e.preventDefault();
+            return;
+          }
           const action = shortcutAction(e);
           if (!action) return;
           e.preventDefault();
