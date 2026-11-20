@@ -8,6 +8,8 @@ import { Icons } from '../components/icons';
 import { SplitColumns } from '../components/SplitColumns';
 import { SectionBlurb } from '../components/SectionBlurb';
 import { assetKind } from '../lib/asset-kind';
+import { assetUrls } from '../lib/assets';
+import { putAsset } from '../lib/db';
 import { nextChapterName, startStory } from '../lib/story';
 import { facesFromPictures, matchVoiceFiles, voiceScript } from '../lib/story-cast';
 import { lazyModule } from '../lib/lazy-module';
@@ -312,8 +314,44 @@ function CastEditor({ story, memberId }: { story: Story; memberId: string }) {
     );
   const pictureOptions = [{ value: '', label: 'None' }, ...images.map((a) => ({ value: a.id, label: a.name }))];
   const found = facesFromPictures(m.name, images, m.expressions);
+  const psdInput = useRef<HTMLInputElement>(null);
+  //A character's PSD in one go: a picture per face, each the body with that face on it (story-psd.ts)
+  const fromPsd = async (file: File) => {
+    try {
+      const { castFromPsd } = await import('../lib/story-psd');
+      const got = castFromPsd(new Uint8Array(await file.arrayBuffer()), m.name);
+      if (!got.faces.length) return store().toast(got.warnings[0] ?? `No faces found in ${file.name}`, 'error');
+      const projectId = store().get().project.id;
+      for (const a of got.assets) {
+        const blob = new Blob([a.bytes as BlobPart], { type: a.mime });
+        await putAsset(projectId, a.id, blob);
+        assetUrls.register(a.id, blob);
+      }
+      store().update((d) => {
+        d.assets.push(...got.assets.map((a) => ({ id: a.id, name: a.name, mime: a.mime, size: a.bytes.byteLength })));
+        const c = d.story?.cast?.find((x) => x.id === memberId);
+        if (!c) return;
+        const have = new Set(c.expressions.map((e) => e.name.toLowerCase()));
+        c.expressions.push(...got.faces.filter((f) => !have.has(f.name)));
+      });
+      store().toast(`${got.faces.length} ${got.faces.length === 1 ? 'face' : 'faces'} from ${file.name}`, 'info');
+    } catch (err) {
+      store().toast(`${file.name}: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    }
+  };
   return (
-    <div className="story-main story-form">
+    <div
+      className="story-main story-form"
+      onDragOver={(e) => {
+        if ([...e.dataTransfer.items].some((i) => i.kind === 'file')) e.preventDefault();
+      }}
+      onDrop={(e) => {
+        const f = [...e.dataTransfer.files].find((x) => /\.psd$/i.test(x.name));
+        if (!f) return;
+        e.preventDefault();
+        void fromPsd(f);
+      }}
+    >
       <div className="script-bar">
         <TextField value={m.name} commitOnBlur title="The name lines use, like Millie: Hello. Capitals don't matter" onChange={(v) => v.trim() && set((c) => void (c.name = v.trim()))} />
         <div className="spacer" />
@@ -380,6 +418,20 @@ function CastEditor({ story, memberId }: { story: Story; memberId: string }) {
         <button className="link-btn" onClick={() => set((c) => void c.expressions.push({ name: c.expressions.length ? `face ${c.expressions.length + 1}` : 'neutral', assetId: null }))}>
           + Add a face
         </button>
+        <button className="link-btn" title={`A Photoshop file of ${m.name}: a group called Faces with a layer for each face, over the body. Each face becomes a picture of the whole character. You can drop the file here too`} onClick={() => psdInput.current?.click()}>
+          Faces from a PSD
+        </button>
+        <input
+          ref={psdInput}
+          type="file"
+          accept=".psd"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (f) void fromPsd(f);
+          }}
+        />
         {found.length > 0 && (
           <button className="btn" title={`Pictures in Assets named after ${m.name}: ${found.map((f) => f.name).join(', ')}`} onClick={() => set((c) => void c.expressions.push(...found))}>
             Add {found.length} {found.length === 1 ? 'face' : 'faces'} from pictures named {m.name}

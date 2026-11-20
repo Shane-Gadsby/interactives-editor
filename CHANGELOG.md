@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Character faces from a PSD**: drop a character's Photoshop file on their Cast form, with a Faces group over the body, and each face becomes a picture of the whole character, all lined up, with blink and talk layers paired to their face.
 - **Three looks for the words**: a story's lines can show in the box along the bottom, on a full screen of text that fills up line by line, or in speech bubbles over whoever's talking, picked in the Story tab's **Settings** and changed mid-story with \`[box full]\`, \`[box bubble]\` and \`[box bottom]\`.
 - **The story as nodes, and story events**: **Dialogue** beside **Script** in the Story tab draws a chapter as scenes, choices, ifs and endings joined by arrows. Drag a choice onto a scene to jump there, add scenes and choices, delete them, or edit a node's lines under the map; it all edits the same script. **On story line**, **On story choice** and **On story scene** let the Interactions graph react as the story plays.
 - **A Visual novel template**: a title screen with **Continue**, save slots that show where you were, the reader's own settings (text speed, Auto speed, volumes, text size, an easier font), the history of what was said, and extras that unlock as you play (a gallery, endings, chapter select, a music room). Characters blink and move their mouths as they talk, words can blip as they type, and holding Ctrl skips. Three more nodes: **Save the story**, **Load the story** and **Story setting**.

@@ -3120,7 +3120,7 @@ help:story help:story-stage help:interactions`,
 
 ## The cast
 
-Each character in the Story tab's **Cast** has a name (as lines use it), what the name plate says, its colour, where they stand, and their **Faces**: a picture for each expression, the first being the one they come on with. Add pictures named after them (\`Millie smiling.png\`, \`Millie sad.png\`) to Assets and **Add faces from pictures named Millie** fills the list in. Whoever isn't speaking is dimmed a little (**Settings** turns that off).
+Each character in the Story tab's **Cast** has a name (as lines use it), what the name plate says, its colour, where they stand, and their **Faces**: a picture for each expression, the first being the one they come on with. Add pictures named after them (\`Millie smiling.png\`, \`Millie sad.png\`) to Assets and **Add faces from pictures named Millie** fills the list in. Or drop their Photoshop file on the form (or press **Faces from a PSD**): a group called **Faces** with a layer per face over the body gives a picture of the whole character per face, all lined up, with layers named \`happy blink\` and \`happy talk\` as that face's blinking and talking pictures. Whoever isn't speaking is dimmed a little (**Settings** turns that off).
 
 **Nodes:** **Start the story** (a New game button, or from a scene), **Go on**, **Pick choice**, **Back to the story**, **Auto or Skip**, **Go back a line** and **On story end**. Scripts get \`ix.story\`.
 

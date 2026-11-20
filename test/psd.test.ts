@@ -766,3 +766,31 @@ describe('re-importing a changed PSD into a linked artboard', () => {
     expect(r4.artboard.children.map((c) => c.name)).toEqual(['Base']);
   });
 });
+
+describe('a character PSD as cast faces', () => {
+  it('flattens each face onto the body, crops them all alike, and pairs blink and talk pictures', async () => {
+    const { castFromPsd } = await import('../src/lib/story-psd');
+    const px = (r: number, g: number, b: number, n: number) => Array.from({ length: n }, () => [r, g, b, 255]).flat();
+    //4 x 4 canvas: a 2 x 2 body at 1,1; faces are 1 x 1 dots on it
+    const psd = buildPsd(
+      [
+        { name: 'Body', left: 1, top: 1, w: 2, h: 2, rgba: px(200, 100, 50, 4) },
+        { name: 'neutral', left: 1, top: 1, w: 1, h: 1, rgba: px(0, 0, 0, 1) },
+        { name: 'neutral blink', left: 1, top: 1, w: 1, h: 1, rgba: px(9, 9, 9, 1) },
+        { name: 'happy', left: 2, top: 1, w: 1, h: 1, rgba: px(255, 255, 0, 1) },
+      ],
+      { width: 4, height: 4 },
+    );
+    const out = castFromPsd(psd, 'Millie');
+    expect(out.faces.map((f) => f.name)).toEqual(['neutral', 'happy']);
+    expect(out.faces[0].blink).toBe(out.assets.find((a) => a.name === 'Millie neutral blink.png')!.id);
+    expect(out.assets.map((a) => a.name).sort()).toEqual(['Millie happy.png', 'Millie neutral blink.png', 'Millie neutral.png']);
+    //every picture is the 2 x 2 box round the body, so faces swap without the character moving
+    const happy = parsePsd(psd).width;
+    expect(happy).toBe(4);
+    for (const a of out.assets) {
+      const view = new DataView(a.bytes.buffer, a.bytes.byteOffset);
+      expect([view.getUint32(16), view.getUint32(20)]).toEqual([2, 2]);
+    }
+  });
+});
