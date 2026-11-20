@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Particles**: a **Particles** section on any rectangle fills it with rain, snow, petals, falling leaves, dust, sparks or bubbles as it plays, or your own picture, with amount, speed, wind, size and colour. Fewer on a slow device, still for anyone who asked for less motion.
 - **Testing an app as a prototype**: add \`?report=study\` to a share link and the page around it (Sightline, or your own study page) hears each page change and every press, as a share of the page with the layer pressed, or none for a press on nothing. Off without it, so learners send none of it. See [Embedding and the player API](embedding).
 - **Fixed: rows overlapping in a dialog**: a list whose rows wrap onto two lines grew them on a page but not inside a dialog or other overlay, so the rows ran into each other.
 - **Sketch pads**: any rectangle can be one, so people draw on it as it plays, with a smoothed pen that feels a stylus's pressure, an eraser, and **Undo a stroke**, **Redo a stroke** and **Clear a sketch pad** nodes. The strokes go in a list variable, so a drawing is saved with the rest of someone's work.

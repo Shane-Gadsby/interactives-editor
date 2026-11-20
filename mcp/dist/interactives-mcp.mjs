@@ -2791,6 +2791,7 @@ function layerOwnProps(node) {
     { prop: "max", label: "Progress maximum", kind: "number" }
   ];
 }
+const PARTICLE_PRESETS = ["rain", "snow", "petals", "leaves", "dust", "sparks", "bubbles"];
 const MODIFIER_UNITS = ["letter", "word", "line"];
 const MODIFIER_SHAPES = ["square", "ramp-up", "ramp-down", "triangle", "round", "smooth", "falloff"];
 function defaultModifier(patch = {}) {
@@ -4584,6 +4585,23 @@ function sanitizeNode(raw, seen) {
       n.sketch = out;
     }
   } else if ("sketch" in n) delete n.sketch;
+  if (raw.type === "rect" && "particles" in n) {
+    const k = n.particles;
+    if (!isObj$1(k) || !PARTICLE_PRESETS.includes(k.preset)) delete n.particles;
+    else {
+      const out = { preset: k.preset };
+      const range = (f2, lo, hi) => {
+        if (isNum(k[f2])) out[f2] = Math.min(hi, Math.max(lo, k[f2]));
+      };
+      range("amount", 0, 100);
+      range("speed", 0.1, 3);
+      range("wind", -100, 100);
+      range("size", 0.25, 4);
+      if (isStr(k.colour) && k.colour.length <= 80) out.colour = k.colour;
+      if (isStr(k.asset) && k.asset.length <= 80) out.asset = k.asset;
+      n.particles = out;
+    }
+  } else if ("particles" in n) delete n.particles;
   if (raw.type === "progress") {
     if (n.orientation !== "horizontal" && n.orientation !== "vertical") n.orientation = "horizontal";
     if (n.semantics !== "none" && n.semantics !== "progressbar" && n.semantics !== "meter") n.semantics = "progressbar";
@@ -26420,6 +26438,33 @@ Expression fields can use every variable and data source by name, \`event\` (det
 
 ## Messages to and from the host page
 **Send message** (and \`ix.emit\`) posts \`{source: 'interactives', name, payload}\` to the page the interactive is in. The page can send messages back with \`player.send(name, payload)\` and **When a message arrives** reacts. See [Embedding and the player API](embedding).`
+  },
+  {
+    id: "particles",
+    title: "Particles",
+    group: "Motion",
+    summary: "Rain, snow, petals, falling leaves, dust, sparks or bubbles drifting across a rectangle, or your own picture.",
+    keywords: "particles particle rain snow petals cherry blossom leaves autumn dust motes sparks embers fire bubbles weather mood atmosphere confetti drift falling wind",
+    body: `**Particles** fill a rectangle with drifting things as it plays: rain against a window, snow over a winter scene, petals in a garden, dust in a beam of light, sparks off a fire, bubbles under water. They set a mood without anyone drawing a frame of it.
+
+**Add them:** select a rectangle and press **+** on its **Particles** section, then pick a **Kind**. They're drawn over the rectangle's fill and kept inside its box, so a clear rectangle over a background picture gives weather over the scene, and a coloured one gives a backdrop of its own.
+
+**Tune them:**
+- **Amount** (0 to 100) is how many for the rectangle's size, so a bigger box gets more without looking thinner.
+- **Speed** and **Size** are multiples of the kind's own (1 is as it comes).
+- **Wind** pushes them sideways: below 0 to the left, above 0 to the right. Rain leans with it.
+- **Colours** keeps the kind's own (a mix for petals, leaves and sparks), or **One colour** for all of them.
+- **Picture** draws one of your pictures as each particle instead (a petal, a leaf, a logo), moving the way the kind does.
+
+**Turn them on and off:** show and hide the rectangle, from a button, a timeline or **Show or hide** in the graph. Hidden, they cost nothing.
+
+**Good to know:**
+- On the canvas they hold still, so you can see the spread; press **Preview** to see them move.
+- Someone who has asked their device for less motion sees them still, the same as on the canvas.
+- A slow device draws fewer on its own, and goes back up once it keeps up again.
+- They never take a click: anything under them still works.
+
+help:sketch-pads help:timelines`
   },
   {
     id: "sketch-pads",

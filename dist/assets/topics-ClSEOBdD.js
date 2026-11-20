@@ -1,4 +1,4 @@
-import{c2 as a,c3 as o,c4 as m,c5 as r,c6 as k,c7 as V,c8 as L,c9 as E,ca as h,cb as s,cc as i,cd as U,ce as O,cf as b,cg as n,ch as S,ci as I,cj as f,ck as w,cl as A,cm as l,cn as d,co as T,cp as P,cq as u,cr as M,cs as x,ct as Y,cu as F,cv as K,cw as D,cx as C,cy as $,cz as Q,cA as J,bp as X,aa as Z,bz as ee,bh as te,ag as W,b4 as ae}from"./index-B_g_CA7G.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{c2 as a,c3 as o,c4 as m,c5 as r,c6 as k,c7 as V,c8 as L,c9 as E,ca as h,cb as s,cc as i,cd as U,ce as O,cf as b,cg as n,ch as S,ci as I,cj as f,ck as w,cl as A,cm as l,cn as d,co as T,cp as P,cq as u,cr as M,cs as x,ct as Y,cu as F,cv as K,cw as D,cx as C,cy as $,cz as Q,cA as J,bp as X,aa as Z,bz as ee,bh as te,ag as W,b4 as ae}from"./index-BIq63kJe.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -6732,7 +6732,26 @@ Every node is listed in [Interaction node reference](interaction-nodes). For a w
 Expression fields can use every variable and data source by name, \`event\` (details of what fired: \`event.key\`, \`event.x\`, \`event.index\` for a repeated copy, \`event.child\` for the layer inside that was hit, \`event.count\` and \`event.elapsed\` on a timer, \`event.payload\` for a message), \`pageNumber\` and \`pageCount\`, and \`Math\`.
 
 ## Messages to and from the host page
-**Send message** (and \`ix.emit\`) posts \`{source: 'interactives', name, payload}\` to the page the interactive is in. The page can send messages back with \`player.send(name, payload)\` and **When a message arrives** reacts. See [Embedding and the player API](embedding).`},{id:"sketch-pads",title:"Sketch pads",group:"Interactivity",summary:"A rectangle people draw on as it plays, with a smoothed pen, an eraser, undo and redo, and the drawing saved with their work.",keywords:"sketch draw drawing pen pencil ink stylus pressure eraser rub out undo redo clear whiteboard annotate doodle signature canvas",body:`A **sketch pad** is a rectangle people draw on as the project plays: label a diagram, show working, sign their name, sketch an idea. The pen smooths out a shaky hand, and a stylus draws thinner or thicker with how hard it presses.
+**Send message** (and \`ix.emit\`) posts \`{source: 'interactives', name, payload}\` to the page the interactive is in. The page can send messages back with \`player.send(name, payload)\` and **When a message arrives** reacts. See [Embedding and the player API](embedding).`},{id:"particles",title:"Particles",group:"Motion",summary:"Rain, snow, petals, falling leaves, dust, sparks or bubbles drifting across a rectangle, or your own picture.",keywords:"particles particle rain snow petals cherry blossom leaves autumn dust motes sparks embers fire bubbles weather mood atmosphere confetti drift falling wind",body:`**Particles** fill a rectangle with drifting things as it plays: rain against a window, snow over a winter scene, petals in a garden, dust in a beam of light, sparks off a fire, bubbles under water. They set a mood without anyone drawing a frame of it.
+
+**Add them:** select a rectangle and press **+** on its **Particles** section, then pick a **Kind**. They're drawn over the rectangle's fill and kept inside its box, so a clear rectangle over a background picture gives weather over the scene, and a coloured one gives a backdrop of its own.
+
+**Tune them:**
+- **Amount** (0 to 100) is how many for the rectangle's size, so a bigger box gets more without looking thinner.
+- **Speed** and **Size** are multiples of the kind's own (1 is as it comes).
+- **Wind** pushes them sideways: below 0 to the left, above 0 to the right. Rain leans with it.
+- **Colours** keeps the kind's own (a mix for petals, leaves and sparks), or **One colour** for all of them.
+- **Picture** draws one of your pictures as each particle instead (a petal, a leaf, a logo), moving the way the kind does.
+
+**Turn them on and off:** show and hide the rectangle, from a button, a timeline or **Show or hide** in the graph. Hidden, they cost nothing.
+
+**Good to know:**
+- On the canvas they hold still, so you can see the spread; press **Preview** to see them move.
+- Someone who has asked their device for less motion sees them still, the same as on the canvas.
+- A slow device draws fewer on its own, and goes back up once it keeps up again.
+- They never take a click: anything under them still works.
+
+help:sketch-pads help:timelines`},{id:"sketch-pads",title:"Sketch pads",group:"Interactivity",summary:"A rectangle people draw on as it plays, with a smoothed pen, an eraser, undo and redo, and the drawing saved with their work.",keywords:"sketch draw drawing pen pencil ink stylus pressure eraser rub out undo redo clear whiteboard annotate doodle signature canvas",body:`A **sketch pad** is a rectangle people draw on as the project plays: label a diagram, show working, sign their name, sketch an idea. The pen smooths out a shaky hand, and a stylus draws thinner or thicker with how hard it presses.
 
 **Make one:** select a rectangle and press **+** on its **Sketch pad** section. Its fill is the paper.
 
