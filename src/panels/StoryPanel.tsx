@@ -408,6 +408,17 @@ function StorySettingsForm({ story }: { story: Story }) {
         <NumberField label="Text speed" value={s.textSpeed ?? 40} min={0} max={400} suffix="letters/s" title="How fast words type on. 0 shows each line at once. Readers can change it in the settings screen" onChange={(v) => set((x) => void (x.textSpeed = v), 'story-speed')} />
         <NumberField label="Auto wait" value={s.autoDelay ?? 30} min={0} max={500} suffix="ms/letter" title="With Auto on, how long a shown line waits before going on, per letter (never under 1.2 s)" onChange={(v) => set((x) => void (x.autoDelay = v), 'story-auto')} />
         <NumberField label="Moves take" value={s.moveTime ?? 400} min={0} max={5000} step={50} suffix="ms" title="How long someone takes to come on, go off or move to another spot" onChange={(v) => set((x) => void (x.moveTime = v), 'story-move')} />
+        <SelectField
+          label="Words shown in"
+          value={s.boxLook ?? 'bottom'}
+          title="How lines are shown unless a [box ...] line says otherwise: a box along the bottom, the whole screen of text (for long narration), or a speech bubble over whoever's talking"
+          options={[
+            { value: 'bottom', label: 'A box along the bottom' },
+            { value: 'full', label: 'The whole screen' },
+            { value: 'bubble', label: 'Speech bubbles' },
+          ]}
+          onChange={(v) => set((x) => void (v === 'bottom' ? delete x.boxLook : (x.boxLook = v)))}
+        />
         <CheckField label="Dim whoever isn't speaking" value={s.dimOthers !== false} title="The others on stage go a little darker while someone talks" onChange={(v) => set((x) => void (x.dimOthers = v))} />
       </div>
     </div>

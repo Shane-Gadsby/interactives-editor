@@ -3078,7 +3078,7 @@ help:sketch-pads help:timelines`,
 - \`# The club fair\` starts a scene. \`-> The club fair\` jumps to it, \`-> Chapter 2\` to a chapter, and \`-> end Good friends\` ends the story, saying which ending.
 - \`? Join the club\` is a choice. The lines indented under it run when it's picked, then the story carries on after the last choice. \`[once]\` on the end hides it once taken, \`[if flyer]\` only shows it when that holds, and \`[if flyer, grey]\` shows it greyed out instead.
 - \`if trust >= 3\`, \`else if\`, \`else\`: the indented lines only run when it holds. \`set trust += 1\` changes a value. A name that isn't a variable is kept by the story itself.
-- Cues go in square brackets on their own line: \`[bg Quad]\`, \`[music Hopeful]\`, \`[music off, 2s]\`, \`[sound Door]\`, \`[show Olive at right]\`, \`[hide Olive, fade]\`, \`[wait 1s]\`, \`[shake]\`, \`[flash]\`, \`[tint night]\`, \`[zoom Millie]\`, \`[weather snow]\`. Pictures and sounds are found by their name in Assets.
+- Cues go in square brackets on their own line: \`[bg Quad]\`, \`[music Hopeful]\`, \`[music off, 2s]\`, \`[sound Door]\`, \`[show Olive at right]\`, \`[hide Olive, fade]\`, \`[wait 1s]\`, \`[shake]\`, \`[flash]\`, \`[tint night]\`, \`[zoom Millie]\`, \`[weather snow]\`, \`[box full]\`, \`[box bubble]\`, \`[box bottom]\`. Pictures and sounds are found by their name in Assets.
 - \`[call Puzzle 1]\` goes to that page and waits; a **Back to the story** node there comes back, with a result the story reads as \`story.result\`. \`[open Notebook]\` opens an overlay and waits for it to close, \`[play Intro]\` plays a timeline on the stage, \`[run Give badge]\` runs a flow.
 - Inside a line: \`{name}\` shows a value, \`{pause}\` holds the typing, \`{fast}\`, \`{slow}\`, \`{shake}...{/shake}\`, \`{wave}\`, \`{b}\`, \`{i}\`, \`{big}\`, \`{small}\`, \`{colour red}\`.
 - \`//\` starts a note for writers that's never shown.
@@ -3113,6 +3113,8 @@ help:story help:story-stage help:interactions`,
     body: `The **story stage** is an ordinary page whose layers are bound to the story's values, so you restyle the dialogue box, the name plate or the choices like anything else. **Start a story** makes one; any page with a layer reading a \`story.\` value works, and the Story tab's **Settings** can name one.
 
 **What it shows:** the background (\`story.background\`, fading in over \`story.backgroundBefore\`), the cast (a list of \`story.cast\`, each with \`item.image\`, \`item.x\` across the stage from 0 to 1, \`item.brightness\`), the dialogue box (\`story.speaker\`, \`story.speakerColour\`, and words with **Story words** on bound to \`story.marked\`, with **Letters shown** bound to \`story.shown\`), and the choices (a list of \`story.choices\`).
+
+**Three looks for the words:** the box along the bottom; the whole screen of text, which keeps each line said on it as the next types under it (good for long narration, \`[box clear]\` starts a fresh screen); and speech bubbles over whoever's talking, with a tail pointing at them. **Words shown in** in the Story tab's **Settings** picks one for the story, and a \`[box ...]\` line changes it from there on.
 
 **Going on:** a click anywhere that isn't a button, Space or Enter finishes the line or goes to the next, and 1 to 9 pick a choice. A page with its own **Go on** node keeps clicks to itself. The stage's buttons: **Back** goes back a line (undoing what happened since), **Auto** goes on by itself, **Skip** flies through lines read before, **Hide** puts the box away until the next click.
 

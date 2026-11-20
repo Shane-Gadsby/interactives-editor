@@ -161,9 +161,38 @@ export function storyStage(hideVar: string, at: Partial<Artboard> = {}): Artboar
     cornerRadius: 14,
     fill: solid('rgba(18, 18, 28, 0.86)'),
     clip: false,
-    bindings: { visible: `(story.text != '' || story.choosing) && !${HIDE_VAR}` },
+    bindings: { visible: `(story.text != '' || story.choosing) && !${HIDE_VAR} && (story.look == 'bottom' || (story.look == 'bubble' && !story.speaking))` },
     children: [plate, words, more],
   });
+
+  //[box full]: the whole screen of text for long narration, the lines said on it so far and the one typing now
+  const fullLine = createNode('text', {
+    name: 'Full screen line',
+    x: 0,
+    y: 0,
+    width: 960,
+    height: 34,
+    text: 'A line of the story.',
+    fontSize: 24,
+    lineHeight: 1.45,
+    color: '#f5f2ea',
+    autoSize: 'height',
+    storyMarkup: true,
+    bindings: {
+      text: "item.current ? (story.speaker ? story.speaker + ': ' : '') + story.marked : item.line",
+      reveal: 'item.current ? story.shown + (story.speaker ? story.speaker.length + 2 : 0) : 100000',
+    },
+  } as never);
+  const fullList = createNode('frame', { name: 'Full screen lines', x: 40, y: 36, width: 960, height: 540, fill: null, clip: true, repeat: { items: "story.page.concat(story.text != '' ? [{ current: true }] : [])", layout: 'vertical', gap: 16, columns: 1 }, children: [fullLine] });
+  const full = createNode('frame', { name: 'Full screen text', x: 120, y: 40, width: 1040, height: 624, cornerRadius: 16, fill: solid('rgba(10, 10, 16, 0.84)'), bindings: { visible: `story.look == 'full' && !${HIDE_VAR}` }, children: [fullList] });
+
+  //[box bubble]: a speech bubble over whoever's talking, its tail pointing at them
+  const BW = 540;
+  const bubbleX = `clamp(story.speakerX * ${W} - ${BW / 2}, 24, ${W - BW - 24})`;
+  const tail = createNode('rect', { name: 'Tail', x: BW / 2 - 16, y: 158, width: 32, height: 32, rotation: 45, fill: solid('#fbfaf7'), bindings: { x: `story.speakerX * ${W} - ${bubbleX} - 16` } } as never);
+  const bubbleName = createNode('text', { name: 'Bubble name', x: 28, y: 18, width: 480, height: 28, text: 'Name', fontSize: 18, fontWeight: 700, color: '#b8860b', autoSize: 'none', bindings: { text: 'story.speaker', color: "story.speakerColour || '#b8860b'" } } as never);
+  const bubbleWords = createNode('text', { name: 'Bubble words', x: 28, y: 50, width: 484, height: 110, text: 'Words in the bubble.', fontSize: 23, lineHeight: 1.4, color: '#1b1b24', autoSize: 'none', storyMarkup: true, bindings: { text: 'story.marked', reveal: 'story.shown' } } as never);
+  const bubble = createNode('frame', { name: 'Speech bubble', x: (W - BW) / 2, y: 60, width: BW, height: 176, cornerRadius: 24, clip: false, fill: solid('#fbfaf7'), shadow: { x: 0, y: 6, blur: 18, spread: 0, color: 'rgba(0, 0, 0, 0.3)' }, bindings: { x: bubbleX, visible: `story.look == 'bubble' && story.speaking && !${HIDE_VAR}` }, children: [tail, bubbleName, bubbleWords] } as never);
 
   const choice = createNode('button', {
     name: 'Choice',
@@ -187,14 +216,15 @@ export function storyStage(hideVar: string, at: Partial<Artboard> = {}): Artboar
     height: 340,
     fill: null,
     repeat: { items: 'story.choices', layout: 'vertical', gap: 14, columns: 1 },
-    bindings: { visible: `story.choosing && !${HIDE_VAR}` },
+    //(lower down on a full screen of text, under the words)
+    bindings: { visible: `story.choosing && !${HIDE_VAR}`, y: "story.look == 'full' ? 380 : 120" },
     children: [choice],
   });
 
   const control = (name: string, label: string, x: number, bind?: string) =>
     createNode('button', { name, x, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid('rgba(18, 18, 28, 0.7)'), color: '#f5f2ea', ...(bind ? { bindings: { label: bind } } : {}) });
   const buttons = [control('Back', 'Back', 0), control('Auto', 'Auto', 94, "story.auto ? 'Auto on' : 'Auto'"), control('Skip', 'Skip', 188, "story.skipping ? 'Skipping' : 'Skip'"), control('Hide', 'Hide', 282)];
-  const bar = createNode('frame', { name: 'Story buttons', x: W - 80 - 366, y: 470, width: 366, height: 32, fill: null, bindings: { visible: `story.started && !story.ended && !${HIDE_VAR}` }, children: buttons });
+  const bar = createNode('frame', { name: 'Story buttons', x: W - 80 - 366, y: 470, width: 366, height: 32, fill: null, bindings: { visible: `story.started && !story.ended && !${HIDE_VAR}`, y: "story.look == 'full' ? 678 : 470" }, children: buttons });
 
   const unhide = createNode('rect', { name: 'Show the box again', x: 0, y: 0, width: W, height: H, fill: null, ariaLabel: 'Show the words again', bindings: { visible: HIDE_VAR } } as never);
   //[weather rain] and the rest turn this on with that kind, [weather off] hides it
@@ -221,7 +251,7 @@ export function storyStage(hideVar: string, at: Partial<Artboard> = {}): Artboar
     width: W,
     height: H,
     background: solid('#15141c'),
-    children: [bgBefore, bg, cast, weather, box, choices, bar, ending, unhide],
+    children: [bgBefore, bg, cast, weather, box, full, bubble, choices, bar, ending, unhide],
     logic: { nodes, edges },
     ...at,
   } as Partial<Artboard>);

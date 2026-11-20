@@ -14761,9 +14761,34 @@ function storyStage(hideVar, at = {}) {
     cornerRadius: 14,
     fill: solid$2("rgba(18, 18, 28, 0.86)"),
     clip: false,
-    bindings: { visible: `(story.text != '' || story.choosing) && !${HIDE_VAR}` },
+    bindings: { visible: `(story.text != '' || story.choosing) && !${HIDE_VAR} && (story.look == 'bottom' || (story.look == 'bubble' && !story.speaking))` },
     children: [plate, words, more]
   });
+  const fullLine = createNode("text", {
+    name: "Full screen line",
+    x: 0,
+    y: 0,
+    width: 960,
+    height: 34,
+    text: "A line of the story.",
+    fontSize: 24,
+    lineHeight: 1.45,
+    color: "#f5f2ea",
+    autoSize: "height",
+    storyMarkup: true,
+    bindings: {
+      text: "item.current ? (story.speaker ? story.speaker + ': ' : '') + story.marked : item.line",
+      reveal: "item.current ? story.shown + (story.speaker ? story.speaker.length + 2 : 0) : 100000"
+    }
+  });
+  const fullList = createNode("frame", { name: "Full screen lines", x: 40, y: 36, width: 960, height: 540, fill: null, clip: true, repeat: { items: "story.page.concat(story.text != '' ? [{ current: true }] : [])", layout: "vertical", gap: 16, columns: 1 }, children: [fullLine] });
+  const full = createNode("frame", { name: "Full screen text", x: 120, y: 40, width: 1040, height: 624, cornerRadius: 16, fill: solid$2("rgba(10, 10, 16, 0.84)"), bindings: { visible: `story.look == 'full' && !${HIDE_VAR}` }, children: [fullList] });
+  const BW = 540;
+  const bubbleX = `clamp(story.speakerX * ${W2} - ${BW / 2}, 24, ${W2 - BW - 24})`;
+  const tail = createNode("rect", { name: "Tail", x: BW / 2 - 16, y: 158, width: 32, height: 32, rotation: 45, fill: solid$2("#fbfaf7"), bindings: { x: `story.speakerX * ${W2} - ${bubbleX} - 16` } });
+  const bubbleName = createNode("text", { name: "Bubble name", x: 28, y: 18, width: 480, height: 28, text: "Name", fontSize: 18, fontWeight: 700, color: "#b8860b", autoSize: "none", bindings: { text: "story.speaker", color: "story.speakerColour || '#b8860b'" } });
+  const bubbleWords = createNode("text", { name: "Bubble words", x: 28, y: 50, width: 484, height: 110, text: "Words in the bubble.", fontSize: 23, lineHeight: 1.4, color: "#1b1b24", autoSize: "none", storyMarkup: true, bindings: { text: "story.marked", reveal: "story.shown" } });
+  const bubble = createNode("frame", { name: "Speech bubble", x: (W2 - BW) / 2, y: 60, width: BW, height: 176, cornerRadius: 24, clip: false, fill: solid$2("#fbfaf7"), shadow: { x: 0, y: 6, blur: 18, spread: 0, color: "rgba(0, 0, 0, 0.3)" }, bindings: { x: bubbleX, visible: `story.look == 'bubble' && story.speaking && !${HIDE_VAR}` }, children: [tail, bubbleName, bubbleWords] });
   const choice = createNode("button", {
     name: "Choice",
     x: 0,
@@ -14786,12 +14811,13 @@ function storyStage(hideVar, at = {}) {
     height: 340,
     fill: null,
     repeat: { items: "story.choices", layout: "vertical", gap: 14, columns: 1 },
-    bindings: { visible: `story.choosing && !${HIDE_VAR}` },
+    //(lower down on a full screen of text, under the words)
+    bindings: { visible: `story.choosing && !${HIDE_VAR}`, y: "story.look == 'full' ? 380 : 120" },
     children: [choice]
   });
   const control = (name, label, x, bind2) => createNode("button", { name, x, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid$2("rgba(18, 18, 28, 0.7)"), color: "#f5f2ea", ...bind2 ? { bindings: { label: bind2 } } : {} });
   const buttons = [control("Back", "Back", 0), control("Auto", "Auto", 94, "story.auto ? 'Auto on' : 'Auto'"), control("Skip", "Skip", 188, "story.skipping ? 'Skipping' : 'Skip'"), control("Hide", "Hide", 282)];
-  const bar = createNode("frame", { name: "Story buttons", x: W2 - 80 - 366, y: 470, width: 366, height: 32, fill: null, bindings: { visible: `story.started && !story.ended && !${HIDE_VAR}` }, children: buttons });
+  const bar = createNode("frame", { name: "Story buttons", x: W2 - 80 - 366, y: 470, width: 366, height: 32, fill: null, bindings: { visible: `story.started && !story.ended && !${HIDE_VAR}`, y: "story.look == 'full' ? 678 : 470" }, children: buttons });
   const unhide = createNode("rect", { name: "Show the box again", x: 0, y: 0, width: W2, height: H2, fill: null, ariaLabel: "Show the words again", bindings: { visible: HIDE_VAR } });
   const weather = createNode("rect", { name: "Weather", x: 0, y: 0, width: W2, height: H2, fill: null, visible: false, particles: { preset: "rain" } });
   const ending = createNode("text", { name: "The end", x: 0, y: H2 / 2 - 40, width: W2, height: 80, text: "The end", fontSize: 44, fontWeight: 700, color: "#ffffff", align: "center", autoSize: "none", bindings: { text: "'The end' + (story.ending ? ': ' + story.ending : '')", visible: "story.ended" } });
@@ -14814,7 +14840,7 @@ function storyStage(hideVar, at = {}) {
     width: W2,
     height: H2,
     background: solid$2("#15141c"),
-    children: [bgBefore, bg, cast, weather, box, choices, bar, ending, unhide],
+    children: [bgBefore, bg, cast, weather, box, full, bubble, choices, bar, ending, unhide],
     logic: { nodes, edges },
     ...at
   });
@@ -27043,7 +27069,7 @@ help:sketch-pads help:timelines`
 - \`# The club fair\` starts a scene. \`-> The club fair\` jumps to it, \`-> Chapter 2\` to a chapter, and \`-> end Good friends\` ends the story, saying which ending.
 - \`? Join the club\` is a choice. The lines indented under it run when it's picked, then the story carries on after the last choice. \`[once]\` on the end hides it once taken, \`[if flyer]\` only shows it when that holds, and \`[if flyer, grey]\` shows it greyed out instead.
 - \`if trust >= 3\`, \`else if\`, \`else\`: the indented lines only run when it holds. \`set trust += 1\` changes a value. A name that isn't a variable is kept by the story itself.
-- Cues go in square brackets on their own line: \`[bg Quad]\`, \`[music Hopeful]\`, \`[music off, 2s]\`, \`[sound Door]\`, \`[show Olive at right]\`, \`[hide Olive, fade]\`, \`[wait 1s]\`, \`[shake]\`, \`[flash]\`, \`[tint night]\`, \`[zoom Millie]\`, \`[weather snow]\`. Pictures and sounds are found by their name in Assets.
+- Cues go in square brackets on their own line: \`[bg Quad]\`, \`[music Hopeful]\`, \`[music off, 2s]\`, \`[sound Door]\`, \`[show Olive at right]\`, \`[hide Olive, fade]\`, \`[wait 1s]\`, \`[shake]\`, \`[flash]\`, \`[tint night]\`, \`[zoom Millie]\`, \`[weather snow]\`, \`[box full]\`, \`[box bubble]\`, \`[box bottom]\`. Pictures and sounds are found by their name in Assets.
 - \`[call Puzzle 1]\` goes to that page and waits; a **Back to the story** node there comes back, with a result the story reads as \`story.result\`. \`[open Notebook]\` opens an overlay and waits for it to close, \`[play Intro]\` plays a timeline on the stage, \`[run Give badge]\` runs a flow.
 - Inside a line: \`{name}\` shows a value, \`{pause}\` holds the typing, \`{fast}\`, \`{slow}\`, \`{shake}...{/shake}\`, \`{wave}\`, \`{b}\`, \`{i}\`, \`{big}\`, \`{small}\`, \`{colour red}\`.
 - \`//\` starts a note for writers that's never shown.
@@ -27078,6 +27104,8 @@ help:story help:story-stage help:interactions`
     body: `The **story stage** is an ordinary page whose layers are bound to the story's values, so you restyle the dialogue box, the name plate or the choices like anything else. **Start a story** makes one; any page with a layer reading a \`story.\` value works, and the Story tab's **Settings** can name one.
 
 **What it shows:** the background (\`story.background\`, fading in over \`story.backgroundBefore\`), the cast (a list of \`story.cast\`, each with \`item.image\`, \`item.x\` across the stage from 0 to 1, \`item.brightness\`), the dialogue box (\`story.speaker\`, \`story.speakerColour\`, and words with **Story words** on bound to \`story.marked\`, with **Letters shown** bound to \`story.shown\`), and the choices (a list of \`story.choices\`).
+
+**Three looks for the words:** the box along the bottom; the whole screen of text, which keeps each line said on it as the next types under it (good for long narration, \`[box clear]\` starts a fresh screen); and speech bubbles over whoever's talking, with a tail pointing at them. **Words shown in** in the Story tab's **Settings** picks one for the story, and a \`[box ...]\` line changes it from there on.
 
 **Going on:** a click anywhere that isn't a button, Space or Enter finishes the line or goes to the next, and 1 to 9 pick a choice. A page with its own **Go on** node keeps clicks to itself. The stage's buttons: **Back** goes back a line (undoing what happened since), **Auto** goes on by itself, **Skip** flies through lines read before, **Hide** puts the box away until the next click.
 
