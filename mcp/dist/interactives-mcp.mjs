@@ -2270,6 +2270,96 @@ const SPECS = [
     params: []
   },
   {
+    kind: "logic.forEach",
+    label: "For each item",
+    category: "logic",
+    summary: "Runs the Each item steps once for every item of a list, in order, then Done.",
+    details: "The steps after Each item see `event.item` (the item), `event.index` (from 0) and `event.count`. Each run finishes, waits included, before the next starts, so a Set variable that adds up a total works. Up to 5000 items.",
+    group: "Branching",
+    outputs: [
+      { id: "each", label: "Each item" },
+      { id: "done", label: "Done" }
+    ],
+    hasInput: true,
+    params: [{ key: "list", label: "List", type: "expr", default: "", placeholder: "cart", help: "A list variable, a data source, or a formula that gives a list. A number n counts 0 to n - 1" }]
+  },
+  {
+    kind: "logic.repeat",
+    label: "Repeat",
+    category: "logic",
+    summary: "Runs the Again steps a number of times, or while something is true, then Done.",
+    details: "The steps after Again see `event.index` (from 0). Each run finishes before the next starts. With While, it stops as soon as that is false, checked before each run, and never more than 5000 times.",
+    group: "Branching",
+    outputs: [
+      { id: "each", label: "Again" },
+      { id: "done", label: "Done" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "times", label: "Times", type: "expr", default: "3", help: "How many times. Leave empty to use While alone" },
+      { key: "while", label: "While (optional)", type: "expr", default: "", placeholder: "lives > 0", help: "Keep going only while this is true" }
+    ]
+  },
+  {
+    kind: "event.flow",
+    label: "Flow",
+    category: "event",
+    summary: "Steps with a name that Call flow runs from anywhere on the page, so they are wired once.",
+    details: "Give it a name and, if it takes any, the names of its inputs. A Call flow node hands it values, and the steps after it read them as `event.<input>` (`event.amount`). Flows on the page master can be called from every page that uses it.",
+    group: "Branching",
+    outputs: OUT,
+    hasInput: false,
+    params: [
+      { key: "name", label: "Name", type: "text", placeholder: "e.g. Add to total" },
+      { key: "inputs", label: "Inputs", type: "text", placeholder: "amount, label", help: "The names of the values it takes, separated by commas" }
+    ]
+  },
+  {
+    kind: "action.callFlow",
+    label: "Call flow",
+    category: "action",
+    summary: "Runs a named Flow with the values you give it, and carries on when it has finished.",
+    details: "Continues from Not found when no Flow on the page has that name.",
+    group: "Branching",
+    outputs: [
+      { id: "out", label: "Finished" },
+      { id: "none", label: "Not found" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "flow", label: "Flow", type: "text", placeholder: "e.g. Add to total", help: "The name of a Flow node" },
+      { key: "values", label: "Values", type: "expr", default: "", placeholder: "{ amount: price * qty }", help: "The inputs it takes, as { name: value, ... }" }
+    ]
+  },
+  {
+    kind: "action.undo",
+    label: "Undo",
+    category: "action",
+    summary: "Steps the variables marked Keeps history back to how they were before the last change.",
+    details: "Tick Keeps history on the variables that hold what a person makes (the tiles, the board, the answers). Changes close together count as one step. `canUndo` in a formula says whether there is anything to undo, for a button that greys out. Continues from Nothing to undo when there is none.",
+    group: "Variables",
+    outputs: [
+      { id: "out", label: "Undone" },
+      { id: "none", label: "Nothing to undo" }
+    ],
+    hasInput: true,
+    params: []
+  },
+  {
+    kind: "action.redo",
+    label: "Redo",
+    category: "action",
+    summary: "Puts back a change Undo took away.",
+    details: "Any new change after an Undo clears what could be redone. `canRedo` in a formula says whether there is any.",
+    group: "Variables",
+    outputs: [
+      { id: "out", label: "Redone" },
+      { id: "none", label: "Nothing to redo" }
+    ],
+    hasInput: true,
+    params: []
+  },
+  {
     kind: "logic.sequence",
     label: "Sequence",
     category: "logic",
@@ -8895,6 +8985,8 @@ function countLayoutFrames(nodes) {
 }
 const PLAYER_SCOPE_HINTS = {
   reducedMotion: { type: "true/false", hint: "The viewer's device asks for less motion" },
+  canUndo: { type: "true/false", hint: "Undo has a step to take back (variables that keep history)" },
+  canRedo: { type: "true/false", hint: "Redo has a step to put back" },
   fullscreen: { type: "true/false", hint: "The project fills the screen (the Full screen node)" },
   token: { type: "function", hint: "token('space/gap'): a number or text theme token, in the theme being shown" },
   voiceAvailable: { type: "true/false", hint: "A voice on this device can read the project aloud" },
@@ -24247,6 +24339,11 @@ You do not have to type the braces. Put the cursor where the value should go and
 
 Pick one with the arrow keys and **Enter**, or click it. It goes in as \`{name}\` at the cursor, over any words you had selected, and the line under the box shows what the whole text says now. The same button is on a button's **Label** and on a connector's label.
 
+
+### A bold label and its words, from a list
+In a repeater's copy, a styled part of a text can hold a value too. To make "**Core** - Complete 2: SCI6103" on one line for every row of a list: double-click the text, press **{ }** (**Insert value**) on the text toolbar and pick \`item.label\`, select it and press **B**, then type \` - \` and insert \`item.text\` after it in plain. Each value goes in where the cursor is and takes the style of the words around it, so the bold part stays bold and the rest stays plain, and the whole line wraps as one paragraph.
+
+A bold label isn't a heading to a screen reader: it's read as part of the line. When the label is something people would jump between (a section name), use two layers, a heading and its text, instead.
 ## Drag a value onto the page
 You can also drag a value to where it should show. In the **Variables** tab, each variable has a small text-icon handle (its name reads **Show it on the page**) beside its name. In the **Data** tab, each field of a data source has the same handle. Drag it onto the page:
 - **Onto a text layer**: it is added to the end of that text as \`{name}\`, with a space before it, and the text keeps its styling. Dropping \`score\` on *Your score:* gives *Your score: {score}*.
@@ -25861,6 +25958,14 @@ Five nodes for what people expect any app to do. The first four only work from a
 - **Print** opens the browser's print dialog for the page as it is now, where people can also save a PDF.
 - **Send to a web address** sends a value as JSON (**POST**, **PUT**, **PATCH** or **DELETE**) and puts the answer in a variable, with \`event.status\` holding the HTTP status. It keeps to the same **Allowed data hosts** as Load data (Project settings; empty allows any https host), never sends the viewer's logins or cookies, and gives up after 15 seconds. It goes on from **Sent** for a success and **Failed** for anything else.
 
+## Doing something for each item, or again and again
+**For each item** runs the steps after **Each item** once for every item of a list, then the steps after **Done**. Those steps see \`event.item\`, \`event.index\` (from 0) and \`event.count\`. Each go finishes, waits included, before the next starts, so a **Change a value** that adds \`event.item.price\` makes a total, and **Done** sees all of it. Give it a number instead of a list (\`5\`) and it counts 0 to 4.
+
+**Repeat** runs the steps after **Again** a number of **Times**, or **While** something is true (\`lives > 0\`), checked before each go. Both stop after 5000 goes, so a mistake can't hang the page.
+
+## Flows you call from anywhere
+When the same steps hang off three buttons, wire them once. Start them with a **Flow** node, give it a **Name** (\`Add to total\`) and the names of the **Inputs** it takes (\`amount\`). Then a **Call flow** node anywhere on the page runs it, with **Values** such as \`{ amount: price * qty }\`, and the flow's steps read them as \`event.amount\`. Call flow carries on once the flow has finished, and from **Not found** when there's no flow of that name. A flow on the page master can be called from every page that uses it.
+
 ## Connecting and adding nodes
 Drag from an output port to the next node's input to connect them. Actions that take time (**Play or stop an animation**, **Animate a layer's setting**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away.
 
@@ -26973,6 +27078,14 @@ In expressions, \`userData.loaded\` is true once the saved values have been look
 **Change a value or counter** with **Do** set to *Back to its starting value* puts one variable back. The **Put values back to the start** node puts several back in one go (tick them in the node's list, or **All**).
 
 A starting value is the one for this course if there is one, else the typed value, else the formula worked out again (so a formula that shuffles gives a fresh order). Live variables are left alone. This is lighter than **Start over**, which also leaves the page. In scripts: \`ix.reset('score', 'answers')\`.
+
+## Undo and redo
+Somebody arranging tiles, a board or a mind map wants to take a step back. Tick **Keeps history** (under **Options**) on the variables that hold their work, and the **Undo** and **Redo** nodes step all of those back and forward together. Put them on two buttons.
+
+- Changes close together (within a quarter of a second, like a drag or one click that sets three things) are one step. Undo goes back up to 100 steps.
+- \`canUndo\` and \`canRedo\` in a formula say whether there's anything to undo or redo, so a button's **Disabled** can be \`!canUndo\`.
+- A new change after an Undo clears what could be redone, as in any app. **Start over** clears the history.
+- Only the ticked variables move. A score or a page number without the tick stays where it is.
 
 ## Different values for different courses
 One project can start with different values in different courses (a due date, a unit name, a week count). In the **Data** tab, pick **context** and add a row under **Per-course values**: a course label such as \`MAT1000_*\`, and the variables it changes. See [Course and learner context](course-context).
@@ -28232,6 +28345,11 @@ A height or width you bind on the template layer still wins. Only copies whose t
 
 ## Instances in a repeater
 Instances in a repeater can take their [inputs](instances) from the item. Select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
+
+## A list in a list
+A repeater can go inside the copy of another one: groups that hold cards, a table's rows and their cells, a board's columns. Give the outer list items that have a list in them (\`{name: "Fruit", cards: ["apple", "pear"]}\`) and set the inner repeater's **Repeat for each** to \`item.cards\`. Each group then draws its own cards.
+
+Inside the inner copies, \`item\` and \`index\` are the card and its place in its group, and \`outer.item\` and \`outer.index\` are the group. So a card can say \`{outer.item.name}: {item}\`. A click on a card gives its own place in its group as \`event.index\`.
 
 ## Selection
 Set **Selection** under the repeater to let people pick copies without any nodes:

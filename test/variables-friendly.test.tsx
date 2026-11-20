@@ -175,7 +175,8 @@ describe('Remember, Save as user data and the formula', () => {
     expect(opts.open).toBe(false);
     expect(tick(opts, 'Remember')).toBeTruthy();
     expect(tick(opts, 'Save as user data')).toBeTruthy();
-    expect(opts.querySelectorAll('.hint').length).toBe(2);
+    expect(tick(opts, 'Keeps history')).toBeTruthy();
+    expect(opts.querySelectorAll('.hint').length).toBe(3);
     act(() => tick(opts, 'Remember')!.click());
     expect(vars()[0].persist).toBe(true);
   });

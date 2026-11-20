@@ -1,4 +1,4 @@
-import{c2 as a,c3 as o,c4 as m,c5 as r,c6 as k,c7 as V,c8 as L,c9 as E,ca as h,cb as s,cc as i,cd as U,ce as O,cf as b,cg as n,ch as S,ci as I,cj as f,ck as w,cl as A,cm as l,cn as d,co as T,cp as P,cq as u,cr as M,cs as x,ct as Y,cu as F,cv as K,cw as D,cx as C,cy as $,cz as Q,cA as J,bp as X,aa as Z,bz as ee,bh as te,ag as W,b4 as ae}from"./index-CnoJ44E8.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{c2 as a,c3 as o,c4 as m,c5 as r,c6 as k,c7 as V,c8 as L,c9 as E,ca as h,cb as s,cc as i,cd as U,ce as O,cf as b,cg as n,ch as S,ci as I,cj as f,ck as w,cl as A,cm as l,cn as d,co as T,cp as P,cq as u,cr as M,cs as x,ct as Y,cu as F,cv as K,cw as D,cx as C,cy as $,cz as Q,cA as J,bp as X,aa as Z,bz as ee,bh as te,ag as W,b4 as ae}from"./index-DF_MCkQt.js";const oe=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -5207,6 +5207,11 @@ You do not have to type the braces. Put the cursor where the value should go and
 
 Pick one with the arrow keys and **Enter**, or click it. It goes in as \`{name}\` at the cursor, over any words you had selected, and the line under the box shows what the whole text says now. The same button is on a button's **Label** and on a connector's label.
 
+
+### A bold label and its words, from a list
+In a repeater's copy, a styled part of a text can hold a value too. To make "**Core** - Complete 2: SCI6103" on one line for every row of a list: double-click the text, press **{ }** (**Insert value**) on the text toolbar and pick \`item.label\`, select it and press **B**, then type \` - \` and insert \`item.text\` after it in plain. Each value goes in where the cursor is and takes the style of the words around it, so the bold part stays bold and the rest stays plain, and the whole line wraps as one paragraph.
+
+A bold label isn't a heading to a screen reader: it's read as part of the line. When the label is something people would jump between (a section name), use two layers, a heading and its text, instead.
 ## Drag a value onto the page
 You can also drag a value to where it should show. In the **Variables** tab, each variable has a small text-icon handle (its name reads **Show it on the page**) beside its name. In the **Data** tab, each field of a data source has the same handle. Drag it onto the page:
 - **Onto a text layer**: it is added to the end of that text as \`{name}\`, with a space before it, and the text keeps its styling. Dropping \`score\` on *Your score:* gives *Your score: {score}*.
@@ -6560,6 +6565,14 @@ Five nodes for what people expect any app to do. The first four only work from a
 - **Print** opens the browser's print dialog for the page as it is now, where people can also save a PDF.
 - **Send to a web address** sends a value as JSON (**POST**, **PUT**, **PATCH** or **DELETE**) and puts the answer in a variable, with \`event.status\` holding the HTTP status. It keeps to the same **Allowed data hosts** as Load data (Project settings; empty allows any https host), never sends the viewer's logins or cookies, and gives up after 15 seconds. It goes on from **Sent** for a success and **Failed** for anything else.
 
+## Doing something for each item, or again and again
+**For each item** runs the steps after **Each item** once for every item of a list, then the steps after **Done**. Those steps see \`event.item\`, \`event.index\` (from 0) and \`event.count\`. Each go finishes, waits included, before the next starts, so a **Change a value** that adds \`event.item.price\` makes a total, and **Done** sees all of it. Give it a number instead of a list (\`5\`) and it counts 0 to 4.
+
+**Repeat** runs the steps after **Again** a number of **Times**, or **While** something is true (\`lives > 0\`), checked before each go. Both stop after 5000 goes, so a mistake can't hang the page.
+
+## Flows you call from anywhere
+When the same steps hang off three buttons, wire them once. Start them with a **Flow** node, give it a **Name** (\`Add to total\`) and the names of the **Inputs** it takes (\`amount\`). Then a **Call flow** node anywhere on the page runs it, with **Values** such as \`{ amount: price * qty }\`, and the flow's steps read them as \`event.amount\`. Call flow carries on once the flow has finished, and from **Not found** when there's no flow of that name. A flow on the page master can be called from every page that uses it.
+
 ## Connecting and adding nodes
 Drag from an output port to the next node's input to connect them. Actions that take time (**Play or stop an animation**, **Animate a layer's setting**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away.
 
@@ -7470,6 +7483,14 @@ In expressions, \`userData.loaded\` is true once the saved values have been look
 
 A starting value is the one for this course if there is one, else the typed value, else the formula worked out again (so a formula that shuffles gives a fresh order). Live variables are left alone. This is lighter than **Start over**, which also leaves the page. In scripts: \`ix.reset('score', 'answers')\`.
 
+## Undo and redo
+Somebody arranging tiles, a board or a mind map wants to take a step back. Tick **Keeps history** (under **Options**) on the variables that hold their work, and the **Undo** and **Redo** nodes step all of those back and forward together. Put them on two buttons.
+
+- Changes close together (within a quarter of a second, like a drag or one click that sets three things) are one step. Undo goes back up to 100 steps.
+- \`canUndo\` and \`canRedo\` in a formula say whether there's anything to undo or redo, so a button's **Disabled** can be \`!canUndo\`.
+- A new change after an Undo clears what could be redone, as in any app. **Start over** clears the history.
+- Only the ticked variables move. A score or a page number without the tick stays where it is.
+
 ## Different values for different courses
 One project can start with different values in different courses (a due date, a unit name, a week count). In the **Data** tab, pick **context** and add a row under **Per-course values**: a course label such as \`MAT1000_*\`, and the variables it changes. See [Course and learner context](course-context).
 
@@ -8300,6 +8321,11 @@ A height or width you bind on the template layer still wins. Only copies whose t
 
 ## Instances in a repeater
 Instances in a repeater can take their [inputs](instances) from the item. Select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
+
+## A list in a list
+A repeater can go inside the copy of another one: groups that hold cards, a table's rows and their cells, a board's columns. Give the outer list items that have a list in them (\`{name: "Fruit", cards: ["apple", "pear"]}\`) and set the inner repeater's **Repeat for each** to \`item.cards\`. Each group then draws its own cards.
+
+Inside the inner copies, \`item\` and \`index\` are the card and its place in its group, and \`outer.item\` and \`outer.index\` are the group. So a card can say \`{outer.item.name}: {item}\`. A click on a card gives its own place in its group as \`event.index\`.
 
 ## Selection
 Set **Selection** under the repeater to let people pick copies without any nodes:

@@ -11,6 +11,10 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Insert value on the text toolbar': [['text', 'A bold label and its words, from a list'], ['text', 'isn\'t a heading to a screen reader']],
+  'Loops and flows you can call': [['interactions', 'For each item'], ['interactions', 'Repeat'], ['interactions', 'Call flow']],
+  'Undo and redo for what people make': [['variables', 'Keeps history'], ['variables', 'canUndo']],
+  'A list in a list': [['repeaters', 'A list in a list'], ['repeaters', 'outer.item']],
   'Copy, open a file, full screen, print and send': [['interactions', 'Copy to clipboard'], ['interactions', 'Open a file'], ['interactions', 'Send to a web address'], ['interactions', 'fullscreen ?']],
   'Paste a video or slides link and it plays': [['web-elements', 'Paste a video or slides link'], ['web-elements', 'embed code']],
   Celebrate: [['interactions', 'still badge']],

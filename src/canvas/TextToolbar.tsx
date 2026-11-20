@@ -7,6 +7,11 @@ import { Icons } from '../components/icons';
 import { FontPicker } from '../components/FontPicker';
 import { ensureGoogleFont } from '../lib/font-catalog';
 import { rangeAtOffsets, setSelectionOffsets } from '../lib/rich-text-dom';
+import { SearchPicker, type PickerOption } from '../components/SearchPicker';
+import { envFor } from '../components/ExprField';
+import { insertChoices } from '../lib/insert-value';
+import { repeatLocals } from '../lib/repeat-locals';
+import { nodeRuns, replaceRunRange } from 'interactives-player';
 import { actionPatch, linkPatch, shortcutAction, targetRange, toolbarState, unlinkPatch, type TextAction, type TextSel, type Tri } from '../lib/text-toolbar';
 
 /** Where the editing box is on the canvas, in the canvas element's own pixels. */
@@ -101,6 +106,32 @@ export function TextToolbar({ node, editor, box, bounds, commands }: { node: Tex
   const patch = (p: Partial<RunStyle>, coalesce?: string) => {
     const range = targetRange(node, sel);
     if (range) store().styleTextRange(id, range.start, range.end, p, coalesce);
+  };
+
+  // Insert value: the choices are worked out when the button is reached, with a list item's fields when the text is in a repeater
+  const [insertMenu, setInsertMenu] = useState<{ options: PickerOption[]; exprs: Map<string, string> }>({ options: [], exprs: new Map() });
+  const openInsert = () => {
+    const st0 = store().get();
+    const ab = st0.project.artboards.find((a) => a.id === st0.activeArtboardId);
+    const rep = ab ? repeatLocals(st0.project, ab, id) : null;
+    const env = envFor(rep?.locals ?? [], node, rep?.values);
+    const exprs = new Map<string, string>();
+    const options = (env ? insertChoices(env) : []).map((c): PickerOption => {
+      const value = `${c.group}|${c.expr}`;
+      exprs.set(value, c.expr);
+      return { value, label: c.label, hint: c.hint, group: c.group };
+    });
+    setInsertMenu({ options, exprs });
+  };
+  const insertValue = (key: string) => {
+    const expr = insertMenu.exprs.get(key);
+    if (!expr) return;
+    // at the caret (or over the selected words), in the run the caret is in, so it keeps that run's style
+    const at = sel ?? { start: node.text.length, end: node.text.length };
+    const piece = `{${expr}}`;
+    store().setTextRuns(id, replaceRunRange(nodeRuns(node), at.start, at.end, piece));
+    store().set({ textSelection: { id, start: at.start + piece.length, end: at.start + piece.length } } as never);
+    refocus({ id, start: at.start + piece.length, end: at.start + piece.length } as TextSel);
   };
 
   useEffect(() => {
@@ -302,6 +333,19 @@ export function TextToolbar({ node, editor, box, bounds, commands }: { node: Tex
         <button type="button" className={`tt-btn${st.link && st.link !== 'mixed' ? ' on' : st.link === 'mixed' ? ' mixed' : ''}`} aria-pressed={st.link === 'mixed' ? 'mixed' : !!st.link} aria-label="Link" title="Add or edit a link (Ctrl/Cmd+K)" disabled={disabled} onClick={() => apply('link')}>
           <Icons.link />
         </button>
+        <span className="tt-sep" aria-hidden="true" />
+        <div className="tt-insert" onFocusCapture={openInsert} onPointerDownCapture={openInsert}>
+          <SearchPicker
+            className="insert-value"
+            value=""
+            options={insertMenu.options}
+            onChange={insertValue}
+            buttonLabel="{ }"
+            searchPlaceholder="Find a value to insert…"
+            title="Insert value: put a variable, a list item's field or the learner's name in where the cursor is. It takes the style of the words around it, so a bold label stays bold"
+            ariaLabel="Insert value"
+          />
+        </div>
         <button type="button" className="tt-btn" aria-label="Clear formatting" title="Clear formatting: remove the styling of the selection and go back to the layer's own (Ctrl/Cmd+\)" disabled={disabled || !st.styled} onClick={() => apply('clear')}>
           <span aria-hidden="true">T<sub>x</sub></span>
         </button>

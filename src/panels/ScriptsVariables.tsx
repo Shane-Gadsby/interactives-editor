@@ -369,7 +369,7 @@ function VariableRow({ v, others, used, circular, writers, setVar }: { v: Variab
     });
     store().toastUndo(`Deleted the variable "${variableLabel(v)}".`, mark);
   };
-  const optionsOpen = !!(v.persist || v.userData || v.live || v.shared);
+  const optionsOpen = !!(v.persist || v.userData || v.live || v.shared || v.history);
   return (
     <tr>
       <td>
@@ -493,6 +493,14 @@ function VariableRow({ v, others, used, circular, writers, setVar }: { v: Variab
             onChange={(x) => setVar(v.id, { userData: x ? true : undefined })}
           />
           <SectionBlurb text="Saves the value for each person on the server, so it follows them to another device." name="user data" help={['variables', 'save-as-user-data']} />
+          <CheckField
+            label="Keeps history"
+            title="The Undo and Redo nodes step this back and forward, together with every other variable that keeps history. Tick it on what a person makes: the tiles they placed, the board, their answers."
+            value={!!v.history}
+            disabled={isLive(v)}
+            onChange={(x) => setVar(v.id, { history: x ? true : undefined })}
+          />
+          <SectionBlurb text="Lets Undo and Redo step it back and forward." name="undo and redo" help={['variables', 'undo-and-redo']} />
           <CheckField
             label="Shared with instances"
             title="One value for this page and every instance of a component inside it, so changing it in one copy changes it in all of them. Off: each instance has its own. Imported Rive view models come in shared."

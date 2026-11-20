@@ -2823,6 +2823,15 @@ div.text-editor {
   cursor: pointer;
   flex: none;
 }
+/* Insert value on the text toolbar: a button the size of the others, its menu dropping under it */
+.tt-insert {
+  display: inline-flex;
+  flex: none;
+}
+.tt-insert .search-picker.insert-value {
+  height: 26px;
+  font: 600 13px/1 ui-monospace, monospace;
+}
 .tt-btn svg {
   width: 16px;
   height: 16px;
