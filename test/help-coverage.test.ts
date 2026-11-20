@@ -11,6 +11,10 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Layer states for dragging': [['layer-states', 'A place it could go'], ['layer-states', 'Line style']],
+  "A zone's own rules, with a reason": [['drag-and-drop', 'Takes it when'], ['drag-and-drop', 'Only these zones'], ['drag-and-drop', 'On refused']],
+  'Zones that shape and arrange what they hold': [['drag-and-drop', 'Fill the zone'], ['drag-and-drop', 'Arrange what it holds'], ['drag-and-drop', 'Stays behind when picked up'], ['drag-and-drop', 'ix.drag.home']],
+  'Drag things made from a list': [['repeaters', 'Reorder by dragging'], ['repeaters', 'Takes items from'], ['repeaters', 'On list drop']],
   'Insert value on the text toolbar': [['text', 'A bold label and its words, from a list'], ['text', 'isn\'t a heading to a screen reader']],
   'Loops and flows you can call': [['interactions', 'For each item'], ['interactions', 'Repeat'], ['interactions', 'Call flow']],
   'Undo and redo for what people make': [['variables', 'Keeps history'], ['variables', 'canUndo']],

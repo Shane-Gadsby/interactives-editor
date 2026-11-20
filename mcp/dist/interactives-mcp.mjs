@@ -391,9 +391,9 @@ const SPECS = [
     label: "On drop",
     category: "event",
     summary: "Runs when a draggable layer is let go.",
-    details: "A drop with the keyboard or a tap counts too. Pick what to react to: dropped in a zone that took it, dropped on a zone that refused it (wrong tag, or full), or dropped where there is no zone. `event.layer`, `event.zone` (the zone it is in now), `event.from` (where it was), `event.accepted`, `event.reason` (tags or full), `event.swapped` (the layer a swap sent back) and `event.tags` are available.",
+    details: "A drop with the keyboard or a tap counts too. Pick what to react to: dropped in a zone that took it, dropped on a zone that refused it (wrong tag, or full), or dropped where there is no zone. `event.layer`, `event.zone` (the zone it is in now), `event.from` (where it was), `event.accepted`, `event.reason` (tags or full), `event.swapped` (the layer a swap sent back) and `event.tags` are available. `event.reason` is rule, and `event.why` the words of the zone, when its Accepts when said no.",
     group: "Dragging",
-    gives: ["event.layer", "event.zone", "event.from", "event.accepted", "event.reason", "event.swapped", "event.tags"],
+    gives: ["event.layer", "event.zone", "event.from", "event.accepted", "event.reason", "event.why", "event.swapped", "event.tags"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -412,6 +412,33 @@ const SPECS = [
         default: "accepted"
       }
     ]
+  },
+  {
+    kind: "event.dragRefused",
+    label: "On refused",
+    category: "event",
+    summary: "Runs when a drop zone says no to a layer let go on it, with the reason why.",
+    details: 'The reason is `event.why`: the words the zone\'s Accepts when gave ("STA6200 runs in T1 and T3"), or nothing for a plain no. `event.reason` is rule, tags or full. Put a Show toast with `event.why` after it and the person sees why. The layer has already gone back.',
+    group: "Dragging",
+    gives: ["event.layer", "event.zone", "event.from", "event.reason", "event.why", "event.tags"],
+    outputs: OUT,
+    hasInput: false,
+    params: [
+      { key: "target", label: "Drop zone", type: "node", placeholder: "Any drop zone", help: "Leave empty for every drop zone" },
+      { key: "layer", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty for every draggable layer" }
+    ]
+  },
+  {
+    kind: "event.listDrop",
+    label: "On list drop",
+    category: "event",
+    summary: "Runs when a copy of a list is dragged to another place in it or to another list.",
+    details: "The list variable has already changed. `event.item` is the item that moved, `event.from` and `event.to` the names of the lists, `event.index` its new place (from 0), `event.fromIndex` where it was, and `event.moved` is true when it went to another list.",
+    group: "Dragging",
+    gives: ["event.item", "event.from", "event.to", "event.index", "event.fromIndex", "event.moved"],
+    outputs: OUT,
+    hasInput: false,
+    params: [{ key: "list", label: "Into list", type: "node", placeholder: "Any list", help: "A repeater that items are dragged into. Empty: every one" }]
   },
   {
     kind: "event.dragEnd",
@@ -4305,11 +4332,26 @@ function dragSettings(raw, draggable) {
     pick("holdToDrag", bool);
     pick("silent", bool);
     if ("zoneVariable" in raw && (raw.zoneVariable === null || isStr(raw.zoneVariable))) out.zoneVariable = raw.zoneVariable;
+    if (Array.isArray(raw.onlyZones)) {
+      const only = arr(raw.onlyZones, isStr).slice(0, 200);
+      if (only.length) out.onlyZones = only;
+    }
+    pick("stayBehind", bool);
   } else {
     pick("capacity", nonNeg);
     pick("whenFull", oneOf2(["reject", "swap"]));
-    pick("snap", oneOf2(["none", "center", "topLeft"]));
+    pick("snap", oneOf2(["none", "center", "topLeft", "fill"]));
     pick("highlight", bool);
+    if (isStr(raw.acceptsWhen) && raw.acceptsWhen.trim()) out.acceptsWhen = raw.acceptsWhen.slice(0, 2e3);
+    if (isObj$1(raw.arrange)) {
+      const a = raw.arrange;
+      out.arrange = {
+        gap: isNum(a.gap) && a.gap >= 0 ? Math.min(a.gap, 400) : 8,
+        ...a.order === "name" || a.order === "arrival" ? { order: a.order } : {},
+        ...typeof a.hug === "boolean" ? { hug: a.hug } : {},
+        ...isNum(a.minRows) && a.minRows >= 0 ? { minRows: Math.min(50, Math.round(a.minRows)) } : {}
+      };
+    }
     if ("contentsVariable" in raw && (raw.contentsVariable === null || isStr(raw.contentsVariable))) out.contentsVariable = raw.contentsVariable;
   }
   return out;
@@ -4428,6 +4470,19 @@ function sanitizeNode(raw, seen) {
   if (isObj$1(n.converters)) for (const [k, list2] of Object.entries(n.converters)) n.converters[k] = objs(list2).filter((c2) => isStr(c2.type));
   if ("constraints" in n) n.constraints = objs(n.constraints).filter((c2) => isStr(c2.type));
   if ("repeat" in n && !(isObj$1(n.repeat) && isStr(n.repeat.items))) delete n.repeat;
+  if (isObj$1(n.repeat) && "drag" in n.repeat) {
+    const d = n.repeat.drag;
+    if (isObj$1(d)) {
+      const out = {};
+      if (typeof d.reorder === "boolean") out.reorder = d.reorder;
+      for (const k of ["list", "tag", "writeField", "writeValue"]) if (isStr(d[k]) && d[k].trim()) out[k] = d[k].slice(0, 2e3);
+      if (Array.isArray(d.takesFrom)) out.takesFrom = arr(d.takesFrom, isStr).map((t2) => t2.trim()).filter(Boolean).slice(0, 50);
+      n.repeat = { ...n.repeat, drag: out };
+    } else {
+      const { drag: _gone, ...rest } = n.repeat;
+      n.repeat = rest;
+    }
+  }
   if (isObj$1(n.repeat) && "select" in n.repeat) {
     const s = n.repeat.select;
     if (isObj$1(s) && (s.mode === "one" || s.mode === "several") && isStr(s.variable) && s.variable) {
@@ -4537,7 +4592,7 @@ function sanitizeNode(raw, seen) {
   }
   if ("states" in n) {
     const list2 = Array.isArray(n.states) ? n.states : [];
-    const clean2 = list2.filter(isObj$1).filter((st) => isStr(st.when) && ["hover", "pressed", "focus", "disabled", "expr"].includes(st.when)).map((st) => {
+    const clean2 = list2.filter(isObj$1).filter((st) => isStr(st.when) && ["hover", "pressed", "focus", "disabled", "expr", "dragging", "lifted", "dropReady", "dropOver", "dropRefuse"].includes(st.when)).map((st) => {
       const out = { id: isStr(st.id) && st.id ? st.id : `st${Math.random().toString(36).slice(2, 9)}`, when: st.when, props: isObj$1(st.props) ? st.props : {} };
       if (isStr(st.name) && st.name) out.name = st.name;
       if (st.when === "expr" && isStr(st.expr)) out.expr = st.expr;
@@ -26144,9 +26199,19 @@ Two buckets, four cards. Dropping a card in the right bucket keeps it there; dro
 ## Drop zones
 - **Takes tags**: leave empty to take any draggable layer.
 - **Holds**: how many layers fit (0 is no limit). **When full** either refuses the new layer, or **swaps**: the layer that has been there longest goes to where the dragged one came from, and the dragged one takes its place. Swapping is how slot puzzles and reordering work.
-- **Dropped layers**: stay where they were dropped, centre in the zone, or sit at its top left corner. A layer sent by the keyboard, a tap or an action goes to the centre when this is left alone.
+- **Dropped layers**: stay where they were dropped, centre in the zone, sit at its top left corner, or **Fill the zone**: the layer takes the zone's place, size and corner radius while it's in it, and its own size again when it leaves, so a card dropped in a slot becomes the slot's shape. A layer sent by the keyboard, a tap or an action goes to the centre when this is left alone.
 - **Outline when a layer is over it**: an outline appears on the zone while a layer it takes is over it (and a fainter one while any such layer is being dragged). Untick it if your artwork shows the state itself.
 - A layer can be both: a tile that can be dropped on and then dragged on again.
+
+### A zone's own rules
+**Takes it when** is a formula that has to be true for the zone to take a layer. \`item.name\`, \`item.tags\` and \`item.index\` are the layer held, and \`zone.name\`, \`zone.count\` and \`zone.contents\` the zone. Give a text instead of false and the text is the reason: \`zone.count < 3 || "A trimester takes three courses"\`. The reason is read out, the layer goes back, and **On refused** runs with it as \`event.why\`, so a **Show toast** after it is the whole message. Only the zones that would take what's held are marked as places it could go, so the marks follow the rule with nothing to repaint.
+
+On the draggable, **Only these zones** names the zones it may go in, whatever their tags say: a piece that may move within its column but not out of it.
+
+### A zone that lays out what it holds
+Tick **Arrange what it holds** and the zone lays its layers out in rows that wrap, with a **Gap** between them, **As they came** or **By name**. With **Fit its height** it grows and shrinks to fit them, keeping room for its **Least rows** when it's empty. Take one out and the rest close up; put one back and it takes its place in the order. A pool of course cards that shrinks as cards leave it is one tick. Reset sends each layer home to its place in the order, not to where it first stood.
+
+Scripts can change where a layer goes home to with \`ix.drag.home('Card', x, y, 'Pool')\`.
 
 ## Events and actions
 - **When dragging starts**, **When dragged over a drop zone** (moves over / off), **When dropped** (taken, refused, or dropped on no zone) and **When dragging ends** (always fires, after On drop, and also when the pick-up is cancelled). Leave the layer empty to hear every draggable layer or zone. Each fires once per drag, however it ends.
@@ -26181,6 +26246,7 @@ Everyone should be able to finish the activity, so every drag has two ways that 
 - **Touch**: a draggable layer stops the browser scrolling or selecting text under the finger. A layer locked to one axis leaves the other axis for scrolling. Inside a scrolling frame, tick **Hold to drag on touch**: the finger must rest a moment before the layer follows it, so swiping from the layer still scrolls the frame.
 
 ## Things to know
+- A picked-up layer comes up over everything else on the page. Tick **Stays behind when picked up** on one that should keep its place in the stack.
 - Dragging changes the layer's **X** and **Y**. Do not animate those on a timeline that plays at the same time; animate a group around it instead.
 - A pointer drag never changes the layer's parent or its place in the layer order; it is raised above everything while it is held. Drop zones can sit in another group or frame. A frame the viewer has scrolled is allowed for: a zone is found where it is drawn.
 - Layers made by a [repeater](repeaters) cannot be dragged (every copy would move). A layer inside an auto layout frame can only be dragged when its **Position** (Layout section) is *Ignore*, otherwise the layout puts it back. The inspector says so.
@@ -26230,10 +26296,12 @@ Two actions have more detail elsewhere. **Play sound** (volume, speed, loop, **S
 ## When a state is on
 - **Hovered**, **Pressed**, **Focused**: the layer's own pointer and keyboard. Hovering something *inside* it doesn't count. These need the piece to be running, so they show in **Preview** and in what you share, not on the canvas.
 - **Disabled**: the layer's own **Disabled** setting (buttons and inputs).
+- **Being dragged**, **Picked up**: a draggable layer while it follows the pointer, or while it's held after a tap or Space.
+- **A place it could go**, **The place it is over**, **A place that refuses it**: a drop zone while something it would take is held, while that something is over it, and while what's over it can't go there (the wrong tag, full, or its **Takes it when** said no). A layer with one of these states loses the player's own dashed or red outline for it, so your look is the only one.
 - **When…**: on while an expression is true, such as \`item.state == "right"\` or \`picked == 3\`. Give it a **Name** so the list reads as it should. These show on the canvas too, so what you style is what you see.
 
 ## What a state changes
-**Fill**, **Line** and **Text** are there from the start; **Also change** adds **Opacity**, **Scale W**, **Scale H** or **Radius**. Anything you leave alone keeps the layer's own value, so a hover state that only sets **Fill** changes nothing else.
+**Fill**, **Line** and **Text** are there from the start; **Also change** adds **Opacity**, **Scale W**, **Scale H**, **Radius**, **Line width** or **Line style** (solid, dashed or dotted). A held card with a dashed border and the places it could go dashed too is two states. Anything you leave alone keeps the layer's own value, so a hover state that only sets **Fill** changes nothing else.
 
 Colours can be [theme tokens](themes) like any other colour, so a state follows the theme instead of pinning a hex.
 
@@ -28350,6 +28418,13 @@ Instances in a repeater can take their [inputs](instances) from the item. Select
 A repeater can go inside the copy of another one: groups that hold cards, a table's rows and their cells, a board's columns. Give the outer list items that have a list in them (\`{name: "Fruit", cards: ["apple", "pear"]}\`) and set the inner repeater's **Repeat for each** to \`item.cards\`. Each group then draws its own cards.
 
 Inside the inner copies, \`item\` and \`index\` are the card and its place in its group, and \`outer.item\` and \`outer.index\` are the group. So a card can say \`{outer.item.name}: {item}\`. A click on a card gives its own place in its group as \`event.index\`.
+
+## Dragging the copies
+Tick **Reorder by dragging** and people can drag a copy to another place in the list: the others make room, and the list variable changes, so the new order is kept like any other value. From the keyboard, Space picks a copy up, the arrow keys move it and Space puts it down (Escape puts everything back).
+
+To drag copies from one list into another, give the first a **Tag** (\`cards\`) and the second **Takes items from** \`cards\`. Two separate list variables trade items. For a card sort, keep one list of cards and show it twice: a pool repeating \`cards.filter(c => !c.group)\` and, inside a list of groups, \`cards.filter(c => c.group == outer.item.name)\`. Set **Items are in** to \`cards\` on both, **A drop writes field** \`group\`, and **To** \`outer.item.name\` on the groups (\`""\` on the pool). Dropping a card in a group writes the group's name into it, and both repeaters redraw from the one list.
+
+**On list drop** runs after a move, with \`event.item\`, \`event.from\`, \`event.to\` and \`event.index\`.
 
 ## Selection
 Set **Selection** under the repeater to let people pick copies without any nodes:

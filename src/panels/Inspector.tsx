@@ -38,6 +38,7 @@ import {
   LINK_TARGETS,
   type LinkTarget,
   type Repeat,
+  type RepeatDrag,
   type Artboard,
   type GroupNode,
   type Blend,
@@ -2396,6 +2397,7 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
               </div>
             </>
           )}
+          <RepeatDragFields rep={rep} project={project} onChange={(drag) => update({ drag })} />
           <SectionBlurb
             text={
               <>
@@ -2409,6 +2411,69 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
         </>
       )}
     </Section>
+  );
+}
+
+/** Dragging a repeater's copies: put in another order, taken into or out of other lists, and what a drop writes on the item. */
+function RepeatDragFields({ rep, project, onChange }: { rep: Repeat; project: Project; onChange: (d: RepeatDrag | null) => void }) {
+  const d = rep.drag ?? null;
+  const on = !!d && (!!d.reorder || !!d.tag || !!d.takesFrom?.length);
+  const put = (patch: Partial<RepeatDrag>) => {
+    const next: RepeatDrag = { ...(d ?? {}), ...patch };
+    for (const k of Object.keys(next) as (keyof RepeatDrag)[]) if (next[k] === undefined || next[k] === '' || (Array.isArray(next[k]) && !(next[k] as unknown[]).length)) delete next[k];
+    onChange(Object.keys(next).length ? next : null);
+  };
+  const listVars = project.variables.filter((v) => v.type === 'list');
+  const bare = /^[A-Za-z_$][\w$]*$/.test(rep.items.trim()) ? project.variables.find((v) => v.name === rep.items.trim() && v.type === 'list') : undefined;
+  return (
+    <>
+      <CheckField
+        label="Reorder by dragging"
+        title="People can drag a copy to another place in the list (Space, the arrow keys and Space from the keyboard). The list variable changes, so the new order is kept like any other value"
+        value={!!d?.reorder}
+        onChange={(v) => put({ reorder: v || undefined })}
+      />
+      <TextField
+        label="Takes items from"
+        title="The tags of other lists whose copies can be dragged into this one, separated by commas. Give those lists a Tag"
+        value={(d?.takesFrom ?? []).join(', ')}
+        placeholder="e.g. cards"
+        commitOnBlur
+        onChange={(v) => put({ takesFrom: [...new Set(v.split(',').map((t) => t.trim()).filter(Boolean))] })}
+      />
+      <TextField label="Tag" title="A word for this list, so another list can take its copies (Takes items from)" value={d?.tag ?? ''} placeholder="e.g. cards" commitOnBlur onChange={(v) => put({ tag: v.trim() || undefined })} />
+      {(on || !!d) && (
+        <>
+          <SelectField
+            label="Items are in"
+            title="The list variable a drop changes. Needed when Repeat for each is a formula (cards.filter(...)) rather than the variable itself"
+            value={d?.list ?? ''}
+            options={[{ value: '', label: bare ? `${bare.name} (what it repeats)` : 'Choose a list variable…' }, ...listVars.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))]}
+            onChange={(v) => put({ list: v || undefined })}
+          />
+          {!d?.list && !bare && <p className="error small">Pick the list variable its items are in, or nothing can be moved.</p>}
+          <TextField
+            label="A drop writes field"
+            title="A field of the item that a drop into this list sets, such as group. Leave empty to only move it"
+            value={d?.writeField ?? ''}
+            placeholder="e.g. group"
+            commitOnBlur
+            onChange={(v) => put({ writeField: v.trim() || undefined })}
+          />
+          {d?.writeField && (
+            <ExprField
+              label="To"
+              title="What it writes: a formula with this list's own scope, so inside a list of groups outer.item.name is the group's name. Empty writes the list's layer name"
+              value={d.writeValue ?? ''}
+              placeholder="outer.item.name"
+              locals={['outer', 'list', 'item']}
+              commitOnBlur
+              onChange={(v) => put({ writeValue: v.trim() || undefined })}
+            />
+          )}
+        </>
+      )}
+    </>
   );
 }
 
