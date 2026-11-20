@@ -133,7 +133,7 @@ export const FIELD_TIPS: Record<string, string> = {
   'Run on start': 'Run this script when the player starts',
   'Run scripts in the sandbox': 'Run scripts in a protected space that cannot reach the rest of the page (safer)',
   'Page title': 'Title of the exported HTML page',
-  'Page background': 'Background of the exported HTML page around the artboard',
+  'Page background': 'The colour around the page in a share link, embed or downloaded page. See-through to start with, so an embed shows the page around it while it loads and resizes',
   Time: 'Time of this keyframe in milliseconds',
   Ease: 'How the value moves from this keyframe to the next',
   Bezier: 'Custom easing curve: x1, y1, x2, y2',

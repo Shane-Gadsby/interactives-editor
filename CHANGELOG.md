@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Fixed: a black box round embeds while they load**: the share page, the project's **Page background** (which started as near black) and the loading spinner's backdrop are all see-through now, so a StudyDesk page shows through while a project loads and resizes. Projects that still had the old near-black default lose it when they're next opened; press **Update** in Share to rebuild a link.
 - **Particles**: a **Particles** section on any rectangle fills it with rain, snow, petals, falling leaves, dust, sparks or bubbles as it plays, or your own picture, with amount, speed, wind, size and colour. Fewer on a slow device, still for anyone who asked for less motion.
 - **Testing an app as a prototype**: add \`?report=study\` to a share link and the page around it (Sightline, or your own study page) hears each page change and every press, as a share of the page with the layer pressed, or none for a press on nothing. Off without it, so learners send none of it. See [Embedding and the player API](embedding).
 - **Fixed: rows overlapping in a dialog**: a list whose rows wrap onto two lines grew them on a page but not inside a dialog or other overlay, so the rows ran into each other.

@@ -5698,7 +5698,7 @@ The **Project** section holds the settings for the whole project, not one page. 
 | Page title | The title of the browser tab for the exported page |
 | Description | A note about the project, kept in the file |
 | Fit | How the page scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
-| Page background | The colour around the page in the exported page |
+| Page background | The colour around the page in a share link, embed or downloaded page. See-through to start with, so an embed never shows a dark box while it loads and resizes |
 | Hide sideways scrollbar | Off unless you tick it. When the project plays inside a frame (the Link for StudyDesk, an embedded share link or file), the page never shows a horizontal scrollbar. Opened in its own tab it scrolls as usual. Press **Update** in Share after changing it |
 | Hide up-down scrollbar | On to begin with. The frame grows to fit the project, so a vertical scrollbar would only flicker on and off while it resizes. Left as it starts, it comes back if nothing sizes the frame (the project stays taller than the frame for a second), so nothing is out of reach. Ticked on purpose, it stays hidden; unticked, the page scrolls as usual. Opened in its own tab it always scrolls. Press **Update** in Share after changing it |
 | Live collaboration | Off unless you turn it on. On, people who share the project see each other's cursors and changes as they happen; off, nothing extra is sent and the project is saved one person at a time. See [Live editing and saving](live-editing#live-collaboration) |
