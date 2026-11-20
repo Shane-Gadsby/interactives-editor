@@ -1020,6 +1020,42 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.sketchUndo",
+    label: "Undo a stroke",
+    category: "action",
+    summary: "Takes back the last stroke or clear on a sketch pad.",
+    group: "Layers and looks",
+    outputs: [
+      { id: "out", label: "Done" },
+      { id: "none", label: "Nothing to undo" }
+    ],
+    hasInput: true,
+    params: [{ key: "layer", label: "Sketch pad", type: "node", help: "A rectangle with Sketch pad ticked" }]
+  },
+  {
+    kind: "action.sketchRedo",
+    label: "Redo a stroke",
+    category: "action",
+    summary: "Puts back what Undo a stroke last took away on a sketch pad.",
+    group: "Layers and looks",
+    outputs: [
+      { id: "out", label: "Done" },
+      { id: "none", label: "Nothing to redo" }
+    ],
+    hasInput: true,
+    params: [{ key: "layer", label: "Sketch pad", type: "node", help: "A rectangle with Sketch pad ticked" }]
+  },
+  {
+    kind: "action.sketchClear",
+    label: "Clear a sketch pad",
+    category: "action",
+    summary: "Rubs out everything drawn on a sketch pad, which Undo a stroke can bring back.",
+    group: "Layers and looks",
+    outputs: [{ id: "out", label: "Next" }],
+    hasInput: true,
+    params: [{ key: "layer", label: "Sketch pad", type: "node", help: "A rectangle with Sketch pad ticked" }]
+  },
+  {
     kind: "action.tableAdd",
     label: "Add a row to a shared table",
     category: "action",
@@ -4537,6 +4573,17 @@ function sanitizeNode(raw, seen) {
     if ("stillFrame" in n && !(isNum(n.stillFrame) && n.stillFrame >= 0)) delete n.stillFrame;
     if ("copyOffset" in n && !isNum(n.copyOffset)) delete n.copyOffset;
   }
+  if (raw.type === "rect" && "sketch" in n) {
+    if (!isObj$1(n.sketch)) delete n.sketch;
+    else {
+      const k = n.sketch;
+      const out = {};
+      for (const f2 of ["variable", "colour", "colourVariable", "sizeVariable", "eraserVariable"]) if (isStr(k[f2]) && k[f2].length <= 80) out[f2] = k[f2];
+      if (isNum(k.size) && k.size > 0) out.size = Math.min(200, k.size);
+      if (k.pressure === false) out.pressure = false;
+      n.sketch = out;
+    }
+  } else if ("sketch" in n) delete n.sketch;
   if (raw.type === "progress") {
     if (n.orientation !== "horizontal" && n.orientation !== "vertical") n.orientation = "horizontal";
     if (n.semantics !== "none" && n.semantics !== "progressbar" && n.semantics !== "meter") n.semantics = "progressbar";
@@ -26373,6 +26420,31 @@ Expression fields can use every variable and data source by name, \`event\` (det
 
 ## Messages to and from the host page
 **Send message** (and \`ix.emit\`) posts \`{source: 'interactives', name, payload}\` to the page the interactive is in. The page can send messages back with \`player.send(name, payload)\` and **When a message arrives** reacts. See [Embedding and the player API](embedding).`
+  },
+  {
+    id: "sketch-pads",
+    title: "Sketch pads",
+    group: "Interactivity",
+    summary: "A rectangle people draw on as it plays, with a smoothed pen, an eraser, undo and redo, and the drawing saved with their work.",
+    keywords: "sketch draw drawing pen pencil ink stylus pressure eraser rub out undo redo clear whiteboard annotate doodle signature canvas",
+    body: `A **sketch pad** is a rectangle people draw on as the project plays: label a diagram, show working, sign their name, sketch an idea. The pen smooths out a shaky hand, and a stylus draws thinner or thicker with how hard it presses.
+
+**Make one:** select a rectangle and press **+** on its **Sketch pad** section. Its fill is the paper.
+
+**Keep the drawing:** pick a list variable in **Strokes kept in**. Each stroke goes in it as plain data, so ticking **Save as user data** on that variable keeps people's drawings between visits, and **Reset variables** clears them. Without one, the drawing lasts as long as the page.
+
+**The pen:** **Colour** and **Size** are what it starts with. **Colour from** and **Size from** read a variable instead, so a row of colour buttons that set \`penColour\` and a slider on \`penSize\` make a palette. **Eraser when** turns it into an eraser while a variable is true (or holds the text eraser).
+
+**Undo, redo and clear:** the **Undo a stroke**, **Redo a stroke** and **Clear a sketch pad** nodes, on buttons of your own. A clear can be undone too. Undo keeps the last 100 changes.
+
+**Take it out:** **Picture of a layer** on the sketch pad (or the frame around it) gives a PNG to download or keep, drawing and all.
+
+**Good to know:**
+- A pad holds up to 1000 strokes. Very long ones are thinned as they are drawn, so a drawing stays small enough to save.
+- The editor canvas shows the empty pad; draw on it in **Preview**.
+- A sketch pad takes the pointer, so put buttons beside it rather than over it.
+
+help:drag-and-drop help:variables`
   },
   {
     id: "drag-and-drop",

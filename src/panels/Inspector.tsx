@@ -1,3 +1,4 @@
+import { SketchSection } from './SketchSection';
 import { variableOption } from '../lib/friendly-names';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { matches } from '../lib/keymap';
@@ -1147,6 +1148,7 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
       {single && <DisclosureSection node={n} project={project} />}
       {single && <OverlaySection node={n} ab={ab} project={project} />}
       {single && <StatesSection node={n} />}
+      {single && n.type === 'rect' && <SketchSection node={n} project={project} />}
       {single && n.type === 'frame' && n.question && <QuestionSection frame={n} ab={ab} project={project} />}
       {single && n.questionPart && <QuestionPartNote node={n} ab={ab} />}
       {!isConn && <LayoutItemSection nodes={nodes} ab={ab} />}

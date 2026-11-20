@@ -11,6 +11,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Sketch pads': [['sketch-pads', 'Strokes kept in'], ['sketch-pads', 'Eraser when'], ['sketch-pads', 'Undo a stroke']],
   'Data people share and change': [['data-sources', '+ Shared table'], ['data-sources', 'Who may take a row away'], ['data-sources', 'Rows a slot']],
   'An editing mode': [['course-context', 'Part of the setup'], ['course-context', 'Editing page'], ['course-context', 'Save setup']],
   'One app, many setups': [['course-context', '+ Add a setup'], ['course-context', '?setup=']],

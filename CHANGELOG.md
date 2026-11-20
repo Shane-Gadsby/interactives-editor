@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Sketch pads**: any rectangle can be one, so people draw on it as it plays, with a smoothed pen that feels a stylus's pressure, an eraser, and **Undo a stroke**, **Redo a stroke** and **Clear a sketch pad** nodes. The strokes go in a list variable, so a drawing is saved with the rest of someone's work.
 - **Data people share and change**: **+ Shared table** in the Data panel holds rows the people using an app add, change and take away (a sign-up sheet, a board, a booking list), with who may do each, rows per person and per slot, and a size you can see, all checked on the server. Three nodes add, change and take away a row.
 - **An editing mode**: tick **Part of the setup** on the variables an app's editors set up, give the app an **Editing page** that opens for them while StudyDesk's editing mode is on, and a **Save setup** node keeps their choices for everyone who opens the setup. Only owners, collaborators, power users and staff can save.
 - **One app, many setups**: **Setups** in the Context panel give one project several setups, each with its own starting values and its own data (paste the cards), played from its own link. A card sort no longer has to be copied to run on a second set of cards, and its responses say which setup they came from.
