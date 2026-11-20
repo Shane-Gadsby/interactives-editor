@@ -19003,7 +19003,7 @@ You've built, animated, wired up, imported and published. Keep going with the to
     4: { check: all(clickThen("button", "action.setVariable", setsVariable("lit")), clickThen("button", "action.setVariable", setsVariable("taps"))) }
   }
 });
-const tutorial$w = {
+const tutorial$y = {
   order: 61,
   level: "intermediate",
   minutes: 20,
@@ -19163,9 +19163,9 @@ The checker looks at every theme for text that uses tokens, so a title that pass
 };
 const __vite_glob_0_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$w
+  tutorial: tutorial$y
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$v = {
+const tutorial$x = {
   order: 32,
   level: "intermediate",
   minutes: 20,
@@ -19303,9 +19303,107 @@ Tabs show one section's text at a time under a row of titles. They read the same
 };
 const __vite_glob_0_1$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$v
+  tutorial: tutorial$x
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$u = {
+const SAMPLE_TITLES = ["who brought the biscuits?"];
+const SAMPLE_PROMPT = "Which of these is a prime number?";
+const SAMPLE_HINT = "A prime number can only be divided evenly by 1 and by itself.";
+const theirs = (c2) => c2.project.artboards.filter((a) => a.puzzle && !SAMPLE_TITLES.includes(String(a.puzzle.title ?? "").trim().toLowerCase()));
+const questionOf = (a) => {
+  let q;
+  const walk2 = (list2) => {
+    for (const n of list2) {
+      if (!q && n.type === "frame" && n.question) q = n.question;
+      if ("children" in n && Array.isArray(n.children)) walk2(n.children);
+    }
+  };
+  walk2(a.children);
+  return q;
+};
+const madeOne = (c2) => theirs(c2).length > 0;
+const ownQuestion = (c2) => theirs(c2).some((a) => {
+  const q = questionOf(a);
+  return !!q && q.prompt.trim() !== "" && q.prompt.trim() !== SAMPLE_PROMPT;
+});
+const ownHints = (c2) => theirs(c2).some((a) => {
+  const p = a.puzzle;
+  return !!String(p.title ?? "").trim() && String(p.title).trim() !== "Prime time" && (p.hints ?? []).some((h) => h.trim() && h.trim() !== SAMPLE_HINT);
+});
+const called = (c2) => {
+  const text2 = (c2.project.story?.chapters ?? []).flatMap((ch) => ch.lines.map((l) => l.text.trim().toLowerCase()));
+  return theirs(c2).some((a) => text2.includes(`[call ${a.name.trim().toLowerCase()}]`)) && text2.some((l) => l.includes("story.result"));
+};
+const tutorial$w = {
+  order: 47,
+  level: "beginner",
+  minutes: 10,
+  example: "tut-add-puzzle",
+  topic: {
+    id: "tutorial-add-puzzle",
+    title: "Add a puzzle",
+    group: "Build it",
+    summary: "Put a puzzle in a story: a question in the puzzle frame, hints bought with hint coins, called from the script, with the story answering how it went.",
+    keywords: "tutorial puzzle puzzles story visual novel hint hints hint coins value score frame call story result question",
+    body: `You will add a puzzle to a story: Ren asks the reader a riddle, the reader can buy hints with hint coins, and Ren answers differently when it's solved. It takes about ten minutes. Use the story from [Your first visual novel](tutorial-visual-novel), or start a new project from the **Visual novel** template.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Add a puzzle**.
+
+A puzzle is a page the story goes to and comes back from. Its frame (the number and value along the top, the hints and coins down the side, the big right or wrong moment) is already wired; you write the question and the hints.
+
+## 1. Make a puzzle page
+
+In the **Story** tab press **+ New puzzle**. A new page opens with a question in the middle and the puzzle frame around it. (The Visual novel template has a **Puzzle 1** already, so yours is **Puzzle 2**.)
+
+## 2. Write the question
+
+Select the question on the page and change it in the **Properties** panel:
+
+- **Question**: \`What gets wetter the more it dries?\`
+- The options: **A towel** (right), **The rain**, **A sponge**.
+
+## 3. Title, value and hints
+
+Click an empty part of the page so the page itself is selected, and open its **Puzzle** section:
+
+- **Title**: \`Ren's riddle\`
+- **Hint 1**: \`Think about what you use after a shower.\`
+- **Hint 2**: \`It hangs in the bathroom.\`
+- **Big hint**: \`You dry yourself with it.\`
+
+Each hint costs a hint coin the first time; a new game starts with 3.
+
+## 4. Call it from the story
+
+In the **Story** tab, under Ren's lines, add (use your puzzle page's name):
+
+\`\`\`
+Ren: Before you sit down, answer me this.
+[call Puzzle 2]
+if story.result == "solved"
+    Ren (happy): Clever. You can stay.
+else
+    Ren: We'll call that a maybe.
+\`\`\`
+
+## 5. Play it
+
+Press **Preview**, play to the riddle, open a hint, answer it wrong once to see the value drop, then right. **Continue** takes you back to the story, which answers how it went.
+
+help:story-puzzles help:story`
+  },
+  guide: {
+    1: { check: madeOne, show: "panel-story" },
+    2: { check: ownQuestion, show: "panel-inspector" },
+    3: { check: ownHints, show: "panel-inspector" },
+    4: { check: called, show: "panel-story" },
+    5: { check: saw("previewed"), show: "preview" }
+  }
+};
+const __vite_glob_0_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$w
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$v = {
   order: 20,
   level: "intermediate",
   minutes: 15,
@@ -19428,11 +19526,11 @@ When the question finishes, it marks each gap on its own: the box of a right gap
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$u
+  tutorial: tutorial$v
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$t = {
+const tutorial$u = {
   order: 67,
   level: "advanced",
   minutes: 30,
@@ -19576,11 +19674,11 @@ Press <kbd>Esc</kbd> to close the Preview.
     9: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$t
+  tutorial: tutorial$u
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$s = {
+const tutorial$t = {
   order: 40,
   level: "intermediate",
   minutes: 30,
@@ -19741,11 +19839,11 @@ Watch \`score\`, \`taken\` and \`ending\` change in **Variables (live)** on the 
     9: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$s
+  tutorial: tutorial$t
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$r = {
+const tutorial$s = {
   order: 62,
   level: "beginner",
   minutes: 15,
@@ -19871,11 +19969,11 @@ In a branded project the logo and brand layers are locked, colours can only be t
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$r
+  tutorial: tutorial$s
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$q = {
+const tutorial$r = {
   order: 33,
   level: "beginner",
   minutes: 20,
@@ -20013,11 +20111,11 @@ Once you leave the formula box, **Only while** shows it as two rows you could al
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$q
+  tutorial: tutorial$r
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$p = {
+const tutorial$q = {
   order: 34,
   level: "beginner",
   minutes: 15,
@@ -20130,11 +20228,11 @@ Add a line of instructions under the pictures saying how to use the keyboard, si
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_8$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$p
+  tutorial: tutorial$q
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$o = {
+const tutorial$p = {
   order: 54,
   level: "intermediate",
   minutes: 15,
@@ -20239,11 +20337,11 @@ To use it for real, give learners the **Link for StudyDesk** from [Share link](e
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_8$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_9$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$o
+  tutorial: tutorial$p
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$n = {
+const tutorial$o = {
   order: 53,
   level: "advanced",
   minutes: 25,
@@ -20385,11 +20483,11 @@ Press **Preview** at the top right. The page plays with the words from the file,
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_9$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_10$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$n
+  tutorial: tutorial$o
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$m = {
+const tutorial$n = {
   order: 36,
   level: "intermediate",
   minutes: 20,
@@ -20563,11 +20661,11 @@ The copy of the mind map's click came with nothing joined to it on this page: in
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_10$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_11$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$m
+  tutorial: tutorial$n
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$l = {
+const tutorial$m = {
   order: 21,
   level: "beginner",
   minutes: 10,
@@ -20668,11 +20766,11 @@ The terms and slots are ordinary layers. The **Restyle a part** buttons at the b
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_11$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_12$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$l
+  tutorial: tutorial$m
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$k = {
+const tutorial$l = {
   order: 31,
   level: "beginner",
   minutes: 15,
@@ -20792,11 +20890,11 @@ Every card shows its front now, because nothing is selected yet. (You could also
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_12$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_13$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$k
+  tutorial: tutorial$l
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$j = {
+const tutorial$k = {
   order: 50,
   level: "intermediate",
   minutes: 25,
@@ -20927,11 +21025,11 @@ Both ways save to the same place. See [Save user data and Load user data](result
     9: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_13$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_14$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$j
+  tutorial: tutorial$k
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$i = {
+const tutorial$j = {
   order: 24,
   level: "intermediate",
   minutes: 20,
@@ -21058,11 +21156,11 @@ Press <kbd>Esc</kbd> to close the Preview.
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_14$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_15$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$i
+  tutorial: tutorial$j
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$h = {
+const tutorial$i = {
   order: 10,
   level: "beginner",
   minutes: 10,
@@ -21171,11 +21269,11 @@ The card is made of ordinary layers, so restyle it like anything else. The **Res
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_15$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_16$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$h
+  tutorial: tutorial$i
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$g = {
+const tutorial$h = {
   order: 41,
   level: "intermediate",
   minutes: 35,
@@ -21327,11 +21425,11 @@ The **Wait** is the timer that turns cards back. For that second both cards are 
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_16$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_17$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$g
+  tutorial: tutorial$h
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$f = {
+const tutorial$g = {
   order: 56,
   level: "intermediate",
   minutes: 20,
@@ -21459,11 +21557,11 @@ To try your real microphone, share the project with **In a StudyDesk page, and k
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_17$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_18$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$f
+  tutorial: tutorial$g
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$e = {
+const tutorial$f = {
   order: 23,
   level: "intermediate",
   minutes: 12,
@@ -21559,11 +21657,11 @@ Leave the fill colour alone: it is set by the question, so a step can turn green
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_18$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_19$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$e
+  tutorial: tutorial$f
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$d = {
+const tutorial$e = {
   order: 42,
   level: "intermediate",
   minutes: 25,
@@ -21698,11 +21796,11 @@ On **Question 3**, open the **Interactions** tab. Each answer's last node is a *
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_19$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_20$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$d
+  tutorial: tutorial$e
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$c = {
+const tutorial$d = {
   order: 35,
   level: "beginner",
   minutes: 15,
@@ -21816,11 +21914,11 @@ Learners whose device asks for less motion get an instant change instead of the 
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_20$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_21$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$c
+  tutorial: tutorial$d
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$b = {
+const tutorial$c = {
   order: 43,
   level: "intermediate",
   minutes: 25,
@@ -21955,11 +22053,11 @@ Build **Read actively** and **Write a draft** the same way. Copy the heading, ti
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_21$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_22$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$b
+  tutorial: tutorial$c
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$a = {
+const tutorial$b = {
   order: 60,
   level: "intermediate",
   minutes: 25,
@@ -22099,11 +22197,11 @@ When a viewer's page changes width while they are using it, the player swaps pag
     10: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_22$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$a
+  tutorial: tutorial$b
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$9 = {
+const tutorial$a = {
   order: 30,
   level: "beginner",
   minutes: 20,
@@ -22251,11 +22349,11 @@ The **Variables (live)** list on the left shows \`seen1\`, \`seen2\` and \`seen3
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$9
+  tutorial: tutorial$a
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$8 = {
+const tutorial$9 = {
   order: 66,
   level: "advanced",
   minutes: 25,
@@ -22371,11 +22469,11 @@ Preview, then watch the **Variables (live)** list on the left of the Preview as 
     8: { show: "panel-variables" }
   }
 };
-const __vite_glob_0_24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$8
+  tutorial: tutorial$9
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$7 = {
+const tutorial$8 = {
   order: 44,
   level: "advanced",
   minutes: 30,
@@ -22513,11 +22611,11 @@ For those viewers both timelines now jump straight to their last pose: Sam is al
     10: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$7
+  tutorial: tutorial$8
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$6 = {
+const tutorial$7 = {
   order: 68,
   level: "advanced",
   minutes: 25,
@@ -22661,11 +22759,11 @@ Leave it ticked. Untick it only for code you trust that needs the page itself (\
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$6
+  tutorial: tutorial$7
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$5 = {
+const tutorial$6 = {
   order: 22,
   level: "intermediate",
   minutes: 12,
@@ -22775,11 +22873,11 @@ Open the **Interactions** tab. There is one **Item dropped in a group** node for
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$5
+  tutorial: tutorial$6
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$4 = {
+const tutorial$5 = {
   order: 57,
   level: "beginner",
   minutes: 15,
@@ -22903,11 +23001,11 @@ Press <kbd>Esc</kbd> to close the Preview.
     9: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$4
+  tutorial: tutorial$5
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$3 = {
+const tutorial$4 = {
   order: 51,
   level: "intermediate",
   minutes: 25,
@@ -23035,11 +23133,11 @@ Set the data source up before you share. Its rules are fixed when the project is
     8: { show: "share" }
   }
 };
-const __vite_glob_0_29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_30 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$3
+  tutorial: tutorial$4
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$2 = {
+const tutorial$3 = {
   order: 55,
   level: "intermediate",
   minutes: 25,
@@ -23206,7 +23304,91 @@ The **Variables (live)** list on the left of the Preview shows \`question\` chan
     10: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_30 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_31 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$3
+}, Symbol.toStringTag, { value: "Module" }));
+const TEMPLATE_CAST = ["millie", "olive"];
+const TEMPLATE_SCENES = ["the club fair", "signing up", "wandering the fair"];
+const fromTemplate = (c2) => !!c2.project.story?.chapters?.length && c2.project.artboards.some((a) => a.name === "Title") && !!c2.project.story.stage;
+const newcomers = (c2) => (c2.project.story?.cast ?? []).filter((m) => !TEMPLATE_CAST.includes(m.name.trim().toLowerCase()));
+const someoneWithAFace = (c2) => newcomers(c2).some((m) => m.expressions.some((e) => !!e.assetId));
+const sceneWithAChoice = (c2) => {
+  const names = newcomers(c2).map((m) => m.name.trim().toLowerCase());
+  return (c2.project.story?.chapters ?? []).some((ch) => {
+    const lines = ch.lines.map((l) => l.text.trim());
+    const scene = lines.some((l) => l.startsWith("#") && !TEMPLATE_SCENES.includes(l.replace(/^#+/, "").trim().toLowerCase()));
+    const choice = lines.some((l) => l.startsWith("?"));
+    const speaks = lines.some((l) => names.some((n) => l.toLowerCase().startsWith(n + ":") || l.toLowerCase().startsWith(n + " (")));
+    return scene && choice && speaks;
+  });
+};
+const tutorial$2 = {
+  order: 46,
+  level: "beginner",
+  minutes: 15,
+  example: "tut-visual-novel",
+  topic: {
+    id: "tutorial-visual-novel",
+    title: "Your first visual novel",
+    group: "Build it",
+    summary: "Start from the Visual novel template, add a character with faces, write a scene with a choice, play it from a line and share it.",
+    keywords: "tutorial visual novel story script character cast faces psd photoshop expressions scene choice preview from this line share link template",
+    body: `You will make a short visual novel set in a library: a new character called Ren with two faces, a scene where Ren talks to the reader, and a choice that changes what Ren says. It takes about fifteen minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Your first visual novel**. **Play** runs it and **Make my copy** gives you your own copy.
+
+A visual novel here is written as plain text, like a play, in the **Story** tab. The template already has a title screen, a stage with the dialogue box, saves, settings and extras, so you only write.
+
+## 1. Start from the template
+
+1. On the projects page press **New project**, open **Templates**, then **Built-in**, and pick **Visual novel**.
+2. Name it **The library** and press **Create project**.
+3. Press **Preview** and click through a few lines to see what you're starting from, then close Preview.
+
+## 2. Add a character
+
+1. Open the **Story** tab (along the bottom; **More panels** brings it back if it's put away).
+2. Under **Cast**, press **+ Add someone** and call them **Ren**.
+3. Give Ren some faces. The quickest way: drop a Photoshop file of Ren on their form, with a group called **Faces** holding a layer for each face (**happy**, **thinking**) over the body. Each face becomes a picture of the whole character, lined up with the others.
+4. No PSD? Put pictures in **Assets** named **Ren happy** and **Ren thinking**, and Ren's form offers to use them.
+
+## 3. Write a scene with a choice
+
+Open **Chapter 1** and add these lines at the end. A name and a colon is someone talking, a line starting with **?** is a choice, and the indented lines under a choice play when it's picked.
+
+\`\`\`
+# At the library
+Ren (happy): You found the quiet floor!
+? Ask Ren to study with you
+    Ren (thinking): Only if you bring snacks.
+? Say you're just passing
+    Ren: Suit yourself.
+\`\`\`
+
+If something is wrong (a name that isn't in the cast, a face Ren doesn't have) the line is marked as you type, often with a fix to press.
+
+## 4. Play it from a line
+
+Click on the line **Ren (happy): You found the quiet floor!** and press **Preview from this line**. Preview starts right there, with the background and the cast as the lines above it leave them. Pick each choice in turn.
+
+## 5. Share it
+
+Press **Share**, then **Share…**, and create a link. Anyone with it can play your story; saves stay in each reader's own browser.
+
+**Next:** [Add a puzzle](tutorial-add-puzzle) to your story.
+
+help:story help:story-stage help:story-game`
+  },
+  guide: {
+    1: { check: fromTemplate, show: "preview" },
+    2: { check: someoneWithAFace, show: "panel-story" },
+    3: { check: sceneWithAChoice, show: "panel-story" },
+    4: { check: saw("previewed"), show: "panel-story" },
+    5: { show: "share" }
+  }
+};
+const __vite_glob_0_32 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   tutorial: tutorial$2
 }, Symbol.toStringTag, { value: "Module" }));
@@ -23330,7 +23512,7 @@ The **Variables (live)** list on the left of the Preview shows all seven values 
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_31 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_33 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   tutorial: tutorial$1
 }, Symbol.toStringTag, { value: "Module" }));
@@ -23502,11 +23684,11 @@ Press **Preview** and **Start**. Click a clue, type the answer, and press **Chec
     11: { check: all(saw("previewed"), variableWhere("entries", (v) => /crossword\(/.test(v.formula ?? ""))), show: "preview" }
   }
 };
-const __vite_glob_0_32 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_34 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   tutorial
 }, Symbol.toStringTag, { value: "Module" }));
-const mods$1 = /* @__PURE__ */ Object.assign({ "./accessible.ts": __vite_glob_0_0$1, "./accordion.ts": __vite_glob_0_1$1, "./blanks.ts": __vite_glob_0_2$1, "./bones.ts": __vite_glob_0_3$1, "./branching.ts": __vite_glob_0_4$1, "./brand.ts": __vite_glob_0_5$1, "./carousel.ts": __vite_glob_0_6$1, "./compare.ts": __vite_glob_0_7$1, "./context.ts": __vite_glob_0_8$1, "./data-source.ts": __vite_glob_0_9$1, "./diagram.ts": __vite_glob_0_10$1, "./drag-match.ts": __vite_glob_0_11$1, "./flipcards.ts": __vite_glob_0_12$1, "./journal.ts": __vite_glob_0_13$1, "./label.ts": __vite_glob_0_14$1, "./mcq.ts": __vite_glob_0_15$1, "./memory.ts": __vite_glob_0_16$1, "./microphone.ts": __vite_glob_0_17$1, "./order.ts": __vite_glob_0_18$1, "./personality.ts": __vite_glob_0_19$1, "./presentation.ts": __vite_glob_0_20$1, "./progress.ts": __vite_glob_0_21$1, "./responsive.ts": __vite_glob_0_22$1, "./reveal.ts": __vite_glob_0_23, "./rive-drive.ts": __vite_glob_0_24, "./scene.ts": __vite_glob_0_25, "./script.ts": __vite_glob_0_26, "./sort.ts": __vite_glob_0_27, "./sound.ts": __vite_glob_0_28, "./survey-chart.ts": __vite_glob_0_29, "./video-chapters.ts": __vite_glob_0_30, "./whatif.ts": __vite_glob_0_31, "./wordgames.ts": __vite_glob_0_32 });
+const mods$1 = /* @__PURE__ */ Object.assign({ "./accessible.ts": __vite_glob_0_0$1, "./accordion.ts": __vite_glob_0_1$1, "./add-puzzle.ts": __vite_glob_0_2$1, "./blanks.ts": __vite_glob_0_3$1, "./bones.ts": __vite_glob_0_4$1, "./branching.ts": __vite_glob_0_5$1, "./brand.ts": __vite_glob_0_6$1, "./carousel.ts": __vite_glob_0_7$1, "./compare.ts": __vite_glob_0_8$1, "./context.ts": __vite_glob_0_9$1, "./data-source.ts": __vite_glob_0_10$1, "./diagram.ts": __vite_glob_0_11$1, "./drag-match.ts": __vite_glob_0_12$1, "./flipcards.ts": __vite_glob_0_13$1, "./journal.ts": __vite_glob_0_14$1, "./label.ts": __vite_glob_0_15$1, "./mcq.ts": __vite_glob_0_16$1, "./memory.ts": __vite_glob_0_17$1, "./microphone.ts": __vite_glob_0_18$1, "./order.ts": __vite_glob_0_19$1, "./personality.ts": __vite_glob_0_20$1, "./presentation.ts": __vite_glob_0_21$1, "./progress.ts": __vite_glob_0_22$1, "./responsive.ts": __vite_glob_0_23, "./reveal.ts": __vite_glob_0_24, "./rive-drive.ts": __vite_glob_0_25, "./scene.ts": __vite_glob_0_26, "./script.ts": __vite_glob_0_27, "./sort.ts": __vite_glob_0_28, "./sound.ts": __vite_glob_0_29, "./survey-chart.ts": __vite_glob_0_30, "./video-chapters.ts": __vite_glob_0_31, "./visual-novel.ts": __vite_glob_0_32, "./whatif.ts": __vite_glob_0_33, "./wordgames.ts": __vite_glob_0_34 });
 const BUILD_TUTORIALS = Object.entries(mods$1).filter(([file]) => !/\/index\.ts$/.test(file)).map(([, m]) => m.tutorial).filter(Boolean).sort((a, b) => a.order - b.order || a.topic.title.localeCompare(b.topic.title));
 const LEVELS = ["beginner", "intermediate", "advanced"];
 const levelName = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" };

@@ -12,6 +12,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'The story as nodes, and story events': [['story-dialogue', 'The Dialogue view'], ['story-dialogue', '+ Choice'], ['story-dialogue', 'On story choice']],
+  'Two story tutorials': [['tutorial-visual-novel', 'Preview from this line'], ['tutorial-add-puzzle', '+ New puzzle']],
   'Big stories load as they go': [['story-game', 'Big stories']],
   'Puzzle mystery template': [['story', 'Puzzle mystery']],
   'Rooms, things you carry and a map': [['story-rooms', '+ New room'], ['story-rooms', 'Look at'], ['story-rooms', '[place Library]']],

@@ -45,6 +45,7 @@ export const TOUR = {
   'panel-a11y': { label: 'The Accessibility tab', where: BOTTOM },
   'panel-themes': { label: 'The Themes tab', where: BOTTOM },
   'panel-variables': { label: 'The Variables tab', where: BOTTOM },
+  'panel-story': { label: 'The Story tab', where: BOTTOM + ' A new project keeps it put away: More panels, then Story.' },
   'timeline-new': { label: '+ New timeline', where: 'Open the Timeline tab (along the bottom) and press + New timeline.' },
   'timeline-play': { label: 'Play preview', where: 'Open the Timeline tab (along the bottom) and make a timeline. Play is in the bar above the tracks.' },
   'timeline-record': { label: 'Record', where: 'Open the Timeline tab (along the bottom) and make a timeline. The red Record button is in the bar above the tracks.' },

@@ -937,5 +937,40 @@
 			"height": 640,
 			"background": "#ffffff"
 		}
+	},
+	{
+		"key": "tut-add-puzzle",
+		"title": "Add a puzzle",
+		"description": "Ren asks a riddle: a puzzle page with hints bought with hint coins, called from the story, which answers to how it went. The Add a puzzle tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"story",
+			"visual novel",
+			"puzzles"
+		],
+		"artboards": 9,
+		"preview": {
+			"width": 1280,
+			"height": 720,
+			"background": "#15141c"
+		}
+	},
+	{
+		"key": "tut-visual-novel",
+		"title": "Your first visual novel",
+		"description": "The Visual novel starter with a new character, Ren, and a scene at the library with a choice: the Your first visual novel tutorial's project.",
+		"group": "Build it",
+		"tags": [
+			"tutorial",
+			"story",
+			"visual novel"
+		],
+		"artboards": 8,
+		"preview": {
+			"width": 1280,
+			"height": 720,
+			"background": "#15141c"
+		}
 	}
 ]

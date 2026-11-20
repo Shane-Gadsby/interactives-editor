@@ -61,7 +61,7 @@ describe('the Tutorials button on the projects page', () => {
     await openTutorials();
     expect(modal()).not.toBeNull();
     expect([...document.querySelectorAll('.tutorials-modal .tut-group > h3')].map((h) => h.textContent)).toEqual(['Getting started', 'Build it', 'Concepts']);
-    expect(cards().length).toBe(5 + 33 + CONCEPTS.length);
+    expect(cards().length).toBe(5 + 35 + CONCEPTS.length);
     expect([...document.querySelectorAll('.tutorials-modal .tut-level')].map((h) => h.textContent)).toEqual(['Beginner', 'Intermediate', 'Advanced']);
   });
 
@@ -113,7 +113,7 @@ describe('the Tutorials button on the projects page', () => {
     expect(button(card('A multiple choice question'), 'Carry on')).toBeTruthy();
     expect(card('Sort into groups').textContent).toContain('Finished');
     expect(button(card('Sort into groups'), 'Do it again')).toBeTruthy();
-    expect(document.querySelector('.tut-total')!.textContent).toBe('1 of 38 tutorials finished');
+    expect(document.querySelector('.tut-total')!.textContent).toBe('1 of 40 tutorials finished');
     const sets = [...document.querySelectorAll('.tut-sets li')].map((li) => li.textContent);
     expect(sets.some((s) => s!.includes('Questions') && s!.includes('1/6'))).toBe(true);
     expect(document.querySelectorAll('.tut-sets li.earned').length).toBe(0);
@@ -122,7 +122,7 @@ describe('the Tutorials button on the projects page', () => {
   it('with badges off it shows the cards but no progress, ticks or badges', async () => {
     setPrefs({ tutorialProgress: { 'tutorial-sort': { done: 9 } }, tutorialBadges: false });
     await openTutorials();
-    expect(cards().length).toBe(5 + 33 + CONCEPTS.length);
+    expect(cards().length).toBe(5 + 35 + CONCEPTS.length);
     expect(document.querySelector('.tut-summary')).toBeNull();
     expect(card('Sort into groups').textContent).not.toContain('Finished');
     expect(prefs().tutorialProgress?.['tutorial-sort']?.done).toBe(9);
