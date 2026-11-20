@@ -96,11 +96,18 @@ export function ContextPanel() {
  * names it. A card sort is made once and run on a second set of cards by pasting them into a setup.
  */
 function Setups() {
-  const s = useEditor((st) => ({ setups: st.project.setups ?? [], variables: st.project.variables, sources: st.project.dataSources.filter((d) => d.source === 'url' || d.source === 'asset'), id: st.project.id }));
+  // each picked on its own: a selector that builds new lists every time never settles
+  const setupsRaw = useEditor((st) => st.project.setups);
+  const variables = useEditor((st) => st.project.variables);
+  const dataSources = useEditor((st) => st.project.dataSources);
+  const projectId = useEditor((st) => st.project.id);
+  const s = { setups: setupsRaw ?? [], variables, sources: dataSources.filter((d) => d.source === 'url' || d.source === 'asset'), id: projectId };
   const [token, setToken] = useState<string | null>(null);
+  // the share link is only looked up once there is a setup to give a link to
+  const any = s.setups.length > 0;
   useEffect(() => {
-    getShare(s.id).then((sh) => setToken(sh?.token ?? null), () => setToken(null));
-  }, [s.id]);
+    if (any) getShare(s.id).then((sh) => setToken(sh?.token ?? null), () => setToken(null));
+  }, [s.id, any]);
   const setAll = (change: (list: Setup[]) => void) =>
     store().update((d) => {
       const list = d.setups ?? [];
