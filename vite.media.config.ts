@@ -9,7 +9,12 @@ import { sourcesHash } from './scripts/media-sources.mjs';
 export default defineConfig({
   publicDir: false,
   build: {
-    lib: { entry: fileURLToPath(new URL('./mcp/media.ts', import.meta.url)), formats: ['es'], fileName: () => 'media-bridge.mjs' },
+    //(and the video sites' relay, small and loaded by every learner page, as a second file)
+    lib: {
+      entry: { 'media-bridge': fileURLToPath(new URL('./mcp/media.ts', import.meta.url)), 'platform-relay': fileURLToPath(new URL('./mcp/platform-relay.ts', import.meta.url)) },
+      formats: ['es'],
+      fileName: (_format, name) => `${name}.mjs`,
+    },
     outDir: 'shared',
     emptyOutDir: false,
     target: 'es2020',

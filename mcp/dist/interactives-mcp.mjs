@@ -4918,6 +4918,7 @@ function sanitizeNode(raw, seen) {
     else n.crop = { x: Math.max(-10, Math.min(10, c2.x)), y: Math.max(-10, Math.min(10, c2.y)), zoom: Math.max(1, Math.min(20, c2.zoom)) };
   }
   if (raw.type === "video") {
+    if ("platformLink" in n && !(isStr(n.platformLink) && n.platformLink.length <= 2e3)) delete n.platformLink;
     if ("captions" in n) {
       const cues = cleanCues(n.captions);
       if (cues.length) n.captions = cues;
@@ -24883,6 +24884,15 @@ This changes one layer. To change a picture **everywhere** it's used, use **Repl
 
 ## Video
 Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.
+
+### YouTube, Vimeo and Panopto
+Paste the video's link (the address you'd share, or the site's embed code) into **Video site link** and the site's own player goes on the layer, wherever you put it and at its size. **Control video**, the **Playing**, **Playback position**, **Length** and **Ended** bindings, cue points and **Hold paused** all work on it as on a file, so a question can pause a YouTube clip at 1:30.
+
+**Good to know:**
+- It plays in Preview, share links, StudyDesk and the single HTML file. On the canvas it's a panel naming the video.
+- Panopto plays, but it can't be told to play, pause or seek, or say what it's doing, so nodes and bindings don't reach it.
+- The site's player sits on top of the project where the layer is, so anything you draw over it (a dialog, a sticker) is hidden behind it while it shows.
+- Speed buttons, frame step, captions you add and descriptions are for video files. YouTube and Vimeo have their own captions in their controls.
 
 ### Poster, and a video with nothing to play
 **Poster** is a picture shown before the video plays. It also stays up the whole time when the file is sound only (choose a sound in the **Video** list and the layer becomes a player with the browser's own controls, speed and captions), under the controls. It counts in the download size and goes with exports. A video with no file or address shows a grey **Choose a video** panel while you edit; learners see a plain grey box, or the words in **Text when empty**. The accessibility check warns about a video with nothing to play, so it gets filled in or deleted before you share.

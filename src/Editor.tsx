@@ -79,6 +79,7 @@ import { noteIfStale } from './lib/stale-build';
 import { primeStills, releaseStills } from './lib/still-cache';
 import { noteProjectDiagnostic, reportError, setProject, span, track } from './lib/analytics';
 import { observeStore } from './lib/usage';
+import { startPlatformRelay } from 'interactives-player';
 import { SHARE_FOR_REVIEW_EVENT, comments, openShareForReview, readNotices } from './lib/comments';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
@@ -1463,6 +1464,14 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   }, [onClose]);
   const ab = getArtboard(project, from === 'current' ? abId : (flowStart(project, from) ?? project.settings.startArtboardId));
   const post = (name: string, value: unknown) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'setVariable', name, value }, '*');
+  // Video sites (YouTube, Vimeo, Panopto) can't play inside Preview's sandboxed frame, so this page draws them over it
+  useEffect(() => {
+    const f = frame.current;
+    if (!f || !html) return;
+    const relay = startPlatformRelay({ frame: f });
+    return () => relay.stop();
+  }, [html, nonce]);
+
   return (
     <div className={`modal-backdrop preview-backdrop${peek ? ' peek' : ''}`} onPointerDown={(e) => !peek && e.target === e.currentTarget && onClose()}>
       <div className="modal preview-modal" ref={modalRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Preview">

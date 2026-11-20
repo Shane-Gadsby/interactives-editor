@@ -12,6 +12,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Fixed: a black box round embeds while they load': [['project-settings', 'never shows a dark box while it loads']],
+  'YouTube, Vimeo and Panopto on a Video layer': [['images-media', 'Video site link'], ['images-media', 'Panopto plays, but']],
   'A fixed stage shape': [['project-settings', 'Stage shape'], ['project-settings', 'Play this way']],
   'Particles': [['particles', 'Amount'], ['particles', 'Wind'], ['particles', 'less motion']],
   'Testing an app as a prototype': [['embedding', 'report=study'], ['embedding', 'interactives-click']],

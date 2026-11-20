@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **YouTube, Vimeo and Panopto on a Video layer**: paste a link into **Video site link** and the site's own player plays where the layer is, in Preview, share links and StudyDesk too, and **Control video**, the media bindings and cue points drive and follow YouTube and Vimeo the way they do a file.
 - **A fixed stage shape**: **Stage shape** in the Project settings keeps the stage 16:9 or 4:3, letterboxed in any window and in a StudyDesk frame of that shape, with a full screen button in frames and on phones, and a nudge to turn a phone on its side.
 - **Fixed: a black box round embeds while they load**: the share page, the project's **Page background** (which started as near black) and the loading spinner's backdrop are all see-through now, so a StudyDesk page shows through while a project loads and resizes. Projects that still had the old near-black default lose it when they're next opened; press **Update** in Share to rebuild a link.
 - **Particles**: a **Particles** section on any rectangle fills it with rain, snow, petals, falling leaves, dust, sparks or bubbles as it plays, or your own picture, with amount, speed, wind, size and colour. Fewer on a slow device, still for anyone who asked for less motion.

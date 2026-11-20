@@ -47,6 +47,7 @@ import {
   type ColorStop,
   type FitMode,
   type StageShape,
+  platformVideo,
   type InputKind,
   type Paint,
   type Project,
@@ -1988,6 +1989,17 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'video':
       return (
         <Section help="images-media#video" title="Video">
+          <TextField
+            label="Video site link"
+            title="Paste a YouTube, Vimeo or Panopto link, the address you'd share. The site's own player plays here, and the video nodes, bindings and events work on it as on a file (Panopto only plays). It plays in Preview, share links and StudyDesk"
+            value={n.platformLink ?? ''}
+            commitOnBlur
+            onChange={(v) => set({ platformLink: v.trim() || undefined })}
+          />
+          {n.platformLink && (() => {
+            const pv = platformVideo(n.platformLink);
+            return <div className="muted small">{pv ? `Plays the ${pv.label}${pv.controllable ? '' : ' (it plays, but Panopto can’t be told to play, pause or seek, or say what it’s doing)'}. The file below isn’t used while this is here.` : 'Not a YouTube, Vimeo or Panopto video link, so the file below plays.'}</div>;
+          })()}
           <SelectField
             label="Video"
             value={n.assetId ?? ''}

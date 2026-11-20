@@ -1,4 +1,4 @@
-/*! built from the player's media sources 90d20e016d38df876003 */
+/*! built from the player's media sources 5b499eaf2d562a9c7b81 */
 const MEDIA_SOURCE = "interactives-media";
 const MEDIA_TARGET = "interactives";
 const MEDIA_VERSION = 2;

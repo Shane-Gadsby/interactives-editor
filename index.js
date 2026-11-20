@@ -6020,6 +6020,10 @@ ${sensors ? `<script type="module" nonce="${nonce}">
 import {startBridge} from ${JSON.stringify(`${base}/media-bridge.mjs`)}
 startBridge({frame: document.getElementById('project'), nonce: ${JSON.stringify(mediaNonce)}, declaration: ${scriptJson(sensors)}})
 </script>` : ''}
+<script type="module" nonce="${nonce}">
+import {startPlatformRelay} from ${JSON.stringify(`${base}/platform-relay.mjs`)}
+startPlatformRelay({frame: document.getElementById('project')})
+</script>
 </body>
 </html>
 `
@@ -6034,6 +6038,14 @@ const frameHash = (...parts) => {
 router.get('/media-bridge.mjs', cacheHeaders.document, (req, res) => {
 	res.type('text/javascript').sendFile(path.join(__dirname, 'shared', 'media-bridge.mjs'), {headers: {'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff'}})
 })
+
+//The video sites' relay: YouTube, Vimeo and Panopto players drawn over the project, which can't play them from its sandbox
+router.get('/platform-relay.mjs', cacheHeaders.document, (req, res) => {
+	res.type('text/javascript').sendFile(path.join(__dirname, 'shared', 'platform-relay.mjs'), {headers: {'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff'}})
+})
+
+//The only sites the relay draws (it builds their addresses itself), so the only frames this page may hold besides the project
+const PLATFORM_FRAMES = 'https://www.youtube-nocookie.com https://player.vimeo.com https://*.panopto.com https://*.panopto.eu'
 
 router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	let token = req.params.token
@@ -6058,7 +6070,7 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	let host = String(req.get('host') || ''),
 		sockets = Object.keys(project.share?.rooms || {}).length && /^[\w.:\[\]-]{1,200}$/.test(host) ? ` ws://${host} wss://${host}` : ''
 
-	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' 'self'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'${sockets}; media-src blob:; base-uri 'none'; form-action 'none'`)
+	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' 'self'; style-src 'unsafe-inline'; frame-src 'self' ${PLATFORM_FRAMES}; connect-src 'self'${sockets}; media-src blob:; base-uri 'none'; form-action 'none'`)
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('Referrer-Policy', 'no-referrer')
 	res.setHeader('X-Robots-Tag', 'noindex')

@@ -97,7 +97,7 @@ describe('the learner page with a declaration', () => {
     const s = await share(project('prmedia001', { camera: true }));
     const csp = (await play(s.token)).headers.get('content-security-policy')!;
     expect(csp).toContain("media-src blob:");
-    expect(csp).toBe(`default-src 'none'; script-src 'nonce-${/nonce-([^']+)'/.exec(csp)![1]}' 'self'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'; media-src blob:; base-uri 'none'; form-action 'none'`);
+    expect(csp).toBe(`default-src 'none'; script-src 'nonce-${/nonce-([^']+)'/.exec(csp)![1]}' 'self'; style-src 'unsafe-inline'; frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com https://*.panopto.com https://*.panopto.eu; connect-src 'self'; media-src blob:; base-uri 'none'; form-action 'none'`);
   });
 
   it('cannot be broken out of by what the author wrote in the purpose', async () => {
@@ -112,8 +112,9 @@ describe('the learner page with a declaration', () => {
     const r = await play(s.token);
     expect(r.text).toContain(`src="/interactives/s/${s.token}"`);
     expect(r.text).not.toContain('#ixm=');
-    expect(r.text).not.toContain('type="module"');
     expect(r.text).not.toContain('media-bridge');
+    //(every learner page draws video sites for its project, declared or not)
+    expect(r.text).toContain('import {startPlatformRelay} from "/interactives/platform-relay.mjs"');
   });
 });
 
