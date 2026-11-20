@@ -11,6 +11,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'More charts, a ring, and numbers that count up': [['charts', 'Stacked fields'], ['charts', 'Histogram'], ['progress-bars', 'Half ring'], ['text', 'Count up']],
   'Lists that cope with real data': [['repeaters', 'At a time'], ['repeaters', 'Add loading, empty and fault looks'], ['repeaters', 'dataStatus.cards']],
   'A tree that folds': [['repeaters', 'Show as a tree'], ['repeaters', 'Parent field'], ['repeaters', 'Open branches in']],
   'Bullets and numbers in text': [['text', 'Bulleted list'], ['text', 'Shift+Tab']],

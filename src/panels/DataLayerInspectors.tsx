@@ -24,6 +24,20 @@ export function ProgressSection({ nodes, project }: { nodes: ProgressNode[]; pro
         <Num node={n} ids={ids} prop="max" label="Max" min={0} title="The value that is a full bar" />
       </Row>
       <Row>
+        <SelectField<'bar' | 'ring' | 'halfRing'>
+          label="Shape"
+          title="A straight bar, a ring that fills round, or a half ring like a gauge"
+          value={n.shape ?? 'bar'}
+          options={[
+            { value: 'bar', label: 'Bar' },
+            { value: 'ring', label: 'Ring' },
+            { value: 'halfRing', label: 'Half ring' },
+          ]}
+          onChange={(v) => set({ shape: v === 'bar' ? undefined : v })}
+        />
+        {n.shape && n.shape !== 'bar' && <NumberField label="Thickness" suffix="px" min={1} value={n.thickness ?? Math.round(Math.max(4, Math.min(n.width, n.height) / 8))} onChange={(v) => set({ thickness: v })} />}
+      </Row>
+      <Row>
         <SelectField<'horizontal' | 'vertical'>
           label="Direction"
           title="Which way the bar grows"
@@ -76,6 +90,10 @@ const KINDS: { value: ChartKind; label: string }[] = [
   { value: 'line', label: 'Line' },
   { value: 'pie', label: 'Pie' },
   { value: 'donut', label: 'Donut' },
+  { value: 'stacked', label: 'Stacked columns' },
+  { value: 'area', label: 'Area' },
+  { value: 'scatter', label: 'Scatter' },
+  { value: 'histogram', label: 'Histogram' },
 ];
 
 /** A number field that can be left blank (null): for a fixed end of the axis, and for decimals. */
@@ -203,6 +221,18 @@ export function ChartSection({ nodes, project, ab }: { nodes: ChartNode[]; proje
           <MaybeNumber label="Axis max" title="The top of the value axis. Blank fits the data" value={n.max} placeholder="Auto" onChange={(v) => set({ max: v })} />
         </Row>
       )}
+      {n.kind === 'stacked' && (
+        <TextField
+          label="Stacked fields"
+          title="The fields of each item that stack on one another, separated by commas, such as home, away. Each gets a colour and a place in the legend"
+          value={(n.series ?? []).join(', ')}
+          placeholder="e.g. home, away"
+          commitOnBlur
+          onChange={(v) => set({ series: v.split(',').map((x) => x.trim()).filter(Boolean) })}
+        />
+      )}
+      {n.kind === 'scatter' && <TextField label="Across field" title="The field that places each point across. The value field places it up" value={n.xKey ?? 'x'} commitOnBlur onChange={(v) => set({ xKey: v.trim() || undefined })} />}
+      {n.kind === 'histogram' && <MaybeNumber label="Bars" title="How many ranges the values are counted into. Blank picks from how many there are" value={n.bins ?? null} placeholder="Auto" onChange={(v) => set({ bins: v && v > 0 ? Math.round(v) : null })} />}
       {n.kind === 'donut' && <NumberField label="Hole" title="The size of the donut's hole, as a share of its radius" value={n.hole} step={0.05} min={0.1} max={0.95} onChange={(v) => set({ hole: v })} />}
       <Row>
         {!circle && <CheckField label="Gridlines" value={n.gridlines} onChange={(v) => set({ gridlines: v })} />}

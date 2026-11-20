@@ -1217,6 +1217,9 @@ Things to know:
 - A **binding** on Text (or a timeline, tween or *Change a layer's setting* action that sets Text) replaces the runs with that plain text for as long as it applies. Variables in braces like \`{score}\` still work inside each run, but a \`{...}\` slot should sit within one run.
 - Lottie export writes the text in the layer's own style (Lottie text has one style per layer). SVG and PNG export, the player and the single-file export keep every run. Rive files with several text runs import as runs.
 
+## Numbers that count up
+Tick **Count up** and the numbers in a text count up (or down) to their new value when it changes, over the time in **Over**: \`Score: {score}\` rolls from 0 to 80 when the page opens, and from 80 to 95 when the score goes up. Each number keeps its decimals. Anyone who asks for less motion sees the new number straight away.
+
 ## Bullets and numbers
 Double-click a text and the toolbar over it has **Bulleted list** and **Numbered list**: they put a bullet or a number on the paragraphs the cursor or the selection is in, and press again to take it off. **Tab** moves a list paragraph in a level and **Shift+Tab** out (the arrows on the toolbar do the same). Numbers go 1, 2, 3, then a, b, c a level in, then i, ii, iii. Wrapped lines line up under the words, not under the marker.
 
@@ -4560,6 +4563,9 @@ Pick the **Progress bar** tool (in the **Data** group of the tool bar, which sta
 - **Direction** is *Across* (it grows from the left) or *Up* (from the bottom). **From the far end** grows it from the right, or the top, instead.
 - **Radius** rounds the track, and the bar is clipped to it. A gradient bar is laid over the whole track and uncovered as the bar grows, so a green-to-red meter shows red only when it is nearly full.
 
+## A ring
+**Shape** can be **Ring**, which fills round a circle, or **Half ring**, which fills along an arc like a gauge. The track is the layer's fill and the part done is the **Bar** colour, and **Thickness** is how thick the ring is. It reads out the same as a bar.
+
 ## For screen readers
 
 **Tells screen readers** chooses what the layer is: a **progress bar** (work towards a goal), a **meter** (a measurement in a range, like volume) or nothing. The first two put \`role\` and \`aria-valuenow\`, \`aria-valuemin\` (0), \`aria-valuemax\` and \`aria-valuetext\` on the layer, kept up to date as the value changes. Give the layer a **text alternative** in *Accessibility* ("Course progress"): the [checker](accessibility-checker) asks for one. A layer marked **Decorative** is hidden from screen readers whatever this says.
@@ -4614,6 +4620,12 @@ A hidden item without a number of its own is left out when the axis is worked ou
 - The axis runs from zero (or lower, for negative values) to a round number above the biggest value. **Axis min** and **Axis max** fix either end.
 - **Gridlines**, **Axis labels**, **Value labels** (the number on each mark) and **Legend** (when each item has its own colour) switch on and off. **Decimals**, **Prefix** and **Suffix** control how numbers are written (\`$\`, \`kg\`, \`%\`). Prefix and suffix take variables in braces (\`{unit}\`), so changing a unit variable relabels the whole chart. Crowded labels are shortened or thinned out.
 - **Colours** is a list of colours or [theme tokens](themes) handed out in turn. With one colour every bar and the line use it; **A colour for each item** gives each item the next colour (pie and donut charts always do). **Text colour**, **Font** and **Size** style the labels and axes. Using tokens, a chart changes with the theme and the colourway like everything else.
+
+## Stacked, area, scatter and histogram
+- **Stacked columns** stack several fields of each item on one another, one colour each: name them in **Stacked fields** (\`home, away\`) and the legend names them too.
+- **Area** is a line with the space under it filled, for a total that builds up.
+- **Scatter** places each item by two numbers: **Across field** (\`x\`) and the value field up. For two measures of the same people, such as hours studied and the mark. A list of pairs (\`[[1, 10], [4, 40]]\`) works too.
+- **Histogram** counts the values of a list into ranges and draws a bar for each, touching. **Bars** sets how many ranges; blank picks from how many values there are. For how a class's marks are spread.
 
 ## Reading it
 

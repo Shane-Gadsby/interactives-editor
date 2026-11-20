@@ -1703,6 +1703,15 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
               <SelectField<'light' | 'dark'> label="Colours" value={n.code.scheme ?? 'light'} options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} onChange={(v) => set({ code: { ...n.code!, scheme: v === 'light' ? undefined : v } })} />
             </Row>
           )}
+          <Row>
+            <CheckField
+              label="Count up"
+              title="Numbers in the text count up (or down) to their new value when it changes: a score, a total, a percentage. Still for anyone who asks for less motion"
+              value={!!n.countUp}
+              onChange={(v) => set({ countUp: v ? { ms: 800 } : null })}
+            />
+            {n.countUp && <NumberField label="Over" suffix="ms" min={100} step={100} value={n.countUp.ms} onChange={(v) => set({ countUp: { ms: Math.max(100, v) } })} />}
+          </Row>
           <CheckField
             label="Formulas between $ signs"
             title="Maths typed the LaTeX way: $\frac{a}{b}$ in a line, $$x^2 + y^2 = r^2$$ on a line of its own. It's drawn by the browser and read out by screen readers. \$ is a dollar sign"

@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **More charts, a ring, and numbers that count up**: **Stacked columns**, **Area**, **Scatter** and **Histogram** charts; a progress layer can be a **Ring** or a **Half ring**; and **Count up** on a text rolls its numbers to their new value.
 - **Lists that cope with real data**: **At a time** shows a long list as pages or with **Load more**, with buttons and a count added in one press, and \`{list.total}\` and its kind for the words round it. **Add loading, empty and fault looks** gives a list what to show while its data loads, when there's nothing, and when the data couldn't be loaded.
 - **A tree that folds**: **Show as a tree** draws a list whose items name a parent as an outline that opens and closes, with the keys a tree should have and the open branches kept in a variable if you like.
 - **Bullets and numbers in text**: **Bulleted list** and **Numbered list** on the text toolbar, with **Tab** and **Shift+Tab** for levels. Wrapped lines hang under the words, and a screen reader hears a real list.
