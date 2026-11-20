@@ -1020,6 +1020,23 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.respond",
+    label: "Send a response",
+    category: "action",
+    summary: "Files what a person did as one row of your Responses table: answers, choices, where cards went.",
+    details: "Values is an object of named values (`{ q1: answer1, mood: mood }`) or a list, such as a card sort's placements (`cards.map(c => ({ card: c.name, group: c.group }))`). Each response is kept under the person, the time and the course, with their name only when Project settings > Responses says With names (otherwise a code that is the same for them every time). See them in the Responses tab of Results, and download them as CSV (a row per response, or a row per item of a list in it) or JSON. Needs the project shared to StudyDesk; in Preview and a downloaded file they are kept in the browser. Continues from Sent, or Not sent when there is nowhere to send it or it was refused.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Sent" },
+      { id: "none", label: "Not sent" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "set", label: "Kind of response", type: "text", default: "responses", placeholder: "e.g. card-sort", help: "A name for this kind of response, so one app can collect two kinds and download them apart" },
+      { key: "values", label: "Values", type: "expr", default: "{ answer: answer }", help: "What to keep: { name: value, ... }, or a list of records" }
+    ]
+  },
+  {
     kind: "action.sharedAdd",
     label: "Add to shared responses",
     category: "action",
@@ -28645,6 +28662,17 @@ User data is kept apart from remembered progress and from results, so **Clear re
 
 ## See the results
 **View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. The owner and people invited to collaborate can see it. **Export CSV** downloads every learner's record as a spreadsheet: username, name, course, completed, passed, attempts, best and last score and percentage, and when they were last active (the list in the dialog shows the latest 200). **Clear results** deletes every record for the project (handy after testing); only the owner can use it (collaborators see it greyed out), since it can't be undone.
+
+## Collect responses, one row each
+A score says how someone did. For what they actually did (a survey's answers, where each card went in a card sort, what they picked in a configurator) use the **Send a response** node. Its **Values** are named values, \`{ q1: answer1, mood: mood }\`, or a list of records such as \`cards.map(c => ({ card: c.name, group: c.group }))\`. **Kind of response** (\`card-sort\`, \`survey\`) keeps two kinds apart in one app.
+
+Each response is a row in the **Responses** tab of **Results**, with when it came and the course. **Download** gives:
+
+- **CSV**: a row per response, a column per value.
+- **CSV, a row per item**: a row per record of the list in each response, the response's other values repeated on each. One row per card placed is the shape card sort analysis tools take.
+- **JSON**: every response as it was sent.
+
+Responses are kept without names to start with: each person's are under a code that is the same for them every time and says nothing about who they are, which is what a survey or a card sort usually wants. Tick **Responses with names** in Project settings, and **Update** the share, to keep names. A person can send up to 300 an hour. In Preview and a downloaded HTML file there is no server, so the browser keeps the last 200 instead.
 
 ## Good to know
 - A result is what the learner's browser says. It is good for tracking progress, not for marks that must be tamper-proof, unless the questions are set to **Mark answers on the server**. Then the server marks them, keeps the tries and writes the result itself, and any result the browser reports is ignored for that project. See [Question kit](question-kit).

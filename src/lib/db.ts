@@ -595,6 +595,31 @@ export const getResults = (projectId: string) => call<Results>(`projects/${encod
 /** Every learner's record as a CSV file. */
 export const resultsCsv = (projectId: string) => call<Blob>(`projects/${encodeURIComponent(projectId)}/results.csv`, {}, 'blob');
 
+/** What Send a response collected: the newest 500 rows, the kinds there are, and whether they carry names. */
+export interface CollectedRow {
+  set: string;
+  at: string;
+  course?: string;
+  username?: string;
+  name?: string;
+  person?: string;
+  setup?: string;
+  values: unknown;
+}
+export interface Collected {
+  sets: string[];
+  count: number;
+  truncated: boolean;
+  named: boolean;
+  rows: CollectedRow[];
+  mayClear?: boolean;
+}
+export const getCollected = (projectId: string, set = '') => call<Collected>(`projects/${encodeURIComponent(projectId)}/responses${set ? `?set=${encodeURIComponent(set)}` : ''}`);
+/** A download of them: CSV a row per response, CSV a row per item of a list in each (the card sort shape), or the raw JSON. */
+export const collectedFile = (projectId: string, kind: 'csv' | 'items' | 'json', set = '') =>
+  call<Blob>(`projects/${encodeURIComponent(projectId)}/responses.${kind === 'json' ? 'json' : 'csv'}?${new URLSearchParams({ ...(kind === 'items' ? { per: 'item' } : {}), ...(set ? { set } : {}) })}`, {}, 'blob');
+export const clearCollected = (projectId: string) => call<{ ok: boolean; deleted: number }>(`projects/${encodeURIComponent(projectId)}/responses`, { method: 'DELETE' });
+
 export const clearResults = (projectId: string) => call<{ ok: boolean; deleted: number }>(`projects/${encodeURIComponent(projectId)}/results`, { method: 'DELETE' });
 
 // ---------------------------------------------------------------- shared responses (the class's answers, for the owner to moderate)

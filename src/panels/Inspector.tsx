@@ -873,6 +873,12 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           onChange={(v) => setProject((p) => (p.settings.hideScrollbarY = v))}
         />
         <CheckField
+          label="Responses with names"
+          title="Send a response keeps each person's name with what they sent. Off (the default), each person's responses are kept under a code that is the same for them every time and says nothing about who they are, which is what a survey or a card sort usually wants. Share again (Update) after changing it."
+          value={!!project.settings.responses?.named}
+          onChange={(v) => setProject((p) => (p.settings.responses = v ? { named: true } : undefined))}
+        />
+        <CheckField
           label="Live collaboration"
           title="Turn on when you work on this project at the same time as the people you invite: you see each other's cursors and changes as they happen. Off (the default), the project is saved one person at a time, nothing extra is sent, and if two people have it open the second to save is asked to reload."
           value={!!project.settings.liveSync}

@@ -109,6 +109,8 @@ let ops = null,
 	media = null,
 	commentLib = null,
 	responses = null,
+	collected = null,
+	collectedRows = null,
 	roomsLib = null,
 	courseLib = null,
 	sharedLimits = {},
@@ -1015,6 +1017,7 @@ const purgeProject = async (row) => {
 	await activityData.deleteMany({project: id})
 	sharedLiveEndProject(id)
 	await sharedRows.deleteMany({project: id})
+	await collectedRows.deleteMany({project: id})
 	await sharedHidden.deleteMany({project: id})
 	await commentRows.deleteMany({project: id})
 	await commentNotices.deleteMany({project: id})
@@ -2171,7 +2174,8 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 		shared = responses.declaredShared(html),
 		roomsDeclared = roomsLib.declaredRooms(html),
 		waitSession = declaredWait(html),
-		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(waitSession === null ? {} : {waitSession}), ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {}), ...(Object.keys(roomsDeclared).length ? {rooms: roomsDeclared} : {})}
+		named = collected.declaredNamed(html),
+		share = {token, ...(named ? {responsesNamed: true} : {}), created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(waitSession === null ? {} : {waitSession}), ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {}), ...(Object.keys(roomsDeclared).length ? {rooms: roomsDeclared} : {})}
 
 	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
 	//An update keeps the page it replaces (one, not a history), so a bad publish can be undone in a click
@@ -3809,6 +3813,39 @@ router.post('/learn/:token/report', express.json({limit: '16kb'}), async (req, r
 	}
 
 	await saveRecord({project: project._id, username: who.username, course: who.course}, (existing) => learner.reportUpdate(existing, result, who, new Date()))
+	res.json({available: true, ok: true})
+})
+
+//Send a response: the values an app collects (a survey's answers, where a card was sorted), one row each, filed under the
+//person (their name when the shared page says so, otherwise a code that is the same for them every time and says nothing
+//about who they are), the time and the setup. Anyone the learner page knows can send; nobody can read them back here
+router.post('/learn/:token/responses', express.json({limit: '24kb'}), async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		return res.json({available: false})
+	}
+
+	let values = collected.cleanValues(req.body?.values)
+
+	if (values === null) {
+		return res.status(400).json({error: 'That response is empty, or too big to keep'})
+	}
+
+	if (!sharedLimits.respond.hit(`${project._id}|${who.username}`)) {
+		return res.status(429).json({available: true, ok: false, problem: 'busy'})
+	}
+
+	let named = !!project.share?.responsesNamed,
+		row = {_id: crypto.randomBytes(12).toString('hex'), project: project._id, set: collected.cleanSet(req.body?.set), at: new Date(), course: who.course, setup: typeof req.body?.setup === 'string' ? req.body.setup.slice(0, 60) : '', values, ...(named ? {username: who.username, name: who.name || ''} : {person: collected.personCode(project._id, who.username)})}
+
+	await collectedRows.insertOne(row)
 	res.json({available: true, ok: true})
 })
 
@@ -5714,6 +5751,11 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
 			}, failed)
 		}
+		else if (m.op === 'respond') {
+			call('POST', 'responses', {set: m.set, values: m.values, setup: m.setup}).then(function (j) {
+				answer(m, {ok: !!j.ok, available: !!j.available, data: j.problem ? {problem: j.problem} : null})
+			}, failed)
+		}
 		else if (m.op === 'mark') {
 			//A question marked on the server: the project sends the answer, the server marks it and says how it went
 			call('POST', 'check', {question: m.question, action: m.action, answer: m.answer}).then(function (j) {
@@ -5873,6 +5915,67 @@ router.get('/api/projects/:id/results.csv', async (req, res) => {
 	res.set('Content-Disposition', `attachment; filename="${name} results.csv"`)
 	//A BOM so Excel reads the names as UTF-8
 	res.send('\ufeff' + learner.resultsCsv(rows))
+})
+
+//What Send a response collected, for the project's owner and collaborators: newest first, as rows (?set= one kind only)
+const collectedFor = async (doc, req) => {
+	let q = {project: doc._id}
+
+	if (typeof req.query.set === 'string' && req.query.set) q.set = collected.cleanSet(req.query.set)
+	return collectedRows.find(q, {projection: {_id: 0, project: 0}}).sort({at: -1}).limit(20000).toArray()
+}
+
+router.get('/api/projects/:id/responses', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let docs = await collectedFor(doc, req),
+		sets = await collectedRows.distinct('set', {project: doc._id})
+
+	res.json({sets, count: docs.length, truncated: docs.length >= 20000, named: !!doc.share?.responsesNamed, rows: docs.slice(0, 500), mayClear: ownsOrPower(req, doc)})
+})
+
+//A table to download: a row per response, or (?per=item) a row per record of the list a response holds, the card sort shape. ?format=json for the raw rows
+const collectedFile = (ext) => async (req, res) => {
+	req.params.ext = ext
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let docs = await collectedFor(doc, req),
+		name = String(doc.name || 'project').replace(/[^\w .-]+/g, '').trim().slice(0, 60) || 'project'
+
+	if (req.params.ext === 'json') {
+		res.set('Content-Type', 'application/json; charset=utf-8')
+		res.set('Content-Disposition', `attachment; filename="${name} responses.json"`)
+		return res.send(JSON.stringify(docs, null, 1))
+	}
+	if (req.params.ext !== 'csv') {
+		return res.status(404).json({error: 'No such download'})
+	}
+
+	res.set('Content-Type', 'text/csv; charset=utf-8')
+	res.set('Content-Disposition', `attachment; filename="${name} responses${req.query.per === 'item' ? ' by item' : ''}.csv"`)
+	res.send('\ufeff' + collected.csvOf(collected.tableOf(docs, req.query.per === 'item')))
+}
+router.get('/api/projects/:id/responses.csv', collectedFile('csv'))
+router.get('/api/projects/:id/responses.json', collectedFile('json'))
+
+router.delete('/api/projects/:id/responses', async (req, res) => {
+	let doc = await projectFor(req, res, {ownerOnly: true})
+
+	if (!doc) {
+		return
+	}
+
+	let r = await collectedRows.deleteMany({project: doc._id})
+
+	res.json({ok: true, deleted: r.deletedCount})
 })
 
 //Wiping every learner's record is the owner's call (or a power user's), not a collaborator's
@@ -6411,6 +6514,7 @@ client.connect()
 		sharedHidden = db.collection('shared-hidden')
 		roomMessages = db.collection('room-messages')
 		courseRows = analyticsDB.collection('interactives-course-collections')
+		collectedRows = db.collection('responses')
 		ingest = analyticsDB.collection('ingest')
 		userLookup = analyticsDB.collection('user-lookup')
 		fs.mkdirSync(storageDir, {recursive: true})
@@ -6420,9 +6524,10 @@ client.connect()
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs'), import('./shared/course.mjs'), import('./shared/rooms.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs'), import('./shared/course.mjs'), import('./shared/rooms.mjs'), import('./shared/collected.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod, courseMod, roomsMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod, courseMod, roomsMod, collectedMod]) => {
+		collected = collectedMod
 		ops = opsMod
 		store = docstoreMod.docStore(docChunks)
 		library = libraryMod
@@ -6453,6 +6558,9 @@ client.connect()
 		//Course collections: per person, whatever the project
 		courseLimits.write = new commentsMod.Limiter(60, 60 * 1000)
 		courseLimits.read = new commentsMod.Limiter(180, 60 * 1000)
+
+		//Send a response: per person per project, an hour at a time
+		sharedLimits.respond = new commentsMod.Limiter(collectedMod.LIMITS.perHour, 60 * 60 * 1000)
 		cacheHeaders.watchEpoch()
 
 		//The bin, now and every 6 hours

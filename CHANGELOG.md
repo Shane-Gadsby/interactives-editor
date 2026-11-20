@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Collect responses, one row each**: the **Send a response** node files what a person did (answers, choices, where each card went) as a row, under the person, the time and the course. **Results** has a **Responses** tab with the rows and downloads: CSV a row per response, CSV a row per item (the card sort shape) and JSON. Without names unless **Responses with names** is ticked.
 - **More charts, a ring, and numbers that count up**: **Stacked columns**, **Area**, **Scatter** and **Histogram** charts; a progress layer can be a **Ring** or a **Half ring**; and **Count up** on a text rolls its numbers to their new value.
 - **Lists that cope with real data**: **At a time** shows a long list as pages or with **Load more**, with buttons and a count added in one press, and \`{list.total}\` and its kind for the words round it. **Add loading, empty and fault looks** gives a list what to show while its data loads, when there's nothing, and when the data couldn't be loaded.
 - **A tree that folds**: **Show as a tree** draws a list whose items name a parent as an outline that opens and closes, with the keys a tree should have and the open branches kept in a variable if you like.
