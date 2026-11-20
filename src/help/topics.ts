@@ -5455,7 +5455,7 @@ All are in the Interactions palette, and described there.
 - **Stop recording**, **Discard recording**, **Play recording** (sound plays through the project's own sound, so the viewer's sound button applies; video plays in the layer you choose) and **Download recording** (offers a file, after a tap: it is the only way a recording leaves memory).
 - **Camera preview** shows the camera live in a layer's place. The page draws it over the project, so the project never sees the camera's pixels.
 - **Take or choose a photo** puts a picture, scaled to at most 1600 px on the long side, into an image asset. Every image layer that uses the asset shows it. From the device's photo picker (with the front or back camera if the device offers it) or a still from the live preview. To fill a different asset for each item of a list, give **Or the asset from an expression** an asset's id or name (such as \`prompts[current].photo\`); it wins over the asset picked. Set **Do** to **Throw the photo away** to put the asset's own picture back and forget the photo.
-- **Download a file** saves text you build, such as a report or a CSV, after a tap. It works in any project. See [Download a file](sensors#download-a-file) below.
+- **Download a file** saves text you build, such as a report or a CSV, after a tap, or a picture or a PDF of a layer. It works in any project. See [Download a file](sensors#download-a-file) below.
 - **Offer: do not use my microphone or camera** asks the learner, in the page's own screen, whether to stop using them for good. Put it on a "Use the keyboard instead" button. Only the learner decides.
 - **When the microphone or camera is used** fires when a recording starts, a recording is ready (\`event.reason\` is \`stopped\`, \`limit\` or \`device-lost\`: the learner can press Stop on the bar too), something could not start (\`event.problem\` and \`event.message\`), the state changed, a video finished playing, a photo arrived, or live listening started or stopped.
 
@@ -5469,6 +5469,17 @@ All are in the Interactions palette, and described there.
 - Every web page is saved with a rule that stops it running script or loading anything when it is opened, so it is a report and nothing more.
 
 The **Photo prompts notebook** starter builds its whole report this way, for upload to a Moodle assignment.
+
+### A picture or a PDF of a layer
+Pick **Picture of a layer (.png)** or **PDF of a layer (.pdf)** as the type and the node saves a layer as it is on screen now, or the whole page with no **Layer** chosen. A study plan's grid, a certificate, a finished drawing.
+
+- **Footer, left** and **Footer, right** put a line at the foot, such as \`context.displayName\` and \`today("d mmmm yyyy")\`.
+- A PDF is the size of the layer, or an **A4** page with the layer fitted in its margins.
+- Tick **Not in downloads** (in a layer's **Layer** section) on anything that means nothing on paper, like an info button or the Download button itself, and it's left out.
+- **File name** is a formula like any other: \`"Plan " + context.displayName + " " + today("dd-mm-yyyy")\`. Characters a file name can't hold, such as a colon or a slash, are replaced with a space.
+- These are saved straight away, without the tap a text file asks for. Text in them is a picture, so it can't be selected or searched, and a video or an embedded page shows as an empty box.
+
+**Picture of a layer** is the same picture as its own node. **Then** downloads it, or keeps it in a text variable: bind an image layer's picture to that variable to show it, and tick **Save as user data** on the variable to keep it for the person (pictures of up to about 1 MB).
 
 ## Try it
 **Preview** has a pretend microphone and camera, because the real ones need the page the project is shared in. It makes a made-up level and short tone for a recording, a swelling level and moving bands for live listening, and a sample picture. The **Microphone and camera** menu above the preview makes it fail the ways a real one does (denied, no device, blocked by the course page, the learner chose not to use them), so you can build and check the plain version. A small "Simulated" note shows while it records. Try the real devices from the **Link for StudyDesk** on the page you will use.

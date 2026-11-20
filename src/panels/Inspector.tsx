@@ -1113,6 +1113,12 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
             onChange={(v) => set({ hugIgnore: v ? true : undefined })}
           />
         )}
+        <CheckField
+          label="Not in downloads"
+          title="Left out of a picture or a PDF the project saves of the page (Download a file, Picture of a layer): an info button, a Download button, anything that means nothing on paper"
+          value={!!n.noDownload}
+          onChange={(v) => set({ noDownload: v ? true : undefined })}
+        />
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={LAYER_BLEND_OPTIONS} onChange={(v) => set({ blendMode: v })} />
       </Section>
       {single && <DisclosureSection node={n} project={project} />}

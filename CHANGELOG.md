@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Save a layer as a picture or a PDF**: **Download a file** has **Picture of a layer (.png)** and **PDF of a layer (.pdf)**, with a footer line and an A4 page, and a new **Picture of a layer** node keeps the picture in a variable for an image to show. **Not in downloads** on a layer leaves it out. The Course Pathway planner's hand-written PDF script can go.
 - **Layer states for dragging**: **Being dragged**, **Picked up**, **A place it could go**, **The place it is over** and **A place that refuses it**, with **Line width** and **Line style** among what a state changes. A layer with one of these loses the player's own ring for it. The Course Pathway planner's held card and its dashed places no longer need a style tag injected by a script.
 - **A zone's own rules, with a reason**: **Takes it when** on a drop zone, a formula that can say why not, read out and handed to a new **On refused** event; **Only these zones** on a draggable. Only the zones that would take what's held are marked, so the marks follow the rules.
 - **Zones that shape and arrange what they hold**: **Fill the zone** gives a dropped layer the zone's size and corners, and **Arrange what it holds** lays the layers out in rows and grows or shrinks to fit them, closing up as one leaves. **Stays behind when picked up**, and \`ix.drag.home\` for scripts.
