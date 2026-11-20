@@ -121,3 +121,20 @@ describe('the Story tab', () => {
     expect(getTopic('story-stage')?.body).toContain('Add faces from pictures named');
   });
 });
+
+describe('voices', () => {
+  it('writes a voice script of the spoken lines and matches recordings named by line id', async () => {
+    const { voiceScript, matchVoiceFiles } = await import('../src/lib/story-cast');
+    const p = createProject('S');
+    startStory(p);
+    const csv = voiceScript(p.story!, readChapter as never);
+    const rows = csv.split('\r\n');
+    expect(rows[0]).toBe('Line id,Chapter,Character,Words,File name');
+    const first = rows[1].split(',');
+    expect(first[2]).toBe('Millie');
+    expect(rows.some((r) => r.includes('Yes! Okay. Sign here. And here.'))).toBe(true);
+    const id = first[0];
+    const got = matchVoiceFiles(p.story!, [{ id: 'snd', name: `Millie ${id}.mp3`, mime: 'audio/mpeg', size: 1 }, { id: 'x', name: 'Music.mp3', mime: 'audio/mpeg', size: 1 }]);
+    expect([...got]).toEqual([[id, 'snd']]);
+  });
+});

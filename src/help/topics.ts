@@ -3070,7 +3070,7 @@ help:sketch-pads help:timelines`,
     keywords: 'story visual novel script dialogue conversation branching scenario role play choices chapters scenes narration writer screenplay characters lines jump ending',
     body: `A **story** is written as text, one line per thing that happens, the way you'd write a play. It plays on a stage page with a dialogue box, the characters and the choices, so a 50 line conversation or a 50,000 word novel needs no page per line and no boxes in the graph.
 
-**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours.
+**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours. For a whole game, start a new project from the **Visual novel** template instead: it adds a title screen, saves, history, settings and extras (see [Saves, settings and extras](story-game)).
 
 **How lines work:**
 - \`Millie: You came!\` is Millie talking. \`Millie (smiling, left, slide): You came!\` also picks her face, where she stands (far left, left, centre, right, far right) and how she comes on (slide, fade, hop, instant), in any order.
@@ -3110,7 +3110,31 @@ Each character in the Story tab's **Cast** has a name (as lines use it), what th
 - A screen reader hears each line once, whole, as it comes up.
 - Lines read on this device are remembered, which is what Skip goes by.
 
-help:story help:repeaters help:bindings`,
+help:story help:story-game help:repeaters help:bindings`,
+  },
+  {
+    id: 'story-game',
+    title: 'Saves, settings and extras',
+    group: 'Interactivity',
+    summary: 'The parts that make a story a game: save slots, Continue, the reader\'s settings, the history, a gallery, endings and chapter select.',
+    keywords: 'visual novel save load slots quick save autosave continue settings text speed volume music voice effects text size readable font history gallery endings chapter select music room extras title screen',
+    body: `The **Visual novel** template (**Templates**, **Built-in**) has all of these as pages you can restyle: **Title**, **Story stage**, **History**, **Save and load**, **Settings** and **Extras**. They're made from the nodes and values below, so you can build your own too.
+
+**Saving:** **Save the story** keeps where the story is and every variable in a slot (1, 2, 3..., or quick), and **Load the story** puts it all back and shows the stage. The story saves itself in **auto** at every choice, and slot **latest** is the newest of all, which is what **Continue** loads (\`story.canContinue\` says whether there's one). A list of \`story.saves\` shows the slots with \`item.chapter\`, \`item.scene\`, \`item.when\`, the last words and the background as a picture. **Settings** in the Story tab sets how many slots there are. Saves stay in the reader's browser.
+
+**The reader's settings:** **Story setting** changes text speed, Auto speed, whether Skip goes through unread lines, the music, voice and effects volumes, text size and an easier to read font, kept on their device. Read them as \`story.prefs\`: the stage's words are bound to \`26 * story.prefs.textSize\`.
+
+**History:** a list of \`story.history\` shows what was said, and **Go back a line** with \`story.history.length + 1 - item.number\` lines back returns to one.
+
+**Extras:** \`story.gallery\` (every picture a \`[bg]\` line shows, with \`item.seen\`), \`story.endings\` (with \`item.reached\`), \`story.chapters\` and \`story.musicRoom\` (\`item.heard\`) unlock as this reader gets to them, across every playthrough.
+
+**Characters that feel alive:** give a face a **Blink** picture and they blink now and then; give it a **Talking** picture and their mouth moves while their words type on or their voice plays. A **Blip** sound in the cast plays as their words type on, higher or lower with **Blip pitch**. All of it holds still for someone who asked for less motion.
+
+**Voices:** **Download the voice script** in the Story tab gives the actors a spreadsheet of every spoken line, with the file name to save each recording as. Put the recordings in Assets and **Match voice files** ties each to its line, which keeps it through any edit to the words. A voice plays as its line comes up, and Auto waits for it.
+
+**Good to know:** holding **Ctrl** skips while it's held.
+
+help:story help:story-stage`,
   },
 
   {

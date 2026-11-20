@@ -2034,6 +2034,66 @@ const SPECS = [
     params: [{ key: "steps", label: "Lines back", type: "expr", default: "1", help: "How many lines back. In a list of story.history: story.history.length - event.index" }]
   },
   {
+    kind: "action.storySave",
+    label: "Save the story",
+    category: "action",
+    summary: "Saves where the story is, and every variable, in a slot on this device, or deletes a slot.",
+    details: "Slots are 1, 2, 3 and so on (a list of story.saves shows them, with the chapter, the scene, the last words and when), plus quick. The story saves itself in auto at every choice. Saves stay in this browser, like a game's saves on a console.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Nothing to save" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "slot", label: "Slot", type: "expr", default: "'quick'", help: "A number, 'quick' or 'auto'. In a list of story.saves: event.index + 1" },
+      { key: "do", label: "Do", type: "select", default: "save", options: [{ value: "save", label: "Save" }, { value: "delete", label: "Delete the save" }] }
+    ]
+  },
+  {
+    kind: "action.storyLoad",
+    label: "Load the story",
+    category: "action",
+    summary: "Puts the story back where a save left it, with the variables as they were, and shows the stage.",
+    details: "Slot latest is the newest save of all, which is what a Continue button wants (story.canContinue says whether there is one). A line deleted since the save carries on from the nearest line before it that's still there.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Empty slot" }
+    ],
+    hasInput: true,
+    params: [{ key: "slot", label: "Slot", type: "expr", default: "'latest'", help: "A number, 'quick', 'auto' or 'latest'. In a list of story.saves: event.index + 1" }]
+  },
+  {
+    kind: "action.storyPref",
+    label: "Story setting",
+    category: "action",
+    summary: "Changes one of the reader's settings for the story, kept on their device.",
+    details: "Text speed (letters a second; empty for the story's own), Auto speed (2 is twice as quick), Skip unread lines, Music, Voice and Effects volumes (0 to 1), Text size (1 as designed) and Readable font. Read them back as story.prefs, for sliders and toggles on a settings page.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      {
+        key: "pref",
+        label: "Setting",
+        type: "select",
+        default: "textSpeed",
+        options: [
+          { value: "textSpeed", label: "Text speed" },
+          { value: "autoSpeed", label: "Auto speed" },
+          { value: "skipUnread", label: "Skip unread lines" },
+          { value: "music", label: "Music volume" },
+          { value: "voice", label: "Voice volume" },
+          { value: "effects", label: "Effects volume" },
+          { value: "textSize", label: "Text size" },
+          { value: "readable", label: "Readable font" }
+        ]
+      },
+      { key: "value", label: "To", type: "expr", default: "event.value", help: "The new value. From a slider or a toggle: event.value" }
+    ]
+  },
+  {
     kind: "action.toastHide",
     label: "Hide toast",
     category: "action",
@@ -2884,6 +2944,14 @@ function layerOwnProps(node) {
   ];
 }
 const PARTICLE_PRESETS = ["rain", "snow", "petals", "leaves", "dust", "sparks", "bubbles"];
+const ID_CHARS = "abcdefghijkmnpqrstuvwxyz23456789";
+function newLineId(taken) {
+  for (; ; ) {
+    let s = "l";
+    for (let i = 0; i < 6; i++) s += ID_CHARS[Math.floor(Math.random() * ID_CHARS.length)];
+    if (!taken?.has(s)) return s;
+  }
+}
 const MODIFIER_UNITS = ["letter", "word", "line"];
 const MODIFIER_SHAPES = ["square", "ramp-up", "ramp-down", "triangle", "round", "smooth", "falloff"];
 function defaultModifier(patch = {}) {
@@ -5782,7 +5850,7 @@ function paletteColor(spec, vars = currentPalette()) {
 }
 const t = (key, name, light, dark, highContrast) => ({ key, name, light, dark, highContrast });
 const WHITE$1 = "--ilar-swatch-off-white";
-const INK$1 = "--ilar-swatch-grey-7";
+const INK$2 = "--ilar-swatch-grey-7";
 const GREEN = "--ilar-swatch-green";
 const ERROR = "--ilar-swatch-error";
 const ORANGE = "--ilar-swatch-orange";
@@ -5790,13 +5858,13 @@ const GOLD$1 = "--ilar-swatch-yellow";
 const LINK = "--ilar-swatch-hyperlink";
 const mix = (a, pct, over) => `mix(${a} ${pct}%, ${over})`;
 const STARTER_TOKEN_DEFS = [
-  t("background", "color/background", WHITE$1, INK$1, INK$1),
-  t("surface", "color/surface", "--ilar-swatch-grey-1", "--ilar-swatch-grey-text", INK$1),
+  t("background", "color/background", WHITE$1, INK$2, INK$2),
+  t("surface", "color/surface", "--ilar-swatch-grey-1", "--ilar-swatch-grey-text", INK$2),
   t("surfaceMuted", "color/surface-muted", "--ilar-swatch-grey-2", "--ilar-swatch-grey-6", "--ilar-swatch-grey-6"),
-  t("text", "color/text", INK$1, "--ilar-swatch-grey-1", WHITE$1),
+  t("text", "color/text", INK$2, "--ilar-swatch-grey-1", WHITE$1),
   t("muted", "color/muted", "--ilar-swatch-grey-4", "--ilar-swatch-grey-3", WHITE$1),
   t("primary", "color/primary", "--ilar-primary", GOLD$1, GOLD$1),
-  t("onPrimary", "color/on-primary", INK$1, INK$1, INK$1),
+  t("onPrimary", "color/on-primary", INK$2, INK$2, INK$2),
   t("link", "color/link", LINK, mix(LINK, 70, WHITE$1), mix(LINK, 70, WHITE$1)),
   t("button", "color/button", "--ilar-btn-primary-background", "--ilar-btn-primary-background", "--ilar-btn-primary-background"),
   t("onButton", "color/on-button", "--ilar-btn-primary-text", "--ilar-btn-primary-text", "--ilar-btn-primary-text"),
@@ -5804,11 +5872,11 @@ const STARTER_TOKEN_DEFS = [
   t("divider", "color/divider", "--ilar-swatch-grey-2", "--ilar-swatch-grey-6", WHITE$1),
   t("focus", "color/focus", "--ilar-primary", GOLD$1, WHITE$1),
   t("success", "color/success", GREEN, mix(GREEN, 55, WHITE$1), mix(GREEN, 55, WHITE$1)),
-  t("successSurface", "color/success-surface", mix(GREEN, 12, WHITE$1), mix(GREEN, 25, INK$1), INK$1),
+  t("successSurface", "color/success-surface", mix(GREEN, 12, WHITE$1), mix(GREEN, 25, INK$2), INK$2),
   t("error", "color/error", ERROR, mix(ERROR, 60, WHITE$1), mix(ERROR, 60, WHITE$1)),
-  t("errorSurface", "color/error-surface", mix(ERROR, 12, WHITE$1), mix(ERROR, 25, INK$1), INK$1),
+  t("errorSurface", "color/error-surface", mix(ERROR, 12, WHITE$1), mix(ERROR, 25, INK$2), INK$2),
   t("warning", "color/warning", ORANGE, GOLD$1, GOLD$1),
-  t("warningSurface", "color/warning-surface", mix(ORANGE, 14, WHITE$1), mix(GOLD$1, 20, INK$1), INK$1)
+  t("warningSurface", "color/warning-surface", mix(ORANGE, 14, WHITE$1), mix(GOLD$1, 20, INK$2), INK$2)
 ];
 function starterHex(def, column2) {
   return paletteColor(def[column2], currentPalette()) ?? "#808080";
@@ -6711,7 +6779,7 @@ function flowLinks(steps2, links, opts2 = {}) {
   });
   const lk = asList$1(links).map((l) => isObj(l) ? l : {});
   const edges = lk.map((l) => ({ a: ids.get(String(l.from ?? "")) ?? -1, b: ids.get(String(l.to ?? "")) ?? -1 }));
-  const { back } = flowLayers(st, edges);
+  const { back: back2 } = flowLayers(st, edges);
   const placed = flowChart(steps2, links, { direction: horizontal ? "right" : "down" });
   const left = Math.min(...placed.map((p) => horizontal ? p.y : p.x));
   const right = Math.max(...placed.map((p) => horizontal ? p.y + p.h : p.x + p.w));
@@ -6720,7 +6788,7 @@ function flowLinks(steps2, links, opts2 = {}) {
   const sideOf = /* @__PURE__ */ new Map();
   const outgoing2 = /* @__PURE__ */ new Map();
   edges.forEach((e, k) => {
-    if (!back[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) (outgoing2.get(e.a) ?? outgoing2.set(e.a, []).get(e.a)).push(k);
+    if (!back2[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) (outgoing2.get(e.a) ?? outgoing2.set(e.a, []).get(e.a)).push(k);
   });
   for (const [a, ks] of outgoing2) {
     if (kindOf(st[a]) !== "decision" || ks.length < 2) continue;
@@ -6729,7 +6797,7 @@ function flowLinks(steps2, links, opts2 = {}) {
   }
   return lk.map((l, k) => {
     const { a, b } = edges[k];
-    const loops = back[k] && a >= 0 && b >= 0;
+    const loops = back2[k] && a >= 0 && b >= 0;
     if (loops) {
       const east = (centre(placed[a]) + centre(placed[b])) / 2 >= (left + right) / 2;
       const side = horizontal ? east ? "bottom" : "top" : east ? "right" : "left";
@@ -6768,7 +6836,7 @@ function flowLayers(steps2, edges) {
     if (e.a >= 0 && e.b >= 0 && e.a !== e.b) outs[e.a].push(k);
   });
   const state = new Array(n).fill(0);
-  const back = edges.map((e) => e.a === e.b && e.a >= 0);
+  const back2 = edges.map((e) => e.a === e.b && e.a >= 0);
   const order = [];
   const starts = [];
   steps2.forEach((s, i) => {
@@ -6790,7 +6858,7 @@ function flowLayers(steps2, edges) {
       top[1]++;
       const k = outs[node][at];
       const to = edges[k].b;
-      if (state[to] === 1) back[k] = true;
+      if (state[to] === 1) back2[k] = true;
       else if (state[to] === 0) {
         state[to] = 1;
         order.push(to);
@@ -6803,20 +6871,20 @@ function flowLayers(steps2, edges) {
   const layer = new Array(n).fill(0);
   const indeg = new Array(n).fill(0);
   edges.forEach((e, k) => {
-    if (!back[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) indeg[e.b]++;
+    if (!back2[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) indeg[e.b]++;
   });
   const queue = indeg.map((d, i) => d === 0 ? i : -1).filter((i) => i >= 0);
   const left = indeg.slice();
   for (let q = 0; q < queue.length; q++) {
     const i = queue[q];
     for (const k of outs[i]) {
-      if (back[k]) continue;
+      if (back2[k]) continue;
       const to = edges[k].b;
       layer[to] = Math.max(layer[to], layer[i] + 1);
       if (--left[to] === 0) queue.push(to);
     }
   }
-  return { layer, back, order };
+  return { layer, back: back2, order };
 }
 function spread(want, sep) {
   const n = want.length;
@@ -6859,7 +6927,7 @@ function flowChart(steps2, links, opts2 = {}) {
     return { a: ids.get(String(x.from ?? "")) ?? -1, b: ids.get(String(x.to ?? "")) ?? -1 };
   });
   const n = st.length;
-  const { layer, back, order: found } = flowLayers(st, edges);
+  const { layer, back: back2, order: found } = flowLayers(st, edges);
   const kind = st.map(kindOf);
   const across = (i) => horizontal ? sizes[kind[i]][1] : sizes[kind[i]][0];
   const along = (i) => horizontal ? sizes[kind[i]][0] : sizes[kind[i]][1];
@@ -6867,7 +6935,7 @@ function flowChart(steps2, links, opts2 = {}) {
   const discovery = new Map(found.map((i, k2) => [i, k2]));
   for (let i = 0; i < n; i++) (rows[layer[i]] ??= []).push(i);
   for (const r3 of rows) r3?.sort((a, b) => (discovery.get(a) ?? 0) - (discovery.get(b) ?? 0));
-  const fwd = edges.map((e2, k2) => ({ ...e2, k: k2 })).filter((e2) => !back[e2.k] && e2.a >= 0 && e2.b >= 0 && e2.a !== e2.b);
+  const fwd = edges.map((e2, k2) => ({ ...e2, k: k2 })).filter((e2) => !back2[e2.k] && e2.a >= 0 && e2.b >= 0 && e2.a !== e2.b);
   const preds = (i) => fwd.filter((e2) => e2.b === i).map((e2) => e2.a);
   const succs = (i) => fwd.filter((e2) => e2.a === i).map((e2) => e2.b);
   const pos = new Array(n).fill(0);
@@ -11847,14 +11915,14 @@ function plainParam(kind, p, technical = technicalWording()) {
 }
 const PURPLE = "#3c2d4d";
 const GOLD = "#ffb448";
-const INK = "#2d2d2d";
+const INK$1 = "#2d2d2d";
 const WHITE = "#ffffff";
 const PEACH = "#ffe9dd";
 const CONTENT_TOKENS = {
   background: WHITE,
   surface: "#f4f3f0",
   surfaceMuted: "#dddcd7",
-  text: INK,
+  text: INK$1,
   //muted, border and the three status colours are as light as they can be and still clear
   //4.5:1 (text) or 3:1 (a control's outline) on the page, the cards and their own status surfaces (starter-contrast.test.ts holds them to it)
   muted: "#65605b",
@@ -11877,10 +11945,10 @@ const way = (id, name, description, start, end, button2, onButton, onGradient, a
   tokens: { primary, button: button2, onButton, focus: primary, onPrimary: primary === button2 ? onButton : WHITE },
   brand: { gradientStart: start, gradientEnd: end, onGradient, deep: PURPLE, onDeep: WHITE, accent, warm: PEACH, logoMark, logoText, logoMarkOnLight: GOLD, logoTextOnLight: PURPLE, scrim: id === "orange" || id === "red" ? SCRIM : CLEAR, ...accentButton(button2) }
 });
-const accentButton = (button2) => button2 === GOLD ? { accentButton: PURPLE, onAccentButton: WHITE } : { accentButton: GOLD, onAccentButton: INK };
+const accentButton = (button2) => button2 === GOLD ? { accentButton: PURPLE, onAccentButton: WHITE } : { accentButton: GOLD, onAccentButton: INK$1 };
 const COLOURWAYS = [
   way("gold", "Gold", "Gold gradient with purple, like the UniSQ title slides.", "#f58220", GOLD, PURPLE, WHITE, PURPLE, PURPLE, PURPLE, PURPLE),
-  way("purple", "Purple", "Deep purple with gold, the UniSQ dark slides.", PURPLE, "#775d94", GOLD, INK, WHITE, GOLD, GOLD, WHITE, PURPLE),
+  way("purple", "Purple", "Deep purple with gold, the UniSQ dark slides.", PURPLE, "#775d94", GOLD, INK$1, WHITE, GOLD, GOLD, WHITE, PURPLE),
   way("blue", "Blue", "The palette blue gradient, gold accents.", "#00497d", "#0080a8", "#00497d", WHITE, WHITE, GOLD, GOLD, WHITE),
   way("green", "Green", "The palette green gradient, for science and health.", "#0e6a6f", "#3e8521", "#0e6a6f", WHITE, WHITE, GOLD, GOLD, WHITE),
   way("orange", "Orange", "The palette orange gradient, warm and bold.", "#d0372b", "#ed6a21", "#b52f24", WHITE, WHITE, GOLD, GOLD, WHITE),
@@ -11977,7 +12045,7 @@ function lookFor(themes) {
   }
   return out;
 }
-const solid$2 = (color) => ({ type: "solid", color });
+const solid$4 = (color) => ({ type: "solid", color });
 function lookDefaults(project, type) {
   if (!hasTokens(project.themes)) return {};
   const l = lookFor(project.themes);
@@ -11986,25 +12054,25 @@ function lookDefaults(project, type) {
     case "ellipse":
     case "polygon":
     case "star":
-      return { fill: solid$2(l.surfaceMuted) };
+      return { fill: solid$4(l.surfaceMuted) };
     case "path":
-      return { stroke: { paint: solid$2(l.text), width: 2 } };
+      return { stroke: { paint: solid$4(l.text), width: 2 } };
     case "text":
       return { color: l.text };
     case "frame":
-      return { fill: solid$2(l.background) };
+      return { fill: solid$4(l.background) };
     case "button":
-      return { fill: solid$2(l.button), color: l.onButton };
+      return { fill: solid$4(l.button), color: l.onButton };
     case "input":
-      return { fill: solid$2(l.background), stroke: { paint: solid$2(l.border), width: 1 }, color: l.text };
+      return { fill: solid$4(l.background), stroke: { paint: solid$4(l.border), width: 1 }, color: l.text };
     case "link":
       return { color: l.link };
     case "progress":
-      return { fill: solid$2(l.surfaceMuted), barFill: solid$2(l.button) };
+      return { fill: solid$4(l.surfaceMuted), barFill: solid$4(l.button) };
     case "chart":
       return { colors: [l.button, l.link, l.success, l.warning, l.error, l.muted], color: l.text };
     case "connector":
-      return { fill: solid$2(l.background), stroke: { paint: solid$2(l.muted), width: 2, cap: "round", join: "round" }, color: l.text };
+      return { fill: solid$4(l.background), stroke: { paint: solid$4(l.muted), width: 2, cap: "round", join: "round" }, color: l.text };
     default:
       return {};
   }
@@ -12799,8 +12867,8 @@ const AREA_BAD = "#b3261e40";
 const AREA_MISS = "#8a520040";
 const bodyStyle = (kind, answerBy) => kind === "multiple" ? "check" : kind === "blank" ? answerBy === "drag" ? "dragblank" : "blank" : kind === "ordering" ? "order" : kind === "matching" ? "match" : kind === "categorise" ? "categorise" : kind === "hotspot" ? "spot" : "radio";
 const RESET_LABELS = { again: "Try again", next: "Next question" };
-const solid$1 = (color) => ({ type: "solid", color });
-const stroke$1 = (color, width = 1.5) => ({ paint: solid$1(color), width });
+const solid$3 = (color) => ({ type: "solid", color });
+const stroke$1 = (color, width = 1.5) => ({ paint: solid$3(color), width });
 const row = (gap) => ({ ...defaultAutoLayout("row"), gap, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "center", hugHeight: true });
 const column = (gap) => ({ ...defaultAutoLayout("column"), gap, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "stretch" });
 const partOf = (n) => (n.questionPart ?? "").split(":")[0];
@@ -12890,14 +12958,14 @@ const STATE_DESCRIPTION = 'item.state == "correct" ? "Right" : item.state == "wr
 function text$1(name, part, value, o = {}) {
   return createNode("text", { name, questionPart: part, text: value, fontSize: TYPE.body, color: L$2.text, autoSize: "height", width: 200, height: 24, ...o });
 }
-function button$1(name, part, label, primary, bindings) {
+function button$2(name, part, label, primary, bindings) {
   return createNode("button", {
     name,
     questionPart: part,
     label,
     width: 150,
     height: 44,
-    fill: solid$1(primary ? L$2.button : L$2.surfaceMuted),
+    fill: solid$3(primary ? L$2.button : L$2.surfaceMuted),
     color: primary ? L$2.onButton : L$2.text,
     ...bindings ? { bindings } : {}
   });
@@ -12916,7 +12984,7 @@ function tickBox(base2) {
     height: 9,
     paths: [{ closed: false, points: [{ x: 0, y: 4.5 }, { x: 4.5, y: 9 }, { x: 12, y: 0 }] }],
     fill: null,
-    stroke: { paint: solid$1(L$2.background), width: 2.25 },
+    stroke: { paint: solid$3(L$2.background), width: 2.25 },
     lineCap: "round",
     lineJoin: "round",
     decorative: true,
@@ -12925,7 +12993,7 @@ function tickBox(base2) {
   return createNode("frame", { ...base2, cornerRadius: 5, clip: false, children: [tick] });
 }
 function optionTemplate(style) {
-  const base2 = { height: 52, fill: solid$1(L$2.background), cornerRadius: RADIUS.control, clip: false };
+  const base2 = { height: 52, fill: solid$3(L$2.background), cornerRadius: RADIUS.control, clip: false };
   if (style === "order") {
     return createNode("frame", {
       ...base2,
@@ -12938,13 +13006,13 @@ function optionTemplate(style) {
         text$1("Number", "optionNumber", "{item.number}.", { width: 28, color: L$2.muted, fontWeight: 600, decorative: true }),
         text$1("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, ...lookBindings("item", { text: L$2.text }) }),
         text$1("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, decorative: true }),
-        createNode("button", { name: "Move up", questionPart: "moveUp", label: "↑", width: 40, height: 36, fill: solid$1(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
-        createNode("button", { name: "Move down", questionPart: "moveDown", label: "↓", width: 40, height: 36, fill: solid$1(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } })
+        createNode("button", { name: "Move up", questionPart: "moveUp", label: "↑", width: 40, height: 36, fill: solid$3(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
+        createNode("button", { name: "Move down", questionPart: "moveDown", label: "↓", width: 40, height: 36, fill: solid$3(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } })
       ]
     });
   }
   const checkbox = style === "check";
-  const markerBase = { name: "Marker", questionPart: "marker", width: 22, height: 22, fill: solid$1(L$2.background), stroke: stroke$1(L$2.border, 2), decorative: true, bindings: { "fill.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.background + '"', "stroke.paint.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.border + '"' } };
+  const markerBase = { name: "Marker", questionPart: "marker", width: 22, height: 22, fill: solid$3(L$2.background), stroke: stroke$1(L$2.border, 2), decorative: true, bindings: { "fill.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.background + '"', "stroke.paint.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.border + '"' } };
   return createNode("frame", {
     ...base2,
     name: "Option",
@@ -13051,7 +13119,7 @@ function chip(q, o) {
     y: o.y,
     width: o.w ?? TERM_W,
     height: o.h ?? TERM_H,
-    fill: solid$1(L$2.background),
+    fill: solid$3(L$2.background),
     stroke: stroke$1(L$2.border, 2),
     cornerRadius: RADIUS.control,
     clip: false,
@@ -13071,7 +13139,7 @@ function matchTerm(q, p, i, slot, name = `Term ${i + 1}`) {
     y: slot * TERM_PITCH,
     width: TERM_W,
     height: TERM_H,
-    fill: solid$1(L$2.background),
+    fill: solid$3(L$2.background),
     stroke: stroke$1(L$2.border, 2),
     cornerRadius: RADIUS.control,
     clip: false,
@@ -13191,7 +13259,7 @@ function catZone(q, g, i) {
     questionPart: `catZone:${g.id}`,
     height: GROUP_H,
     layoutItem: { width: "fill" },
-    fill: solid$1(L$2.surface),
+    fill: solid$3(L$2.surface),
     stroke: { ...stroke$1(L$2.border, 2), dash: [8, 5] },
     cornerRadius: 12,
     clip: false,
@@ -13484,7 +13552,7 @@ function spotArea(q, o, i, shape, box, points) {
     role: isMultiple(q) ? "checkbox" : "radio",
     focusable: true,
     ariaLabel: o.text,
-    fill: solid$1("#ffffff01"),
+    fill: solid$3("#ffffff01"),
     stroke: stroke$1(AREA_OFF, 3),
     cursor: "pointer",
     bindings: {
@@ -13500,13 +13568,13 @@ function spotArea(q, o, i, shape, box, points) {
   return createNode("rect", { ...common, cornerRadius: 8 });
 }
 function samplePicture() {
-  const shape = (type, name, x, y, w, h, color, extra = {}) => createNode(type, { name, x, y, width: w, height: h, fill: solid$1(color), stroke: null, decorative: true, ...extra });
+  const shape = (type, name, x, y, w, h, color, extra = {}) => createNode(type, { name, x, y, width: w, height: h, fill: solid$3(color), stroke: null, decorative: true, ...extra });
   return createNode("frame", {
     name: "Picture",
     questionPart: "picture",
     width: AREA_W,
     height: AREA_H,
-    fill: solid$1("#cfe8ff"),
+    fill: solid$3("#cfe8ff"),
     stroke: null,
     cornerRadius: RADIUS.control,
     clip: true,
@@ -13516,7 +13584,7 @@ function samplePicture() {
       shape("ellipse", "Sun", 466, 28, 78, 78, "#ffcf33"),
       shape("rect", "Ground", 0, 224, AREA_W, 56, "#9bd18b"),
       shape("rect", "Walls", 150, 138, 170, 104, "#e8c9a0"),
-      createNode("path", { name: "Roof", x: 130, y: 62, width: 210, height: 76, fill: solid$1("#b5523b"), stroke: null, decorative: true, paths: [{ closed: true, points: [{ x: 0, y: 76 }, { x: 105, y: 0 }, { x: 210, y: 76 }] }] }),
+      createNode("path", { name: "Roof", x: 130, y: 62, width: 210, height: 76, fill: solid$3("#b5523b"), stroke: null, decorative: true, paths: [{ closed: true, points: [{ x: 0, y: 76 }, { x: 105, y: 0 }, { x: 210, y: 76 }] }] }),
       shape("rect", "Door", 224, 178, 38, 64, "#7a4a2b"),
       shape("rect", "Trunk", 428, 168, 20, 74, "#7a4a2b"),
       shape("ellipse", "Leaves", 394, 98, 90, 88, "#3f9a4a")
@@ -13599,7 +13667,7 @@ function frameFor(q, blankVars, at) {
     role: "region",
     question: q,
     //A flat grey card on the page, like the toolbox's cards
-    fill: solid$1(L$2.surface),
+    fill: solid$3(L$2.surface),
     stroke: null,
     cornerRadius: 8,
     clip: false,
@@ -13621,9 +13689,9 @@ function frameFor(q, blankVars, at) {
         clip: false,
         layout: { ...row(12), align: "center" },
         children: [
-          button$1("Check answer", "check", "Check answer", true, { disabled: p("locked") }),
-          button$1("Hint", "hint", "Hint", false, { visible: `${p("hintsLeft")} > 0 && !${p("locked")}` }),
-          button$1("Try again", "reset", resetLabel(q), false, { visible: resetVisible(q) }),
+          button$2("Check answer", "check", "Check answer", true, { disabled: p("locked") }),
+          button$2("Hint", "hint", "Hint", false, { visible: `${p("hintsLeft")} > 0 && !${p("locked")}` }),
+          button$2("Try again", "reset", resetLabel(q), false, { visible: resetVisible(q) }),
           text$1("Score", "score", `Score: {${p("score")}}`, { fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, bindings: { visible: p("locked") } })
         ]
       })
@@ -13963,7 +14031,7 @@ function syncListen(ab, frame, q) {
   const has = partsOf(frame).listen?.[0];
   if (q.listen && !has) {
     const at = Math.min(row2.children.length, Math.max(0, row2.children.findIndex((c2) => c2.questionPart === "hint") + 1));
-    const b = button$1(uniqueName(nodeNames(ab), "Listen"), "listen", "Listen", false, { visible: "voiceAvailable" });
+    const b = button$2(uniqueName(nodeNames(ab), "Listen"), "listen", "Listen", false, { visible: "voiceAvailable" });
     b.ariaLabel = "Listen to the question";
     row2.children.splice(at, 0, b);
   } else if (!q.listen && has) {
@@ -14025,7 +14093,7 @@ function setKitOptions(d, abId, frameId, o) {
     const g = gate(o.hintWhen);
     if (g) hint.bindings = { ...hint.bindings ?? {}, visible: `${g} && ${varName(q, "hintsLeft")} > 0 && !${varName(q, "locked")}` };
     if (o.hint === "pill") {
-      Object.assign(hint, PILL, { fill: solid$1(L$2.background), stroke: stroke$1(L$2.border), fontWeight: 600 });
+      Object.assign(hint, PILL, { fill: solid$3(L$2.background), stroke: stroke$1(L$2.border), fontWeight: 600 });
       hint.ariaLabel = "Show a hint";
       const at = locateIn(frame, hint.id);
       const row2 = promptRow(ab, frame);
@@ -14155,7 +14223,7 @@ function buildStepBar(project, ab, cfg) {
   const counter = createNode("text", { name: "Step counter", text: `Step {${step}} of {${count2}}`, x: 16, y: 14, width: inner, fontSize: 13, fontWeight: 600, color: L$1.muted });
   const heading2 = createNode("text", { name: "Step title", text: `{${title}}`, x: 16, y: 36, width: inner, fontSize: 20, fontWeight: 700, color: L$1.text, role: "heading", headingLevel: 2 });
   const words = createNode("text", { name: "Step caption", text: `{${caption}}`, x: 16, y: 68, width: inner, fontSize: 15, color: L$1.text });
-  const back = barButton("Back button", "Back", 16, 112, false, `${step} <= 1`);
+  const back2 = barButton("Back button", "Back", 16, 112, false, `${step} <= 1`);
   const next = barButton("Next button", "Next", box.width - 16 - 96, 112, true, `${step} >= ${count2}`);
   const dotSize = 24;
   const dot = createNode("frame", {
@@ -14204,12 +14272,12 @@ function buildStepBar(project, ab, cfg) {
     clip: false,
     role: "region",
     ariaLabel: "Steps",
-    children: [counter, heading2, words, back, dots, next]
+    children: [counter, heading2, words, back2, dots, next]
   });
   const right = Math.max(-260, ...ab.logic.nodes.map((n) => n.x)) + 260;
   const logicNode = (kind, row2, col, params) => ({ id: uid("ln"), kind, x: right + col * 240, y: row2 * 120, params });
   const rows = [
-    [logicNode("event.pointer", 0, 0, { target: back.id, type: "click" }), logicNode("action.steps", 0, 1, { op: "back" })],
+    [logicNode("event.pointer", 0, 0, { target: back2.id, type: "click" }), logicNode("action.steps", 0, 1, { op: "back" })],
     [logicNode("event.pointer", 1, 0, { target: next.id, type: "click" }), logicNode("action.steps", 1, 1, { op: "next" })],
     [logicNode("event.pointer", 2, 0, { target: dot.id, type: "click" }), logicNode("action.steps", 2, 1, { op: "goto", step: "event.index + 1" })]
   ];
@@ -14454,43 +14522,43 @@ function boxOf$1(n, ox, oy) {
   }
   return { x: ox + n.x, y: oy + n.y, w, h };
 }
-function collect(list2, page, ox, oy, out) {
+function collect(list2, page2, ox, oy, out) {
   for (const raw of list2) {
     const n = raw;
-    if (n.decorative && n.width * n.height > page.width * page.height * 0.5) continue;
+    if (n.decorative && n.width * n.height > page2.width * page2.height * 0.5) continue;
     const box = boxOf$1(n, ox, oy);
     if (n.type === "text" && !(n.text ?? "").trim()) continue;
     if (isContainer(n)) {
       const painted = !!n.fill || !!n.stroke;
-      if (painted && box.w * box.h < page.width * page.height * 0.5) out.push(box);
-      collect(n.children, page, box.x, box.y, out);
-    } else if (box.w * box.h < page.width * page.height * 0.5 || n.type === "text" || n.type === "button") out.push(box);
+      if (painted && box.w * box.h < page2.width * page2.height * 0.5) out.push(box);
+      collect(n.children, page2, box.x, box.y, out);
+    } else if (box.w * box.h < page2.width * page2.height * 0.5 || n.type === "text" || n.type === "button") out.push(box);
   }
 }
 const hits = (a, b, pad = 0) => a.x < b.x + b.w + pad && a.x + a.w + pad > b.x && a.y < b.y + b.h + pad && a.y + a.h + pad > b.y;
-function pickCorner(project, page, branded) {
+function pickCorner(project, page2, branded) {
   const boxes = [];
-  collect(page.children, page, 0, 0, boxes);
-  const master = page.master ? project.artboards.find((a) => a.id === page.master) : void 0;
+  collect(page2.children, page2, 0, 0, boxes);
+  const master = page2.master ? project.artboards.find((a) => a.id === page2.master) : void 0;
   const fromMaster = [];
   if (master) collect(master.children, master, 0, 0, fromMaster);
   const edge2 = branded ? SIDE_MARGIN : GUTTER;
-  const mid = branded ? footerMidY(page.height) : page.height - GUTTER - H / 2;
+  const mid = branded ? footerMidY(page2.height) : page2.height - GUTTER - H / 2;
   const spots = [
-    { x: page.width - edge2 - W, y: mid - H / 2, right: true },
-    { x: page.width - edge2 - W, y: GUTTER, right: true },
+    { x: page2.width - edge2 - W, y: mid - H / 2, right: true },
+    { x: page2.width - edge2 - W, y: GUTTER, right: true },
     { x: edge2, y: mid - H / 2, right: false },
     { x: edge2, y: GUTTER, right: false }
   ];
   const clear = (s) => {
     const b = { x: s.x, y: s.y, w: W, h: H };
-    return !boxes.some((o) => hits(b, o) && !isFooter(page, o)) && !fromMaster.some((o) => hits(b, o, 8));
+    return !boxes.some((o) => hits(b, o) && !isFooter(page2, o)) && !fromMaster.some((o) => hits(b, o, 8));
   };
   return spots.find(clear) ?? spots[0];
 }
-const footerOf = (page) => page.children.find((n) => n.name === "Footer text" && n.type === "text");
-function isFooter(page, box) {
-  const f2 = footerOf(page);
+const footerOf = (page2) => page2.children.find((n) => n.name === "Footer text" && n.type === "text");
+function isFooter(page2, box) {
+  const f2 = footerOf(page2);
   return !!f2 && box.x === f2.x && box.y === f2.y && box.w === f2.width;
 }
 const isBranded = (project) => !!project.brandLook;
@@ -14506,12 +14574,12 @@ function addCreditsButton(project) {
   const font = project.fonts.find((f2) => f2.family === "Open Sans") ? "Open Sans" : void 0;
   const deep = ref("brand/deep");
   let first2;
-  for (const page of [start, ...project.artboards.filter((a) => a.variantOf === start.id && !a.isMaster)]) {
-    const bg = page.background;
+  for (const page2 of [start, ...project.artboards.filter((a) => a.variantOf === start.id && !a.isMaster)]) {
+    const bg = page2.background;
     const colour = (bg?.type === "linear" || bg?.type === "radial" ? ref("brand/on-gradient") : bg?.type === "solid" && deep && bg.color === deep ? ref("brand/on-deep") : void 0) ?? ref("color/muted") ?? ref("color/text");
     if (!colour) continue;
-    const spot = pickCorner(project, page, branded);
-    const footer = footerOf(page);
+    const spot = pickCorner(project, page2, branded);
+    const footer = footerOf(page2);
     if (footer && spot.x + W > footer.x && spot.y < footer.y + 24 && spot.y + H > footer.y) footer.width = Math.max(40, spot.x + PAD - 12 - footer.x);
     const button2 = createNode("button", {
       name: CREDITS_BUTTON_NAME,
@@ -14530,14 +14598,14 @@ function addCreditsButton(project) {
       textDecoration: "underline",
       ...font ? { fontFamily: font } : {}
     });
-    page.children.push(button2);
+    page2.children.push(button2);
     first2 ??= button2;
-    const y = page.logic.nodes.reduce((m, n) => Math.max(m, n.y + 140), 0);
+    const y = page2.logic.nodes.reduce((m, n) => Math.max(m, n.y + 140), 0);
     const on = { id: uid("ln"), kind: "event.pointer", x: 0, y, params: { target: button2.id, type: "click" } };
     const open = { id: uid("ln"), kind: "action.credits", x: 260, y, params: {} };
-    page.logic.nodes.push(on, open);
-    page.logic.edges.push({ id: uid("le"), from: on.id, fromPort: "out", to: open.id, toPort: "in" });
-    graphNote(page, { anchor: on, colour: "sky", text: "**Open credits** shows the list from Project > Credits. [ ] Fill the list in, or delete this button and its two nodes." });
+    page2.logic.nodes.push(on, open);
+    page2.logic.edges.push({ id: uid("le"), from: on.id, fromPort: "out", to: open.id, toPort: "in" });
+    graphNote(page2, { anchor: on, colour: "sky", text: "**Open credits** shows the list from Project > Credits. [ ] Fill the list in, or delete this button and its two nodes." });
   }
   if (!first2) return null;
   return {
@@ -14547,6 +14615,360 @@ function addCreditsButton(project) {
     nodeId: first2.id,
     artboardId: start.id,
     done: false
+  };
+}
+const STAGE_W = 1280;
+const STAGE_H = 720;
+const SAMPLE_CHAPTER = `# The club fair
+
+// Lines are read top to bottom. A name and a colon is someone talking; anything else is narration.
+// Put a picture called Quad in Assets and [bg Quad] shows it behind everyone.
+The quad was crowded with folding tables and hand-painted signs.
+Millie: You came! I knew you would.
+Olive: I said I'd think about it.
+Millie: Think about it here, then. With biscuits.
+
+? Join the writing club
+    set writing += 1
+    Millie: {shake}Yes!{/shake} Okay. Sign here. And here.
+    -> Signing up
+? Ask what they actually write [once]
+    Millie: Short stories, mostly. And one very long one about a lighthouse.
+    Olive: How long?
+    Millie: {pause}We don't talk about it.
+? Say you're still deciding
+    Millie: Oh. Well... the offer stands.
+
+Millie: Either way, take a flyer.
+if writing > 0
+    Olive: I've already signed up. Remember?
+else
+    Olive: Fine. One flyer.
+-> Wandering the fair
+
+# Signing up
+
+Millie: Welcome to the club!
+-> end Joined the club
+
+# Wandering the fair
+
+The tables thinned out as the sun went down.
+? Go home
+    -> end Went home early`;
+function linesOf(text2) {
+  const taken = /* @__PURE__ */ new Set();
+  return text2.split("\n").map((t2) => {
+    const id = newLineId(taken);
+    taken.add(id);
+    return { id, text: t2 };
+  });
+}
+const HIDE_VAR = "storyBoxHidden";
+const solid$2 = (color) => ({ type: "solid", color });
+function storyStage(hideVar, at = {}) {
+  const W2 = STAGE_W;
+  const H2 = STAGE_H;
+  const bgBefore = createNode("image", { name: "Background before", x: 0, y: 0, width: W2, height: H2, fit: "cover", bindings: { assetId: "story.backgroundBefore", visible: "story.backgroundFade < 1 && story.backgroundBefore != ''" } });
+  const bg = createNode("image", { name: "Background", x: 0, y: 0, width: W2, height: H2, fit: "cover", bindings: { assetId: "story.background", opacity: "story.backgroundFade", visible: "story.background != ''" } });
+  const character = createNode("image", {
+    name: "Character",
+    x: W2 / 2 - 280,
+    y: H2 * 0.1,
+    width: 560,
+    height: H2 * 0.9,
+    fit: "contain",
+    ariaLabel: "",
+    bindings: {
+      assetId: "item.image",
+      x: `item.x * ${W2} - 280`,
+      y: `${H2} - item.height * ${H2} - item.lift`,
+      height: `item.height * ${H2}`,
+      opacity: "item.opacity",
+      brightness: "item.brightness",
+      visible: "item.image != ''"
+    }
+  });
+  const cast = createNode("frame", { name: "Cast", x: 0, y: 0, width: W2, height: H2, fill: null, clip: false, repeat: { items: "story.cast", layout: "none", gap: 0, columns: 1 }, children: [character] });
+  const plate = createNode("frame", {
+    name: "Name plate",
+    x: 28,
+    y: -22,
+    width: 240,
+    height: 44,
+    cornerRadius: 10,
+    fill: solid$2("#b8860b"),
+    bindings: { "fill.color": "story.speakerColour || '#b8860b'", visible: "story.speaking" },
+    children: [createNode("text", { name: "Name", x: 0, y: 0, width: 240, height: 44, text: "Name", fontSize: 22, fontWeight: 700, color: "#ffffff", align: "center", verticalAlign: "middle", autoSize: "none", bindings: { text: "story.speaker" } })]
+  });
+  const words = createNode("text", {
+    name: "Words",
+    x: 40,
+    y: 38,
+    width: 1040,
+    height: 112,
+    text: "The words of the line type on here.",
+    fontSize: 26,
+    lineHeight: 1.45,
+    color: "#f5f2ea",
+    autoSize: "none",
+    storyMarkup: true,
+    bindings: { text: "story.marked", reveal: "story.shown" }
+  });
+  const more = createNode("text", { name: "More", x: 1078, y: 132, width: 24, height: 24, text: "▼", fontSize: 16, color: "#f5f2ea", align: "center", autoSize: "none", decorative: true, bindings: { visible: "story.waiting" } });
+  const box = createNode("frame", {
+    name: "Dialogue box",
+    x: 80,
+    y: 516,
+    width: 1120,
+    height: 180,
+    cornerRadius: 14,
+    fill: solid$2("rgba(18, 18, 28, 0.86)"),
+    clip: false,
+    bindings: { visible: `(story.text != '' || story.choosing) && !${HIDE_VAR}` },
+    children: [plate, words, more]
+  });
+  const choice = createNode("button", {
+    name: "Choice",
+    x: 0,
+    y: 0,
+    width: 640,
+    height: 58,
+    label: "A choice",
+    fontSize: 22,
+    cornerRadius: 12,
+    fill: solid$2("#fbfaf7"),
+    color: "#1b1b24",
+    shadow: { x: 0, y: 4, blur: 14, spread: 0, color: "rgba(0, 0, 0, 0.35)" },
+    bindings: { label: "(item.picked ? '✓ ' : '') + item.text", disabled: "!item.enabled" }
+  });
+  const choices = createNode("frame", {
+    name: "Choices",
+    x: (W2 - 640) / 2,
+    y: 120,
+    width: 640,
+    height: 340,
+    fill: null,
+    repeat: { items: "story.choices", layout: "vertical", gap: 14, columns: 1 },
+    bindings: { visible: `story.choosing && !${HIDE_VAR}` },
+    children: [choice]
+  });
+  const control = (name, label, x, bind2) => createNode("button", { name, x, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid$2("rgba(18, 18, 28, 0.7)"), color: "#f5f2ea", ...bind2 ? { bindings: { label: bind2 } } : {} });
+  const buttons = [control("Back", "Back", 0), control("Auto", "Auto", 94, "story.auto ? 'Auto on' : 'Auto'"), control("Skip", "Skip", 188, "story.skipping ? 'Skipping' : 'Skip'"), control("Hide", "Hide", 282)];
+  const bar = createNode("frame", { name: "Story buttons", x: W2 - 80 - 366, y: 470, width: 366, height: 32, fill: null, bindings: { visible: `story.started && !story.ended && !${HIDE_VAR}` }, children: buttons });
+  const unhide = createNode("rect", { name: "Show the box again", x: 0, y: 0, width: W2, height: H2, fill: null, ariaLabel: "Show the words again", bindings: { visible: HIDE_VAR } });
+  const weather = createNode("rect", { name: "Weather", x: 0, y: 0, width: W2, height: H2, fill: null, visible: false, particles: { preset: "rain" } });
+  const ending = createNode("text", { name: "The end", x: 0, y: H2 / 2 - 40, width: W2, height: 80, text: "The end", fontSize: 44, fontWeight: 700, color: "#ffffff", align: "center", autoSize: "none", bindings: { text: "'The end' + (story.ending ? ': ' + story.ending : '')", visible: "story.ended" } });
+  const nodes = [];
+  const edges = [];
+  const wire = (target, action) => {
+    const ev = { id: uid("n"), kind: "event.pointer", x: 40, y: 40 + nodes.length * 60, params: { type: "click", target: target.id } };
+    const act = { id: uid("n"), x: 320, y: 40 + nodes.length * 60, ...action };
+    nodes.push(ev, act);
+    edges.push({ id: uid("e"), from: ev.id, fromPort: "out", to: act.id, toPort: "in" });
+  };
+  wire(choice, { kind: "action.storyPick", params: { choice: "event.index + 1" } });
+  wire(buttons[0], { kind: "action.storyRollBack", params: { steps: "1" } });
+  wire(buttons[1], { kind: "action.storyMode", params: { mode: "auto", to: "toggle" } });
+  wire(buttons[2], { kind: "action.storyMode", params: { mode: "skip", to: "toggle" } });
+  wire(buttons[3], { kind: "action.setVariable", params: { variable: hideVar, value: "true" } });
+  wire(unhide, { kind: "action.setVariable", params: { variable: hideVar, value: "false" } });
+  return createArtboard({
+    name: "Story stage",
+    width: W2,
+    height: H2,
+    background: solid$2("#15141c"),
+    children: [bgBefore, bg, cast, weather, box, choices, bar, ending, unhide],
+    logic: { nodes, edges },
+    ...at
+  });
+}
+const INK = "#f5f2ea";
+const DARK = "#15141c";
+const PANEL = "rgba(255, 255, 255, 0.07)";
+const ACCENT = "#c8a24a";
+const solid$1 = (color) => ({ type: "solid", color });
+const wiring = () => ({ nodes: [], edges: [] });
+function onClick(w, target, ...actions) {
+  const y = 40 + w.nodes.length * 40;
+  const ev = { id: uid("n"), kind: "event.pointer", x: 40, y, params: { type: "click", target: target.id } };
+  w.nodes.push(ev);
+  let prev = ev;
+  actions.forEach((a, i) => {
+    const n = { id: uid("n"), kind: a.kind, x: 320 + i * 260, y, params: a.params ?? {} };
+    w.nodes.push(n);
+    w.edges.push({ id: uid("e"), from: prev.id, fromPort: "out", to: n.id, toPort: "in" });
+    prev = n;
+  });
+}
+const go = (artboard) => ({ kind: "action.artboard", params: { to: "picked", artboard, transition: "fade", duration: 400 } });
+const back = () => ({ kind: "action.artboard", params: { to: "back", transition: "fade", duration: 300 } });
+const heading$2 = (text2, y = 48) => createNode("text", { name: "Heading", text: text2, x: 80, y, width: STAGE_W - 160, height: 60, fontSize: 44, fontWeight: 700, color: INK, autoSize: "none", role: "heading", headingLevel: 1 });
+const button$1 = (name, label, x, y, width = 280, extra = {}) => createNode("button", { name, label, x, y, width, height: 54, fontSize: 20, fontWeight: 600, cornerRadius: 12, fill: solid$1("rgba(255, 255, 255, 0.92)"), color: DARK, ...extra });
+const page = (name, children, w, at) => createArtboard({ name, width: STAGE_W, height: STAGE_H, background: solid$1(DARK), children, logic: w, canvasX: at * (STAGE_W + 160), canvasY: 0 });
+function titlePage(stageId, savesId, settingsId, extrasId, modeVar) {
+  const w = wiring();
+  const title = createNode("text", { name: "Title", text: "Your story", x: 0, y: 150, width: STAGE_W, height: 90, fontSize: 72, fontWeight: 700, color: INK, align: "center", autoSize: "none", role: "heading", headingLevel: 1 });
+  const sub = createNode("text", { name: "Subtitle", text: "A visual novel", x: 0, y: 248, width: STAGE_W, height: 34, fontSize: 24, color: "rgba(245, 242, 234, 0.7)", align: "center", autoSize: "none" });
+  const x = (STAGE_W - 280) / 2;
+  const cont = button$1("Continue", "Continue", x, 320, 280, { bindings: { visible: "story.canContinue" } });
+  const start = button$1("New game", "New game", x, 394);
+  const load = button$1("Load", "Load", x, 468);
+  const settings = button$1("Settings", "Settings", x, 542);
+  const extras = button$1("Extras", "Extras", x, 616);
+  onClick(w, start, { kind: "action.storyStart", params: {} });
+  onClick(w, cont, { kind: "action.storyLoad", params: { slot: "'latest'" } });
+  onClick(w, load, { kind: "action.setVariable", params: { variable: modeVar, value: "'load'" } }, go(savesId));
+  onClick(w, settings, go(settingsId));
+  onClick(w, extras, go(extrasId));
+  return page("Title", [title, sub, cont, start, load, settings, extras], w, 0);
+}
+function savesPage(modeVar, modeName) {
+  const w = wiring();
+  const head = createNode("text", { name: "Heading", text: "Load", x: 80, y: 40, width: 800, height: 60, fontSize: 44, fontWeight: 700, color: INK, autoSize: "none", role: "heading", headingLevel: 1, bindings: { text: `${modeName} == 'save' ? 'Save' : 'Load'` } });
+  const pic = createNode("image", { name: "Picture", x: 0, y: 0, width: 180, height: 101, fit: "cover", cornerRadius: 8, bindings: { assetId: "item.picture", visible: "item.picture != ''" } });
+  const words = createNode("text", { name: "Slot words", text: "Empty", x: 196, y: 4, width: 320, height: 94, overflow: "ellipsis", fontSize: 17, lineHeight: 1.4, color: INK, align: "left", autoSize: "none", bindings: { text: "item.used ? 'Slot ' + item.slot + ': ' + item.chapter + (item.scene ? ', ' + item.scene : '') + '\\n' + item.when + '\\n' + item.text : 'Slot ' + item.slot + ': empty'" } });
+  const slot = createNode("frame", { name: "Slot", x: 0, y: 0, width: 540, height: 117, cornerRadius: 12, fill: solid$1(PANEL), clip: true, cursor: "pointer", role: "button", children: [pic, words], bindings: { ariaLabel: "'Slot ' + item.slot + (item.used ? ', ' + item.chapter + ', ' + item.when : ', empty')" } });
+  slot.children.forEach((c2) => {
+    c2.x += 8;
+    c2.y += 8;
+  });
+  const grid = createNode("frame", { name: "Slots", x: 80, y: 130, width: 1100, height: 420, fill: null, repeat: { items: "story.saves", layout: "grid", gap: 20, columns: 2 }, children: [slot] });
+  const done = button$1("Back", "Back", 80, 620, 200);
+  const ifSave = { id: uid("n"), kind: "logic.if", x: 320, y: 40, params: { condition: `${modeName} == 'save'` } };
+  const ev = { id: uid("n"), kind: "event.pointer", x: 40, y: 40, params: { type: "click", target: slot.id } };
+  const save = { id: uid("n"), kind: "action.storySave", x: 580, y: 0, params: { slot: "event.index + 1" } };
+  const load = { id: uid("n"), kind: "action.storyLoad", x: 580, y: 100, params: { slot: "event.index + 1" } };
+  w.nodes.push(ev, ifSave, save, load);
+  w.edges.push({ id: uid("e"), from: ev.id, fromPort: "out", to: ifSave.id, toPort: "in" }, { id: uid("e"), from: ifSave.id, fromPort: "true", to: save.id, toPort: "in" }, { id: uid("e"), from: ifSave.id, fromPort: "false", to: load.id, toPort: "in" });
+  onClick(w, done, back());
+  return page("Save and load", [head, grid, done], w, 3);
+}
+function settingsPage() {
+  const w = wiring();
+  const rows = [
+    ["Text speed", "textSpeed", [["Slow", "20"], ["Normal", "null"], ["Fast", "90"], ["Instant", "0"]]],
+    ["Auto speed", "autoSpeed", [["Slow", "0.6"], ["Normal", "1"], ["Fast", "1.6"]]],
+    ["Skip", "skipUnread", [["Lines I have read", "false"], ["Every line", "true"]]],
+    ["Music", "music", [["Off", "0"], ["Quiet", "0.4"], ["Normal", "0.8"], ["Full", "1"]]],
+    ["Voices", "voice", [["Off", "0"], ["Quiet", "0.5"], ["Full", "1"]]],
+    ["Sound effects", "effects", [["Off", "0"], ["Quiet", "0.4"], ["Normal", "0.8"], ["Full", "1"]]],
+    ["Text size", "textSize", [["As designed", "1"], ["Large", "1.25"], ["Largest", "1.5"]]],
+    ["Font", "readable", [["As designed", "false"], ["Easier to read", "true"]]]
+  ];
+  const kids = [heading$2("Settings", 32)];
+  const rowW = 760;
+  rows.forEach(([label, pref, choices], i) => {
+    const y = 112 + i * 62;
+    kids.push(createNode("text", { name: label, text: label, x: 80, y: y + 12, width: 260, height: 30, fontSize: 20, color: INK, autoSize: "none" }));
+    const bw = (rowW - 20 * (choices.length - 1)) / choices.length;
+    choices.forEach(([name, value], j) => {
+      const now2 = value === "null" ? `story.prefs.${pref} === null` : `story.prefs.${pref} == ${value}`;
+      const b = button$1(`${label}: ${name}`, name, 360 + j * (bw + 20), y, bw, { height: 48, fontSize: 17, bindings: { "fill.color": `${now2} ? '${ACCENT}' : 'rgba(255, 255, 255, 0.92)'`, ariaPressed: `${now2} ? 'true' : 'false'` } });
+      kids.push(b);
+      onClick(w, b, { kind: "action.storyPref", params: { pref, value } });
+    });
+  });
+  const done = button$1("Back", "Back", 80, 640, 200);
+  kids.push(done);
+  onClick(w, done, back());
+  return page("Settings", kids, w, 4);
+}
+function historyPage(stageId) {
+  const w = wiring();
+  const line = createNode("text", { name: "Said", text: "Who: what they said", x: 0, y: 0, width: 1120, height: 52, fontSize: 19, lineHeight: 1.35, color: INK, autoSize: "height", cursor: "pointer", role: "button", bindings: { text: "(item.speaker ? item.speaker + ': ' : '') + item.text" } });
+  const list2 = createNode("frame", { name: "Lines", x: 80, y: 150, width: 1120, height: 460, fill: null, clip: true, repeat: { items: "story.history.slice(-9)", layout: "vertical", gap: 10, columns: 1 }, children: [line] });
+  const done = button$1("Back to the story", "Back to the story", 80, 640, 280);
+  onClick(w, line, { kind: "action.storyRollBack", params: { steps: "story.history.length + 1 - story.history.slice(-9)[event.index].number" } }, go(stageId));
+  onClick(w, done, go(stageId));
+  const hint = createNode("text", { name: "Hint", text: "Click a line to go back to it.", x: 80, y: 100, width: 800, height: 26, fontSize: 16, color: "rgba(245, 242, 234, 0.7)", autoSize: "none" });
+  return page("History", [heading$2("What was said", 28), hint, list2, done], w, 2);
+}
+function extrasPage() {
+  const w = wiring();
+  const pic = createNode("image", { name: "Picture", x: 0, y: 0, width: 200, height: 112, fit: "cover", cornerRadius: 8, fill: solid$1(PANEL), bindings: { assetId: "item.seen ? item.image : ''" } });
+  const locked = createNode("text", { name: "Locked", text: "?", x: 0, y: 30, width: 200, height: 50, fontSize: 36, color: "rgba(245, 242, 234, 0.5)", align: "center", autoSize: "none", bindings: { visible: "!item.seen" } });
+  const cell = createNode("frame", { name: "Gallery picture", x: 0, y: 0, width: 200, height: 112, fill: solid$1(PANEL), cornerRadius: 8, clip: true, children: [pic, locked] });
+  const gallery = createNode("frame", { name: "Gallery", x: 80, y: 150, width: 650, height: 380, fill: null, repeat: { items: "story.gallery", layout: "grid", gap: 20, columns: 3 }, children: [cell] });
+  const ending = createNode("text", { name: "Ending", text: "An ending", x: 0, y: 0, width: 380, height: 30, fontSize: 19, color: INK, autoSize: "none", bindings: { text: "item.reached ? item.name : '???'" } });
+  const endings = createNode("frame", { name: "Endings", x: 800, y: 150, width: 400, height: 200, fill: null, repeat: { items: "story.endings", layout: "vertical", gap: 8, columns: 1 }, children: [ending] });
+  const chapter = button$1("Chapter", "A chapter", 0, 0, 380, { height: 44, fontSize: 17, bindings: { label: "item.reached ? item.name : '???'", disabled: "!item.reached" } });
+  const chapters = createNode("frame", { name: "Chapter select", x: 800, y: 420, width: 400, height: 200, fill: null, repeat: { items: "story.chapters", layout: "vertical", gap: 10, columns: 1 }, children: [chapter] });
+  const song = button$1("Song", "Play", 0, 0, 200, { height: 40, fontSize: 16, bindings: { label: "item.heard ? 'Track ' + item.number : '???'", disabled: "!item.heard" } });
+  const songs = createNode("frame", { name: "Music room", x: 80, y: 580, width: 650, height: 40, fill: null, repeat: { items: "story.musicRoom", layout: "horizontal", gap: 20, columns: 1 }, children: [song] });
+  const label = (text2, x, y) => createNode("text", { name: text2, text: text2, x, y, width: 400, height: 30, fontSize: 22, fontWeight: 700, color: INK, autoSize: "none", role: "heading", headingLevel: 2 });
+  onClick(w, chapter, { kind: "action.storyStart", params: { from: "{story.chapters[event.index].name}" } });
+  onClick(w, song, { kind: "action.sound", params: { source: "story.musicRoom[event.index].sound", soundtrack: true, loop: true } });
+  const done = button$1("Back", "Back", 80, 640, 200);
+  onClick(w, done, { kind: "action.stopSound", params: {} }, back());
+  return page("Extras", [heading$2("Extras", 32), label("Gallery", 80, 110), gallery, label("Endings", 800, 110), endings, label("Chapters", 800, 380), chapters, label("Music", 80, 540), songs, done], w, 5);
+}
+function visualNovel() {
+  const project = createProject("Visual novel");
+  project.themes = starterThemes();
+  const hide2 = { id: uid("v"), name: HIDE_VAR, type: "boolean", initial: false };
+  const mode = { id: uid("v"), name: "savesMode", type: "string", initial: "load" };
+  project.variables.push(hide2, mode);
+  project.fonts.push({ family: "Open Sans", source: "google", weights: [400, 600, 700] }, { family: "Atkinson Hyperlegible", source: "google", weights: [400, 700] });
+  project.settings.stage = "16:9";
+  const stage = storyStage(hide2.id, { canvasX: STAGE_W + 160, canvasY: 0 });
+  const saves = savesPage(mode.id, mode.name);
+  const settings = settingsPage();
+  const history = historyPage(stage.id);
+  const extras = extrasPage();
+  const title = titlePage(stage.id, saves.id, settings.id, extras.id, mode.id);
+  const find2 = (name) => {
+    let hit2;
+    const look = (list2) => {
+      for (const n of list2) {
+        if (!hit2 && n.name === name) hit2 = n;
+        if ("children" in n && Array.isArray(n.children)) look(n.children);
+      }
+    };
+    look(stage.children);
+    return hit2;
+  };
+  const bar = find2("Story buttons");
+  const more = (name, label) => createNode("button", { name, x: 0, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid$1("rgba(18, 18, 28, 0.7)"), color: INK });
+  const extra = [more("Save", "Save"), more("Load", "Load"), more("History", "History"), more("Menu", "Menu")];
+  bar.children.forEach((b, i) => b.x = (extra.length + i) * 94);
+  extra.forEach((b, i) => b.x = i * 94);
+  bar.children.unshift(...extra);
+  bar.width = bar.children.length * 94 - 10;
+  bar.x = STAGE_W - 80 - bar.width;
+  const sw = stage.logic;
+  onClick(sw, extra[0], { kind: "action.setVariable", params: { variable: mode.id, value: "'save'" } }, go(saves.id));
+  onClick(sw, extra[1], { kind: "action.setVariable", params: { variable: mode.id, value: "'load'" } }, go(saves.id));
+  onClick(sw, extra[2], go(history.id));
+  onClick(sw, extra[3], { kind: "action.storySave", params: { slot: "'auto'" } }, go(title.id));
+  const words = find2("Words");
+  words.bindings = { ...words.bindings, fontSize: "26 * story.prefs.textSize", fontFamily: "story.prefs.readable ? 'Atkinson Hyperlegible' : 'Open Sans'" };
+  const toTitle = createNode("button", { name: "Back to the title", x: (STAGE_W - 280) / 2, y: STAGE_H / 2 + 60, width: 280, height: 54, label: "Back to the title", fontSize: 20, fontWeight: 600, cornerRadius: 12, fill: solid$1("rgba(255, 255, 255, 0.92)"), color: DARK, bindings: { visible: "story.ended" } });
+  stage.children.push(toTitle);
+  onClick(sw, toTitle, go(title.id));
+  title.canvasX = 0;
+  project.artboards = [title, stage, history, saves, settings, extras];
+  project.artboards.forEach((a, i) => a.canvasX = i * (STAGE_W + 160));
+  project.settings.startArtboardId = title.id;
+  project.story = {
+    stage: stage.id,
+    chapters: [{ id: uid("ch"), name: "Chapter 1", lines: linesOf(SAMPLE_CHAPTER) }],
+    cast: [
+      { id: uid("cm"), name: "Millie", colour: "#c2410c", expressions: [] },
+      { id: uid("cm"), name: "Olive", colour: "#1d4ed8", expressions: [] }
+    ]
+  };
+  const item2 = (text2, node, artboard) => ({ id: uid("ck"), text: text2, ...node ? { nodeId: node.id } : {}, ...artboard ? { artboardId: artboard.id } : {}, done: false });
+  return {
+    project,
+    checklist: [
+      item2("Give it a title on the title screen", title.children[0], title),
+      item2("Write your story in the Story tab: the sample shows every kind of line"),
+      item2("Add your characters in the Story tab under Cast, with a picture for each face (pictures named after them fill the faces in)"),
+      item2("Add backgrounds to Assets and show them with a line like [bg Quad]"),
+      item2("Restyle the dialogue box: its colour, the name plate and the words", find2("Dialogue box"), stage),
+      item2("Preview it from the title, play to an ending, and try Save, Load, History and Settings")
+    ]
   };
 }
 let L = lookFor(void 0);
@@ -14650,7 +15072,7 @@ function flipCards() {
   ];
   const fronts = [];
   const backs = [];
-  data.forEach(([front, back], i) => {
+  data.forEach(([front, back2], i) => {
     const v = { id: uid("v"), name: `flipped${i + 1}`, type: "boolean", initial: false };
     project.variables.push(v);
     const x = 80 + i * 285;
@@ -14678,7 +15100,7 @@ function flipCards() {
       stroke: stroke(L.success, 2),
       clip: false,
       bindings: { visible: v.name },
-      children: [text("Back text", back, 24, 110, 212, { fontSize: 18, align: "center" })]
+      children: [text("Back text", back2, 24, 110, 212, { fontSize: 18, align: "center" })]
     });
     const card = createNode("frame", {
       name: `Card ${i + 1}`,
@@ -14814,14 +15236,14 @@ function branching() {
   ab.children.push(goLeft, goRight);
   const wire = (btn, to, row2, board) => {
     const on = gnode("event.pointer", 0, row2 * 120, { target: btn.id, type: "click" }, "Story");
-    const go = gnode("action.artboard", 260, row2 * 120, { artboard: to.id, transition: "fade", duration: 300 });
-    board.logic.nodes.push(on, go);
-    board.logic.edges.push(edge(on, go));
+    const go2 = gnode("action.artboard", 260, row2 * 120, { artboard: to.id, transition: "fade", duration: 300 });
+    board.logic.nodes.push(on, go2);
+    board.logic.edges.push(edge(on, go2));
   };
   wire(goLeft, left, 0, ab);
   wire(goRight, right, 1, ab);
-  for (const [board, back] of [[left, "Try the other path"], [right, "Try the other path"]]) {
-    const again = button(`${board.name} restart`, back, 80, 320, 260, false);
+  for (const [board, back2] of [[left, "Try the other path"], [right, "Try the other path"]]) {
+    const again = button(`${board.name} restart`, back2, 80, 320, 260, false);
     board.children.push(again);
     wire(again, ab, 0, board);
   }
@@ -14870,9 +15292,9 @@ function timelineIntro() {
   };
   ab.timelines.push(tl);
   const on = gnode("event.pointer", 0, 0, { target: replay.id, type: "click" }, "Intro");
-  const go = gnode("action.timeline", 260, 0, { timeline: tl.id, op: "restart" });
-  ab.logic.nodes.push(on, go);
-  ab.logic.edges.push(edge(on, go));
+  const go2 = gnode("action.timeline", 260, 0, { timeline: tl.id, op: "restart" });
+  ab.logic.nodes.push(on, go2);
+  ab.logic.edges.push(edge(on, go2));
   return {
     project,
     checklist: [
@@ -14890,7 +15312,8 @@ const STARTERS = [
   { key: "flip-cards", name: "Flip cards", description: "Three cards that turn over on a click or Enter, for terms and definitions or question and answer.", tags: ["revision", "variables"], build: flipCards },
   { key: "sorting", name: "Drag and drop sorting", description: "Four items to drag into two groups, with feedback for a right and a wrong drop, a count and a Start again button.", tags: ["drag and drop", "assessment"], build: sorting },
   { key: "branching-story", name: "Branching story", description: "An opening scene with two choices that lead to different endings, each on its own artboard.", tags: ["scenarios", "artboards"], build: branching },
-  { key: "timeline-intro", name: "Animated timeline intro", description: "A title, a line and a bar that animate in on a timeline, with a Replay button.", tags: ["animation", "timeline"], build: timelineIntro }
+  { key: "timeline-intro", name: "Animated timeline intro", description: "A title, a line and a bar that animate in on a timeline, with a Replay button.", tags: ["animation", "timeline"], build: timelineIntro },
+  { key: "visual-novel", name: "Visual novel", description: "A story written as text, played on a stage with a dialogue box, characters and choices, with a title screen, saves, history, settings and extras.", tags: ["story", "scenarios"], build: visualNovel }
 ];
 const starterByKey = (key) => STARTERS.find((s) => s.key === key);
 function projectFromStarter(s, name) {
@@ -17618,13 +18041,13 @@ function allNodes(p) {
 }
 function artboardNodes(ab) {
   const out = [];
-  const go = (list2) => {
+  const go2 = (list2) => {
     for (const n of list2 ?? []) {
       out.push(n);
-      go(n.children);
+      go2(n.children);
     }
   };
-  go(ab.children);
+  go2(ab.children);
   return out;
 }
 const byId = (p) => new Map(allNodes(p).map((n) => [n.id, n]));
@@ -26576,7 +26999,7 @@ help:sketch-pads help:timelines`
     keywords: "story visual novel script dialogue conversation branching scenario role play choices chapters scenes narration writer screenplay characters lines jump ending",
     body: `A **story** is written as text, one line per thing that happens, the way you'd write a play. It plays on a stage page with a dialogue box, the characters and the choices, so a 50 line conversation or a 50,000 word novel needs no page per line and no boxes in the graph.
 
-**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours.
+**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours. For a whole game, start a new project from the **Visual novel** template instead: it adds a title screen, saves, history, settings and extras (see [Saves, settings and extras](story-game)).
 
 **How lines work:**
 - \`Millie: You came!\` is Millie talking. \`Millie (smiling, left, slide): You came!\` also picks her face, where she stands (far left, left, centre, right, far right) and how she comes on (slide, fade, hop, instant), in any order.
@@ -26616,7 +27039,31 @@ Each character in the Story tab's **Cast** has a name (as lines use it), what th
 - A screen reader hears each line once, whole, as it comes up.
 - Lines read on this device are remembered, which is what Skip goes by.
 
-help:story help:repeaters help:bindings`
+help:story help:story-game help:repeaters help:bindings`
+  },
+  {
+    id: "story-game",
+    title: "Saves, settings and extras",
+    group: "Interactivity",
+    summary: "The parts that make a story a game: save slots, Continue, the reader's settings, the history, a gallery, endings and chapter select.",
+    keywords: "visual novel save load slots quick save autosave continue settings text speed volume music voice effects text size readable font history gallery endings chapter select music room extras title screen",
+    body: `The **Visual novel** template (**Templates**, **Built-in**) has all of these as pages you can restyle: **Title**, **Story stage**, **History**, **Save and load**, **Settings** and **Extras**. They're made from the nodes and values below, so you can build your own too.
+
+**Saving:** **Save the story** keeps where the story is and every variable in a slot (1, 2, 3..., or quick), and **Load the story** puts it all back and shows the stage. The story saves itself in **auto** at every choice, and slot **latest** is the newest of all, which is what **Continue** loads (\`story.canContinue\` says whether there's one). A list of \`story.saves\` shows the slots with \`item.chapter\`, \`item.scene\`, \`item.when\`, the last words and the background as a picture. **Settings** in the Story tab sets how many slots there are. Saves stay in the reader's browser.
+
+**The reader's settings:** **Story setting** changes text speed, Auto speed, whether Skip goes through unread lines, the music, voice and effects volumes, text size and an easier to read font, kept on their device. Read them as \`story.prefs\`: the stage's words are bound to \`26 * story.prefs.textSize\`.
+
+**History:** a list of \`story.history\` shows what was said, and **Go back a line** with \`story.history.length + 1 - item.number\` lines back returns to one.
+
+**Extras:** \`story.gallery\` (every picture a \`[bg]\` line shows, with \`item.seen\`), \`story.endings\` (with \`item.reached\`), \`story.chapters\` and \`story.musicRoom\` (\`item.heard\`) unlock as this reader gets to them, across every playthrough.
+
+**Characters that feel alive:** give a face a **Blink** picture and they blink now and then; give it a **Talking** picture and their mouth moves while their words type on or their voice plays. A **Blip** sound in the cast plays as their words type on, higher or lower with **Blip pitch**. All of it holds still for someone who asked for less motion.
+
+**Voices:** **Download the voice script** in the Story tab gives the actors a spreadsheet of every spoken line, with the file name to save each recording as. Put the recordings in Assets and **Match voice files** ties each to its line, which keeps it through any edit to the words. A voice plays as its line comes up, and Auto waits for it.
+
+**Good to know:** holding **Ctrl** skips while it's held.
+
+help:story help:story-stage`
   },
   {
     id: "sketch-pads",
@@ -30221,8 +30668,8 @@ A note is up to 2000 characters, a conversation holds 200 messages, and a projec
     summary: "Let an AI agent join your editing session to build, change and debug alongside you.",
     keywords: "ai agent claude mcp model context protocol assistant automation llm copilot url connect http",
     body: () => {
-      const page = typeof location !== "undefined" && /^https?:$/.test(location.protocol) ? location : null;
-      const base2 = page ? `${page.origin}${page.pathname.replace(/\/(index\.html)?$/, "")}` : "https://<your server>/interactives";
+      const page2 = typeof location !== "undefined" && /^https?:$/.test(location.protocol) ? location : null;
+      const base2 = page2 ? `${page2.origin}${page2.pathname.replace(/\/(index\.html)?$/, "")}` : "https://<your server>/interactives";
       const url = `${base2}/mcp?agent=Claude`;
       let sid = "";
       try {

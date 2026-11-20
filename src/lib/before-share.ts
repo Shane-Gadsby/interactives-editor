@@ -126,6 +126,19 @@ export function unreachablePages(project: Project): ShareItem[] {
   const start = project.settings.startArtboardId && pages.some((p) => p.id === project.settings.startArtboardId) ? project.settings.startArtboardId : pages[0].id;
   const next = new Map<string, string[]>();
   for (const r of pageRoutes(project)) next.set(r.from, [...(next.get(r.from) ?? []), r.to]);
+  //The story: a page with a Start, Load or Back to the story node leads to the stage, and the stage to every page a [call] or [open] line names
+  const story = project.story;
+  const stage = story?.stage ?? (story ? start : undefined);
+  if (story && stage) {
+    for (const ab of project.artboards) if (ab.logic.nodes.some((n) => ['action.storyStart', 'action.storyLoad', 'action.storyBack'].includes(n.kind))) next.set(ab.id, [...(next.get(ab.id) ?? []), stage]);
+    const byName = new Map(project.artboards.map((a) => [a.name.trim().toLowerCase(), a.id]));
+    for (const ch of story.chapters)
+      for (const l of ch.lines) {
+        const m = /^\s*\[(call|open)\s+(.+?)\s*\]\s*$/i.exec(l.text);
+        const to = m ? byName.get(m[2].toLowerCase()) : undefined;
+        if (to) next.set(stage, [...(next.get(stage) ?? []), to]);
+      }
+  }
   const seen = new Set<string>([start]);
   for (const id of seen) for (const to of next.get(id) ?? []) seen.add(to);
   return pages.filter((p) => !seen.has(p.id) && !parts.has(p.id)).map((p) => ({ key: `page:${p.id}`, name: p.name, where: 'nothing leads here', artboardId: p.id }));

@@ -9,7 +9,7 @@ import { SplitColumns } from '../components/SplitColumns';
 import { SectionBlurb } from '../components/SectionBlurb';
 import { assetKind } from '../lib/asset-kind';
 import { nextChapterName, startStory } from '../lib/story';
-import { facesFromPictures } from '../lib/story-cast';
+import { facesFromPictures, matchVoiceFiles, voiceScript } from '../lib/story-cast';
 
 /** Ask the editor to open Preview playing the story from a line (Editor.tsx listens). */
 export const PREVIEW_STORY_EVENT = 'ix-preview-story';
@@ -388,8 +388,46 @@ function StorySettingsForm({ story }: { story: Story }) {
 function StorySide({ story, chapterId }: { story: Story; chapterId: string | null }) {
   const counts = useMemo(() => storyCounts(story), [story]);
   const ch = chapterId ? counts.chapters.find((c) => c.id === chapterId) : null;
+  const assets = useEditor((st) => st.project.assets);
+  const spoken = useMemo(() => story.chapters.reduce((n, c) => n + readChapter(c, story).ops.filter((o) => o.k === 'say' && o.speaker).length, 0), [story]);
+  const voiced = story.chapters.reduce((n, c) => n + c.lines.filter((l) => l.voice).length, 0);
+  const sounds = assets.filter((a) => assetKind(a.mime, a.name) === 'audio');
+  const found = matchVoiceFiles(story, sounds);
+  const fresh = [...found].filter(([line, asset]) => story.chapters.some((c) => c.lines.some((l) => l.id === line && l.voice !== asset))).length;
   return (
     <div className="script-help story-side">
+      <div className="field-label block">Voices</div>
+      <p className="hint">
+        {voiced} of {spoken} spoken lines have a voice.
+      </p>
+      <div className="story-actions story-voice">
+        <button
+          className="link-btn"
+          title="A spreadsheet (CSV) for the actors: every spoken line, who says it, and the file name to save the recording as"
+          onClick={() => {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([voiceScript(story, readChapter as never)], { type: 'text/csv' }));
+            a.download = 'voice script.csv';
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+          }}
+        >
+          Download the voice script
+        </button>
+        {fresh > 0 && (
+          <button
+            className="btn"
+            title="Sound files in Assets named with a line's id (as the voice script names them) become that line's voice"
+            onClick={() =>
+              store().update((d) => {
+                for (const c of d.story?.chapters ?? []) for (const l of c.lines) if (found.has(l.id)) l.voice = found.get(l.id)!;
+              })
+            }
+          >
+            Match {fresh} voice {fresh === 1 ? 'file' : 'files'}
+          </button>
+        )}
+      </div>
       <div className="field-label block">Words</div>
       <p className="hint">
         {ch ? `${ch.words.toLocaleString()} in this chapter, ` : ''}

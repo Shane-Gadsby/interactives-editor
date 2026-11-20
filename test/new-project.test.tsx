@@ -185,12 +185,12 @@ describe('Start a new project', () => {
     expect(opened).toEqual(['prtpl00001']);
   });
 
-  it('Built-in template shows the six starters as cards and makes a project from one', async () => {
+  it('Built-in template shows the seven starters as cards and makes a project from one', async () => {
     await openChooser();
     await click(tab('Built-in'));
     await flush();
-    expect(options()).toHaveLength(6);
-    expect(dlg()!.querySelectorAll('.np-thumb')).toHaveLength(6);
+    expect(options()).toHaveLength(7);
+    expect(dlg()!.querySelectorAll('.np-thumb')).toHaveLength(7);
     await click(options()[0]);
     const nm = nameBox().value;
     expect(nm).toBeTruthy();
@@ -263,7 +263,7 @@ describe('keyboard and screen reader behaviour', () => {
     expect(document.activeElement).toBe(options()[1]);
     expect(options().filter((o) => o.tabIndex === 0)).toEqual([options()[1]]);
     await press(options()[1], 'End');
-    expect(options()[5].getAttribute('aria-selected')).toBe('true');
+    expect(options()[6].getAttribute('aria-selected')).toBe('true');
     await press(options()[5], 'Home');
     expect(options()[0].getAttribute('aria-selected')).toBe('true');
     await press(options()[0], 'Enter');
@@ -307,7 +307,7 @@ describe('keyboard and screen reader behaviour', () => {
     await flush();
     const search = document.querySelector<HTMLInputElement>('.np-search')!;
     expect(search.getAttribute('aria-label')).toMatch(/Search/);
-    expect(dlg()!.querySelector('[role=status]')!.textContent).toBe('6 choices');
+    expect(dlg()!.querySelector('[role=status]')!.textContent).toBe('7 choices');
     await typeInto(search, 'quiz');
     expect(dlg()!.querySelector('[role=status]')!.textContent).toMatch(/^\d+ choices?$/);
   });

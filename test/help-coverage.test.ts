@@ -11,6 +11,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'A Visual novel template': [['story-game', 'Save the story'], ['story-game', 'Continue'], ['story-game', 'Story setting'], ['story-game', 'Blink'], ['story-game', 'Match voice files']],
   'Stories written as text': [['story', 'Start a story'], ['story', 'Preview from this line'], ['story-stage', 'Add faces from pictures named'], ['story-stage', 'Go back a line']],
   'Fixed: a black box round embeds while they load': [['project-settings', 'never shows a dark box while it loads']],
   'YouTube, Vimeo and Panopto on a Video layer': [['images-media', 'Video site link'], ['images-media', 'Panopto plays, but']],

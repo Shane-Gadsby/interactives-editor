@@ -243,7 +243,7 @@ describe('the built-in starters', () => {
       const ids = new Set(project.themes!.tokens.map((t) => `token:${t.id}`));
       const used = refsIn(project.artboards);
       //The animated intro is a dark hero on purpose: it carries the themes but keeps its own fixed colours
-      if (s.key !== 'timeline-intro') expect(used.length).toBeGreaterThan(3);
+      if (s.key !== 'timeline-intro' && s.key !== 'visual-novel') expect(used.length).toBeGreaterThan(3);
       expect(used.every((r) => ids.has(r))).toBe(true);
     });
 

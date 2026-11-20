@@ -38,3 +38,33 @@ export function facesFromPictures(name: string, images: Asset[], have: CastExpre
   // neutral first, as the face they come on with
   return [...faces.values()].sort((a, b) => (a.name === 'neutral' ? -1 : b.name === 'neutral' ? 1 : 0));
 }
+
+/** The lines someone says, for the actors: one row per spoken line with its id, which is what a recorded file is named by. */
+export function voiceScript(story: import('interactives-player').Story, readChapter: (c: import('interactives-player').StoryChapter, s: import('interactives-player').Story) => { ops: { k: string; line: string; speaker?: string | null; text?: string }[] }): string {
+  const rows = [['Line id', 'Chapter', 'Character', 'Words', 'File name']];
+  for (const ch of story.chapters) {
+    const prog = readChapter(ch, story);
+    for (const op of prog.ops) {
+      if (op.k !== 'say' || !op.speaker) continue;
+      const plain = String(op.text ?? '').replace(/\{\/?(pause|fast|slow|shake|wave|b|i|colour|color|big|small)(?:[ =:][^{}]*)?\}/gi, '');
+      rows.push([op.line, ch.name, op.speaker, plain, `${op.speaker} ${op.line}.mp3`]);
+    }
+  }
+  const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  return rows.map((r) => r.map(cell).join(',')).join('\r\n');
+}
+
+/** Sound files whose names carry a line's id ("Millie l7k2q9.mp3", "l7k2q9.wav") matched to those lines: line id to asset id. */
+export function matchVoiceFiles(story: import('interactives-player').Story, sounds: Asset[]): Map<string, string> {
+  const ids = new Set(story.chapters.flatMap((c) => c.lines.map((l) => l.id)));
+  const out = new Map<string, string>();
+  for (const a of sounds) {
+    for (const word of a.name.replace(/\.[a-z0-9]+$/i, '').split(/[\s_\-.,]+/)) {
+      if (ids.has(word)) {
+        out.set(word, a.id);
+        break;
+      }
+    }
+  }
+  return out;
+}
