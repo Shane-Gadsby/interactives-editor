@@ -104,9 +104,10 @@ export const PANEL_NAMES: Record<PanelId, { label: string; words: string }> = {
   themes: { label: 'Themes', words: 'colours tokens' },
   usage: { label: 'Usage', words: 'unused broken references' },
   credits: { label: 'Attributions', words: 'credits sources' },
+  story: { label: 'Story', words: 'visual novel script dialogue characters cast branching scenario chapters' },
 };
 
-const BOTTOM_TABS: PanelId[] = ['timeline', 'logic', 'scripts', 'variables', 'data', 'usage', 'a11y', 'insights', 'interface', 'checklist', 'content', 'themes', 'credits'];
+const BOTTOM_TABS: PanelId[] = ['timeline', 'logic', 'scripts', 'variables', 'data', 'usage', 'a11y', 'insights', 'interface', 'checklist', 'content', 'themes', 'credits', 'story'];
 
 /** Show a panel (and bring its tab forward when it lives in the bottom tabs). */
 export function openPanel(id: PanelId): void {

@@ -1,4 +1,5 @@
 import { answerPreviewProgress, forgetPreviewCourse, forgetPreviewLearner, previewCourseHas, previewLearnerHas, usesCourseCollections } from './lib/preview-learner';
+import { PREVIEW_STORY_EVENT } from './panels/StoryPanel';
 import { parked } from './lib/parked';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
@@ -505,6 +506,17 @@ function Workspace({ home }: { home: () => void }) {
   useDockSync();
   const z = useZoneSizes(widths);
   const [preview, setPreview] = useState(false);
+  //The Story panel's Preview from this line: Preview opens playing the story from there
+  const [storyFrom, setStoryFrom] = useState<{ chapter: string; line: string } | null>(null);
+  useEffect(() => {
+    const open = (e: Event) => {
+      setStoryFrom((e as CustomEvent<{ chapter: string; line: string }>).detail);
+      store().set({ previewPlaying: false });
+      setPreview(true);
+    };
+    window.addEventListener(PREVIEW_STORY_EVENT, open);
+    return () => window.removeEventListener(PREVIEW_STORY_EVENT, open);
+  }, []);
   // Someone new (they saw the first-run screen) opens their first project in Essentials, once. A template's checklist stays the tab that is open
   useEffect(() => void applyNewcomerEssentials(), []);
   // Fitted before the first paint (the canvas opens at its final zoom, not at 100% for a frame), and again a frame later in
@@ -560,7 +572,7 @@ function Workspace({ home }: { home: () => void }) {
       <DockZone zone="bottom" />
       <DockFloats />
       <DockDragLayer />
-      {preview && <PreviewModal onClose={() => setPreview(false)} />}
+      {preview && <PreviewModal storyFrom={storyFrom} onClose={() => (setPreview(false), setStoryFrom(null))} />}
       <CommandPalette />
       <ComponentPicker />
       {s.toast && <ToastView toast={s.toast} />}
@@ -1255,7 +1267,7 @@ function flowStart(project: { settings: { flows?: { id: string; artboardId: stri
   return f && project.artboards.some((a) => a.id === f.artboardId) ? f.artboardId : null;
 }
 
-export function PreviewModal({ onClose }: { onClose: () => void }) {
+export function PreviewModal({ onClose, storyFrom = null }: { onClose: () => void; storyFrom?: { chapter: string; line: string } | null }) {
   const project = useEditor((st) => st.project);
   const abId = useEditor((st) => st.activeArtboardId);
   const [html, setHtml] = useState<string | null>(null);
@@ -1403,14 +1415,14 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
     setBuildError(null);
     // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show,
     // opened with the sample link values on its address
-    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project), link: { ...(project.sampleLink ?? {}) } }).then(
+    standaloneHtml(storyFrom && project.story ? ({ ...project, story: { ...project.story, startAt: storyFrom } } as Project) : (project as Project), { startArtboardId: storyFrom && project.story?.stage ? project.story.stage : from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project), link: { ...(project.sampleLink ?? {}) } }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );
     return () => {
       live = false;
     };
-  }, [project, from, abId, nonce, accessibility, lessMotion]);
+  }, [project, from, abId, nonce, accessibility, lessMotion, storyFrom]);
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow) return;

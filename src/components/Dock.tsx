@@ -23,6 +23,7 @@ import { ThemesPanel } from '../panels/ThemesPanel';
 import { AccessibilityPanel } from '../panels/AccessibilityPanel';
 import { ChecklistPanel } from '../panels/ChecklistPanel';
 import { ContentFormPanel } from '../panels/ContentFormPanel';
+import { StoryPanel } from '../panels/StoryPanel';
 import { showFillIn } from '../lib/content-form';
 import { jumpToThread } from '../lib/comment-jump';
 import { panelOn, panelsInUse } from '../lib/essentials';
@@ -77,6 +78,7 @@ const PANELS: Record<PanelId, PanelDef> = {
   checklist: { label: 'Checklist', icon: 'check', help: 'templates#use-a-template', tip: 'The things to change in a project made from a template: tick them off, click one to find its layer, review before you share', tool: true, body: () => <ChecklistPanel /> },
   content: { label: 'Fill in', icon: 'form', help: 'fill-in-starter', tip: 'Fill in this starter: the words, questions, lists and pictures of a project made from a starter, as a plain form. What you type goes into the project, and the other panels show it', body: () => <ContentFormPanel /> },
   themes: { label: 'Themes', icon: 'themes', help: 'themes', tip: 'Colour tokens and the themes that give them values (Light, Dark, High contrast), with a contrast check per theme', tool: true, body: () => <ThemesPanel /> },
+  story: { label: 'Story', icon: 'text', help: 'story', tip: 'Write a story as plain text: who says what, the choices and where it jumps. It plays on a stage page with a dialogue box (visual novels, branching scenarios, role plays)', tool: true, body: () => <StoryPanel /> },
   credits: { label: 'Attributions', icon: 'credits', help: 'attributions', tip: 'Where the pictures, sounds, text and data in this project came from, and what it draws on: credits and references, linked to assets, with an optional Credits button for learners', tool: true, body: () => <CreditsPanel /> },
   usage: { label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each page, asset, variable, data source, script and timeline is used, and what is unused', tool: true, body: () => <UsagePanel /> },
 };

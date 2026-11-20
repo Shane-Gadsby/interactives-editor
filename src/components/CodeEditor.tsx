@@ -3,7 +3,7 @@ import { lazyModule } from '../lib/lazy-module';
 /** CodeMirror and its languages (about 500 kB) come in with the first code box to open, not with the editor's first screen. */
 export const codeMirror = lazyModule(() => import('./CodeEditorImpl'));
 
-type Props = { value: string; onChange: (v: string) => void; language?: 'javascript' | 'html' | 'glsl'; height?: number | string; errorLines?: number[] };
+type Props = { value: string; onChange: (v: string) => void; language?: 'javascript' | 'html' | 'glsl' | 'story'; height?: number | string; errorLines?: number[]; onCursorLine?: (line: number) => void; goToLine?: { line: number; n: number } | null; label?: string };
 
 /**
  * The code box: CodeMirror once it is in. Until then (a moment, the first time) a read-only copy of the text in the same

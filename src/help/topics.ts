@@ -3063,6 +3063,57 @@ help:sketch-pads help:timelines`,
   },
 
   {
+    id: 'story',
+    title: 'Writing a story',
+    group: 'Interactivity',
+    summary: 'A visual novel, a branching scenario or a role play written as plain text: who says what, the choices, and where the story goes next.',
+    keywords: 'story visual novel script dialogue conversation branching scenario role play choices chapters scenes narration writer screenplay characters lines jump ending',
+    body: `A **story** is written as text, one line per thing that happens, the way you'd write a play. It plays on a stage page with a dialogue box, the characters and the choices, so a 50 line conversation or a 50,000 word novel needs no page per line and no boxes in the graph.
+
+**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours.
+
+**How lines work:**
+- \`Millie: You came!\` is Millie talking. \`Millie (smiling, left, slide): You came!\` also picks her face, where she stands (far left, left, centre, right, far right) and how she comes on (slide, fade, hop, instant), in any order.
+- A line without a name is narration. Start it with \`>\` if it begins like a name (\`> Note: it was open.\`).
+- \`# The club fair\` starts a scene. \`-> The club fair\` jumps to it, \`-> Chapter 2\` to a chapter, and \`-> end Good friends\` ends the story, saying which ending.
+- \`? Join the club\` is a choice. The lines indented under it run when it's picked, then the story carries on after the last choice. \`[once]\` on the end hides it once taken, \`[if flyer]\` only shows it when that holds, and \`[if flyer, grey]\` shows it greyed out instead.
+- \`if trust >= 3\`, \`else if\`, \`else\`: the indented lines only run when it holds. \`set trust += 1\` changes a value. A name that isn't a variable is kept by the story itself.
+- Cues go in square brackets on their own line: \`[bg Quad]\`, \`[music Hopeful]\`, \`[music off, 2s]\`, \`[sound Door]\`, \`[show Olive at right]\`, \`[hide Olive, fade]\`, \`[wait 1s]\`, \`[shake]\`, \`[flash]\`, \`[tint night]\`, \`[zoom Millie]\`, \`[weather snow]\`. Pictures and sounds are found by their name in Assets.
+- \`[call Puzzle 1]\` goes to that page and waits; a **Back to the story** node there comes back, with a result the story reads as \`story.result\`. \`[open Notebook]\` opens an overlay and waits for it to close, \`[play Intro]\` plays a timeline on the stage, \`[run Give badge]\` runs a flow.
+- Inside a line: \`{name}\` shows a value, \`{pause}\` holds the typing, \`{fast}\`, \`{slow}\`, \`{shake}...{/shake}\`, \`{wave}\`, \`{b}\`, \`{i}\`, \`{big}\`, \`{small}\`, \`{colour red}\`.
+- \`//\` starts a note for writers that's never shown.
+
+**In the panel:** lines with a problem are marked, and listed under the script with a fix where there is one (**Add Hale** for someone not in the cast). **Preview from this line** plays from the caret, with the background, music and characters as the lines above leave them. The side shows word counts per chapter and per character. Download a chapter as text, or replace it with a text file: lines that didn't change keep their voice files and their place in saves.
+
+help:story-stage help:variables help:interactions`,
+  },
+  {
+    id: 'story-stage',
+    title: 'The story stage and the cast',
+    group: 'Interactivity',
+    summary: 'The page a story plays on, the characters on it, and the nodes that move the story along.',
+    keywords: 'story stage cast characters faces expressions sprites dialogue box name plate choices auto skip back hide visual novel story values',
+    body: `The **story stage** is an ordinary page whose layers are bound to the story's values, so you restyle the dialogue box, the name plate or the choices like anything else. **Start a story** makes one; any page with a layer reading a \`story.\` value works, and the Story tab's **Settings** can name one.
+
+**What it shows:** the background (\`story.background\`, fading in over \`story.backgroundBefore\`), the cast (a list of \`story.cast\`, each with \`item.image\`, \`item.x\` across the stage from 0 to 1, \`item.brightness\`), the dialogue box (\`story.speaker\`, \`story.speakerColour\`, and words with **Story words** on bound to \`story.marked\`, with **Letters shown** bound to \`story.shown\`), and the choices (a list of \`story.choices\`).
+
+**Going on:** a click anywhere that isn't a button, Space or Enter finishes the line or goes to the next, and 1 to 9 pick a choice. A page with its own **Go on** node keeps clicks to itself. The stage's buttons: **Back** goes back a line (undoing what happened since), **Auto** goes on by itself, **Skip** flies through lines read before, **Hide** puts the box away until the next click.
+
+## The cast
+
+Each character in the Story tab's **Cast** has a name (as lines use it), what the name plate says, its colour, where they stand, and their **Faces**: a picture for each expression, the first being the one they come on with. Add pictures named after them (\`Millie smiling.png\`, \`Millie sad.png\`) to Assets and **Add faces from pictures named Millie** fills the list in. Whoever isn't speaking is dimmed a little (**Settings** turns that off).
+
+**Nodes:** **Start the story** (a New game button, or from a scene), **Go on**, **Pick choice**, **Back to the story**, **Auto or Skip**, **Go back a line** and **On story end**. Scripts get \`ix.story\`.
+
+**Good to know:**
+- Someone who asked for less motion gets no shake or zoom, and the words don't wobble.
+- A screen reader hears each line once, whole, as it comes up.
+- Lines read on this device are remembered, which is what Skip goes by.
+
+help:story help:repeaters help:bindings`,
+  },
+
+  {
     id: 'sketch-pads',
     title: 'Sketch pads',
     group: 'Interactivity',

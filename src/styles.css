@@ -4520,6 +4520,104 @@ button.twisty:hover {
   white-space: pre;
   margin: 0;
 }
+/* ---------------------------------------------------------------- story */
+
+.story-list {
+  border-right: 1px solid var(--line);
+  padding: 6px;
+  overflow-y: auto;
+}
+.story-list .field-label.block {
+  margin: 10px 6px 4px;
+}
+.story-list .field-label.block:first-child {
+  margin-top: 4px;
+}
+.story-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.story-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: none;
+}
+.story-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.story-main .code-editor {
+  flex: 1;
+  min-height: 0;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+}
+.story-form {
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+.story-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px 20px;
+  padding: 8px 12px;
+}
+.story-form > .field-label.block,
+.story-form > .section-blurb,
+.story-actions {
+  margin: 8px 12px 4px;
+}
+.story-actions {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.story-faces {
+  border-collapse: collapse;
+  margin: 0 12px;
+  width: calc(100% - 24px);
+}
+.story-faces th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 2px 6px 2px 0;
+}
+.story-faces td {
+  padding: 2px 6px 2px 0;
+}
+.story-problems {
+  max-height: 30%;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px 12px;
+  list-style: none;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.story-problems li {
+  padding: 2px 0;
+}
+.story-counts {
+  margin: 0 0 8px;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.story-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  max-width: 560px;
+}
+
 .variables {
   padding: 10px 16px;
   overflow-y: auto;

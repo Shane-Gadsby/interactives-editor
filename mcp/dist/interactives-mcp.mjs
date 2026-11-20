@@ -1944,6 +1944,96 @@ const SPECS = [
     ]
   },
   {
+    kind: "event.storyEnd",
+    label: "On story end",
+    category: "event",
+    summary: "Runs when the story reaches an -> end line, with the ending it named.",
+    details: 'The ending is in event.ending ("Joined the club" for -> end Joined the club, empty for a plain -> end). Wire it to a page of endings, or to Go to page for the title screen. The story keeps showing its last line until something moves on.',
+    group: "Story",
+    gives: ["event.ending"],
+    outputs: OUT,
+    hasInput: false,
+    params: []
+  },
+  {
+    kind: "action.storyStart",
+    label: "Start the story",
+    category: "action",
+    summary: "Starts the story from the top (a New game button), or from a scene or chapter you name.",
+    details: "Goes to the story's stage page if it isn't showing. Everything the story kept (its own values, who's on stage, the choices taken) starts again; project variables are left alone, so reset them first if a new game should clear them too.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: [{ key: "from", label: "From", type: "text", placeholder: "the start", help: "A scene title or chapter name. Empty: the first chapter" }]
+  },
+  {
+    kind: "action.storyGoOn",
+    label: "Go on",
+    category: "action",
+    summary: "Finishes the line that's typing, or goes on to the next one, and cuts a [wait] short.",
+    details: "The story stage already goes on with a click anywhere, Space or Enter. A page with a Go on node of its own (on its dialogue box, say) keeps clicks to itself, so a click on a picture doesn't move the story on.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: []
+  },
+  {
+    kind: "action.storyPick",
+    label: "Pick choice",
+    category: "action",
+    summary: "Picks one of the story's choices on show, counting from 1.",
+    details: "Wired to a click on the copy of a list of story.choices, the default picks the copy that was clicked. The keys 1 to 9 pick choices too. A greyed-out choice can't be picked.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "Picked" },
+      { id: "none", label: "Not a choice" }
+    ],
+    hasInput: true,
+    params: [{ key: "choice", label: "Choice", type: "expr", default: "event.index + 1", help: "Which choice, from 1. The default is the clicked copy of a list" }]
+  },
+  {
+    kind: "action.storyBack",
+    label: "Back to the story",
+    category: "action",
+    summary: "From a page a [call ...] line went to: back to the story stage, carrying on after that line.",
+    details: `The result is in story.result, so a line after the call can say "if story.result == 'solved'". From any other page it goes nowhere and runs Not called.`,
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Not called" }
+    ],
+    hasInput: true,
+    params: [{ key: "result", label: "Result", type: "expr", placeholder: "'solved'", help: "What the page hands back (story.result)" }]
+  },
+  {
+    kind: "action.storyMode",
+    label: "Auto or Skip",
+    category: "action",
+    summary: "Turns Auto (lines go on by themselves) or Skip (read lines fly past) on, off, or the other way.",
+    details: "Auto waits for a line's voice to finish. Skip only goes through lines read before (on this device), and stops at a choice and at the first new line, unless Skip unread is on in the reader's settings.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "mode", label: "Mode", type: "select", default: "auto", options: [{ value: "auto", label: "Auto" }, { value: "skip", label: "Skip" }, { value: "both", label: "Both off" }] },
+      { key: "to", label: "Turn it", type: "select", default: "toggle", options: [{ value: "toggle", label: "The other way" }, { value: "on", label: "On" }, { value: "off", label: "Off" }], showIf: { key: "mode", values: ["auto", "skip"] } }
+    ]
+  },
+  {
+    kind: "action.storyRollBack",
+    label: "Go back a line",
+    category: "action",
+    summary: "Takes the story back to an earlier line, undoing what happened since (values, choices, who was on stage).",
+    details: "Wired to a click on a copy of a list of story.history, Lines back picks that line. The history holds the last 200 lines.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Nothing to go back to" }
+    ],
+    hasInput: true,
+    params: [{ key: "steps", label: "Lines back", type: "expr", default: "1", help: "How many lines back. In a list of story.history: story.history.length - event.index" }]
+  },
+  {
     kind: "action.toastHide",
     label: "Hide toast",
     category: "action",
@@ -2728,6 +2818,8 @@ const ANIMATABLE_PROPS = [
   { prop: "fontWeight", label: "Font weight", kind: "number" },
   { prop: "lineHeight", label: "Line height", kind: "number" },
   { prop: "blur", label: "Blur", kind: "number" },
+  { prop: "brightness", label: "Brightness", kind: "number" },
+  { prop: "reveal", label: "Letters shown", kind: "number" },
   { prop: "shadow.blur", label: "Shadow blur", kind: "number" },
   { prop: "shadow.x", label: "Shadow X", kind: "number" },
   { prop: "shadow.y", label: "Shadow Y", kind: "number" },
@@ -4857,7 +4949,7 @@ function sanitizeNode(raw, seen) {
     else delete n.states;
   }
   if ("maskMode" in n && !["alpha", "inverted", "luminance", "invertedLuminance"].includes(n.maskMode)) delete n.maskMode;
-  for (const k of ["blur", "fontWeight"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
+  for (const k of ["blur", "fontWeight", "brightness"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
   for (const k of ["blendMode", "cursor", "ariaLabel", "ariaDescription", "sayAs", "className"]) if (k in n && !isStr(n[k])) delete n[k];
   if ("role" in n && !["button", "checkbox", "radio", "radiogroup", "heading", "image", "region"].includes(n.role)) delete n.role;
   for (const k of ["decorative", "focusable", "ariaChecked", "ariaExpanded", "ariaPressed"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
@@ -26475,6 +26567,56 @@ Expression fields can use every variable and data source by name, \`event\` (det
 - They never take a click: anything under them still works.
 
 help:sketch-pads help:timelines`
+  },
+  {
+    id: "story",
+    title: "Writing a story",
+    group: "Interactivity",
+    summary: "A visual novel, a branching scenario or a role play written as plain text: who says what, the choices, and where the story goes next.",
+    keywords: "story visual novel script dialogue conversation branching scenario role play choices chapters scenes narration writer screenplay characters lines jump ending",
+    body: `A **story** is written as text, one line per thing that happens, the way you'd write a play. It plays on a stage page with a dialogue box, the characters and the choices, so a 50 line conversation or a 50,000 word novel needs no page per line and no boxes in the graph.
+
+**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours.
+
+**How lines work:**
+- \`Millie: You came!\` is Millie talking. \`Millie (smiling, left, slide): You came!\` also picks her face, where she stands (far left, left, centre, right, far right) and how she comes on (slide, fade, hop, instant), in any order.
+- A line without a name is narration. Start it with \`>\` if it begins like a name (\`> Note: it was open.\`).
+- \`# The club fair\` starts a scene. \`-> The club fair\` jumps to it, \`-> Chapter 2\` to a chapter, and \`-> end Good friends\` ends the story, saying which ending.
+- \`? Join the club\` is a choice. The lines indented under it run when it's picked, then the story carries on after the last choice. \`[once]\` on the end hides it once taken, \`[if flyer]\` only shows it when that holds, and \`[if flyer, grey]\` shows it greyed out instead.
+- \`if trust >= 3\`, \`else if\`, \`else\`: the indented lines only run when it holds. \`set trust += 1\` changes a value. A name that isn't a variable is kept by the story itself.
+- Cues go in square brackets on their own line: \`[bg Quad]\`, \`[music Hopeful]\`, \`[music off, 2s]\`, \`[sound Door]\`, \`[show Olive at right]\`, \`[hide Olive, fade]\`, \`[wait 1s]\`, \`[shake]\`, \`[flash]\`, \`[tint night]\`, \`[zoom Millie]\`, \`[weather snow]\`. Pictures and sounds are found by their name in Assets.
+- \`[call Puzzle 1]\` goes to that page and waits; a **Back to the story** node there comes back, with a result the story reads as \`story.result\`. \`[open Notebook]\` opens an overlay and waits for it to close, \`[play Intro]\` plays a timeline on the stage, \`[run Give badge]\` runs a flow.
+- Inside a line: \`{name}\` shows a value, \`{pause}\` holds the typing, \`{fast}\`, \`{slow}\`, \`{shake}...{/shake}\`, \`{wave}\`, \`{b}\`, \`{i}\`, \`{big}\`, \`{small}\`, \`{colour red}\`.
+- \`//\` starts a note for writers that's never shown.
+
+**In the panel:** lines with a problem are marked, and listed under the script with a fix where there is one (**Add Hale** for someone not in the cast). **Preview from this line** plays from the caret, with the background, music and characters as the lines above leave them. The side shows word counts per chapter and per character. Download a chapter as text, or replace it with a text file: lines that didn't change keep their voice files and their place in saves.
+
+help:story-stage help:variables help:interactions`
+  },
+  {
+    id: "story-stage",
+    title: "The story stage and the cast",
+    group: "Interactivity",
+    summary: "The page a story plays on, the characters on it, and the nodes that move the story along.",
+    keywords: "story stage cast characters faces expressions sprites dialogue box name plate choices auto skip back hide visual novel story values",
+    body: `The **story stage** is an ordinary page whose layers are bound to the story's values, so you restyle the dialogue box, the name plate or the choices like anything else. **Start a story** makes one; any page with a layer reading a \`story.\` value works, and the Story tab's **Settings** can name one.
+
+**What it shows:** the background (\`story.background\`, fading in over \`story.backgroundBefore\`), the cast (a list of \`story.cast\`, each with \`item.image\`, \`item.x\` across the stage from 0 to 1, \`item.brightness\`), the dialogue box (\`story.speaker\`, \`story.speakerColour\`, and words with **Story words** on bound to \`story.marked\`, with **Letters shown** bound to \`story.shown\`), and the choices (a list of \`story.choices\`).
+
+**Going on:** a click anywhere that isn't a button, Space or Enter finishes the line or goes to the next, and 1 to 9 pick a choice. A page with its own **Go on** node keeps clicks to itself. The stage's buttons: **Back** goes back a line (undoing what happened since), **Auto** goes on by itself, **Skip** flies through lines read before, **Hide** puts the box away until the next click.
+
+## The cast
+
+Each character in the Story tab's **Cast** has a name (as lines use it), what the name plate says, its colour, where they stand, and their **Faces**: a picture for each expression, the first being the one they come on with. Add pictures named after them (\`Millie smiling.png\`, \`Millie sad.png\`) to Assets and **Add faces from pictures named Millie** fills the list in. Whoever isn't speaking is dimmed a little (**Settings** turns that off).
+
+**Nodes:** **Start the story** (a New game button, or from a scene), **Go on**, **Pick choice**, **Back to the story**, **Auto or Skip**, **Go back a line** and **On story end**. Scripts get \`ix.story\`.
+
+**Good to know:**
+- Someone who asked for less motion gets no shake or zoom, and the words don't wobble.
+- A screen reader hears each line once, whole, as it comes up.
+- Lines read on this device are remembered, which is what Skip goes by.
+
+help:story help:repeaters help:bindings`
   },
   {
     id: "sketch-pads",

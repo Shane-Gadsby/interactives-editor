@@ -12,7 +12,7 @@ import { hideSome, type DockLayout, type PanelId } from './dock';
 export const ESSENTIAL_PANELS: PanelId[] = ['layers', 'assets', 'inspector', 'timeline', 'logic', 'variables', 'checklist', 'content'];
 
 /** Put away in Essentials. */
-export const HIDDEN_PANELS: PanelId[] = ['icons', 'libraries', 'comments', 'scripts', 'data', 'a11y', 'insights', 'interface', 'themes', 'usage', 'credits'];
+export const HIDDEN_PANELS: PanelId[] = ['icons', 'libraries', 'comments', 'scripts', 'data', 'a11y', 'insights', 'interface', 'themes', 'usage', 'credits', 'story'];
 
 /** Tool rail groups put away in Essentials (Shapes, Media with Text, and Web stay). */
 export const HIDDEN_TOOL_GROUPS = ['draw', 'data', 'rig'];
@@ -35,6 +35,7 @@ export function panelsInUse(project: Project, reviewed = false): Set<PanelId> {
   const pi = project.settings?.publicInterface;
   if (pi && (pi.variables.length || pi.messages.length)) out.add('interface');
   if (project.attributions?.length) out.add('credits');
+  if (project.story) out.add('story');
   if (project.libraries?.length) out.add('libraries');
   // the three themes every project starts with are not a reason; one more is somebody working with them
   if ((project.themes?.list.length ?? 0) > 3) out.add('themes');

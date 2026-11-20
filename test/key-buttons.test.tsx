@@ -63,6 +63,8 @@ const LEFT_OUT = [
   /^cornerRadii/, // keyed from the corner radii control
   'drawOrder',
   'solo.active',
+  'brightness', // the story dims whoever isn't speaking through a binding; a look on a timeline uses opacity or a shader
+  'reveal', // letters shown: bound to story.shown, typing on, not keyed
 ];
 
 describe('key buttons in the inspector', () => {

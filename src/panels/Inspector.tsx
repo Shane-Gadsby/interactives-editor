@@ -1608,6 +1608,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
   const set = useSetter(ids);
   const shown = useShown(n);
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
+  const hasStory = !!project.story;
   const videos = project.assets.filter((a) => assetKind(a.mime, a.name) === 'video');
   const sounds = project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio');
   const radius = 'cornerRadius' in n ? <Num node={n} ids={ids} prop="cornerRadius" label="Radius" min={0} /> : null;
@@ -1758,6 +1759,16 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             />
             {n.countUp && <NumberField label="Over" suffix="ms" min={100} step={100} value={n.countUp.ms} onChange={(v) => set({ countUp: { ms: Math.max(100, v) } })} />}
           </Row>
+          {(n.storyMarkup || typeof n.reveal === 'number' || n.bindings?.reveal || hasStory) && (
+            <Row>
+              <CheckField
+                label="Story words"
+                title="Tags in the text are drawn as what they say: {shake}, {wave}, {b}, {i}, {big}, {small}, {colour red}. {pause} is taken out. The dialogue box's words have it on"
+                value={!!n.storyMarkup}
+                onChange={(v) => set({ storyMarkup: v || undefined })}
+              />
+            </Row>
+          )}
           <CheckField
             label="Formulas between $ signs"
             title="Maths typed the LaTeX way: $\frac{a}{b}$ in a line, $$x^2 + y^2 = r^2$$ on a line of its own. It's drawn by the browser and read out by screen readers. \$ is a dollar sign"

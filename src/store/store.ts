@@ -251,7 +251,7 @@ export function onPanelRequest(fn: ((id: BottomTab | null) => void) | null): voi
   panelRequestHandler = fn;
 }
 
-export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface' | 'checklist' | 'themes' | 'credits';
+export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface' | 'checklist' | 'themes' | 'credits' | 'story';
 
 /** Where learners clicked on one artboard (from Insights), drawn over the canvas as a heat map. Never saved. */
 export interface HeatOverlay {

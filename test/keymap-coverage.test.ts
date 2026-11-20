@@ -239,6 +239,7 @@ const MENUS: Record<string, Record<string, string>> = {
         ['Accessibility', 'a11y'],
         ['Assets', 'assets'],
         ['Attributions', 'credits'],
+        ['Story', 'story'],
         ['Checklist', 'checklist'],
         ['Comments', 'comments'],
         ['Data', 'data'],
