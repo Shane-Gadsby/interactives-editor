@@ -246,7 +246,7 @@ export function checkBeforeShare(project: Project, fine: FineMap = loadFine(proj
   add('contrast', findings(project, 'contrast', ['issue']), (n) => `${plural(n, 'piece', 'pieces')} of text hard to read`, 'The text is too close in colour to what is behind it, which is hard to read in sunlight or with low vision.', 'accessibility-checker');
   add('broken', brokenThings(project), (n) => `${plural(n, 'link or reference', 'links and references')} lead nowhere`, 'A learner who follows it gets an error or nothing at all.', 'usage');
   const media = mediaThings(project);
-  add('size', media.heavy, () => `The files add up to ${mb(project.assets.reduce((s, a) => s + (Number(a.size) || 0), 0))}`, 'Learners on a slow connection wait a long time for it to open. The biggest are listed.', 'download-size');
+  add('size', media.heavy, () => `The files add up to ${mb(project.assets.reduce((s, a) => s + (Number(a.size) || 0), 0))}`, project.story?.chapters?.length ? 'On the link a story loads its pictures and sounds a little ahead of the reader, so it starts quickly however big it is. A download in one file carries all of it, so share the link. The biggest are listed.' : 'Learners on a slow connection wait a long time for it to open. The biggest are listed.', 'download-size');
   add('unused-media', media.unused, (n) => `${plural(n, 'file', 'files')} nothing uses`, 'They travel with the project, making it bigger for nothing.', 'usage');
   return groups;
 }

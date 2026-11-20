@@ -27611,6 +27611,8 @@ help:story help:story-game help:repeaters help:bindings`
 
 **Voices:** **Download the voice script** in the Story tab gives the actors a spreadsheet of every spoken line, with the file name to save each recording as. Put the recordings in Assets and **Match voice files** ties each to its line, which keeps it through any edit to the words. A voice plays as its line comes up, and Auto waits for it.
 
+**Big stories:** on the link, a story loads the pictures and sounds of the next stretch (the next scenes, every branch, where a jump goes) while the reader reads, and lets go of the ones far behind, so a story with hundreds of pictures starts as quickly as a small one. A file you download carries everything at once, so share a big story as a link.
+
 **Good to know:** holding **Ctrl** skips while it's held.
 
 help:story help:story-stage help:story-puzzles`
