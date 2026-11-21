@@ -6345,7 +6345,7 @@ player.setData('products', [...]);
 \`\`\`
 
 ## Testing it as a prototype
-A study tool (Sightline, or your own page) can watch where people go and what they press, to see whether they find their way. Add \`?report=study\` to the share link (or the single HTML file's address), or post \`{ source: 'interactives-report', on: true }\` into the frame. The page around it then hears:
+A study page built for it can watch where people go and what they press, to see whether they find their way. Add \`?report=study\` to the share link (or the single HTML file's address), or post \`{ source: 'interactives-report', on: true }\` into the frame. The page around it then hears:
 - \`{ source: 'interactives-page', from, to, name }\` each time the page on show changes, with the pages' ids and the name you gave the new one (\`from\` is null for the first).
 - \`{ source: 'interactives-click', page, x, y, element }\` for every press, with \`x\` and \`y\` as shares (0 to 1) of the page's width and height, and \`element\` the id of the layer that does something when pressed, or null for a press on nothing that does anything.
 
