@@ -3647,6 +3647,7 @@ The learner types into one or more inputs. Write the accepted answers one per li
 - A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses.
 - A line written \`/colou?r/i\` is a pattern.
 - **Feedback if wrong** is said after the question's own *Wrong* line whenever that blank is wrong, so you can say what went wrong in it (*Give the units*). Several wrong blanks say theirs in order.
+- Each blank's box takes your theme's colours, so it goes dark in Dark and High contrast along with the rest of the question.
 - **Shown as** appears when a blank accepts a pattern. It is what **Show the right answer when finished wrong** puts in the blank. Left empty it shows the first accepted answer that isn't a pattern, and a blank with only patterns shows nothing (the question's checks say so).
 - **Add blank** adds another input in the look of the last one.
 - Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).

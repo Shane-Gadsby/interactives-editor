@@ -13207,6 +13207,11 @@ function blankRow(q, i, blankVar) {
         name: "Blank input",
         questionPart: "blankInput",
         placeholder: "Your answer",
+        //(the theme's colours, not the input's built-in light ones, so the box goes dark with Dark and High contrast)
+        fill: solid$5(L$2.background),
+        stroke: { paint: solid$5(L$2.border), width: 1 },
+        color: L$2.text,
+        cornerRadius: RADIUS.control,
         ariaLabel: q.blanks[i]?.label || "Answer",
         ...q.blanks[i]?.spelling && q.guard?.spellcheck !== false ? { noAssist: true } : {},
         ...q.blanks[i]?.spelling && q.guard && q.guard.paste !== false ? { noPaste: true } : {},
@@ -13985,9 +13990,21 @@ function bindBlank(n, name) {
   n.bindings = { ...n.bindings, value: name };
   n.bindingModes = { ...n.bindingModes, value: "both" };
 }
+function themeOldBlankInputs(container) {
+  if (!isTokenRef(L$2.background)) return;
+  const plain2 = createNode("input");
+  const plainFill = plain2.fill?.type === "solid" ? plain2.fill.color : null;
+  walk(container.children, (n) => {
+    if (n.type !== "input" || partOf(n) !== "blankInput") return;
+    if (n.fill?.type === "solid" && n.fill.color === plainFill) n.fill = solid$5(L$2.background);
+    if (n.color === plain2.color) n.color = L$2.text;
+    if (n.stroke?.paint.type === "solid" && plain2.stroke?.paint.type === "solid" && n.stroke.paint.color === plain2.stroke.paint.color) n.stroke = { ...n.stroke, paint: solid$5(L$2.border) };
+  });
+}
 function syncBlankRows(frame, q) {
   const container = partsOf(frame).blanks?.[0];
   if (!container) return;
+  themeOldBlankInputs(container);
   const rows = container.children.filter((c2) => partOf(c2) === "blankRow");
   const blankNames = q.blanks.map((_, i) => varName(q, `blank${i + 1}`));
   while (rows.length > q.blanks.length) {
@@ -28281,6 +28298,7 @@ The learner types into one or more inputs. Write the accepted answers one per li
 - A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses.
 - A line written \`/colou?r/i\` is a pattern.
 - **Feedback if wrong** is said after the question's own *Wrong* line whenever that blank is wrong, so you can say what went wrong in it (*Give the units*). Several wrong blanks say theirs in order.
+- Each blank's box takes your theme's colours, so it goes dark in Dark and High contrast along with the rest of the question.
 - **Shown as** appears when a blank accepts a pattern. It is what **Show the right answer when finished wrong** puts in the blank. Left empty it shows the first accepted answer that isn't a pattern, and a blank with only patterns shows nothing (the question's checks say so).
 - **Add blank** adds another input in the look of the last one.
 - Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).

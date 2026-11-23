@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Fixed: a white box in a dark fill in the blank**: a fill in the blank question's box kept its light colours in the Dark and High contrast themes, so it glared and the words under it failed contrast. It takes the theme's colours now, and a question made before this picks them up the next time you change its settings.
 - **Toasts size like modals**: the page is the toast's size, hugging its words or a set size once you untick the fits, and **Show toast** and **Hide toast** list only toasts, not every page.
 - **A new input comes with a label** above it (beside a tick box), in the text colour at the label size, and a screen reader reads its words as the box's name. Delete it and the box stays. The **Preferences** search box now stretches across the header, so the version and close button sit at the far right.
 - **Two story tutorials**: **Your first visual novel** (the template, a character with faces, a scene with a choice, Preview from this line, sharing; about 15 minutes) and **Add a puzzle** (a question in the puzzle frame, hints, called from the story; about 10 minutes), under **Build it** in Tutorials, each step ticking itself when it's done, with their finished projects under Examples.
