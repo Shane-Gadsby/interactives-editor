@@ -1907,10 +1907,10 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           <SelectField<InputKind>
             label="Type"
             value={n.inputType}
-            options={['text', 'number', 'email', 'password', 'textarea', 'checkbox', 'range', 'select']}
-            onChange={(v) => set({ inputType: v })}
+            options={[...(['text', 'number', 'email', 'password', 'textarea', 'checkbox', 'range', 'select'] as const).map((k) => ({ value: k, label: k })), { value: 'choice', label: 'choice buttons' }]}
+            onChange={(v) => set(v === 'choice' && !n.options?.trim() ? { inputType: v, options: 'Yes\nNo' } : { inputType: v })}
           />
-          {n.inputType !== 'checkbox' && n.inputType !== 'range' && n.inputType !== 'select' && <TextField label="Placeholder" value={n.placeholder} onChange={(v) => set({ placeholder: v })} />}
+          {n.inputType !== 'checkbox' && n.inputType !== 'range' && n.inputType !== 'select' && n.inputType !== 'choice' && <TextField label="Placeholder" value={n.placeholder} onChange={(v) => set({ placeholder: v })} />}
           <InputValue nodes={nodes} project={project} set={set} />
           {(n.inputType === 'number' || n.inputType === 'range') && (
             <Row>
@@ -1920,6 +1920,26 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             </Row>
           )}
           {n.inputType === 'select' && <TextField label="Options" value={n.options ?? ''} multiline placeholder="One per line" onChange={(v) => set({ options: v })} />}
+          {n.inputType === 'choice' && (
+            <>
+              {!n.optionsFrom?.trim() && <TextField label="Options" title="One a line: the value, or value|words on the button (FT|Full-time)" value={n.options ?? ''} multiline placeholder={'FT|Full-time\nPT|Part-time'} commitOnBlur onChange={(v) => set({ options: v })} />}
+              <ExprField label="Options from" title="Or the options from a formula: a list of text, or of {value, label} (and off, with a reason, to turn one off). The buttons follow the data" value={n.optionsFrom ?? ''} placeholder="The lines above" commitOnBlur onChange={(v) => set({ optionsFrom: v.trim() || undefined })} />
+              <ExprField
+                label="Off when"
+                title="A formula for each option, with option.value, option.label and option.index: true turns it off, a text turns it off with that text as the reason, shown under the buttons and read out when someone tries it"
+                value={n.optionOff ?? ''}
+                placeholder={"program == 'GCSC' && option.value == 'FT' ? 'GCSC is part-time only' : false"}
+                locals={['option']}
+                commitOnBlur
+                onChange={(v) => set({ optionOff: v.trim() || undefined })}
+              />
+              <Row>
+                <ColorField label="Chosen" title="The chosen button's fill. Empty: the palette's gold" value={n.chosenFill ?? ''} onChange={(v) => set({ chosenFill: v || undefined })} />
+                <ColorField label="Chosen text" title="The chosen button's text colour. Empty: dark" value={n.chosenColor ?? ''} onChange={(v) => set({ chosenColor: v || undefined })} />
+                <NumberField label="Gap" title="The space between the buttons, px" suffix="px" value={n.gap ?? 20} min={0} onChange={(v) => set({ gap: v === 20 ? undefined : Math.max(0, v) })} />
+              </Row>
+            </>
+          )}
           {(n.inputType === 'text' || n.inputType === 'textarea' || n.inputType === 'email') && (
             <>
               <CheckField label="No browser help" title="Turns off the spellcheck underline, autocorrect, automatic capitals and autofill in this box. For a spelling test, so the browser does not mark or fix the word" value={!!n.noAssist} onChange={(v) => set({ noAssist: v || undefined })} />

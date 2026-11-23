@@ -144,11 +144,11 @@ export function goToPage(id: string): void {
 }
 
 /** A new layer in the middle of the open page, selected (text opens for typing). */
-export function addLayerHere(type: NodeType): string | null {
+export function addLayerHere(type: NodeType, extra: Partial<SceneNode> = {}): string | null {
   const s = store();
   const ab = s.artboard();
   if (!ab) return null;
-  const proto = createNode(type);
+  const proto = createNode(type, extra as never);
   const font = prefs().defaultFont.trim();
   const fontDefaults = font && (type === 'text' || type === 'button' || type === 'input' || type === 'link') ? { fontFamily: fontStack(font) } : {};
   const node = createNode(type, {
@@ -156,6 +156,7 @@ export function addLayerHere(type: NodeType): string | null {
     y: Math.round((ab.height - (type === 'text' ? 0 : proto.height)) / 2),
     ...fontDefaults,
     ...lookDefaults(s.get().project, type),
+    ...extra,
   } as never);
   if (node.type === 'input') {
     s.addNodes(withLabel(s.get().project, node), { artboardId: ab.id, select: false });
@@ -230,6 +231,15 @@ export function buildCommands(): Command[] {
       },
     });
   }
+
+  add({
+    id: 'add:choice',
+    title: 'Add choice buttons',
+    group: 'Add',
+    words: 'radio segmented toggle options pick one choose mode select row',
+    disabled: noPage,
+    run: () => void addLayerHere('input', { inputType: 'choice', options: 'Yes\nNo', placeholder: '', width: 360, height: 44 } as Partial<SceneNode>),
+  });
 
   for (const k of [
     { id: 'accordion', title: 'Add an accordion', words: 'collapse expand sections disclosure faq' },

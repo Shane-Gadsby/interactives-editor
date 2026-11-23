@@ -5120,6 +5120,9 @@ function sanitizeNode(raw, seen) {
   if ("cornerRadii" in n && !(Array.isArray(n.cornerRadii) && n.cornerRadii.length === 4 && n.cornerRadii.every(isNum))) delete n.cornerRadii;
   for (const k of ["mask", "locked", "noAssist", "noPaste", "hugIgnore", "noDownload"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
   if ("labelId" in n && n.labelId !== null && !isStr(n.labelId)) delete n.labelId;
+  for (const k of ["optionsFrom", "optionOff", "chosenFill", "chosenColor"]) if (k in n && !isStr(n[k])) delete n[k];
+  if ("gap" in n && n.type === "input" && !(isNum(n.gap) && n.gap >= 0)) delete n.gap;
+  if ("resolvedChoices" in n) delete n.resolvedChoices;
   if ("wai" in n) delete n.wai;
   if (n.type === "embed" && "allow" in n) {
     const known = new Set(EMBED_ALLOW.map((x) => x.key));
@@ -26662,13 +26665,22 @@ Press <kbd>B</kbd> to draw one. A button has a label (which can use \`{expressio
 - **Small buttons** keep the size you draw. A button narrower than about 80 px no longer grows by its padding, so a dot-sized button really is dot-sized.
 
 ## Input
-An input is one of: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select).
+An input is one of: text, number, email, password, multi-line, checkbox, slider (range), dropdown (select) or choice buttons.
 - **A new input comes with a label** above it (beside it for a tick box), in your text colour at the size every control's label takes. Change its words and a screen reader reads them as the box's name, so you don't have to write an **Accessible label** too. Move or restyle the label like any text; delete it if you don't want one, and the box stays. Inputs made before this have no label added.
 - **Bind to a variable…** (under *Value*) ties the box to a variable with an ordinary [data binding](bindings) on its **Value**, set to **⇄ Both**: typing writes the variable and the variable fills the box. Change the way, or the variable, under **Data bindings**. Choose **Out →** to only write the variable and keep the box's own value. Older projects that had a *Variable* setting on an input are changed to this when they open.
 - **When a value changes** reacts to what was typed.
 - **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test.
 - **Block paste and drop** refuses pasted or dragged text, so the answer has to be typed.
 - To do something when Enter is pressed in a text box, use a **When a key is pressed** event set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions#when-a-key-is-pressed)).
+
+
+### Choice buttons
+A row of buttons for one variable, one of them chosen: study mode, a starting trimester, easy, medium or hard. Press <kbd>Ctrl</kbd>+<kbd>K</kbd> and **Add choice buttons**, or set an input's **Type** to **choice buttons**, then **Bind to a variable…** like any input.
+
+- **Options**: one a line, the value or \`value|words on the button\` (\`FT|Full-time\`). Or **Options from** a formula: a list of text, or of \`{value, label}\`, so the buttons follow the data (\`programData.find(p => p.code == program).starts\`).
+- **Off when**: a formula for each option, with \`option.value\`, \`option.label\` and \`option.index\`. True turns it off; a text turns it off and says why: \`program == 'GCSC' && option.value == 'FT' ? 'GCSC is part-time only' : false\`. An option that's off stays in the row, dimmed, and trying it shows the reason under the buttons and reads it out, so nobody's left wondering why a button does nothing. An item from **Options from** can carry its own \`off\` too. Off when doesn't change the variable: one that holds an option that's now off keeps it, with no button chosen, until someone picks another.
+- The chosen one is gold with dark text (**Chosen** and **Chosen text** change it), the buttons share the layer's width in equal parts with **Gap** (20 px) between them, and each has the layer's fill, corners and stroke.
+- It's a radio group to a screen reader: one <kbd>Tab</kbd> stop, the arrow keys move along and choose.
 
 ## Link
 Text that opens a URL. **Fit text to box** works here too. For making any other layer a link, see [Links and cursors](links-cursors).

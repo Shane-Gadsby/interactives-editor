@@ -13,6 +13,7 @@ import { getTopic, topicBody } from '../src/help/topics';
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'The story as nodes, and story events': [['story-dialogue', 'The Dialogue view'], ['story-dialogue', '+ Choice'], ['story-dialogue', 'On story choice']],
   'Sound captions in stories': [['story-game', 'Sound captions:']],
+  'Choice buttons': [['web-elements', '### Choice buttons'], ['web-elements', 'Add choice buttons'], ['web-elements', 'GCSC is part-time only']],
   'Checks': [['checks', 'open **Checks** in Properties'], ['checks', 'A check fails for it'], ['checks', 'checks.list']],
   'Drop rules that count units': [['drag-and-drop', 'Counting units, and zones counted together'], ['drag-and-drop', '+ New zone group'], ['drag-and-drop', 'Totals in any formula']],
   'A variable can start from the link': [['course-context', 'Starts from the link'], ['course-context', 'so a link for one program always opens that program']],

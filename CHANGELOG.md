@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Choice buttons**: an input that's a row of buttons for one variable (**Add choice buttons** in Ctrl+K, or an input's **Type**). Options are typed (`FT|Full-time`) or come from a formula, and **Off when** turns one off with a reason that's shown and read out when someone tries it. The chosen one is gold, they share the width with 20 px between them, and it's a radio group from the keyboard.
 - **Checks**: a project can have a list of rules it's checked against as it runs, each a formula and the words for when it fails, once or for every item in a list. What fails is `checks.list`, `checks.count` and `checks.passed` in any formula (and in variables if you like), and the new layer state **A check fails for it** outlines the card that's wrong.
 - **Drop rules that count units**: a draggable can carry values of its own (`units: 2`), a drop zone can hold so many of one (**Holds** 2 **of** units), and **Zone groups** count several zones together (a year of trimesters, 8 units at most) and refuse a drop in your own words. `count('Year 1')`, `sum('Year 1', 'units')` and `items('Trimester 1')` read what zones hold in any formula, and follow every drop.
 - **A variable can start from the link**: type a link value's name in a variable's **Starts from the link** (in its **Options**) and it starts with what the link carries (`&program=GDSI`), over an embed attribute and its own starting value. With nothing on the link it starts as usual, and a value saved for the learner only comes back when the link names none.
