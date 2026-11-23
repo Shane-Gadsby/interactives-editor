@@ -81,6 +81,7 @@ import { ArtboardView, holdView, whenViewDrawn } from './ArtboardView';
 import { fontsReadyFor, fontsReadyNow } from '../lib/fonts';
 import { hasCachedStill, stillHash } from '../lib/still-cache';
 import { lookDefaults, lookFor, shownTheme } from '../lib/themes';
+import { withLabel } from '../lib/input-label';
 import { viewPlan } from './viewPlan';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
 import { ADD_POINT_CURSOR, BEND_CURSOR, BONE_CHAIN_CURSOR, PEN_CLOSE_CURSOR, dragCursor, resizeCursor, rotateCursor, rotateCursorAt, toolCursor } from './cursors';
@@ -1412,7 +1413,10 @@ export function Canvas() {
       if (type === 'text') extra.autoSize = tiny ? 'width' : 'height';
       node = createNode(type, { x: round(x - parentOffset.x), y: round(y - parentOffset.y), width: round(width), height: round(height), ...extra, ...fontDefaults(type), ...lookDefaults(store().get().project, type) } as never);
     }
-    store().addNodes([node], { parentId, artboardId: ab.id });
+    if (node.type === 'input') {
+      store().addNodes(withLabel(store().get().project, node), { parentId, artboardId: ab.id, select: false });
+      store().select([node.id], { artboardId: ab.id });
+    } else store().addNodes([node], { parentId, artboardId: ab.id });
     if (!shift) store().set({ tool: 'select' });
     if (node.type === 'text') store().set({ editingTextId: node.id });
   }
@@ -2209,7 +2213,10 @@ export function Canvas() {
           const proto = createNode(t.type);
           const node = createNode(t.type, { x: round(p.x - (t.type === 'text' ? 0 : proto.width / 2)), y: round(p.y - (t.type === 'text' ? 0 : proto.height / 2)), ...fontDefaults(t.type), ...lookDefaults(store().get().project, t.type) } as never);
           s2.set({ activeArtboardId: ab.id });
-          s2.addNodes([node], { artboardId: ab.id });
+          if (node.type === 'input') {
+            s2.addNodes(withLabel(s2.get().project, node), { artboardId: ab.id, select: false });
+            s2.select([node.id], { artboardId: ab.id });
+          } else s2.addNodes([node], { artboardId: ab.id });
           if (node.type === 'text') s2.set({ editingTextId: node.id });
         },
       })),

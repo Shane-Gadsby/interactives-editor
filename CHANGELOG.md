@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **A new input comes with a label** above it (beside a tick box), in the text colour at the label size, and a screen reader reads its words as the box's name. Delete it and the box stays. The **Preferences** search box now stretches across the header, so the version and close button sit at the far right.
 - **Two story tutorials**: **Your first visual novel** (the template, a character with faces, a scene with a choice, Preview from this line, sharing; about 15 minutes) and **Add a puzzle** (a question in the puzzle frame, hints, called from the story; about 10 minutes), under **Build it** in Tutorials, each step ticking itself when it's done, with their finished projects under Examples.
 - **Big stories load as they go**: the player fetches the pictures and sounds of the next stretch of a story (the next scenes, every branch, where a jump goes, the start of the next chapter) while you read, and lets go of the ones far behind, so a story with hundreds of pictures starts quickly and doesn't stop to load at a scene change. Before you share, a big story is pointed at the link rather than a one-file download.
 - **Puzzle mystery template**: a case to solve, built on the Visual novel starter. Search a clubroom for clues and hidden hint coins, show Olive the key you find, solve three puzzles of different kinds with hints, travel by a map, and reach one of three endings. Everything runs from the script, every puzzle can be done with the keyboard alone, and it has a checklist for making it yours.

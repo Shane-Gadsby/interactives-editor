@@ -4,6 +4,7 @@
 import { clearGuidesCommand, guideCount, setGuidesLocked, universalCount } from './guides';
 import { parked } from './parked';
 import { openInsertComponentPicker } from './components';
+import { withLabel } from './input-label';
 import { QUESTION_KINDS, createNode, walk, type NodeType, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { prefs, setPrefs } from './prefs';
@@ -156,6 +157,11 @@ export function addLayerHere(type: NodeType): string | null {
     ...fontDefaults,
     ...lookDefaults(s.get().project, type),
   } as never);
+  if (node.type === 'input') {
+    s.addNodes(withLabel(s.get().project, node), { artboardId: ab.id, select: false });
+    s.select([node.id], { artboardId: ab.id });
+    return node.id;
+  }
   s.addNodes([node], { artboardId: ab.id });
   if (node.type === 'text') s.set({ editingTextId: node.id });
   return node.id;

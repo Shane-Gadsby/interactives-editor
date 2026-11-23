@@ -5100,6 +5100,7 @@ function sanitizeNode(raw, seen) {
   }
   if ("cornerRadii" in n && !(Array.isArray(n.cornerRadii) && n.cornerRadii.length === 4 && n.cornerRadii.every(isNum))) delete n.cornerRadii;
   for (const k of ["mask", "locked", "noAssist", "noPaste", "hugIgnore", "noDownload"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  if ("labelId" in n && n.labelId !== null && !isStr(n.labelId)) delete n.labelId;
   if ("wai" in n) delete n.wai;
   if (n.type === "embed" && "allow" in n) {
     const known = new Set(EMBED_ALLOW.map((x) => x.key));
@@ -6276,6 +6277,7 @@ function cloneWithNewIds(node, idMap = /* @__PURE__ */ new Map()) {
     remapConnectorIds(n, idMap);
     if (n.type === "path" && n.skin) for (const b of n.skin.bones) b.bone = remap(b.bone);
     if (n.type === "image" && n.mesh?.skin) for (const b of n.mesh.skin.bones) b.bone = remap(b.bone);
+    if (n.type === "input" && n.labelId) n.labelId = remap(n.labelId);
     if (isContainer(n)) n.children.forEach(fix);
   };
   fix(copy);
@@ -25117,7 +25119,7 @@ The small **(i)** icon in the title bar shows the version of Ixia you are runnin
 
 ## Using the window
 - **Changes apply at once.** There is no OK and no Cancel: tick a box and the editor changes. <kbd>Esc</kbd> or the **×** closes the window.
-- **Search all preferences** (the box in the title bar) finds a setting on any page by its name, by what it does or by another word for it (try *dark*, *alt text*, *pan*, *typeface*). Pick a result, or press <kbd>Enter</kbd> for the first, and the window goes to that page, scrolls to the setting, marks it for a moment and puts focus on it. When shortcuts match too, the last result opens the Keyboard shortcuts page with your search filled in. <kbd>Esc</kbd> clears the search first.
+- **Search all preferences** (the box across the title bar) finds a setting on any page by its name, by what it does or by another word for it (try *dark*, *alt text*, *pan*, *typeface*). Pick a result, or press <kbd>Enter</kbd> for the first, and the window goes to that page, scrolls to the setting, marks it for a moment and puts focus on it. When shortcuts match too, the last result opens the Keyboard shortcuts page with your search filled in. <kbd>Esc</kbd> clears the search first.
 - **Reset this page** puts every setting on the page you are looking at back to how the editor starts (it asks first, and is greyed out when the page is already as it starts). **Reset everything** does it for every page, and puts your keys back to the Default set. The keyboard sets and workspace layouts you saved stay, and so do your projects.
 - Drag the corner of the window to make it bigger or smaller (double-click the corner to put it back). On a phone or a narrow window it fills the screen and the pages become a row of tabs along the top.
 - With the keyboard: <kbd>Tab</kbd> goes into the list of pages, <kbd>↑</kbd> and <kbd>↓</kbd> (<kbd>←</kbd> and <kbd>→</kbd> in the narrow row) move between pages, <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last, and <kbd>Tab</kbd> again goes to the settings. A screen reader hears a list of tabs, one panel, and each field with its name. The editor's own keys stand down while the window is open.
@@ -26616,6 +26618,7 @@ Press <kbd>B</kbd> to draw one. A button has a label (which can use \`{expressio
 
 ## Input
 An input is one of: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select).
+- **A new input comes with a label** above it (beside it for a tick box), in your text colour at the size every control's label takes. Change its words and a screen reader reads them as the box's name, so you don't have to write an **Accessible label** too. Move or restyle the label like any text; delete it if you don't want one, and the box stays. Inputs made before this have no label added.
 - **Bind to a variable…** (under *Value*) ties the box to a variable with an ordinary [data binding](bindings) on its **Value**, set to **⇄ Both**: typing writes the variable and the variable fills the box. Change the way, or the variable, under **Data bindings**. Choose **Out →** to only write the variable and keep the box's own value. Older projects that had a *Variable* setting on an input are changed to this when they open.
 - **When a value changes** reacts to what was typed.
 - **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test.
@@ -30972,7 +30975,7 @@ player.setData('products', [...]);
 \`\`\`
 
 ## Testing it as a prototype
-A study tool (Sightline, or your own page) can watch where people go and what they press, to see whether they find their way. Add \`?report=study\` to the share link (or the single HTML file's address), or post \`{ source: 'interactives-report', on: true }\` into the frame. The page around it then hears:
+A study page built for it can watch where people go and what they press, to see whether they find their way. Add \`?report=study\` to the share link (or the single HTML file's address), or post \`{ source: 'interactives-report', on: true }\` into the frame. The page around it then hears:
 - \`{ source: 'interactives-page', from, to, name }\` each time the page on show changes, with the pages' ids and the name you gave the new one (\`from\` is null for the first).
 - \`{ source: 'interactives-click', page, x, y, element }\` for every press, with \`x\` and \`y\` as shares (0 to 1) of the page's width and height, and \`element\` the id of the layer that does something when pressed, or null for a press on nothing that does anything.
 

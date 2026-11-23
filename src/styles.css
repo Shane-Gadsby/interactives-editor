@@ -6127,8 +6127,7 @@ kbd {
 .prefs-search {
   flex: 1;
   min-width: 0;
-  max-width: 360px;
-  margin-left: 12px;
+  margin: 0 12px;
 }
 .prefs-window > header .spacer {
   flex: 1;
