@@ -1388,6 +1388,12 @@ export function ParamForm({ node, ab, project, onChange, onNote }: { node: Logic
         );
       }
       case 'artboard':
+        if (p.overlayKind) {
+          //(only that kind of overlay page, and the one already chosen even if it has stopped being one)
+          const kind = p.overlayKind;
+          const list = project.artboards.filter((a) => a.overlay?.kind === kind || a.id === v).map((a) => ({ value: a.id, label: a.name }));
+          return pick(list, !list.length ? 'No toasts yet (Toast in the Web tools)' : node.kind === 'action.toastHide' ? 'All toasts' : 'Choose toast…');
+        }
         return pick(artboardChoices(project, v), 'Choose page…');
       case 'script':
         return pick(project.scripts.map((x) => ({ value: x.id, label: x.name })), project.scripts.length ? 'Choose script…' : 'No scripts yet');

@@ -1,4 +1,4 @@
-import{c6 as a,c7 as o,c8 as w,c9 as d,ca as x,cb as Y,cc as M,cd as F,ce as l,cf as n,cg as h,ch as K,ci as N,cj as f,ck as i,cl as A,cm as j,cn as v,co as y,cp as P,cq as p,cr as c,cs as S,ct as C,cu as g,cv as B,cw as T,cx as $,cy as z,cz as Q,cA as O,cB as I,cC as J,cD as X,cE as Z,bq as ee,ad as te,bA as ae,bj as oe,aj as E,b6 as se}from"./index-0ND_vvNp.js";const ne=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{c6 as a,c7 as o,c8 as w,c9 as d,ca as x,cb as Y,cc as M,cd as F,ce as l,cf as n,cg as h,ch as K,ci as N,cj as f,ck as i,cl as A,cm as j,cn as v,co as y,cp as P,cq as p,cr as c,cs as S,ct as C,cu as g,cv as B,cw as T,cx as $,cy as z,cz as Q,cA as O,cB as I,cC as J,cD as X,cE as Z,bq as ee,ad as te,bA as ae,bj as oe,aj as E,b6 as se}from"./index-NU7kJcvD.js";const ne=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -6995,6 +6995,8 @@ A layer **inside an overlay** can point at another overlay too. A **More informa
 - Showing a toast that's already up gives it the new words and its full time again. Different toasts **stack**, the newest nearest the edge.
 - **On its own** makes a toast show alone: showing it puts any other toast away, and showing another puts it away. Tick it on every toast and there is only ever one at a time, the latest.
 - Nothing points at a toast, so it has no target or trigger and no lines on the canvas.
+- **Its size works like a modal's.** The toast's page is its size: a new one has **Fit width** and **Fit height** on, so it hugs its words. Untick either and drag the page (or the card) to give it a set size. A toast made before this can be tied the same way with **The page sizes the overlay**.
+- **Show toast** and **Hide toast** list only your toasts, not every page.
 
 From a script: \`ix.toast('Toast', 'Plan saved')\` and \`ix.hideToast('Toast')\`.
 

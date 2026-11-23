@@ -3491,6 +3491,8 @@ A layer **inside an overlay** can point at another overlay too. A **More informa
 - Showing a toast that's already up gives it the new words and its full time again. Different toasts **stack**, the newest nearest the edge.
 - **On its own** makes a toast show alone: showing it puts any other toast away, and showing another puts it away. Tick it on every toast and there is only ever one at a time, the latest.
 - Nothing points at a toast, so it has no target or trigger and no lines on the canvas.
+- **Its size works like a modal's.** The toast's page is its size: a new one has **Fit width** and **Fit height** on, so it hugs its words. Untick either and drag the page (or the card) to give it a set size. A toast made before this can be tied the same way with **The page sizes the overlay**.
+- **Show toast** and **Hide toast** list only your toasts, not every page.
 
 From a script: \`ix.toast('Toast', 'Plan saved')\` and \`ix.hideToast('Toast')\`.
 

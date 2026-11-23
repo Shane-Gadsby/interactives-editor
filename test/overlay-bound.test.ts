@@ -105,6 +105,53 @@ describe('a new overlay is bound to its page', () => {
   });
 });
 
+describe('a toast is sized the way a modal is', () => {
+  it('a set size once Fit width and Fit height are off, the card filling the page', () => {
+    const { page, card, set } = make('toast');
+    set((a) => {
+      delete a.hugWidth;
+      delete a.hugHeight;
+      a.width = 360;
+      a.height = 140;
+    });
+    expect([card().width, card().height]).toEqual([360, 140]);
+    expect(card().layout!.hugWidth).toBe(false);
+    expect(card().layout!.hugHeight).toBe(false);
+    //and back on, it hugs its words again
+    set((a) => {
+      a.hugWidth = true;
+      a.hugHeight = true;
+    });
+    expect(page().width).toBe(Math.ceil(card().width));
+    expect(page().height).toBe(Math.ceil(card().height));
+  });
+
+  it('resizing the card resizes the page, once the page has a set width', () => {
+    const { page, card, set, s } = make('toast');
+    set((a) => void delete a.hugWidth);
+    s.update((d) => {
+      const c = cardOf(d.artboards.find((a) => a.id === page().id)!.children) as FrameNode;
+      c.width = 480;
+    });
+    expect(page().width).toBe(480);
+    expect(card().width).toBe(480);
+  });
+
+  it('a toast made before binding takes its card\'s size when bound, so nothing shown changes', () => {
+    const { page, card, set } = make('toast');
+    set((a) => unbindCard(a));
+    set((a) => {
+      delete a.hugWidth;
+      delete a.hugHeight;
+      a.width = 700;
+      a.height = 500;
+    });
+    const was = { w: card().width, h: card().height };
+    set((a) => void bindCardToPage(a));
+    expect([page().width, page().height]).toEqual([Math.ceil(was.w), Math.ceil(was.h)]);
+  });
+});
+
 describe('fit width to content', () => {
   it('the page is as wide as its furthest showing layer, and follows it', () => {
     const s = new EditorStore(createProject());
