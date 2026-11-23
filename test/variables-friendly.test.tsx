@@ -177,7 +177,8 @@ describe('Remember, Save as user data and the formula', () => {
     expect(tick(opts, 'Save as user data')).toBeTruthy();
     expect(tick(opts, 'Keeps history')).toBeTruthy();
     expect(tick(opts, 'Part of the setup')).toBeTruthy();
-    expect(opts.querySelectorAll('.hint').length).toBe(3);
+    expect(opts.querySelectorAll('.hint').length).toBe(4);
+    expect(opts.textContent).toMatch(/Starts from the link/);
     act(() => tick(opts, 'Remember')!.click());
     expect(vars()[0].persist).toBe(true);
   });
@@ -186,9 +187,11 @@ describe('Remember, Save as user data and the formula', () => {
     mount([
       { id: 'v1', name: 'a', type: 'number', initial: 0, persist: true },
       { id: 'v2', name: 'b', type: 'number', initial: 0 },
+      { id: 'v3', name: 'c', type: 'number', initial: 0, fromLink: 'year' },
     ]);
     expect(rows()[0].querySelector<HTMLDetailsElement>('details.var-options')!.open).toBe(true);
     expect(rows()[1].querySelector<HTMLDetailsElement>('details.var-options')!.open).toBe(false);
+    expect(rows()[2].querySelector<HTMLDetailsElement>('details.var-options')!.open).toBe(true);
   });
 
   it('the formula box and its placeholder only show for Worked out', () => {

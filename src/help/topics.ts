@@ -5516,6 +5516,11 @@ Every value is text, and a name that isn't there is empty, so give it a fallback
 
 It works from the Link for StudyDesk and from a plain share link. To see the project with values on its address while you build it, open **Data**, pick **context**, and under **link** press **+ Add a link value**: give it a name (\`program\`) and a sample value (\`GCSC\`). The canvas and Preview then behave as if the project were opened with \`&program=GCSC\`. Sample values are for designing only: a share link, an embed or an export never carries them, and leaving a name out of the samples is how you check what the project does with no value. A project shared before 19 November 2026 needs **Update** in Share to get it.
 
+### A variable from the link
+A variable can start from a value on the link, so you don't need a script to read it. Open the variable's **Options** and type the link value's name in **Starts from the link** (\`program\`). When the link carries \`&program=GDSI\`, the variable starts as \`GDSI\`: over an embed attribute (\`input-program\`), a course row, a setup and its own starting value, and again on **Start over**. With nothing on the link, it starts as it always did.
+
+A value saved for the learner (**Save as user data**, **Remember**) still comes back when the link names nothing, and the link wins when it does, so a link for one program always opens that program. A value that doesn't fit (a choice the variable hasn't got, text for a number) is ignored. The canvas uses the sample value from Data > context > link.
+
 ### Choices, and trying each one
 Give a link value its **Choices** in the same table, with commas between them (\`MSCN, GDSI, GCSC\`). The sample then picks from them, and so do these two:
 

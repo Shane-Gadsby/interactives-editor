@@ -112,3 +112,16 @@ describe('link value fields', () => {
     expect(code()).toContain('&cdtID=42&program=GCSC"');
   });
 });
+
+describe('a variable that starts from the link, on the canvas', () => {
+  it('takes the sample link value when it fits, and its own starting value otherwise', async () => {
+    const { previewScope } = await import('../src/lib/data');
+    const p = createProject('L');
+    p.variables.push({ id: 'v1', name: 'prog', type: 'enum', options: ['MSCN', 'GDSI'], initial: 'MSCN', fromLink: 'program' });
+    expect(previewScope(p).prog).toBe('MSCN');
+    p.sampleLink = { program: 'GDSI' };
+    expect(previewScope(p).prog).toBe('GDSI');
+    p.sampleLink = { program: 'BSC' };
+    expect(previewScope(p).prog).toBe('MSCN');
+  });
+});

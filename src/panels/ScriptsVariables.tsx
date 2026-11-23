@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { cleanVariableLabel, isLive, variableLabel, liveWriters, LIGHT_LOOK, planLive, uid, type Project, type Script, type Variable, type VariableType } from 'interactives-player';
+import { cleanVariableLabel, isLive, linkNameOk, variableLabel, liveWriters, LIGHT_LOOK, planLive, uid, type Project, type Script, type Variable, type VariableType } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { isIdentifier, uniqueName } from '../store/doc';
 import { choiceDialog, confirmDialog } from '../components/dialogs';
@@ -369,7 +369,7 @@ function VariableRow({ v, others, used, circular, writers, setVar }: { v: Variab
     });
     store().toastUndo(`Deleted the variable "${variableLabel(v)}".`, mark);
   };
-  const optionsOpen = !!(v.persist || v.userData || v.live || v.shared || v.history || v.setupValue);
+  const optionsOpen = !!(v.persist || v.userData || v.live || v.shared || v.history || v.setupValue || v.fromLink);
   return (
     <tr>
       <td>
@@ -508,6 +508,7 @@ function VariableRow({ v, others, used, circular, writers, setVar }: { v: Variab
             onChange={(x) => setVar(v.id, { history: x ? true : undefined })}
           />
           <SectionBlurb text="Lets Undo and Redo step it back and forward." name="undo and redo" help={['variables', 'undo-and-redo']} />
+          {!isLive(v) && <FromLinkField v={v} onChange={(fromLink) => setVar(v.id, { fromLink })} />}
           <CheckField
             label="Shared with instances"
             title="One value for this page and every instance of a component inside it, so changing it in one copy changes it in all of them. Off: each instance has its own. Imported Rive view models come in shared."
@@ -520,5 +521,30 @@ function VariableRow({ v, others, used, circular, writers, setVar }: { v: Variab
         <IconButton icon={<Icons.trash />} title={used.length ? `Delete variable (used in ${used.length} ${used.length === 1 ? 'place' : 'places'}, you will be asked first)` : 'Delete variable'} onClick={() => void remove()} />
       </td>
     </tr>
+  );
+}
+
+/** Start from a value on the link: the name on the address (program for &program=GCSC), checked as it is typed. */
+function FromLinkField({ v, onChange }: { v: Variable; onChange: (name: string | undefined) => void }) {
+  const [problem, setProblem] = useState<string | null>(null);
+  return (
+    <>
+      <TextField
+        label="Starts from the link"
+        value={v.fromLink ?? ''}
+        mono
+        commitOnBlur
+        placeholder="program"
+        title={`When the link carries this value (&program=GCSC for program), ${v.name} starts with it, over an embed attribute and the starting value above, and over what was saved for the learner. With no value on the link, it starts as usual. Empty: it doesn't look at the link`}
+        onChange={(x) => {
+          const name = x.trim();
+          if (name && !linkNameOk(name)) return setProblem('Letters, digits, . _ and - only, starting with a letter (and not title, cdtID, sessionID, ixm or lti)');
+          setProblem(null);
+          onChange(name || undefined);
+        }}
+      />
+      {problem && <p className="error small">{problem}</p>}
+      <SectionBlurb text="One project for several programs: the link picks the starting value." name="starting from the link" help={['course-context', 'a-variable-from-the-link']} />
+    </>
   );
 }
