@@ -263,6 +263,25 @@ code,
   margin: 6px 0;
   line-height: 1.35;
 }
+/* Drop zone: the page's zone groups, the ones this zone is in opened up to edit */
+.zone-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0;
+}
+.zone-groups > .btn {
+  align-self: flex-start;
+}
+.zone-group-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 2px 0 6px 22px;
+}
+.zone-group-edit > .link-btn {
+  align-self: flex-start;
+}
 .consent-preview {
   border: 1px dashed var(--border, #888);
   border-radius: 6px;

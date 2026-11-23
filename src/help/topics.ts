@@ -3291,6 +3291,16 @@ Two buckets, four cards. Dropping a card in the right bucket keeps it there; dro
 
 On the draggable, **Only these zones** names the zones it may go in, whatever their tags say: a piece that may move within its column but not out of it.
 
+### Counting units, and zones counted together
+A draggable can carry values of its own: **Its own values**, one a line, as \`units: 2\` or \`code: MSC6100\`. Then:
+
+- **Holds** on a zone can count one of them instead of layers: **Holds** 2 **of** units takes a 1 unit card and a 1 unit card, or one 2 unit card, but not a third. A layer without the value counts as 1.
+- **Zone groups** count several zones together. Press **+ New zone group** on one of them, name it (\`Year 1\`), give it a limit (**Holds** 8 **of** units) and what to say when it's full (\`{name} is 8 units at most.\`), then tick it on the other zones. A drop that would take the group over is refused wherever in the group it lands, and the learner hears your words. Moving a card within the group is fine: it's only counted once.
+- **Takes it when** gets \`item.data\` (\`item.data.units\`), \`zone.total\` (what **Holds** counts, without the held layer) and \`zone.groups\` (the names of its groups).
+
+### Totals in any formula
+\`count('Year 1')\` is how many layers a zone or zone group holds, \`sum('Year 1', 'units')\` adds up one of their values, and \`items('Trimester 1')\` lists them, each with \`name\`, \`zone\`, \`tags\` and its own values, for a repeater. A name with \`*\` covers every zone it matches (\`sum('T*', 'units')\`). Text bound to them, and variables that keep their formula up to date, change after every drop: \`Year 1 · {sum('Year 1', 'units')} / 8 units\`. Given a list, \`count\` and \`sum\` work on the list as they always have. On the canvas nothing has been dropped yet, so they show 0.
+
 ### A zone that lays out what it holds
 Tick **Arrange what it holds** and the zone lays its layers out in rows that wrap, with a **Gap** between them, **As they came** or **By name**. With **Fit its height** it grows and shrinks to fit them, keeping room for its **Least rows** when it's empty. Take one out and the rest close up; put one back and it takes its place in the order. A pool of course cards that shrinks as cards leave it is one tick. Reset sends each layer home to its place in the order, not to where it first stood.
 
