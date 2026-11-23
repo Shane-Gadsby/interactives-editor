@@ -2105,7 +2105,7 @@ const SPECS = [
     label: "Story setting",
     category: "action",
     summary: "Changes one of the reader's settings for the story, kept on their device.",
-    details: "Text speed (letters a second; empty for the story's own), Auto speed (2 is twice as quick), Skip unread lines, Music, Voice and Effects volumes (0 to 1), Text size (1 as designed) and Readable font. Read them back as story.prefs, for sliders and toggles on a settings page.",
+    details: "Text speed (letters a second; empty for the story's own), Auto speed (2 is twice as quick), Skip unread lines, Music, Voice and Effects volumes (0 to 1), Text size (1 as designed) and Readable font. Captions for sounds and Show song titles are on or off too. Read them back as story.prefs, for sliders and toggles on a settings page.",
     group: "Story",
     outputs: OUT,
     hasInput: true,
@@ -2123,7 +2123,9 @@ const SPECS = [
           { value: "voice", label: "Voice volume" },
           { value: "effects", label: "Effects volume" },
           { value: "textSize", label: "Text size" },
-          { value: "readable", label: "Readable font" }
+          { value: "readable", label: "Readable font" },
+          { value: "captions", label: "Captions for sounds" },
+          { value: "songTitles", label: "Show song titles" }
         ]
       },
       { key: "value", label: "To", type: "expr", default: "event.value", help: "The new value. From a slider or a toggle: event.value" }
@@ -14962,6 +14964,8 @@ function storyStage(hideVar, at = {}) {
   const weather = createNode("rect", { name: "Weather", x: 0, y: 0, width: W2, height: H2, fill: null, visible: false, particles: { preset: "rain" } });
   const endWords = createNode("text", { name: "The end words", x: 0, y: 20, width: 880, height: 70, text: "The end", fontSize: 44, fontWeight: 700, color: "#ffffff", align: "center", autoSize: "none", bindings: { text: "'The end' + (story.ending ? ': ' + story.ending : '')" } });
   const ending = createNode("frame", { name: "The end", x: (W2 - 880) / 2, y: H2 / 2 - 150, width: 880, height: 110, cornerRadius: 16, fill: solid$4("rgba(10, 10, 16, 0.86)"), bindings: { visible: "story.ended" }, children: [endWords] });
+  const captionWords = createNode("text", { name: "Caption words", x: 16, y: 8, width: 568, height: 28, text: "", fontSize: 20, fontWeight: 600, color: "#ffffff", align: "center", autoSize: "none", bindings: { text: "story.captionKind == 'music' ? '♪ ' + story.caption : '[' + story.caption + ']'" } });
+  const caption = createNode("frame", { name: "Caption", x: (W2 - 600) / 2, y: 24, width: 600, height: 44, cornerRadius: 10, fill: solid$4("rgba(10, 10, 16, 0.82)"), bindings: { visible: "story.caption != ''" }, children: [captionWords] });
   const nodes = [];
   const edges = [];
   const wire = (target, action) => {
@@ -14981,7 +14985,7 @@ function storyStage(hideVar, at = {}) {
     width: W2,
     height: H2,
     background: solid$4("#15141c"),
-    children: [bgBefore, bg, cast, weather, box, full, bubble, choices, bar, ending, unhide],
+    children: [bgBefore, bg, cast, weather, box, full, bubble, choices, bar, caption, ending, unhide],
     logic: { nodes, edges },
     ...at
   });
@@ -15160,17 +15164,19 @@ function settingsPage() {
     ["Voices", "voice", [["Off", "0"], ["Quiet", "0.5"], ["Full", "1"]]],
     ["Sound effects", "effects", [["Off", "0"], ["Quiet", "0.4"], ["Normal", "0.8"], ["Full", "1"]]],
     ["Text size", "textSize", [["As designed", "1"], ["Large", "1.25"], ["Largest", "1.5"]]],
-    ["Font", "readable", [["As designed", "false"], ["Easier to read", "true"]]]
+    ["Font", "readable", [["As designed", "false"], ["Easier to read", "true"]]],
+    ["Captions", "captions", [["Off", "false"], ["On", "true"]]],
+    ["Song titles", "songTitles", [["Off", "false"], ["Show them", "true"]]]
   ];
   const kids = [heading$2("Settings", 32)];
   const rowW = 760;
   rows.forEach(([label, pref, choices], i) => {
-    const y = 112 + i * 62;
-    kids.push(createNode("text", { name: label, text: label, x: 80, y: y + 12, width: 260, height: 30, fontSize: 20, color: INK$1, autoSize: "none" }));
+    const y = 108 + i * 52;
+    kids.push(createNode("text", { name: label, text: label, x: 80, y: y + 6, width: 260, height: 30, fontSize: 20, color: INK$1, autoSize: "none" }));
     const bw = (rowW - 20 * (choices.length - 1)) / choices.length;
     choices.forEach(([name, value], j) => {
       const now2 = value === "null" ? `story.prefs.${pref} === null` : `story.prefs.${pref} == ${value}`;
-      const b = button$2(`${label}: ${name}`, name, 360 + j * (bw + 20), y, bw, { height: 48, fontSize: 17, bindings: { "fill.color": `${now2} ? '${ACCENT$1}' : 'rgba(255, 255, 255, 0.92)'`, ariaPressed: `${now2} ? 'true' : 'false'` } });
+      const b = button$2(`${label}: ${name}`, name, 360 + j * (bw + 20), y, bw, { height: 42, fontSize: 17, bindings: { "fill.color": `${now2} ? '${ACCENT$1}' : 'rgba(255, 255, 255, 0.92)'`, ariaPressed: `${now2} ? 'true' : 'false'` } });
       kids.push(b);
       onClick$1(w, b, { kind: "action.storyPref", params: { pref, value } });
     });
@@ -27803,7 +27809,9 @@ help:story help:story-game help:repeaters help:bindings`
 
 **Saving:** **Save the story** keeps where the story is and every variable in a slot (1, 2, 3..., or quick), and **Load the story** puts it all back and shows the stage. The story saves itself in **auto** at every choice, and slot **latest** is the newest of all, which is what **Continue** loads (\`story.canContinue\` says whether there's one). A list of \`story.saves\` shows the slots with \`item.chapter\`, \`item.scene\`, \`item.when\`, the last words and the background as a picture. **Settings** in the Story tab sets how many slots there are. Saves stay in the reader's browser.
 
-**The reader's settings:** **Story setting** changes text speed, Auto speed, whether Skip goes through unread lines, the music, voice and effects volumes, text size and an easier to read font, kept on their device. Read them as \`story.prefs\`: the stage's words are bound to \`26 * story.prefs.textSize\`.
+**The reader's settings:** **Story setting** changes text speed, Auto speed, whether Skip goes through unread lines, the music, voice and effects volumes, text size, an easier to read font, **Captions for sounds** and **Show song titles**, kept on their device. Read them as \`story.prefs\`: the stage's words are bound to \`26 * story.prefs.textSize\`.
+
+**Sound captions:** give a sound a caption in **Assets** (its **Caption** button): what it is, *Door slams*, or a song's title. When \`[sound]\` or \`[music]\` plays it, a reader with captions on sees it as \`story.caption\` for a few seconds (longer for more words); the template's stage shows it along the top as *[Door slams]* or *♪ Hopeful*. **Show song titles** shows the music's ones even with captions off. Nothing comes up while skipping, and a sound with no caption shows nothing.
 
 **History:** a list of \`story.history\` shows what was said, and **Go back a line** with \`story.history.length + 1 - item.number\` lines back returns to one.
 

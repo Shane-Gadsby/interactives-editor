@@ -98,17 +98,19 @@ function settingsPage(): Artboard {
     ['Sound effects', 'effects', [['Off', '0'], ['Quiet', '0.4'], ['Normal', '0.8'], ['Full', '1']]],
     ['Text size', 'textSize', [['As designed', '1'], ['Large', '1.25'], ['Largest', '1.5']]],
     ['Font', 'readable', [['As designed', 'false'], ['Easier to read', 'true']]],
+    ['Captions', 'captions', [['Off', 'false'], ['On', 'true']]],
+    ['Song titles', 'songTitles', [['Off', 'false'], ['Show them', 'true']]],
   ];
   const kids: SceneNode[] = [heading('Settings', 32)];
   const rowW = 760;
   rows.forEach(([label, pref, choices], i) => {
-    const y = 112 + i * 62;
-    kids.push(createNode('text', { name: label, text: label, x: 80, y: y + 12, width: 260, height: 30, fontSize: 20, color: INK, autoSize: 'none' } as never));
+    const y = 108 + i * 52;
+    kids.push(createNode('text', { name: label, text: label, x: 80, y: y + 6, width: 260, height: 30, fontSize: 20, color: INK, autoSize: 'none' } as never));
     //choices fill the row in equal parts, 20 px apart
     const bw = (rowW - 20 * (choices.length - 1)) / choices.length;
     choices.forEach(([name, value], j) => {
       const now = value === 'null' ? `story.prefs.${pref} === null` : `story.prefs.${pref} == ${value}`;
-      const b = button(`${label}: ${name}`, name, 360 + j * (bw + 20), y, bw, { height: 48, fontSize: 17, bindings: { 'fill.color': `${now} ? '${ACCENT}' : 'rgba(255, 255, 255, 0.92)'`, ariaPressed: `${now} ? 'true' : 'false'` } });
+      const b = button(`${label}: ${name}`, name, 360 + j * (bw + 20), y, bw, { height: 42, fontSize: 17, bindings: { 'fill.color': `${now} ? '${ACCENT}' : 'rgba(255, 255, 255, 0.92)'`, ariaPressed: `${now} ? 'true' : 'false'` } });
       kids.push(b);
       onClick(w, b, { kind: 'action.storyPref', params: { pref, value } });
     });

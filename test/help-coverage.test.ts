@@ -12,6 +12,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'The story as nodes, and story events': [['story-dialogue', 'The Dialogue view'], ['story-dialogue', '+ Choice'], ['story-dialogue', 'On story choice']],
+  'Sound captions in stories': [['story-game', 'Sound captions:']],
   'Fixed: a white box in a dark fill in the blank': [['question-kit', 'goes dark in Dark and High contrast']],
   'Toasts size like modals': [['overlays', 'Its size works like a modal']],
   'A new input comes with a label': [['web-elements', 'A new input comes with a label'], ['preferences', 'the box across the title bar']],

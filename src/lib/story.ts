@@ -247,6 +247,10 @@ export function storyStage(hideVar: string, at: Partial<Artboard> = {}): Artboar
   const endWords = createNode('text', { name: 'The end words', x: 0, y: 20, width: 880, height: 70, text: 'The end', fontSize: 44, fontWeight: 700, color: '#ffffff', align: 'center', autoSize: 'none', bindings: { text: "'The end' + (story.ending ? ': ' + story.ending : '')" } } as never);
   const ending = createNode('frame', { name: 'The end', x: (W - 880) / 2, y: H / 2 - 150, width: 880, height: 110, cornerRadius: 16, fill: solid('rgba(10, 10, 16, 0.86)'), bindings: { visible: 'story.ended' }, children: [endWords] } as never);
 
+  //A sound's caption ([Door slams], or a song's title) along the top while it plays, for a reader who turned captions on
+  const captionWords = createNode('text', { name: 'Caption words', x: 16, y: 8, width: 568, height: 28, text: '', fontSize: 20, fontWeight: 600, color: '#ffffff', align: 'center', autoSize: 'none', bindings: { text: "story.captionKind == 'music' ? '♪ ' + story.caption : '[' + story.caption + ']'" } } as never);
+  const caption = createNode('frame', { name: 'Caption', x: (W - 600) / 2, y: 24, width: 600, height: 44, cornerRadius: 10, fill: solid('rgba(10, 10, 16, 0.82)'), bindings: { visible: "story.caption != ''" }, children: [captionWords] } as never);
+
   const nodes: LogicNode[] = [];
   const edges: LogicEdge[] = [];
   const wire = (target: SceneNode, action: Omit<LogicNode, 'id' | 'x' | 'y'>) => {
@@ -267,7 +271,7 @@ export function storyStage(hideVar: string, at: Partial<Artboard> = {}): Artboar
     width: W,
     height: H,
     background: solid('#15141c'),
-    children: [bgBefore, bg, cast, weather, box, full, bubble, choices, bar, ending, unhide],
+    children: [bgBefore, bg, cast, weather, box, full, bubble, choices, bar, caption, ending, unhide],
     logic: { nodes, edges },
     ...at,
   } as Partial<Artboard>);

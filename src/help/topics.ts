@@ -3144,7 +3144,9 @@ help:story help:story-game help:repeaters help:bindings`,
 
 **Saving:** **Save the story** keeps where the story is and every variable in a slot (1, 2, 3..., or quick), and **Load the story** puts it all back and shows the stage. The story saves itself in **auto** at every choice, and slot **latest** is the newest of all, which is what **Continue** loads (\`story.canContinue\` says whether there's one). A list of \`story.saves\` shows the slots with \`item.chapter\`, \`item.scene\`, \`item.when\`, the last words and the background as a picture. **Settings** in the Story tab sets how many slots there are. Saves stay in the reader's browser.
 
-**The reader's settings:** **Story setting** changes text speed, Auto speed, whether Skip goes through unread lines, the music, voice and effects volumes, text size and an easier to read font, kept on their device. Read them as \`story.prefs\`: the stage's words are bound to \`26 * story.prefs.textSize\`.
+**The reader's settings:** **Story setting** changes text speed, Auto speed, whether Skip goes through unread lines, the music, voice and effects volumes, text size, an easier to read font, **Captions for sounds** and **Show song titles**, kept on their device. Read them as \`story.prefs\`: the stage's words are bound to \`26 * story.prefs.textSize\`.
+
+**Sound captions:** give a sound a caption in **Assets** (its **Caption** button): what it is, *Door slams*, or a song's title. When \`[sound]\` or \`[music]\` plays it, a reader with captions on sees it as \`story.caption\` for a few seconds (longer for more words); the template's stage shows it along the top as *[Door slams]* or *♪ Hopeful*. **Show song titles** shows the music's ones even with captions off. Nothing comes up while skipping, and a sound with no caption shows nothing.
 
 **History:** a list of \`story.history\` shows what was said, and **Go back a line** with \`story.history.length + 1 - item.number\` lines back returns to one.
 
