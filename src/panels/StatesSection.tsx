@@ -33,7 +33,7 @@ export function StatesSection({ node }: { node: SceneNode }) {
               label="When"
               title="What turns this look on"
               value={st.when}
-              options={(['hover', 'pressed', 'focus', 'disabled', 'expr', 'dragging', 'lifted', 'dropReady', 'dropOver', 'dropRefuse'] as const).map((w) => ({ value: w, label: STATE_LABELS[w] }))}
+              options={(['hover', 'pressed', 'focus', 'disabled', 'expr', 'dragging', 'lifted', 'dropReady', 'dropOver', 'dropRefuse', 'checkFails'] as const).map((w) => ({ value: w, label: STATE_LABELS[w] }))}
               onChange={(w) => setStates((list) => void (list[i].when = w))}
             />
             <IconButton icon={<Icons.chevronUp />} title="Move up" disabled={i === 0} onClick={() => setStates((list) => void list.splice(i - 1, 0, list.splice(i, 1)[0]))} />

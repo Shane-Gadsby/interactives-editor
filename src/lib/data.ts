@@ -1,4 +1,4 @@
-import { coerceInput, isLive, Pocket, puzzleScope, setBase, sampleStoryScope, sampleRoom, sampleValue, artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
+import { coerceInput, isLive, runChecks, template, tryEvaluate, Pocket, puzzleScope, setBase, sampleStoryScope, sampleRoom, sampleValue, artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -121,6 +121,10 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
     // One that starts from the link takes the sample link value, as the player would take the real one
     const linked = v.fromLink && !isLive(v) && project.sampleLink?.[v.fromLink] ? coerceInput(v, project.sampleLink[v.fromLink]) : null;
     start[v.name] = vars[v.name] = linked?.ok ? linked.value : perCourse.has(v.id) ? initialValue({ ...v, initial: perCourse.get(v.id)! }) : startingValue(v, start);
+  }
+  // The project's checks on the starting values, so a message bound to checks.list shows on the canvas (nothing has been dropped yet)
+  if (project.settings.checks?.length && !('checks' in vars)) {
+    vars.checks = runChecks(project.settings.checks, (expr, extra) => tryEvaluate(expr, { vars, extra }), (text, extra) => template(text, { vars, extra }));
   }
   // `quiz` (score, max, the list of questions) as the player has it at the start, so a results page doesn't show its raw formula on the canvas.
   // A variable or data source of that name wins, like in the player

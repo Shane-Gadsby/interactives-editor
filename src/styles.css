@@ -263,6 +263,22 @@ code,
   margin: 6px 0;
   line-height: 1.35;
 }
+/* Project checks: one block per check, its name and delete button on a line */
+.check-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.check-row-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.check-row-head > :first-child {
+  flex: 1;
+}
 /* Drop zone: the page's zone groups, the ones this zone is in opened up to edit */
 .zone-groups {
   display: flex;

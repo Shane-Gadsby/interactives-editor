@@ -1,3 +1,4 @@
+import { ChecksSection } from './ChecksSection';
 import { SketchSection } from './SketchSection';
 import { ParticlesSection } from './ParticlesSection';
 import { PuzzleSection } from './PuzzleSection';
@@ -1004,6 +1005,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <CaptionsSection project={project} />
       <ReadAloudSection project={project} />
       <ReportingSection project={project} />
+      <ChecksSection project={project} />
       <RecordsSection project={project} />
       <SensorsSection project={project} />
       <Section help="attributions" title="Credits" defaultOpen={false}>
