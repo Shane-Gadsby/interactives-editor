@@ -4901,6 +4901,40 @@ button.twisty:hover {
   border-radius: 4px;
   height: 26px;
 }
+/* Share: the link values to put on what's copied, in a row above it */
+.share-link-values {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+/* Link values for this run: a list or a short text box each, side by side */
+.preview-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.link-value-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.link-value-select,
+.link-value-text input {
+  background: var(--bg);
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  height: 26px;
+  padding: 0 6px;
+  font: inherit;
+}
+.link-value-select:focus,
+.link-value-text input:focus {
+  outline: none;
+  border-color: var(--focus-ring);
+}
 .preview-body {
   flex: 1;
   min-height: 0;

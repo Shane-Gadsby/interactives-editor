@@ -1,6 +1,8 @@
 import { answerPreviewProgress, forgetPreviewCourse, forgetPreviewLearner, previewCourseHas, previewLearnerHas, usesCourseCollections } from './lib/preview-learner';
 import { PREVIEW_STORY_EVENT } from './panels/StoryPanel';
 import { parked } from './lib/parked';
+import { linkNames } from './lib/link-values';
+import { LinkValueField } from './components/LinkValueField';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
@@ -1305,6 +1307,10 @@ export function PreviewModal({ onClose, storyFrom = null }: { onClose: () => voi
   const t0 = useRef(performance.now());
   const [showVars, setShowVars] = useState(true);
   const [nonce, setNonce] = useState(0);
+  //The link values this run is opened with: the samples from Data > context to begin with, changed from the bar without touching
+  //the project (a reviewer can try every program, and the samples stay what the canvas shows)
+  const [previewLink, setPreviewLink] = useState<Record<string, string>>(() => ({ ...((project as Project).sampleLink ?? {}) }));
+  const [linkFields] = useState(() => linkNames(project as Project));
   //Which frame has loaded: a new one stays see-through until its page is in, so the empty frame's white never shows
   const [frameShown, setFrameShown] = useState(-1);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -1402,6 +1408,17 @@ export function PreviewModal({ onClose, storyFrom = null }: { onClose: () => voi
     w.postMessage({ target: 'interactives', type: 'simulateViewer', prefs: v === 'device' ? null : { dark: v === 'dark' || v === 'dark-contrast', contrast: v === 'contrast' || v === 'dark-contrast' } }, '*');
     w.postMessage({ target: 'interactives', type: 'setTheme', theme: t }, '*');
   };
+  // A new iframe runs everything from the start; the debug panel starts again with it
+  const restart = () => {
+    setNonce((n) => n + 1);
+    setTraces([]);
+    setLog([]);
+    setScriptErrors([]);
+    setSaid([]);
+    setDbg(null);
+    clearFlow();
+    t0.current = performance.now();
+  };
   const hasDrag = project.artboards.some((a) => {
     let found = false;
     walk(a.children, (n) => {
@@ -1415,14 +1432,14 @@ export function PreviewModal({ onClose, storyFrom = null }: { onClose: () => voi
     setBuildError(null);
     // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show,
     // opened with the sample link values on its address
-    standaloneHtml(storyFrom && project.story ? ({ ...project, story: { ...project.story, startAt: storyFrom } } as Project) : (project as Project), { startArtboardId: storyFrom && project.story?.stage ? project.story.stage : from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project), link: { ...(project.sampleLink ?? {}) } }).then(
+    standaloneHtml(storyFrom && project.story ? ({ ...project, story: { ...project.story, startAt: storyFrom } } as Project) : (project as Project), { startArtboardId: storyFrom && project.story?.stage ? project.story.stage : from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project), link: Object.fromEntries(Object.entries(previewLink).filter(([, v]) => v !== '')) }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );
     return () => {
       live = false;
     };
-  }, [project, from, abId, nonce, accessibility, lessMotion, storyFrom]);
+  }, [project, from, abId, nonce, accessibility, lessMotion, storyFrom, previewLink]);
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow) return;
@@ -1599,6 +1616,25 @@ export function PreviewModal({ onClose, storyFrom = null }: { onClose: () => voi
               ))}
             </select>
           )}
+          {linkFields.length > 0 && (
+            <span className="preview-link" role="group" aria-label="Link values this run is opened with">
+              {linkFields.map((name) => (
+                <LinkValueField
+                  key={name}
+                  name={name}
+                  value={previewLink[name] ?? ''}
+                  choices={(project as Project).linkChoices?.[name]}
+                  onChange={(v) => {
+                    //Clear the page first, so the new frame only ever loads the page built with the new value (one that
+                    //loaded the old page and then swapped it never got its session answered, and stayed blank)
+                    setHtml(null);
+                    setPreviewLink((was) => ({ ...was, [name]: v }));
+                    restart();
+                  }}
+                />
+              ))}
+            </span>
+          )}
           {hasDrag && (
             <button
               className={`btn${hitAreas ? ' active' : ''}`}
@@ -1614,17 +1650,7 @@ export function PreviewModal({ onClose, storyFrom = null }: { onClose: () => voi
           <div className="spacer" />
           <button
             className="btn"
-            onClick={() => {
-              // A new iframe runs everything from the start; the debug panel starts again with it
-              setNonce(nonce + 1);
-              setTraces([]);
-              setLog([]);
-              setScriptErrors([]);
-              setSaid([]);
-              setDbg(null);
-              clearFlow();
-              t0.current = performance.now();
-            }}
+            onClick={restart}
             title="Start again from the beginning (timelines, variables and all)"
           >
             Restart

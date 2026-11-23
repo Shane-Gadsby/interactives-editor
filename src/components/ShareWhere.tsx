@@ -5,6 +5,8 @@ import { embedAspect, embedCode } from '../lib/embed';
 import { requestAppAction } from '../lib/app-actions';
 import { store } from '../store/store';
 import { track } from '../lib/analytics';
+import { linkNames, withLinkValues } from '../lib/link-values';
+import { LinkValueField } from './LinkValueField';
 
 export type Where = 'studydesk' | 'studydesk-plain' | 'gradebook' | 'link' | 'file';
 
@@ -85,7 +87,26 @@ export function ShareWhere({ projectId, share, busy, publish, embedId, marked }:
   const project = store().get().project;
   const device = usesDevice(share);
   const needsLink = where !== 'file';
-  const iframe = (url: string) => embedCode({ url, title: project.name, sensors: share?.sensors, aspect: embedAspect(project), cdtID: embedId });
+  //Link values to put on what's copied (&program=GCSC), for a project that reads them. None by default: the plain link
+  const [names] = useState(() => linkNames(project));
+  const [linkVals, setLinkVals] = useState<Record<string, string>>({});
+  const iframe = (url: string) => embedCode({ url, title: project.name, sensors: share?.sensors, aspect: embedAspect(project), cdtID: embedId, link: linkVals });
+  const linkFields = names.length > 0 && (
+    <div className="share-link-values" role="group" aria-label="Link values to open it with">
+      <span className="small">Open it with:</span>
+      {names.map((name) => (
+        <LinkValueField
+          key={name}
+          name={name}
+          label="on the copied link"
+          value={linkVals[name] ?? ''}
+          choices={project.linkChoices?.[name]}
+          title={`Put &${name}=… on what you copy, so the project opens with link.${name} set. None leaves it off`}
+          onChange={(v) => setLinkVals((was) => ({ ...was, [name]: v }))}
+        />
+      ))}
+    </div>
+  );
   const deviceNames = share?.sensors ? [share.sensors.microphone && 'microphone', share.sensors.camera && 'camera', share.sensors.photos && 'photos'].filter(Boolean).join(', ') : '';
   const ready = !!share && needsLink;
   return (
@@ -121,6 +142,7 @@ export function ShareWhere({ projectId, share, busy, publish, embedId, marked }:
               <li>Edit the page and open its <strong>Source code</strong> (the <code>&lt;&gt;</code> button).</li>
               <li>Paste the code where the activity should go, and save the page.</li>
             </ol>
+            {linkFields}
             <CopyBox text={iframe(learnerUrl(share.token))} label="Embed code" rows={4} onCopied={() => track('feature', 'share-embed-copy')} />
             {device && <p className="small muted">This project uses the {deviceNames}. The code already lets the page use it, so there is nothing to add.</p>}
           </>
@@ -140,6 +162,7 @@ export function ShareWhere({ projectId, share, busy, publish, embedId, marked }:
                   <li>Edit the page and open its <strong>Source code</strong> (the <code>&lt;&gt;</code> button).</li>
                   <li>Paste the code where the activity should go, and save the page.</li>
                 </ol>
+                {linkFields}
                 <CopyBox text={iframe(shareUrl(share.token))} label="Embed code" rows={4} onCopied={() => track('feature', 'share-embed-copy', { detail: { results: false } })} />
                 <p className="small muted">Nothing is kept for learners with this one. Choose the first option above if you later want scores or progress.</p>
               </>
@@ -172,9 +195,10 @@ export function ShareWhere({ projectId, share, busy, publish, embedId, marked }:
             <p>
               <strong>Copy this link</strong> and send it, or put it on a page. Anyone with it can play the project (not change it).
             </p>
+            {linkFields}
             <div className="share-copy">
-              <CopyBox text={shareUrl(share.token)} label="Share link" />
-              <a className="btn" href={shareUrl(share.token)} target="_blank" rel="noreferrer">
+              <CopyBox text={withLinkValues(shareUrl(share.token), linkVals)} label="Share link" />
+              <a className="btn" href={withLinkValues(shareUrl(share.token), linkVals)} target="_blank" rel="noreferrer">
                 Open
               </a>
             </div>

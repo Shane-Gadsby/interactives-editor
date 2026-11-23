@@ -1,4 +1,4 @@
-import { type Setup, CONTEXT_FIELDS, courseMatches, linkNameOk, LINK_MAX_LENGTH, LINK_MAX_VALUES, sampleContextFor, uid, type ContextValues, type CourseValueRow, type Variable, variableLabelAndName } from 'interactives-player';
+import { type Setup, CONTEXT_FIELDS, courseMatches, linkNameOk, LINK_MAX_CHOICES, LINK_MAX_LENGTH, LINK_MAX_VALUES, sampleContextFor, uid, type ContextValues, type CourseValueRow, type Variable, variableLabelAndName } from 'interactives-player';
 import { useEffect, useState } from 'react';
 import { getShare, learnerUrl } from '../lib/db';
 import { store, useEditor } from '../store/store';
@@ -207,13 +207,32 @@ function Setups() {
 /** Made-up `link` values: as if the project were opened with `?program=GCSC` on its address. The canvas and Preview use them. */
 function SampleLink() {
   const sample = useEditor((st) => st.project.sampleLink);
+  const choices = useEditor((st) => st.project.linkChoices);
   const entries = Object.entries(sample ?? {});
   const clash = useEditor((st) => st.project.variables.some((v) => v.name === 'link'));
   //Rebuilt in order each time, so renaming a value keeps its place in the list
-  const write = (next: [string, string][]) =>
+  //Choices follow their row: renamed with it, dropped with it
+  const write = (next: [string, string][], renamed?: [string, string]) =>
     store().update((d) => {
       if (next.length) d.sampleLink = Object.fromEntries(next);
       else delete d.sampleLink;
+      if (d.linkChoices) {
+        if (renamed && d.linkChoices[renamed[0]]) {
+          d.linkChoices[renamed[1]] = d.linkChoices[renamed[0]];
+          delete d.linkChoices[renamed[0]];
+        }
+        for (const k of Object.keys(d.linkChoices)) if (!next.some(([n]) => n === k)) delete d.linkChoices[k];
+        if (!Object.keys(d.linkChoices).length) delete d.linkChoices;
+      }
+    });
+  const setChoices = (name: string, text: string) =>
+    store().update((d) => {
+      const list = [...new Set(text.split(',').map((x) => x.trim().slice(0, LINK_MAX_LENGTH)).filter(Boolean))].slice(0, LINK_MAX_CHOICES);
+      if (list.length) (d.linkChoices ??= {})[name] = list;
+      else if (d.linkChoices) {
+        delete d.linkChoices[name];
+        if (!Object.keys(d.linkChoices).length) delete d.linkChoices;
+      }
     });
   const add = () => {
     let name = 'program';
@@ -233,6 +252,7 @@ function SampleLink() {
             <tr>
               <th>Name</th>
               <th title="Made up, for the canvas and Preview only. Never saved into an export or seen by a learner">Sample value</th>
+              <th title="The values it can take, with commas between them. Preview's bar and Share then offer them as a list">Choices</th>
               <th />
             </tr>
           </thead>
@@ -243,7 +263,9 @@ function SampleLink() {
                 name={name}
                 value={value}
                 taken={(n) => entries.some(([other], j) => j !== i && other === n)}
-                rename={(n) => write(entries.map((e, j) => (j === i ? [n, e[1]] : e)))}
+                choices={choices?.[name] ?? []}
+                setChoices={(text) => setChoices(name, text)}
+                rename={(n) => write(entries.map((e, j) => (j === i ? [n, e[1]] : e)), [name, n])}
                 setValue={(v) => write(entries.map((e, j) => (j === i ? [e[0], v.slice(0, LINK_MAX_LENGTH)] : e)))}
                 remove={() => write(entries.filter((_, j) => j !== i))}
               />
@@ -258,7 +280,7 @@ function SampleLink() {
   );
 }
 
-function LinkRow({ name, value, taken, rename, setValue, remove }: { name: string; value: string; taken: (name: string) => boolean; rename: (name: string) => void; setValue: (v: string) => void; remove: () => void }) {
+function LinkRow({ name, value, choices, taken, rename, setValue, setChoices, remove }: { name: string; value: string; choices: string[]; taken: (name: string) => boolean; rename: (name: string) => void; setValue: (v: string) => void; setChoices: (text: string) => void; remove: () => void }) {
   const [problem, setProblem] = useState<string | null>(null);
   const tryName = (raw: string) => {
     const n = raw.trim();
@@ -275,7 +297,14 @@ function LinkRow({ name, value, taken, rename, setValue, remove }: { name: strin
         {problem && <p className="error small">{problem}</p>}
       </td>
       <td>
-        <TextField value={value} commitOnBlur title={`A made-up value for link.${name}`} onChange={setValue} />
+        {choices.length ? (
+          <SelectField<string> value={value} title={`A made-up value for link.${name}. None plays it as if the link had no ${name}`} options={[{ value: '', label: 'None' }, ...(value && !choices.includes(value) ? [{ value, label: `${value} (not a choice)` }] : []), ...choices.map((c) => ({ value: c, label: c }))]} onChange={setValue} />
+        ) : (
+          <TextField value={value} commitOnBlur title={`A made-up value for link.${name}`} onChange={setValue} />
+        )}
+      </td>
+      <td>
+        <TextField value={choices.join(', ')} commitOnBlur placeholder="MSCN, GDSI, GCSC" title={`The values link.${name} can take, with commas between them. Preview's bar and Share offer them as a list. Leave it empty for any text`} onChange={setChoices} />
       </td>
       <td>
         <IconButton icon={<Icons.trash />} title={`Delete link.${name}`} onClick={remove} />

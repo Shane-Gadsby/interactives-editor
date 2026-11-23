@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Try each link value in Preview**: a project that reads values from its link (`link.program`) gets a field for each on Preview's bar. Pick or type one and Preview starts again as if the link carried it, without changing the project's sample. Give a value its **Choices** in Data > context > link (`MSCN, GDSI, GCSC`) and it's a list there, in Preview, and in Share, where **Open it with:** puts the chosen value on the embed code and the share link you copy.
 - **Sound captions in stories**: a sound can have a caption (its **Caption** button in Assets). When the story plays it, a reader who turned on **Captions** in the template's settings sees *[Door slams]* along the top, and **Song titles** shows the music's title as it starts.
 - **Fixed: a white box in a dark fill in the blank**: a fill in the blank question's box kept its light colours in the Dark and High contrast themes, so it glared and the words under it failed contrast. It takes the theme's colours now, and a question made before this picks them up the next time you change its settings.
 - **Toasts size like modals**: the page is the toast's size, hugging its words or a set size once you untick the fits, and **Show toast** and **Hide toast** list only toasts, not every page.

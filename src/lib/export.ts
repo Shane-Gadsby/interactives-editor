@@ -64,9 +64,10 @@ export async function standaloneHtml(
     fetched = e.bytes;
     if (e.failed.length) opts.onLinkedFailed?.(e.failed);
   }
-  const { sampleContext: _sample, sampleLink: _sampleLink, ...unsampled } = withoutLinks(whole);
+  const { sampleContext: _sample, sampleLink: _sampleLink, linkChoices: _linkChoices, ...unsampled } = withoutLinks(whole);
   void _sample;
   void _sampleLink;
+  void _linkChoices;
   // Where a picture was found in the catalogue is the author's business, not something a page for learners carries
   const unfound = unsampled.assets.some((a) => a.catalogue) ? { ...unsampled, assets: unsampled.assets.map(({ catalogue: _c, ...a }) => a) } : unsampled;
   const clean = withPublishedCredits(unfound as Project);

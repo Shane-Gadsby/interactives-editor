@@ -377,6 +377,8 @@ The layout is remembered in this browser. Whatever opens a panel for you (choosi
 
 ![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)
 
+When the project reads [values on the link](course-context#values-on-the-link) (\`link.program\`, \`ix.link.program\`), the top bar has a field for each: pick or type a value and Preview starts again as if the link carried it. The project's own sample doesn't change.
+
 When the project has [responsive pages](responsive), a **Page width** slider appears under the top bar. Drag it to resize the page the project runs in; the breakpoints are marked on the track and the player switches page as you cross them.
 
 **View at embed size** shows it the way StudyDesk shows the embed code: no wider than 800 px, and exactly as tall as the project asks the page for, changing as it runs. A page with **Fit height to content** grows and shrinks here as it would in the course, and anything the embed would cut off or leave empty shows. Scroll the preview when it's taller than the window.
@@ -5431,7 +5433,7 @@ A course collection holds only the stamps and counters a project added, with the
     title: 'Course and learner context',
     group: 'Data',
     summary: 'The built-in context source (course label, first name, student or staff) and per-course variable values.',
-    keywords: 'context course label code term year learner first name display name student staff studydesk per-course values offering rollover duplicate fetchactivity session greeting',
+    keywords: 'context course label code term year learner first name display name student staff studydesk per-course values offering rollover duplicate fetchactivity session greeting link value address program choices preview share',
     body: `Every project has a built-in, read-only data source called **context**. It holds the course the project is in and the person playing, so a project can greet someone by name, show the unit code, or change what it says for staff and students. You do not add it and you cannot edit it; it is always in the **Data** tab's list, first.
 
 ## What is in it
@@ -5513,6 +5515,12 @@ Only the owner, collaborators, power users and staff can save; anyone else goes 
 Every value is text, and a name that isn't there is empty, so give it a fallback: \`link.program || 'MSCN'\`. A name is letters, digits, \`.\`, \`_\` and \`-\` (up to 40), a value is up to 200 letters, and there are 20 at most. \`title\` and \`cdtID\` (the embed code's own), \`sessionID\`, \`ixm\` and \`lti\` are never handed on.
 
 It works from the Link for StudyDesk and from a plain share link. To see the project with values on its address while you build it, open **Data**, pick **context**, and under **link** press **+ Add a link value**: give it a name (\`program\`) and a sample value (\`GCSC\`). The canvas and Preview then behave as if the project were opened with \`&program=GCSC\`. Sample values are for designing only: a share link, an embed or an export never carries them, and leaving a name out of the samples is how you check what the project does with no value. A project shared before 19 November 2026 needs **Update** in Share to get it.
+
+### Choices, and trying each one
+Give a link value its **Choices** in the same table, with commas between them (\`MSCN, GDSI, GCSC\`). The sample then picks from them, and so do these two:
+
+- **Preview's bar** has a field for every link value the project reads (from \`link.\` in text, bindings and formulas, and \`ix.link.\` in scripts), plus the ones in the table: a list when it has choices, otherwise a box to type in (Enter applies it). Changing one starts Preview again, opened with that value. It's for this run only: the sample in Data stays as it was, so a reviewer can try every program without changing the project.
+- **Share** shows the same fields as **Open it with:** above the embed code and the share link. Pick a value and what you copy carries it (\`&program=GCSC\`). Leave it on **none** for the plain link.
 
 Anyone can change what's on an address they open, so use a value to pick what to show, never to decide what someone may do or to set a score.
 

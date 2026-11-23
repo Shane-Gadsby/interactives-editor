@@ -2,7 +2,7 @@
 // the learner page, so StudyDesk, StaffDesk and the open site all treat it like any other ILAR. One shape for all three, since they
 // share the one ILAR host and the one si-manager script; only the host differs per environment and that comes from the address
 // the editor is on.
-import type { Project } from 'interactives-player';
+import { linkNameOk, type Project } from 'interactives-player';
 
 /** What the share record says the project uses of the learner's device (the page only allows what was declared when it was shared). */
 export interface EmbedSensors {
@@ -21,6 +21,8 @@ export interface EmbedOptions {
   aspect?: string;
   /** The item's own id, the way the Toolbox stamps `Date.now()` on every item it inserts. */
   cdtID: number | string;
+  /** Link values to open it with (`program: 'GCSC'` adds `&program=GCSC`), what the project reads as `link.program`. Empty ones are left off. */
+  link?: Record<string, string>;
 }
 
 // Same escaping the Toolbox uses for anything that lands in an attribute
@@ -60,6 +62,7 @@ export const embedCode = (o: EmbedOptions) => {
   const aspect = /^\d+\/\d+$/.test(o.aspect ?? '') ? o.aspect : '16/9';
   // Built by hand the way the Toolbox builds its src (encodeURIComponent, a bare &), so it reads the same as every other item's.
   // Everything after the path is encoded, and the path is a token of letters, digits, dashes and underscores
-  const src = `${o.url.split(/[?#]/)[0].replace(/["<>\s]/g, '')}?title=${encodeURIComponent(o.title)}&cdtID=${encodeURIComponent(`${o.cdtID}`)}`;
+  const link = Object.entries(o.link ?? {}).filter(([k, v]) => v !== '' && linkNameOk(k)).map(([k, v]) => `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('');
+  const src = `${o.url.split(/[?#]/)[0].replace(/["<>\s]/g, '')}?title=${encodeURIComponent(o.title)}&cdtID=${encodeURIComponent(`${o.cdtID}`)}${link}`;
   return `<iframe title="${embedTitle(o.title)}" src="${src}" data-cdt-id="${escapeAttr(o.cdtID)}" allow="${embedAllow(o.sensors)}" allowfullscreen style="border:0; width:100%; height:auto; aspect-ratio:${aspect}"></iframe>`;
 };
