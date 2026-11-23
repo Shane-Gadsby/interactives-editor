@@ -40,6 +40,7 @@ import {
   type TextModifier,
   type TextRun,
   type Timeline,
+  retextParagraphs,
 } from 'interactives-player';
 import { applyRuns, nodePropsToRunStyle } from '../lib/rich-text';
 import { lockViolation, unlinkStyleRef } from '../lib/libraries';
@@ -250,7 +251,7 @@ export function onPanelRequest(fn: ((id: BottomTab | null) => void) | null): voi
   panelRequestHandler = fn;
 }
 
-export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface' | 'checklist' | 'themes' | 'credits';
+export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface' | 'checklist' | 'themes' | 'credits' | 'story';
 
 /** Where learners clicked on one artboard (from Insights), drawn over the canvas as a heat map. Never saved. */
 export interface HeatOverlay {
@@ -808,6 +809,11 @@ export class EditorStore {
             // Editing the plain text of a rich text layer keeps the styling around the edit
             applyRuns(loc.node, retextRuns(loc.node.runs, String(value ?? '')));
           } else {
+            if (prop === 'text' && loc.node.type === 'text' && loc.node.paragraphs?.length) {
+              const kept = retextParagraphs(loc.node.text, String(value ?? ''), loc.node.paragraphs);
+              if (kept) loc.node.paragraphs = kept;
+              else delete loc.node.paragraphs;
+            }
             setPath(loc.node as unknown as Record<string, unknown>, prop, value);
             unlinkStyleRef(loc.node, prop);
           }

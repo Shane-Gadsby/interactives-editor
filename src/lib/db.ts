@@ -11,6 +11,8 @@ import type { TemplateInfo } from './templates';
 import { reportError, routePattern, track } from './analytics';
 import { fetchOrEarly } from './early-fetch';
 import { normalizeProject, readPackage, uid, writePackage, type Asset, type Project } from 'interactives-player';
+import { relinkPackagedFonts } from './font-embed';
+import { fontsBase } from './fonts';
 
 export interface ProjectMeta {
   id: string;
@@ -429,8 +431,12 @@ async function importPackageInner(file: Blob): Promise<Project> {
     project = normalizeProject(JSON.parse(new TextDecoder().decode(bytes)));
     for (const a of project.assets) if (a.src?.startsWith('data:')) blobs.set(a.id, await (await fetch(a.src)).blob());
   }
+  // A package carries its Google fonts so it can play offline: here they're linked from the font server again where it
+  // has them, and the copies left out of the new project
+  const relinked = await relinkPackagedFonts(project, fontsBase());
+  for (const id of relinked.drop) blobs.delete(id);
   const now = new Date().toISOString();
-  project = { ...project, id: uid('pr'), updated: now };
+  project = { ...project, fonts: relinked.fonts, id: uid('pr'), updated: now };
   project.assets = project.assets.filter((a) => blobs.has(a.id)).map(({ src: _src, ...a }) => ({ ...a }));
   // The project has to exist on the server before assets can be attached to it (the asset routes check its owner)
   revs.set(project.id, 0);
@@ -588,6 +594,31 @@ export const getResults = (projectId: string) => call<Results>(`projects/${encod
 
 /** Every learner's record as a CSV file. */
 export const resultsCsv = (projectId: string) => call<Blob>(`projects/${encodeURIComponent(projectId)}/results.csv`, {}, 'blob');
+
+/** What Send a response collected: the newest 500 rows, the kinds there are, and whether they carry names. */
+export interface CollectedRow {
+  set: string;
+  at: string;
+  course?: string;
+  username?: string;
+  name?: string;
+  person?: string;
+  setup?: string;
+  values: unknown;
+}
+export interface Collected {
+  sets: string[];
+  count: number;
+  truncated: boolean;
+  named: boolean;
+  rows: CollectedRow[];
+  mayClear?: boolean;
+}
+export const getCollected = (projectId: string, set = '') => call<Collected>(`projects/${encodeURIComponent(projectId)}/responses${set ? `?set=${encodeURIComponent(set)}` : ''}`);
+/** A download of them: CSV a row per response, CSV a row per item of a list in each (the card sort shape), or the raw JSON. */
+export const collectedFile = (projectId: string, kind: 'csv' | 'items' | 'json', set = '') =>
+  call<Blob>(`projects/${encodeURIComponent(projectId)}/responses.${kind === 'json' ? 'json' : 'csv'}?${new URLSearchParams({ ...(kind === 'items' ? { per: 'item' } : {}), ...(set ? { set } : {}) })}`, {}, 'blob');
+export const clearCollected = (projectId: string) => call<{ ok: boolean; deleted: number }>(`projects/${encodeURIComponent(projectId)}/responses`, { method: 'DELETE' });
 
 export const clearResults = (projectId: string) => call<{ ok: boolean; deleted: number }>(`projects/${encodeURIComponent(projectId)}/results`, { method: 'DELETE' });
 

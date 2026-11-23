@@ -61,6 +61,6 @@ describe('Projects and Templates tabs on the projects page', () => {
     await act(async () => root.render(<Home open={() => undefined} />));
     await flush();
     expect(host.querySelector('.templates-tab')).not.toBeNull();
-    expect(host.querySelectorAll('.template-card')).toHaveLength(6);
+    expect(host.querySelectorAll('.template-card')).toHaveLength(8);
   });
 });

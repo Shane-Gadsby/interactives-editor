@@ -1,4 +1,4 @@
-import { sampleRoom, sampleValue, artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
+import { coerceInput, isLive, runChecks, template, tryEvaluate, Pocket, puzzleScope, setBase, sampleStoryScope, sampleRoom, sampleValue, artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -118,7 +118,13 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
   // A variable with a formula is worked out from the ones above it (the crossword's layout from its word list), as the player does at the start
   const start: Record<string, unknown> = {};
   for (const v of project.variables) {
-    start[v.name] = vars[v.name] = perCourse.has(v.id) ? initialValue({ ...v, initial: perCourse.get(v.id)! }) : startingValue(v, start);
+    // One that starts from the link takes the sample link value, as the player would take the real one
+    const linked = v.fromLink && !isLive(v) && project.sampleLink?.[v.fromLink] ? coerceInput(v, project.sampleLink[v.fromLink]) : null;
+    start[v.name] = vars[v.name] = linked?.ok ? linked.value : perCourse.has(v.id) ? initialValue({ ...v, initial: perCourse.get(v.id)! }) : startingValue(v, start);
+  }
+  // The project's checks on the starting values, so a message bound to checks.list shows on the canvas (nothing has been dropped yet)
+  if (project.settings.checks?.length && !('checks' in vars)) {
+    vars.checks = runChecks(project.settings.checks, (expr, extra) => tryEvaluate(expr, { vars, extra }), (text, extra) => template(text, { vars, extra }));
   }
   // `quiz` (score, max, the list of questions) as the player has it at the start, so a results page doesn't show its raw formula on the canvas.
   // A variable or data source of that name wins, like in the player
@@ -127,6 +133,16 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
     for (const ab of project.artboards) walk(ab.children as SceneNode[], (n) => void (n.type === 'frame' && n.question && sources.push({ question: n.question, page: ab.name })));
     vars.quiz = quizState(sources, (prefix, suffix) => vars[`${prefix}_${suffix}`], project.settings.reporting?.passMark);
   }
+  // A story stage shows the story's first spoken line, with its background and cast, as the player would
+  if (project.story && !('story' in vars)) {
+    const st = sampleStoryScope(project);
+    if (st) vars.story = st;
+  }
+  // A puzzle page shows its number, title, value and hints as a first go at it would (no hint open, no right or wrong yet)
+  const puzzlePage = artboard?.puzzle ? artboard : artboard ? setBase(project.artboards, artboard) : undefined;
+  if (puzzlePage?.puzzle && !('puzzle' in vars)) vars.puzzle = { active: true, ...puzzleScope(project.artboards, puzzlePage, new Pocket(project.story?.settings?.coins), null) };
+  // A room shows its box with a sample line, so it can be styled
+  if (artboard && !('room' in vars) && JSON.stringify(artboard.children).includes('"examine":{')) vars.room = { showing: true, text: 'What you see when you look at something.', speaker: '', speaking: false, more: false, coins: project.story?.settings?.coins ?? 3, items: [] };
   // Live variables read all of them (the ones below too), so they are worked out once everything else has its value
   const live = planLive(project);
   if (live.order.length) runLive(live, vars, null);

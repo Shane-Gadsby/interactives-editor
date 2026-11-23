@@ -50,7 +50,7 @@ export const catalogItem = (id: string): CatalogItem | undefined => CATALOG.find
 const THEMES: [string, string, string[]][] = [
   ['questions', 'Questions', ['mcq', 'drag-match', 'blanks', 'sort', 'order', 'label']],
   ['show-and-explain', 'Show and explain', ['reveal', 'flipcards', 'accordion', 'carousel', 'compare', 'presentation', 'diagram']],
-  ['games-and-stories', 'Games and stories', ['branching', 'memory', 'personality', 'progress', 'scene', 'wordgames']],
+  ['games-and-stories', 'Games and stories', ['branching', 'memory', 'personality', 'progress', 'scene', 'wordgames', 'visual-novel', 'add-puzzle']],
   ['learners-and-data', 'Learners, media and data', ['journal', 'survey-chart', 'whatif', 'data-source', 'context', 'video-chapters', 'microphone', 'sound']],
   ['polish', 'Polish and advanced', ['responsive', 'accessible', 'brand', 'bones', 'rive-drive', 'script']],
 ];

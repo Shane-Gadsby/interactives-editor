@@ -7,9 +7,9 @@ import { fileURLToPath } from 'node:url'
 const here = (p) => fileURLToPath(new URL(p, import.meta.url))
 
 //Everything the bridge can reach: the entry, and every file in the player's media folder except the player-side ones (they are not in the bundle)
-const PLAYER_ONLY = new Set(['host.ts', 'fake.ts', 'runtime.ts', 'playback.ts', 'index.ts'])
+const PLAYER_ONLY = new Set(['host.ts', 'fake.ts', 'runtime.ts', 'playback.ts', 'index.ts', 'platform-media.ts', 'platform-host.ts'])
 
-export const mediaSources = () => ['../mcp/media.ts', ...readdirSync(here('../../interactives-player/src/media')).filter((f) => f.endsWith('.ts') && !PLAYER_ONLY.has(f)).sort().map((f) => `../../interactives-player/src/media/${f}`)]
+export const mediaSources = () => ['../mcp/media.ts', '../mcp/platform-relay.ts', ...readdirSync(here('../../interactives-player/src/media')).filter((f) => f.endsWith('.ts') && !PLAYER_ONLY.has(f)).sort().map((f) => `../../interactives-player/src/media/${f}`)]
 
 export const sourcesHash = () => {
 	let hash = createHash('sha256')

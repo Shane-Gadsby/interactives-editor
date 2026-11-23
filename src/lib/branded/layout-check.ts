@@ -17,7 +17,7 @@
  * panel that opens later is not (build the page's states into a test when one matters). A layer that fades in is read at its settled
  * look (`settledLook`), not at the opacity 0 it starts from.
  */
-import { REPEAT_SEP, artboardScope, isContainer, pageInfo, prepareNodes, relayoutTree, startingValue, evaluate, textAutoSize, withMaster, type Artboard, type CopySizes, type ExprScope, type Project, type SceneNode, type TextNode } from 'interactives-player';
+import { Pocket, puzzleScope, sampleStoryScope, setBase, REPEAT_SEP, artboardScope, isContainer, pageInfo, prepareNodes, relayoutTree, startingValue, evaluate, textAutoSize, withMaster, type Artboard, type CopySizes, type ExprScope, type Project, type SceneNode, type TextNode } from 'interactives-player';
 import { LOGO_CLEAR, OVERLAY_TAG, type LayoutState } from './kit';
 import { previewValue } from '../data';
 
@@ -355,9 +355,22 @@ export function preparedPage(project: Project, page: Artboard, state?: LayoutSta
   const info = pageInfo(project, page);
   const scope: ExprScope = {
     vars,
-    extra: { pageNumber: info.index + 1, pageCount: info.list.length, artboard: artboardScope(page, { index: info.index, count: info.list.length, group: info.group }), quiz: { questions: [], score: 0, points: 0 }, event: {} },
+    extra: { pageNumber: info.index + 1, pageCount: info.list.length, artboard: artboardScope(page, { index: info.index, count: info.list.length, group: info.group }), quiz: { questions: [], score: 0, points: 0 }, event: {}, ...storyStart(project, page) },
   };
   return { nodes: drawn(project, page, scope), scope };
+}
+
+/** A story's pages as they start: the story's first moment, a fresh go at a puzzle, a room's box put away. */
+function storyStart(project: Project, page: Artboard): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (project.story?.chapters?.length) {
+    const st = sampleStoryScope(project);
+    if (st) out.story = st;
+  }
+  const pz = page.puzzle ? page : setBase(project.artboards, page);
+  if (pz.puzzle) out.puzzle = { active: true, ...puzzleScope(project.artboards, pz, new Pocket(project.story?.settings?.coins), null) };
+  if (JSON.stringify(page.children).includes('"examine":{')) out.room = { showing: false, text: '', speaker: '', speaking: false, more: false, coins: project.story?.settings?.coins ?? 3, items: [] };
+  return out;
 }
 
 /** A text layer's words with its `{expression}` slots filled, the way the layout check reads them. */

@@ -1,12 +1,17 @@
 import { PickerButton } from '../components/ColourPicker';
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MutableRefObject, type ReactNode, type RefObject } from 'react';
-import { formatColor, parseColor, type RunStyle, type TextNode } from 'interactives-player';
+import { formatColor, parseColor, type ParagraphStyle, type RunStyle, type TextNode } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { PaletteButton } from '../components/ui';
 import { Icons } from '../components/icons';
 import { FontPicker } from '../components/FontPicker';
 import { ensureGoogleFont } from '../lib/font-catalog';
 import { rangeAtOffsets, setSelectionOffsets } from '../lib/rich-text-dom';
+import { SearchPicker, type PickerOption } from '../components/SearchPicker';
+import { envFor } from '../components/ExprField';
+import { insertChoices } from '../lib/insert-value';
+import { repeatLocals } from '../lib/repeat-locals';
+import { nodeRuns, replaceRunRange } from 'interactives-player';
 import { actionPatch, linkPatch, shortcutAction, targetRange, toolbarState, unlinkPatch, type TextAction, type TextSel, type Tri } from '../lib/text-toolbar';
 
 /** Where the editing box is on the canvas, in the canvas element's own pixels. */
@@ -40,6 +45,8 @@ export interface ToolbarCommands {
   apply: (action: TextAction, at?: TextSel | null) => void;
   /** Move the focus to the first control (Alt+F10). */
   enter: () => void;
+  /** Tab and Shift+Tab in a list paragraph move it in and out a level; false when the cursor isn't in a list. */
+  indentList?: (by: number) => boolean;
 }
 
 export function TextToolbar({ node, editor, box, bounds, commands }: { node: TextNode; editor: RefObject<HTMLElement | null>; box: ToolbarBox; bounds: { width: number; height: number }; commands: MutableRefObject<ToolbarCommands | null> }) {
@@ -101,6 +108,62 @@ export function TextToolbar({ node, editor, box, bounds, commands }: { node: Tex
   const patch = (p: Partial<RunStyle>, coalesce?: string) => {
     const range = targetRange(node, sel);
     if (range) store().styleTextRange(id, range.start, range.end, p, coalesce);
+  };
+
+  // Lists: the paragraphs the cursor or the selection is in
+  const paraSpan = (): [number, number] => {
+    const at = sel ?? { start: 0, end: node.text.length };
+    const a = node.text.slice(0, Math.min(at.start, at.end)).split('\n').length - 1;
+    const b = node.text.slice(0, Math.max(at.start, at.end)).split('\n').length - 1;
+    return [a, b];
+  };
+  const listsOn = (kind?: 'bullet' | 'number') => {
+    const [a, b] = paraSpan();
+    for (let i = a; i <= b; i++) {
+      const p = node.paragraphs?.[i];
+      if (!p?.list || (kind && p.list !== kind)) return false;
+    }
+    return true;
+  };
+  const setParas = (f: (p: ParagraphStyle | null, i: number) => ParagraphStyle | null) => {
+    const [a, b] = paraSpan();
+    const next = [...(node.paragraphs ?? [])];
+    for (let i = a; i <= b; i++) next[i] = f(next[i] ?? null, i);
+    for (let i = 0; i < next.length; i++) if (next[i] === undefined) next[i] = null;
+    while (next.length && !next[next.length - 1]) next.pop();
+    store().setProps([id], { paragraphs: next.length ? next : undefined });
+  };
+  const toggleList = (kind: 'bullet' | 'number') => {
+    const off = listsOn(kind);
+    setParas((p) => (off ? null : { ...(p ?? {}), list: kind }));
+  };
+  const indentList = (by: number) => setParas((p) => (p?.list ? { ...p, level: Math.max(0, Math.min(5, (p.level ?? 0) + by)) || undefined } : p));
+  commands.current = { ...commands.current!, indentList: (by: number) => (listsOn() ? (indentList(by), true) : false) };
+
+  // Insert value: the choices are worked out when the button is reached, with a list item's fields when the text is in a repeater
+  const [insertMenu, setInsertMenu] = useState<{ options: PickerOption[]; exprs: Map<string, string> }>({ options: [], exprs: new Map() });
+  const openInsert = () => {
+    const st0 = store().get();
+    const ab = st0.project.artboards.find((a) => a.id === st0.activeArtboardId);
+    const rep = ab ? repeatLocals(st0.project, ab, id) : null;
+    const env = envFor(rep?.locals ?? [], node, rep?.values);
+    const exprs = new Map<string, string>();
+    const options = (env ? insertChoices(env) : []).map((c): PickerOption => {
+      const value = `${c.group}|${c.expr}`;
+      exprs.set(value, c.expr);
+      return { value, label: c.label, hint: c.hint, group: c.group };
+    });
+    setInsertMenu({ options, exprs });
+  };
+  const insertValue = (key: string) => {
+    const expr = insertMenu.exprs.get(key);
+    if (!expr) return;
+    // at the caret (or over the selected words), in the run the caret is in, so it keeps that run's style
+    const at = sel ?? { start: node.text.length, end: node.text.length };
+    const piece = `{${expr}}`;
+    store().setTextRuns(id, replaceRunRange(nodeRuns(node), at.start, at.end, piece));
+    store().set({ textSelection: { id, start: at.start + piece.length, end: at.start + piece.length } } as never);
+    refocus({ id, start: at.start + piece.length, end: at.start + piece.length } as TextSel);
   };
 
   useEffect(() => {
@@ -301,6 +364,32 @@ export function TextToolbar({ node, editor, box, bounds, commands }: { node: Tex
         <span className="tt-sep" aria-hidden="true" />
         <button type="button" className={`tt-btn${st.link && st.link !== 'mixed' ? ' on' : st.link === 'mixed' ? ' mixed' : ''}`} aria-pressed={st.link === 'mixed' ? 'mixed' : !!st.link} aria-label="Link" title="Add or edit a link (Ctrl/Cmd+K)" disabled={disabled} onClick={() => apply('link')}>
           <Icons.link />
+        </button>
+        <span className="tt-sep" aria-hidden="true" />
+        <div className="tt-insert" onFocusCapture={openInsert} onPointerDownCapture={openInsert}>
+          <SearchPicker
+            className="insert-value"
+            value=""
+            options={insertMenu.options}
+            onChange={insertValue}
+            buttonLabel="{ }"
+            searchPlaceholder="Find a value to insert…"
+            title="Insert value: put a variable, a list item's field or the learner's name in where the cursor is. It takes the style of the words around it, so a bold label stays bold"
+            ariaLabel="Insert value"
+          />
+        </div>
+        <span className="tt-sep" aria-hidden="true" />
+        <button type="button" className={`tt-btn${listsOn('bullet') ? ' on' : ''}`} aria-pressed={listsOn('bullet')} aria-label="Bulleted list" title="Bulleted list: a bullet on the paragraphs the cursor or selection is in (again to take it off)" disabled={disabled} onClick={() => toggleList('bullet')}>
+          <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>•≡</span>
+        </button>
+        <button type="button" className={`tt-btn${listsOn('number') ? ' on' : ''}`} aria-pressed={listsOn('number')} aria-label="Numbered list" title="Numbered list: 1, 2, 3 on the paragraphs the cursor or selection is in, a, b, c a level in" disabled={disabled} onClick={() => toggleList('number')}>
+          <span aria-hidden="true" style={{ fontSize: 12, lineHeight: 1 }}>1.≡</span>
+        </button>
+        <button type="button" className="tt-btn" aria-label="Indent list item" title="Move the list items in a level (Tab in a list)" disabled={disabled || !listsOn()} onClick={() => indentList(1)}>
+          <span aria-hidden="true">⇥</span>
+        </button>
+        <button type="button" className="tt-btn" aria-label="Outdent list item" title="Move the list items out a level (Shift+Tab in a list)" disabled={disabled || !listsOn()} onClick={() => indentList(-1)}>
+          <span aria-hidden="true">⇤</span>
         </button>
         <button type="button" className="tt-btn" aria-label="Clear formatting" title="Clear formatting: remove the styling of the selection and go back to the layer's own (Ctrl/Cmd+\)" disabled={disabled || !st.styled} onClick={() => apply('clear')}>
           <span aria-hidden="true">T<sub>x</sub></span>

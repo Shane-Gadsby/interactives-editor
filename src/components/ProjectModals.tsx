@@ -6,10 +6,10 @@ import { store, useEditor } from '../store/store';
 import { setLiveSync } from '../lib/live-sync';
 import { serverMarkedCounts } from '../lib/question-kit';
 import { embedAspect, embedCode } from '../lib/embed';
-import { addCollaborator, setCollaboratorCount, clearResults, resultsCsv, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, saveNamedVersion, updateRevision, publishShare, restoreRevision, revertShare, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
+import { addCollaborator, setCollaboratorCount, clearResults, resultsCsv, getCollected, collectedFile, clearCollected, type Collected, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, saveNamedVersion, updateRevision, publishShare, restoreRevision, revertShare, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
 import { download, standaloneHtml, warnInEditor } from '../lib/export';
-import { IconButton } from './ui';
+import { IconButton, SelectField } from './ui';
 import { BeforeShareLine, BeforeYouShareModal } from './BeforeShare';
 import { ShareWhere } from './ShareWhere';
 import { Icons } from './icons';
@@ -200,7 +200,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
     setBusy('Building and uploading…');
     setError(null);
     try {
-      setShare(await publishShare(projectId, await standaloneHtml(store().get().project, { embedFonts: true, optimise: true, onWarning: warnInEditor }), (notes) => store().toast(notes.join(' '), 'error')));
+      setShare(await publishShare(projectId, await standaloneHtml(store().get().project, { optimise: true, onWarning: warnInEditor }), (notes) => store().toast(notes.join(' '), 'error')));
       track('feature', 'share-publish');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -496,8 +496,20 @@ export function ResultsModal({ onClose }: { onClose: () => void }) {
       setError(e instanceof Error ? e.message : String(e));
     }
   };
+  const [tab, setTab] = useState<'learners' | 'responses'>('learners');
   return (
     <Modal title="Results" help="results" onClose={onClose} className="results-modal">
+      <div className="seg results-tabs" role="tablist" aria-label="What to show">
+        <button role="tab" aria-selected={tab === 'learners'} className={tab === 'learners' ? 'on' : ''} onClick={() => setTab('learners')} title="Each learner's completion, score and attempts">
+          Learners
+        </button>
+        <button role="tab" aria-selected={tab === 'responses'} className={tab === 'responses' ? 'on' : ''} onClick={() => setTab('responses')} title="What the Send a response node collected: a row per response">
+          Responses
+        </button>
+      </div>
+      {tab === 'responses' ? (
+        <ResponsesPanel projectId={projectId} />
+      ) : (
       <div className="results-body">
         {!results && !error && <p className="muted">Loading…</p>}
         {error && <p className="error">{error}</p>}
@@ -598,7 +610,100 @@ export function ResultsModal({ onClose }: { onClose: () => void }) {
           </>
         )}
       </div>
+      )}
     </Modal>
+  );
+}
+
+/** What Send a response collected: the newest rows as a table, and downloads (a row per response, a row per item of a list in it, JSON). */
+function ResponsesPanel({ projectId }: { projectId: string }) {
+  const [data, setData] = useState<Collected | null>(null);
+  const [set, setSet] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const load = () => {
+    getCollected(projectId, set).then(setData, (e) => setError(String(e.message ?? e)));
+  };
+  useEffect(load, [projectId, set]);
+  const name = store().get().project.name || 'project';
+  const get = (kind: 'csv' | 'items' | 'json') => {
+    track('feature', `responses-${kind}`);
+    collectedFile(projectId, kind, set).then(
+      (blob) => download(blob, `${name} responses${kind === 'items' ? ' by item' : ''}.${kind === 'json' ? 'json' : 'csv'}`),
+      (e) => setError(e instanceof Error ? e.message : String(e)),
+    );
+  };
+  const clear = async () => {
+    if (!(await confirmDialog({ title: 'Clear responses', message: 'Delete every response this project has collected? This cannot be undone.', confirmLabel: 'Clear responses', danger: true }))) return;
+    try {
+      await clearCollected(projectId);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+  const show = (v: unknown): string => {
+    const t = typeof v === 'string' ? v : JSON.stringify(v);
+    return t.length > 140 ? `${t.slice(0, 140)}…` : t;
+  };
+  return (
+    <div className="results-body">
+      {!data && !error && <p className="muted">Loading…</p>}
+      {error && <p className="error">{error}</p>}
+      {data && (
+        <>
+          <p className="hint">{data.named ? 'A row per Send a response, with names.' : 'A row per Send a response, under a code per person, without names.'}</p>
+          {data.sets.length > 1 && (
+            <SelectField label="Kind" value={set} options={[{ value: '', label: 'Every kind' }, ...data.sets.map((x) => ({ value: x, label: x }))]} onChange={setSet} />
+          )}
+          {data.count === 0 ? (
+            <p className="muted">Nothing collected yet. Add a Send a response node to the project, share it, and the rows arrive here.</p>
+          ) : (
+            <div className="results-scroll">
+              <table className="results-table">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>{data.named ? 'Learner' : 'Person'}</th>
+                    <th>Course</th>
+                    <th>Kind</th>
+                    <th>Values</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.rows.map((r, i) => (
+                    <tr key={i}>
+                      <td>{new Date(r.at).toLocaleString()}</td>
+                      <td>{r.username ? (r.name ? `${r.name} (${r.username})` : r.username) : r.person}</td>
+                      <td>{r.course || '–'}</td>
+                      <td>{r.set}</td>
+                      <td className="mono small">{show(r.values)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {data.count > data.rows.length && <p className="small muted">Showing the newest {data.rows.length} of {data.count}. The downloads have them all.</p>}
+          <div className="row">
+            <button className="btn" onClick={load}>
+              Refresh
+            </button>
+            <button className="btn" disabled={!data.count} title="A row per response, a column per value" onClick={() => get('csv')}>
+              CSV
+            </button>
+            <button className="btn" disabled={!data.count} title="A row per item of the list in each response, such as one row per card placed in a card sort, with the response's other values on each" onClick={() => get('items')}>
+              CSV, a row per item
+            </button>
+            <button className="btn" disabled={!data.count} title="Every response as it was sent" onClick={() => get('json')}>
+              JSON
+            </button>
+            <button className="btn danger" disabled={!data.count || data.mayClear === false} title={data.mayClear === false ? "Only the project's owner can clear its responses" : undefined} onClick={clear}>
+              Clear responses
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

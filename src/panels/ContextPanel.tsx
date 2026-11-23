@@ -1,5 +1,6 @@
-import { CONTEXT_FIELDS, courseMatches, linkNameOk, LINK_MAX_LENGTH, LINK_MAX_VALUES, sampleContextFor, uid, type ContextValues, type CourseValueRow, type Variable, variableLabelAndName } from 'interactives-player';
-import { useState } from 'react';
+import { type Setup, CONTEXT_FIELDS, courseMatches, linkNameOk, LINK_MAX_CHOICES, LINK_MAX_LENGTH, LINK_MAX_VALUES, sampleContextFor, uid, type ContextValues, type CourseValueRow, type Variable, variableLabelAndName } from 'interactives-player';
+import { useEffect, useState } from 'react';
+import { getShare, learnerUrl } from '../lib/db';
 import { store, useEditor } from '../store/store';
 import { Icons } from '../components/icons';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
@@ -84,6 +85,121 @@ export function ContextPanel() {
         </button>
         {!s.variables.length && <p className="hint">Variables are made in the Variables panel. A course row sets the ones you pick.</p>}
       </div>
+
+      <Setups />
+    </div>
+  );
+}
+
+/**
+ * One app, many setups: each a name, its own starting values and its own contents for the data sources, played from a link that
+ * names it. A card sort is made once and run on a second set of cards by pasting them into a setup.
+ */
+function Setups() {
+  // each picked on its own: a selector that builds new lists every time never settles
+  const setupsRaw = useEditor((st) => st.project.setups);
+  const variables = useEditor((st) => st.project.variables);
+  const dataSources = useEditor((st) => st.project.dataSources);
+  const projectId = useEditor((st) => st.project.id);
+  const s = { setups: setupsRaw ?? [], variables, sources: dataSources.filter((d) => d.source === 'url' || d.source === 'asset'), id: projectId };
+  const [token, setToken] = useState<string | null>(null);
+  // the share link is only looked up once there is a setup to give a link to
+  const any = s.setups.length > 0;
+  useEffect(() => {
+    if (any) getShare(s.id).then((sh) => setToken(sh?.token ?? null), () => setToken(null));
+  }, [s.id, any]);
+  const setAll = (change: (list: Setup[]) => void) =>
+    store().update((d) => {
+      const list = d.setups ?? [];
+      change(list);
+      if (list.length) d.setups = list;
+      else delete d.setups;
+    });
+  const edit = (id: string, change: (x: Setup) => void, coalesce?: string) =>
+    store().update(
+      (d) => {
+        const x = d.setups?.find((y) => y.id === id);
+        if (x) change(x);
+      },
+      coalesce ? { coalesce } : undefined,
+    );
+  const byId = new Map(s.variables.map((v) => [v.id, v]));
+  return (
+    <div className="context-block">
+      <h3>Setups</h3>
+      <SectionBlurb text="One app, many setups: each its own values, its own data and its own link. Responses say which setup they came from." name="setups" help={['course-context', 'setups']} />
+      {s.setups.map((x) => {
+        const link = token ? `${learnerUrl(token)}?setup=${encodeURIComponent(x.id)}` : '';
+        const unset = s.variables.filter((v) => !(v.id in x.values));
+        return (
+          <div className="course-row" key={x.id}>
+            <div className="course-row-head">
+              <TextField value={x.name} commitOnBlur placeholder="Week 2 cards" title="What to call this setup. setup.name in formulas" onChange={(v) => edit(x.id, (y) => void (y.name = v.trim() || y.name))} />
+              <IconButton icon={<Icons.trash />} title="Delete this setup" onClick={() => setAll((list) => void list.splice(list.findIndex((y) => y.id === x.id), 1))} />
+            </div>
+            <table className="var-table">
+              <tbody>
+                {Object.entries(x.values).map(([id, value]) => {
+                  const v = byId.get(id);
+                  return (
+                    <tr key={id}>
+                      <td className="mono">{v ? v.name : <span className="muted">(deleted variable)</span>}</td>
+                      <td>{v ? <ValueEditor variable={v} value={value} onChange={(nv) => edit(x.id, (y) => void (y.values[id] = nv), `setup-${x.id}-${id}`)} /> : <span className="muted">{String(value)}</span>}</td>
+                      <td>
+                        <IconButton icon={<Icons.trash />} title="Stop setting this variable in the setup" onClick={() => edit(x.id, (y) => void delete y.values[id])} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {unset.length > 0 && (
+              <SelectField<string>
+                value=""
+                title="Pick a variable to give its own starting value in this setup"
+                options={[{ value: '', label: 'Set a variable…' }, ...unset.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))]}
+                onChange={(id) => {
+                  const v = byId.get(id);
+                  if (v) edit(x.id, (y) => void (y.values[id] = v.initial));
+                }}
+              />
+            )}
+            {s.sources.map((ds) => (
+              <div key={ds.id} className="setup-data">
+                <CheckField
+                  label={`Its own ${ds.name}`}
+                  title={`This setup's own contents for the ${ds.name} data source, instead of its file or address`}
+                  value={typeof x.data?.[ds.id] === 'string'}
+                  onChange={(on) => edit(x.id, (y) => {
+                    y.data ??= {};
+                    if (on) y.data[ds.id] = ds.kind === 'json' ? '[]' : '';
+                    else delete y.data[ds.id];
+                    if (!Object.keys(y.data).length) delete y.data;
+                  })}
+                />
+                {typeof x.data?.[ds.id] === 'string' && (
+                  <TextField value={x.data![ds.id]} multiline mono rows={5} commitOnBlur title={`Paste the ${ds.kind.toUpperCase()} this setup uses for ${ds.name}`} onChange={(v) => edit(x.id, (y) => void ((y.data ??= {})[ds.id] = v))} />
+                )}
+              </div>
+            ))}
+            <div className="setup-link">
+              {link ? (
+                <>
+                  <code className="small">{link}</code>
+                  <button className="btn" onClick={() => void navigator.clipboard?.writeText(link)} title="Copy the Link for StudyDesk that plays this setup">
+                    Copy link
+                  </button>
+                </>
+              ) : (
+                <span className="muted small">Share the project and each setup gets its own link here (?setup={x.id}).</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      <button className="btn" onClick={() => setAll((list) => void list.push({ id: uid('st'), name: `Setup ${list.length + 1}`, values: {} }))}>
+        + Add a setup
+      </button>
     </div>
   );
 }
@@ -91,13 +207,32 @@ export function ContextPanel() {
 /** Made-up `link` values: as if the project were opened with `?program=GCSC` on its address. The canvas and Preview use them. */
 function SampleLink() {
   const sample = useEditor((st) => st.project.sampleLink);
+  const choices = useEditor((st) => st.project.linkChoices);
   const entries = Object.entries(sample ?? {});
   const clash = useEditor((st) => st.project.variables.some((v) => v.name === 'link'));
   //Rebuilt in order each time, so renaming a value keeps its place in the list
-  const write = (next: [string, string][]) =>
+  //Choices follow their row: renamed with it, dropped with it
+  const write = (next: [string, string][], renamed?: [string, string]) =>
     store().update((d) => {
       if (next.length) d.sampleLink = Object.fromEntries(next);
       else delete d.sampleLink;
+      if (d.linkChoices) {
+        if (renamed && d.linkChoices[renamed[0]]) {
+          d.linkChoices[renamed[1]] = d.linkChoices[renamed[0]];
+          delete d.linkChoices[renamed[0]];
+        }
+        for (const k of Object.keys(d.linkChoices)) if (!next.some(([n]) => n === k)) delete d.linkChoices[k];
+        if (!Object.keys(d.linkChoices).length) delete d.linkChoices;
+      }
+    });
+  const setChoices = (name: string, text: string) =>
+    store().update((d) => {
+      const list = [...new Set(text.split(',').map((x) => x.trim().slice(0, LINK_MAX_LENGTH)).filter(Boolean))].slice(0, LINK_MAX_CHOICES);
+      if (list.length) (d.linkChoices ??= {})[name] = list;
+      else if (d.linkChoices) {
+        delete d.linkChoices[name];
+        if (!Object.keys(d.linkChoices).length) delete d.linkChoices;
+      }
     });
   const add = () => {
     let name = 'program';
@@ -117,6 +252,7 @@ function SampleLink() {
             <tr>
               <th>Name</th>
               <th title="Made up, for the canvas and Preview only. Never saved into an export or seen by a learner">Sample value</th>
+              <th title="The values it can take, with commas between them. Preview's bar and Share then offer them as a list">Choices</th>
               <th />
             </tr>
           </thead>
@@ -127,7 +263,9 @@ function SampleLink() {
                 name={name}
                 value={value}
                 taken={(n) => entries.some(([other], j) => j !== i && other === n)}
-                rename={(n) => write(entries.map((e, j) => (j === i ? [n, e[1]] : e)))}
+                choices={choices?.[name] ?? []}
+                setChoices={(text) => setChoices(name, text)}
+                rename={(n) => write(entries.map((e, j) => (j === i ? [n, e[1]] : e)), [name, n])}
                 setValue={(v) => write(entries.map((e, j) => (j === i ? [e[0], v.slice(0, LINK_MAX_LENGTH)] : e)))}
                 remove={() => write(entries.filter((_, j) => j !== i))}
               />
@@ -142,7 +280,7 @@ function SampleLink() {
   );
 }
 
-function LinkRow({ name, value, taken, rename, setValue, remove }: { name: string; value: string; taken: (name: string) => boolean; rename: (name: string) => void; setValue: (v: string) => void; remove: () => void }) {
+function LinkRow({ name, value, choices, taken, rename, setValue, setChoices, remove }: { name: string; value: string; choices: string[]; taken: (name: string) => boolean; rename: (name: string) => void; setValue: (v: string) => void; setChoices: (text: string) => void; remove: () => void }) {
   const [problem, setProblem] = useState<string | null>(null);
   const tryName = (raw: string) => {
     const n = raw.trim();
@@ -159,7 +297,14 @@ function LinkRow({ name, value, taken, rename, setValue, remove }: { name: strin
         {problem && <p className="error small">{problem}</p>}
       </td>
       <td>
-        <TextField value={value} commitOnBlur title={`A made-up value for link.${name}`} onChange={setValue} />
+        {choices.length ? (
+          <SelectField<string> value={value} title={`A made-up value for link.${name}. None plays it as if the link had no ${name}`} options={[{ value: '', label: 'None' }, ...(value && !choices.includes(value) ? [{ value, label: `${value} (not a choice)` }] : []), ...choices.map((c) => ({ value: c, label: c }))]} onChange={setValue} />
+        ) : (
+          <TextField value={value} commitOnBlur title={`A made-up value for link.${name}`} onChange={setValue} />
+        )}
+      </td>
+      <td>
+        <TextField value={choices.join(', ')} commitOnBlur placeholder="MSCN, GDSI, GCSC" title={`The values link.${name} can take, with commas between them. Preview's bar and Share offer them as a list. Leave it empty for any text`} onChange={setChoices} />
       </td>
       <td>
         <IconButton icon={<Icons.trash />} title={`Delete link.${name}`} onClick={remove} />

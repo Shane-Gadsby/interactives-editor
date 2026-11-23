@@ -249,6 +249,9 @@ export class FakeDb {
   'shared-responses' = new FakeCollection();
   'shared-hidden' = new FakeCollection();
   'room-messages' = new FakeCollection();
+  responses = new FakeCollection();
+  'setup-values' = new FakeCollection();
+  'shared-tables' = new FakeCollection();
   ingest = new FakeCollection();
   'user-lookup' = new FakeCollection();
   'doc-chunks' = new FakeCollection();

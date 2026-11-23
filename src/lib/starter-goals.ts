@@ -46,6 +46,8 @@ const OWN: Record<string, Goal[]> = {
   sorting: ['quiz', 'practise'],
   'branching-story': ['story'],
   'timeline-intro': ['explain', 'story'],
+  'visual-novel': ['story', 'practise'],
+  'puzzle-mystery': ['story', 'practise'],
   'assessment/find-the-hotspot': ['quiz', 'story'],
   'assessment/find-multiple-hotspots': ['quiz', 'story'],
   'assessment/essay': ['quiz', 'practise'],

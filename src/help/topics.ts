@@ -377,6 +377,8 @@ The layout is remembered in this browser. Whatever opens a panel for you (choosi
 
 ![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)
 
+When the project reads [values on the link](course-context#values-on-the-link) (\`link.program\`, \`ix.link.program\`), the top bar has a field for each: pick or type a value and Preview starts again as if the link carried it. The project's own sample doesn't change.
+
 When the project has [responsive pages](responsive), a **Page width** slider appears under the top bar. Drag it to resize the page the project runs in; the breakpoints are marked on the track and the player switches page as you cross them.
 
 **View at embed size** shows it the way StudyDesk shows the embed code: no wider than 800 px, and exactly as tall as the project asks the page for, changing as it runs. A page with **Fit height to content** grows and shrinks here as it would in the course, and anything the embed would cut off or leave empty shows. Scroll the preview when it's taller than the window.
@@ -470,7 +472,7 @@ The small **(i)** icon in the title bar shows the version of Ixia you are runnin
 
 ## Using the window
 - **Changes apply at once.** There is no OK and no Cancel: tick a box and the editor changes. <kbd>Esc</kbd> or the **×** closes the window.
-- **Search all preferences** (the box in the title bar) finds a setting on any page by its name, by what it does or by another word for it (try *dark*, *alt text*, *pan*, *typeface*). Pick a result, or press <kbd>Enter</kbd> for the first, and the window goes to that page, scrolls to the setting, marks it for a moment and puts focus on it. When shortcuts match too, the last result opens the Keyboard shortcuts page with your search filled in. <kbd>Esc</kbd> clears the search first.
+- **Search all preferences** (the box across the title bar) finds a setting on any page by its name, by what it does or by another word for it (try *dark*, *alt text*, *pan*, *typeface*). Pick a result, or press <kbd>Enter</kbd> for the first, and the window goes to that page, scrolls to the setting, marks it for a moment and puts focus on it. When shortcuts match too, the last result opens the Keyboard shortcuts page with your search filled in. <kbd>Esc</kbd> clears the search first.
 - **Reset this page** puts every setting on the page you are looking at back to how the editor starts (it asks first, and is greyed out when the page is already as it starts). **Reset everything** does it for every page, and puts your keys back to the Default set. The keyboard sets and workspace layouts you saved stay, and so do your projects.
 - Drag the corner of the window to make it bigger or smaller (double-click the corner to put it back). On a phone or a narrow window it fills the screen and the pages become a row of tabs along the top.
 - With the keyboard: <kbd>Tab</kbd> goes into the list of pages, <kbd>↑</kbd> and <kbd>↓</kbd> (<kbd>←</kbd> and <kbd>→</kbd> in the narrow row) move between pages, <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last, and <kbd>Tab</kbd> again goes to the settings. A screen reader hears a list of tabs, one panel, and each field with its name. The editor's own keys stand down while the window is open.
@@ -1217,6 +1219,22 @@ Things to know:
 - A **binding** on Text (or a timeline, tween or *Change a layer's setting* action that sets Text) replaces the runs with that plain text for as long as it applies. Variables in braces like \`{score}\` still work inside each run, but a \`{...}\` slot should sit within one run.
 - Lottie export writes the text in the layer's own style (Lottie text has one style per layer). SVG and PNG export, the player and the single-file export keep every run. Rive files with several text runs import as runs.
 
+## Numbers that count up
+Tick **Count up** and the numbers in a text count up (or down) to their new value when it changes, over the time in **Over**: \`Score: {score}\` rolls from 0 to 80 when the page opens, and from 80 to 95 when the score goes up. Each number keeps its decimals. Anyone who asks for less motion sees the new number straight away.
+
+## Bullets and numbers
+Double-click a text and the toolbar over it has **Bulleted list** and **Numbered list**: they put a bullet or a number on the paragraphs the cursor or the selection is in, and press again to take it off. **Tab** moves a list paragraph in a level and **Shift+Tab** out (the arrows on the toolbar do the same). Numbers go 1, 2, 3, then a, b, c a level in, then i, ii, iii. Wrapped lines line up under the words, not under the marker.
+
+A screen reader hears a list, with how many items it has and where each one is, which typed dashes never gave it. Pressing Enter in a list item starts another item; a line with no list on it ends the list, and numbering starts again after it.
+
+## Code
+**Show as code** in the **Text** section shows the text as code: a fixed-width font, coloured by language (JavaScript, TypeScript, Python, HTML, CSS, JSON, SQL, Java, C, Shell, or **Code, no colours**), on a light or dark panel. Tick **Line numbers** to number the lines, and **Copy button** for a button in the corner that copies the code when it plays. The line numbers aren't copied or read out.
+
+## Formulas
+Tick **Formulas between $ signs** and maths typed the LaTeX way is drawn as maths: \`$\\frac{a}{b}$\` in a line, \`$$x^2 + y^2 = r^2$$\` on a line of its own. A preview under the box shows each formula as you type. It knows fractions (\`\\frac\`), roots (\`\\sqrt\`, \`\\sqrt[3]{x}\`), powers and indices (\`^\`, \`_\`), Greek letters (\`\\alpha\`, \`\\pi\`), \`\\sum\`, \`\\int\`, \`\\lim\`, \`\\sin\` and the other functions, \`\\times\`, \`\\le\`, \`\\neq\` and their kind, brackets that grow (\`\\left( ... \\right)\`), \`\\text{}\` and matrices (\`\\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}\`). A command it doesn't know shows up in red as typed.
+
+The browser draws it, so it scales with the text and follows its colour, and a screen reader reads it as maths. Write \`\\$\` for a dollar sign. A dollar sign on its own, as in \`$5\`, stays as it is.
+
 ## Live values in text
 Anything in braces is an [expression](expressions): \`Score: {score}\`, \`{name.toUpperCase()}\`, \`{items.length} items\`. Write \`{{\` for a literal brace.
 
@@ -1232,6 +1250,11 @@ You do not have to type the braces. Put the cursor where the value should go and
 
 Pick one with the arrow keys and **Enter**, or click it. It goes in as \`{name}\` at the cursor, over any words you had selected, and the line under the box shows what the whole text says now. The same button is on a button's **Label** and on a connector's label.
 
+
+### A bold label and its words, from a list
+In a repeater's copy, a styled part of a text can hold a value too. To make "**Core** - Complete 2: SCI6103" on one line for every row of a list: double-click the text, press **{ }** (**Insert value**) on the text toolbar and pick \`item.label\`, select it and press **B**, then type \` - \` and insert \`item.text\` after it in plain. Each value goes in where the cursor is and takes the style of the words around it, so the bold part stays bold and the rest stays plain, and the whole line wraps as one paragraph.
+
+A bold label isn't a heading to a screen reader: it's read as part of the line. When the label is something people would jump between (a section name), use two layers, a heading and its text, instead.
 ## Drag a value onto the page
 You can also drag a value to where it should show. In the **Variables** tab, each variable has a small text-icon handle (its name reads **Show it on the page**) beside its name. In the **Data** tab, each field of a data source has the same handle. Drag it onto the page:
 - **Onto a text layer**: it is added to the end of that text as \`{name}\`, with a space before it, and the text keeps its styling. Dropping \`score\` on *Your score:* gives *Your score: {score}*.
@@ -1410,6 +1433,14 @@ The crop belongs to the layer, not the file, and the frame (with its corner radi
 - The Lottie export shows the whole picture (it lists that in its notes).
 - Older files and players show the picture uncropped.
 
+### A QR code
+An image layer can be a **QR code** instead of a picture: choose **QR code from text** at the top of its **Image** list, or **Add QR code** from the command palette. Type what it carries under **QR code of**, usually a link. It's written like a text layer, so \`https://example.com/?id={userId}\` puts the viewer's own value in, and \`{item.link}\` gives each copy in a list its own code. The code is drawn as the page plays, so it changes when the values do.
+
+- **Error correction** is how much of the code can be covered or scuffed and still scan. **Medium** suits a screen. Pick **High** or **Highest** for a printed poster, or when a logo sits over the middle.
+- **Squares** and **Background** are its colours. Keep dark squares on a light background: plenty of phone cameras can't read light on dark.
+- Keep it to a link. A long paragraph makes a dense code that phones struggle with, and the inspector says so past about 1200 characters.
+- Give it a text alternative that says where it goes ("QR code for the course survey"). A screen reader can't scan it.
+
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
 
@@ -1435,6 +1466,15 @@ This changes one layer. To change a picture **everywhere** it's used, use **Repl
 
 ## Video
 Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.
+
+### YouTube, Vimeo and Panopto
+Paste the video's link (the address you'd share, or the site's embed code) into **Video site link** and the site's own player goes on the layer, wherever you put it and at its size. **Control video**, the **Playing**, **Playback position**, **Length** and **Ended** bindings, cue points and **Hold paused** all work on it as on a file, so a question can pause a YouTube clip at 1:30.
+
+**Good to know:**
+- It plays in Preview, share links, StudyDesk and the single HTML file. On the canvas it's a panel naming the video.
+- Panopto plays, but it can't be told to play, pause or seek, or say what it's doing, so nodes and bindings don't reach it.
+- The site's player sits on top of the project where the layer is, so anything you draw over it (a dialog, a sticker) is hidden behind it while it shows.
+- Speed buttons, frame step, captions you add and descriptions are for video files. YouTube and Vimeo have their own captions in their controls.
 
 ### Poster, and a video with nothing to play
 **Poster** is a picture shown before the video plays. It also stays up the whole time when the file is sound only (choose a sound in the **Video** list and the layer becomes a player with the browser's own controls, speed and captions), under the controls. It counts in the download size and goes with exports. A video with no file or address shows a grey **Choose a video** panel while you edit; learners see a plain grey box, or the words in **Text when empty**. The accessibility check warns about a video with nothing to play, so it gets filled in or deleted before you share.
@@ -1933,18 +1973,42 @@ Press <kbd>B</kbd> to draw one. A button has a label (which can use \`{expressio
 - **Small buttons** keep the size you draw. A button narrower than about 80 px no longer grows by its padding, so a dot-sized button really is dot-sized.
 
 ## Input
-An input is one of: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select).
+An input is one of: text, number, email, password, multi-line, checkbox, slider (range), dropdown (select) or choice buttons.
+- **A new input comes with a label** above it (beside it for a tick box), in your text colour at the size every control's label takes. Change its words and a screen reader reads them as the box's name, so you don't have to write an **Accessible label** too. Move or restyle the label like any text; delete it if you don't want one, and the box stays. Inputs made before this have no label added.
 - **Bind to a variable…** (under *Value*) ties the box to a variable with an ordinary [data binding](bindings) on its **Value**, set to **⇄ Both**: typing writes the variable and the variable fills the box. Change the way, or the variable, under **Data bindings**. Choose **Out →** to only write the variable and keep the box's own value. Older projects that had a *Variable* setting on an input are changed to this when they open.
 - **When a value changes** reacts to what was typed.
 - **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test.
 - **Block paste and drop** refuses pasted or dragged text, so the answer has to be typed.
 - To do something when Enter is pressed in a text box, use a **When a key is pressed** event set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions#when-a-key-is-pressed)).
 
+
+### Choice buttons
+A row of buttons for one variable, one of them chosen: study mode, a starting trimester, easy, medium or hard. Press <kbd>Ctrl</kbd>+<kbd>K</kbd> and **Add choice buttons**, or set an input's **Type** to **choice buttons**, then **Bind to a variable…** like any input.
+
+- **Options**: one a line, the value or \`value|words on the button\` (\`FT|Full-time\`). Or **Options from** a formula: a list of text, or of \`{value, label}\`, so the buttons follow the data (\`programData.find(p => p.code == program).starts\`).
+- **Off when**: a formula for each option, with \`option.value\`, \`option.label\` and \`option.index\`. True turns it off; a text turns it off and says why: \`program == 'GCSC' && option.value == 'FT' ? 'GCSC is part-time only' : false\`. An option that's off stays in the row, dimmed, and trying it shows the reason under the buttons and reads it out, so nobody's left wondering why a button does nothing. An item from **Options from** can carry its own \`off\` too. Off when doesn't change the variable: one that holds an option that's now off keeps it, with no button chosen, until someone picks another.
+- The chosen one is gold with dark text (**Chosen** and **Chosen text** change it), the buttons share the layer's width in equal parts with **Gap** (20 px) between them, and each has the layer's fill, corners and stroke.
+- It's a radio group to a screen reader: one <kbd>Tab</kbd> stop, the arrow keys move along and choose.
+
 ## Link
 Text that opens a URL. **Fit text to box** works here too. For making any other layer a link, see [Links and cursors](links-cursors).
 
 ## Embed
 An iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
+
+### Paste a video or slides link
+Most video and slide sites won't play in a frame at the address you copy from them: a YouTube watch page gives a grey box. Paste it anyway. The embed works out the address that plays, sets the layer's height to the shape of what it shows, and says under the box what it found (**Plays as a YouTube video**). The link you pasted stays in the box, so you can still read it.
+
+| Site | Paste |
+|---|---|
+| YouTube | a watch link, a \`youtu.be\` link, a Short or a playlist. It plays from YouTube's no-cookie address, and a start time (\`t=1m30s\`) is kept |
+| Vimeo | the video's page, an unlisted one's link with its code included |
+| Panopto | the viewer link (\`Viewer.aspx?id=...\`) |
+| Google Slides, Forms, Docs, Sheets | the link from **Share**. The file has to be open to **Anyone with the link** |
+| Microsoft Forms | the link to fill in the form |
+| Microsoft Stream | a \`stream.aspx\` link. A short link (\`/:v:/\`) has nothing in it to work from: use **Share > Embed code** in Stream and paste that |
+
+You can also paste a site's whole **embed code** (\`<iframe ...>\`): the address is taken out of it and the layer takes its shape. Anything else is used as it is.
 
 **The page may use** (a web page embed only) is a list of tick boxes for what the embedded page is allowed: **Autoplay**, **Full screen**, **Clipboard**, **Microphone**, **Camera**, **Screen share**, **Location**, **Motion sensors**, **Picture in picture** and **Protected video**. Only what's ticked is let through; an unticked box is a no, even for a page from the same site. Hover a box for what it really does.
 
@@ -2811,6 +2875,32 @@ In an expression, \`pageNumber\` is the page's place from 1 and \`pageCount\` ho
 
 Its **Transition** is how the page changes, and **Speed** is how long that takes: see [How the page changes](links-cursors#how-the-page-changes) for every look, **Opens from** and the speeds.
 
+## Celebrate
+The **Celebrate** node throws a short burst of **Confetti** or **Stars** over the page, with **Words** on a badge in the middle if you give it some (\`"Well done, " + name\`). Put it after a question is right or the last page is done.
+
+- It never takes a click or the focus, so the next button works straight away, and it's gone in under two seconds.
+- A viewer whose device asks for less motion sees a **still badge** with the same words instead of anything flying about.
+- The words are read out politely to screen readers, so it needs no Announce node beside it.
+- **Sound** plays a sound from Assets with it. **Colours** can be party colours or your project's accent colours, which follow its colourway.
+- **Wait for it to finish** holds the next node until it has gone. Off, the flow carries straight on.
+
+## Copy, open, full screen, print and send
+Five nodes for what people expect any app to do. The first four only work from a click, because browsers only let a page do them when the person has just pressed something, so put them on a button.
+
+- **Copy to clipboard** copies its **Text**, for a Copy button beside a code, a link or a result. It goes on from **Not copied** when the page around the project refuses, which an embed made before 20 November 2026 can: press **Update** in Share for the new embed code, or show the text so it can be copied by hand.
+- **Open a file** asks for a CSV, JSON or text file from the person's device and puts it in a variable: a CSV becomes a list with a row per line, keyed by its first row, so a repeater can show it straight away. Up to 2 MB, and it's read in the page: nothing is uploaded. **Not opened** is when they cancel.
+- **Full screen** goes in, comes out, or switches. \`fullscreen\` in a formula is true while it's in, so a button can say \`{fullscreen ? "Leave full screen" : "Full screen"}\`. Escape always comes out.
+- **Print** opens the browser's print dialog for the page as it is now, where people can also save a PDF.
+- **Send to a web address** sends a value as JSON (**POST**, **PUT**, **PATCH** or **DELETE**) and puts the answer in a variable, with \`event.status\` holding the HTTP status. It keeps to the same **Allowed data hosts** as Load data (Project settings; empty allows any https host), never sends the viewer's logins or cookies, and gives up after 15 seconds. It goes on from **Sent** for a success and **Failed** for anything else.
+
+## Doing something for each item, or again and again
+**For each item** runs the steps after **Each item** once for every item of a list, then the steps after **Done**. Those steps see \`event.item\`, \`event.index\` (from 0) and \`event.count\`. Each go finishes, waits included, before the next starts, so a **Change a value** that adds \`event.item.price\` makes a total, and **Done** sees all of it. Give it a number instead of a list (\`5\`) and it counts 0 to 4.
+
+**Repeat** runs the steps after **Again** a number of **Times**, or **While** something is true (\`lives > 0\`), checked before each go. Both stop after 5000 goes, so a mistake can't hang the page.
+
+## Flows you call from anywhere
+When the same steps hang off three buttons, wire them once. Start them with a **Flow** node, give it a **Name** (\`Add to total\`) and the names of the **Inputs** it takes (\`amount\`). Then a **Call flow** node anywhere on the page runs it, with **Values** such as \`{ amount: price * qty }\`, and the flow's steps read them as \`event.amount\`. Call flow carries on once the flow has finished, and from **Not found** when there's no flow of that name. A flow on the page master can be called from every page that uses it.
+
 ## Connecting and adding nodes
 Drag from an output port to the next node's input to connect them. Actions that take time (**Play or stop an animation**, **Animate a layer's setting**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away.
 
@@ -2957,6 +3047,218 @@ Expression fields can use every variable and data source by name, \`event\` (det
 **Send message** (and \`ix.emit\`) posts \`{source: 'interactives', name, payload}\` to the page the interactive is in. The page can send messages back with \`player.send(name, payload)\` and **When a message arrives** reacts. See [Embedding and the player API](embedding).`,
   },
   {
+    id: 'particles',
+    title: 'Particles',
+    group: 'Motion',
+    summary: 'Rain, snow, petals, falling leaves, dust, sparks or bubbles drifting across a rectangle, or your own picture.',
+    keywords: 'particles particle rain snow petals cherry blossom leaves autumn dust motes sparks embers fire bubbles weather mood atmosphere confetti drift falling wind',
+    body: `**Particles** fill a rectangle with drifting things as it plays: rain against a window, snow over a winter scene, petals in a garden, dust in a beam of light, sparks off a fire, bubbles under water. They set a mood without anyone drawing a frame of it.
+
+**Add them:** select a rectangle and press **+** on its **Particles** section, then pick a **Kind**. They're drawn over the rectangle's fill and kept inside its box, so a clear rectangle over a background picture gives weather over the scene, and a coloured one gives a backdrop of its own.
+
+**Tune them:**
+- **Amount** (0 to 100) is how many for the rectangle's size, so a bigger box gets more without looking thinner.
+- **Speed** and **Size** are multiples of the kind's own (1 is as it comes).
+- **Wind** pushes them sideways: below 0 to the left, above 0 to the right. Rain leans with it.
+- **Colours** keeps the kind's own (a mix for petals, leaves and sparks), or **One colour** for all of them.
+- **Picture** draws one of your pictures as each particle instead (a petal, a leaf, a logo), moving the way the kind does.
+
+**Turn them on and off:** show and hide the rectangle, from a button, a timeline or **Show or hide** in the graph. Hidden, they cost nothing.
+
+**Good to know:**
+- On the canvas they hold still, so you can see the spread; press **Preview** to see them move.
+- Someone who has asked their device for less motion sees them still, the same as on the canvas.
+- A slow device draws fewer on its own, and goes back up once it keeps up again.
+- They never take a click: anything under them still works.
+
+help:sketch-pads help:timelines`,
+  },
+
+  {
+    id: 'story',
+    title: 'Writing a story',
+    group: 'Interactivity',
+    summary: 'A visual novel, a branching scenario or a role play written as plain text: who says what, the choices, and where the story goes next.',
+    keywords: 'story visual novel script dialogue conversation branching scenario role play choices chapters scenes narration writer screenplay characters lines jump ending',
+    body: `A **story** is written as text, one line per thing that happens, the way you'd write a play. It plays on a stage page with a dialogue box, the characters and the choices, so a 50 line conversation or a 50,000 word novel needs no page per line and no boxes in the graph.
+
+**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours. For a whole game, start a new project from the **Visual novel** template instead: it adds a title screen, saves, history, settings and extras (see [Saves, settings and extras](story-game)). The **Puzzle mystery** template adds a case to solve: a room to search, three puzzles and a map (see [Puzzles in a story](story-puzzles) and [Rooms, things you carry and a map](story-rooms)).
+
+**How lines work:**
+- \`Millie: You came!\` is Millie talking. \`Millie (smiling, left, slide): You came!\` also picks her face, where she stands (far left, left, centre, right, far right) and how she comes on (slide, fade, hop, instant), in any order.
+- A line without a name is narration. Start it with \`>\` if it begins like a name (\`> Note: it was open.\`).
+- \`# The club fair\` starts a scene. \`-> The club fair\` jumps to it, \`-> Chapter 2\` to a chapter, and \`-> end Good friends\` ends the story, saying which ending.
+- \`? Join the club\` is a choice. The lines indented under it run when it's picked, then the story carries on after the last choice. \`[once]\` on the end hides it once taken, \`[if flyer]\` only shows it when that holds, and \`[if flyer, grey]\` shows it greyed out instead.
+- \`if trust >= 3\`, \`else if\`, \`else\`: the indented lines only run when it holds. \`set trust += 1\` changes a value. A name that isn't a variable is kept by the story itself.
+- Cues go in square brackets on their own line: \`[bg Quad]\`, \`[music Hopeful]\`, \`[music off, 2s]\`, \`[sound Door]\`, \`[show Olive at right]\`, \`[hide Olive, fade]\`, \`[wait 1s]\`, \`[shake]\`, \`[flash]\`, \`[tint night]\`, \`[zoom Millie]\`, \`[weather snow]\`, \`[box full]\`, \`[box bubble]\`, \`[box bottom]\`. Pictures and sounds are found by their name in Assets.
+- \`[call Puzzle 1]\` goes to that page and waits; a **Back to the story** node there comes back, with a result the story reads as \`story.result\`. \`[open Notebook]\` opens an overlay and waits for it to close, \`[play Intro]\` plays a timeline on the stage, \`[run Give badge]\` runs a flow.
+- Inside a line: \`{name}\` shows a value, \`{pause}\` holds the typing, \`{fast}\`, \`{slow}\`, \`{shake}...{/shake}\`, \`{wave}\`, \`{b}\`, \`{i}\`, \`{big}\`, \`{small}\`, \`{colour red}\`.
+- \`//\` starts a note for writers that's never shown.
+
+**In the panel:** lines with a problem are marked, and listed under the script with a fix where there is one (**Add Hale** for someone not in the cast). **Preview from this line** plays from the caret, with the background, music and characters as the lines above leave them. The side shows word counts per chapter and per character. Download a chapter as text, or replace it with a text file: lines that didn't change keep their voice files and their place in saves.
+
+help:story-dialogue help:story-stage help:variables help:interactions`,
+  },
+  {
+    id: 'story-dialogue',
+    title: 'The story as nodes',
+    group: 'Interactivity',
+    summary: "A chapter drawn as scenes, choices and endings joined by arrows, that you can edit, and the events the story sends as it plays.",
+    keywords: 'story dialogue view nodes map flow chart branching scenes choices endings arrows graph dialogue manager story events on story line on story choice on story scene',
+    body: `**The Dialogue view:** **Dialogue** beside **Script** shows the chapter as nodes: each scene and run of lines, each choice with a way out per option, each if, and the endings, with arrows for where the story goes. Drag from a choice, or the right edge of a scene, onto another scene and the script gets the jump; **+ Scene** and **+ Choice** add them; **Delete** takes a node's lines out; click a node to edit its lines under the map. A scene nothing leads to is dashed. It's the same lines either way, so the two views never disagree.
+
+**Reacting to the story:** **On story line** (everyone's, or one person's), **On story choice** and **On story scene** run in the Interactions graph as the story plays, for a portrait in a corner, a count, a sound, without a cue in the script.
+
+**Good to know:**
+- Nodes stay where you drag them (the chapter keeps their places), and new ones are laid out left to right in the order the story reaches them.
+- Joining from a run of lines with no title gives it one (**New scene**), so there's somewhere to jump to. Rename it in the script.
+- **Show in the script** takes you to the selected node's first line.
+
+help:story help:story-stage help:interactions`,
+  },
+  {
+    id: 'story-stage',
+    title: 'The story stage and the cast',
+    group: 'Interactivity',
+    summary: 'The page a story plays on, the characters on it, and the nodes that move the story along.',
+    keywords: 'story stage cast characters faces expressions sprites dialogue box name plate choices auto skip back hide visual novel story values',
+    body: `The **story stage** is an ordinary page whose layers are bound to the story's values, so you restyle the dialogue box, the name plate or the choices like anything else. **Start a story** makes one; any page with a layer reading a \`story.\` value works, and the Story tab's **Settings** can name one.
+
+**What it shows:** the background (\`story.background\`, fading in over \`story.backgroundBefore\`), the cast (a list of \`story.cast\`, each with \`item.image\`, \`item.x\` across the stage from 0 to 1, \`item.brightness\`), the dialogue box (\`story.speaker\`, \`story.speakerColour\`, and words with **Story words** on bound to \`story.marked\`, with **Letters shown** bound to \`story.shown\`), and the choices (a list of \`story.choices\`).
+
+**Three looks for the words:** the box along the bottom; the whole screen of text, which keeps each line said on it as the next types under it (good for long narration, \`[box clear]\` starts a fresh screen); and speech bubbles by whoever's talking, with a tail pointing at them. **Words shown in** in the Story tab's **Settings** picks one for the story, and a \`[box ...]\` line changes it from there on.
+
+**Keeping faces clear:** a bubble sits under the speaker's face unless **Bubble sits** in the **Settings** says above their head, beside them or along the top. Above and beside go under instead when there's no room or they'd cover someone else's face. Set **Face at** on a cast member whose face isn't near the top of their picture.
+
+**Going on:** a click anywhere that isn't a button, Space or Enter finishes the line or goes to the next, and 1 to 9 pick a choice. A page with its own **Go on** node keeps clicks to itself. The stage's buttons: **Back** goes back a line (undoing what happened since), **Auto** goes on by itself, **Skip** flies through lines read before, **Hide** puts the box away until the next click.
+
+## The cast
+
+Each character in the Story tab's **Cast** has a name (as lines use it), what the name plate says, its colour, where they stand, and their **Faces**: a picture for each expression, the first being the one they come on with. Add pictures named after them (\`Millie smiling.png\`, \`Millie sad.png\`) to Assets and **Add faces from pictures named Millie** fills the list in. Or drop their Photoshop file on the form (or press **Faces from a PSD**): a group called **Faces** with a layer per face over the body gives a picture of the whole character per face, all lined up, with layers named \`happy blink\` and \`happy talk\` as that face's blinking and talking pictures. Whoever isn't speaking is dimmed a little (**Settings** turns that off).
+
+**Nodes:** **Start the story** (a New game button, or from a scene), **Go on**, **Pick choice**, **Back to the story**, **Auto or Skip**, **Go back a line** and **On story end**. Scripts get \`ix.story\`.
+
+**Good to know:**
+- Someone who asked for less motion gets no shake or zoom, and the words don't wobble.
+- A screen reader hears each line once, whole, as it comes up.
+- Lines read on this device are remembered, which is what Skip goes by.
+
+help:story help:story-game help:repeaters help:bindings`,
+  },
+  {
+    id: 'story-game',
+    title: 'Saves, settings and extras',
+    group: 'Interactivity',
+    summary: 'The parts that make a story a game: save slots, Continue, the reader\'s settings, the history, a gallery, endings and chapter select.',
+    keywords: 'visual novel save load slots quick save autosave continue settings text speed volume music voice effects text size readable font history gallery endings chapter select music room extras title screen',
+    body: `The **Visual novel** template (**Templates**, **Built-in**) has all of these as pages you can restyle: **Title**, **Story stage**, **History**, **Save and load**, **Settings** and **Extras**. They're made from the nodes and values below, so you can build your own too.
+
+**Saving:** **Save the story** keeps where the story is and every variable in a slot (1, 2, 3..., or quick), and **Load the story** puts it all back and shows the stage. The story saves itself in **auto** at every choice, and slot **latest** is the newest of all, which is what **Continue** loads (\`story.canContinue\` says whether there's one). A list of \`story.saves\` shows the slots with \`item.chapter\`, \`item.scene\`, \`item.when\`, the last words and the background as a picture. **Settings** in the Story tab sets how many slots there are. Saves stay in the reader's browser.
+
+**The reader's settings:** **Story setting** changes text speed, Auto speed, whether Skip goes through unread lines, the music, voice and effects volumes, text size, an easier to read font, **Captions for sounds** and **Show song titles**, kept on their device. Read them as \`story.prefs\`: the stage's words are bound to \`26 * story.prefs.textSize\`.
+
+**Sound captions:** give a sound a caption in **Assets** (its **Caption** button): what it is, *Door slams*, or a song's title. When \`[sound]\` or \`[music]\` plays it, a reader with captions on sees it as \`story.caption\` for a few seconds (longer for more words); the template's stage shows it along the top as *[Door slams]* or *♪ Hopeful*. **Show song titles** shows the music's ones even with captions off. Nothing comes up while skipping, and a sound with no caption shows nothing.
+
+**History:** a list of \`story.history\` shows what was said, and **Go back a line** with \`story.history.length + 1 - item.number\` lines back returns to one.
+
+**Extras:** \`story.gallery\` (every picture a \`[bg]\` line shows, with \`item.seen\`), \`story.endings\` (with \`item.reached\`), \`story.chapters\` and \`story.musicRoom\` (\`item.heard\`) unlock as this reader gets to them, across every playthrough.
+
+**Characters that feel alive:** give a face a **Blink** picture and they blink now and then; give it a **Talking** picture and their mouth moves while their words type on or their voice plays. A **Blip** sound in the cast plays as their words type on, higher or lower with **Blip pitch**. All of it holds still for someone who asked for less motion.
+
+**Voices:** **Download the voice script** in the Story tab gives the actors a spreadsheet of every spoken line, with the file name to save each recording as. Put the recordings in Assets and **Match voice files** ties each to its line, which keeps it through any edit to the words. A voice plays as its line comes up, and Auto waits for it.
+
+**Big stories:** on the link, a story loads the pictures and sounds of the next stretch (the next scenes, every branch, where a jump goes) while the reader reads, and lets go of the ones far behind, so a story with hundreds of pictures starts as quickly as a small one. A file you download carries everything at once, so share a big story as a link.
+
+**Good to know:** holding **Ctrl** skips while it's held.
+
+help:story help:story-stage help:story-puzzles`,
+  },
+
+  {
+    id: 'story-puzzles',
+    title: 'Puzzles in a story',
+    group: 'Interactivity',
+    summary: 'A puzzle page with a number, a value that drops with each wrong try, hints bought with hint coins, a memo, and a puzzle index.',
+    keywords: 'puzzle puzzles visual novel mystery adventure hint hints hint coins coins currency big hint super hint value points score wrong try memo sketch index replay skip solved story result call',
+    body: `A **puzzle** is a page the story goes to and comes back from. It has a number and a title, a value in points that drops a little with each wrong try, up to three hints and a big hint that the reader opens with **hint coins**, a memo to scribble on, and a big moment when it's right.
+
+**Make one:** in the **Story** tab press **+ New puzzle**. You get a page with a question in the middle and the puzzle frame around it, all wired. Change the question like any other, and the title, value and hints under **Puzzle** in the page's settings. Any page can become one with the **+** on its **Puzzle** section.
+
+**Call it from the story:** a line like \`[call Puzzle 1]\` goes to the page, and the story carries on when the reader leaves it. \`story.result\` says how it went:
+
+\`\`\`
+[call Puzzle 1]
+if story.result == "solved"
+    Millie: I knew you'd get it.
+else
+    Millie: We'll come back to that one.
+\`\`\`
+
+**Answering:** a question on a puzzle page answers the puzzle when it's checked, whatever kind it is (a choice, putting things in order, filling a blank, dragging into groups). For a puzzle made of anything else, wire a **Puzzle answer** node (Right or Wrong) to what decides it.
+
+**The frame** is plain layers bound to \`puzzle.*\`, so restyle it freely: \`puzzle.label\` (Puzzle 1), \`puzzle.title\`, \`puzzle.value\`, \`puzzle.coins\`, a list of \`puzzle.hints\` (\`item.label\`, \`item.open\`, \`item.cost\`, \`item.canOpen\`), \`puzzle.hintText\` for the hint being read, \`puzzle.memo\`, and \`puzzle.right\` and \`puzzle.wrong\` for the big moments. The nodes behind its buttons are **Open a hint**, **Puzzle memo**, **Puzzle answer** (Try again) and **Leave the puzzle** (with **Skip it** for Skip).
+
+**Hint coins:** a new game starts with the number in the Story tab's **Settings** (3 unless you say). The **Hint coins** node gives more (a collectable in a room, a reward). Each hint costs coins once; an open hint stays open.
+
+**The index:** \`story.puzzles\` lists every puzzle page with \`item.found\`, \`item.solved\`, \`item.skipped\` and \`item.score\`, and \`story.score\` adds them up. Going to a found puzzle's page plays it again, without changing its score. The **Visual novel** template has a **Puzzles** page under Extras that does this.
+
+**Good to know:** a save keeps the coins and the index with everything else, and a new game empties them.
+
+help:story help:story-game help:story-rooms`,
+  },
+
+  {
+    id: 'story-rooms',
+    title: 'Rooms, things you carry and a map',
+    group: 'Interactivity',
+    summary: 'Scenes to look around, hidden hint coins, things to pick up and show people, and a map of the places the story has opened.',
+    keywords: 'room rooms look around investigate investigation examine magnifier hotspot point and click collectable collectables hint coins item items inventory carry give take show key map places travel location mystery adventure',
+    body: `A **room** is a page the reader looks around: they click things to hear about them, find hidden hint coins, and pick up things to carry. A **map** takes them between places as the story opens them.
+
+**Make one:** in the **Story** tab press **+ New room**. You get a room drawn from shapes with five places to look at, two hidden hint coins, a key in the desk, the room box their words show in, what the reader carries, and **Leave**. Swap the shapes for a background picture and keep invisible layers on top as the places. Call it with \`[call Room]\`.
+
+**Something to look at:** select any layer and press **+** on its **Look at** section. **Words** is what's said when it's clicked, a line each (\`Millie: Too tidy.\` works). **Hint coins** and **Gives** make it a collectable: it gives them the first time and then disappears, unless **Stays when picked up** is on (a desk with a key in it). It gets a magnifier cursor and is a button for the keyboard too.
+
+**Things you carry** come from collectables and from the script: \`[give Brass key]\`, \`[take Brass key]\` and \`[coins 2]\`. Ask about them in an if or a choice, which is how you show someone a thing:
+
+\`\`\`
+? Show the brass key [if has("Brass key")]
+    Olive: That opens the shed!
+\`\`\`
+
+**The map:** \`[place Library]\` opens a place (\`[place Library, off]\` closes it), and **+ New map** makes a page with a button for each open place that goes to the scene of that name (**Go to a scene**). Call it with \`[call Map]\`.
+
+**Good to know:** \`story.items\`, \`story.coins\` and \`story.places\` are there for pages of your own (an inventory, say), and a save keeps all of them. On a room, \`room.text\`, \`room.speaker\` and \`room.showing\` drive the room box.
+
+help:story help:story-puzzles`,
+  },
+
+  {
+    id: 'sketch-pads',
+    title: 'Sketch pads',
+    group: 'Interactivity',
+    summary: 'A rectangle people draw on as it plays, with a smoothed pen, an eraser, undo and redo, and the drawing saved with their work.',
+    keywords: 'sketch draw drawing pen pencil ink stylus pressure eraser rub out undo redo clear whiteboard annotate doodle signature canvas',
+    body: `A **sketch pad** is a rectangle people draw on as the project plays: label a diagram, show working, sign their name, sketch an idea. The pen smooths out a shaky hand, and a stylus draws thinner or thicker with how hard it presses.
+
+**Make one:** select a rectangle and press **+** on its **Sketch pad** section. Its fill is the paper.
+
+**Keep the drawing:** pick a list variable in **Strokes kept in**. Each stroke goes in it as plain data, so ticking **Save as user data** on that variable keeps people's drawings between visits, and **Reset variables** clears them. Without one, the drawing lasts as long as the page.
+
+**The pen:** **Colour** and **Size** are what it starts with. **Colour from** and **Size from** read a variable instead, so a row of colour buttons that set \`penColour\` and a slider on \`penSize\` make a palette. **Eraser when** turns it into an eraser while a variable is true (or holds the text eraser).
+
+**Undo, redo and clear:** the **Undo a stroke**, **Redo a stroke** and **Clear a sketch pad** nodes, on buttons of your own. A clear can be undone too. Undo keeps the last 100 changes.
+
+**Take it out:** **Picture of a layer** on the sketch pad (or the frame around it) gives a PNG to download or keep, drawing and all.
+
+**Good to know:**
+- A pad holds up to 1000 strokes. Very long ones are thinned as they are drawn, so a drawing stays small enough to save.
+- The editor canvas shows the empty pad; draw on it in **Preview**.
+- A sketch pad takes the pointer, so put buttons beside it rather than over it.
+
+help:drag-and-drop help:variables`,
+  },
+  {
     id: 'drag-and-drop',
     title: 'Drag and drop',
     group: 'Interactivity',
@@ -2989,9 +3291,29 @@ Two buckets, four cards. Dropping a card in the right bucket keeps it there; dro
 ## Drop zones
 - **Takes tags**: leave empty to take any draggable layer.
 - **Holds**: how many layers fit (0 is no limit). **When full** either refuses the new layer, or **swaps**: the layer that has been there longest goes to where the dragged one came from, and the dragged one takes its place. Swapping is how slot puzzles and reordering work.
-- **Dropped layers**: stay where they were dropped, centre in the zone, or sit at its top left corner. A layer sent by the keyboard, a tap or an action goes to the centre when this is left alone.
+- **Dropped layers**: stay where they were dropped, centre in the zone, sit at its top left corner, or **Fill the zone**: the layer takes the zone's place, size and corner radius while it's in it, and its own size again when it leaves, so a card dropped in a slot becomes the slot's shape. A layer sent by the keyboard, a tap or an action goes to the centre when this is left alone.
 - **Outline when a layer is over it**: an outline appears on the zone while a layer it takes is over it (and a fainter one while any such layer is being dragged). Untick it if your artwork shows the state itself.
 - A layer can be both: a tile that can be dropped on and then dragged on again.
+
+### A zone's own rules
+**Takes it when** is a formula that has to be true for the zone to take a layer. \`item.name\`, \`item.tags\` and \`item.index\` are the layer held, and \`zone.name\`, \`zone.count\` and \`zone.contents\` the zone. Give a text instead of false and the text is the reason: \`zone.count < 3 || "A trimester takes three courses"\`. The reason is read out, the layer goes back, and **On refused** runs with it as \`event.why\`, so a **Show toast** after it is the whole message. Only the zones that would take what's held are marked as places it could go, so the marks follow the rule with nothing to repaint.
+
+On the draggable, **Only these zones** names the zones it may go in, whatever their tags say: a piece that may move within its column but not out of it.
+
+### Counting units, and zones counted together
+A draggable can carry values of its own: **Its own values**, one a line, as \`units: 2\` or \`code: MSC6100\`. Then:
+
+- **Holds** on a zone can count one of them instead of layers: **Holds** 2 **of** units takes a 1 unit card and a 1 unit card, or one 2 unit card, but not a third. A layer without the value counts as 1.
+- **Zone groups** count several zones together. Press **+ New zone group** on one of them, name it (\`Year 1\`), give it a limit (**Holds** 8 **of** units) and what to say when it's full (\`{name} is 8 units at most.\`), then tick it on the other zones. A drop that would take the group over is refused wherever in the group it lands, and the learner hears your words. Moving a card within the group is fine: it's only counted once.
+- **Takes it when** gets \`item.data\` (\`item.data.units\`), \`zone.total\` (what **Holds** counts, without the held layer) and \`zone.groups\` (the names of its groups).
+
+### Totals in any formula
+\`count('Year 1')\` is how many layers a zone or zone group holds, \`sum('Year 1', 'units')\` adds up one of their values, and \`items('Trimester 1')\` lists them, each with \`name\`, \`zone\`, \`tags\` and its own values, for a repeater. A name with \`*\` covers every zone it matches (\`sum('T*', 'units')\`). Text bound to them, and variables that keep their formula up to date, change after every drop: \`Year 1 · {sum('Year 1', 'units')} / 8 units\`. Given a list, \`count\` and \`sum\` work on the list as they always have. On the canvas nothing has been dropped yet, so they show 0.
+
+### A zone that lays out what it holds
+Tick **Arrange what it holds** and the zone lays its layers out in rows that wrap, with a **Gap** between them, **As they came** or **By name**. With **Fit its height** it grows and shrinks to fit them, keeping room for its **Least rows** when it's empty. Take one out and the rest close up; put one back and it takes its place in the order. A pool of course cards that shrinks as cards leave it is one tick. Reset sends each layer home to its place in the order, not to where it first stood.
+
+Scripts can change where a layer goes home to with \`ix.drag.home('Card', x, y, 'Pool')\`.
 
 ## Events and actions
 - **When dragging starts**, **When dragged over a drop zone** (moves over / off), **When dropped** (taken, refused, or dropped on no zone) and **When dragging ends** (always fires, after On drop, and also when the pick-up is cancelled). Leave the layer empty to hear every draggable layer or zone. Each fires once per drag, however it ends.
@@ -3026,6 +3348,7 @@ Everyone should be able to finish the activity, so every drag has two ways that 
 - **Touch**: a draggable layer stops the browser scrolling or selecting text under the finger. A layer locked to one axis leaves the other axis for scrolling. Inside a scrolling frame, tick **Hold to drag on touch**: the finger must rest a moment before the layer follows it, so swiping from the layer still scrolls the frame.
 
 ## Things to know
+- A picked-up layer comes up over everything else on the page. Tick **Stays behind when picked up** on one that should keep its place in the stack.
 - Dragging changes the layer's **X** and **Y**. Do not animate those on a timeline that plays at the same time; animate a group around it instead.
 - A pointer drag never changes the layer's parent or its place in the layer order; it is raised above everything while it is held. Drop zones can sit in another group or frame. A frame the viewer has scrolled is allowed for: a zone is found where it is drawn.
 - Layers made by a [repeater](repeaters) cannot be dragged (every copy would move). A layer inside an auto layout frame can only be dragged when its **Position** (Layout section) is *Ignore*, otherwise the layout puts it back. The inspector says so.
@@ -3080,10 +3403,12 @@ Two actions have more detail elsewhere. **Play sound** (volume, speed, loop, **S
 ## When a state is on
 - **Hovered**, **Pressed**, **Focused**: the layer's own pointer and keyboard. Hovering something *inside* it doesn't count. These need the piece to be running, so they show in **Preview** and in what you share, not on the canvas.
 - **Disabled**: the layer's own **Disabled** setting (buttons and inputs).
+- **Being dragged**, **Picked up**: a draggable layer while it follows the pointer, or while it's held after a tap or Space.
+- **A place it could go**, **The place it is over**, **A place that refuses it**: a drop zone while something it would take is held, while that something is over it, and while what's over it can't go there (the wrong tag, full, or its **Takes it when** said no). A layer with one of these states loses the player's own dashed or red outline for it, so your look is the only one.
 - **When…**: on while an expression is true, such as \`item.state == "right"\` or \`picked == 3\`. Give it a **Name** so the list reads as it should. These show on the canvas too, so what you style is what you see.
 
 ## What a state changes
-**Fill**, **Line** and **Text** are there from the start; **Also change** adds **Opacity**, **Scale W**, **Scale H** or **Radius**. Anything you leave alone keeps the layer's own value, so a hover state that only sets **Fill** changes nothing else.
+**Fill**, **Line** and **Text** are there from the start; **Also change** adds **Opacity**, **Scale W**, **Scale H**, **Radius**, **Line width** or **Line style** (solid, dashed or dotted). A held card with a dashed border and the places it could go dashed too is two states. Anything you leave alone keeps the layer's own value, so a hover state that only sets **Fill** changes nothing else.
 
 Colours can be [theme tokens](themes) like any other colour, so a state follows the theme instead of pinning a hex.
 
@@ -3189,6 +3514,8 @@ A layer **inside an overlay** can point at another overlay too. A **More informa
 - Showing a toast that's already up gives it the new words and its full time again. Different toasts **stack**, the newest nearest the edge.
 - **On its own** makes a toast show alone: showing it puts any other toast away, and showing another puts it away. Tick it on every toast and there is only ever one at a time, the latest.
 - Nothing points at a toast, so it has no target or trigger and no lines on the canvas.
+- **Its size works like a modal's.** The toast's page is its size: a new one has **Fit width** and **Fit height** on, so it hugs its words. Untick either and drag the page (or the card) to give it a set size. A toast made before this can be tied the same way with **The page sizes the overlay**.
+- **Show toast** and **Hide toast** list only your toasts, not every page.
 
 From a script: \`ix.toast('Toast', 'Plan saved')\` and \`ix.hideToast('Toast')\`.
 
@@ -3343,6 +3670,7 @@ The learner types into one or more inputs. Write the accepted answers one per li
 - A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses.
 - A line written \`/colou?r/i\` is a pattern.
 - **Feedback if wrong** is said after the question's own *Wrong* line whenever that blank is wrong, so you can say what went wrong in it (*Give the units*). Several wrong blanks say theirs in order.
+- Each blank's box takes your theme's colours, so it goes dark in Dark and High contrast along with the rest of the question.
 - **Shown as** appears when a blank accepts a pattern. It is what **Show the right answer when finished wrong** puts in the blank. Left empty it shows the first accepted answer that isn't a pattern, and a blank with only patterns shows nothing (the question's checks say so).
 - **Add blank** adds another input in the look of the last one.
 - Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).
@@ -3929,6 +4257,14 @@ In expressions, \`userData.loaded\` is true once the saved values have been look
 
 A starting value is the one for this course if there is one, else the typed value, else the formula worked out again (so a formula that shuffles gives a fresh order). Live variables are left alone. This is lighter than **Start over**, which also leaves the page. In scripts: \`ix.reset('score', 'answers')\`.
 
+## Undo and redo
+Somebody arranging tiles, a board or a mind map wants to take a step back. Tick **Keeps history** (under **Options**) on the variables that hold their work, and the **Undo** and **Redo** nodes step all of those back and forward together. Put them on two buttons.
+
+- Changes close together (within a quarter of a second, like a drag or one click that sets three things) are one step. Undo goes back up to 100 steps.
+- \`canUndo\` and \`canRedo\` in a formula say whether there's anything to undo or redo, so a button's **Disabled** can be \`!canUndo\`.
+- A new change after an Undo clears what could be redone, as in any app. **Start over** clears the history.
+- Only the ticked variables move. A score or a page number without the tick stays where it is.
+
 ## Different values for different courses
 One project can start with different values in different courses (a due date, a unit name, a week count). In the **Data** tab, pick **context** and add a row under **Per-course values**: a course label such as \`MAT1000_*\`, and the variables it changes. See [Course and learner context](course-context).
 
@@ -4473,6 +4809,9 @@ Pick the **Progress bar** tool (in the **Data** group of the tool bar, which sta
 - **Direction** is *Across* (it grows from the left) or *Up* (from the bottom). **From the far end** grows it from the right, or the top, instead.
 - **Radius** rounds the track, and the bar is clipped to it. A gradient bar is laid over the whole track and uncovered as the bar grows, so a green-to-red meter shows red only when it is nearly full.
 
+## A ring
+**Shape** can be **Ring**, which fills round a circle, or **Half ring**, which fills along an arc like a gauge. The track is the layer's fill and the part done is the **Bar** colour, and **Thickness** is how thick the ring is. It reads out the same as a bar.
+
 ## For screen readers
 
 **Tells screen readers** chooses what the layer is: a **progress bar** (work towards a goal), a **meter** (a measurement in a range, like volume) or nothing. The first two put \`role\` and \`aria-valuenow\`, \`aria-valuemin\` (0), \`aria-valuemax\` and \`aria-valuetext\` on the layer, kept up to date as the value changes. Give the layer a **text alternative** in *Accessibility* ("Course progress"): the [checker](accessibility-checker) asks for one. A layer marked **Decorative** is hidden from screen readers whatever this says.
@@ -4527,6 +4866,12 @@ A hidden item without a number of its own is left out when the axis is worked ou
 - The axis runs from zero (or lower, for negative values) to a round number above the biggest value. **Axis min** and **Axis max** fix either end.
 - **Gridlines**, **Axis labels**, **Value labels** (the number on each mark) and **Legend** (when each item has its own colour) switch on and off. **Decimals**, **Prefix** and **Suffix** control how numbers are written (\`$\`, \`kg\`, \`%\`). Prefix and suffix take variables in braces (\`{unit}\`), so changing a unit variable relabels the whole chart. Crowded labels are shortened or thinned out.
 - **Colours** is a list of colours or [theme tokens](themes) handed out in turn. With one colour every bar and the line use it; **A colour for each item** gives each item the next colour (pie and donut charts always do). **Text colour**, **Font** and **Size** style the labels and axes. Using tokens, a chart changes with the theme and the colourway like everything else.
+
+## Stacked, area, scatter and histogram
+- **Stacked columns** stack several fields of each item on one another, one colour each: name them in **Stacked fields** (\`home, away\`) and the legend names them too.
+- **Area** is a line with the space under it filled, for a total that builds up.
+- **Scatter** places each item by two numbers: **Across field** (\`x\`) and the value field up. For two measures of the same people, such as hours studied and the mark. A list of pairs (\`[[1, 10], [4, 40]]\`) works too.
+- **Histogram** counts the values of a list into ranges and draws a bar for each, touching. **Bars** sets how many ranges; blank picks from how many values there are. For how a class's marks are spread.
 
 ## Reading it
 
@@ -4923,6 +5268,17 @@ JSON that doesn't parse is **not** saved. The interactive keeps using the last g
 - In the form, **Tab** moves through the fields and buttons in order, each card's title is a heading with a button that opens and closes it, and every field has a real label. Nothing waits to be confirmed: each change is saved a moment after you stop typing.
 - Each save leaves the earlier file on the server so Undo works. **Remove unused assets** in the Usage tab clears them.
 
+## Shared tables
+A sign-up sheet, a board, a register, a booking list: rows the people using the app add, change and take away, that everyone in the class sees. **+ Shared table** makes one. Give it its **Fields** (\`name, slot, note\`), then say:
+
+- **Who may add**: anyone signed in, or staff only.
+- **Who may change a row** and **Who may take a row away**: whoever added it (and staff), staff only, or for changing, anyone.
+- **Rows each**: how many one person may have (1 for a sign-up sheet). **Slot field** and **Rows a slot**: so many per time or group.
+- **At most**: the table's size, up to 2000 rows. Say on the page how many places are left; a table that quietly stops taking rows looks broken.
+- **Show names**: each row carries who added it as \`row.by\`. Off, nobody's name is shown.
+
+Its value is \`{ rows, count, max, mine }\`: repeat \`signups.rows\`, and each row says whether it's yours (\`item.mine\`). The **Add a row to a shared table**, **Change a row of a shared table** and **Take a row out of a shared table** nodes do the rest, with **Row** being \`item\` in a repeater. The server checks every rule and limit; a refusal goes on from **Not done** with \`event.problem\` (not-allowed, per-person, slot-full, full). Each class has its own rows. Share again after changing the settings. In Preview the table is kept in your browser, with you as its only person.
+
 ## The built-in context
 The list always starts with **context**, a read-only source that is there without adding anything: the course and the learner (\`{context.firstName}\`, \`context.courseCode\`). Pick it to see its fields, set sample values to design with, and give different courses different starting values. See [Course and learner context](course-context).
 
@@ -5096,7 +5452,7 @@ A course collection holds only the stamps and counters a project added, with the
     title: 'Course and learner context',
     group: 'Data',
     summary: 'The built-in context source (course label, first name, student or staff) and per-course variable values.',
-    keywords: 'context course label code term year learner first name display name student staff studydesk per-course values offering rollover duplicate fetchactivity session greeting',
+    keywords: 'context course label code term year learner first name display name student staff studydesk per-course values offering rollover duplicate fetchactivity session greeting link value address program choices preview share',
     body: `Every project has a built-in, read-only data source called **context**. It holds the course the project is in and the person playing, so a project can greet someone by name, show the unit code, or change what it says for staff and students. You do not add it and you cannot edit it; it is always in the **Data** tab's list, first.
 
 ## What is in it
@@ -5124,6 +5480,16 @@ Use it by name anywhere expressions go, the same as any [data source](data-sourc
 
 A variable or data source that you name \`context\` hides the built-in one, and the Data tab warns about it.
 
+## Who is looking
+An app can show more to the people who look after it, such as a results view, a moderation list or editing tools:
+
+- \`context.isOwner\`: they own this project. \`context.isCollaborator\`: they help make it.
+- \`context.canEdit\`: they may change what it shows: the owner, a collaborator, a power user, or staff with StudyDesk's editing mode on.
+- \`context.isEditing\`: StudyDesk's editing mode is on for the page it's on, so editing tools can wait until someone is editing.
+- \`context.groups\`: which of the suite's groups (as si-admin keeps them) they are in, out of the ones you list in **Groups it can check** in Project settings. \`context.groups.includes("tutors")\` is true for a tutor. The app never learns about any other group, and **Update** the share after changing the list.
+
+These are worked out on the server from the person's own StudyDesk session, except \`isEditing\`, which comes from the page. They show what to show; they don't keep anything safe on their own. An admin viewing a course as a student counts as nobody special. Outside StudyDesk every one of them is false.
+
 ## Where the values come from
 - **The Link for StudyDesk** fills it in from the signed in StudyDesk session. Use that link, not the plain share link, when you want it.
 - **Preview and the canvas** use made-up **sample values**, which you edit in the Data tab under **context** (first name, course label and so on). The code, term and year follow the sample label. Clear a field to see the project with it blank. Sample values are for designing: they are never in an exported file or a share link.
@@ -5141,6 +5507,24 @@ Results are already kept per course, so each course's learners start clean witho
 
 After changing per-course values, press **Update to the latest version** in [Share link](export#share-link) so the Link for StudyDesk plays the new version.
 
+## Setups
+One app, many setups. A card sort made once can run on a second set of cards without copying the project. Under **Setups** in the **Context** panel, **+ Add a setup** and give it:
+
+- a **name** (\`setup.name\` in formulas),
+- its own starting values for any variables (**Set a variable…**),
+- its own contents for any data source: tick **Its own cards** and paste the JSON or CSV it uses instead of the file or address.
+
+Each setup has its own link once the project is shared: the Link for StudyDesk with \`?setup=\` and the setup's id on it, which **Copy link** copies. Put that link on the course page. A setup's values win over a per-course row's, and responses say which setup they came from. Without \`?setup=\` the project plays as you made it.
+
+## An editing mode
+An app can be set up where it sits, by the people who look after it, without opening the editor. A tiles app shows pens and a plus sign to them and plain tiles to everyone else.
+
+1. Tick **Part of the setup** (under a variable's **Options**) on what they set up: the tiles, the cards, a picture they picked with **Picture of a layer**.
+2. Make a page for it and tick **Editing page** in its **Page** section. It opens instead of the start page for anyone who may edit the app (\`context.canEdit\`) while StudyDesk's editing mode is on, and nobody else can be sent to it.
+3. Put a **Save** button on it that runs **Save setup**. It keeps those variables' values, for the setup the link plays, and everyone who opens it afterwards starts with them.
+
+Only the owner, collaborators, power users and staff can save; anyone else goes on from **Not saved**. StudyDesk's editing mode decides when the editing page shows, never who may save. In Preview the saved setup is kept in your browser, to try it out.
+
 ## Values on the link
 **link** sits beside context: it holds the values on the address the project was opened with, so one project can serve several programs or courses from different links. Add \`&program=GCSC\` to the end of the address in the embed code (or \`?program=GCSC\` to a link with nothing after it), and the project reads:
 
@@ -5150,6 +5534,17 @@ After changing per-course values, press **Update to the latest version** in [Sha
 Every value is text, and a name that isn't there is empty, so give it a fallback: \`link.program || 'MSCN'\`. A name is letters, digits, \`.\`, \`_\` and \`-\` (up to 40), a value is up to 200 letters, and there are 20 at most. \`title\` and \`cdtID\` (the embed code's own), \`sessionID\`, \`ixm\` and \`lti\` are never handed on.
 
 It works from the Link for StudyDesk and from a plain share link. To see the project with values on its address while you build it, open **Data**, pick **context**, and under **link** press **+ Add a link value**: give it a name (\`program\`) and a sample value (\`GCSC\`). The canvas and Preview then behave as if the project were opened with \`&program=GCSC\`. Sample values are for designing only: a share link, an embed or an export never carries them, and leaving a name out of the samples is how you check what the project does with no value. A project shared before 19 November 2026 needs **Update** in Share to get it.
+
+### A variable from the link
+A variable can start from a value on the link, so you don't need a script to read it. Open the variable's **Options** and type the link value's name in **Starts from the link** (\`program\`). When the link carries \`&program=GDSI\`, the variable starts as \`GDSI\`: over an embed attribute (\`input-program\`), a course row, a setup and its own starting value, and again on **Start over**. With nothing on the link, it starts as it always did.
+
+A value saved for the learner (**Save as user data**, **Remember**) still comes back when the link names nothing, and the link wins when it does, so a link for one program always opens that program. A value that doesn't fit (a choice the variable hasn't got, text for a number) is ignored. The canvas uses the sample value from Data > context > link.
+
+### Choices, and trying each one
+Give a link value its **Choices** in the same table, with commas between them (\`MSCN, GDSI, GCSC\`). The sample then picks from them, and so do these two:
+
+- **Preview's bar** has a field for every link value the project reads (from \`link.\` in text, bindings and formulas, and \`ix.link.\` in scripts), plus the ones in the table: a list when it has choices, otherwise a box to type in (Enter applies it). Changing one starts Preview again, opened with that value. It's for this run only: the sample in Data stays as it was, so a reviewer can try every program without changing the project.
+- **Share** shows the same fields as **Open it with:** above the embed code and the share link. Pick a value and what you copy carries it (\`&program=GCSC\`). Leave it on **none** for the plain link.
 
 Anyone can change what's on an address they open, so use a value to pick what to show, never to decide what someone may do or to set a score.
 
@@ -5184,12 +5579,36 @@ Inside the copies, \`item\` is the current item and \`index\` is its position, c
 A grid has a **Fill** direction. *Rows first* goes across each row and then down (1 2 3 / 4 5 6 / 7). *Columns first* goes down each column and then across (1 4 7 / 2 5 / 3 6). **Cols** is still the number of columns.
 
 ## Text in the copies sizes itself
-A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there. A long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow. You don't need to guess a height from the number of characters.
+A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there. A long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow, on a page and inside a dialog, tooltip or other overlay alike. You don't need to guess a height from the number of characters.
 
 A height or width you bind on the template layer still wins. Only copies whose text changed are measured again.
 
 ## Instances in a repeater
 Instances in a repeater can take their [inputs](instances) from the item. Select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
+
+## A list in a list
+A repeater can go inside the copy of another one: groups that hold cards, a table's rows and their cells, a board's columns. Give the outer list items that have a list in them (\`{name: "Fruit", cards: ["apple", "pear"]}\`) and set the inner repeater's **Repeat for each** to \`item.cards\`. Each group then draws its own cards.
+
+Inside the inner copies, \`item\` and \`index\` are the card and its place in its group, and \`outer.item\` and \`outer.index\` are the group. So a card can say \`{outer.item.name}: {item}\`. A click on a card gives its own place in its group as \`event.index\`.
+
+## Dragging the copies
+Tick **Reorder by dragging** and people can drag a copy to another place in the list: the others make room, and the list variable changes, so the new order is kept like any other value. From the keyboard, Space picks a copy up, the arrow keys move it and Space puts it down (Escape puts everything back).
+
+To drag copies from one list into another, give the first a **Tag** (\`cards\`) and the second **Takes items from** \`cards\`. Two separate list variables trade items. For a card sort, keep one list of cards and show it twice: a pool repeating \`cards.filter(c => !c.group)\` and, inside a list of groups, \`cards.filter(c => c.group == outer.item.name)\`. Set **Items are in** to \`cards\` on both, **A drop writes field** \`group\`, and **To** \`outer.item.name\` on the groups (\`""\` on the pool). Dropping a card in a group writes the group's name into it, and both repeaters redraw from the one list.
+
+**On list drop** runs after a move, with \`event.item\`, \`event.from\`, \`event.to\` and \`event.index\`.
+
+## Long lists, and lists that load
+**At a time** shows so many copies at once: as **Load more**, which adds the next lot below, or as **Pages** with Next and Previous. **Add Load more and a count** (or **Add Next, Previous and a count**) puts the buttons inside the list, already wired, with a line that says how many there are. Each button hides itself when it has nothing to do.
+
+The layers round the copies can say where the list is at: \`{list.total}\`, \`{list.shown}\`, \`{list.from}\`, \`{list.to}\`, \`{list.page}\` and \`{list.pages}\`. Say how many there are: a list that is cut off without saying so looks finished.
+
+**Add loading, empty and fault looks** puts three texts in the list: one shown while its data loads, one when it's empty, and one when its data couldn't be loaded. Change their words and their look as you like. A list knows its data is loading or failed when its **Repeat for each** names a data source; \`dataStatus.cards\` says the same in any formula.
+
+## A tree that folds
+Tick **Show as a tree** and the list is drawn as an outline. Each item names its parent in the **Parent field** (\`parent\`), by the parent's **Id field** (\`id\`); items with no parent are the top level. A branch opens and closes with a click, **Enter** or **Space**, and the arrow keys move round it the way the W3C tree view pattern has them: **Right** opens a branch or goes into it, **Left** closes it or goes up to its parent, **Up**, **Down**, **Home** and **End** move between the rows. A screen reader hears a tree, with each item's level and whether it's open.
+
+In the copies, \`depth\`, \`hasChildren\` and \`isOpen\` say where each one is, for a chevron that turns (\`isOpen ? 90 : 0\`) or a line. **Open branches in** keeps the open ones in a list variable, to save or set. A course outline, a file list and a tree test are all one list with a parent field.
 
 ## Selection
 Set **Selection** under the repeater to let people pick copies without any nodes:
@@ -5209,6 +5628,28 @@ A click, <kbd>Enter</kbd> or <kbd>Space</kbd> on a copy picks it, and the arrow 
 Clicks on a copy fire **When clicked or hovered** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked. For keeping track of which were clicked, **Selection** above does it for you.
 
 For lists a keyboard user moves through, tick **Keyboard navigation** under the repeater. One copy is the Tab stop and the arrow keys move between the rest (see [Accessibility](accessibility#keyboard-navigation)).`,
+  },
+  {
+    id: 'checks',
+    title: 'Checks',
+    group: 'Data',
+    summary: 'Rules the project is checked against as it runs, with the words for each one that fails.',
+    keywords: 'checks check rules validate validation issues problems errors plan complete done passed failing warnings messages list',
+    body: `**Checks** are rules a project is checked against while it runs: a study plan that mustn't go over 8 units a year, a form that needs an email, a build that needs every part. Each check is a formula that's true when all is well, and the words to show when it isn't. They're worked out again after every change, so the list of what's wrong is always current.
+
+## Add one
+Select nothing (or the page), open **Checks** in Properties and press its **+**.
+
+- **Passes when**: \`sum('Year 1', 'units') <= 8\`. Give a text instead of false and the text is the message: \`sum('Year 1', 'units') <= 8 || 'Year 1 is over 8 units'\`.
+- **Otherwise say**: the words when it fails, with \`{slots}\`: \`Year 1 has {sum('Year 1', 'units')} units, 8 at most.\`
+- **For each** (optional): a formula giving a list, \`items('Year 1')\`. The check runs once per item, with \`item\` and \`index\`, and each failure names its item: \`Passes when\` \`item.offered.includes(item.zone)\`, **Otherwise say** \`{item.name} isn't offered in {item.zone}.\`
+
+## Show what fails
+- In any formula: \`checks.count\`, \`checks.passed\`, and \`checks.list\`, where each failure has \`check\` (its name), \`message\` and \`item\`. A repeater over \`checks.list\` with a text of \`{item.message}\` is the whole issues list.
+- On a layer, the state **A check fails for it** is on while a check fails for an item of the layer's name: the red outline on a card that's in the wrong place, with no script.
+- Under the checks, **Failures**, **How many** and **All pass** write them to variables too, for a **Save user data** or an **On variable change**.
+
+Good to know: a check whose formula can't be worked out counts as failing, so a typo never makes a plan look finished. The canvas runs them on the starting values. See [Drag and drop](drag-and-drop#totals-in-any-formula) for \`count\`, \`sum\` and \`items\`.`,
   },
   {
     id: 'results',
@@ -5265,6 +5706,17 @@ User data is kept apart from remembered progress and from results, so **Clear re
 
 ## See the results
 **View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. The owner and people invited to collaborate can see it. **Export CSV** downloads every learner's record as a spreadsheet: username, name, course, completed, passed, attempts, best and last score and percentage, and when they were last active (the list in the dialog shows the latest 200). **Clear results** deletes every record for the project (handy after testing); only the owner can use it (collaborators see it greyed out), since it can't be undone.
+
+## Collect responses, one row each
+A score says how someone did. For what they actually did (a survey's answers, where each card went in a card sort, what they picked in a configurator) use the **Send a response** node. Its **Values** are named values, \`{ q1: answer1, mood: mood }\`, or a list of records such as \`cards.map(c => ({ card: c.name, group: c.group }))\`. **Kind of response** (\`card-sort\`, \`survey\`) keeps two kinds apart in one app.
+
+Each response is a row in the **Responses** tab of **Results**, with when it came and the course. **Download** gives:
+
+- **CSV**: a row per response, a column per value.
+- **CSV, a row per item**: a row per record of the list in each response, the response's other values repeated on each. One row per card placed is the shape card sort analysis tools take.
+- **JSON**: every response as it was sent.
+
+Responses are kept without names to start with: each person's are under a code that is the same for them every time and says nothing about who they are, which is what a survey or a card sort usually wants. Tick **Responses with names** in Project settings, and **Update** the share, to keep names. A person can send up to 300 an hour. In Preview and a downloaded HTML file there is no server, so the browser keeps the last 200 instead.
 
 ## Good to know
 - A result is what the learner's browser says. It is good for tracking progress, not for marks that must be tamper-proof, unless the questions are set to **Mark answers on the server**. Then the server marks them, keeps the tries and writes the result itself, and any result the browser reports is ignored for that project. See [Question kit](question-kit).
@@ -5369,7 +5821,7 @@ All are in the Interactions palette, and described there.
 - **Stop recording**, **Discard recording**, **Play recording** (sound plays through the project's own sound, so the viewer's sound button applies; video plays in the layer you choose) and **Download recording** (offers a file, after a tap: it is the only way a recording leaves memory).
 - **Camera preview** shows the camera live in a layer's place. The page draws it over the project, so the project never sees the camera's pixels.
 - **Take or choose a photo** puts a picture, scaled to at most 1600 px on the long side, into an image asset. Every image layer that uses the asset shows it. From the device's photo picker (with the front or back camera if the device offers it) or a still from the live preview. To fill a different asset for each item of a list, give **Or the asset from an expression** an asset's id or name (such as \`prompts[current].photo\`); it wins over the asset picked. Set **Do** to **Throw the photo away** to put the asset's own picture back and forget the photo.
-- **Download a file** saves text you build, such as a report or a CSV, after a tap. It works in any project. See [Download a file](sensors#download-a-file) below.
+- **Download a file** saves text you build, such as a report or a CSV, after a tap, or a picture or a PDF of a layer. It works in any project. See [Download a file](sensors#download-a-file) below.
 - **Offer: do not use my microphone or camera** asks the learner, in the page's own screen, whether to stop using them for good. Put it on a "Use the keyboard instead" button. Only the learner decides.
 - **When the microphone or camera is used** fires when a recording starts, a recording is ready (\`event.reason\` is \`stopped\`, \`limit\` or \`device-lost\`: the learner can press Stop on the bar too), something could not start (\`event.problem\` and \`event.message\`), the state changed, a video finished playing, a photo arrived, or live listening started or stopped.
 
@@ -5383,6 +5835,17 @@ All are in the Interactions palette, and described there.
 - Every web page is saved with a rule that stops it running script or loading anything when it is opened, so it is a report and nothing more.
 
 The **Photo prompts notebook** starter builds its whole report this way, for upload to a Moodle assignment.
+
+### A picture or a PDF of a layer
+Pick **Picture of a layer (.png)** or **PDF of a layer (.pdf)** as the type and the node saves a layer as it is on screen now, or the whole page with no **Layer** chosen. A study plan's grid, a certificate, a finished drawing.
+
+- **Footer, left** and **Footer, right** put a line at the foot, such as \`context.displayName\` and \`today("d mmmm yyyy")\`.
+- A PDF is the size of the layer, or an **A4** page with the layer fitted in its margins.
+- Tick **Not in downloads** (in a layer's **Layer** section) on anything that means nothing on paper, like an info button or the Download button itself, and it's left out.
+- **File name** is a formula like any other: \`"Plan " + context.displayName + " " + today("dd-mm-yyyy")\`. Characters a file name can't hold, such as a colon or a slash, are replaced with a space.
+- These are saved straight away, without the tap a text file asks for. Text in them is a picture, so it can't be selected or searched, and a video or an embedded page shows as an empty box.
+
+**Picture of a layer** is the same picture as its own node. **Then** downloads it, or keeps it in a text variable: bind an image layer's picture to that variable to show it, and tick **Save as user data** on the variable to keep it for the person (pictures of up to about 1 MB).
 
 ## Try it
 **Preview** has a pretend microphone and camera, because the real ones need the page the project is shared in. It makes a made-up level and short tone for a recording, a swelling level and moving bands for live listening, and a sample picture. The **Microphone and camera** menu above the preview makes it fail the ways a real one does (denied, no device, blocked by the course page, the learner chose not to use them), so you can build and check the plain version. A small "Simulated" note shows while it records. Try the real devices from the **Link for StudyDesk** on the page you will use.
@@ -5448,7 +5911,7 @@ Off by default, so embeds that already exist keep working. Turn it on and attrib
     title: 'Project settings',
     group: 'Getting started',
     summary: 'Start page, fit, page title, fonts, live collaboration, sandbox, reduced motion and Optimise output.',
-    keywords: 'settings live collaboration start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider',
+    keywords: 'settings stage shape 16:9 4:3 widescreen letterbox full screen phone sideways landscape portrait live collaboration start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider',
     body: `![The Project section of the Inspector, with Allowed data hosts filled in and the library and reduced motion boxes below it.](help/project-settings.png)
 
 The **Project** section holds the settings for the whole project, not one page. Click an empty part of the canvas, or a page's name, and it shows in the Inspector, below the page's own settings.
@@ -5460,8 +5923,9 @@ The **Project** section holds the settings for the whole project, not one page. 
 | Name | The project's name, as on the projects page |
 | Page title | The title of the browser tab for the exported page |
 | Description | A note about the project, kept in the file |
-| Fit | How the page scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
-| Page background | The colour around the page in the exported page |
+| Stage shape | **Free** (each page sets its own size, the default), **16:9, widescreen** or **4:3**. With a shape, the stage keeps it the way a game does: letterboxed in any window, a StudyDesk frame of that shape, a full screen button at its top right when it's in a frame or on a phone, and a phone held upright asked to turn on its side (or **Play this way**). Pages of another shape are letterboxed inside it; 1280 x 720 is the usual size for 16:9 |
+| Fit | How the page scales to the space it's given (with a **Stage shape**, always letterboxed): **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
+| Page background | The colour around the page in a share link, embed or downloaded page. See-through to start with, so an embed never shows a dark box while it loads and resizes |
 | Hide sideways scrollbar | Off unless you tick it. When the project plays inside a frame (the Link for StudyDesk, an embedded share link or file), the page never shows a horizontal scrollbar. Opened in its own tab it scrolls as usual. Press **Update** in Share after changing it |
 | Hide up-down scrollbar | On to begin with. The frame grows to fit the project, so a vertical scrollbar would only flicker on and off while it resizes. Left as it starts, it comes back if nothing sizes the frame (the project stays taller than the frame for a second), so nothing is out of reach. Ticked on purpose, it stays hidden; unticked, the page scrolls as usual. Opened in its own tab it always scrolls. Press **Update** in Share after changing it |
 | Live collaboration | Off unless you turn it on. On, people who share the project see each other's cursors and changes as they happen; off, nothing extra is sent and the project is saved one person at a time. See [Live editing and saving](live-editing#live-collaboration) |
@@ -5797,7 +6261,10 @@ The files are named after the project (and the page, for pictures, Lottie and vi
 ## About the single HTML file
 - Big pictures go in as their [optimised copies](export#optimised-pictures).
 - Every file is inside it, so a lesson offered in lighter versions still sends all of them in the first download. See [Download size](download-size#what-the-player-loads-and-when).
-- Google fonts are copied into the file, so opening it never calls Google. If a font can't be fetched when you export, a message says so and that font loads from Google instead.
+- Google fonts load from this server, the same place as the editor, so the file stays small and opening it never calls Google. Opened with no network, text shows in a standard font instead.
+
+## About the project package
+A **Project package** (\`${PACKAGE_EXTENSION}\`) carries a copy of every Google font the project draws with, so it plays with no network. Importing a package links each font from this server again whenever the server has it, and leaves the copy out, so the project doesn't carry the font twice. A font the server can't give keeps its copy. If a font can't be fetched when you export, a message says so, and opened online it still loads from the server.
 
 ## Video, GIF and frames
 **Export → Video, GIF or frames…** turns one timeline of the open page into moving pictures you can put in a slide deck, an email or a lecture recording. It plays the timeline once through, from the start, and draws every frame at its exact time: the result is smooth however slow or busy your computer is, and it is the same drawing as **PNG image**, so a frame looks like the canvas with the playhead there.
@@ -5864,7 +6331,7 @@ At the top of the dialog a line says whether there is anything to look at first:
 ## Share link
 **Share → Share…**, under **More ways to share**, publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it). Links are long and random so they can't be guessed. **Copy** copies the link and **Open** opens it in a new tab.
 
-The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google. A message tells you if a font couldn't be fetched, and that font loads from Google instead.
+The page loads the project's Google fonts from this server, the same place as the editor, so viewers' browsers never call Google and the page stays small (the fonts used to be copied into it, which made a page several times bigger).
 
 ### Updating, reverting and turning off
 The link is a snapshot of the project when you published it.
@@ -5935,7 +6402,14 @@ player.timeline('Intro').play();
 player.goTo('Checkout', 'fade');
 player.setTheme('Dark');   // or null to follow the viewer
 player.setData('products', [...]);
-\`\`\``,
+\`\`\`
+
+## Testing it as a prototype
+A study page built for it can watch where people go and what they press, to see whether they find their way. Add \`?report=study\` to the share link (or the single HTML file's address), or post \`{ source: 'interactives-report', on: true }\` into the frame. The page around it then hears:
+- \`{ source: 'interactives-page', from, to, name }\` each time the page on show changes, with the pages' ids and the name you gave the new one (\`from\` is null for the first).
+- \`{ source: 'interactives-click', page, x, y, element }\` for every press, with \`x\` and \`y\` as shares (0 to 1) of the page's width and height, and \`element\` the id of the layer that does something when pressed, or null for a press on nothing that does anything.
+
+Without the flag nothing is sent, so learners never send any of it, and neither carries what anyone typed or any variable's value. From JavaScript it's \`player.setReporting(true)\` with \`studypage\` and \`studyclick\` events. A share link published before 20 Nov 2026 needs **Publish** again first.`,
   },
 
   // ---------------------------------------------------------------- together

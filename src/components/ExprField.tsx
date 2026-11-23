@@ -20,7 +20,7 @@ export const ExprLocals = createContext<{ locals?: string[]; self?: SceneNode; v
 const NAV_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'Home', 'End']);
 
 /** What the suggestions know about the open project, worked out only when a suggestion is asked for. */
-function envFor(locals: string[], self: SceneNode | undefined, values?: Record<string, unknown>): SuggestEnv | null {
+export function envFor(locals: string[], self: SceneNode | undefined, values?: Record<string, unknown>): SuggestEnv | null {
   const st = maybeStore()?.get();
   if (!st) return null;
   const project = st.project;

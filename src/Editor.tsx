@@ -1,5 +1,8 @@
 import { answerPreviewProgress, forgetPreviewCourse, forgetPreviewLearner, previewCourseHas, previewLearnerHas, usesCourseCollections } from './lib/preview-learner';
+import { PREVIEW_STORY_EVENT } from './panels/StoryPanel';
 import { parked } from './lib/parked';
+import { linkNames } from './lib/link-values';
+import { LinkValueField } from './components/LinkValueField';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
@@ -79,6 +82,7 @@ import { noteIfStale } from './lib/stale-build';
 import { primeStills, releaseStills } from './lib/still-cache';
 import { noteProjectDiagnostic, reportError, setProject, span, track } from './lib/analytics';
 import { observeStore } from './lib/usage';
+import { startPlatformRelay } from 'interactives-player';
 import { SHARE_FOR_REVIEW_EVENT, comments, openShareForReview, readNotices } from './lib/comments';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
@@ -504,6 +508,17 @@ function Workspace({ home }: { home: () => void }) {
   useDockSync();
   const z = useZoneSizes(widths);
   const [preview, setPreview] = useState(false);
+  //The Story panel's Preview from this line: Preview opens playing the story from there
+  const [storyFrom, setStoryFrom] = useState<{ chapter: string; line: string } | null>(null);
+  useEffect(() => {
+    const open = (e: Event) => {
+      setStoryFrom((e as CustomEvent<{ chapter: string; line: string }>).detail);
+      store().set({ previewPlaying: false });
+      setPreview(true);
+    };
+    window.addEventListener(PREVIEW_STORY_EVENT, open);
+    return () => window.removeEventListener(PREVIEW_STORY_EVENT, open);
+  }, []);
   // Someone new (they saw the first-run screen) opens their first project in Essentials, once. A template's checklist stays the tab that is open
   useEffect(() => void applyNewcomerEssentials(), []);
   // Fitted before the first paint (the canvas opens at its final zoom, not at 100% for a frame), and again a frame later in
@@ -559,7 +574,7 @@ function Workspace({ home }: { home: () => void }) {
       <DockZone zone="bottom" />
       <DockFloats />
       <DockDragLayer />
-      {preview && <PreviewModal onClose={() => setPreview(false)} />}
+      {preview && <PreviewModal storyFrom={storyFrom} onClose={() => (setPreview(false), setStoryFrom(null))} />}
       <CommandPalette />
       <ComponentPicker />
       {s.toast && <ToastView toast={s.toast} />}
@@ -1254,7 +1269,7 @@ function flowStart(project: { settings: { flows?: { id: string; artboardId: stri
   return f && project.artboards.some((a) => a.id === f.artboardId) ? f.artboardId : null;
 }
 
-export function PreviewModal({ onClose }: { onClose: () => void }) {
+export function PreviewModal({ onClose, storyFrom = null }: { onClose: () => void; storyFrom?: { chapter: string; line: string } | null }) {
   const project = useEditor((st) => st.project);
   const abId = useEditor((st) => st.activeArtboardId);
   const [html, setHtml] = useState<string | null>(null);
@@ -1292,6 +1307,10 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const t0 = useRef(performance.now());
   const [showVars, setShowVars] = useState(true);
   const [nonce, setNonce] = useState(0);
+  //The link values this run is opened with: the samples from Data > context to begin with, changed from the bar without touching
+  //the project (a reviewer can try every program, and the samples stay what the canvas shows)
+  const [previewLink, setPreviewLink] = useState<Record<string, string>>(() => ({ ...((project as Project).sampleLink ?? {}) }));
+  const [linkFields] = useState(() => linkNames(project as Project));
   //Which frame has loaded: a new one stays see-through until its page is in, so the empty frame's white never shows
   const [frameShown, setFrameShown] = useState(-1);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -1389,6 +1408,17 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
     w.postMessage({ target: 'interactives', type: 'simulateViewer', prefs: v === 'device' ? null : { dark: v === 'dark' || v === 'dark-contrast', contrast: v === 'contrast' || v === 'dark-contrast' } }, '*');
     w.postMessage({ target: 'interactives', type: 'setTheme', theme: t }, '*');
   };
+  // A new iframe runs everything from the start; the debug panel starts again with it
+  const restart = () => {
+    setNonce((n) => n + 1);
+    setTraces([]);
+    setLog([]);
+    setScriptErrors([]);
+    setSaid([]);
+    setDbg(null);
+    clearFlow();
+    t0.current = performance.now();
+  };
   const hasDrag = project.artboards.some((a) => {
     let found = false;
     walk(a.children, (n) => {
@@ -1402,14 +1432,14 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
     setBuildError(null);
     // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show,
     // opened with the sample link values on its address
-    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project), link: { ...(project.sampleLink ?? {}) } }).then(
+    standaloneHtml(storyFrom && project.story ? ({ ...project, story: { ...project.story, startAt: storyFrom } } as Project) : (project as Project), { startArtboardId: storyFrom && project.story?.stage ? project.story.stage : from === 'current' ? abId : (flowStart(project, from) ?? undefined), debug: true, accessibility, lessMotion, context: sampleContextFor(project as Project), link: Object.fromEntries(Object.entries(previewLink).filter(([, v]) => v !== '')) }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );
     return () => {
       live = false;
     };
-  }, [project, from, abId, nonce, accessibility, lessMotion]);
+  }, [project, from, abId, nonce, accessibility, lessMotion, storyFrom, previewLink]);
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow) return;
@@ -1463,6 +1493,14 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   }, [onClose]);
   const ab = getArtboard(project, from === 'current' ? abId : (flowStart(project, from) ?? project.settings.startArtboardId));
   const post = (name: string, value: unknown) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'setVariable', name, value }, '*');
+  // Video sites (YouTube, Vimeo, Panopto) can't play inside Preview's sandboxed frame, so this page draws them over it
+  useEffect(() => {
+    const f = frame.current;
+    if (!f || !html) return;
+    const relay = startPlatformRelay({ frame: f });
+    return () => relay.stop();
+  }, [html, nonce]);
+
   return (
     <div className={`modal-backdrop preview-backdrop${peek ? ' peek' : ''}`} onPointerDown={(e) => !peek && e.target === e.currentTarget && onClose()}>
       <div className="modal preview-modal" ref={modalRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Preview">
@@ -1578,6 +1616,25 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
               ))}
             </select>
           )}
+          {linkFields.length > 0 && (
+            <span className="preview-link" role="group" aria-label="Link values this run is opened with">
+              {linkFields.map((name) => (
+                <LinkValueField
+                  key={name}
+                  name={name}
+                  value={previewLink[name] ?? ''}
+                  choices={(project as Project).linkChoices?.[name]}
+                  onChange={(v) => {
+                    //Clear the page first, so the new frame only ever loads the page built with the new value (one that
+                    //loaded the old page and then swapped it never got its session answered, and stayed blank)
+                    setHtml(null);
+                    setPreviewLink((was) => ({ ...was, [name]: v }));
+                    restart();
+                  }}
+                />
+              ))}
+            </span>
+          )}
           {hasDrag && (
             <button
               className={`btn${hitAreas ? ' active' : ''}`}
@@ -1593,17 +1650,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           <div className="spacer" />
           <button
             className="btn"
-            onClick={() => {
-              // A new iframe runs everything from the start; the debug panel starts again with it
-              setNonce(nonce + 1);
-              setTraces([]);
-              setLog([]);
-              setScriptErrors([]);
-              setSaid([]);
-              setDbg(null);
-              clearFlow();
-              t0.current = performance.now();
-            }}
+            onClick={restart}
             title="Start again from the beginning (timelines, variables and all)"
           >
             Restart
@@ -1696,7 +1743,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           )}
           <div className={`preview-stage${embedSize ? ' embed-size' : ''}`} ref={stageBox}>
           {html && frameShown !== nonce && <BuildingSpinner project={project as Project} overlay />}
-          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={{ ...(embedSize ? { flex: 'none', width: Math.min(EMBED_MAX_WIDTH, room || EMBED_MAX_WIDTH, pageWidth ?? Infinity), height: askedHeight ?? undefined } : pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : {}), opacity: frameShown === nonce ? 1 : 0 }} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-downloads" srcDoc={html} onLoad={() => (setFrameShown(nonce), hitAreas && showHitAreas(true), applyTheme(), mediaSim !== 'works' && simulateMedia(mediaSim))} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <BuildingSpinner project={project as Project} />}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay; fullscreen; clipboard-write" style={{ ...(embedSize ? { flex: 'none', width: Math.min(EMBED_MAX_WIDTH, room || EMBED_MAX_WIDTH, pageWidth ?? Infinity), height: askedHeight ?? undefined } : pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : {}), opacity: frameShown === nonce ? 1 : 0 }} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-downloads allow-modals" srcDoc={html} onLoad={() => (setFrameShown(nonce), hitAreas && showHitAreas(true), applyTheme(), mediaSim !== 'works' && simulateMedia(mediaSim))} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <BuildingSpinner project={project as Project} />}
           </div>
         </div>
         {accessibility && screenReader && (

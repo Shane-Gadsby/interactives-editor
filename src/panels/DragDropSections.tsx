@@ -1,14 +1,51 @@
 import type { ReactNode } from 'react';
-import { walk, type Artboard, type Draggable, type DropZone, type Project, type SceneNode, variableLabelAndName } from 'interactives-player';
+import { uid, walk, type Artboard, type Draggable, type DropZone, type Project, type SceneNode, type ZoneGroup, variableLabelAndName } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { usePrefs } from '../lib/prefs';
 import { addVariableOption, withQuickAdd } from '../lib/quick-add';
+import { ExprField } from '../components/ExprField';
 
 /** Tags as people type them: words separated by commas. */
 const tagsText = (tags?: string[]) => (tags ?? []).join(', ');
 const parseTags = (text: string) => [...new Set(text.split(',').map((t) => t.trim()).filter(Boolean))];
+
+/** A draggable's own values as lines of `name: value`, and back (numbers and true/false come back as themselves). */
+const dataText = (data?: Draggable['data']) => Object.entries(data ?? {}).map(([k, v]) => `${k}: ${v}`).join('\n');
+function parseData(text: string): Draggable['data'] {
+  const out: NonNullable<Draggable['data']> = {};
+  for (const line of text.split('\n')) {
+    const m = /^\s*([A-Za-z_$][\w$]*)\s*[:=]\s*(.*?)\s*$/.exec(line);
+    if (!m) continue;
+    const raw = m[2];
+    out[m[1]] = raw === 'true' ? true : raw === 'false' ? false : raw !== '' && Number.isFinite(Number(raw)) ? Number(raw) : raw;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** The names of the number values the page's draggables carry, for what a zone or group counts. */
+function numberKeys(ab: Artboard): string[] {
+  const keys = new Set<string>();
+  walk(ab.children, (n) => {
+    for (const [k, v] of Object.entries(n.draggable?.data ?? {})) if (typeof v === 'number') keys.add(k);
+  });
+  return [...keys];
+}
+
+/** Layers, or one of those values: what a capacity counts. The one set now stays in the list even when no layer has it yet. */
+const countOptions = (ab: Artboard, current?: string) => [{ value: '', label: 'layers' }, ...[...new Set([...numberKeys(ab), ...(current ? [current] : [])])].map((k) => ({ value: k, label: k }))];
+
+/** Change the artboard's zone groups. */
+const setGroups = (abId: string, change: (list: ZoneGroup[]) => void) =>
+  store().update((d) => {
+    const a = d.artboards.find((x) => x.id === abId);
+    if (!a) return;
+    const list = a.zoneGroups ?? [];
+    change(list);
+    if (list.length) a.zoneGroups = list;
+    else delete a.zoneGroups;
+  });
 
 /** Settings with the empty ones left out, so a layer only carries what was changed. */
 function tidy<T extends object>(o: T): T {
@@ -27,7 +64,7 @@ function placement(n: SceneNode, ab: Artboard): string | null {
     const c = x as SceneNode & { repeat?: { items?: string } | null; children?: SceneNode[] };
     if (c.repeat?.items?.trim() && c.children?.length) walk([c.children[0]], (t) => void repeated.add(t.id));
   });
-  if (repeated.has(n.id)) return 'Layers made by a repeater cannot be dragged (every copy would move). Use a layer outside the repeater instead.';
+  if (repeated.has(n.id)) return 'Layers made by a repeater cannot be dragged this way (every copy would move). Tick Reorder by dragging, or Takes items from, on the repeater instead.';
   const p = parent as SceneNode | null;
   if (p && p.type === 'frame' && p.layout && n.layoutItem?.position !== 'ignore') return 'This layer sits in an auto layout flow, which puts it back where it belongs. Set its Position (Layout section) to Ignore to drag it.';
   return null;
@@ -74,7 +111,15 @@ const SNAP: Choice<NonNullable<DropZone['snap']>> = [
   { value: 'none', label: 'Stay where it was dropped' },
   { value: 'center', label: 'Centre in the zone' },
   { value: 'topLeft', label: 'Top left corner of the zone' },
+  { value: 'fill', label: 'Fill the zone (take its size and corners)' },
 ];
+
+/** The drop zones on the page, id to name. */
+function zoneNames(ab: Artboard): Map<string, string> {
+  const out = new Map<string, string>();
+  walk(ab.children, (x) => void (x.dropZone && out.set(x.id, x.name)));
+  return out;
+}
 
 function layersOf(ab: Artboard, except: string[]): { value: string; label: string }[] {
   const out: { value: string; label: string }[] = [];
@@ -191,6 +236,29 @@ function DraggableSection({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artb
               />
             </>
           )}
+          <TextField
+            label="Only these zones"
+            title="The drop zones this layer may go in, by name, separated by commas, whatever their tags say: a piece that may move within its column but not out of it. Empty: any zone that takes its tags"
+            value={(d!.onlyZones ?? []).map((id) => zoneNames(ab).get(id) ?? id).join(', ')}
+            placeholder="Any zone"
+            commitOnBlur
+            onChange={(v) => {
+              const byName = new Map([...zoneNames(ab)].map(([id, name]) => [name.toLowerCase(), id]));
+              set({ onlyZones: parseTags(v).map((t) => byName.get(t.toLowerCase()) ?? t) });
+            }}
+          />
+          <TextField
+            label="Its own values"
+            title="Values of its own, one a line as name: value (units: 2, code: MSC6100). A zone or zone group can count a number one instead of layers, a zone's Takes it when reads item.data.units, and sum('Year 1', 'units') adds them up in any formula"
+            value={dataText(d!.data)}
+            placeholder={'units: 2\ncode: MSC6100'}
+            multiline
+            mono
+            rows={2}
+            commitOnBlur
+            onChange={(v) => set({ data: parseData(v) })}
+          />
+          <CheckField label="Stays behind when picked up" title="Keeps its place in the stack while it is held, instead of coming up over everything else on the page" value={!!d!.stayBehind} onChange={(v) => set({ stayBehind: v ? true : undefined })} />
           <CheckField label="Do not announce" title="Screen readers are told when the layer is picked up, moved and dropped. Tick this to say it yourself with Announce nodes" value={!!d!.silent} onChange={(v) => set({ silent: v ? true : undefined })} />
           {warn && <div className="drag-warn small">{warn}</div>}
           <Hint>
@@ -237,7 +305,14 @@ function DropZoneSection({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artbo
             onChange={(v) => set({ accepts: parseTags(v) })}
           />
           <Row>
-            <NumberField label="Holds" title="How many layers fit in the zone. 0 is no limit" value={z!.capacity ?? 0} min={0} onChange={(v) => set({ capacity: v > 0 ? Math.round(v) : undefined })} />
+            <NumberField label="Holds" title="How many layers fit in the zone, or how much of a value they carry (units). 0 is no limit" value={z!.capacity ?? 0} min={0} onChange={(v) => set({ capacity: v > 0 ? (z!.capacityBy ? v : Math.round(v)) : undefined })} />
+            <SelectField<string>
+              title="What Holds counts: layers, or one of the values the draggable layers carry (their Its own values), added up. A layer without that value counts as 1"
+              label="of"
+              value={z!.capacityBy ?? ''}
+              options={countOptions(ab, z!.capacityBy)}
+              onChange={(v) => set({ capacityBy: v || undefined })}
+            />
           </Row>
           {(z!.capacity ?? 0) > 0 && (
             <SelectField<NonNullable<DropZone['whenFull']>>
@@ -249,6 +324,38 @@ function DropZoneSection({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artbo
             />
           )}
           <SelectField<NonNullable<DropZone['snap']>> label="Dropped layers" title="Where a layer settles once the zone takes it. Layers sent by the keyboard go to the centre when this is left alone" value={z!.snap ?? 'none'} options={SNAP} onChange={(v) => set({ snap: v === 'none' ? undefined : v })} />
+          <ExprField
+            label="Takes it when"
+            title="A formula that has to be true for the zone to take a layer: item.name, item.tags, item.data (its own values), zone.name, zone.count, zone.total (what Holds counts, without the held layer), zone.groups. Give a text instead of false and that text is the reason, read out and handed to On refused. Zones that would take what is held are the ones marked as places it could go"
+            value={z!.acceptsWhen ?? ''}
+            placeholder='e.g. zone.count < 3 || "This trimester is full"'
+            locals={['item', 'zone']}
+            commitOnBlur
+            onChange={(v) => set({ acceptsWhen: v.trim() || undefined })}
+          />
+          <CheckField
+            label="Arrange what it holds"
+            title="Lays the layers in the zone out in rows that wrap, in the order they came, and grows or shrinks the zone to fit them. A list of cards that closes up when one is taken out"
+            value={!!z!.arrange}
+            onChange={(v) => set({ arrange: v ? { gap: 8 } : undefined })}
+          />
+          {z!.arrange && (
+            <Row>
+              <NumberField label="Gap" title="Space between the layers and round the edge" suffix="px" value={z!.arrange.gap} min={0} onChange={(v) => set({ arrange: { ...z!.arrange!, gap: Math.max(0, v) } }, `zone-gap-${ids.join(',')}`)} />
+              <NumberField label="Least rows" title="The rows an empty zone keeps room for, so there is still somewhere to drop" value={z!.arrange.minRows ?? 1} min={0} onChange={(v) => set({ arrange: { ...z!.arrange!, minRows: Math.max(0, Math.round(v)) } })} />
+              <SelectField<'arrival' | 'name'>
+                label="Order"
+                value={z!.arrange.order ?? 'arrival'}
+                options={[
+                  { value: 'arrival', label: 'As they came' },
+                  { value: 'name', label: 'By name' },
+                ]}
+                onChange={(v) => set({ arrange: { ...z!.arrange!, order: v === 'arrival' ? undefined : v } })}
+              />
+              <CheckField label="Fit its height" title="The zone grows and shrinks with what it holds" value={z!.arrange.hug !== false} onChange={(v) => set({ arrange: { ...z!.arrange!, hug: v ? undefined : false } })} />
+            </Row>
+          )}
+          <ZoneGroupsField ab={ab} groups={z!.groups ?? []} set={(groups) => set({ groups })} />
           <CheckField label="Outline when a layer is over it" title="Draws an outline round the zone while a layer it takes is over it (and a fainter one while something is being dragged). Untick if the artwork shows it already" value={z!.highlight !== false} onChange={(v) => set({ highlight: v ? undefined : false })} />
           {single && (
             <>
@@ -274,5 +381,73 @@ function DropZoneSection({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artbo
         </>
       )}
     </Section>
+  );
+}
+
+/**
+ * The page's zone groups, with this zone's own in them ticked. A group is shared by its zones, so its name, limit and words
+ * are edited here from any of them.
+ */
+function ZoneGroupsField({ ab, groups, set }: { ab: Artboard; groups: string[]; set: (groups: string[]) => void }) {
+  const list = ab.zoneGroups ?? [];
+  const edit = (id: string, patch: Partial<ZoneGroup>) =>
+    setGroups(ab.id, (l) => {
+      const g = l.find((x) => x.id === id);
+      if (!g) return;
+      Object.assign(g, patch);
+      for (const k of Object.keys(patch) as (keyof ZoneGroup)[]) if (g[k] === undefined) delete g[k];
+    });
+  const add = () => {
+    const id = uid('zg');
+    let n = list.length + 1;
+    while (list.some((g) => g.name === `Group ${n}`)) n++;
+    setGroups(ab.id, (l) => void l.push({ id, name: `Group ${n}` }));
+    set([...groups, id]);
+  };
+  return (
+    <div className="zone-groups">
+      <div className="small">Zone groups</div>
+      {list.map((g) => {
+        const inIt = groups.includes(g.id);
+        const members = (() => {
+          let c = 0;
+          walk(ab.children, (n) => void (n.dropZone?.groups?.includes(g.id) && c++));
+          return c;
+        })();
+        return (
+          <div key={g.id} className="zone-group">
+            <CheckField
+              label={`${g.name} (${members} ${members === 1 ? 'zone' : 'zones'})`}
+              title={`Count this zone in ${g.name}: a drop that would take the group over its limit is refused`}
+              value={inIt}
+              onChange={(v) => set(v ? [...groups, g.id] : groups.filter((x) => x !== g.id))}
+            />
+            {inIt && (
+              <div className="zone-group-edit">
+                <TextField label="Name" title="What it's called in formulas (count('Year 1'), sum('Year 1', 'units')) and in what the learner hears" value={g.name} commitOnBlur onChange={(v) => v.trim() && edit(g.id, { name: v.trim() })} />
+                <Row>
+                  <NumberField label="Holds" title="The most the zones in the group hold between them: layers, or the total of a value. 0 is no limit (it's still there to count)" value={g.capacity ?? 0} min={0} onChange={(v) => edit(g.id, { capacity: v > 0 ? v : undefined })} />
+                  <SelectField<string> label="of" title="What the group counts: layers, or one of the draggables' own values added up" value={g.capacityBy ?? ''} options={countOptions(ab, g.capacityBy)} onChange={(v) => edit(g.id, { capacityBy: v || undefined })} />
+                </Row>
+                <TextField
+                  label="When full, say"
+                  title="What the learner hears when a drop would take the group over. {name}, {capacity} and {total} are filled in"
+                  value={g.fullText ?? ''}
+                  placeholder="{name} is full."
+                  commitOnBlur
+                  onChange={(v) => edit(g.id, { fullText: v.trim() || undefined })}
+                />
+                <button className="link-btn small" onClick={() => setGroups(ab.id, (l) => void l.splice(l.findIndex((x) => x.id === g.id), 1))} title={`Delete ${g.name} from the page. Its zones stay as they are`}>
+                  Delete this group
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <button className="btn small" onClick={add} title="A new group of zones counted together (a year of trimesters, a shelf), with this zone in it">
+        + New zone group
+      </button>
+    </div>
   );
 }

@@ -9,6 +9,8 @@ import { addStepsExample } from './steps';
 import { lookFor, starterThemes } from './themes';
 import { applyTidy } from './artboard-tidy';
 import { addCreditsButton } from './starter-credits';
+import { visualNovel } from './story-template';
+import { puzzleMystery } from './mystery-template';
 
 //The starters use the starter theme tokens: base() gives each project the Light, Dark and High contrast themes and picks these up.
 let L = lookFor(undefined);
@@ -391,6 +393,8 @@ export const STARTERS: Starter[] = [
   { key: 'sorting', name: 'Drag and drop sorting', description: 'Four items to drag into two groups, with feedback for a right and a wrong drop, a count and a Start again button.', tags: ['drag and drop', 'assessment'], build: sorting },
   { key: 'branching-story', name: 'Branching story', description: 'An opening scene with two choices that lead to different endings, each on its own artboard.', tags: ['scenarios', 'artboards'], build: branching },
   { key: 'timeline-intro', name: 'Animated timeline intro', description: 'A title, a line and a bar that animate in on a timeline, with a Replay button.', tags: ['animation', 'timeline'], build: timelineIntro },
+  { key: 'visual-novel', name: 'Visual novel', description: 'A story written as text, played on a stage with a dialogue box, characters and choices, with a title screen, saves, history, settings and extras.', tags: ['story', 'scenarios'], build: visualNovel },
+  { key: 'puzzle-mystery', name: 'Puzzle mystery', description: 'A case to solve: a story with a room to search for clues and hidden hint coins, three puzzles with hints, a map and a puzzle index.', tags: ['story', 'puzzles'], build: puzzleMystery },
 ];
 
 export const starterByKey = (key: string): Starter | undefined => STARTERS.find((s) => s.key === key);

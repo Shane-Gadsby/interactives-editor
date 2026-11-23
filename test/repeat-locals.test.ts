@@ -24,7 +24,10 @@ describe('repeatLocals', () => {
   });
   it('works nested repeaters out from the outside in', () => {
     const { p, ab } = project();
-    expect(repeatLocals(p, ab, 'pet')?.values).toEqual({ item: 'cat', index: 0 });
+    const r = repeatLocals(p, ab, 'pet');
+    //the card around it is `outer`, as the player gives it
+    expect(r?.values).toEqual({ item: 'cat', index: 0, outer: { item: { name: 'Ann', pets: ['cat', 'dog'] }, index: 0 } });
+    expect(r?.locals).toContain('outer');
   });
   it('is null outside a repeater, and for a repeater\'s other children', () => {
     const { p, ab } = project();

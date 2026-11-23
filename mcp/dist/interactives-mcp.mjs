@@ -391,9 +391,9 @@ const SPECS = [
     label: "On drop",
     category: "event",
     summary: "Runs when a draggable layer is let go.",
-    details: "A drop with the keyboard or a tap counts too. Pick what to react to: dropped in a zone that took it, dropped on a zone that refused it (wrong tag, or full), or dropped where there is no zone. `event.layer`, `event.zone` (the zone it is in now), `event.from` (where it was), `event.accepted`, `event.reason` (tags or full), `event.swapped` (the layer a swap sent back) and `event.tags` are available.",
+    details: "A drop with the keyboard or a tap counts too. Pick what to react to: dropped in a zone that took it, dropped on a zone that refused it (wrong tag, or full), or dropped where there is no zone. `event.layer`, `event.zone` (the zone it is in now), `event.from` (where it was), `event.accepted`, `event.reason` (tags or full), `event.swapped` (the layer a swap sent back) and `event.tags` are available. `event.reason` is rule, and `event.why` the words of the zone, when its Accepts when said no.",
     group: "Dragging",
-    gives: ["event.layer", "event.zone", "event.from", "event.accepted", "event.reason", "event.swapped", "event.tags"],
+    gives: ["event.layer", "event.zone", "event.from", "event.accepted", "event.reason", "event.why", "event.swapped", "event.tags"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -412,6 +412,33 @@ const SPECS = [
         default: "accepted"
       }
     ]
+  },
+  {
+    kind: "event.dragRefused",
+    label: "On refused",
+    category: "event",
+    summary: "Runs when a drop zone says no to a layer let go on it, with the reason why.",
+    details: 'The reason is `event.why`: the words the zone\'s Accepts when gave ("STA6200 runs in T1 and T3"), or nothing for a plain no. `event.reason` is rule, tags or full. Put a Show toast with `event.why` after it and the person sees why. The layer has already gone back.',
+    group: "Dragging",
+    gives: ["event.layer", "event.zone", "event.from", "event.reason", "event.why", "event.tags"],
+    outputs: OUT,
+    hasInput: false,
+    params: [
+      { key: "target", label: "Drop zone", type: "node", placeholder: "Any drop zone", help: "Leave empty for every drop zone" },
+      { key: "layer", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty for every draggable layer" }
+    ]
+  },
+  {
+    kind: "event.listDrop",
+    label: "On list drop",
+    category: "event",
+    summary: "Runs when a copy of a list is dragged to another place in it or to another list.",
+    details: "The list variable has already changed. `event.item` is the item that moved, `event.from` and `event.to` the names of the lists, `event.index` its new place (from 0), `event.fromIndex` where it was, and `event.moved` is true when it went to another list.",
+    group: "Dragging",
+    gives: ["event.item", "event.from", "event.to", "event.index", "event.fromIndex", "event.moved"],
+    outputs: OUT,
+    hasInput: false,
+    params: [{ key: "list", label: "Into list", type: "node", placeholder: "Any list", help: "A repeater that items are dragged into. Empty: every one" }]
   },
   {
     kind: "event.dragEnd",
@@ -993,6 +1020,125 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.sketchUndo",
+    label: "Undo a stroke",
+    category: "action",
+    summary: "Takes back the last stroke or clear on a sketch pad.",
+    group: "Layers and looks",
+    outputs: [
+      { id: "out", label: "Done" },
+      { id: "none", label: "Nothing to undo" }
+    ],
+    hasInput: true,
+    params: [{ key: "layer", label: "Sketch pad", type: "node", help: "A rectangle with Sketch pad ticked" }]
+  },
+  {
+    kind: "action.sketchRedo",
+    label: "Redo a stroke",
+    category: "action",
+    summary: "Puts back what Undo a stroke last took away on a sketch pad.",
+    group: "Layers and looks",
+    outputs: [
+      { id: "out", label: "Done" },
+      { id: "none", label: "Nothing to redo" }
+    ],
+    hasInput: true,
+    params: [{ key: "layer", label: "Sketch pad", type: "node", help: "A rectangle with Sketch pad ticked" }]
+  },
+  {
+    kind: "action.sketchClear",
+    label: "Clear a sketch pad",
+    category: "action",
+    summary: "Rubs out everything drawn on a sketch pad, which Undo a stroke can bring back.",
+    group: "Layers and looks",
+    outputs: [{ id: "out", label: "Next" }],
+    hasInput: true,
+    params: [{ key: "layer", label: "Sketch pad", type: "node", help: "A rectangle with Sketch pad ticked" }]
+  },
+  {
+    kind: "action.tableAdd",
+    label: "Add a row to a shared table",
+    category: "action",
+    summary: "Adds a row to a shared table everyone sees: a name on a sign-up sheet, a card on a board.",
+    details: "Only the fields the table has are kept. The server checks who may add and the limits (rows per person, per slot, the table's size); a refusal goes on from Not done with `event.problem` (not-allowed, per-person, slot-full, full, busy). The table's value is the new table either way.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Done" },
+      { id: "refused", label: "Not done" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "source", label: "Shared table", type: "data", help: "A data source set to Shared table" },
+      { key: "values", label: "Values", type: "expr", default: "{ name: context.firstName }", help: "The row: { field: value, ... }" }
+    ]
+  },
+  {
+    kind: "action.tableChange",
+    label: "Change a row of a shared table",
+    category: "action",
+    summary: "Changes some fields of one row of a shared table, if the table's rules let this person.",
+    details: "Row is the row itself (`item` in a repeater of the table's rows) or its id. A refusal goes on from Not done with `event.problem`.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Done" },
+      { id: "refused", label: "Not done" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "source", label: "Shared table", type: "data" },
+      { key: "row", label: "Row", type: "expr", default: "item", help: "The row, or its id" },
+      { key: "values", label: "Values", type: "expr", default: "{ }", help: "The fields to change: { field: value, ... }" }
+    ]
+  },
+  {
+    kind: "action.tableRemove",
+    label: "Take a row out of a shared table",
+    category: "action",
+    summary: "Takes one row out of a shared table, if the table's rules let this person.",
+    details: "Row is the row itself (`item` in a repeater of the table's rows) or its id. A refusal goes on from Not done with `event.problem`.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Done" },
+      { id: "refused", label: "Not done" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "source", label: "Shared table", type: "data" },
+      { key: "row", label: "Row", type: "expr", default: "item", help: "The row, or its id" }
+    ]
+  },
+  {
+    kind: "action.saveSetup",
+    label: "Save setup",
+    category: "action",
+    summary: "Keeps the values of the variables marked Part of the setup for everyone who opens this setup.",
+    details: "For an app set up where it sits: the tiles, the cards or a picture the people who look after it chose. Only the project's owner, its collaborators, power users and staff can save; anyone else goes on from Not saved, with `event.problem`. Everyone who opens the setup afterwards starts with these values. Put it on a Save button on the app's editing page, shown when `context.canEdit`.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Saved" },
+      { id: "failed", label: "Not saved" }
+    ],
+    hasInput: true,
+    params: []
+  },
+  {
+    kind: "action.respond",
+    label: "Send a response",
+    category: "action",
+    summary: "Files what a person did as one row of your Responses table: answers, choices, where cards went.",
+    details: "Values is an object of named values (`{ q1: answer1, mood: mood }`) or a list, such as a card sort's placements (`cards.map(c => ({ card: c.name, group: c.group }))`). Each response is kept under the person, the time and the course, with their name only when Project settings > Responses says With names (otherwise a code that is the same for them every time). See them in the Responses tab of Results, and download them as CSV (a row per response, or a row per item of a list in it) or JSON. Needs the project shared to StudyDesk; in Preview and a downloaded file they are kept in the browser. Continues from Sent, or Not sent when there is nowhere to send it or it was refused.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Sent" },
+      { id: "none", label: "Not sent" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "set", label: "Kind of response", type: "text", default: "responses", placeholder: "e.g. card-sort", help: "A name for this kind of response, so one app can collect two kinds and download them apart" },
+      { key: "values", label: "Values", type: "expr", default: "{ answer: answer }", help: "What to keep: { name: value, ... }, or a list of records" }
+    ]
+  },
+  {
     kind: "action.sharedAdd",
     label: "Add to shared responses",
     category: "action",
@@ -1445,8 +1591,8 @@ const SPECS = [
     kind: "action.saveFile",
     label: "Download a file",
     category: "action",
-    summary: "Offers the learner a text file to save, such as a report, a CSV or notes.",
-    details: "Built here and handed to the page around the project, which saves it after a tap. Works in any project, no microphone or camera needed. Text only, up to 2 MB (a web page with pictures in it, 16 MB).",
+    summary: "Offers the learner a file to save: a report, a CSV, notes, or a picture or PDF of a layer.",
+    details: "Built here and handed to the page around the project, which saves it after a tap. Works in any project, no microphone or camera needed. Text only, up to 2 MB (a web page with pictures in it, 16 MB). A picture or a PDF of a layer is the layer as it is on screen, with an optional footer, and is saved straight away. Characters a file name can't hold (a colon, a slash) are replaced.",
     group: "Results and data",
     outputs: OUT,
     hasInput: true,
@@ -1462,10 +1608,169 @@ const SPECS = [
           { value: "text/csv", label: "CSV (.csv)" },
           { value: "application/json", label: "JSON (.json)" },
           { value: "text/markdown", label: "Markdown (.md)" },
-          { value: "text/html", label: "Web page (.html)" }
+          { value: "text/html", label: "Web page (.html)" },
+          { value: "image/png", label: "Picture of a layer (.png)" },
+          { value: "application/pdf", label: "PDF of a layer (.pdf)" }
         ],
         default: "text/plain"
+      },
+      { key: "layer", label: "Layer", type: "node", placeholder: "The whole page", help: "The layer to save as it is on screen now. Empty: the page. Layers ticked Not in downloads are left out", showIf: { key: "mime", values: ["image/png", "application/pdf"] } },
+      {
+        key: "page",
+        label: "Page size",
+        type: "select",
+        options: [
+          { value: "layer", label: "The size of the layer" },
+          { value: "a4-landscape", label: "A4 landscape" },
+          { value: "a4-portrait", label: "A4 portrait" }
+        ],
+        default: "layer",
+        showIf: { key: "mime", values: ["application/pdf"] }
+      },
+      { key: "footerLeft", label: "Footer, left", type: "expr", default: "", placeholder: "context.displayName", help: "A line at the foot of the page, on the left. Empty: no footer", showIf: { key: "mime", values: ["image/png", "application/pdf"] } },
+      { key: "footerRight", label: "Footer, right", type: "expr", default: "", placeholder: 'today("d mmmm yyyy")', help: "The same line, on the right", showIf: { key: "mime", values: ["image/png", "application/pdf"] } }
+    ]
+  },
+  {
+    kind: "action.picture",
+    label: "Picture of a layer",
+    category: "action",
+    summary: "Makes a picture of a layer or the page as it is now, to download or keep in a variable.",
+    details: "Kept, the picture goes in a text variable as a data address: bind an image layer's picture to it to show it, and save the variable as user data to keep it for the person (pictures up to about 1 MB). Layers ticked Not in downloads are left out. Continues from Failed when the picture could not be made.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Done" },
+      { id: "failed", label: "Failed" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "layer", label: "Layer", type: "node", placeholder: "The whole page" },
+      {
+        key: "do",
+        label: "Then",
+        type: "select",
+        options: [
+          { value: "download", label: "Download it" },
+          { value: "keep", label: "Keep it in a variable" }
+        ],
+        default: "download"
+      },
+      { key: "name", label: "File name", type: "expr", default: '"picture"', help: "Without the extension", showIf: { key: "do", values: ["download"] } },
+      { key: "variable", label: "Keep it in", type: "variable", showIf: { key: "do", values: ["keep"] } },
+      { key: "scale", label: "Sharpness", type: "select", options: [{ value: "1", label: "As on screen" }, { value: "2", label: "Twice (for print)" }], default: "2" }
+    ]
+  },
+  {
+    kind: "action.copy",
+    label: "Copy to clipboard",
+    category: "action",
+    summary: "Puts text on the clipboard, for a Copy button beside a code, a link or a result.",
+    details: "Put it on a click: browsers only let a page copy when the person has just pressed something. Continues from Copied, or from Not copied when the page around the project refuses (an old embed without clipboard access), so you can show the text to copy by hand instead.",
+    group: "Code and messages",
+    outputs: [
+      { id: "out", label: "Copied" },
+      { id: "failed", label: "Not copied" }
+    ],
+    hasInput: true,
+    params: [{ key: "text", label: "Text", type: "expr", default: "", placeholder: "code", help: 'What to copy, e.g. a variable, or "Your code is " + code' }]
+  },
+  {
+    kind: "action.openFile",
+    label: "Open a file",
+    category: "action",
+    summary: "Asks the person for a CSV, JSON or text file from their device and puts it in a variable.",
+    details: "Put it on a click: the browser only opens its file chooser for one. A CSV or TSV becomes a list with a row per line, keyed by the first row; JSON becomes its value; anything else stays text. Up to 2 MB. Nothing is sent anywhere: the file is read in the page. Continues from Opened, or from Not opened when they cancel or the file is too big.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Opened" },
+      { id: "none", label: "Not opened" }
+    ],
+    hasInput: true,
+    params: [
+      {
+        key: "kind",
+        label: "Accepts",
+        type: "select",
+        options: [
+          { value: "any", label: "CSV, JSON or text" },
+          { value: "csv", label: "CSV" },
+          { value: "json", label: "JSON" },
+          { value: "text", label: "Text" }
+        ],
+        default: "any"
+      },
+      { key: "variable", label: "Put it in", type: "variable", help: "A list variable for a CSV, any variable for the rest" },
+      { key: "nameVariable", label: "File name into (optional)", type: "variable", help: "A text variable that gets the file's name" }
+    ]
+  },
+  {
+    kind: "action.fullscreen",
+    label: "Full screen",
+    category: "action",
+    summary: "Fills the whole screen with the project, or comes back out.",
+    details: "Put it on a click: browsers only go full screen for one. The viewer can always leave with Escape. `fullscreen` in a formula is true while it is, for a button that says Enter or Leave. Continues from Not allowed when the page around the project does not let it go full screen.",
+    group: "Navigation",
+    outputs: [
+      { id: "out", label: "Done" },
+      { id: "failed", label: "Not allowed" }
+    ],
+    hasInput: true,
+    params: [
+      {
+        key: "op",
+        label: "Do",
+        type: "select",
+        options: [
+          { value: "toggle", label: "Switch between the two" },
+          { value: "enter", label: "Go full screen" },
+          { value: "exit", label: "Leave full screen" }
+        ],
+        default: "toggle"
       }
+    ]
+  },
+  {
+    kind: "action.print",
+    label: "Print",
+    category: "action",
+    summary: "Opens the browser's print dialog for the page, where the person can also save it as a PDF.",
+    details: "It prints what is on the page as it is now. For a file of one layer, use Download a file instead. Continues from Not allowed when the page around the project does not allow printing.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Opened" },
+      { id: "failed", label: "Not allowed" }
+    ],
+    hasInput: true,
+    params: []
+  },
+  {
+    kind: "action.sendData",
+    label: "Send to a web address",
+    category: "action",
+    summary: "Sends a value to a web address as JSON, and keeps the answer.",
+    details: "For a form that goes to your own service, a webhook or an API. It keeps to the hosts the project may load data from (Project settings, Allowed data hosts), never sends the viewer's cookies or logins, and gives up after 15 seconds. Continues from Sent when the address answers with success, and from Failed otherwise; the answer goes in the variable either way, and `event.status` holds the HTTP status.",
+    group: "Results and data",
+    outputs: [
+      { id: "out", label: "Sent" },
+      { id: "failed", label: "Failed" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "url", label: "Address", type: "expr", default: '"https://"', help: 'An https address, e.g. "https://example.com/api/answers"' },
+      {
+        key: "method",
+        label: "Method",
+        type: "select",
+        options: [
+          { value: "POST", label: "POST (add)" },
+          { value: "PUT", label: "PUT (replace)" },
+          { value: "PATCH", label: "PATCH (change)" },
+          { value: "DELETE", label: "DELETE" }
+        ],
+        default: "POST"
+      },
+      { key: "body", label: "Value", type: "expr", default: "{ answer: answer }", help: "Sent as JSON: a variable, a list, or { name: value, ... }" },
+      { key: "variable", label: "Answer into (optional)", type: "variable", help: "What the address sends back" }
     ]
   },
   {
@@ -1608,8 +1913,319 @@ const SPECS = [
     outputs: OUT,
     hasInput: true,
     params: [
-      { key: "toast", label: "Toast", type: "artboard", help: "The toast page to show" },
+      { key: "toast", label: "Toast", type: "artboard", overlayKind: "toast", help: "The toast page to show" },
       { key: "text", label: "Message", type: "expr", default: "", placeholder: '"Plan saved"', help: 'The words it says this time, as an expression, e.g. "Saved " + name. Empty leaves the words the toast already has' }
+    ]
+  },
+  {
+    kind: "action.celebrate",
+    label: "Celebrate",
+    category: "action",
+    summary: "Throws a short burst of confetti or stars over the page, with words if you like.",
+    details: "It never takes a click or the focus, so the next button works straight away, and it clears itself in under two seconds. A viewer whose device asks for less motion sees a still badge with the same words instead. The words are read out politely to screen readers. Pick a sound to play with it.",
+    group: "Layers and looks",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      {
+        key: "look",
+        label: "Look",
+        type: "select",
+        options: [
+          { value: "confetti", label: "Confetti" },
+          { value: "stars", label: "Stars" }
+        ],
+        default: "confetti"
+      },
+      { key: "text", label: "Words", type: "expr", default: "", placeholder: '"Well done!"', help: "Shown on a badge in the middle and read out. Empty: no badge" },
+      { key: "asset", label: "Sound", type: "asset", help: "Optional. Played with it" },
+      { key: "colours", label: "Colours", type: "select", options: [{ value: "party", label: "Party colours" }, { value: "theme", label: "The project's accent colours" }], default: "party" },
+      { key: "wait", label: "Wait for it to finish", type: "boolean", default: false, help: "Off, the next node runs straight away" }
+    ]
+  },
+  {
+    kind: "event.storyEnd",
+    label: "On story end",
+    category: "event",
+    summary: "Runs when the story reaches an -> end line, with the ending it named.",
+    details: 'The ending is in event.ending ("Joined the club" for -> end Joined the club, empty for a plain -> end). Wire it to a page of endings, or to Go to page for the title screen. The story keeps showing its last line until something moves on.',
+    group: "Story",
+    gives: ["event.ending"],
+    outputs: OUT,
+    hasInput: false,
+    params: []
+  },
+  {
+    kind: "event.storyLine",
+    label: "On story line",
+    category: "event",
+    summary: "Runs as each line of the story comes up, or only someone's lines.",
+    details: "event.speaker is who says it (empty for narration), event.text the words and event.line the line's hidden id. For a reaction the script doesn't need to know about: a portrait in a corner, a count of lines read, a sound.",
+    group: "Story",
+    gives: ["event.speaker", "event.text", "event.line"],
+    outputs: OUT,
+    hasInput: false,
+    params: [{ key: "speaker", label: "Speaker", type: "text", placeholder: "anyone", help: "Only this person's lines (as the script names them). Empty: every line" }]
+  },
+  {
+    kind: "event.storyChoice",
+    label: "On story choice",
+    category: "event",
+    summary: "Runs when the reader picks one of the story's choices.",
+    details: "event.number is which one (from 1, among those on show) and event.choice its words.",
+    group: "Story",
+    gives: ["event.number", "event.choice"],
+    outputs: OUT,
+    hasInput: false,
+    params: []
+  },
+  {
+    kind: "event.storyScene",
+    label: "On story scene",
+    category: "event",
+    summary: "Runs when the story reaches a scene (a # line), or one scene by its title.",
+    details: "event.scene is the scene's title and event.chapter the chapter's name.",
+    group: "Story",
+    gives: ["event.scene", "event.chapter"],
+    outputs: OUT,
+    hasInput: false,
+    params: [{ key: "scene", label: "Scene", type: "text", placeholder: "any scene", help: "Only this scene. Empty: every scene" }]
+  },
+  {
+    kind: "action.storyStart",
+    label: "Start the story",
+    category: "action",
+    summary: "Starts the story from the top (a New game button), or from a scene or chapter you name.",
+    details: "Goes to the story's stage page if it isn't showing. Everything the story kept (its own values, who's on stage, the choices taken) starts again; project variables are left alone, so reset them first if a new game should clear them too.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: [{ key: "from", label: "From", type: "text", placeholder: "the start", help: "A scene title or chapter name. Empty: the first chapter" }]
+  },
+  {
+    kind: "action.storyGoOn",
+    label: "Go on",
+    category: "action",
+    summary: "Finishes the line that's typing, or goes on to the next one, and cuts a [wait] short.",
+    details: "The story stage already goes on with a click anywhere, Space or Enter. A page with a Go on node of its own (on its dialogue box, say) keeps clicks to itself, so a click on a picture doesn't move the story on.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: []
+  },
+  {
+    kind: "action.storyPick",
+    label: "Pick choice",
+    category: "action",
+    summary: "Picks one of the story's choices on show, counting from 1.",
+    details: "Wired to a click on the copy of a list of story.choices, the default picks the copy that was clicked. The keys 1 to 9 pick choices too. A greyed-out choice can't be picked.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "Picked" },
+      { id: "none", label: "Not a choice" }
+    ],
+    hasInput: true,
+    params: [{ key: "choice", label: "Choice", type: "expr", default: "event.index + 1", help: "Which choice, from 1. The default is the clicked copy of a list" }]
+  },
+  {
+    kind: "action.storyBack",
+    label: "Back to the story",
+    category: "action",
+    summary: "From a page a [call ...] line went to: back to the story stage, carrying on after that line.",
+    details: `The result is in story.result, so a line after the call can say "if story.result == 'solved'". From any other page it goes nowhere and runs Not called.`,
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Not called" }
+    ],
+    hasInput: true,
+    params: [{ key: "result", label: "Result", type: "expr", placeholder: "'solved'", help: "What the page hands back (story.result)" }]
+  },
+  {
+    kind: "action.storyMode",
+    label: "Auto or Skip",
+    category: "action",
+    summary: "Turns Auto (lines go on by themselves) or Skip (read lines fly past) on, off, or the other way.",
+    details: "Auto waits for a line's voice to finish. Skip only goes through lines read before (on this device), and stops at a choice and at the first new line, unless Skip unread is on in the reader's settings.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "mode", label: "Mode", type: "select", default: "auto", options: [{ value: "auto", label: "Auto" }, { value: "skip", label: "Skip" }, { value: "both", label: "Both off" }] },
+      { key: "to", label: "Turn it", type: "select", default: "toggle", options: [{ value: "toggle", label: "The other way" }, { value: "on", label: "On" }, { value: "off", label: "Off" }], showIf: { key: "mode", values: ["auto", "skip"] } }
+    ]
+  },
+  {
+    kind: "action.storyRollBack",
+    label: "Go back a line",
+    category: "action",
+    summary: "Takes the story back to an earlier line, undoing what happened since (values, choices, who was on stage).",
+    details: "Wired to a click on a copy of a list of story.history, Lines back picks that line. The history holds the last 200 lines.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Nothing to go back to" }
+    ],
+    hasInput: true,
+    params: [{ key: "steps", label: "Lines back", type: "expr", default: "1", help: "How many lines back. In a list of story.history: story.history.length - event.index" }]
+  },
+  {
+    kind: "action.storySave",
+    label: "Save the story",
+    category: "action",
+    summary: "Saves where the story is, and every variable, in a slot on this device, or deletes a slot.",
+    details: "Slots are 1, 2, 3 and so on (a list of story.saves shows them, with the chapter, the scene, the last words and when), plus quick. The story saves itself in auto at every choice. Saves stay in this browser, like a game's saves on a console.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Nothing to save" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "slot", label: "Slot", type: "expr", default: "'quick'", help: "A number, 'quick' or 'auto'. In a list of story.saves: event.index + 1" },
+      { key: "do", label: "Do", type: "select", default: "save", options: [{ value: "save", label: "Save" }, { value: "delete", label: "Delete the save" }] }
+    ]
+  },
+  {
+    kind: "action.storyLoad",
+    label: "Load the story",
+    category: "action",
+    summary: "Puts the story back where a save left it, with the variables as they were, and shows the stage.",
+    details: "Slot latest is the newest save of all, which is what a Continue button wants (story.canContinue says whether there is one). A line deleted since the save carries on from the nearest line before it that's still there.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Empty slot" }
+    ],
+    hasInput: true,
+    params: [{ key: "slot", label: "Slot", type: "expr", default: "'latest'", help: "A number, 'quick', 'auto' or 'latest'. In a list of story.saves: event.index + 1" }]
+  },
+  {
+    kind: "action.storyPref",
+    label: "Story setting",
+    category: "action",
+    summary: "Changes one of the reader's settings for the story, kept on their device.",
+    details: "Text speed (letters a second; empty for the story's own), Auto speed (2 is twice as quick), Skip unread lines, Music, Voice and Effects volumes (0 to 1), Text size (1 as designed) and Readable font. Captions for sounds and Show song titles are on or off too. Read them back as story.prefs, for sliders and toggles on a settings page.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      {
+        key: "pref",
+        label: "Setting",
+        type: "select",
+        default: "textSpeed",
+        options: [
+          { value: "textSpeed", label: "Text speed" },
+          { value: "autoSpeed", label: "Auto speed" },
+          { value: "skipUnread", label: "Skip unread lines" },
+          { value: "music", label: "Music volume" },
+          { value: "voice", label: "Voice volume" },
+          { value: "effects", label: "Effects volume" },
+          { value: "textSize", label: "Text size" },
+          { value: "readable", label: "Readable font" },
+          { value: "captions", label: "Captions for sounds" },
+          { value: "songTitles", label: "Show song titles" }
+        ]
+      },
+      { key: "value", label: "To", type: "expr", default: "event.value", help: "The new value. From a slider or a toggle: event.value" }
+    ]
+  },
+  {
+    kind: "action.storyGoTo",
+    label: "Go to a scene",
+    category: "action",
+    summary: "Carries the story on from a scene or chapter you name, and shows the stage.",
+    details: "For a map: a place's button goes to its scene. Unlike Start the story nothing is forgotten (values, coins, things carried stay), and a page the story called is left behind. {values} work, so a list of story.places can say {story.places[event.index]}.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "No such scene" }
+    ],
+    hasInput: true,
+    params: [{ key: "where", label: "Scene or chapter", type: "text", placeholder: "The library", help: "A scene title (a # line) or a chapter name. {values} work" }]
+  },
+  {
+    kind: "action.puzzleAnswer",
+    label: "Puzzle answer",
+    category: "action",
+    summary: "Says the puzzle on this page was answered right or wrong, for the big moment and the score.",
+    details: "Right marks it solved for what it's worth now (puzzle.value) and shows puzzle.right; wrong takes a little off and shows puzzle.wrong. Try again clears the wrong mark. A question on a puzzle page does this by itself when it's checked, so this is for a puzzle made of anything else: drag and drop, a dial, a code lock.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Not a puzzle page" }
+    ],
+    hasInput: true,
+    params: [
+      {
+        key: "answer",
+        label: "Answer",
+        type: "select",
+        default: "right",
+        options: [
+          { value: "right", label: "Right" },
+          { value: "wrong", label: "Wrong" },
+          { value: "again", label: "Try again (clear the wrong mark)" }
+        ]
+      }
+    ]
+  },
+  {
+    kind: "action.puzzleHint",
+    label: "Open a hint",
+    category: "action",
+    summary: "Opens one of the puzzle's hints (paying hint coins the first time) and shows it, or puts it away.",
+    details: "Hints open in order, then the big hint. One already open shows again for free. puzzle.hintText is the hint showing, puzzle.coins what the reader has left. Wired to a click on a copy of a list of puzzle.hints, the default opens that one.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "short", label: "Not enough coins" },
+      { id: "none", label: "No such hint yet" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "do", label: "Do", type: "select", default: "open", options: [{ value: "open", label: "Open and show it" }, { value: "close", label: "Put it away" }] },
+      { key: "hint", label: "Hint", type: "expr", default: "event.index + 1", help: "Which hint, from 1 (the big hint comes after the others), or 'next' for the next to open", showIf: { key: "do", values: ["open"] } }
+    ]
+  },
+  {
+    kind: "action.puzzleMemo",
+    label: "Puzzle memo",
+    category: "action",
+    summary: "Shows or hides the memo, a sketch pad over the puzzle for working things out.",
+    details: "puzzle.memo says whether it is showing: bind the memo layer's Visible to it.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: [{ key: "to", label: "Turn it", type: "select", default: "toggle", options: [{ value: "toggle", label: "The other way" }, { value: "on", label: "On" }, { value: "off", label: "Off" }] }]
+  },
+  {
+    kind: "action.puzzleLeave",
+    label: "Leave the puzzle",
+    category: "action",
+    summary: "Back to the story from a puzzle, or to the page before when it was played from the index.",
+    details: "Skip it marks an unsolved puzzle skipped. story.result is 'solved', 'skipped' or empty, so the script can say if story.result == 'solved'. A skipped puzzle stays in the index to come back to.",
+    group: "Story",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Nowhere to go back to" }
+    ],
+    hasInput: true,
+    params: [{ key: "skip", label: "Skip it", type: "boolean", default: false, help: "Mark it skipped if it is not solved yet" }]
+  },
+  {
+    kind: "action.puzzleCoins",
+    label: "Hint coins",
+    category: "action",
+    summary: "Gives the reader hint coins, or takes some away.",
+    details: "story.coins (and puzzle.coins) is how many they have. A save keeps them, and a new game starts again from the number in the Story settings.",
+    group: "Story",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "do", label: "Do", type: "select", default: "give", options: [{ value: "give", label: "Give" }, { value: "take", label: "Take away" }] },
+      { key: "amount", label: "How many", type: "expr", default: "1" }
     ]
   },
   {
@@ -1621,7 +2237,7 @@ const SPECS = [
     group: "Layers and looks",
     outputs: OUT,
     hasInput: true,
-    params: [{ key: "toast", label: "Toast", type: "artboard", help: "The toast to put away. None chosen puts them all away" }]
+    params: [{ key: "toast", label: "Toast", type: "artboard", overlayKind: "toast", help: "The toast to put away. None chosen puts them all away" }]
   },
   {
     kind: "action.announce",
@@ -2131,6 +2747,96 @@ const SPECS = [
     params: []
   },
   {
+    kind: "logic.forEach",
+    label: "For each item",
+    category: "logic",
+    summary: "Runs the Each item steps once for every item of a list, in order, then Done.",
+    details: "The steps after Each item see `event.item` (the item), `event.index` (from 0) and `event.count`. Each run finishes, waits included, before the next starts, so a Set variable that adds up a total works. Up to 5000 items.",
+    group: "Branching",
+    outputs: [
+      { id: "each", label: "Each item" },
+      { id: "done", label: "Done" }
+    ],
+    hasInput: true,
+    params: [{ key: "list", label: "List", type: "expr", default: "", placeholder: "cart", help: "A list variable, a data source, or a formula that gives a list. A number n counts 0 to n - 1" }]
+  },
+  {
+    kind: "logic.repeat",
+    label: "Repeat",
+    category: "logic",
+    summary: "Runs the Again steps a number of times, or while something is true, then Done.",
+    details: "The steps after Again see `event.index` (from 0). Each run finishes before the next starts. With While, it stops as soon as that is false, checked before each run, and never more than 5000 times.",
+    group: "Branching",
+    outputs: [
+      { id: "each", label: "Again" },
+      { id: "done", label: "Done" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "times", label: "Times", type: "expr", default: "3", help: "How many times. Leave empty to use While alone" },
+      { key: "while", label: "While (optional)", type: "expr", default: "", placeholder: "lives > 0", help: "Keep going only while this is true" }
+    ]
+  },
+  {
+    kind: "event.flow",
+    label: "Flow",
+    category: "event",
+    summary: "Steps with a name that Call flow runs from anywhere on the page, so they are wired once.",
+    details: "Give it a name and, if it takes any, the names of its inputs. A Call flow node hands it values, and the steps after it read them as `event.<input>` (`event.amount`). Flows on the page master can be called from every page that uses it.",
+    group: "Branching",
+    outputs: OUT,
+    hasInput: false,
+    params: [
+      { key: "name", label: "Name", type: "text", placeholder: "e.g. Add to total" },
+      { key: "inputs", label: "Inputs", type: "text", placeholder: "amount, label", help: "The names of the values it takes, separated by commas" }
+    ]
+  },
+  {
+    kind: "action.callFlow",
+    label: "Call flow",
+    category: "action",
+    summary: "Runs a named Flow with the values you give it, and carries on when it has finished.",
+    details: "Continues from Not found when no Flow on the page has that name.",
+    group: "Branching",
+    outputs: [
+      { id: "out", label: "Finished" },
+      { id: "none", label: "Not found" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "flow", label: "Flow", type: "text", placeholder: "e.g. Add to total", help: "The name of a Flow node" },
+      { key: "values", label: "Values", type: "expr", default: "", placeholder: "{ amount: price * qty }", help: "The inputs it takes, as { name: value, ... }" }
+    ]
+  },
+  {
+    kind: "action.undo",
+    label: "Undo",
+    category: "action",
+    summary: "Steps the variables marked Keeps history back to how they were before the last change.",
+    details: "Tick Keeps history on the variables that hold what a person makes (the tiles, the board, the answers). Changes close together count as one step. `canUndo` in a formula says whether there is anything to undo, for a button that greys out. Continues from Nothing to undo when there is none.",
+    group: "Variables",
+    outputs: [
+      { id: "out", label: "Undone" },
+      { id: "none", label: "Nothing to undo" }
+    ],
+    hasInput: true,
+    params: []
+  },
+  {
+    kind: "action.redo",
+    label: "Redo",
+    category: "action",
+    summary: "Puts back a change Undo took away.",
+    details: "Any new change after an Undo clears what could be redone. `canRedo` in a formula says whether there is any.",
+    group: "Variables",
+    outputs: [
+      { id: "out", label: "Redone" },
+      { id: "none", label: "Nothing to redo" }
+    ],
+    hasInput: true,
+    params: []
+  },
+  {
     kind: "logic.sequence",
     label: "Sequence",
     category: "logic",
@@ -2307,6 +3013,8 @@ const ANIMATABLE_PROPS = [
   { prop: "fontWeight", label: "Font weight", kind: "number" },
   { prop: "lineHeight", label: "Line height", kind: "number" },
   { prop: "blur", label: "Blur", kind: "number" },
+  { prop: "brightness", label: "Brightness", kind: "number" },
+  { prop: "reveal", label: "Letters shown", kind: "number" },
   { prop: "shadow.blur", label: "Shadow blur", kind: "number" },
   { prop: "shadow.x", label: "Shadow X", kind: "number" },
   { prop: "shadow.y", label: "Shadow Y", kind: "number" },
@@ -2369,6 +3077,15 @@ function layerOwnProps(node) {
     { prop: "value", label: "Progress value", kind: "number" },
     { prop: "max", label: "Progress maximum", kind: "number" }
   ];
+}
+const PARTICLE_PRESETS = ["rain", "snow", "petals", "leaves", "dust", "sparks", "bubbles"];
+const ID_CHARS = "abcdefghijkmnpqrstuvwxyz23456789";
+function newLineId(taken) {
+  for (; ; ) {
+    let s = "l";
+    for (let i = 0; i < 6; i++) s += ID_CHARS[Math.floor(Math.random() * ID_CHARS.length)];
+    if (!taken?.has(s)) return s;
+  }
 }
 const MODIFIER_UNITS = ["letter", "word", "line"];
 const MODIFIER_SHAPES = ["square", "ramp-up", "ramp-down", "triangle", "round", "smooth", "falloff"];
@@ -4076,14 +4793,46 @@ function dragSettings(raw, draggable) {
     pick("holdToDrag", bool);
     pick("silent", bool);
     if ("zoneVariable" in raw && (raw.zoneVariable === null || isStr(raw.zoneVariable))) out.zoneVariable = raw.zoneVariable;
+    if (Array.isArray(raw.onlyZones)) {
+      const only = arr(raw.onlyZones, isStr).slice(0, 200);
+      if (only.length) out.onlyZones = only;
+    }
+    pick("stayBehind", bool);
+    const data = cleanDragData(raw.data);
+    if (data) out.data = data;
   } else {
     pick("capacity", nonNeg);
+    if (isStr(raw.capacityBy) && raw.capacityBy.trim()) out.capacityBy = raw.capacityBy.trim().slice(0, 40);
+    if (Array.isArray(raw.groups)) {
+      const groups = arr(raw.groups, isStr).slice(0, 20);
+      if (groups.length) out.groups = groups;
+    }
     pick("whenFull", oneOf2(["reject", "swap"]));
-    pick("snap", oneOf2(["none", "center", "topLeft"]));
+    pick("snap", oneOf2(["none", "center", "topLeft", "fill"]));
     pick("highlight", bool);
+    if (isStr(raw.acceptsWhen) && raw.acceptsWhen.trim()) out.acceptsWhen = raw.acceptsWhen.slice(0, 2e3);
+    if (isObj$1(raw.arrange)) {
+      const a = raw.arrange;
+      out.arrange = {
+        gap: isNum(a.gap) && a.gap >= 0 ? Math.min(a.gap, 400) : 8,
+        ...a.order === "name" || a.order === "arrival" ? { order: a.order } : {},
+        ...typeof a.hug === "boolean" ? { hug: a.hug } : {},
+        ...isNum(a.minRows) && a.minRows >= 0 ? { minRows: Math.min(50, Math.round(a.minRows)) } : {}
+      };
+    }
     if ("contentsVariable" in raw && (raw.contentsVariable === null || isStr(raw.contentsVariable))) out.contentsVariable = raw.contentsVariable;
   }
   return out;
+}
+function cleanDragData(v) {
+  if (!isObj$1(v)) return void 0;
+  const out = {};
+  for (const [k, x] of Object.entries(v)) {
+    if (!/^[A-Za-z_$][\w$]{0,39}$/.test(k) || Object.keys(out).length >= 30) continue;
+    if (isNum(x) || typeof x === "boolean") out[k] = x;
+    else if (isStr(x)) out[k] = x.slice(0, 500);
+  }
+  return Object.keys(out).length ? out : void 0;
 }
 function stringMap(v) {
   if (!isObj$1(v)) return void 0;
@@ -4137,14 +4886,47 @@ function sanitizeNode(raw, seen) {
     if ("stillFrame" in n && !(isNum(n.stillFrame) && n.stillFrame >= 0)) delete n.stillFrame;
     if ("copyOffset" in n && !isNum(n.copyOffset)) delete n.copyOffset;
   }
+  if (raw.type === "rect" && "sketch" in n) {
+    if (!isObj$1(n.sketch)) delete n.sketch;
+    else {
+      const k = n.sketch;
+      const out = {};
+      for (const f2 of ["variable", "colour", "colourVariable", "sizeVariable", "eraserVariable"]) if (isStr(k[f2]) && k[f2].length <= 80) out[f2] = k[f2];
+      if (isNum(k.size) && k.size > 0) out.size = Math.min(200, k.size);
+      if (k.pressure === false) out.pressure = false;
+      n.sketch = out;
+    }
+  } else if ("sketch" in n) delete n.sketch;
+  if (raw.type === "rect" && "particles" in n) {
+    const k = n.particles;
+    if (!isObj$1(k) || !PARTICLE_PRESETS.includes(k.preset)) delete n.particles;
+    else {
+      const out = { preset: k.preset };
+      const range = (f2, lo, hi) => {
+        if (isNum(k[f2])) out[f2] = Math.min(hi, Math.max(lo, k[f2]));
+      };
+      range("amount", 0, 100);
+      range("speed", 0.1, 3);
+      range("wind", -100, 100);
+      range("size", 0.25, 4);
+      if (isStr(k.colour) && k.colour.length <= 80) out.colour = k.colour;
+      if (isStr(k.asset) && k.asset.length <= 80) out.asset = k.asset;
+      n.particles = out;
+    }
+  } else if ("particles" in n) delete n.particles;
   if (raw.type === "progress") {
     if (n.orientation !== "horizontal" && n.orientation !== "vertical") n.orientation = "horizontal";
     if (n.semantics !== "none" && n.semantics !== "progressbar" && n.semantics !== "meter") n.semantics = "progressbar";
     if ("reverse" in n && typeof n.reverse !== "boolean") delete n.reverse;
     if ("valueText" in n && !isStr(n.valueText)) delete n.valueText;
+    if ("shape" in n && !["bar", "ring", "halfRing"].includes(n.shape)) delete n.shape;
+    if ("thickness" in n && !(isNum(n.thickness) && n.thickness > 0)) delete n.thickness;
   }
   if (raw.type === "chart") {
-    if (!["column", "bar", "line", "pie", "donut"].includes(n.kind)) n.kind = "column";
+    if (!["column", "bar", "line", "pie", "donut", "stacked", "area", "scatter", "histogram"].includes(n.kind)) n.kind = "column";
+    if ("series" in n) n.series = arr(n.series, isStr).slice(0, 12);
+    if ("xKey" in n && !isStr(n.xKey)) delete n.xKey;
+    if ("bins" in n && n.bins !== null && !(isNum(n.bins) && n.bins > 0)) delete n.bins;
     n.colors = arr(n.colors, isStr).slice(0, 40);
     for (const k of ["min", "max", "decimals"]) if (n[k] !== null && !isNum(n[k])) n[k] = null;
     if (!isNum(n.fontSize) || n.fontSize < 4) n.fontSize = 13;
@@ -4176,6 +4958,37 @@ function sanitizeNode(raw, seen) {
     if (!isNum(n.fontSize) || n.fontSize < 4) n.fontSize = 13;
     if ("fontWeight" in n && !isNum(n.fontWeight)) delete n.fontWeight;
   }
+  if (raw.type === "text") {
+    if ("paragraphs" in n) {
+      const list2 = Array.isArray(n.paragraphs) ? n.paragraphs.slice(0, 5e3) : [];
+      const clean2 = list2.map((p) => isObj$1(p) && (p.list === "bullet" || p.list === "number") ? { list: p.list, ...isNum(p.level) && p.level > 0 ? { level: Math.min(5, Math.round(p.level)) } : {} } : null);
+      if (clean2.some(Boolean)) n.paragraphs = clean2;
+      else delete n.paragraphs;
+    }
+    if ("code" in n) {
+      const c2 = n.code;
+      if (!isObj$1(c2) || !isStr(c2.language)) delete n.code;
+      else n.code = { language: c2.language.slice(0, 20), ...typeof c2.lineNumbers === "boolean" ? { lineNumbers: c2.lineNumbers } : {}, ...typeof c2.copyButton === "boolean" ? { copyButton: c2.copyButton } : {}, ...c2.scheme === "dark" || c2.scheme === "light" ? { scheme: c2.scheme } : {} };
+    }
+    if ("maths" in n && typeof n.maths !== "boolean") delete n.maths;
+    if ("countUp" in n) {
+      const c2 = n.countUp;
+      if (isObj$1(c2) && isNum(c2.ms) && c2.ms > 0) n.countUp = { ms: Math.min(1e4, c2.ms) };
+      else delete n.countUp;
+    }
+  }
+  if (raw.type === "image" && "qr" in n) {
+    const q = n.qr;
+    if (!isObj$1(q) || !isStr(q.text)) delete n.qr;
+    else {
+      n.qr = {
+        text: q.text.slice(0, 4e3),
+        ...["L", "M", "Q", "H"].includes(q.level) ? { level: q.level } : {},
+        ...isStr(q.dark) ? { dark: q.dark } : {},
+        ...isStr(q.light) ? { light: q.light } : {}
+      };
+    }
+  }
   if (raw.type === "image" && "shaderFilter" in n) {
     const f2 = n.shaderFilter;
     if (isObj$1(f2) && isStr(f2.code)) {
@@ -4187,6 +5000,56 @@ function sanitizeNode(raw, seen) {
   if (isObj$1(n.converters)) for (const [k, list2] of Object.entries(n.converters)) n.converters[k] = objs(list2).filter((c2) => isStr(c2.type));
   if ("constraints" in n) n.constraints = objs(n.constraints).filter((c2) => isStr(c2.type));
   if ("repeat" in n && !(isObj$1(n.repeat) && isStr(n.repeat.items))) delete n.repeat;
+  if (isObj$1(n.repeat) && "paging" in n.repeat) {
+    const g = n.repeat.paging;
+    if (isObj$1(g) && isNum(g.size) && g.size >= 1 && (g.mode === "pages" || g.mode === "more")) {
+      const out = { size: Math.min(1e3, Math.round(g.size)), mode: g.mode };
+      for (const k of ["next", "previous", "more", "variable"]) if (isStr(g[k]) && g[k]) out[k] = g[k];
+      n.repeat = { ...n.repeat, paging: out };
+    } else {
+      const { paging: _gone, ...rest } = n.repeat;
+      n.repeat = rest;
+    }
+  }
+  if (isObj$1(n.repeat) && "tree" in n.repeat) {
+    const t2 = n.repeat.tree;
+    if (isObj$1(t2) && isStr(t2.parentField) && t2.parentField.trim()) {
+      const out = { parentField: t2.parentField.trim().slice(0, 60) };
+      if (isStr(t2.idField) && t2.idField.trim()) out.idField = t2.idField.trim().slice(0, 60);
+      if (isNum(t2.indent) && t2.indent >= 0) out.indent = Math.min(200, t2.indent);
+      if (isStr(t2.openVariable) && t2.openVariable) out.openVariable = t2.openVariable;
+      if (typeof t2.startOpen === "boolean") out.startOpen = t2.startOpen;
+      n.repeat = { ...n.repeat, tree: out };
+    } else {
+      const { tree: _gone, ...rest } = n.repeat;
+      n.repeat = rest;
+    }
+  }
+  if (isObj$1(n.repeat) && "states" in n.repeat) {
+    const st = n.repeat.states;
+    const out = {};
+    if (isObj$1(st)) {
+      for (const k of ["loading", "empty", "fault"]) if (isStr(st[k]) && st[k]) out[k] = st[k];
+    }
+    if (Object.keys(out).length) n.repeat = { ...n.repeat, states: out };
+    else {
+      const { states: _gone, ...rest } = n.repeat;
+      n.repeat = rest;
+    }
+  }
+  if (isObj$1(n.repeat) && "drag" in n.repeat) {
+    const d = n.repeat.drag;
+    if (isObj$1(d)) {
+      const out = {};
+      if (typeof d.reorder === "boolean") out.reorder = d.reorder;
+      for (const k of ["list", "tag", "writeField", "writeValue"]) if (isStr(d[k]) && d[k].trim()) out[k] = d[k].slice(0, 2e3);
+      if (Array.isArray(d.takesFrom)) out.takesFrom = arr(d.takesFrom, isStr).map((t2) => t2.trim()).filter(Boolean).slice(0, 50);
+      n.repeat = { ...n.repeat, drag: out };
+    } else {
+      const { drag: _gone, ...rest } = n.repeat;
+      n.repeat = rest;
+    }
+  }
   if (isObj$1(n.repeat) && "select" in n.repeat) {
     const s = n.repeat.select;
     if (isObj$1(s) && (s.mode === "one" || s.mode === "several") && isStr(s.variable) && s.variable) {
@@ -4255,7 +5118,11 @@ function sanitizeNode(raw, seen) {
     }
   }
   if ("cornerRadii" in n && !(Array.isArray(n.cornerRadii) && n.cornerRadii.length === 4 && n.cornerRadii.every(isNum))) delete n.cornerRadii;
-  for (const k of ["mask", "locked", "noAssist", "noPaste", "hugIgnore"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  for (const k of ["mask", "locked", "noAssist", "noPaste", "hugIgnore", "noDownload"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  if ("labelId" in n && n.labelId !== null && !isStr(n.labelId)) delete n.labelId;
+  for (const k of ["optionsFrom", "optionOff", "chosenFill", "chosenColor"]) if (k in n && !isStr(n[k])) delete n[k];
+  if ("gap" in n && n.type === "input" && !(isNum(n.gap) && n.gap >= 0)) delete n.gap;
+  if ("resolvedChoices" in n) delete n.resolvedChoices;
   if ("wai" in n) delete n.wai;
   if (n.type === "embed" && "allow" in n) {
     const known = new Set(EMBED_ALLOW.map((x) => x.key));
@@ -4296,7 +5163,7 @@ function sanitizeNode(raw, seen) {
   }
   if ("states" in n) {
     const list2 = Array.isArray(n.states) ? n.states : [];
-    const clean2 = list2.filter(isObj$1).filter((st) => isStr(st.when) && ["hover", "pressed", "focus", "disabled", "expr"].includes(st.when)).map((st) => {
+    const clean2 = list2.filter(isObj$1).filter((st) => isStr(st.when) && ["hover", "pressed", "focus", "disabled", "expr", "dragging", "lifted", "dropReady", "dropOver", "dropRefuse", "checkFails"].includes(st.when)).map((st) => {
       const out = { id: isStr(st.id) && st.id ? st.id : `st${Math.random().toString(36).slice(2, 9)}`, when: st.when, props: isObj$1(st.props) ? st.props : {} };
       if (isStr(st.name) && st.name) out.name = st.name;
       if (st.when === "expr" && isStr(st.expr)) out.expr = st.expr;
@@ -4306,7 +5173,7 @@ function sanitizeNode(raw, seen) {
     else delete n.states;
   }
   if ("maskMode" in n && !["alpha", "inverted", "luminance", "invertedLuminance"].includes(n.maskMode)) delete n.maskMode;
-  for (const k of ["blur", "fontWeight"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
+  for (const k of ["blur", "fontWeight", "brightness"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
   for (const k of ["blendMode", "cursor", "ariaLabel", "ariaDescription", "sayAs", "className"]) if (k in n && !isStr(n[k])) delete n[k];
   if ("role" in n && !["button", "checkbox", "radio", "radiogroup", "heading", "image", "region"].includes(n.role)) delete n.role;
   for (const k of ["decorative", "focusable", "ariaChecked", "ariaExpanded", "ariaPressed"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
@@ -4353,6 +5220,17 @@ function sanitizeNode(raw, seen) {
     for (const k of ["min", "max", "step"]) if (k in n && !isNum(n[k])) delete n[k];
   }
   if ("cursorImage" in n && n.cursorImage !== null && !isStr(n.cursorImage)) delete n.cursorImage;
+  if ("examine" in n && n.examine !== null) {
+    const ex = n.examine;
+    if (!isObj$1(ex)) delete n.examine;
+    else {
+      const o = ex;
+      if ("text" in o && !isStr(o.text)) delete o.text;
+      if ("item" in o && !isStr(o.item)) delete o.item;
+      if ("coins" in o && !(isNum(o.coins) && o.coins >= 0)) delete o.coins;
+      if ("stays" in o && typeof o.stays !== "boolean") delete o.stays;
+    }
+  }
   if ("depth" in n && !isNum(n.depth)) delete n.depth;
   else if (typeof n.depth === "number") n.depth = Math.max(-100, Math.min(100, n.depth));
   if ("cursorHotspot" in n && !(isObj$1(n.cursorHotspot) && isNum(n.cursorHotspot.x) && isNum(n.cursorHotspot.y))) delete n.cursorHotspot;
@@ -4367,6 +5245,7 @@ function sanitizeNode(raw, seen) {
     else n.crop = { x: Math.max(-10, Math.min(10, c2.x)), y: Math.max(-10, Math.min(10, c2.y)), zoom: Math.max(1, Math.min(20, c2.zoom)) };
   }
   if (raw.type === "video") {
+    if ("platformLink" in n && !(isStr(n.platformLink) && n.platformLink.length <= 2e3)) delete n.platformLink;
     if ("captions" in n) {
       const cues = cleanCues(n.captions);
       if (cues.length) n.captions = cues;
@@ -4596,7 +5475,7 @@ function createProject(name = "Untitled project") {
     settings: {
       startArtboardId: artboard.id,
       fit: "contain",
-      pageBackground: "#111111",
+      pageBackground: "transparent",
       title: name,
       description: "",
       scriptSandbox: true,
@@ -5138,7 +6017,7 @@ function paletteColor(spec, vars = currentPalette()) {
 }
 const t = (key, name, light, dark, highContrast) => ({ key, name, light, dark, highContrast });
 const WHITE$1 = "--ilar-swatch-off-white";
-const INK$1 = "--ilar-swatch-grey-7";
+const INK$4 = "--ilar-swatch-grey-7";
 const GREEN = "--ilar-swatch-green";
 const ERROR = "--ilar-swatch-error";
 const ORANGE = "--ilar-swatch-orange";
@@ -5146,13 +6025,13 @@ const GOLD$1 = "--ilar-swatch-yellow";
 const LINK = "--ilar-swatch-hyperlink";
 const mix = (a, pct, over) => `mix(${a} ${pct}%, ${over})`;
 const STARTER_TOKEN_DEFS = [
-  t("background", "color/background", WHITE$1, INK$1, INK$1),
-  t("surface", "color/surface", "--ilar-swatch-grey-1", "--ilar-swatch-grey-text", INK$1),
+  t("background", "color/background", WHITE$1, INK$4, INK$4),
+  t("surface", "color/surface", "--ilar-swatch-grey-1", "--ilar-swatch-grey-text", INK$4),
   t("surfaceMuted", "color/surface-muted", "--ilar-swatch-grey-2", "--ilar-swatch-grey-6", "--ilar-swatch-grey-6"),
-  t("text", "color/text", INK$1, "--ilar-swatch-grey-1", WHITE$1),
+  t("text", "color/text", INK$4, "--ilar-swatch-grey-1", WHITE$1),
   t("muted", "color/muted", "--ilar-swatch-grey-4", "--ilar-swatch-grey-3", WHITE$1),
   t("primary", "color/primary", "--ilar-primary", GOLD$1, GOLD$1),
-  t("onPrimary", "color/on-primary", INK$1, INK$1, INK$1),
+  t("onPrimary", "color/on-primary", INK$4, INK$4, INK$4),
   t("link", "color/link", LINK, mix(LINK, 70, WHITE$1), mix(LINK, 70, WHITE$1)),
   t("button", "color/button", "--ilar-btn-primary-background", "--ilar-btn-primary-background", "--ilar-btn-primary-background"),
   t("onButton", "color/on-button", "--ilar-btn-primary-text", "--ilar-btn-primary-text", "--ilar-btn-primary-text"),
@@ -5160,11 +6039,11 @@ const STARTER_TOKEN_DEFS = [
   t("divider", "color/divider", "--ilar-swatch-grey-2", "--ilar-swatch-grey-6", WHITE$1),
   t("focus", "color/focus", "--ilar-primary", GOLD$1, WHITE$1),
   t("success", "color/success", GREEN, mix(GREEN, 55, WHITE$1), mix(GREEN, 55, WHITE$1)),
-  t("successSurface", "color/success-surface", mix(GREEN, 12, WHITE$1), mix(GREEN, 25, INK$1), INK$1),
+  t("successSurface", "color/success-surface", mix(GREEN, 12, WHITE$1), mix(GREEN, 25, INK$4), INK$4),
   t("error", "color/error", ERROR, mix(ERROR, 60, WHITE$1), mix(ERROR, 60, WHITE$1)),
-  t("errorSurface", "color/error-surface", mix(ERROR, 12, WHITE$1), mix(ERROR, 25, INK$1), INK$1),
+  t("errorSurface", "color/error-surface", mix(ERROR, 12, WHITE$1), mix(ERROR, 25, INK$4), INK$4),
   t("warning", "color/warning", ORANGE, GOLD$1, GOLD$1),
-  t("warningSurface", "color/warning-surface", mix(ORANGE, 14, WHITE$1), mix(GOLD$1, 20, INK$1), INK$1)
+  t("warningSurface", "color/warning-surface", mix(ORANGE, 14, WHITE$1), mix(GOLD$1, 20, INK$4), INK$4)
 ];
 function starterHex(def, column2) {
   return paletteColor(def[column2], currentPalette()) ?? "#808080";
@@ -5420,6 +6299,7 @@ function cloneWithNewIds(node, idMap = /* @__PURE__ */ new Map()) {
     remapConnectorIds(n, idMap);
     if (n.type === "path" && n.skin) for (const b of n.skin.bones) b.bone = remap(b.bone);
     if (n.type === "image" && n.mesh?.skin) for (const b of n.mesh.skin.bones) b.bone = remap(b.bone);
+    if (n.type === "input" && n.labelId) n.labelId = remap(n.labelId);
     if (isContainer(n)) n.children.forEach(fix);
   };
   fix(copy);
@@ -6067,7 +6947,7 @@ function flowLinks(steps2, links, opts2 = {}) {
   });
   const lk = asList$1(links).map((l) => isObj(l) ? l : {});
   const edges = lk.map((l) => ({ a: ids.get(String(l.from ?? "")) ?? -1, b: ids.get(String(l.to ?? "")) ?? -1 }));
-  const { back } = flowLayers(st, edges);
+  const { back: back2 } = flowLayers(st, edges);
   const placed = flowChart(steps2, links, { direction: horizontal ? "right" : "down" });
   const left = Math.min(...placed.map((p) => horizontal ? p.y : p.x));
   const right = Math.max(...placed.map((p) => horizontal ? p.y + p.h : p.x + p.w));
@@ -6076,7 +6956,7 @@ function flowLinks(steps2, links, opts2 = {}) {
   const sideOf = /* @__PURE__ */ new Map();
   const outgoing2 = /* @__PURE__ */ new Map();
   edges.forEach((e, k) => {
-    if (!back[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) (outgoing2.get(e.a) ?? outgoing2.set(e.a, []).get(e.a)).push(k);
+    if (!back2[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) (outgoing2.get(e.a) ?? outgoing2.set(e.a, []).get(e.a)).push(k);
   });
   for (const [a, ks] of outgoing2) {
     if (kindOf(st[a]) !== "decision" || ks.length < 2) continue;
@@ -6085,7 +6965,7 @@ function flowLinks(steps2, links, opts2 = {}) {
   }
   return lk.map((l, k) => {
     const { a, b } = edges[k];
-    const loops = back[k] && a >= 0 && b >= 0;
+    const loops = back2[k] && a >= 0 && b >= 0;
     if (loops) {
       const east = (centre(placed[a]) + centre(placed[b])) / 2 >= (left + right) / 2;
       const side = horizontal ? east ? "bottom" : "top" : east ? "right" : "left";
@@ -6124,7 +7004,7 @@ function flowLayers(steps2, edges) {
     if (e.a >= 0 && e.b >= 0 && e.a !== e.b) outs[e.a].push(k);
   });
   const state = new Array(n).fill(0);
-  const back = edges.map((e) => e.a === e.b && e.a >= 0);
+  const back2 = edges.map((e) => e.a === e.b && e.a >= 0);
   const order = [];
   const starts = [];
   steps2.forEach((s, i) => {
@@ -6146,7 +7026,7 @@ function flowLayers(steps2, edges) {
       top[1]++;
       const k = outs[node][at];
       const to = edges[k].b;
-      if (state[to] === 1) back[k] = true;
+      if (state[to] === 1) back2[k] = true;
       else if (state[to] === 0) {
         state[to] = 1;
         order.push(to);
@@ -6159,20 +7039,20 @@ function flowLayers(steps2, edges) {
   const layer = new Array(n).fill(0);
   const indeg = new Array(n).fill(0);
   edges.forEach((e, k) => {
-    if (!back[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) indeg[e.b]++;
+    if (!back2[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) indeg[e.b]++;
   });
   const queue = indeg.map((d, i) => d === 0 ? i : -1).filter((i) => i >= 0);
   const left = indeg.slice();
   for (let q = 0; q < queue.length; q++) {
     const i = queue[q];
     for (const k of outs[i]) {
-      if (back[k]) continue;
+      if (back2[k]) continue;
       const to = edges[k].b;
       layer[to] = Math.max(layer[to], layer[i] + 1);
       if (--left[to] === 0) queue.push(to);
     }
   }
-  return { layer, back, order };
+  return { layer, back: back2, order };
 }
 function spread(want, sep) {
   const n = want.length;
@@ -6215,7 +7095,7 @@ function flowChart(steps2, links, opts2 = {}) {
     return { a: ids.get(String(x.from ?? "")) ?? -1, b: ids.get(String(x.to ?? "")) ?? -1 };
   });
   const n = st.length;
-  const { layer, back, order: found } = flowLayers(st, edges);
+  const { layer, back: back2, order: found } = flowLayers(st, edges);
   const kind = st.map(kindOf);
   const across = (i) => horizontal ? sizes[kind[i]][1] : sizes[kind[i]][0];
   const along = (i) => horizontal ? sizes[kind[i]][0] : sizes[kind[i]][1];
@@ -6223,7 +7103,7 @@ function flowChart(steps2, links, opts2 = {}) {
   const discovery = new Map(found.map((i, k2) => [i, k2]));
   for (let i = 0; i < n; i++) (rows[layer[i]] ??= []).push(i);
   for (const r3 of rows) r3?.sort((a, b) => (discovery.get(a) ?? 0) - (discovery.get(b) ?? 0));
-  const fwd = edges.map((e2, k2) => ({ ...e2, k: k2 })).filter((e2) => !back[e2.k] && e2.a >= 0 && e2.b >= 0 && e2.a !== e2.b);
+  const fwd = edges.map((e2, k2) => ({ ...e2, k: k2 })).filter((e2) => !back2[e2.k] && e2.a >= 0 && e2.b >= 0 && e2.a !== e2.b);
   const preds = (i) => fwd.filter((e2) => e2.b === i).map((e2) => e2.a);
   const succs = (i) => fwd.filter((e2) => e2.a === i).map((e2) => e2.b);
   const pos = new Array(n).fill(0);
@@ -7241,7 +8121,7 @@ class Parser {
           const name = IDENT_NAME.get(a);
           if (name) {
             return (env) => {
-              const f2 = find(env, name);
+              const f2 = find$1(env, name);
               return f2.found ? typeof f2.value : "undefined";
             };
           }
@@ -7377,7 +8257,7 @@ class Parser {
     this.advance();
     this.names.add(name);
     const ev = (env) => {
-      const f2 = find(env, name);
+      const f2 = find$1(env, name);
       if (!f2.found) throw new ExprError(`${name} is not defined`);
       return f2.value;
     };
@@ -7392,7 +8272,7 @@ class Parser {
     this.names.add(name);
     const args = this.is("(") ? this.args() : [];
     return (env) => {
-      const f2 = find(env, name);
+      const f2 = find$1(env, name);
       const fn = f2.found ? f2.value : void 0;
       if (typeof fn !== "function" || !NEWABLE.has(fn)) throw new ExprError(`new ${name} is not supported in expressions`);
       budget(env);
@@ -7445,7 +8325,7 @@ class Parser {
           props.push({
             key,
             value: (env) => {
-              const f2 = find(env, name);
+              const f2 = find$1(env, name);
               if (!f2.found) throw new ExprError(`${name} is not defined`);
               return f2.value;
             }
@@ -7548,7 +8428,7 @@ class Parser {
 function budget(env) {
   if (++env.budget.steps > MAX_STEPS) throw new ExprError("Expression took too long");
 }
-function find(env, name) {
+function find$1(env, name) {
   for (let l = env.locals; l; l = l.parent) {
     const i = l.names.lastIndexOf(name);
     if (i >= 0) return { found: true, value: l.values[i] };
@@ -8184,6 +9064,8 @@ const FORMULA_HELPERS = {
   positions: (list2, ...rest) => listHelper(() => positions(list2, ...rest)),
   /** A list of numbers added up, or one field of each item: sum(list), sum(list, field). */
   sum: (list2, field) => sum(list2, field),
+  /** The layers a drop zone holds (the player answers it on a page with drop zones; anywhere else nothing). */
+  items: (_zone) => [],
   /** One field of every item as a list: pluck(list, field). */
   pluck: (list2, field) => pluck(list2, field)
 };
@@ -8744,12 +9626,18 @@ function countLayoutFrames(nodes) {
 }
 const PLAYER_SCOPE_HINTS = {
   reducedMotion: { type: "true/false", hint: "The viewer's device asks for less motion" },
+  setup: { type: "object", hint: "The setup the link plays: setup.name and setup.id (empty without one)" },
+  dataStatus: { type: "object", hint: "Each data source: loading, ready or failed (dataStatus.cards)" },
+  canUndo: { type: "true/false", hint: "Undo has a step to take back (variables that keep history)" },
+  canRedo: { type: "true/false", hint: "Redo has a step to put back" },
+  fullscreen: { type: "true/false", hint: "The project fills the screen (the Full screen node)" },
   token: { type: "function", hint: "token('space/gap'): a number or text theme token, in the theme being shown" },
   voiceAvailable: { type: "true/false", hint: "A voice on this device can read the project aloud" },
   speaking: { type: "true/false", hint: "A voice is reading right now" },
   readRate: { type: "number", hint: "The learner's chosen reading speed" },
   soundPlaying: { type: "function", hint: 'A Play sound sound is going: soundPlaying() for any, soundPlaying("Ding") for one' },
   soundsPlaying: { type: "list", hint: "The names of the Play sound sounds going now" },
+  checks: { type: "object", hint: "The project's checks that fail now: checks.list (each check, message, item), checks.count, checks.passed, checks.failing('MSC6100')" },
   downloadSize: { type: "function", hint: "Bytes the named artboards' files weigh" },
   saveData: { type: "true/false", hint: "The browser asks to save data" },
   connectionType: { type: "text", hint: "The browser's connection guess, like 4g (empty if unknown)" },
@@ -8778,7 +9666,7 @@ const PLAYER_SCOPE_HINTS = {
   layer: { type: "function", hint: 'Any layer by name or id: layer("Knob").width' },
   steps: { type: "list", hint: "One entry per step, for a step bar's dots" }
 };
-const AMBIENT = new Set(Object.keys(PLAYER_SCOPE_HINTS).filter((n) => n !== "enums"));
+const AMBIENT = /* @__PURE__ */ new Set([...Object.keys(PLAYER_SCOPE_HINTS).filter((n) => n !== "enums"), "count", "sum", "items"]);
 const isLive = (v) => !!v.live && !!v.formula?.trim();
 function planLive(project) {
   const live = project.variables.filter(isLive);
@@ -11198,14 +12086,14 @@ function plainParam(kind, p, technical = technicalWording()) {
 }
 const PURPLE = "#3c2d4d";
 const GOLD = "#ffb448";
-const INK = "#2d2d2d";
+const INK$3 = "#2d2d2d";
 const WHITE = "#ffffff";
 const PEACH = "#ffe9dd";
 const CONTENT_TOKENS = {
   background: WHITE,
   surface: "#f4f3f0",
   surfaceMuted: "#dddcd7",
-  text: INK,
+  text: INK$3,
   //muted, border and the three status colours are as light as they can be and still clear
   //4.5:1 (text) or 3:1 (a control's outline) on the page, the cards and their own status surfaces (starter-contrast.test.ts holds them to it)
   muted: "#65605b",
@@ -11228,10 +12116,10 @@ const way = (id, name, description, start, end, button2, onButton, onGradient, a
   tokens: { primary, button: button2, onButton, focus: primary, onPrimary: primary === button2 ? onButton : WHITE },
   brand: { gradientStart: start, gradientEnd: end, onGradient, deep: PURPLE, onDeep: WHITE, accent, warm: PEACH, logoMark, logoText, logoMarkOnLight: GOLD, logoTextOnLight: PURPLE, scrim: id === "orange" || id === "red" ? SCRIM : CLEAR, ...accentButton(button2) }
 });
-const accentButton = (button2) => button2 === GOLD ? { accentButton: PURPLE, onAccentButton: WHITE } : { accentButton: GOLD, onAccentButton: INK };
+const accentButton = (button2) => button2 === GOLD ? { accentButton: PURPLE, onAccentButton: WHITE } : { accentButton: GOLD, onAccentButton: INK$3 };
 const COLOURWAYS = [
   way("gold", "Gold", "Gold gradient with purple, like the UniSQ title slides.", "#f58220", GOLD, PURPLE, WHITE, PURPLE, PURPLE, PURPLE, PURPLE),
-  way("purple", "Purple", "Deep purple with gold, the UniSQ dark slides.", PURPLE, "#775d94", GOLD, INK, WHITE, GOLD, GOLD, WHITE, PURPLE),
+  way("purple", "Purple", "Deep purple with gold, the UniSQ dark slides.", PURPLE, "#775d94", GOLD, INK$3, WHITE, GOLD, GOLD, WHITE, PURPLE),
   way("blue", "Blue", "The palette blue gradient, gold accents.", "#00497d", "#0080a8", "#00497d", WHITE, WHITE, GOLD, GOLD, WHITE),
   way("green", "Green", "The palette green gradient, for science and health.", "#0e6a6f", "#3e8521", "#0e6a6f", WHITE, WHITE, GOLD, GOLD, WHITE),
   way("orange", "Orange", "The palette orange gradient, warm and bold.", "#d0372b", "#ed6a21", "#b52f24", WHITE, WHITE, GOLD, GOLD, WHITE),
@@ -11328,7 +12216,7 @@ function lookFor(themes) {
   }
   return out;
 }
-const solid$2 = (color) => ({ type: "solid", color });
+const solid$6 = (color) => ({ type: "solid", color });
 function lookDefaults(project, type) {
   if (!hasTokens(project.themes)) return {};
   const l = lookFor(project.themes);
@@ -11337,25 +12225,25 @@ function lookDefaults(project, type) {
     case "ellipse":
     case "polygon":
     case "star":
-      return { fill: solid$2(l.surfaceMuted) };
+      return { fill: solid$6(l.surfaceMuted) };
     case "path":
-      return { stroke: { paint: solid$2(l.text), width: 2 } };
+      return { stroke: { paint: solid$6(l.text), width: 2 } };
     case "text":
       return { color: l.text };
     case "frame":
-      return { fill: solid$2(l.background) };
+      return { fill: solid$6(l.background) };
     case "button":
-      return { fill: solid$2(l.button), color: l.onButton };
+      return { fill: solid$6(l.button), color: l.onButton };
     case "input":
-      return { fill: solid$2(l.background), stroke: { paint: solid$2(l.border), width: 1 }, color: l.text };
+      return { fill: solid$6(l.background), stroke: { paint: solid$6(l.border), width: 1 }, color: l.text };
     case "link":
       return { color: l.link };
     case "progress":
-      return { fill: solid$2(l.surfaceMuted), barFill: solid$2(l.button) };
+      return { fill: solid$6(l.surfaceMuted), barFill: solid$6(l.button) };
     case "chart":
       return { colors: [l.button, l.link, l.success, l.warning, l.error, l.muted], color: l.text };
     case "connector":
-      return { fill: solid$2(l.background), stroke: { paint: solid$2(l.muted), width: 2, cap: "round", join: "round" }, color: l.text };
+      return { fill: solid$6(l.background), stroke: { paint: solid$6(l.muted), width: 2, cap: "round", join: "round" }, color: l.text };
     default:
       return {};
   }
@@ -12150,8 +13038,8 @@ const AREA_BAD = "#b3261e40";
 const AREA_MISS = "#8a520040";
 const bodyStyle = (kind, answerBy) => kind === "multiple" ? "check" : kind === "blank" ? answerBy === "drag" ? "dragblank" : "blank" : kind === "ordering" ? "order" : kind === "matching" ? "match" : kind === "categorise" ? "categorise" : kind === "hotspot" ? "spot" : "radio";
 const RESET_LABELS = { again: "Try again", next: "Next question" };
-const solid$1 = (color) => ({ type: "solid", color });
-const stroke$1 = (color, width = 1.5) => ({ paint: solid$1(color), width });
+const solid$5 = (color) => ({ type: "solid", color });
+const stroke$1 = (color, width = 1.5) => ({ paint: solid$5(color), width });
 const row = (gap) => ({ ...defaultAutoLayout("row"), gap, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "center", hugHeight: true });
 const column = (gap) => ({ ...defaultAutoLayout("column"), gap, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: "stretch" });
 const partOf = (n) => (n.questionPart ?? "").split(":")[0];
@@ -12238,17 +13126,17 @@ function applyLooks(frame, before, after) {
 }
 const STATE_WORDS = '{item.state == "correct" ? "✓ Right" : item.state == "wrong" ? "✗ Wrong" : item.state == "missed" ? "← Right answer" : ""}';
 const STATE_DESCRIPTION = 'item.state == "correct" ? "Right" : item.state == "wrong" ? "Wrong" : item.state == "missed" ? "This was the right answer" : ""';
-function text$1(name, part, value, o = {}) {
+function text$2(name, part, value, o = {}) {
   return createNode("text", { name, questionPart: part, text: value, fontSize: TYPE.body, color: L$2.text, autoSize: "height", width: 200, height: 24, ...o });
 }
-function button$1(name, part, label, primary, bindings) {
+function button$4(name, part, label, primary, bindings) {
   return createNode("button", {
     name,
     questionPart: part,
     label,
     width: 150,
     height: 44,
-    fill: solid$1(primary ? L$2.button : L$2.surfaceMuted),
+    fill: solid$5(primary ? L$2.button : L$2.surfaceMuted),
     color: primary ? L$2.onButton : L$2.text,
     ...bindings ? { bindings } : {}
   });
@@ -12267,7 +13155,7 @@ function tickBox(base2) {
     height: 9,
     paths: [{ closed: false, points: [{ x: 0, y: 4.5 }, { x: 4.5, y: 9 }, { x: 12, y: 0 }] }],
     fill: null,
-    stroke: { paint: solid$1(L$2.background), width: 2.25 },
+    stroke: { paint: solid$5(L$2.background), width: 2.25 },
     lineCap: "round",
     lineJoin: "round",
     decorative: true,
@@ -12276,7 +13164,7 @@ function tickBox(base2) {
   return createNode("frame", { ...base2, cornerRadius: 5, clip: false, children: [tick] });
 }
 function optionTemplate(style) {
-  const base2 = { height: 52, fill: solid$1(L$2.background), cornerRadius: RADIUS.control, clip: false };
+  const base2 = { height: 52, fill: solid$5(L$2.background), cornerRadius: RADIUS.control, clip: false };
   if (style === "order") {
     return createNode("frame", {
       ...base2,
@@ -12286,16 +13174,16 @@ function optionTemplate(style) {
       layout: { ...row(12), padding: { top: 10, right: 12, bottom: 10, left: 16 } },
       ...optionLooks({ fill: L$2.background, line: L$2.border }, { ariaDescription: STATE_DESCRIPTION }, false),
       children: [
-        text$1("Number", "optionNumber", "{item.number}.", { width: 28, color: L$2.muted, fontWeight: 600, decorative: true }),
-        text$1("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, ...lookBindings("item", { text: L$2.text }) }),
-        text$1("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, decorative: true }),
-        createNode("button", { name: "Move up", questionPart: "moveUp", label: "↑", width: 40, height: 36, fill: solid$1(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
-        createNode("button", { name: "Move down", questionPart: "moveDown", label: "↓", width: 40, height: 36, fill: solid$1(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } })
+        text$2("Number", "optionNumber", "{item.number}.", { width: 28, color: L$2.muted, fontWeight: 600, decorative: true }),
+        text$2("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, ...lookBindings("item", { text: L$2.text }) }),
+        text$2("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, decorative: true }),
+        createNode("button", { name: "Move up", questionPart: "moveUp", label: "↑", width: 40, height: 36, fill: solid$5(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
+        createNode("button", { name: "Move down", questionPart: "moveDown", label: "↓", width: 40, height: 36, fill: solid$5(L$2.surfaceMuted), color: L$2.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } })
       ]
     });
   }
   const checkbox = style === "check";
-  const markerBase = { name: "Marker", questionPart: "marker", width: 22, height: 22, fill: solid$1(L$2.background), stroke: stroke$1(L$2.border, 2), decorative: true, bindings: { "fill.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.background + '"', "stroke.paint.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.border + '"' } };
+  const markerBase = { name: "Marker", questionPart: "marker", width: 22, height: 22, fill: solid$5(L$2.background), stroke: stroke$1(L$2.border, 2), decorative: true, bindings: { "fill.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.background + '"', "stroke.paint.color": 'item.selected ? "' + L$2.primary + '" : "' + L$2.border + '"' } };
   return createNode("frame", {
     ...base2,
     name: "Option",
@@ -12307,8 +13195,8 @@ function optionTemplate(style) {
     ...optionLooks({ fill: L$2.background, line: L$2.border }, { ariaChecked: "item.selected", ariaLabel: "item.text", ariaDescription: STATE_DESCRIPTION }, true),
     children: [
       checkbox ? tickBox(markerBase) : createNode("ellipse", { ...markerBase, shadow: { x: 0, y: 0, blur: 0, spread: 4, color: L$2.background, inset: true } }),
-      text$1("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, decorative: true, ...lookBindings("item", { text: L$2.text }, ALL_LOOKS, true) }),
-      text$1("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 110, decorative: true })
+      text$2("Label", "optionLabel", "{item.text}", { layoutItem: { width: "fill" }, decorative: true, ...lookBindings("item", { text: L$2.text }, ALL_LOOKS, true) }),
+      text$2("Result", "optionState", STATE_WORDS, { fontSize: TYPE.small, fontWeight: 600, color: L$2.muted, autoSize: "width", width: 110, decorative: true })
     ]
   });
 }
@@ -12339,11 +13227,16 @@ function blankRow(q, i, blankVar) {
     clip: false,
     layout: { ...column(6), align: "stretch" },
     children: [
-      text$1("Blank label", "blankLabel", q.blanks[i]?.label ?? "", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
+      text$2("Blank label", "blankLabel", q.blanks[i]?.label ?? "", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
       createNode("input", {
         name: "Blank input",
         questionPart: "blankInput",
         placeholder: "Your answer",
+        //(the theme's colours, not the input's built-in light ones, so the box goes dark with Dark and High contrast)
+        fill: solid$5(L$2.background),
+        stroke: { paint: solid$5(L$2.border), width: 1 },
+        color: L$2.text,
+        cornerRadius: RADIUS.control,
         ariaLabel: q.blanks[i]?.label || "Answer",
         ...q.blanks[i]?.spelling && q.guard?.spellcheck !== false ? { noAssist: true } : {},
         ...q.blanks[i]?.spelling && q.guard && q.guard.paste !== false ? { noPaste: true } : {},
@@ -12353,7 +13246,7 @@ function blankRow(q, i, blankVar) {
         converters: line.converters,
         bindings: { value: blankVar, ...line.bindings, ariaLabel: `${at}?.label || "Answer"` }
       }),
-      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
+      text$2("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
     ]
   });
 }
@@ -12402,7 +13295,7 @@ function chip(q, o) {
     y: o.y,
     width: o.w ?? TERM_W,
     height: o.h ?? TERM_H,
-    fill: solid$1(L$2.background),
+    fill: solid$5(L$2.background),
     stroke: stroke$1(L$2.border, 2),
     cornerRadius: RADIUS.control,
     clip: false,
@@ -12411,7 +13304,7 @@ function chip(q, o) {
     draggable: { tags: [o.tag], onMiss: "return", label: o.word },
     shadow: { x: 0, y: 2, blur: 6, spread: 0, color: "rgba(0,0,0,0.15)" },
     ...o.marks ? lookBindings(at, { fill: L$2.background, line: L$2.border }) : {},
-    children: [text$1(`${o.name} text`, `${o.part}Text`, o.marks ? `{${at}?.state == "correct" ? "✓ " : ${at}?.state == "wrong" ? "✗ " : ""}{${at}?.text}` : o.word, { layoutItem: { width: "fill" }, decorative: true, ...o.marks ? lookBindings(at, { text: L$2.text }) : {} })]
+    children: [text$2(`${o.name} text`, `${o.part}Text`, o.marks ? `{${at}?.state == "correct" ? "✓ " : ${at}?.state == "wrong" ? "✗ " : ""}{${at}?.text}` : o.word, { layoutItem: { width: "fill" }, decorative: true, ...o.marks ? lookBindings(at, { text: L$2.text }) : {} })]
   });
 }
 function matchTerm(q, p, i, slot, name = `Term ${i + 1}`) {
@@ -12422,7 +13315,7 @@ function matchTerm(q, p, i, slot, name = `Term ${i + 1}`) {
     y: slot * TERM_PITCH,
     width: TERM_W,
     height: TERM_H,
-    fill: solid$1(L$2.background),
+    fill: solid$5(L$2.background),
     stroke: stroke$1(L$2.border, 2),
     cornerRadius: RADIUS.control,
     clip: false,
@@ -12431,7 +13324,7 @@ function matchTerm(q, p, i, slot, name = `Term ${i + 1}`) {
     draggable: { tags: [termTag(q)], onMiss: "return", label: p.term },
     shadow: { x: 0, y: 2, blur: 6, spread: 0, color: "rgba(0,0,0,0.15)" },
     ...lookBindings(itemAt(q, i), { fill: L$2.background, line: L$2.border }),
-    children: [text$1("Term text", "matchTermText", `{${itemAt(q, i)}?.text}`, { layoutItem: { width: "fill" }, decorative: true, ...lookBindings(itemAt(q, i), { text: L$2.text }) })]
+    children: [text$2("Term text", "matchTermText", `{${itemAt(q, i)}?.text}`, { layoutItem: { width: "fill" }, decorative: true, ...lookBindings(itemAt(q, i), { text: L$2.text }) })]
   });
 }
 function matchRow(q, p, i) {
@@ -12454,7 +13347,7 @@ function matchRow(q, p, i) {
         clip: false,
         layout: row(12),
         children: [
-          text$1("Definition", "matchDefinition", `{${at}?.label}`, { layoutItem: { width: "fill" } }),
+          text$2("Definition", "matchDefinition", `{${at}?.label}`, { layoutItem: { width: "fill" } }),
           createNode("frame", {
             name: `Slot ${i + 1}`,
             questionPart: `matchZone:${p.id}`,
@@ -12470,7 +13363,7 @@ function matchRow(q, p, i) {
           })
         ]
       }),
-      text$1("Match result", "matchState", `{${at}?.state == "correct" ? "✓ Right" : ${at}?.state == "wrong" ? "✗ Wrong" + (${at}?.answer ? ". The answer is " + ${at}.answer : "") : ""}`, {
+      text$2("Match result", "matchState", `{${at}?.state == "correct" ? "✓ Right" : ${at}?.state == "wrong" ? "✗ Wrong" + (${at}?.answer ? ". The answer is " + ${at}.answer : "") : ""}`, {
         fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.muted,
@@ -12542,7 +13435,7 @@ function catZone(q, g, i) {
     questionPart: `catZone:${g.id}`,
     height: GROUP_H,
     layoutItem: { width: "fill" },
-    fill: solid$1(L$2.surface),
+    fill: solid$5(L$2.surface),
     stroke: { ...stroke$1(L$2.border, 2), dash: [8, 5] },
     cornerRadius: 12,
     clip: false,
@@ -12550,7 +13443,7 @@ function catZone(q, g, i) {
     //Unlimited, and a dropped item stays where it was let go. Every group takes every item: whether it is right is for Check to say
     dropZone: { accepts: [catTag(q)], snap: "none", label: g.name },
     ariaLabel: g.name,
-    children: [text$1(`Group ${i + 1} heading`, "catHeading", g.name, { x: 12, y: 10, width: 140, fontWeight: 700, fontSize: TYPE.heading, decorative: true })]
+    children: [text$2(`Group ${i + 1} heading`, "catHeading", g.name, { x: 12, y: 10, width: 140, fontWeight: 700, fontSize: TYPE.heading, decorative: true })]
   });
 }
 function catCard(q, c2, i) {
@@ -12595,7 +13488,7 @@ function categoriseBody(q) {
           return made;
         })
       }),
-      text$1("Right groups", "catAnswer", `{${items}.filter(i => i.answer).map(i => i.text + " goes in " + i.answer).join(". ")}`, {
+      text$2("Right groups", "catAnswer", `{${items}.filter(i => i.answer).map(i => i.text + " goes in " + i.answer).join(". ")}`, {
         fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.warning,
@@ -12682,7 +13575,7 @@ function dragBlankRow(q, b, i) {
     clip: false,
     layout: { ...column(6), align: "stretch" },
     children: [
-      text$1("Blank label", "blankLabel", b.label, { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
+      text$2("Blank label", "blankLabel", b.label, { fontSize: TYPE.small, fontWeight: 600, color: L$2.text, bindings: { text: `${at}?.label ?? ""` } }),
       createNode("frame", {
         name: `Gap ${i + 1}`,
         questionPart: `blankZone:${b.id}`,
@@ -12697,7 +13590,7 @@ function dragBlankRow(q, b, i) {
         converters: line.converters,
         bindings: { ...line.bindings, ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) }
       }),
-      text$1("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
+      text$2("Blank answer", "blankAnswer", `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: TYPE.small, color: L$2.warning, bindings: { visible: `!!${at}?.answer` } })
     ]
   });
 }
@@ -12724,7 +13617,7 @@ function dragBlanksBody(q) {
         layout: column(14),
         children: q.blanks.map((b, i) => dragBlankRow(q, b, i))
       }),
-      text$1("Word bank label", "wordBankLabel", "Word bank", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text }),
+      text$2("Word bank label", "wordBankLabel", "Word bank", { fontSize: TYPE.small, fontWeight: 600, color: L$2.text }),
       createNode("frame", {
         name: "Word bank",
         questionPart: "wordBank",
@@ -12822,7 +13715,7 @@ const defaultBox = (k) => ({ x: 40 + k * 46 % 360, y: 40 + k * 38 % 150, w: 90, 
 function pentagon(w, h) {
   return [[0.5, 0], [1, 0.4], [0.8, 1], [0.2, 1], [0, 0.4]].map(([x, y]) => ({ x: Math.round(x * w), y: Math.round(y * h) }));
 }
-function spotArea(q, o, i, shape, box, points) {
+function spotArea(q, o, i, shape2, box, points) {
   const at = itemAt(q, i);
   const r3 = `${at}?`;
   const common = {
@@ -12835,7 +13728,7 @@ function spotArea(q, o, i, shape, box, points) {
     role: isMultiple(q) ? "checkbox" : "radio",
     focusable: true,
     ariaLabel: o.text,
-    fill: solid$1("#ffffff01"),
+    fill: solid$5("#ffffff01"),
     stroke: stroke$1(AREA_OFF, 3),
     cursor: "pointer",
     bindings: {
@@ -12846,31 +13739,31 @@ function spotArea(q, o, i, shape, box, points) {
       "stroke.paint.color": `${r3}.state == "correct" ? "${L$2.success}" : ${r3}.state == "wrong" ? "${L$2.error}" : ${r3}.state == "missed" ? "${L$2.warning}" : ${r3}.selected ? "${L$2.primary}" : "${AREA_OFF}"`
     }
   };
-  if (shape === "ellipse") return createNode("ellipse", common);
-  if (shape === "polygon") return createNode("path", { ...common, paths: [{ closed: true, points: points ? points.map(([x, y]) => ({ x, y })) : pentagon(box.w, box.h) }] });
+  if (shape2 === "ellipse") return createNode("ellipse", common);
+  if (shape2 === "polygon") return createNode("path", { ...common, paths: [{ closed: true, points: points ? points.map(([x, y]) => ({ x, y })) : pentagon(box.w, box.h) }] });
   return createNode("rect", { ...common, cornerRadius: 8 });
 }
 function samplePicture() {
-  const shape = (type, name, x, y, w, h, color, extra = {}) => createNode(type, { name, x, y, width: w, height: h, fill: solid$1(color), stroke: null, decorative: true, ...extra });
+  const shape2 = (type, name, x, y, w, h, color, extra = {}) => createNode(type, { name, x, y, width: w, height: h, fill: solid$5(color), stroke: null, decorative: true, ...extra });
   return createNode("frame", {
     name: "Picture",
     questionPart: "picture",
     width: AREA_W,
     height: AREA_H,
-    fill: solid$1("#cfe8ff"),
+    fill: solid$5("#cfe8ff"),
     stroke: null,
     cornerRadius: RADIUS.control,
     clip: true,
     role: "image",
     ariaLabel: "A house with a red roof and a door, a tree beside it and the sun in the sky",
     children: [
-      shape("ellipse", "Sun", 466, 28, 78, 78, "#ffcf33"),
-      shape("rect", "Ground", 0, 224, AREA_W, 56, "#9bd18b"),
-      shape("rect", "Walls", 150, 138, 170, 104, "#e8c9a0"),
-      createNode("path", { name: "Roof", x: 130, y: 62, width: 210, height: 76, fill: solid$1("#b5523b"), stroke: null, decorative: true, paths: [{ closed: true, points: [{ x: 0, y: 76 }, { x: 105, y: 0 }, { x: 210, y: 76 }] }] }),
-      shape("rect", "Door", 224, 178, 38, 64, "#7a4a2b"),
-      shape("rect", "Trunk", 428, 168, 20, 74, "#7a4a2b"),
-      shape("ellipse", "Leaves", 394, 98, 90, 88, "#3f9a4a")
+      shape2("ellipse", "Sun", 466, 28, 78, 78, "#ffcf33"),
+      shape2("rect", "Ground", 0, 224, AREA_W, 56, "#9bd18b"),
+      shape2("rect", "Walls", 150, 138, 170, 104, "#e8c9a0"),
+      createNode("path", { name: "Roof", x: 130, y: 62, width: 210, height: 76, fill: solid$5("#b5523b"), stroke: null, decorative: true, paths: [{ closed: true, points: [{ x: 0, y: 76 }, { x: 105, y: 0 }, { x: 210, y: 76 }] }] }),
+      shape2("rect", "Door", 224, 178, 38, 64, "#7a4a2b"),
+      shape2("rect", "Trunk", 428, 168, 20, 74, "#7a4a2b"),
+      shape2("ellipse", "Leaves", 394, 98, 90, 88, "#3f9a4a")
     ]
   });
 }
@@ -12903,12 +13796,12 @@ function hotspotBody(q) {
         //The areas sit in one group: a single On pointer on it (only when a child is hit) feeds Choose option the child's place, so an area added later needs no flow of its own
         children: [samplePicture(), createNode("frame", { name: "Areas", questionPart: "spotAreas", width: AREA_W, height: AREA_H, fill: null, stroke: null, clip: false, children: areas })]
       }),
-      text$1("Picks", "spotPicks", `Selected: {${items}.filter(i => i.selected).map(i => i.text + (i.state == "correct" ? " (right)" : i.state == "wrong" ? " (wrong)" : "")).join(", ")}`, {
+      text$2("Picks", "spotPicks", `Selected: {${items}.filter(i => i.selected).map(i => i.text + (i.state == "correct" ? " (right)" : i.state == "wrong" ? " (wrong)" : "")).join(", ")}`, {
         fontSize: TYPE.small,
         color: L$2.muted,
         bindings: { visible: `${items}.some(i => i.selected)` }
       }),
-      text$1("Right areas", "spotAnswer", `Right answer: {${items}.filter(i => i.state == "missed").map(i => i.text).join(", ")}`, {
+      text$2("Right areas", "spotAnswer", `Right answer: {${items}.filter(i => i.state == "missed").map(i => i.text).join(", ")}`, {
         fontSize: TYPE.small,
         fontWeight: 600,
         color: L$2.warning,
@@ -12950,17 +13843,17 @@ function frameFor(q, blankVars, at) {
     role: "region",
     question: q,
     //A flat grey card on the page, like the toolbox's cards
-    fill: solid$1(L$2.surface),
+    fill: solid$5(L$2.surface),
     stroke: null,
     cornerRadius: 8,
     clip: false,
     bindings: { ariaLabel: `"Question: " + ${p("prompt")}` },
     layout: { ...defaultAutoLayout("column"), gap: 16, padding: { top: 24, right: 24, bottom: 24, left: 24 }, align: "stretch", hugHeight: true },
     children: [
-      text$1("Prompt", "prompt", `{${p("prompt")}}`, { role: "heading", headingLevel: 3, fontSize: TYPE.heading, fontWeight: 600, lineHeight: 1.35 }),
+      text$2("Prompt", "prompt", `{${p("prompt")}}`, { role: "heading", headingLevel: 3, fontSize: TYPE.heading, fontWeight: 600, lineHeight: 1.35 }),
       body,
-      text$1("Hint text", "hintText", `Hint: {${p("hint")}}`, { fontSize: TYPE.small, fontStyle: "italic", color: L$2.muted, bindings: { visible: `${p("hint")} != ""` } }),
-      text$1("Feedback", "feedback", `{${p("feedback")}}`, {
+      text$2("Hint text", "hintText", `Hint: {${p("hint")}}`, { fontSize: TYPE.small, fontStyle: "italic", color: L$2.muted, bindings: { visible: `${p("hint")} != ""` } }),
+      text$2("Feedback", "feedback", `{${p("feedback")}}`, {
         fontWeight: 600,
         bindings: { visible: `${p("feedback")} != ""`, color: `${p("answered")} ? (${p("correct")} ? "${L$2.success}" : "${L$2.error}") : "${L$2.muted}"` }
       }),
@@ -12972,10 +13865,10 @@ function frameFor(q, blankVars, at) {
         clip: false,
         layout: { ...row(12), align: "center" },
         children: [
-          button$1("Check answer", "check", "Check answer", true, { disabled: p("locked") }),
-          button$1("Hint", "hint", "Hint", false, { visible: `${p("hintsLeft")} > 0 && !${p("locked")}` }),
-          button$1("Try again", "reset", resetLabel(q), false, { visible: resetVisible(q) }),
-          text$1("Score", "score", `Score: {${p("score")}}`, { fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, bindings: { visible: p("locked") } })
+          button$4("Check answer", "check", "Check answer", true, { disabled: p("locked") }),
+          button$4("Hint", "hint", "Hint", false, { visible: `${p("hintsLeft")} > 0 && !${p("locked")}` }),
+          button$4("Try again", "reset", resetLabel(q), false, { visible: resetVisible(q) }),
+          text$2("Score", "score", `Score: {${p("score")}}`, { fontWeight: 600, color: L$2.muted, autoSize: "width", width: 90, bindings: { visible: p("locked") } })
         ]
       })
     ]
@@ -13122,9 +14015,21 @@ function bindBlank(n, name) {
   n.bindings = { ...n.bindings, value: name };
   n.bindingModes = { ...n.bindingModes, value: "both" };
 }
+function themeOldBlankInputs(container) {
+  if (!isTokenRef(L$2.background)) return;
+  const plain2 = createNode("input");
+  const plainFill = plain2.fill?.type === "solid" ? plain2.fill.color : null;
+  walk(container.children, (n) => {
+    if (n.type !== "input" || partOf(n) !== "blankInput") return;
+    if (n.fill?.type === "solid" && n.fill.color === plainFill) n.fill = solid$5(L$2.background);
+    if (n.color === plain2.color) n.color = L$2.text;
+    if (n.stroke?.paint.type === "solid" && plain2.stroke?.paint.type === "solid" && n.stroke.paint.color === plain2.stroke.paint.color) n.stroke = { ...n.stroke, paint: solid$5(L$2.border) };
+  });
+}
 function syncBlankRows(frame, q) {
   const container = partsOf(frame).blanks?.[0];
   if (!container) return;
+  themeOldBlankInputs(container);
   const rows = container.children.filter((c2) => partOf(c2) === "blankRow");
   const blankNames = q.blanks.map((_, i) => varName(q, `blank${i + 1}`));
   while (rows.length > q.blanks.length) {
@@ -13314,7 +14219,7 @@ function syncListen(ab, frame, q) {
   const has = partsOf(frame).listen?.[0];
   if (q.listen && !has) {
     const at = Math.min(row2.children.length, Math.max(0, row2.children.findIndex((c2) => c2.questionPart === "hint") + 1));
-    const b = button$1(uniqueName(nodeNames(ab), "Listen"), "listen", "Listen", false, { visible: "voiceAvailable" });
+    const b = button$4(uniqueName(nodeNames(ab), "Listen"), "listen", "Listen", false, { visible: "voiceAvailable" });
     b.ariaLabel = "Listen to the question";
     row2.children.splice(at, 0, b);
   } else if (!q.listen && has) {
@@ -13329,7 +14234,7 @@ function syncKeysHint(frame, q) {
   if (want && !has) {
     const body = parts.options?.[0];
     const at = body ? frame.children.findIndex((c2) => c2 === body) : -1;
-    const line = text$1("Number keys hint", "keysHint", `Press 1 to {${varName(q, "items")}.length} to choose`, { fontSize: TYPE.small, color: L$2.muted });
+    const line = text$2("Number keys hint", "keysHint", `Press 1 to {${varName(q, "items")}.length} to choose`, { fontSize: TYPE.small, color: L$2.muted });
     frame.children.splice(at >= 0 ? at + 1 : 2, 0, line);
   } else if (!want && has) {
     const loc = locateIn(frame, has.id);
@@ -13376,7 +14281,7 @@ function setKitOptions(d, abId, frameId, o) {
     const g = gate(o.hintWhen);
     if (g) hint.bindings = { ...hint.bindings ?? {}, visible: `${g} && ${varName(q, "hintsLeft")} > 0 && !${varName(q, "locked")}` };
     if (o.hint === "pill") {
-      Object.assign(hint, PILL, { fill: solid$1(L$2.background), stroke: stroke$1(L$2.border), fontWeight: 600 });
+      Object.assign(hint, PILL, { fill: solid$5(L$2.background), stroke: stroke$1(L$2.border), fontWeight: 600 });
       hint.ariaLabel = "Show a hint";
       const at = locateIn(frame, hint.id);
       const row2 = promptRow(ab, frame);
@@ -13506,7 +14411,7 @@ function buildStepBar(project, ab, cfg) {
   const counter = createNode("text", { name: "Step counter", text: `Step {${step}} of {${count2}}`, x: 16, y: 14, width: inner, fontSize: 13, fontWeight: 600, color: L$1.muted });
   const heading2 = createNode("text", { name: "Step title", text: `{${title}}`, x: 16, y: 36, width: inner, fontSize: 20, fontWeight: 700, color: L$1.text, role: "heading", headingLevel: 2 });
   const words = createNode("text", { name: "Step caption", text: `{${caption}}`, x: 16, y: 68, width: inner, fontSize: 15, color: L$1.text });
-  const back = barButton("Back button", "Back", 16, 112, false, `${step} <= 1`);
+  const back2 = barButton("Back button", "Back", 16, 112, false, `${step} <= 1`);
   const next = barButton("Next button", "Next", box.width - 16 - 96, 112, true, `${step} >= ${count2}`);
   const dotSize = 24;
   const dot = createNode("frame", {
@@ -13555,12 +14460,12 @@ function buildStepBar(project, ab, cfg) {
     clip: false,
     role: "region",
     ariaLabel: "Steps",
-    children: [counter, heading2, words, back, dots, next]
+    children: [counter, heading2, words, back2, dots, next]
   });
   const right = Math.max(-260, ...ab.logic.nodes.map((n) => n.x)) + 260;
   const logicNode = (kind, row2, col, params) => ({ id: uid("ln"), kind, x: right + col * 240, y: row2 * 120, params });
   const rows = [
-    [logicNode("event.pointer", 0, 0, { target: back.id, type: "click" }), logicNode("action.steps", 0, 1, { op: "back" })],
+    [logicNode("event.pointer", 0, 0, { target: back2.id, type: "click" }), logicNode("action.steps", 0, 1, { op: "back" })],
     [logicNode("event.pointer", 1, 0, { target: next.id, type: "click" }), logicNode("action.steps", 1, 1, { op: "next" })],
     [logicNode("event.pointer", 2, 0, { target: dot.id, type: "click" }), logicNode("action.steps", 2, 1, { op: "goto", step: "event.index + 1" })]
   ];
@@ -13805,43 +14710,43 @@ function boxOf$1(n, ox, oy) {
   }
   return { x: ox + n.x, y: oy + n.y, w, h };
 }
-function collect(list2, page, ox, oy, out) {
+function collect(list2, page2, ox, oy, out) {
   for (const raw of list2) {
     const n = raw;
-    if (n.decorative && n.width * n.height > page.width * page.height * 0.5) continue;
+    if (n.decorative && n.width * n.height > page2.width * page2.height * 0.5) continue;
     const box = boxOf$1(n, ox, oy);
     if (n.type === "text" && !(n.text ?? "").trim()) continue;
     if (isContainer(n)) {
       const painted = !!n.fill || !!n.stroke;
-      if (painted && box.w * box.h < page.width * page.height * 0.5) out.push(box);
-      collect(n.children, page, box.x, box.y, out);
-    } else if (box.w * box.h < page.width * page.height * 0.5 || n.type === "text" || n.type === "button") out.push(box);
+      if (painted && box.w * box.h < page2.width * page2.height * 0.5) out.push(box);
+      collect(n.children, page2, box.x, box.y, out);
+    } else if (box.w * box.h < page2.width * page2.height * 0.5 || n.type === "text" || n.type === "button") out.push(box);
   }
 }
 const hits = (a, b, pad = 0) => a.x < b.x + b.w + pad && a.x + a.w + pad > b.x && a.y < b.y + b.h + pad && a.y + a.h + pad > b.y;
-function pickCorner(project, page, branded) {
+function pickCorner(project, page2, branded) {
   const boxes = [];
-  collect(page.children, page, 0, 0, boxes);
-  const master = page.master ? project.artboards.find((a) => a.id === page.master) : void 0;
+  collect(page2.children, page2, 0, 0, boxes);
+  const master = page2.master ? project.artboards.find((a) => a.id === page2.master) : void 0;
   const fromMaster = [];
   if (master) collect(master.children, master, 0, 0, fromMaster);
   const edge2 = branded ? SIDE_MARGIN : GUTTER;
-  const mid = branded ? footerMidY(page.height) : page.height - GUTTER - H / 2;
+  const mid = branded ? footerMidY(page2.height) : page2.height - GUTTER - H / 2;
   const spots = [
-    { x: page.width - edge2 - W, y: mid - H / 2, right: true },
-    { x: page.width - edge2 - W, y: GUTTER, right: true },
+    { x: page2.width - edge2 - W, y: mid - H / 2, right: true },
+    { x: page2.width - edge2 - W, y: GUTTER, right: true },
     { x: edge2, y: mid - H / 2, right: false },
     { x: edge2, y: GUTTER, right: false }
   ];
   const clear = (s) => {
     const b = { x: s.x, y: s.y, w: W, h: H };
-    return !boxes.some((o) => hits(b, o) && !isFooter(page, o)) && !fromMaster.some((o) => hits(b, o, 8));
+    return !boxes.some((o) => hits(b, o) && !isFooter(page2, o)) && !fromMaster.some((o) => hits(b, o, 8));
   };
   return spots.find(clear) ?? spots[0];
 }
-const footerOf = (page) => page.children.find((n) => n.name === "Footer text" && n.type === "text");
-function isFooter(page, box) {
-  const f2 = footerOf(page);
+const footerOf = (page2) => page2.children.find((n) => n.name === "Footer text" && n.type === "text");
+function isFooter(page2, box) {
+  const f2 = footerOf(page2);
   return !!f2 && box.x === f2.x && box.y === f2.y && box.w === f2.width;
 }
 const isBranded = (project) => !!project.brandLook;
@@ -13857,12 +14762,12 @@ function addCreditsButton(project) {
   const font = project.fonts.find((f2) => f2.family === "Open Sans") ? "Open Sans" : void 0;
   const deep = ref("brand/deep");
   let first2;
-  for (const page of [start, ...project.artboards.filter((a) => a.variantOf === start.id && !a.isMaster)]) {
-    const bg = page.background;
+  for (const page2 of [start, ...project.artboards.filter((a) => a.variantOf === start.id && !a.isMaster)]) {
+    const bg = page2.background;
     const colour = (bg?.type === "linear" || bg?.type === "radial" ? ref("brand/on-gradient") : bg?.type === "solid" && deep && bg.color === deep ? ref("brand/on-deep") : void 0) ?? ref("color/muted") ?? ref("color/text");
     if (!colour) continue;
-    const spot = pickCorner(project, page, branded);
-    const footer = footerOf(page);
+    const spot = pickCorner(project, page2, branded);
+    const footer = footerOf(page2);
     if (footer && spot.x + W > footer.x && spot.y < footer.y + 24 && spot.y + H > footer.y) footer.width = Math.max(40, spot.x + PAD - 12 - footer.x);
     const button2 = createNode("button", {
       name: CREDITS_BUTTON_NAME,
@@ -13881,14 +14786,14 @@ function addCreditsButton(project) {
       textDecoration: "underline",
       ...font ? { fontFamily: font } : {}
     });
-    page.children.push(button2);
+    page2.children.push(button2);
     first2 ??= button2;
-    const y = page.logic.nodes.reduce((m, n) => Math.max(m, n.y + 140), 0);
+    const y = page2.logic.nodes.reduce((m, n) => Math.max(m, n.y + 140), 0);
     const on = { id: uid("ln"), kind: "event.pointer", x: 0, y, params: { target: button2.id, type: "click" } };
     const open = { id: uid("ln"), kind: "action.credits", x: 260, y, params: {} };
-    page.logic.nodes.push(on, open);
-    page.logic.edges.push({ id: uid("le"), from: on.id, fromPort: "out", to: open.id, toPort: "in" });
-    graphNote(page, { anchor: on, colour: "sky", text: "**Open credits** shows the list from Project > Credits. [ ] Fill the list in, or delete this button and its two nodes." });
+    page2.logic.nodes.push(on, open);
+    page2.logic.edges.push({ id: uid("le"), from: on.id, fromPort: "out", to: open.id, toPort: "in" });
+    graphNote(page2, { anchor: on, colour: "sky", text: "**Open credits** shows the list from Project > Credits. [ ] Fill the list in, or delete this button and its two nodes." });
   }
   if (!first2) return null;
   return {
@@ -13898,6 +14803,748 @@ function addCreditsButton(project) {
     nodeId: first2.id,
     artboardId: start.id,
     done: false
+  };
+}
+const STAGE_W = 1280;
+const STAGE_H = 720;
+const SAMPLE_CHAPTER = `# The club fair
+
+// Lines are read top to bottom. A name and a colon is someone talking; anything else is narration.
+// Put a picture called Quad in Assets and [bg Quad] shows it behind everyone.
+The quad was crowded with folding tables and hand-painted signs.
+Millie: You came! I knew you would.
+Olive: I said I'd think about it.
+Millie: Think about it here, then. With biscuits.
+
+? Join the writing club
+    set writing += 1
+    Millie: {shake}Yes!{/shake} Okay. Sign here. And here.
+    -> Signing up
+? Ask what they actually write [once]
+    Millie: Short stories, mostly. And one very long one about a lighthouse.
+    Olive: How long?
+    Millie: {pause}We don't talk about it.
+? Say you're still deciding
+    Millie: Oh. Well... the offer stands.
+
+Millie: Either way, take a flyer.
+if writing > 0
+    Olive: I've already signed up. Remember?
+else
+    Olive: Fine. One flyer.
+-> Wandering the fair
+
+# Signing up
+
+Millie: Welcome to the club!
+-> end Joined the club
+
+# Wandering the fair
+
+The tables thinned out as the sun went down.
+? Go home
+    -> end Went home early`;
+function linesOf(text2) {
+  const taken = /* @__PURE__ */ new Set();
+  return text2.split("\n").map((t2) => {
+    const id = newLineId(taken);
+    taken.add(id);
+    return { id, text: t2 };
+  });
+}
+const HIDE_VAR = "storyBoxHidden";
+const solid$4 = (color) => ({ type: "solid", color });
+function storyStage(hideVar, at = {}) {
+  const W2 = STAGE_W;
+  const H2 = STAGE_H;
+  const bgBefore = createNode("image", { name: "Background before", x: 0, y: 0, width: W2, height: H2, fit: "cover", bindings: { assetId: "story.backgroundBefore", visible: "story.backgroundFade < 1 && story.backgroundBefore != ''" } });
+  const bg = createNode("image", { name: "Background", x: 0, y: 0, width: W2, height: H2, fit: "cover", bindings: { assetId: "story.background", opacity: "story.backgroundFade", visible: "story.background != ''" } });
+  const character = createNode("image", {
+    name: "Character",
+    x: W2 / 2 - 280,
+    y: H2 * 0.1,
+    width: 560,
+    height: H2 * 0.9,
+    fit: "contain",
+    ariaLabel: "",
+    bindings: {
+      assetId: "item.image",
+      x: `item.x * ${W2} - 280`,
+      y: `${H2} - item.height * ${H2} - item.lift`,
+      height: `item.height * ${H2}`,
+      opacity: "item.opacity",
+      brightness: "item.brightness",
+      visible: "item.image != ''"
+    }
+  });
+  const cast = createNode("frame", { name: "Cast", x: 0, y: 0, width: W2, height: H2, fill: null, clip: false, repeat: { items: "story.cast", layout: "none", gap: 0, columns: 1 }, children: [character] });
+  const plate = createNode("frame", {
+    name: "Name plate",
+    x: 28,
+    y: -22,
+    width: 240,
+    height: 44,
+    cornerRadius: 10,
+    fill: solid$4("#b8860b"),
+    bindings: { "fill.color": "story.speakerColour || '#b8860b'", visible: "story.speaking" },
+    children: [createNode("text", { name: "Name", x: 0, y: 0, width: 240, height: 44, text: "Name", fontSize: 22, fontWeight: 700, color: "#ffffff", align: "center", verticalAlign: "middle", autoSize: "none", bindings: { text: "story.speaker" } })]
+  });
+  const words = createNode("text", {
+    name: "Words",
+    x: 40,
+    y: 38,
+    width: 1040,
+    height: 112,
+    text: "The words of the line type on here.",
+    fontSize: 26,
+    lineHeight: 1.45,
+    color: "#f5f2ea",
+    autoSize: "none",
+    storyMarkup: true,
+    bindings: { text: "story.marked", reveal: "story.shown" }
+  });
+  const more = createNode("text", { name: "More", x: 1078, y: 132, width: 24, height: 24, text: "▼", fontSize: 16, color: "#f5f2ea", align: "center", autoSize: "none", decorative: true, bindings: { visible: "story.waiting" } });
+  const box = createNode("frame", {
+    name: "Dialogue box",
+    x: 80,
+    y: 516,
+    width: 1120,
+    height: 180,
+    cornerRadius: 14,
+    fill: solid$4("rgba(18, 18, 28, 0.86)"),
+    clip: false,
+    bindings: { visible: `(story.text != '' || story.choosing) && !${HIDE_VAR} && (story.look == 'bottom' || (story.look == 'bubble' && !story.speaking))` },
+    children: [plate, words, more]
+  });
+  const fullLine = createNode("text", {
+    name: "Full screen line",
+    x: 0,
+    y: 0,
+    width: 960,
+    height: 34,
+    text: "A line of the story.",
+    fontSize: 24,
+    lineHeight: 1.45,
+    color: "#f5f2ea",
+    autoSize: "height",
+    storyMarkup: true,
+    bindings: {
+      text: "item.current ? (story.speaker ? story.speaker + ': ' : '') + story.marked : item.line",
+      reveal: "item.current ? story.shown + (story.speaker ? story.speaker.length + 2 : 0) : 100000"
+    }
+  });
+  const fullList = createNode("frame", { name: "Full screen lines", x: 40, y: 36, width: 960, height: 540, fill: null, clip: true, repeat: { items: "story.page.concat(story.text != '' ? [{ current: true }] : [])", layout: "vertical", gap: 16, columns: 1 }, children: [fullLine] });
+  const full = createNode("frame", { name: "Full screen text", x: 120, y: 40, width: 1040, height: 624, cornerRadius: 16, fill: solid$4("rgba(10, 10, 16, 0.84)"), bindings: { visible: `story.look == 'full' && !${HIDE_VAR}` }, children: [fullList] });
+  const BW = 540;
+  const BH = 176;
+  const tail = createNode("rect", {
+    name: "Tail",
+    x: BW / 2 - 16,
+    y: -14,
+    width: 32,
+    height: 32,
+    rotation: 45,
+    fill: solid$4("#fbfaf7"),
+    bindings: {
+      x: `clamp((story.bubble.tipX - story.bubble.x) * ${W2} - 16, -14, ${BW - 18})`,
+      y: `clamp((story.bubble.tipY - story.bubble.y) * ${H2} - 16, -14, ${BH - 18})`,
+      visible: "story.bubble.tail != 'none'"
+    }
+  });
+  const bubbleName = createNode("text", { name: "Bubble name", x: 28, y: 18, width: 480, height: 28, text: "Name", fontSize: 18, fontWeight: 700, color: "#7a5a06", autoSize: "none", bindings: { text: "story.speaker", color: "story.speakerColour || '#7a5a06'" } });
+  const bubbleWords = createNode("text", { name: "Bubble words", x: 28, y: 50, width: 484, height: 110, text: "Words in the bubble.", fontSize: 23, lineHeight: 1.4, color: "#1b1b24", autoSize: "none", storyMarkup: true, bindings: { text: "story.marked", reveal: "story.shown" } });
+  const bubble = createNode("frame", { name: "Speech bubble", x: (W2 - BW) / 2, y: 300, width: BW, height: BH, cornerRadius: 24, clip: false, fill: solid$4("#fbfaf7"), shadow: { x: 0, y: 6, blur: 18, spread: 0, color: "rgba(0, 0, 0, 0.3)" }, bindings: { x: `story.bubble.x * ${W2}`, y: `story.bubble.y * ${H2}`, visible: `story.look == 'bubble' && story.speaking && !${HIDE_VAR}` }, children: [tail, bubbleName, bubbleWords] });
+  const choice = createNode("button", {
+    name: "Choice",
+    x: 0,
+    y: 0,
+    width: 640,
+    height: 58,
+    label: "A choice",
+    fontSize: 22,
+    cornerRadius: 12,
+    fill: solid$4("#fbfaf7"),
+    color: "#1b1b24",
+    shadow: { x: 0, y: 4, blur: 14, spread: 0, color: "rgba(0, 0, 0, 0.35)" },
+    bindings: { label: "(item.picked ? '✓ ' : '') + item.text", disabled: "!item.enabled" }
+  });
+  const choices = createNode("frame", {
+    name: "Choices",
+    x: (W2 - 640) / 2,
+    y: 120,
+    width: 640,
+    height: 340,
+    fill: null,
+    repeat: { items: "story.choices", layout: "vertical", gap: 14, columns: 1 },
+    //(lower down on a full screen of text, under the words)
+    bindings: { visible: `story.choosing && !${HIDE_VAR}`, y: "story.look == 'full' ? 380 : 120" },
+    children: [choice]
+  });
+  const control = (name, label, x, bind2) => createNode("button", { name, x, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid$4("rgba(18, 18, 28, 0.7)"), color: "#f5f2ea", ...bind2 ? { bindings: { label: bind2 } } : {} });
+  const buttons = [control("Back", "Back", 0), control("Auto", "Auto", 94, "story.auto ? 'Auto on' : 'Auto'"), control("Skip", "Skip", 188, "story.skipping ? 'Skipping' : 'Skip'"), control("Hide", "Hide", 282)];
+  const bar = createNode("frame", { name: "Story buttons", x: W2 - 80 - 366, y: 470, width: 366, height: 32, fill: null, bindings: { visible: `story.started && !story.ended && !${HIDE_VAR}`, y: "story.look == 'full' || (story.look == 'bubble' && story.speaking) ? 678 : 470" }, children: buttons });
+  const unhide = createNode("button", { name: "Show the box again", x: 0, y: 0, width: W2, height: H2, label: "", fill: null, stroke: null, ariaLabel: "Show the words again", bindings: { visible: HIDE_VAR } });
+  const weather = createNode("rect", { name: "Weather", x: 0, y: 0, width: W2, height: H2, fill: null, visible: false, particles: { preset: "rain" } });
+  const endWords = createNode("text", { name: "The end words", x: 0, y: 20, width: 880, height: 70, text: "The end", fontSize: 44, fontWeight: 700, color: "#ffffff", align: "center", autoSize: "none", bindings: { text: "'The end' + (story.ending ? ': ' + story.ending : '')" } });
+  const ending = createNode("frame", { name: "The end", x: (W2 - 880) / 2, y: H2 / 2 - 150, width: 880, height: 110, cornerRadius: 16, fill: solid$4("rgba(10, 10, 16, 0.86)"), bindings: { visible: "story.ended" }, children: [endWords] });
+  const captionWords = createNode("text", { name: "Caption words", x: 16, y: 8, width: 568, height: 28, text: "", fontSize: 20, fontWeight: 600, color: "#ffffff", align: "center", autoSize: "none", bindings: { text: "story.captionKind == 'music' ? '♪ ' + story.caption : '[' + story.caption + ']'" } });
+  const caption = createNode("frame", { name: "Caption", x: (W2 - 600) / 2, y: 24, width: 600, height: 44, cornerRadius: 10, fill: solid$4("rgba(10, 10, 16, 0.82)"), bindings: { visible: "story.caption != ''" }, children: [captionWords] });
+  const nodes = [];
+  const edges = [];
+  const wire = (target, action) => {
+    const ev = { id: uid("n"), kind: "event.pointer", x: 40, y: 40 + nodes.length * 60, params: { type: "click", target: target.id } };
+    const act = { id: uid("n"), x: 320, y: 40 + nodes.length * 60, ...action };
+    nodes.push(ev, act);
+    edges.push({ id: uid("e"), from: ev.id, fromPort: "out", to: act.id, toPort: "in" });
+  };
+  wire(choice, { kind: "action.storyPick", params: { choice: "event.index + 1" } });
+  wire(buttons[0], { kind: "action.storyRollBack", params: { steps: "1" } });
+  wire(buttons[1], { kind: "action.storyMode", params: { mode: "auto", to: "toggle" } });
+  wire(buttons[2], { kind: "action.storyMode", params: { mode: "skip", to: "toggle" } });
+  wire(buttons[3], { kind: "action.setVariable", params: { variable: hideVar, value: "true" } });
+  wire(unhide, { kind: "action.setVariable", params: { variable: hideVar, value: "false" } });
+  return createArtboard({
+    name: "Story stage",
+    width: W2,
+    height: H2,
+    background: solid$4("#15141c"),
+    children: [bgBefore, bg, cast, weather, box, full, bubble, choices, bar, caption, ending, unhide],
+    logic: { nodes, edges },
+    ...at
+  });
+}
+const INK$2 = "#f5f2ea";
+const DARK$2 = "#15141c";
+const BAND = "rgba(12, 11, 18, 0.88)";
+const PANEL$1 = "#232130";
+const ACCENT$2 = "#c8a24a";
+const solid$3 = (color) => ({ type: "solid", color });
+const PUZZLE_FRAME_NAME = "Puzzle bar";
+function onClick$2(w, target, ...actions) {
+  const y = 40 + w.nodes.length * 40;
+  const ev = { id: uid("n"), kind: "event.pointer", x: 40, y, params: { type: "click", target: target.id } };
+  w.nodes.push(ev);
+  let prev = ev;
+  actions.forEach((a, i) => {
+    const n = { id: uid("n"), kind: a.kind, x: 320 + i * 260, y, params: a.params ?? {} };
+    w.nodes.push(n);
+    w.edges.push({ id: uid("e"), from: prev.id, fromPort: "out", to: n.id, toPort: "in" });
+    prev = n;
+  });
+}
+const text$1 = (name, value, x, y, width, height, extra = {}) => createNode("text", { name, text: value, x, y, width, height, fontSize: 20, color: INK$2, autoSize: "none", ...extra });
+const button$3 = (name, label, x, y, width, extra = {}) => createNode("button", { name, label, x, y, width, height: 48, fontSize: 18, fontWeight: 600, cornerRadius: 12, fill: solid$3("rgba(255, 255, 255, 0.92)"), color: DARK$2, ...extra });
+function puzzleFrame(w = STAGE_W, h = STAGE_H) {
+  const wiring2 = { nodes: [], edges: [] };
+  const side = 220;
+  const sx = w - side - 24;
+  const band = createNode("rect", { name: "Band", x: 0, y: 0, width: w, height: 64, fill: solid$3(BAND), decorative: true });
+  const label = text$1("Number", "Puzzle 1", 24, 14, 150, 36, { fontSize: 22, fontWeight: 700, color: ACCENT$2, bindings: { text: "puzzle.label" } });
+  const title = text$1("Title", "The puzzle", 180, 14, w - 180 - 460, 36, { fontSize: 22, fontWeight: 600, role: "heading", headingLevel: 1, overflow: "ellipsis", bindings: { text: "puzzle.title" } });
+  const value = text$1("Value", "30 points", w - 440, 18, 200, 30, { align: "right", bindings: { text: "puzzle.solved && !puzzle.right ? 'Solved: ' + puzzle.score + ' points' : puzzle.value + ' points'" } });
+  const coins = text$1("Coins", "Hint coins: 3", w - 224, 18, 200, 30, { align: "right", bindings: { text: "'Hint coins: ' + puzzle.coins" } });
+  const top = createNode("frame", { name: PUZZLE_FRAME_NAME, x: 0, y: 0, width: w, height: 64, fill: null, children: [band, label, title, value, coins] });
+  const hint = button$3("Hint button", "Hint 1", 0, 0, side, {
+    height: 44,
+    fontSize: 16,
+    bindings: {
+      label: "item.open ? item.label : item.label + ' (' + item.cost + (item.cost == 1 ? ' coin)' : ' coins)')",
+      disabled: "!item.open && !item.canOpen",
+      "fill.color": `item.open ? '${ACCENT$2}' : 'rgba(255, 255, 255, 0.92)'`
+    }
+  });
+  const hints = createNode("frame", { name: "Hints", x: sx, y: 88, width: side, height: 212, fill: null, repeat: { items: "puzzle.hints", layout: "vertical", gap: 12, columns: 1 }, children: [hint] });
+  onClick$2(wiring2, hint, { kind: "action.puzzleHint", params: { do: "open", hint: "event.index + 1" } });
+  const noHints = createNode("frame", { name: "No hints", x: sx, y: 88, width: side, height: 44, cornerRadius: 10, fill: solid$3(PANEL$1), bindings: { visible: "puzzle.hints.length == 0" }, children: [text$1("No hints words", "No hints for this one.", 14, 10, side - 28, 24, { fontSize: 16, color: INK$2 })] });
+  const short2 = text$1("Not enough coins", "Not enough hint coins. Look around for more.", sx, 310, side, 52, { fontSize: 15, lineHeight: 1.3, color: "#f2b8a0", bindings: { visible: "puzzle.short" } });
+  const memo2 = button$3("Memo", "Memo", sx, h - 148, side, { bindings: { label: "puzzle.memo ? 'Close the memo' : 'Memo'", ariaPressed: "puzzle.memo ? 'true' : 'false'" } });
+  onClick$2(wiring2, memo2, { kind: "action.puzzleMemo", params: { to: "toggle" } });
+  const skip = button$3("Skip", "Skip for now", sx, h - 84, side, { fill: solid$3("rgba(255, 255, 255, 0.14)"), color: INK$2, bindings: { label: "puzzle.solved ? 'Back' : 'Skip for now'" } });
+  onClick$2(wiring2, skip, { kind: "action.puzzleLeave", params: { skip: true } });
+  const pad = createNode("rect", { name: "Memo pad", x: 0, y: 64, width: sx - 24, height: h - 64, fill: solid$3("rgba(255, 252, 235, 0.16)"), sketch: { colour: "#fff3b0", size: 4 }, ariaLabel: "Memo: draw here to work the puzzle out", bindings: { visible: "puzzle.memo" } });
+  const cw = 560;
+  const cx = (sx - 24 - cw) / 2;
+  const cardHead = text$1("Hint heading", "Hint 1", 24, 20, cw - 48, 32, { fontSize: 22, fontWeight: 700, color: ACCENT$2, role: "heading", headingLevel: 2, bindings: { text: "puzzle.hintLabel" } });
+  const cardText = text$1("Hint words", "The hint.", 24, 64, cw - 48, 84, { fontSize: 19, lineHeight: 1.45, autoSize: "height", bindings: { text: "puzzle.hintText" } });
+  const cardClose = button$3("Close the hint", "Got it", 24, 164, 160, { height: 44, fill: solid$3(ACCENT$2) });
+  onClick$2(wiring2, cardClose, { kind: "action.puzzleHint", params: { do: "close" } });
+  const card = createNode("frame", { name: "Hint card", x: cx, y: 150, width: cw, height: 232, fill: solid$3(PANEL$1), cornerRadius: 16, stroke: { color: ACCENT$2, width: 2 }, role: "dialog", ariaLabel: "Hint", children: [cardHead, cardText, cardClose], bindings: { visible: "puzzle.showing > 0" } });
+  const dim = (name, visible) => createNode("rect", { name, x: 0, y: 0, width: w, height: h, fill: solid$3("rgba(8, 8, 14, 0.72)"), decorative: true, bindings: { visible } });
+  const pw2 = 520;
+  const px = (w - pw2) / 2;
+  const rightHead = text$1("Right heading", "Solved!", 0, 36, pw2, 70, { fontSize: 56, fontWeight: 800, color: ACCENT$2, align: "center", role: "heading", headingLevel: 2 });
+  const rightWords = text$1("Right words", "30 points", 0, 116, pw2, 36, { fontSize: 22, align: "center", bindings: { text: "puzzle.replay || puzzle.won == 0 ? 'Solved again. Well done.' : puzzle.won + ' points'" } });
+  const onward = button$3("Continue", "Continue", (pw2 - 220) / 2, 184, 220, { fill: solid$3(ACCENT$2) });
+  onClick$2(wiring2, onward, { kind: "action.puzzleLeave", params: { skip: false } });
+  const right = createNode("frame", { name: "Right", x: px, y: (h - 270) / 2, width: pw2, height: 270, fill: solid$3(PANEL$1), cornerRadius: 20, role: "dialog", ariaLabel: "Solved", children: [rightHead, rightWords, onward], bindings: { visible: "puzzle.right" } });
+  const wrongHead = text$1("Wrong heading", "Not quite.", 0, 36, pw2, 64, { fontSize: 48, fontWeight: 800, color: "#f2b8a0", align: "center", role: "heading", headingLevel: 2 });
+  const wrongWords = text$1("Wrong words", "It is worth 27 points now.", 0, 110, pw2, 34, { fontSize: 20, align: "center", bindings: { text: "'It is worth ' + puzzle.value + ' points now.'" } });
+  const again = button$3("Try the puzzle again", "Try again", pw2 / 2 - 230, 178, 220, { fill: solid$3(ACCENT$2) });
+  const leave = button$3("Leave it for now", "Leave it for now", pw2 / 2 + 10, 178, 220, { fill: solid$3("rgba(255, 255, 255, 0.14)"), color: INK$2 });
+  onClick$2(wiring2, again, { kind: "action.puzzleAnswer", params: { answer: "again" } });
+  onClick$2(wiring2, leave, { kind: "action.puzzleLeave", params: { skip: true } });
+  const wrong = createNode("frame", { name: "Not quite", x: px, y: (h - 260) / 2, width: pw2, height: 260, fill: solid$3(PANEL$1), cornerRadius: 20, role: "dialog", ariaLabel: "Not quite", children: [wrongHead, wrongWords, again, leave], bindings: { visible: "puzzle.wrong" } });
+  return { layers: [pad, top, hints, noHints, short2, memo2, skip, card, dim("Right dim", "puzzle.right"), right, dim("Not quite dim", "puzzle.wrong"), wrong], wiring: wiring2 };
+}
+function makePuzzle(d, abId) {
+  const ab = d.artboards.find((a) => a.id === abId);
+  if (!ab) return;
+  if (!ab.puzzle) ab.puzzle = { value: 30, hints: [] };
+  if (ab.children.some((c2) => c2.name === PUZZLE_FRAME_NAME)) return;
+  const { layers: layers2, wiring: wiring2 } = puzzleFrame(ab.width, ab.height);
+  ab.children.push(...layers2);
+  const dy = Math.max(0, ...ab.logic.nodes.map((n) => n.y + 80));
+  for (const n of wiring2.nodes) n.y += dy;
+  ab.logic.nodes.push(...wiring2.nodes);
+  ab.logic.edges.push(...wiring2.edges);
+}
+function addPuzzlePage(d, opts2 = {}) {
+  const count2 = d.artboards.filter((a) => a.puzzle).length + 1;
+  const last = d.artboards.reduce((m, a) => Math.max(m, a.canvasX + a.width), 0);
+  const name = opts2.name ?? `Puzzle ${count2}`;
+  const page2 = createArtboard({ name, width: STAGE_W, height: STAGE_H, background: solid$3(DARK$2), canvasX: last + 160, canvasY: 0 });
+  page2.puzzle = {
+    //Hints that fit the kit's own sample question (which prime), so a new puzzle plays straight away
+    title: opts2.title ?? "Prime time",
+    value: opts2.value ?? 30,
+    hints: opts2.hints ?? ["A prime number can only be divided evenly by 1 and by itself.", "Any number ending in 5 can be divided by 5.", "9 is 3 times 3."],
+    bigHint: opts2.bigHint ?? "21 is 3 times 7, so only one is left."
+  };
+  d.artboards.push(page2);
+  const qid = addQuestion(d, page2.id, opts2.kind ?? "single", { at: { x: Math.round((STAGE_W - 244 - 640) / 2), y: 96 } });
+  if (qid) setQuestionSettings(d, page2.id, qid, { attempts: 0, hints: [], reveal: false, ...opts2.question ?? {} });
+  makePuzzle(d, page2.id);
+  return page2.id;
+}
+const INK$1 = "#f5f2ea";
+const DARK$1 = "#15141c";
+const PANEL = "rgba(255, 255, 255, 0.07)";
+const ACCENT$1 = "#c8a24a";
+const solid$2 = (color) => ({ type: "solid", color });
+const wiring = () => ({ nodes: [], edges: [] });
+function onClick$1(w, target, ...actions) {
+  const y = 40 + w.nodes.length * 40;
+  const ev = { id: uid("n"), kind: "event.pointer", x: 40, y, params: { type: "click", target: target.id } };
+  w.nodes.push(ev);
+  let prev = ev;
+  actions.forEach((a, i) => {
+    const n = { id: uid("n"), kind: a.kind, x: 320 + i * 260, y, params: a.params ?? {} };
+    w.nodes.push(n);
+    w.edges.push({ id: uid("e"), from: prev.id, fromPort: "out", to: n.id, toPort: "in" });
+    prev = n;
+  });
+}
+const go = (artboard) => ({ kind: "action.artboard", params: { to: "picked", artboard, transition: "fade", duration: 400 } });
+const back = () => ({ kind: "action.artboard", params: { to: "back", transition: "fade", duration: 300 } });
+const heading$2 = (text2, y = 48) => createNode("text", { name: "Heading", text: text2, x: 80, y, width: STAGE_W - 160, height: 60, fontSize: 44, fontWeight: 700, color: INK$1, autoSize: "none", role: "heading", headingLevel: 1 });
+const button$2 = (name, label, x, y, width = 280, extra = {}) => createNode("button", { name, label, x, y, width, height: 54, fontSize: 20, fontWeight: 600, cornerRadius: 12, fill: solid$2("rgba(255, 255, 255, 0.92)"), color: DARK$1, ...extra });
+const page = (name, children, w, at) => createArtboard({ name, width: STAGE_W, height: STAGE_H, background: solid$2(DARK$1), children, logic: w, canvasX: at * (STAGE_W + 160), canvasY: 0 });
+function titlePage(stageId, savesId, settingsId, extrasId, modeVar) {
+  const w = wiring();
+  const title = createNode("text", { name: "Title", text: "Your story", x: 0, y: 150, width: STAGE_W, height: 90, fontSize: 72, fontWeight: 700, color: INK$1, align: "center", autoSize: "none", role: "heading", headingLevel: 1 });
+  const sub = createNode("text", { name: "Subtitle", text: "A visual novel", x: 0, y: 248, width: STAGE_W, height: 34, fontSize: 24, color: "rgba(245, 242, 234, 0.7)", align: "center", autoSize: "none" });
+  const x = (STAGE_W - 280) / 2;
+  const cont = button$2("Continue", "Continue", x, 320, 280, { bindings: { visible: "story.canContinue" } });
+  const start = button$2("New game", "New game", x, 394);
+  const load = button$2("Load", "Load", x, 468);
+  const settings = button$2("Settings", "Settings", x, 542);
+  const extras = button$2("Extras", "Extras", x, 616);
+  onClick$1(w, start, { kind: "action.storyStart", params: {} });
+  onClick$1(w, cont, { kind: "action.storyLoad", params: { slot: "'latest'" } });
+  onClick$1(w, load, { kind: "action.setVariable", params: { variable: modeVar, value: "'load'" } }, go(savesId));
+  onClick$1(w, settings, go(settingsId));
+  onClick$1(w, extras, go(extrasId));
+  return page("Title", [title, sub, cont, start, load, settings, extras], w, 0);
+}
+function savesPage(modeVar, modeName) {
+  const w = wiring();
+  const head = createNode("text", { name: "Heading", text: "Load", x: 80, y: 40, width: 800, height: 60, fontSize: 44, fontWeight: 700, color: INK$1, autoSize: "none", role: "heading", headingLevel: 1, bindings: { text: `${modeName} == 'save' ? 'Save' : 'Load'` } });
+  const pic = createNode("image", { name: "Picture", x: 0, y: 0, width: 180, height: 101, fit: "cover", cornerRadius: 8, bindings: { assetId: "item.picture", visible: "item.picture != ''" } });
+  const words = createNode("text", { name: "Slot words", text: "Empty", x: 196, y: 4, width: 320, height: 94, overflow: "ellipsis", fontSize: 17, lineHeight: 1.4, color: INK$1, align: "left", autoSize: "none", bindings: { text: "item.used ? 'Slot ' + item.slot + ': ' + item.chapter + (item.scene ? ', ' + item.scene : '') + '\\n' + item.when + '\\n' + item.text : 'Slot ' + item.slot + ': empty'" } });
+  const slot = createNode("frame", { name: "Slot", x: 0, y: 0, width: 540, height: 117, cornerRadius: 12, fill: solid$2(PANEL), clip: true, cursor: "pointer", role: "button", children: [pic, words], bindings: { ariaLabel: "'Slot ' + item.slot + (item.used ? ', ' + item.chapter + ', ' + item.when : ', empty')" } });
+  slot.children.forEach((c2) => {
+    c2.x += 8;
+    c2.y += 8;
+  });
+  const grid = createNode("frame", { name: "Slots", x: 80, y: 130, width: 1100, height: 420, fill: null, repeat: { items: "story.saves", layout: "grid", gap: 20, columns: 2 }, children: [slot] });
+  const done = button$2("Back", "Back", 80, 620, 200);
+  const ifSave = { id: uid("n"), kind: "logic.if", x: 320, y: 40, params: { condition: `${modeName} == 'save'` } };
+  const ev = { id: uid("n"), kind: "event.pointer", x: 40, y: 40, params: { type: "click", target: slot.id } };
+  const save = { id: uid("n"), kind: "action.storySave", x: 580, y: 0, params: { slot: "event.index + 1" } };
+  const load = { id: uid("n"), kind: "action.storyLoad", x: 580, y: 100, params: { slot: "event.index + 1" } };
+  w.nodes.push(ev, ifSave, save, load);
+  w.edges.push({ id: uid("e"), from: ev.id, fromPort: "out", to: ifSave.id, toPort: "in" }, { id: uid("e"), from: ifSave.id, fromPort: "true", to: save.id, toPort: "in" }, { id: uid("e"), from: ifSave.id, fromPort: "false", to: load.id, toPort: "in" });
+  onClick$1(w, done, back());
+  return page("Save and load", [head, grid, done], w, 3);
+}
+function settingsPage() {
+  const w = wiring();
+  const rows = [
+    ["Text speed", "textSpeed", [["Slow", "20"], ["Normal", "null"], ["Fast", "90"], ["Instant", "0"]]],
+    ["Auto speed", "autoSpeed", [["Slow", "0.6"], ["Normal", "1"], ["Fast", "1.6"]]],
+    ["Skip", "skipUnread", [["Lines I have read", "false"], ["Every line", "true"]]],
+    ["Music", "music", [["Off", "0"], ["Quiet", "0.4"], ["Normal", "0.8"], ["Full", "1"]]],
+    ["Voices", "voice", [["Off", "0"], ["Quiet", "0.5"], ["Full", "1"]]],
+    ["Sound effects", "effects", [["Off", "0"], ["Quiet", "0.4"], ["Normal", "0.8"], ["Full", "1"]]],
+    ["Text size", "textSize", [["As designed", "1"], ["Large", "1.25"], ["Largest", "1.5"]]],
+    ["Font", "readable", [["As designed", "false"], ["Easier to read", "true"]]],
+    ["Captions", "captions", [["Off", "false"], ["On", "true"]]],
+    ["Song titles", "songTitles", [["Off", "false"], ["Show them", "true"]]]
+  ];
+  const kids = [heading$2("Settings", 32)];
+  const rowW = 760;
+  rows.forEach(([label, pref, choices], i) => {
+    const y = 108 + i * 52;
+    kids.push(createNode("text", { name: label, text: label, x: 80, y: y + 6, width: 260, height: 30, fontSize: 20, color: INK$1, autoSize: "none" }));
+    const bw = (rowW - 20 * (choices.length - 1)) / choices.length;
+    choices.forEach(([name, value], j) => {
+      const now2 = value === "null" ? `story.prefs.${pref} === null` : `story.prefs.${pref} == ${value}`;
+      const b = button$2(`${label}: ${name}`, name, 360 + j * (bw + 20), y, bw, { height: 42, fontSize: 17, bindings: { "fill.color": `${now2} ? '${ACCENT$1}' : 'rgba(255, 255, 255, 0.92)'`, ariaPressed: `${now2} ? 'true' : 'false'` } });
+      kids.push(b);
+      onClick$1(w, b, { kind: "action.storyPref", params: { pref, value } });
+    });
+  });
+  const done = button$2("Back", "Back", 80, 640, 200);
+  kids.push(done);
+  onClick$1(w, done, back());
+  return page("Settings", kids, w, 4);
+}
+function historyPage(stageId) {
+  const w = wiring();
+  const line = createNode("text", { name: "Said", text: "Who: what they said", x: 0, y: 0, width: 1120, height: 52, fontSize: 19, lineHeight: 1.35, color: INK$1, autoSize: "height", cursor: "pointer", role: "button", bindings: { text: "(item.speaker ? item.speaker + ': ' : '') + item.text" } });
+  const list2 = createNode("frame", { name: "Lines", x: 80, y: 150, width: 1120, height: 460, fill: null, clip: true, repeat: { items: "story.history.slice(-9)", layout: "vertical", gap: 10, columns: 1 }, children: [line] });
+  const done = button$2("Back to the story", "Back to the story", 80, 640, 280);
+  onClick$1(w, line, { kind: "action.storyRollBack", params: { steps: "story.history.length + 1 - story.history.slice(-9)[event.index].number" } }, go(stageId));
+  onClick$1(w, done, go(stageId));
+  const hint = createNode("text", { name: "Hint", text: "Click a line to go back to it.", x: 80, y: 100, width: 800, height: 26, fontSize: 16, color: "rgba(245, 242, 234, 0.7)", autoSize: "none" });
+  return page("History", [heading$2("What was said", 28), hint, list2, done], w, 2);
+}
+function extrasPage(puzzlesId) {
+  const w = wiring();
+  const pic = createNode("image", { name: "Picture", x: 0, y: 0, width: 200, height: 112, fit: "cover", cornerRadius: 8, fill: solid$2(PANEL), bindings: { assetId: "item.seen ? item.image : ''" } });
+  const locked = createNode("text", { name: "Locked", text: "?", x: 0, y: 30, width: 200, height: 50, fontSize: 36, color: "rgba(245, 242, 234, 0.5)", align: "center", autoSize: "none", bindings: { visible: "!item.seen" } });
+  const cell = createNode("frame", { name: "Gallery picture", x: 0, y: 0, width: 200, height: 112, fill: solid$2(PANEL), cornerRadius: 8, clip: true, children: [pic, locked] });
+  const gallery = createNode("frame", { name: "Gallery", x: 80, y: 150, width: 650, height: 380, fill: null, repeat: { items: "story.gallery", layout: "grid", gap: 20, columns: 3 }, children: [cell] });
+  const ending = createNode("text", { name: "Ending", text: "An ending", x: 0, y: 0, width: 380, height: 30, fontSize: 19, color: INK$1, autoSize: "none", bindings: { text: "item.reached ? item.name : '???'" } });
+  const endings = createNode("frame", { name: "Endings", x: 800, y: 150, width: 400, height: 200, fill: null, repeat: { items: "story.endings", layout: "vertical", gap: 8, columns: 1 }, children: [ending] });
+  const chapter = button$2("Chapter", "A chapter", 0, 0, 380, { height: 44, fontSize: 17, bindings: { label: "item.reached ? item.name : '???'", disabled: "!item.reached" } });
+  const chapters = createNode("frame", { name: "Chapter select", x: 800, y: 420, width: 400, height: 200, fill: null, repeat: { items: "story.chapters", layout: "vertical", gap: 10, columns: 1 }, children: [chapter] });
+  const song = button$2("Song", "Play", 0, 0, 200, { height: 40, fontSize: 16, bindings: { label: "item.heard ? 'Track ' + item.number : '???'", disabled: "!item.heard" } });
+  const songs = createNode("frame", { name: "Music room", x: 80, y: 580, width: 650, height: 40, fill: null, repeat: { items: "story.musicRoom", layout: "horizontal", gap: 20, columns: 1 }, children: [song] });
+  const label = (text2, x, y) => createNode("text", { name: text2, text: text2, x, y, width: 400, height: 30, fontSize: 22, fontWeight: 700, color: INK$1, autoSize: "none", role: "heading", headingLevel: 2 });
+  onClick$1(w, chapter, { kind: "action.storyStart", params: { from: "{story.chapters[event.index].name}" } });
+  onClick$1(w, song, { kind: "action.sound", params: { source: "story.musicRoom[event.index].sound", soundtrack: true, loop: true } });
+  const done = button$2("Back", "Back", 80, 640, 200);
+  onClick$1(w, done, { kind: "action.stopSound", params: {} }, back());
+  const puzzles = button$2("Puzzles", "Puzzles", 300, 640, 200);
+  onClick$1(w, puzzles, { kind: "action.stopSound", params: {} }, go(puzzlesId));
+  return page("Extras", [heading$2("Extras", 32), label("Gallery", 80, 110), gallery, label("Endings", 800, 110), endings, label("Chapters", 800, 380), chapters, label("Music", 80, 540), songs, done, puzzles], w, 5);
+}
+function puzzlesPage() {
+  const w = wiring();
+  const sub = createNode("text", { name: "Score", text: "Score", x: 80, y: 100, width: 900, height: 28, fontSize: 18, color: "rgba(245, 242, 234, 0.75)", autoSize: "none", bindings: { text: "story.score + ' points from ' + story.puzzles.filter((p) => p.solved).length + ' of ' + story.puzzles.length + ' puzzles. Hint coins: ' + story.coins" } });
+  const row2 = button$2("Puzzle", "A puzzle", 0, 0, 1120, {
+    height: 48,
+    fontSize: 18,
+    align: "left",
+    bindings: {
+      label: "item.found ? item.number + '. ' + item.title + (item.solved ? '  ·  Solved, ' + item.score + ' of ' + item.full + ' points' : item.skipped ? '  ·  Skipped' : '  ·  Not solved yet') : item.number + '. ???'",
+      disabled: "!item.found",
+      "fill.color": `item.solved ? '${ACCENT$1}' : 'rgba(255, 255, 255, 0.92)'`
+    }
+  });
+  const list2 = createNode("frame", { name: "Puzzle list", x: 80, y: 150, width: 1120, height: 460, fill: null, clip: true, repeat: { items: "story.puzzles", layout: "vertical", gap: 12, columns: 1 }, children: [row2] });
+  onClick$1(w, row2, { kind: "action.artboard", params: { to: "expression", expr: "story.puzzles[event.index].page", transition: "fade", duration: 400 } });
+  const done = button$2("Back", "Back", 80, 640, 200);
+  onClick$1(w, done, back());
+  return page("Puzzles", [heading$2("Puzzles", 32), sub, list2, done], w, 6);
+}
+const PUZZLE_LINES = `The tables thinned out as the sun went down.
+Millie: Wait! Before you go, settle an argument for us.
+[call Puzzle 1]
+if story.result == "solved"
+    Millie: I knew it was me. You're good at this.
+else
+    Millie: We'll ask you again tomorrow.
+`;
+function visualNovel() {
+  const project = createProject("Visual novel");
+  project.themes = starterThemes();
+  const hide2 = { id: uid("v"), name: HIDE_VAR, type: "boolean", initial: false };
+  const mode = { id: uid("v"), name: "savesMode", type: "string", initial: "load" };
+  project.variables.push(hide2, mode);
+  project.fonts.push({ family: "Open Sans", source: "google", weights: [400, 600, 700] }, { family: "Atkinson Hyperlegible", source: "google", weights: [400, 700] });
+  project.settings.stage = "16:9";
+  const stage = storyStage(hide2.id, { canvasX: STAGE_W + 160, canvasY: 0 });
+  const saves = savesPage(mode.id, mode.name);
+  const settings = settingsPage();
+  const history = historyPage(stage.id);
+  const puzzles = puzzlesPage();
+  const extras = extrasPage(puzzles.id);
+  const title = titlePage(stage.id, saves.id, settings.id, extras.id, mode.id);
+  const find2 = (name) => {
+    let hit2;
+    const look = (list2) => {
+      for (const n of list2) {
+        if (!hit2 && n.name === name) hit2 = n;
+        if ("children" in n && Array.isArray(n.children)) look(n.children);
+      }
+    };
+    look(stage.children);
+    return hit2;
+  };
+  const bar = find2("Story buttons");
+  const more = (name, label) => createNode("button", { name, x: 0, y: 0, width: 84, height: 32, label, fontSize: 15, cornerRadius: 8, fill: solid$2("rgba(18, 18, 28, 0.7)"), color: INK$1 });
+  const extra = [more("Save", "Save"), more("Load", "Load"), more("History", "History"), more("Menu", "Menu")];
+  bar.children.forEach((b, i) => b.x = (extra.length + i) * 94);
+  extra.forEach((b, i) => b.x = i * 94);
+  bar.children.unshift(...extra);
+  bar.width = bar.children.length * 94 - 10;
+  bar.x = STAGE_W - 80 - bar.width;
+  const sw = stage.logic;
+  onClick$1(sw, extra[0], { kind: "action.setVariable", params: { variable: mode.id, value: "'save'" } }, go(saves.id));
+  onClick$1(sw, extra[1], { kind: "action.setVariable", params: { variable: mode.id, value: "'load'" } }, go(saves.id));
+  onClick$1(sw, extra[2], go(history.id));
+  onClick$1(sw, extra[3], { kind: "action.storySave", params: { slot: "'auto'" } }, go(title.id));
+  const words = find2("Words");
+  words.bindings = { ...words.bindings, fontSize: "26 * story.prefs.textSize", fontFamily: "story.prefs.readable ? 'Atkinson Hyperlegible' : 'Open Sans'" };
+  const toTitle = createNode("button", { name: "Back to the title", x: (STAGE_W - 280) / 2, y: STAGE_H / 2 + 60, width: 280, height: 54, label: "Back to the title", fontSize: 20, fontWeight: 600, cornerRadius: 12, fill: solid$2("rgba(255, 255, 255, 0.92)"), color: DARK$1, bindings: { visible: "story.ended" } });
+  stage.children.push(toTitle);
+  onClick$1(sw, toTitle, go(title.id));
+  title.canvasX = 0;
+  project.artboards = [title, stage, history, saves, settings, extras, puzzles];
+  const puzzleId = addPuzzlePage(project, {
+    name: "Puzzle 1",
+    title: "Who brought the biscuits?",
+    hints: ["Sam's snack is already known.", "That leaves the biscuits and the crisps for Millie and Olive."],
+    bigHint: "Olive didn't bring the biscuits. So who did?",
+    question: {
+      prompt: "Millie, Olive and Sam each brought one snack to the fair: biscuits, fruit or crisps. Olive didn't bring biscuits. Sam brought fruit. Who brought the biscuits?",
+      options: [
+        { id: "o1", text: "Millie", correct: true },
+        { id: "o2", text: "Olive" },
+        { id: "o3", text: "Sam" }
+      ],
+      shuffle: false
+    }
+  });
+  project.artboards.forEach((a, i) => a.canvasX = i * (STAGE_W + 160));
+  project.settings.startArtboardId = title.id;
+  project.story = {
+    stage: stage.id,
+    chapters: [{ id: uid("ch"), name: "Chapter 1", lines: linesOf(SAMPLE_CHAPTER.replace("The tables thinned out as the sun went down.\n", PUZZLE_LINES)) }],
+    cast: [
+      { id: uid("cm"), name: "Millie", colour: "#c2410c", expressions: [] },
+      { id: uid("cm"), name: "Olive", colour: "#1d4ed8", expressions: [] }
+    ]
+  };
+  const item2 = (text2, node, artboard) => ({ id: uid("ck"), text: text2, ...node ? { nodeId: node.id } : {}, ...artboard ? { artboardId: artboard.id } : {}, done: false });
+  return {
+    project,
+    checklist: [
+      item2("Give it a title on the title screen", title.children[0], title),
+      item2("Write your story in the Story tab: the sample shows every kind of line"),
+      item2("Add your characters in the Story tab under Cast, with a picture for each face (pictures named after them fill the faces in)"),
+      item2("Add backgrounds to Assets and show them with a line like [bg Quad]"),
+      item2("Restyle the dialogue box: its colour, the name plate and the words", find2("Dialogue box"), stage),
+      item2("Write your own puzzle on Puzzle 1: the question, and its title, value and hints under Puzzle in the page settings", void 0, project.artboards.find((a) => a.id === puzzleId)),
+      item2("Preview it from the title, play to an ending, and try Save, Load, History and Settings")
+    ]
+  };
+}
+const INK = "#f5f2ea";
+const DARK = "#15141c";
+const ACCENT = "#c8a24a";
+const solid$1 = (color) => ({ type: "solid", color });
+function onClick(w, target, ...actions) {
+  const y = 40 + w.nodes.length * 40;
+  const ev = { id: uid("n"), kind: "event.pointer", x: 40, y, params: { type: "click", target: target.id } };
+  w.nodes.push(ev);
+  let prev = ev;
+  actions.forEach((a, i) => {
+    const n = { id: uid("n"), kind: a.kind, x: 320 + i * 260, y, params: a.params ?? {} };
+    w.nodes.push(n);
+    w.edges.push({ id: uid("e"), from: prev.id, fromPort: "out", to: n.id, toPort: "in" });
+    prev = n;
+  });
+}
+const button$1 = (name, label, x, y, width, extra = {}) => createNode("button", { name, label, x, y, width, height: 44, fontSize: 17, fontWeight: 600, cornerRadius: 10, fill: solid$1("rgba(18, 18, 28, 0.78)"), color: INK, ...extra });
+const shape = (type, name, x, y, width, height, color, extra = {}) => createNode(type, { name, x, y, width, height, fill: solid$1(color), stroke: null, ...extra });
+function roomControls(w, width = STAGE_W, height = STAGE_H) {
+  const name = createNode("text", { name: "Room name", x: 28, y: 14, width: 600, height: 28, text: "Name", fontSize: 19, fontWeight: 700, color: ACCENT, autoSize: "none", bindings: { text: "room.speaker", visible: "room.speaking" } });
+  const words = createNode("text", { name: "Room words", x: 28, y: 46, width: width - 216, height: 80, text: "What you see.", fontSize: 23, lineHeight: 1.4, color: INK, autoSize: "none", bindings: { text: "room.text" } });
+  const more = createNode("text", { name: "Room more", x: width - 196, y: 100, width: 24, height: 24, text: "▼", fontSize: 15, color: INK, align: "center", autoSize: "none", decorative: true, bindings: { visible: "room.more" } });
+  const box = createNode("frame", { name: "Room box", x: 80, y: height - 170, width: width - 160, height: 140, cornerRadius: 14, fill: solid$1("rgba(18, 18, 28, 0.88)"), role: "status", bindings: { visible: "room.showing" }, children: [name, words, more] });
+  const carried = createNode("text", { name: "Carrying", x: 24, y: 20, width: 760, height: 26, text: "Hint coins: 3", fontSize: 16, color: INK, autoSize: "none", bindings: { text: "'Hint coins: ' + room.coins + (room.items.length ? '   Carrying: ' + room.items.map((i) => i.name).join(', ') : '')" } });
+  const leave = button$1("Leave", "Leave", width - 24 - 140, 14, 140);
+  onClick(w, leave, { kind: "action.storyBack", params: { result: "'left'" } });
+  return [carried, leave, box];
+}
+function roomPage(name = "Room") {
+  const W2 = STAGE_W;
+  const H2 = STAGE_H;
+  const w = { nodes: [], edges: [] };
+  const wall = shape("rect", "Wall", 0, 0, W2, 470, "#3b3346", { decorative: true });
+  const floor = shape("rect", "Floor", 0, 470, W2, 250, "#5a4636", { decorative: true });
+  const look = (n, examine) => Object.assign(n, { examine });
+  const window = look(shape("rect", "Window", 520, 70, 240, 180, "#8fb3d9", { cornerRadius: 6, stroke: { color: "#2a2433", width: 10 } }), { text: "Rain on the glass. The quad is empty." });
+  const shelf = look(shape("rect", "Bookshelf", 90, 120, 220, 380, "#6b4a2f", { cornerRadius: 4 }), { text: "Mostly poetry. One book is upside down.\nMillie: That one is mine. Leave it." });
+  const desk = look(shape("rect", "Desk", 860, 330, 300, 170, "#7a5a3a", { cornerRadius: 6 }), { text: "A desk with one drawer that sticks. Inside: a small brass key.", item: "Brass key", stays: true });
+  const rug = look(shape("ellipse", "Rug", 420, 540, 440, 120, "#8a3a3a"), { text: "A rug with a burn mark shaped like a duck." });
+  const door = look(shape("rect", "Door", 1180, 150, 90, 330, "#4a3a2c", { cornerRadius: 4 }), { text: "Locked. Through the keyhole: a garden shed." });
+  const glint = (n, x, y, says) => look(shape("ellipse", n, x, y, 26, 26, "#f3d27a", { opacity: 0.35 }), { coins: 1, text: says });
+  const coins = [glint("Glint on the shelf", 250, 160, "Something shines behind the books."), glint("Glint by the door", 1150, 640, "Something shines under the door.")];
+  const page2 = createArtboard({ name, width: W2, height: H2, background: solid$1(DARK), children: [wall, floor, window, shelf, desk, rug, door, ...coins], logic: w, canvasX: 0, canvasY: 0 });
+  page2.children.push(...roomControls(w, W2, H2));
+  return page2;
+}
+function mapPage(name = "Map") {
+  const W2 = STAGE_W;
+  const H2 = STAGE_H;
+  const w = { nodes: [], edges: [] };
+  const heading2 = createNode("text", { name: "Heading", text: "Where to?", x: 80, y: 48, width: 800, height: 60, fontSize: 44, fontWeight: 700, color: INK, autoSize: "none", role: "heading", headingLevel: 1 });
+  const place = button$1("Place", "A place", 0, 0, 360, { height: 56, fontSize: 20, fill: solid$1("rgba(255, 255, 255, 0.92)"), color: DARK, bindings: { label: "item" } });
+  const list2 = createNode("frame", { name: "Places", x: 80, y: 140, width: 1120, height: 440, fill: null, repeat: { items: "story.places", layout: "grid", gap: 20, columns: 3 }, children: [place] });
+  onClick(w, place, { kind: "action.storyGoTo", params: { where: "{story.places[event.index]}" } });
+  const noneWords = createNode("text", { name: "Nowhere yet words", text: "Nowhere to go yet.", x: 20, y: 14, width: 320, height: 28, fontSize: 20, color: INK, autoSize: "none" });
+  const none = createNode("frame", { name: "Nowhere yet", x: 80, y: 140, width: 360, height: 56, cornerRadius: 10, fill: solid$1("#2b3a33"), bindings: { visible: "story.places.length == 0" }, children: [noneWords] });
+  const back2 = button$1("Back", "Back", 80, H2 - 90, 200, { height: 54, fontSize: 20 });
+  onClick(w, back2, { kind: "action.storyBack", params: { result: "''" } });
+  return createArtboard({ name, width: W2, height: H2, background: solid$1("#1e2a24"), children: [heading2, list2, none, back2], logic: w, canvasX: 0, canvasY: 0 });
+}
+function addPage(d, page2) {
+  const names = new Set(d.artboards.map((a) => a.name.toLowerCase()));
+  let n = page2.name;
+  for (let i = 2; names.has(n.toLowerCase()); i++) n = `${page2.name} ${i}`;
+  page2.name = n;
+  page2.canvasX = d.artboards.reduce((m, a) => Math.max(m, a.canvasX + a.width), 0) + 160;
+  d.artboards.push(page2);
+  return page2.id;
+}
+const SCRIPT = `# The clubroom
+
+// The case: the writing club's trophy has gone from its cabinet overnight.
+Millie: It's gone. The trophy. The cabinet was locked all night.
+Olive: Then someone had a key. Let's look around before anyone tidies up.
+[call Clubroom]
+? Show Olive the brass key [if has("Brass key")]
+    Olive: The cabinet key! So it never left the room.
+    set clues += 1
+? Say you found nothing
+    Olive: Then we'll have to think instead.
+
+Millie: First, an argument from this morning. Settle it for us.
+[call Puzzle 1]
+if story.result == "solved"
+    Millie: Ha. I knew it was me.
+[place The quad]
+[place The library]
+Olive: The quad has the noticeboard. The library has the other cabinet. Where first?
+[call Map]
+
+# The quad
+
+Olive: Last night's timetable is pinned up here. If we put it in order...
+[call Puzzle 2]
+if story.result == "solved"
+    set clues += 1
+    Olive: So the caretaker swept up after the lights went out. Odd.
+else
+    Olive: It's a muddle. Let's try the library.
+-> The library
+
+# The library
+
+Millie: The library cabinet has a code lock, and the librarian left a riddle on it.
+[call Puzzle 3]
+if story.result == "solved"
+    Millie: It's open, and the trophy is behind the dictionaries!
+    if clues >= 2
+        Olive: Moved here for safe keeping, by someone with the brass key. The caretaker.
+        -> end Case closed
+    Olive: But who put it there?
+    -> end Found, not solved
+Millie: We'll crack it tomorrow.
+-> end Still missing
+`;
+const find = (ab, name) => {
+  let hit2;
+  const look = (list2) => {
+    for (const n of list2) {
+      if (!hit2 && n.name === name) hit2 = n;
+      if ("children" in n && Array.isArray(n.children)) look(n.children);
+    }
+  };
+  look(ab.children);
+  return hit2;
+};
+function puzzleMystery() {
+  const { project } = visualNovel();
+  project.settings.title = "Puzzle mystery";
+  const title = project.artboards.find((a) => a.name === "Title");
+  const heading2 = find(title, "Title");
+  if (heading2 && heading2.type === "text") heading2.text = "The missing trophy";
+  const sub = find(title, "Subtitle");
+  if (sub && sub.type === "text") sub.text = "A puzzle mystery";
+  project.variables.push({ id: uid("v"), name: "clues", type: "number", initial: 0 });
+  const p1 = project.artboards.find((a) => a.puzzle);
+  p1.puzzle.title = "Who brought the biscuits?";
+  const p2 = addPuzzlePage(project, {
+    kind: "ordering",
+    name: "Puzzle 2",
+    title: "Last night, in order",
+    value: 30,
+    hints: ["The meeting ended before anyone locked up.", "You can only sweep a room once the meeting has left it."],
+    bigHint: "The lights go out last of all.",
+    question: {
+      prompt: "Put last night in the order it happened. Use the arrows, or drag.",
+      options: [
+        { id: "o1", text: "The club meeting ends" },
+        { id: "o2", text: "Millie locks the cabinet" },
+        { id: "o3", text: "The caretaker sweeps the clubroom" },
+        { id: "o4", text: "The lights go out" }
+      ],
+      shuffle: true
+    }
+  });
+  const p3 = addPuzzlePage(project, {
+    kind: "multiple",
+    name: "Puzzle 3",
+    title: "The librarian’s lock",
+    value: 40,
+    hints: ["36 is 4 times 9.", "36 is also 3 times 12."],
+    bigHint: "Only one of them leaves something over.",
+    question: {
+      prompt: "The riddle on the lock: “Press every number that goes into 36 exactly.” Which buttons do you press?",
+      options: [
+        { id: "o1", text: "4", correct: true },
+        { id: "o2", text: "5" },
+        { id: "o3", text: "9", correct: true },
+        { id: "o4", text: "12", correct: true }
+      ],
+      shuffle: false
+    }
+  });
+  const room = roomPage("Clubroom");
+  addPage(project, room);
+  const map = mapPage("Map");
+  addPage(project, map);
+  project.artboards.forEach((a, i) => a.canvasX = i * (1280 + 160));
+  project.story.chapters = [{ id: uid("ch"), name: "The case", lines: linesOf(SCRIPT) }];
+  const page2 = (id) => project.artboards.find((a) => a.id === id);
+  const item2 = (text2, node, artboard) => ({ id: uid("ck"), text: text2, ...node ? { nodeId: node.id } : {}, ...artboard ? { artboardId: artboard.id } : {}, done: false });
+  return {
+    project,
+    checklist: [
+      item2("Give your mystery a title on the title screen", heading2, title),
+      item2("Rewrite the case in the Story tab: the sample shows a room, three puzzles and a map"),
+      item2("Put a background picture in the Clubroom and lay its places over the things in it (each has Look at)", void 0, room),
+      item2("Change the hidden coins and the key: their words, and what they give, under Look at", find(room, "Desk"), room),
+      item2("Write your own puzzles: the question on each page, and its title, value and hints under Puzzle", void 0, p1),
+      item2("Check the second and third puzzles too", void 0, page2(p2)),
+      item2("Open places on the Map from the script with [place ...], each with a # scene of the same name", void 0, map),
+      item2("Preview it from the title and play to an ending, using only the keyboard once", void 0, page2(p3))
+    ]
   };
 }
 let L = lookFor(void 0);
@@ -14001,7 +15648,7 @@ function flipCards() {
   ];
   const fronts = [];
   const backs = [];
-  data.forEach(([front, back], i) => {
+  data.forEach(([front, back2], i) => {
     const v = { id: uid("v"), name: `flipped${i + 1}`, type: "boolean", initial: false };
     project.variables.push(v);
     const x = 80 + i * 285;
@@ -14029,7 +15676,7 @@ function flipCards() {
       stroke: stroke(L.success, 2),
       clip: false,
       bindings: { visible: v.name },
-      children: [text("Back text", back, 24, 110, 212, { fontSize: 18, align: "center" })]
+      children: [text("Back text", back2, 24, 110, 212, { fontSize: 18, align: "center" })]
     });
     const card = createNode("frame", {
       name: `Card ${i + 1}`,
@@ -14165,14 +15812,14 @@ function branching() {
   ab.children.push(goLeft, goRight);
   const wire = (btn, to, row2, board) => {
     const on = gnode("event.pointer", 0, row2 * 120, { target: btn.id, type: "click" }, "Story");
-    const go = gnode("action.artboard", 260, row2 * 120, { artboard: to.id, transition: "fade", duration: 300 });
-    board.logic.nodes.push(on, go);
-    board.logic.edges.push(edge(on, go));
+    const go2 = gnode("action.artboard", 260, row2 * 120, { artboard: to.id, transition: "fade", duration: 300 });
+    board.logic.nodes.push(on, go2);
+    board.logic.edges.push(edge(on, go2));
   };
   wire(goLeft, left, 0, ab);
   wire(goRight, right, 1, ab);
-  for (const [board, back] of [[left, "Try the other path"], [right, "Try the other path"]]) {
-    const again = button(`${board.name} restart`, back, 80, 320, 260, false);
+  for (const [board, back2] of [[left, "Try the other path"], [right, "Try the other path"]]) {
+    const again = button(`${board.name} restart`, back2, 80, 320, 260, false);
     board.children.push(again);
     wire(again, ab, 0, board);
   }
@@ -14221,9 +15868,9 @@ function timelineIntro() {
   };
   ab.timelines.push(tl);
   const on = gnode("event.pointer", 0, 0, { target: replay.id, type: "click" }, "Intro");
-  const go = gnode("action.timeline", 260, 0, { timeline: tl.id, op: "restart" });
-  ab.logic.nodes.push(on, go);
-  ab.logic.edges.push(edge(on, go));
+  const go2 = gnode("action.timeline", 260, 0, { timeline: tl.id, op: "restart" });
+  ab.logic.nodes.push(on, go2);
+  ab.logic.edges.push(edge(on, go2));
   return {
     project,
     checklist: [
@@ -14241,7 +15888,9 @@ const STARTERS = [
   { key: "flip-cards", name: "Flip cards", description: "Three cards that turn over on a click or Enter, for terms and definitions or question and answer.", tags: ["revision", "variables"], build: flipCards },
   { key: "sorting", name: "Drag and drop sorting", description: "Four items to drag into two groups, with feedback for a right and a wrong drop, a count and a Start again button.", tags: ["drag and drop", "assessment"], build: sorting },
   { key: "branching-story", name: "Branching story", description: "An opening scene with two choices that lead to different endings, each on its own artboard.", tags: ["scenarios", "artboards"], build: branching },
-  { key: "timeline-intro", name: "Animated timeline intro", description: "A title, a line and a bar that animate in on a timeline, with a Replay button.", tags: ["animation", "timeline"], build: timelineIntro }
+  { key: "timeline-intro", name: "Animated timeline intro", description: "A title, a line and a bar that animate in on a timeline, with a Replay button.", tags: ["animation", "timeline"], build: timelineIntro },
+  { key: "visual-novel", name: "Visual novel", description: "A story written as text, played on a stage with a dialogue box, characters and choices, with a title screen, saves, history, settings and extras.", tags: ["story", "scenarios"], build: visualNovel },
+  { key: "puzzle-mystery", name: "Puzzle mystery", description: "A case to solve: a story with a room to search for clues and hidden hint coins, three puzzles with hints, a map and a puzzle index.", tags: ["story", "puzzles"], build: puzzleMystery }
 ];
 const starterByKey = (key) => STARTERS.find((s) => s.key === key);
 function projectFromStarter(s, name) {
@@ -16969,13 +18618,13 @@ function allNodes(p) {
 }
 function artboardNodes(ab) {
   const out = [];
-  const go = (list2) => {
+  const go2 = (list2) => {
     for (const n of list2 ?? []) {
       out.push(n);
-      go(n.children);
+      go2(n.children);
     }
   };
-  go(ab.children);
+  go2(ab.children);
   return out;
 }
 const byId = (p) => new Map(allNodes(p).map((n) => [n.id, n]));
@@ -17402,7 +19051,7 @@ You've built, animated, wired up, imported and published. Keep going with the to
     4: { check: all(clickThen("button", "action.setVariable", setsVariable("lit")), clickThen("button", "action.setVariable", setsVariable("taps"))) }
   }
 });
-const tutorial$w = {
+const tutorial$y = {
   order: 61,
   level: "intermediate",
   minutes: 20,
@@ -17562,9 +19211,9 @@ The checker looks at every theme for text that uses tokens, so a title that pass
 };
 const __vite_glob_0_0$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$w
+  tutorial: tutorial$y
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$v = {
+const tutorial$x = {
   order: 32,
   level: "intermediate",
   minutes: 20,
@@ -17702,9 +19351,107 @@ Tabs show one section's text at a time under a row of titles. They read the same
 };
 const __vite_glob_0_1$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$v
+  tutorial: tutorial$x
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$u = {
+const SAMPLE_TITLES = ["who brought the biscuits?"];
+const SAMPLE_PROMPT = "Which of these is a prime number?";
+const SAMPLE_HINT = "A prime number can only be divided evenly by 1 and by itself.";
+const theirs = (c2) => c2.project.artboards.filter((a) => a.puzzle && !SAMPLE_TITLES.includes(String(a.puzzle.title ?? "").trim().toLowerCase()));
+const questionOf = (a) => {
+  let q;
+  const walk2 = (list2) => {
+    for (const n of list2) {
+      if (!q && n.type === "frame" && n.question) q = n.question;
+      if ("children" in n && Array.isArray(n.children)) walk2(n.children);
+    }
+  };
+  walk2(a.children);
+  return q;
+};
+const madeOne = (c2) => theirs(c2).length > 0;
+const ownQuestion = (c2) => theirs(c2).some((a) => {
+  const q = questionOf(a);
+  return !!q && q.prompt.trim() !== "" && q.prompt.trim() !== SAMPLE_PROMPT;
+});
+const ownHints = (c2) => theirs(c2).some((a) => {
+  const p = a.puzzle;
+  return !!String(p.title ?? "").trim() && String(p.title).trim() !== "Prime time" && (p.hints ?? []).some((h) => h.trim() && h.trim() !== SAMPLE_HINT);
+});
+const called = (c2) => {
+  const text2 = (c2.project.story?.chapters ?? []).flatMap((ch) => ch.lines.map((l) => l.text.trim().toLowerCase()));
+  return theirs(c2).some((a) => text2.includes(`[call ${a.name.trim().toLowerCase()}]`)) && text2.some((l) => l.includes("story.result"));
+};
+const tutorial$w = {
+  order: 47,
+  level: "beginner",
+  minutes: 10,
+  example: "tut-add-puzzle",
+  topic: {
+    id: "tutorial-add-puzzle",
+    title: "Add a puzzle",
+    group: "Build it",
+    summary: "Put a puzzle in a story: a question in the puzzle frame, hints bought with hint coins, called from the script, with the story answering how it went.",
+    keywords: "tutorial puzzle puzzles story visual novel hint hints hint coins value score frame call story result question",
+    body: `You will add a puzzle to a story: Ren asks the reader a riddle, the reader can buy hints with hint coins, and Ren answers differently when it's solved. It takes about ten minutes. Use the story from [Your first visual novel](tutorial-visual-novel), or start a new project from the **Visual novel** template.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Add a puzzle**.
+
+A puzzle is a page the story goes to and comes back from. Its frame (the number and value along the top, the hints and coins down the side, the big right or wrong moment) is already wired; you write the question and the hints.
+
+## 1. Make a puzzle page
+
+In the **Story** tab press **+ New puzzle**. A new page opens with a question in the middle and the puzzle frame around it. (The Visual novel template has a **Puzzle 1** already, so yours is **Puzzle 2**.)
+
+## 2. Write the question
+
+Select the question on the page and change it in the **Properties** panel:
+
+- **Question**: \`What gets wetter the more it dries?\`
+- The options: **A towel** (right), **The rain**, **A sponge**.
+
+## 3. Title, value and hints
+
+Click an empty part of the page so the page itself is selected, and open its **Puzzle** section:
+
+- **Title**: \`Ren's riddle\`
+- **Hint 1**: \`Think about what you use after a shower.\`
+- **Hint 2**: \`It hangs in the bathroom.\`
+- **Big hint**: \`You dry yourself with it.\`
+
+Each hint costs a hint coin the first time; a new game starts with 3.
+
+## 4. Call it from the story
+
+In the **Story** tab, under Ren's lines, add (use your puzzle page's name):
+
+\`\`\`
+Ren: Before you sit down, answer me this.
+[call Puzzle 2]
+if story.result == "solved"
+    Ren (happy): Clever. You can stay.
+else
+    Ren: We'll call that a maybe.
+\`\`\`
+
+## 5. Play it
+
+Press **Preview**, play to the riddle, open a hint, answer it wrong once to see the value drop, then right. **Continue** takes you back to the story, which answers how it went.
+
+help:story-puzzles help:story`
+  },
+  guide: {
+    1: { check: madeOne, show: "panel-story" },
+    2: { check: ownQuestion, show: "panel-inspector" },
+    3: { check: ownHints, show: "panel-inspector" },
+    4: { check: called, show: "panel-story" },
+    5: { check: saw("previewed"), show: "preview" }
+  }
+};
+const __vite_glob_0_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$w
+}, Symbol.toStringTag, { value: "Module" }));
+const tutorial$v = {
   order: 20,
   level: "intermediate",
   minutes: 15,
@@ -17827,11 +19574,11 @@ When the question finishes, it marks each gap on its own: the box of a right gap
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_2$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$u
+  tutorial: tutorial$v
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$t = {
+const tutorial$u = {
   order: 67,
   level: "advanced",
   minutes: 30,
@@ -17975,11 +19722,11 @@ Press <kbd>Esc</kbd> to close the Preview.
     9: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_3$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$t
+  tutorial: tutorial$u
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$s = {
+const tutorial$t = {
   order: 40,
   level: "intermediate",
   minutes: 30,
@@ -18140,11 +19887,11 @@ Watch \`score\`, \`taken\` and \`ending\` change in **Variables (live)** on the 
     9: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_4$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$s
+  tutorial: tutorial$t
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$r = {
+const tutorial$s = {
   order: 62,
   level: "beginner",
   minutes: 15,
@@ -18270,11 +20017,11 @@ In a branded project the logo and brand layers are locked, colours can only be t
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_5$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$r
+  tutorial: tutorial$s
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$q = {
+const tutorial$r = {
   order: 33,
   level: "beginner",
   minutes: 20,
@@ -18412,11 +20159,11 @@ Once you leave the formula box, **Only while** shows it as two rows you could al
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_6$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$q
+  tutorial: tutorial$r
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$p = {
+const tutorial$q = {
   order: 34,
   level: "beginner",
   minutes: 15,
@@ -18529,11 +20276,11 @@ Add a line of instructions under the pictures saying how to use the keyboard, si
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_7$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_8$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$p
+  tutorial: tutorial$q
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$o = {
+const tutorial$p = {
   order: 54,
   level: "intermediate",
   minutes: 15,
@@ -18638,11 +20385,11 @@ To use it for real, give learners the **Link for StudyDesk** from [Share link](e
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_8$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_9$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$o
+  tutorial: tutorial$p
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$n = {
+const tutorial$o = {
   order: 53,
   level: "advanced",
   minutes: 25,
@@ -18784,11 +20531,11 @@ Press **Preview** at the top right. The page plays with the words from the file,
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_9$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_10$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$n
+  tutorial: tutorial$o
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$m = {
+const tutorial$n = {
   order: 36,
   level: "intermediate",
   minutes: 20,
@@ -18962,11 +20709,11 @@ The copy of the mind map's click came with nothing joined to it on this page: in
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_10$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_11$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$m
+  tutorial: tutorial$n
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$l = {
+const tutorial$m = {
   order: 21,
   level: "beginner",
   minutes: 10,
@@ -19067,11 +20814,11 @@ The terms and slots are ordinary layers. The **Restyle a part** buttons at the b
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_11$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_12$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$l
+  tutorial: tutorial$m
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$k = {
+const tutorial$l = {
   order: 31,
   level: "beginner",
   minutes: 15,
@@ -19191,11 +20938,11 @@ Every card shows its front now, because nothing is selected yet. (You could also
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_12$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_13$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$k
+  tutorial: tutorial$l
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$j = {
+const tutorial$k = {
   order: 50,
   level: "intermediate",
   minutes: 25,
@@ -19326,11 +21073,11 @@ Both ways save to the same place. See [Save user data and Load user data](result
     9: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_13$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_14$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$j
+  tutorial: tutorial$k
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$i = {
+const tutorial$j = {
   order: 24,
   level: "intermediate",
   minutes: 20,
@@ -19457,11 +21204,11 @@ Press <kbd>Esc</kbd> to close the Preview.
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_14$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_15$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$i
+  tutorial: tutorial$j
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$h = {
+const tutorial$i = {
   order: 10,
   level: "beginner",
   minutes: 10,
@@ -19570,11 +21317,11 @@ The card is made of ordinary layers, so restyle it like anything else. The **Res
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_15$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_16$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$h
+  tutorial: tutorial$i
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$g = {
+const tutorial$h = {
   order: 41,
   level: "intermediate",
   minutes: 35,
@@ -19726,11 +21473,11 @@ The **Wait** is the timer that turns cards back. For that second both cards are 
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_16$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_17$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$g
+  tutorial: tutorial$h
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$f = {
+const tutorial$g = {
   order: 56,
   level: "intermediate",
   minutes: 20,
@@ -19858,11 +21605,11 @@ To try your real microphone, share the project with **In a StudyDesk page, and k
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_17$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_18$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$f
+  tutorial: tutorial$g
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$e = {
+const tutorial$f = {
   order: 23,
   level: "intermediate",
   minutes: 12,
@@ -19958,11 +21705,11 @@ Leave the fill colour alone: it is set by the question, so a step can turn green
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_18$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_19$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$e
+  tutorial: tutorial$f
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$d = {
+const tutorial$e = {
   order: 42,
   level: "intermediate",
   minutes: 25,
@@ -20097,11 +21844,11 @@ On **Question 3**, open the **Interactions** tab. Each answer's last node is a *
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_19$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_20$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$d
+  tutorial: tutorial$e
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$c = {
+const tutorial$d = {
   order: 35,
   level: "beginner",
   minutes: 15,
@@ -20215,11 +21962,11 @@ Learners whose device asks for less motion get an instant change instead of the 
     6: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_20$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_21$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$c
+  tutorial: tutorial$d
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$b = {
+const tutorial$c = {
   order: 43,
   level: "intermediate",
   minutes: 25,
@@ -20354,11 +22101,11 @@ Build **Read actively** and **Write a draft** the same way. Copy the heading, ti
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_21$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_22$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$b
+  tutorial: tutorial$c
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$a = {
+const tutorial$b = {
   order: 60,
   level: "intermediate",
   minutes: 25,
@@ -20498,11 +22245,11 @@ When a viewer's page changes width while they are using it, the player swaps pag
     10: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_22$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$a
+  tutorial: tutorial$b
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$9 = {
+const tutorial$a = {
   order: 30,
   level: "beginner",
   minutes: 20,
@@ -20650,11 +22397,11 @@ The **Variables (live)** list on the left shows \`seen1\`, \`seen2\` and \`seen3
     8: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$9
+  tutorial: tutorial$a
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$8 = {
+const tutorial$9 = {
   order: 66,
   level: "advanced",
   minutes: 25,
@@ -20770,11 +22517,11 @@ Preview, then watch the **Variables (live)** list on the left of the Preview as 
     8: { show: "panel-variables" }
   }
 };
-const __vite_glob_0_24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$8
+  tutorial: tutorial$9
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$7 = {
+const tutorial$8 = {
   order: 44,
   level: "advanced",
   minutes: 30,
@@ -20912,11 +22659,11 @@ For those viewers both timelines now jump straight to their last pose: Sam is al
     10: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$7
+  tutorial: tutorial$8
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$6 = {
+const tutorial$7 = {
   order: 68,
   level: "advanced",
   minutes: 25,
@@ -21060,11 +22807,11 @@ Leave it ticked. Untick it only for code you trust that needs the page itself (\
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$6
+  tutorial: tutorial$7
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$5 = {
+const tutorial$6 = {
   order: 22,
   level: "intermediate",
   minutes: 12,
@@ -21174,11 +22921,11 @@ Open the **Interactions** tab. There is one **Item dropped in a group** node for
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$5
+  tutorial: tutorial$6
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$4 = {
+const tutorial$5 = {
   order: 57,
   level: "beginner",
   minutes: 15,
@@ -21302,11 +23049,11 @@ Press <kbd>Esc</kbd> to close the Preview.
     9: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$4
+  tutorial: tutorial$5
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$3 = {
+const tutorial$4 = {
   order: 51,
   level: "intermediate",
   minutes: 25,
@@ -21434,11 +23181,11 @@ Set the data source up before you share. Its rules are fixed when the project is
     8: { show: "share" }
   }
 };
-const __vite_glob_0_29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_30 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  tutorial: tutorial$3
+  tutorial: tutorial$4
 }, Symbol.toStringTag, { value: "Module" }));
-const tutorial$2 = {
+const tutorial$3 = {
   order: 55,
   level: "intermediate",
   minutes: 25,
@@ -21605,7 +23352,91 @@ The **Variables (live)** list on the left of the Preview shows \`question\` chan
     10: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_30 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_31 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  tutorial: tutorial$3
+}, Symbol.toStringTag, { value: "Module" }));
+const TEMPLATE_CAST = ["millie", "olive"];
+const TEMPLATE_SCENES = ["the club fair", "signing up", "wandering the fair"];
+const fromTemplate = (c2) => !!c2.project.story?.chapters?.length && c2.project.artboards.some((a) => a.name === "Title") && !!c2.project.story.stage;
+const newcomers = (c2) => (c2.project.story?.cast ?? []).filter((m) => !TEMPLATE_CAST.includes(m.name.trim().toLowerCase()));
+const someoneWithAFace = (c2) => newcomers(c2).some((m) => m.expressions.some((e) => !!e.assetId));
+const sceneWithAChoice = (c2) => {
+  const names = newcomers(c2).map((m) => m.name.trim().toLowerCase());
+  return (c2.project.story?.chapters ?? []).some((ch) => {
+    const lines = ch.lines.map((l) => l.text.trim());
+    const scene = lines.some((l) => l.startsWith("#") && !TEMPLATE_SCENES.includes(l.replace(/^#+/, "").trim().toLowerCase()));
+    const choice = lines.some((l) => l.startsWith("?"));
+    const speaks = lines.some((l) => names.some((n) => l.toLowerCase().startsWith(n + ":") || l.toLowerCase().startsWith(n + " (")));
+    return scene && choice && speaks;
+  });
+};
+const tutorial$2 = {
+  order: 46,
+  level: "beginner",
+  minutes: 15,
+  example: "tut-visual-novel",
+  topic: {
+    id: "tutorial-visual-novel",
+    title: "Your first visual novel",
+    group: "Build it",
+    summary: "Start from the Visual novel template, add a character with faces, write a scene with a choice, play it from a line and share it.",
+    keywords: "tutorial visual novel story script character cast faces psd photoshop expressions scene choice preview from this line share link template",
+    body: `You will make a short visual novel set in a library: a new character called Ren with two faces, a scene where Ren talks to the reader, and a choice that changes what Ren says. It takes about fifteen minutes.
+
+**Just want to look?** The finished one is on the projects page: **Templates**, then under **Examples** find **Build it**, **Your first visual novel**. **Play** runs it and **Make my copy** gives you your own copy.
+
+A visual novel here is written as plain text, like a play, in the **Story** tab. The template already has a title screen, a stage with the dialogue box, saves, settings and extras, so you only write.
+
+## 1. Start from the template
+
+1. On the projects page press **New project**, open **Templates**, then **Built-in**, and pick **Visual novel**.
+2. Name it **The library** and press **Create project**.
+3. Press **Preview** and click through a few lines to see what you're starting from, then close Preview.
+
+## 2. Add a character
+
+1. Open the **Story** tab (along the bottom; **More panels** brings it back if it's put away).
+2. Under **Cast**, press **+ Add someone** and call them **Ren**.
+3. Give Ren some faces. The quickest way: drop a Photoshop file of Ren on their form, with a group called **Faces** holding a layer for each face (**happy**, **thinking**) over the body. Each face becomes a picture of the whole character, lined up with the others.
+4. No PSD? Put pictures in **Assets** named **Ren happy** and **Ren thinking**, and Ren's form offers to use them.
+
+## 3. Write a scene with a choice
+
+Open **Chapter 1** and add these lines at the end. A name and a colon is someone talking, a line starting with **?** is a choice, and the indented lines under a choice play when it's picked.
+
+\`\`\`
+# At the library
+Ren (happy): You found the quiet floor!
+? Ask Ren to study with you
+    Ren (thinking): Only if you bring snacks.
+? Say you're just passing
+    Ren: Suit yourself.
+\`\`\`
+
+If something is wrong (a name that isn't in the cast, a face Ren doesn't have) the line is marked as you type, often with a fix to press.
+
+## 4. Play it from a line
+
+Click on the line **Ren (happy): You found the quiet floor!** and press **Preview from this line**. Preview starts right there, with the background and the cast as the lines above it leave them. Pick each choice in turn.
+
+## 5. Share it
+
+Press **Share**, then **Share…**, and create a link. Anyone with it can play your story; saves stay in each reader's own browser.
+
+**Next:** [Add a puzzle](tutorial-add-puzzle) to your story.
+
+help:story help:story-stage help:story-game`
+  },
+  guide: {
+    1: { check: fromTemplate, show: "preview" },
+    2: { check: someoneWithAFace, show: "panel-story" },
+    3: { check: sceneWithAChoice, show: "panel-story" },
+    4: { check: saw("previewed"), show: "panel-story" },
+    5: { show: "share" }
+  }
+};
+const __vite_glob_0_32 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   tutorial: tutorial$2
 }, Symbol.toStringTag, { value: "Module" }));
@@ -21729,7 +23560,7 @@ The **Variables (live)** list on the left of the Preview shows all seven values 
     7: { check: saw("previewed"), show: "preview" }
   }
 };
-const __vite_glob_0_31 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_33 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   tutorial: tutorial$1
 }, Symbol.toStringTag, { value: "Module" }));
@@ -21901,11 +23732,11 @@ Press **Preview** and **Start**. Click a clue, type the answer, and press **Chec
     11: { check: all(saw("previewed"), variableWhere("entries", (v) => /crossword\(/.test(v.formula ?? ""))), show: "preview" }
   }
 };
-const __vite_glob_0_32 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const __vite_glob_0_34 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   tutorial
 }, Symbol.toStringTag, { value: "Module" }));
-const mods$1 = /* @__PURE__ */ Object.assign({ "./accessible.ts": __vite_glob_0_0$1, "./accordion.ts": __vite_glob_0_1$1, "./blanks.ts": __vite_glob_0_2$1, "./bones.ts": __vite_glob_0_3$1, "./branching.ts": __vite_glob_0_4$1, "./brand.ts": __vite_glob_0_5$1, "./carousel.ts": __vite_glob_0_6$1, "./compare.ts": __vite_glob_0_7$1, "./context.ts": __vite_glob_0_8$1, "./data-source.ts": __vite_glob_0_9$1, "./diagram.ts": __vite_glob_0_10$1, "./drag-match.ts": __vite_glob_0_11$1, "./flipcards.ts": __vite_glob_0_12$1, "./journal.ts": __vite_glob_0_13$1, "./label.ts": __vite_glob_0_14$1, "./mcq.ts": __vite_glob_0_15$1, "./memory.ts": __vite_glob_0_16$1, "./microphone.ts": __vite_glob_0_17$1, "./order.ts": __vite_glob_0_18$1, "./personality.ts": __vite_glob_0_19$1, "./presentation.ts": __vite_glob_0_20$1, "./progress.ts": __vite_glob_0_21$1, "./responsive.ts": __vite_glob_0_22$1, "./reveal.ts": __vite_glob_0_23, "./rive-drive.ts": __vite_glob_0_24, "./scene.ts": __vite_glob_0_25, "./script.ts": __vite_glob_0_26, "./sort.ts": __vite_glob_0_27, "./sound.ts": __vite_glob_0_28, "./survey-chart.ts": __vite_glob_0_29, "./video-chapters.ts": __vite_glob_0_30, "./whatif.ts": __vite_glob_0_31, "./wordgames.ts": __vite_glob_0_32 });
+const mods$1 = /* @__PURE__ */ Object.assign({ "./accessible.ts": __vite_glob_0_0$1, "./accordion.ts": __vite_glob_0_1$1, "./add-puzzle.ts": __vite_glob_0_2$1, "./blanks.ts": __vite_glob_0_3$1, "./bones.ts": __vite_glob_0_4$1, "./branching.ts": __vite_glob_0_5$1, "./brand.ts": __vite_glob_0_6$1, "./carousel.ts": __vite_glob_0_7$1, "./compare.ts": __vite_glob_0_8$1, "./context.ts": __vite_glob_0_9$1, "./data-source.ts": __vite_glob_0_10$1, "./diagram.ts": __vite_glob_0_11$1, "./drag-match.ts": __vite_glob_0_12$1, "./flipcards.ts": __vite_glob_0_13$1, "./journal.ts": __vite_glob_0_14$1, "./label.ts": __vite_glob_0_15$1, "./mcq.ts": __vite_glob_0_16$1, "./memory.ts": __vite_glob_0_17$1, "./microphone.ts": __vite_glob_0_18$1, "./order.ts": __vite_glob_0_19$1, "./personality.ts": __vite_glob_0_20$1, "./presentation.ts": __vite_glob_0_21$1, "./progress.ts": __vite_glob_0_22$1, "./responsive.ts": __vite_glob_0_23, "./reveal.ts": __vite_glob_0_24, "./rive-drive.ts": __vite_glob_0_25, "./scene.ts": __vite_glob_0_26, "./script.ts": __vite_glob_0_27, "./sort.ts": __vite_glob_0_28, "./sound.ts": __vite_glob_0_29, "./survey-chart.ts": __vite_glob_0_30, "./video-chapters.ts": __vite_glob_0_31, "./visual-novel.ts": __vite_glob_0_32, "./whatif.ts": __vite_glob_0_33, "./wordgames.ts": __vite_glob_0_34 });
 const BUILD_TUTORIALS = Object.entries(mods$1).filter(([file]) => !/\/index\.ts$/.test(file)).map(([, m]) => m.tutorial).filter(Boolean).sort((a, b) => a.order - b.order || a.topic.title.localeCompare(b.topic.title));
 const LEVELS = ["beginner", "intermediate", "advanced"];
 const levelName = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" };
@@ -23241,6 +25072,8 @@ The layout is remembered in this browser. Whatever opens a panel for you (choosi
 
 ![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)
 
+When the project reads [values on the link](course-context#values-on-the-link) (\`link.program\`, \`ix.link.program\`), the top bar has a field for each: pick or type a value and Preview starts again as if the link carried it. The project's own sample doesn't change.
+
 When the project has [responsive pages](responsive), a **Page width** slider appears under the top bar. Drag it to resize the page the project runs in; the breakpoints are marked on the track and the player switches page as you cross them.
 
 **View at embed size** shows it the way StudyDesk shows the embed code: no wider than 800 px, and exactly as tall as the project asks the page for, changing as it runs. A page with **Fit height to content** grows and shrinks here as it would in the course, and anything the embed would cut off or leave empty shows. Scroll the preview when it's taller than the window.
@@ -23334,7 +25167,7 @@ The small **(i)** icon in the title bar shows the version of Ixia you are runnin
 
 ## Using the window
 - **Changes apply at once.** There is no OK and no Cancel: tick a box and the editor changes. <kbd>Esc</kbd> or the **×** closes the window.
-- **Search all preferences** (the box in the title bar) finds a setting on any page by its name, by what it does or by another word for it (try *dark*, *alt text*, *pan*, *typeface*). Pick a result, or press <kbd>Enter</kbd> for the first, and the window goes to that page, scrolls to the setting, marks it for a moment and puts focus on it. When shortcuts match too, the last result opens the Keyboard shortcuts page with your search filled in. <kbd>Esc</kbd> clears the search first.
+- **Search all preferences** (the box across the title bar) finds a setting on any page by its name, by what it does or by another word for it (try *dark*, *alt text*, *pan*, *typeface*). Pick a result, or press <kbd>Enter</kbd> for the first, and the window goes to that page, scrolls to the setting, marks it for a moment and puts focus on it. When shortcuts match too, the last result opens the Keyboard shortcuts page with your search filled in. <kbd>Esc</kbd> clears the search first.
 - **Reset this page** puts every setting on the page you are looking at back to how the editor starts (it asks first, and is greyed out when the page is already as it starts). **Reset everything** does it for every page, and puts your keys back to the Default set. The keyboard sets and workspace layouts you saved stay, and so do your projects.
 - Drag the corner of the window to make it bigger or smaller (double-click the corner to put it back). On a phone or a narrow window it fills the screen and the pages become a row of tabs along the top.
 - With the keyboard: <kbd>Tab</kbd> goes into the list of pages, <kbd>↑</kbd> and <kbd>↓</kbd> (<kbd>←</kbd> and <kbd>→</kbd> in the narrow row) move between pages, <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last, and <kbd>Tab</kbd> again goes to the settings. A screen reader hears a list of tabs, one panel, and each field with its name. The editor's own keys stand down while the window is open.
@@ -24080,6 +25913,22 @@ Things to know:
 - A **binding** on Text (or a timeline, tween or *Change a layer's setting* action that sets Text) replaces the runs with that plain text for as long as it applies. Variables in braces like \`{score}\` still work inside each run, but a \`{...}\` slot should sit within one run.
 - Lottie export writes the text in the layer's own style (Lottie text has one style per layer). SVG and PNG export, the player and the single-file export keep every run. Rive files with several text runs import as runs.
 
+## Numbers that count up
+Tick **Count up** and the numbers in a text count up (or down) to their new value when it changes, over the time in **Over**: \`Score: {score}\` rolls from 0 to 80 when the page opens, and from 80 to 95 when the score goes up. Each number keeps its decimals. Anyone who asks for less motion sees the new number straight away.
+
+## Bullets and numbers
+Double-click a text and the toolbar over it has **Bulleted list** and **Numbered list**: they put a bullet or a number on the paragraphs the cursor or the selection is in, and press again to take it off. **Tab** moves a list paragraph in a level and **Shift+Tab** out (the arrows on the toolbar do the same). Numbers go 1, 2, 3, then a, b, c a level in, then i, ii, iii. Wrapped lines line up under the words, not under the marker.
+
+A screen reader hears a list, with how many items it has and where each one is, which typed dashes never gave it. Pressing Enter in a list item starts another item; a line with no list on it ends the list, and numbering starts again after it.
+
+## Code
+**Show as code** in the **Text** section shows the text as code: a fixed-width font, coloured by language (JavaScript, TypeScript, Python, HTML, CSS, JSON, SQL, Java, C, Shell, or **Code, no colours**), on a light or dark panel. Tick **Line numbers** to number the lines, and **Copy button** for a button in the corner that copies the code when it plays. The line numbers aren't copied or read out.
+
+## Formulas
+Tick **Formulas between $ signs** and maths typed the LaTeX way is drawn as maths: \`$\\frac{a}{b}$\` in a line, \`$$x^2 + y^2 = r^2$$\` on a line of its own. A preview under the box shows each formula as you type. It knows fractions (\`\\frac\`), roots (\`\\sqrt\`, \`\\sqrt[3]{x}\`), powers and indices (\`^\`, \`_\`), Greek letters (\`\\alpha\`, \`\\pi\`), \`\\sum\`, \`\\int\`, \`\\lim\`, \`\\sin\` and the other functions, \`\\times\`, \`\\le\`, \`\\neq\` and their kind, brackets that grow (\`\\left( ... \\right)\`), \`\\text{}\` and matrices (\`\\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}\`). A command it doesn't know shows up in red as typed.
+
+The browser draws it, so it scales with the text and follows its colour, and a screen reader reads it as maths. Write \`\\$\` for a dollar sign. A dollar sign on its own, as in \`$5\`, stays as it is.
+
 ## Live values in text
 Anything in braces is an [expression](expressions): \`Score: {score}\`, \`{name.toUpperCase()}\`, \`{items.length} items\`. Write \`{{\` for a literal brace.
 
@@ -24095,6 +25944,11 @@ You do not have to type the braces. Put the cursor where the value should go and
 
 Pick one with the arrow keys and **Enter**, or click it. It goes in as \`{name}\` at the cursor, over any words you had selected, and the line under the box shows what the whole text says now. The same button is on a button's **Label** and on a connector's label.
 
+
+### A bold label and its words, from a list
+In a repeater's copy, a styled part of a text can hold a value too. To make "**Core** - Complete 2: SCI6103" on one line for every row of a list: double-click the text, press **{ }** (**Insert value**) on the text toolbar and pick \`item.label\`, select it and press **B**, then type \` - \` and insert \`item.text\` after it in plain. Each value goes in where the cursor is and takes the style of the words around it, so the bold part stays bold and the rest stays plain, and the whole line wraps as one paragraph.
+
+A bold label isn't a heading to a screen reader: it's read as part of the line. When the label is something people would jump between (a section name), use two layers, a heading and its text, instead.
 ## Drag a value onto the page
 You can also drag a value to where it should show. In the **Variables** tab, each variable has a small text-icon handle (its name reads **Show it on the page**) beside its name. In the **Data** tab, each field of a data source has the same handle. Drag it onto the page:
 - **Onto a text layer**: it is added to the end of that text as \`{name}\`, with a space before it, and the text keeps its styling. Dropping \`score\` on *Your score:* gives *Your score: {score}*.
@@ -24273,6 +26127,14 @@ The crop belongs to the layer, not the file, and the frame (with its corner radi
 - The Lottie export shows the whole picture (it lists that in its notes).
 - Older files and players show the picture uncropped.
 
+### A QR code
+An image layer can be a **QR code** instead of a picture: choose **QR code from text** at the top of its **Image** list, or **Add QR code** from the command palette. Type what it carries under **QR code of**, usually a link. It's written like a text layer, so \`https://example.com/?id={userId}\` puts the viewer's own value in, and \`{item.link}\` gives each copy in a list its own code. The code is drawn as the page plays, so it changes when the values do.
+
+- **Error correction** is how much of the code can be covered or scuffed and still scan. **Medium** suits a screen. Pick **High** or **Highest** for a printed poster, or when a logo sits over the middle.
+- **Squares** and **Background** are its colours. Keep dark squares on a light background: plenty of phone cameras can't read light on dark.
+- Keep it to a link. A long paragraph makes a dense code that phones struggle with, and the inspector says so past about 1200 characters.
+- Give it a text alternative that says where it goes ("QR code for the course survey"). A screen reader can't scan it.
+
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
 
@@ -24298,6 +26160,15 @@ This changes one layer. To change a picture **everywhere** it's used, use **Repl
 
 ## Video
 Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.
+
+### YouTube, Vimeo and Panopto
+Paste the video's link (the address you'd share, or the site's embed code) into **Video site link** and the site's own player goes on the layer, wherever you put it and at its size. **Control video**, the **Playing**, **Playback position**, **Length** and **Ended** bindings, cue points and **Hold paused** all work on it as on a file, so a question can pause a YouTube clip at 1:30.
+
+**Good to know:**
+- It plays in Preview, share links, StudyDesk and the single HTML file. On the canvas it's a panel naming the video.
+- Panopto plays, but it can't be told to play, pause or seek, or say what it's doing, so nodes and bindings don't reach it.
+- The site's player sits on top of the project where the layer is, so anything you draw over it (a dialog, a sticker) is hidden behind it while it shows.
+- Speed buttons, frame step, captions you add and descriptions are for video files. YouTube and Vimeo have their own captions in their controls.
 
 ### Poster, and a video with nothing to play
 **Poster** is a picture shown before the video plays. It also stays up the whole time when the file is sound only (choose a sound in the **Video** list and the layer becomes a player with the browser's own controls, speed and captions), under the controls. It counts in the download size and goes with exports. A video with no file or address shows a grey **Choose a video** panel while you edit; learners see a plain grey box, or the words in **Text when empty**. The accessibility check warns about a video with nothing to play, so it gets filled in or deleted before you share.
@@ -24794,18 +26665,42 @@ Press <kbd>B</kbd> to draw one. A button has a label (which can use \`{expressio
 - **Small buttons** keep the size you draw. A button narrower than about 80 px no longer grows by its padding, so a dot-sized button really is dot-sized.
 
 ## Input
-An input is one of: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select).
+An input is one of: text, number, email, password, multi-line, checkbox, slider (range), dropdown (select) or choice buttons.
+- **A new input comes with a label** above it (beside it for a tick box), in your text colour at the size every control's label takes. Change its words and a screen reader reads them as the box's name, so you don't have to write an **Accessible label** too. Move or restyle the label like any text; delete it if you don't want one, and the box stays. Inputs made before this have no label added.
 - **Bind to a variable…** (under *Value*) ties the box to a variable with an ordinary [data binding](bindings) on its **Value**, set to **⇄ Both**: typing writes the variable and the variable fills the box. Change the way, or the variable, under **Data bindings**. Choose **Out →** to only write the variable and keep the box's own value. Older projects that had a *Variable* setting on an input are changed to this when they open.
 - **When a value changes** reacts to what was typed.
 - **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test.
 - **Block paste and drop** refuses pasted or dragged text, so the answer has to be typed.
 - To do something when Enter is pressed in a text box, use a **When a key is pressed** event set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions#when-a-key-is-pressed)).
 
+
+### Choice buttons
+A row of buttons for one variable, one of them chosen: study mode, a starting trimester, easy, medium or hard. Press <kbd>Ctrl</kbd>+<kbd>K</kbd> and **Add choice buttons**, or set an input's **Type** to **choice buttons**, then **Bind to a variable…** like any input.
+
+- **Options**: one a line, the value or \`value|words on the button\` (\`FT|Full-time\`). Or **Options from** a formula: a list of text, or of \`{value, label}\`, so the buttons follow the data (\`programData.find(p => p.code == program).starts\`).
+- **Off when**: a formula for each option, with \`option.value\`, \`option.label\` and \`option.index\`. True turns it off; a text turns it off and says why: \`program == 'GCSC' && option.value == 'FT' ? 'GCSC is part-time only' : false\`. An option that's off stays in the row, dimmed, and trying it shows the reason under the buttons and reads it out, so nobody's left wondering why a button does nothing. An item from **Options from** can carry its own \`off\` too. Off when doesn't change the variable: one that holds an option that's now off keeps it, with no button chosen, until someone picks another.
+- The chosen one is gold with dark text (**Chosen** and **Chosen text** change it), the buttons share the layer's width in equal parts with **Gap** (20 px) between them, and each has the layer's fill, corners and stroke.
+- It's a radio group to a screen reader: one <kbd>Tab</kbd> stop, the arrow keys move along and choose.
+
 ## Link
 Text that opens a URL. **Fit text to box** works here too. For making any other layer a link, see [Links and cursors](links-cursors).
 
 ## Embed
 An iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
+
+### Paste a video or slides link
+Most video and slide sites won't play in a frame at the address you copy from them: a YouTube watch page gives a grey box. Paste it anyway. The embed works out the address that plays, sets the layer's height to the shape of what it shows, and says under the box what it found (**Plays as a YouTube video**). The link you pasted stays in the box, so you can still read it.
+
+| Site | Paste |
+|---|---|
+| YouTube | a watch link, a \`youtu.be\` link, a Short or a playlist. It plays from YouTube's no-cookie address, and a start time (\`t=1m30s\`) is kept |
+| Vimeo | the video's page, an unlisted one's link with its code included |
+| Panopto | the viewer link (\`Viewer.aspx?id=...\`) |
+| Google Slides, Forms, Docs, Sheets | the link from **Share**. The file has to be open to **Anyone with the link** |
+| Microsoft Forms | the link to fill in the form |
+| Microsoft Stream | a \`stream.aspx\` link. A short link (\`/:v:/\`) has nothing in it to work from: use **Share > Embed code** in Stream and paste that |
+
+You can also paste a site's whole **embed code** (\`<iframe ...>\`): the address is taken out of it and the layer takes its shape. Anything else is used as it is.
 
 **The page may use** (a web page embed only) is a list of tick boxes for what the embedded page is allowed: **Autoplay**, **Full screen**, **Clipboard**, **Microphone**, **Camera**, **Screen share**, **Location**, **Motion sensors**, **Picture in picture** and **Protected video**. Only what's ticked is let through; an unticked box is a no, even for a page from the same site. Hover a box for what it really does.
 
@@ -25669,6 +27564,32 @@ In an expression, \`pageNumber\` is the page's place from 1 and \`pageCount\` ho
 
 Its **Transition** is how the page changes, and **Speed** is how long that takes: see [How the page changes](links-cursors#how-the-page-changes) for every look, **Opens from** and the speeds.
 
+## Celebrate
+The **Celebrate** node throws a short burst of **Confetti** or **Stars** over the page, with **Words** on a badge in the middle if you give it some (\`"Well done, " + name\`). Put it after a question is right or the last page is done.
+
+- It never takes a click or the focus, so the next button works straight away, and it's gone in under two seconds.
+- A viewer whose device asks for less motion sees a **still badge** with the same words instead of anything flying about.
+- The words are read out politely to screen readers, so it needs no Announce node beside it.
+- **Sound** plays a sound from Assets with it. **Colours** can be party colours or your project's accent colours, which follow its colourway.
+- **Wait for it to finish** holds the next node until it has gone. Off, the flow carries straight on.
+
+## Copy, open, full screen, print and send
+Five nodes for what people expect any app to do. The first four only work from a click, because browsers only let a page do them when the person has just pressed something, so put them on a button.
+
+- **Copy to clipboard** copies its **Text**, for a Copy button beside a code, a link or a result. It goes on from **Not copied** when the page around the project refuses, which an embed made before 20 November 2026 can: press **Update** in Share for the new embed code, or show the text so it can be copied by hand.
+- **Open a file** asks for a CSV, JSON or text file from the person's device and puts it in a variable: a CSV becomes a list with a row per line, keyed by its first row, so a repeater can show it straight away. Up to 2 MB, and it's read in the page: nothing is uploaded. **Not opened** is when they cancel.
+- **Full screen** goes in, comes out, or switches. \`fullscreen\` in a formula is true while it's in, so a button can say \`{fullscreen ? "Leave full screen" : "Full screen"}\`. Escape always comes out.
+- **Print** opens the browser's print dialog for the page as it is now, where people can also save a PDF.
+- **Send to a web address** sends a value as JSON (**POST**, **PUT**, **PATCH** or **DELETE**) and puts the answer in a variable, with \`event.status\` holding the HTTP status. It keeps to the same **Allowed data hosts** as Load data (Project settings; empty allows any https host), never sends the viewer's logins or cookies, and gives up after 15 seconds. It goes on from **Sent** for a success and **Failed** for anything else.
+
+## Doing something for each item, or again and again
+**For each item** runs the steps after **Each item** once for every item of a list, then the steps after **Done**. Those steps see \`event.item\`, \`event.index\` (from 0) and \`event.count\`. Each go finishes, waits included, before the next starts, so a **Change a value** that adds \`event.item.price\` makes a total, and **Done** sees all of it. Give it a number instead of a list (\`5\`) and it counts 0 to 4.
+
+**Repeat** runs the steps after **Again** a number of **Times**, or **While** something is true (\`lives > 0\`), checked before each go. Both stop after 5000 goes, so a mistake can't hang the page.
+
+## Flows you call from anywhere
+When the same steps hang off three buttons, wire them once. Start them with a **Flow** node, give it a **Name** (\`Add to total\`) and the names of the **Inputs** it takes (\`amount\`). Then a **Call flow** node anywhere on the page runs it, with **Values** such as \`{ amount: price * qty }\`, and the flow's steps read them as \`event.amount\`. Call flow carries on once the flow has finished, and from **Not found** when there's no flow of that name. A flow on the page master can be called from every page that uses it.
+
 ## Connecting and adding nodes
 Drag from an output port to the next node's input to connect them. Actions that take time (**Play or stop an animation**, **Animate a layer's setting**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away.
 
@@ -25815,6 +27736,214 @@ Expression fields can use every variable and data source by name, \`event\` (det
 **Send message** (and \`ix.emit\`) posts \`{source: 'interactives', name, payload}\` to the page the interactive is in. The page can send messages back with \`player.send(name, payload)\` and **When a message arrives** reacts. See [Embedding and the player API](embedding).`
   },
   {
+    id: "particles",
+    title: "Particles",
+    group: "Motion",
+    summary: "Rain, snow, petals, falling leaves, dust, sparks or bubbles drifting across a rectangle, or your own picture.",
+    keywords: "particles particle rain snow petals cherry blossom leaves autumn dust motes sparks embers fire bubbles weather mood atmosphere confetti drift falling wind",
+    body: `**Particles** fill a rectangle with drifting things as it plays: rain against a window, snow over a winter scene, petals in a garden, dust in a beam of light, sparks off a fire, bubbles under water. They set a mood without anyone drawing a frame of it.
+
+**Add them:** select a rectangle and press **+** on its **Particles** section, then pick a **Kind**. They're drawn over the rectangle's fill and kept inside its box, so a clear rectangle over a background picture gives weather over the scene, and a coloured one gives a backdrop of its own.
+
+**Tune them:**
+- **Amount** (0 to 100) is how many for the rectangle's size, so a bigger box gets more without looking thinner.
+- **Speed** and **Size** are multiples of the kind's own (1 is as it comes).
+- **Wind** pushes them sideways: below 0 to the left, above 0 to the right. Rain leans with it.
+- **Colours** keeps the kind's own (a mix for petals, leaves and sparks), or **One colour** for all of them.
+- **Picture** draws one of your pictures as each particle instead (a petal, a leaf, a logo), moving the way the kind does.
+
+**Turn them on and off:** show and hide the rectangle, from a button, a timeline or **Show or hide** in the graph. Hidden, they cost nothing.
+
+**Good to know:**
+- On the canvas they hold still, so you can see the spread; press **Preview** to see them move.
+- Someone who has asked their device for less motion sees them still, the same as on the canvas.
+- A slow device draws fewer on its own, and goes back up once it keeps up again.
+- They never take a click: anything under them still works.
+
+help:sketch-pads help:timelines`
+  },
+  {
+    id: "story",
+    title: "Writing a story",
+    group: "Interactivity",
+    summary: "A visual novel, a branching scenario or a role play written as plain text: who says what, the choices, and where the story goes next.",
+    keywords: "story visual novel script dialogue conversation branching scenario role play choices chapters scenes narration writer screenplay characters lines jump ending",
+    body: `A **story** is written as text, one line per thing that happens, the way you'd write a play. It plays on a stage page with a dialogue box, the characters and the choices, so a 50 line conversation or a 50,000 word novel needs no page per line and no boxes in the graph.
+
+**Start one:** open the **Story** tab and press **Start a story**. You get a sample chapter, two characters and a **Story stage** page, already wired. Press **Preview** to play it, then make it yours. For a whole game, start a new project from the **Visual novel** template instead: it adds a title screen, saves, history, settings and extras (see [Saves, settings and extras](story-game)). The **Puzzle mystery** template adds a case to solve: a room to search, three puzzles and a map (see [Puzzles in a story](story-puzzles) and [Rooms, things you carry and a map](story-rooms)).
+
+**How lines work:**
+- \`Millie: You came!\` is Millie talking. \`Millie (smiling, left, slide): You came!\` also picks her face, where she stands (far left, left, centre, right, far right) and how she comes on (slide, fade, hop, instant), in any order.
+- A line without a name is narration. Start it with \`>\` if it begins like a name (\`> Note: it was open.\`).
+- \`# The club fair\` starts a scene. \`-> The club fair\` jumps to it, \`-> Chapter 2\` to a chapter, and \`-> end Good friends\` ends the story, saying which ending.
+- \`? Join the club\` is a choice. The lines indented under it run when it's picked, then the story carries on after the last choice. \`[once]\` on the end hides it once taken, \`[if flyer]\` only shows it when that holds, and \`[if flyer, grey]\` shows it greyed out instead.
+- \`if trust >= 3\`, \`else if\`, \`else\`: the indented lines only run when it holds. \`set trust += 1\` changes a value. A name that isn't a variable is kept by the story itself.
+- Cues go in square brackets on their own line: \`[bg Quad]\`, \`[music Hopeful]\`, \`[music off, 2s]\`, \`[sound Door]\`, \`[show Olive at right]\`, \`[hide Olive, fade]\`, \`[wait 1s]\`, \`[shake]\`, \`[flash]\`, \`[tint night]\`, \`[zoom Millie]\`, \`[weather snow]\`, \`[box full]\`, \`[box bubble]\`, \`[box bottom]\`. Pictures and sounds are found by their name in Assets.
+- \`[call Puzzle 1]\` goes to that page and waits; a **Back to the story** node there comes back, with a result the story reads as \`story.result\`. \`[open Notebook]\` opens an overlay and waits for it to close, \`[play Intro]\` plays a timeline on the stage, \`[run Give badge]\` runs a flow.
+- Inside a line: \`{name}\` shows a value, \`{pause}\` holds the typing, \`{fast}\`, \`{slow}\`, \`{shake}...{/shake}\`, \`{wave}\`, \`{b}\`, \`{i}\`, \`{big}\`, \`{small}\`, \`{colour red}\`.
+- \`//\` starts a note for writers that's never shown.
+
+**In the panel:** lines with a problem are marked, and listed under the script with a fix where there is one (**Add Hale** for someone not in the cast). **Preview from this line** plays from the caret, with the background, music and characters as the lines above leave them. The side shows word counts per chapter and per character. Download a chapter as text, or replace it with a text file: lines that didn't change keep their voice files and their place in saves.
+
+help:story-dialogue help:story-stage help:variables help:interactions`
+  },
+  {
+    id: "story-dialogue",
+    title: "The story as nodes",
+    group: "Interactivity",
+    summary: "A chapter drawn as scenes, choices and endings joined by arrows, that you can edit, and the events the story sends as it plays.",
+    keywords: "story dialogue view nodes map flow chart branching scenes choices endings arrows graph dialogue manager story events on story line on story choice on story scene",
+    body: `**The Dialogue view:** **Dialogue** beside **Script** shows the chapter as nodes: each scene and run of lines, each choice with a way out per option, each if, and the endings, with arrows for where the story goes. Drag from a choice, or the right edge of a scene, onto another scene and the script gets the jump; **+ Scene** and **+ Choice** add them; **Delete** takes a node's lines out; click a node to edit its lines under the map. A scene nothing leads to is dashed. It's the same lines either way, so the two views never disagree.
+
+**Reacting to the story:** **On story line** (everyone's, or one person's), **On story choice** and **On story scene** run in the Interactions graph as the story plays, for a portrait in a corner, a count, a sound, without a cue in the script.
+
+**Good to know:**
+- Nodes stay where you drag them (the chapter keeps their places), and new ones are laid out left to right in the order the story reaches them.
+- Joining from a run of lines with no title gives it one (**New scene**), so there's somewhere to jump to. Rename it in the script.
+- **Show in the script** takes you to the selected node's first line.
+
+help:story help:story-stage help:interactions`
+  },
+  {
+    id: "story-stage",
+    title: "The story stage and the cast",
+    group: "Interactivity",
+    summary: "The page a story plays on, the characters on it, and the nodes that move the story along.",
+    keywords: "story stage cast characters faces expressions sprites dialogue box name plate choices auto skip back hide visual novel story values",
+    body: `The **story stage** is an ordinary page whose layers are bound to the story's values, so you restyle the dialogue box, the name plate or the choices like anything else. **Start a story** makes one; any page with a layer reading a \`story.\` value works, and the Story tab's **Settings** can name one.
+
+**What it shows:** the background (\`story.background\`, fading in over \`story.backgroundBefore\`), the cast (a list of \`story.cast\`, each with \`item.image\`, \`item.x\` across the stage from 0 to 1, \`item.brightness\`), the dialogue box (\`story.speaker\`, \`story.speakerColour\`, and words with **Story words** on bound to \`story.marked\`, with **Letters shown** bound to \`story.shown\`), and the choices (a list of \`story.choices\`).
+
+**Three looks for the words:** the box along the bottom; the whole screen of text, which keeps each line said on it as the next types under it (good for long narration, \`[box clear]\` starts a fresh screen); and speech bubbles by whoever's talking, with a tail pointing at them. **Words shown in** in the Story tab's **Settings** picks one for the story, and a \`[box ...]\` line changes it from there on.
+
+**Keeping faces clear:** a bubble sits under the speaker's face unless **Bubble sits** in the **Settings** says above their head, beside them or along the top. Above and beside go under instead when there's no room or they'd cover someone else's face. Set **Face at** on a cast member whose face isn't near the top of their picture.
+
+**Going on:** a click anywhere that isn't a button, Space or Enter finishes the line or goes to the next, and 1 to 9 pick a choice. A page with its own **Go on** node keeps clicks to itself. The stage's buttons: **Back** goes back a line (undoing what happened since), **Auto** goes on by itself, **Skip** flies through lines read before, **Hide** puts the box away until the next click.
+
+## The cast
+
+Each character in the Story tab's **Cast** has a name (as lines use it), what the name plate says, its colour, where they stand, and their **Faces**: a picture for each expression, the first being the one they come on with. Add pictures named after them (\`Millie smiling.png\`, \`Millie sad.png\`) to Assets and **Add faces from pictures named Millie** fills the list in. Or drop their Photoshop file on the form (or press **Faces from a PSD**): a group called **Faces** with a layer per face over the body gives a picture of the whole character per face, all lined up, with layers named \`happy blink\` and \`happy talk\` as that face's blinking and talking pictures. Whoever isn't speaking is dimmed a little (**Settings** turns that off).
+
+**Nodes:** **Start the story** (a New game button, or from a scene), **Go on**, **Pick choice**, **Back to the story**, **Auto or Skip**, **Go back a line** and **On story end**. Scripts get \`ix.story\`.
+
+**Good to know:**
+- Someone who asked for less motion gets no shake or zoom, and the words don't wobble.
+- A screen reader hears each line once, whole, as it comes up.
+- Lines read on this device are remembered, which is what Skip goes by.
+
+help:story help:story-game help:repeaters help:bindings`
+  },
+  {
+    id: "story-game",
+    title: "Saves, settings and extras",
+    group: "Interactivity",
+    summary: "The parts that make a story a game: save slots, Continue, the reader's settings, the history, a gallery, endings and chapter select.",
+    keywords: "visual novel save load slots quick save autosave continue settings text speed volume music voice effects text size readable font history gallery endings chapter select music room extras title screen",
+    body: `The **Visual novel** template (**Templates**, **Built-in**) has all of these as pages you can restyle: **Title**, **Story stage**, **History**, **Save and load**, **Settings** and **Extras**. They're made from the nodes and values below, so you can build your own too.
+
+**Saving:** **Save the story** keeps where the story is and every variable in a slot (1, 2, 3..., or quick), and **Load the story** puts it all back and shows the stage. The story saves itself in **auto** at every choice, and slot **latest** is the newest of all, which is what **Continue** loads (\`story.canContinue\` says whether there's one). A list of \`story.saves\` shows the slots with \`item.chapter\`, \`item.scene\`, \`item.when\`, the last words and the background as a picture. **Settings** in the Story tab sets how many slots there are. Saves stay in the reader's browser.
+
+**The reader's settings:** **Story setting** changes text speed, Auto speed, whether Skip goes through unread lines, the music, voice and effects volumes, text size, an easier to read font, **Captions for sounds** and **Show song titles**, kept on their device. Read them as \`story.prefs\`: the stage's words are bound to \`26 * story.prefs.textSize\`.
+
+**Sound captions:** give a sound a caption in **Assets** (its **Caption** button): what it is, *Door slams*, or a song's title. When \`[sound]\` or \`[music]\` plays it, a reader with captions on sees it as \`story.caption\` for a few seconds (longer for more words); the template's stage shows it along the top as *[Door slams]* or *♪ Hopeful*. **Show song titles** shows the music's ones even with captions off. Nothing comes up while skipping, and a sound with no caption shows nothing.
+
+**History:** a list of \`story.history\` shows what was said, and **Go back a line** with \`story.history.length + 1 - item.number\` lines back returns to one.
+
+**Extras:** \`story.gallery\` (every picture a \`[bg]\` line shows, with \`item.seen\`), \`story.endings\` (with \`item.reached\`), \`story.chapters\` and \`story.musicRoom\` (\`item.heard\`) unlock as this reader gets to them, across every playthrough.
+
+**Characters that feel alive:** give a face a **Blink** picture and they blink now and then; give it a **Talking** picture and their mouth moves while their words type on or their voice plays. A **Blip** sound in the cast plays as their words type on, higher or lower with **Blip pitch**. All of it holds still for someone who asked for less motion.
+
+**Voices:** **Download the voice script** in the Story tab gives the actors a spreadsheet of every spoken line, with the file name to save each recording as. Put the recordings in Assets and **Match voice files** ties each to its line, which keeps it through any edit to the words. A voice plays as its line comes up, and Auto waits for it.
+
+**Big stories:** on the link, a story loads the pictures and sounds of the next stretch (the next scenes, every branch, where a jump goes) while the reader reads, and lets go of the ones far behind, so a story with hundreds of pictures starts as quickly as a small one. A file you download carries everything at once, so share a big story as a link.
+
+**Good to know:** holding **Ctrl** skips while it's held.
+
+help:story help:story-stage help:story-puzzles`
+  },
+  {
+    id: "story-puzzles",
+    title: "Puzzles in a story",
+    group: "Interactivity",
+    summary: "A puzzle page with a number, a value that drops with each wrong try, hints bought with hint coins, a memo, and a puzzle index.",
+    keywords: "puzzle puzzles visual novel mystery adventure hint hints hint coins coins currency big hint super hint value points score wrong try memo sketch index replay skip solved story result call",
+    body: `A **puzzle** is a page the story goes to and comes back from. It has a number and a title, a value in points that drops a little with each wrong try, up to three hints and a big hint that the reader opens with **hint coins**, a memo to scribble on, and a big moment when it's right.
+
+**Make one:** in the **Story** tab press **+ New puzzle**. You get a page with a question in the middle and the puzzle frame around it, all wired. Change the question like any other, and the title, value and hints under **Puzzle** in the page's settings. Any page can become one with the **+** on its **Puzzle** section.
+
+**Call it from the story:** a line like \`[call Puzzle 1]\` goes to the page, and the story carries on when the reader leaves it. \`story.result\` says how it went:
+
+\`\`\`
+[call Puzzle 1]
+if story.result == "solved"
+    Millie: I knew you'd get it.
+else
+    Millie: We'll come back to that one.
+\`\`\`
+
+**Answering:** a question on a puzzle page answers the puzzle when it's checked, whatever kind it is (a choice, putting things in order, filling a blank, dragging into groups). For a puzzle made of anything else, wire a **Puzzle answer** node (Right or Wrong) to what decides it.
+
+**The frame** is plain layers bound to \`puzzle.*\`, so restyle it freely: \`puzzle.label\` (Puzzle 1), \`puzzle.title\`, \`puzzle.value\`, \`puzzle.coins\`, a list of \`puzzle.hints\` (\`item.label\`, \`item.open\`, \`item.cost\`, \`item.canOpen\`), \`puzzle.hintText\` for the hint being read, \`puzzle.memo\`, and \`puzzle.right\` and \`puzzle.wrong\` for the big moments. The nodes behind its buttons are **Open a hint**, **Puzzle memo**, **Puzzle answer** (Try again) and **Leave the puzzle** (with **Skip it** for Skip).
+
+**Hint coins:** a new game starts with the number in the Story tab's **Settings** (3 unless you say). The **Hint coins** node gives more (a collectable in a room, a reward). Each hint costs coins once; an open hint stays open.
+
+**The index:** \`story.puzzles\` lists every puzzle page with \`item.found\`, \`item.solved\`, \`item.skipped\` and \`item.score\`, and \`story.score\` adds them up. Going to a found puzzle's page plays it again, without changing its score. The **Visual novel** template has a **Puzzles** page under Extras that does this.
+
+**Good to know:** a save keeps the coins and the index with everything else, and a new game empties them.
+
+help:story help:story-game help:story-rooms`
+  },
+  {
+    id: "story-rooms",
+    title: "Rooms, things you carry and a map",
+    group: "Interactivity",
+    summary: "Scenes to look around, hidden hint coins, things to pick up and show people, and a map of the places the story has opened.",
+    keywords: "room rooms look around investigate investigation examine magnifier hotspot point and click collectable collectables hint coins item items inventory carry give take show key map places travel location mystery adventure",
+    body: `A **room** is a page the reader looks around: they click things to hear about them, find hidden hint coins, and pick up things to carry. A **map** takes them between places as the story opens them.
+
+**Make one:** in the **Story** tab press **+ New room**. You get a room drawn from shapes with five places to look at, two hidden hint coins, a key in the desk, the room box their words show in, what the reader carries, and **Leave**. Swap the shapes for a background picture and keep invisible layers on top as the places. Call it with \`[call Room]\`.
+
+**Something to look at:** select any layer and press **+** on its **Look at** section. **Words** is what's said when it's clicked, a line each (\`Millie: Too tidy.\` works). **Hint coins** and **Gives** make it a collectable: it gives them the first time and then disappears, unless **Stays when picked up** is on (a desk with a key in it). It gets a magnifier cursor and is a button for the keyboard too.
+
+**Things you carry** come from collectables and from the script: \`[give Brass key]\`, \`[take Brass key]\` and \`[coins 2]\`. Ask about them in an if or a choice, which is how you show someone a thing:
+
+\`\`\`
+? Show the brass key [if has("Brass key")]
+    Olive: That opens the shed!
+\`\`\`
+
+**The map:** \`[place Library]\` opens a place (\`[place Library, off]\` closes it), and **+ New map** makes a page with a button for each open place that goes to the scene of that name (**Go to a scene**). Call it with \`[call Map]\`.
+
+**Good to know:** \`story.items\`, \`story.coins\` and \`story.places\` are there for pages of your own (an inventory, say), and a save keeps all of them. On a room, \`room.text\`, \`room.speaker\` and \`room.showing\` drive the room box.
+
+help:story help:story-puzzles`
+  },
+  {
+    id: "sketch-pads",
+    title: "Sketch pads",
+    group: "Interactivity",
+    summary: "A rectangle people draw on as it plays, with a smoothed pen, an eraser, undo and redo, and the drawing saved with their work.",
+    keywords: "sketch draw drawing pen pencil ink stylus pressure eraser rub out undo redo clear whiteboard annotate doodle signature canvas",
+    body: `A **sketch pad** is a rectangle people draw on as the project plays: label a diagram, show working, sign their name, sketch an idea. The pen smooths out a shaky hand, and a stylus draws thinner or thicker with how hard it presses.
+
+**Make one:** select a rectangle and press **+** on its **Sketch pad** section. Its fill is the paper.
+
+**Keep the drawing:** pick a list variable in **Strokes kept in**. Each stroke goes in it as plain data, so ticking **Save as user data** on that variable keeps people's drawings between visits, and **Reset variables** clears them. Without one, the drawing lasts as long as the page.
+
+**The pen:** **Colour** and **Size** are what it starts with. **Colour from** and **Size from** read a variable instead, so a row of colour buttons that set \`penColour\` and a slider on \`penSize\` make a palette. **Eraser when** turns it into an eraser while a variable is true (or holds the text eraser).
+
+**Undo, redo and clear:** the **Undo a stroke**, **Redo a stroke** and **Clear a sketch pad** nodes, on buttons of your own. A clear can be undone too. Undo keeps the last 100 changes.
+
+**Take it out:** **Picture of a layer** on the sketch pad (or the frame around it) gives a PNG to download or keep, drawing and all.
+
+**Good to know:**
+- A pad holds up to 1000 strokes. Very long ones are thinned as they are drawn, so a drawing stays small enough to save.
+- The editor canvas shows the empty pad; draw on it in **Preview**.
+- A sketch pad takes the pointer, so put buttons beside it rather than over it.
+
+help:drag-and-drop help:variables`
+  },
+  {
     id: "drag-and-drop",
     title: "Drag and drop",
     group: "Interactivity",
@@ -25847,9 +27976,29 @@ Two buckets, four cards. Dropping a card in the right bucket keeps it there; dro
 ## Drop zones
 - **Takes tags**: leave empty to take any draggable layer.
 - **Holds**: how many layers fit (0 is no limit). **When full** either refuses the new layer, or **swaps**: the layer that has been there longest goes to where the dragged one came from, and the dragged one takes its place. Swapping is how slot puzzles and reordering work.
-- **Dropped layers**: stay where they were dropped, centre in the zone, or sit at its top left corner. A layer sent by the keyboard, a tap or an action goes to the centre when this is left alone.
+- **Dropped layers**: stay where they were dropped, centre in the zone, sit at its top left corner, or **Fill the zone**: the layer takes the zone's place, size and corner radius while it's in it, and its own size again when it leaves, so a card dropped in a slot becomes the slot's shape. A layer sent by the keyboard, a tap or an action goes to the centre when this is left alone.
 - **Outline when a layer is over it**: an outline appears on the zone while a layer it takes is over it (and a fainter one while any such layer is being dragged). Untick it if your artwork shows the state itself.
 - A layer can be both: a tile that can be dropped on and then dragged on again.
+
+### A zone's own rules
+**Takes it when** is a formula that has to be true for the zone to take a layer. \`item.name\`, \`item.tags\` and \`item.index\` are the layer held, and \`zone.name\`, \`zone.count\` and \`zone.contents\` the zone. Give a text instead of false and the text is the reason: \`zone.count < 3 || "A trimester takes three courses"\`. The reason is read out, the layer goes back, and **On refused** runs with it as \`event.why\`, so a **Show toast** after it is the whole message. Only the zones that would take what's held are marked as places it could go, so the marks follow the rule with nothing to repaint.
+
+On the draggable, **Only these zones** names the zones it may go in, whatever their tags say: a piece that may move within its column but not out of it.
+
+### Counting units, and zones counted together
+A draggable can carry values of its own: **Its own values**, one a line, as \`units: 2\` or \`code: MSC6100\`. Then:
+
+- **Holds** on a zone can count one of them instead of layers: **Holds** 2 **of** units takes a 1 unit card and a 1 unit card, or one 2 unit card, but not a third. A layer without the value counts as 1.
+- **Zone groups** count several zones together. Press **+ New zone group** on one of them, name it (\`Year 1\`), give it a limit (**Holds** 8 **of** units) and what to say when it's full (\`{name} is 8 units at most.\`), then tick it on the other zones. A drop that would take the group over is refused wherever in the group it lands, and the learner hears your words. Moving a card within the group is fine: it's only counted once.
+- **Takes it when** gets \`item.data\` (\`item.data.units\`), \`zone.total\` (what **Holds** counts, without the held layer) and \`zone.groups\` (the names of its groups).
+
+### Totals in any formula
+\`count('Year 1')\` is how many layers a zone or zone group holds, \`sum('Year 1', 'units')\` adds up one of their values, and \`items('Trimester 1')\` lists them, each with \`name\`, \`zone\`, \`tags\` and its own values, for a repeater. A name with \`*\` covers every zone it matches (\`sum('T*', 'units')\`). Text bound to them, and variables that keep their formula up to date, change after every drop: \`Year 1 · {sum('Year 1', 'units')} / 8 units\`. Given a list, \`count\` and \`sum\` work on the list as they always have. On the canvas nothing has been dropped yet, so they show 0.
+
+### A zone that lays out what it holds
+Tick **Arrange what it holds** and the zone lays its layers out in rows that wrap, with a **Gap** between them, **As they came** or **By name**. With **Fit its height** it grows and shrinks to fit them, keeping room for its **Least rows** when it's empty. Take one out and the rest close up; put one back and it takes its place in the order. A pool of course cards that shrinks as cards leave it is one tick. Reset sends each layer home to its place in the order, not to where it first stood.
+
+Scripts can change where a layer goes home to with \`ix.drag.home('Card', x, y, 'Pool')\`.
 
 ## Events and actions
 - **When dragging starts**, **When dragged over a drop zone** (moves over / off), **When dropped** (taken, refused, or dropped on no zone) and **When dragging ends** (always fires, after On drop, and also when the pick-up is cancelled). Leave the layer empty to hear every draggable layer or zone. Each fires once per drag, however it ends.
@@ -25884,6 +28033,7 @@ Everyone should be able to finish the activity, so every drag has two ways that 
 - **Touch**: a draggable layer stops the browser scrolling or selecting text under the finger. A layer locked to one axis leaves the other axis for scrolling. Inside a scrolling frame, tick **Hold to drag on touch**: the finger must rest a moment before the layer follows it, so swiping from the layer still scrolls the frame.
 
 ## Things to know
+- A picked-up layer comes up over everything else on the page. Tick **Stays behind when picked up** on one that should keep its place in the stack.
 - Dragging changes the layer's **X** and **Y**. Do not animate those on a timeline that plays at the same time; animate a group around it instead.
 - A pointer drag never changes the layer's parent or its place in the layer order; it is raised above everything while it is held. Drop zones can sit in another group or frame. A frame the viewer has scrolled is allowed for: a zone is found where it is drawn.
 - Layers made by a [repeater](repeaters) cannot be dragged (every copy would move). A layer inside an auto layout frame can only be dragged when its **Position** (Layout section) is *Ignore*, otherwise the layout puts it back. The inspector says so.
@@ -25933,10 +28083,12 @@ Two actions have more detail elsewhere. **Play sound** (volume, speed, loop, **S
 ## When a state is on
 - **Hovered**, **Pressed**, **Focused**: the layer's own pointer and keyboard. Hovering something *inside* it doesn't count. These need the piece to be running, so they show in **Preview** and in what you share, not on the canvas.
 - **Disabled**: the layer's own **Disabled** setting (buttons and inputs).
+- **Being dragged**, **Picked up**: a draggable layer while it follows the pointer, or while it's held after a tap or Space.
+- **A place it could go**, **The place it is over**, **A place that refuses it**: a drop zone while something it would take is held, while that something is over it, and while what's over it can't go there (the wrong tag, full, or its **Takes it when** said no). A layer with one of these states loses the player's own dashed or red outline for it, so your look is the only one.
 - **When…**: on while an expression is true, such as \`item.state == "right"\` or \`picked == 3\`. Give it a **Name** so the list reads as it should. These show on the canvas too, so what you style is what you see.
 
 ## What a state changes
-**Fill**, **Line** and **Text** are there from the start; **Also change** adds **Opacity**, **Scale W**, **Scale H** or **Radius**. Anything you leave alone keeps the layer's own value, so a hover state that only sets **Fill** changes nothing else.
+**Fill**, **Line** and **Text** are there from the start; **Also change** adds **Opacity**, **Scale W**, **Scale H**, **Radius**, **Line width** or **Line style** (solid, dashed or dotted). A held card with a dashed border and the places it could go dashed too is two states. Anything you leave alone keeps the layer's own value, so a hover state that only sets **Fill** changes nothing else.
 
 Colours can be [theme tokens](themes) like any other colour, so a state follows the theme instead of pinning a hex.
 
@@ -26042,6 +28194,8 @@ A layer **inside an overlay** can point at another overlay too. A **More informa
 - Showing a toast that's already up gives it the new words and its full time again. Different toasts **stack**, the newest nearest the edge.
 - **On its own** makes a toast show alone: showing it puts any other toast away, and showing another puts it away. Tick it on every toast and there is only ever one at a time, the latest.
 - Nothing points at a toast, so it has no target or trigger and no lines on the canvas.
+- **Its size works like a modal's.** The toast's page is its size: a new one has **Fit width** and **Fit height** on, so it hugs its words. Untick either and drag the page (or the card) to give it a set size. A toast made before this can be tied the same way with **The page sizes the overlay**.
+- **Show toast** and **Hide toast** list only your toasts, not every page.
 
 From a script: \`ix.toast('Toast', 'Plan saved')\` and \`ix.hideToast('Toast')\`.
 
@@ -26196,6 +28350,7 @@ The learner types into one or more inputs. Write the accepted answers one per li
 - A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses.
 - A line written \`/colou?r/i\` is a pattern.
 - **Feedback if wrong** is said after the question's own *Wrong* line whenever that blank is wrong, so you can say what went wrong in it (*Give the units*). Several wrong blanks say theirs in order.
+- Each blank's box takes your theme's colours, so it goes dark in Dark and High contrast along with the rest of the question.
 - **Shown as** appears when a blank accepts a pattern. It is what **Show the right answer when finished wrong** puts in the blank. Left empty it shows the first accepted answer that isn't a pattern, and a blank with only patterns shows nothing (the question's checks say so).
 - **Add blank** adds another input in the look of the last one.
 - Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).
@@ -26782,6 +28937,14 @@ In expressions, \`userData.loaded\` is true once the saved values have been look
 
 A starting value is the one for this course if there is one, else the typed value, else the formula worked out again (so a formula that shuffles gives a fresh order). Live variables are left alone. This is lighter than **Start over**, which also leaves the page. In scripts: \`ix.reset('score', 'answers')\`.
 
+## Undo and redo
+Somebody arranging tiles, a board or a mind map wants to take a step back. Tick **Keeps history** (under **Options**) on the variables that hold their work, and the **Undo** and **Redo** nodes step all of those back and forward together. Put them on two buttons.
+
+- Changes close together (within a quarter of a second, like a drag or one click that sets three things) are one step. Undo goes back up to 100 steps.
+- \`canUndo\` and \`canRedo\` in a formula say whether there's anything to undo or redo, so a button's **Disabled** can be \`!canUndo\`.
+- A new change after an Undo clears what could be redone, as in any app. **Start over** clears the history.
+- Only the ticked variables move. A score or a page number without the tick stays where it is.
+
 ## Different values for different courses
 One project can start with different values in different courses (a due date, a unit name, a week count). In the **Data** tab, pick **context** and add a row under **Per-course values**: a course label such as \`MAT1000_*\`, and the variables it changes. See [Course and learner context](course-context).
 
@@ -27323,6 +29486,9 @@ Pick the **Progress bar** tool (in the **Data** group of the tool bar, which sta
 - **Direction** is *Across* (it grows from the left) or *Up* (from the bottom). **From the far end** grows it from the right, or the top, instead.
 - **Radius** rounds the track, and the bar is clipped to it. A gradient bar is laid over the whole track and uncovered as the bar grows, so a green-to-red meter shows red only when it is nearly full.
 
+## A ring
+**Shape** can be **Ring**, which fills round a circle, or **Half ring**, which fills along an arc like a gauge. The track is the layer's fill and the part done is the **Bar** colour, and **Thickness** is how thick the ring is. It reads out the same as a bar.
+
 ## For screen readers
 
 **Tells screen readers** chooses what the layer is: a **progress bar** (work towards a goal), a **meter** (a measurement in a range, like volume) or nothing. The first two put \`role\` and \`aria-valuenow\`, \`aria-valuemin\` (0), \`aria-valuemax\` and \`aria-valuetext\` on the layer, kept up to date as the value changes. Give the layer a **text alternative** in *Accessibility* ("Course progress"): the [checker](accessibility-checker) asks for one. A layer marked **Decorative** is hidden from screen readers whatever this says.
@@ -27377,6 +29543,12 @@ A hidden item without a number of its own is left out when the axis is worked ou
 - The axis runs from zero (or lower, for negative values) to a round number above the biggest value. **Axis min** and **Axis max** fix either end.
 - **Gridlines**, **Axis labels**, **Value labels** (the number on each mark) and **Legend** (when each item has its own colour) switch on and off. **Decimals**, **Prefix** and **Suffix** control how numbers are written (\`$\`, \`kg\`, \`%\`). Prefix and suffix take variables in braces (\`{unit}\`), so changing a unit variable relabels the whole chart. Crowded labels are shortened or thinned out.
 - **Colours** is a list of colours or [theme tokens](themes) handed out in turn. With one colour every bar and the line use it; **A colour for each item** gives each item the next colour (pie and donut charts always do). **Text colour**, **Font** and **Size** style the labels and axes. Using tokens, a chart changes with the theme and the colourway like everything else.
+
+## Stacked, area, scatter and histogram
+- **Stacked columns** stack several fields of each item on one another, one colour each: name them in **Stacked fields** (\`home, away\`) and the legend names them too.
+- **Area** is a line with the space under it filled, for a total that builds up.
+- **Scatter** places each item by two numbers: **Across field** (\`x\`) and the value field up. For two measures of the same people, such as hours studied and the mark. A list of pairs (\`[[1, 10], [4, 40]]\`) works too.
+- **Histogram** counts the values of a list into ranges and draws a bar for each, touching. **Bars** sets how many ranges; blank picks from how many values there are. For how a class's marks are spread.
 
 ## Reading it
 
@@ -27773,6 +29945,17 @@ JSON that doesn't parse is **not** saved. The interactive keeps using the last g
 - In the form, **Tab** moves through the fields and buttons in order, each card's title is a heading with a button that opens and closes it, and every field has a real label. Nothing waits to be confirmed: each change is saved a moment after you stop typing.
 - Each save leaves the earlier file on the server so Undo works. **Remove unused assets** in the Usage tab clears them.
 
+## Shared tables
+A sign-up sheet, a board, a register, a booking list: rows the people using the app add, change and take away, that everyone in the class sees. **+ Shared table** makes one. Give it its **Fields** (\`name, slot, note\`), then say:
+
+- **Who may add**: anyone signed in, or staff only.
+- **Who may change a row** and **Who may take a row away**: whoever added it (and staff), staff only, or for changing, anyone.
+- **Rows each**: how many one person may have (1 for a sign-up sheet). **Slot field** and **Rows a slot**: so many per time or group.
+- **At most**: the table's size, up to 2000 rows. Say on the page how many places are left; a table that quietly stops taking rows looks broken.
+- **Show names**: each row carries who added it as \`row.by\`. Off, nobody's name is shown.
+
+Its value is \`{ rows, count, max, mine }\`: repeat \`signups.rows\`, and each row says whether it's yours (\`item.mine\`). The **Add a row to a shared table**, **Change a row of a shared table** and **Take a row out of a shared table** nodes do the rest, with **Row** being \`item\` in a repeater. The server checks every rule and limit; a refusal goes on from **Not done** with \`event.problem\` (not-allowed, per-person, slot-full, full). Each class has its own rows. Share again after changing the settings. In Preview the table is kept in your browser, with you as its only person.
+
 ## The built-in context
 The list always starts with **context**, a read-only source that is there without adding anything: the course and the learner (\`{context.firstName}\`, \`context.courseCode\`). Pick it to see its fields, set sample values to design with, and give different courses different starting values. See [Course and learner context](course-context).
 
@@ -27946,7 +30129,7 @@ A course collection holds only the stamps and counters a project added, with the
     title: "Course and learner context",
     group: "Data",
     summary: "The built-in context source (course label, first name, student or staff) and per-course variable values.",
-    keywords: "context course label code term year learner first name display name student staff studydesk per-course values offering rollover duplicate fetchactivity session greeting",
+    keywords: "context course label code term year learner first name display name student staff studydesk per-course values offering rollover duplicate fetchactivity session greeting link value address program choices preview share",
     body: `Every project has a built-in, read-only data source called **context**. It holds the course the project is in and the person playing, so a project can greet someone by name, show the unit code, or change what it says for staff and students. You do not add it and you cannot edit it; it is always in the **Data** tab's list, first.
 
 ## What is in it
@@ -27974,6 +30157,16 @@ Use it by name anywhere expressions go, the same as any [data source](data-sourc
 
 A variable or data source that you name \`context\` hides the built-in one, and the Data tab warns about it.
 
+## Who is looking
+An app can show more to the people who look after it, such as a results view, a moderation list or editing tools:
+
+- \`context.isOwner\`: they own this project. \`context.isCollaborator\`: they help make it.
+- \`context.canEdit\`: they may change what it shows: the owner, a collaborator, a power user, or staff with StudyDesk's editing mode on.
+- \`context.isEditing\`: StudyDesk's editing mode is on for the page it's on, so editing tools can wait until someone is editing.
+- \`context.groups\`: which of the suite's groups (as si-admin keeps them) they are in, out of the ones you list in **Groups it can check** in Project settings. \`context.groups.includes("tutors")\` is true for a tutor. The app never learns about any other group, and **Update** the share after changing the list.
+
+These are worked out on the server from the person's own StudyDesk session, except \`isEditing\`, which comes from the page. They show what to show; they don't keep anything safe on their own. An admin viewing a course as a student counts as nobody special. Outside StudyDesk every one of them is false.
+
 ## Where the values come from
 - **The Link for StudyDesk** fills it in from the signed in StudyDesk session. Use that link, not the plain share link, when you want it.
 - **Preview and the canvas** use made-up **sample values**, which you edit in the Data tab under **context** (first name, course label and so on). The code, term and year follow the sample label. Clear a field to see the project with it blank. Sample values are for designing: they are never in an exported file or a share link.
@@ -27991,6 +30184,24 @@ Results are already kept per course, so each course's learners start clean witho
 
 After changing per-course values, press **Update to the latest version** in [Share link](export#share-link) so the Link for StudyDesk plays the new version.
 
+## Setups
+One app, many setups. A card sort made once can run on a second set of cards without copying the project. Under **Setups** in the **Context** panel, **+ Add a setup** and give it:
+
+- a **name** (\`setup.name\` in formulas),
+- its own starting values for any variables (**Set a variable…**),
+- its own contents for any data source: tick **Its own cards** and paste the JSON or CSV it uses instead of the file or address.
+
+Each setup has its own link once the project is shared: the Link for StudyDesk with \`?setup=\` and the setup's id on it, which **Copy link** copies. Put that link on the course page. A setup's values win over a per-course row's, and responses say which setup they came from. Without \`?setup=\` the project plays as you made it.
+
+## An editing mode
+An app can be set up where it sits, by the people who look after it, without opening the editor. A tiles app shows pens and a plus sign to them and plain tiles to everyone else.
+
+1. Tick **Part of the setup** (under a variable's **Options**) on what they set up: the tiles, the cards, a picture they picked with **Picture of a layer**.
+2. Make a page for it and tick **Editing page** in its **Page** section. It opens instead of the start page for anyone who may edit the app (\`context.canEdit\`) while StudyDesk's editing mode is on, and nobody else can be sent to it.
+3. Put a **Save** button on it that runs **Save setup**. It keeps those variables' values, for the setup the link plays, and everyone who opens it afterwards starts with them.
+
+Only the owner, collaborators, power users and staff can save; anyone else goes on from **Not saved**. StudyDesk's editing mode decides when the editing page shows, never who may save. In Preview the saved setup is kept in your browser, to try it out.
+
 ## Values on the link
 **link** sits beside context: it holds the values on the address the project was opened with, so one project can serve several programs or courses from different links. Add \`&program=GCSC\` to the end of the address in the embed code (or \`?program=GCSC\` to a link with nothing after it), and the project reads:
 
@@ -28000,6 +30211,17 @@ After changing per-course values, press **Update to the latest version** in [Sha
 Every value is text, and a name that isn't there is empty, so give it a fallback: \`link.program || 'MSCN'\`. A name is letters, digits, \`.\`, \`_\` and \`-\` (up to 40), a value is up to 200 letters, and there are 20 at most. \`title\` and \`cdtID\` (the embed code's own), \`sessionID\`, \`ixm\` and \`lti\` are never handed on.
 
 It works from the Link for StudyDesk and from a plain share link. To see the project with values on its address while you build it, open **Data**, pick **context**, and under **link** press **+ Add a link value**: give it a name (\`program\`) and a sample value (\`GCSC\`). The canvas and Preview then behave as if the project were opened with \`&program=GCSC\`. Sample values are for designing only: a share link, an embed or an export never carries them, and leaving a name out of the samples is how you check what the project does with no value. A project shared before 19 November 2026 needs **Update** in Share to get it.
+
+### A variable from the link
+A variable can start from a value on the link, so you don't need a script to read it. Open the variable's **Options** and type the link value's name in **Starts from the link** (\`program\`). When the link carries \`&program=GDSI\`, the variable starts as \`GDSI\`: over an embed attribute (\`input-program\`), a course row, a setup and its own starting value, and again on **Start over**. With nothing on the link, it starts as it always did.
+
+A value saved for the learner (**Save as user data**, **Remember**) still comes back when the link names nothing, and the link wins when it does, so a link for one program always opens that program. A value that doesn't fit (a choice the variable hasn't got, text for a number) is ignored. The canvas uses the sample value from Data > context > link.
+
+### Choices, and trying each one
+Give a link value its **Choices** in the same table, with commas between them (\`MSCN, GDSI, GCSC\`). The sample then picks from them, and so do these two:
+
+- **Preview's bar** has a field for every link value the project reads (from \`link.\` in text, bindings and formulas, and \`ix.link.\` in scripts), plus the ones in the table: a list when it has choices, otherwise a box to type in (Enter applies it). Changing one starts Preview again, opened with that value. It's for this run only: the sample in Data stays as it was, so a reviewer can try every program without changing the project.
+- **Share** shows the same fields as **Open it with:** above the embed code and the share link. Pick a value and what you copy carries it (\`&program=GCSC\`). Leave it on **none** for the plain link.
 
 Anyone can change what's on an address they open, so use a value to pick what to show, never to decide what someone may do or to set a score.
 
@@ -28034,12 +30256,36 @@ Inside the copies, \`item\` is the current item and \`index\` is its position, c
 A grid has a **Fill** direction. *Rows first* goes across each row and then down (1 2 3 / 4 5 6 / 7). *Columns first* goes down each column and then across (1 4 7 / 2 5 / 3 6). **Cols** is still the number of columns.
 
 ## Text in the copies sizes itself
-A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there. A long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow. You don't need to guess a height from the number of characters.
+A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there. A long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow, on a page and inside a dialog, tooltip or other overlay alike. You don't need to guess a height from the number of characters.
 
 A height or width you bind on the template layer still wins. Only copies whose text changed are measured again.
 
 ## Instances in a repeater
 Instances in a repeater can take their [inputs](instances) from the item. Select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
+
+## A list in a list
+A repeater can go inside the copy of another one: groups that hold cards, a table's rows and their cells, a board's columns. Give the outer list items that have a list in them (\`{name: "Fruit", cards: ["apple", "pear"]}\`) and set the inner repeater's **Repeat for each** to \`item.cards\`. Each group then draws its own cards.
+
+Inside the inner copies, \`item\` and \`index\` are the card and its place in its group, and \`outer.item\` and \`outer.index\` are the group. So a card can say \`{outer.item.name}: {item}\`. A click on a card gives its own place in its group as \`event.index\`.
+
+## Dragging the copies
+Tick **Reorder by dragging** and people can drag a copy to another place in the list: the others make room, and the list variable changes, so the new order is kept like any other value. From the keyboard, Space picks a copy up, the arrow keys move it and Space puts it down (Escape puts everything back).
+
+To drag copies from one list into another, give the first a **Tag** (\`cards\`) and the second **Takes items from** \`cards\`. Two separate list variables trade items. For a card sort, keep one list of cards and show it twice: a pool repeating \`cards.filter(c => !c.group)\` and, inside a list of groups, \`cards.filter(c => c.group == outer.item.name)\`. Set **Items are in** to \`cards\` on both, **A drop writes field** \`group\`, and **To** \`outer.item.name\` on the groups (\`""\` on the pool). Dropping a card in a group writes the group's name into it, and both repeaters redraw from the one list.
+
+**On list drop** runs after a move, with \`event.item\`, \`event.from\`, \`event.to\` and \`event.index\`.
+
+## Long lists, and lists that load
+**At a time** shows so many copies at once: as **Load more**, which adds the next lot below, or as **Pages** with Next and Previous. **Add Load more and a count** (or **Add Next, Previous and a count**) puts the buttons inside the list, already wired, with a line that says how many there are. Each button hides itself when it has nothing to do.
+
+The layers round the copies can say where the list is at: \`{list.total}\`, \`{list.shown}\`, \`{list.from}\`, \`{list.to}\`, \`{list.page}\` and \`{list.pages}\`. Say how many there are: a list that is cut off without saying so looks finished.
+
+**Add loading, empty and fault looks** puts three texts in the list: one shown while its data loads, one when it's empty, and one when its data couldn't be loaded. Change their words and their look as you like. A list knows its data is loading or failed when its **Repeat for each** names a data source; \`dataStatus.cards\` says the same in any formula.
+
+## A tree that folds
+Tick **Show as a tree** and the list is drawn as an outline. Each item names its parent in the **Parent field** (\`parent\`), by the parent's **Id field** (\`id\`); items with no parent are the top level. A branch opens and closes with a click, **Enter** or **Space**, and the arrow keys move round it the way the W3C tree view pattern has them: **Right** opens a branch or goes into it, **Left** closes it or goes up to its parent, **Up**, **Down**, **Home** and **End** move between the rows. A screen reader hears a tree, with each item's level and whether it's open.
+
+In the copies, \`depth\`, \`hasChildren\` and \`isOpen\` say where each one is, for a chevron that turns (\`isOpen ? 90 : 0\`) or a line. **Open branches in** keeps the open ones in a list variable, to save or set. A course outline, a file list and a tree test are all one list with a parent field.
 
 ## Selection
 Set **Selection** under the repeater to let people pick copies without any nodes:
@@ -28059,6 +30305,28 @@ A click, <kbd>Enter</kbd> or <kbd>Space</kbd> on a copy picks it, and the arrow 
 Clicks on a copy fire **When clicked or hovered** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked. For keeping track of which were clicked, **Selection** above does it for you.
 
 For lists a keyboard user moves through, tick **Keyboard navigation** under the repeater. One copy is the Tab stop and the arrow keys move between the rest (see [Accessibility](accessibility#keyboard-navigation)).`
+  },
+  {
+    id: "checks",
+    title: "Checks",
+    group: "Data",
+    summary: "Rules the project is checked against as it runs, with the words for each one that fails.",
+    keywords: "checks check rules validate validation issues problems errors plan complete done passed failing warnings messages list",
+    body: `**Checks** are rules a project is checked against while it runs: a study plan that mustn't go over 8 units a year, a form that needs an email, a build that needs every part. Each check is a formula that's true when all is well, and the words to show when it isn't. They're worked out again after every change, so the list of what's wrong is always current.
+
+## Add one
+Select nothing (or the page), open **Checks** in Properties and press its **+**.
+
+- **Passes when**: \`sum('Year 1', 'units') <= 8\`. Give a text instead of false and the text is the message: \`sum('Year 1', 'units') <= 8 || 'Year 1 is over 8 units'\`.
+- **Otherwise say**: the words when it fails, with \`{slots}\`: \`Year 1 has {sum('Year 1', 'units')} units, 8 at most.\`
+- **For each** (optional): a formula giving a list, \`items('Year 1')\`. The check runs once per item, with \`item\` and \`index\`, and each failure names its item: \`Passes when\` \`item.offered.includes(item.zone)\`, **Otherwise say** \`{item.name} isn't offered in {item.zone}.\`
+
+## Show what fails
+- In any formula: \`checks.count\`, \`checks.passed\`, and \`checks.list\`, where each failure has \`check\` (its name), \`message\` and \`item\`. A repeater over \`checks.list\` with a text of \`{item.message}\` is the whole issues list.
+- On a layer, the state **A check fails for it** is on while a check fails for an item of the layer's name: the red outline on a card that's in the wrong place, with no script.
+- Under the checks, **Failures**, **How many** and **All pass** write them to variables too, for a **Save user data** or an **On variable change**.
+
+Good to know: a check whose formula can't be worked out counts as failing, so a typo never makes a plan look finished. The canvas runs them on the starting values. See [Drag and drop](drag-and-drop#totals-in-any-formula) for \`count\`, \`sum\` and \`items\`.`
   },
   {
     id: "results",
@@ -28115,6 +30383,17 @@ User data is kept apart from remembered progress and from results, so **Clear re
 
 ## See the results
 **View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. The owner and people invited to collaborate can see it. **Export CSV** downloads every learner's record as a spreadsheet: username, name, course, completed, passed, attempts, best and last score and percentage, and when they were last active (the list in the dialog shows the latest 200). **Clear results** deletes every record for the project (handy after testing); only the owner can use it (collaborators see it greyed out), since it can't be undone.
+
+## Collect responses, one row each
+A score says how someone did. For what they actually did (a survey's answers, where each card went in a card sort, what they picked in a configurator) use the **Send a response** node. Its **Values** are named values, \`{ q1: answer1, mood: mood }\`, or a list of records such as \`cards.map(c => ({ card: c.name, group: c.group }))\`. **Kind of response** (\`card-sort\`, \`survey\`) keeps two kinds apart in one app.
+
+Each response is a row in the **Responses** tab of **Results**, with when it came and the course. **Download** gives:
+
+- **CSV**: a row per response, a column per value.
+- **CSV, a row per item**: a row per record of the list in each response, the response's other values repeated on each. One row per card placed is the shape card sort analysis tools take.
+- **JSON**: every response as it was sent.
+
+Responses are kept without names to start with: each person's are under a code that is the same for them every time and says nothing about who they are, which is what a survey or a card sort usually wants. Tick **Responses with names** in Project settings, and **Update** the share, to keep names. A person can send up to 300 an hour. In Preview and a downloaded HTML file there is no server, so the browser keeps the last 200 instead.
 
 ## Good to know
 - A result is what the learner's browser says. It is good for tracking progress, not for marks that must be tamper-proof, unless the questions are set to **Mark answers on the server**. Then the server marks them, keeps the tries and writes the result itself, and any result the browser reports is ignored for that project. See [Question kit](question-kit).
@@ -28219,7 +30498,7 @@ All are in the Interactions palette, and described there.
 - **Stop recording**, **Discard recording**, **Play recording** (sound plays through the project's own sound, so the viewer's sound button applies; video plays in the layer you choose) and **Download recording** (offers a file, after a tap: it is the only way a recording leaves memory).
 - **Camera preview** shows the camera live in a layer's place. The page draws it over the project, so the project never sees the camera's pixels.
 - **Take or choose a photo** puts a picture, scaled to at most 1600 px on the long side, into an image asset. Every image layer that uses the asset shows it. From the device's photo picker (with the front or back camera if the device offers it) or a still from the live preview. To fill a different asset for each item of a list, give **Or the asset from an expression** an asset's id or name (such as \`prompts[current].photo\`); it wins over the asset picked. Set **Do** to **Throw the photo away** to put the asset's own picture back and forget the photo.
-- **Download a file** saves text you build, such as a report or a CSV, after a tap. It works in any project. See [Download a file](sensors#download-a-file) below.
+- **Download a file** saves text you build, such as a report or a CSV, after a tap, or a picture or a PDF of a layer. It works in any project. See [Download a file](sensors#download-a-file) below.
 - **Offer: do not use my microphone or camera** asks the learner, in the page's own screen, whether to stop using them for good. Put it on a "Use the keyboard instead" button. Only the learner decides.
 - **When the microphone or camera is used** fires when a recording starts, a recording is ready (\`event.reason\` is \`stopped\`, \`limit\` or \`device-lost\`: the learner can press Stop on the bar too), something could not start (\`event.problem\` and \`event.message\`), the state changed, a video finished playing, a photo arrived, or live listening started or stopped.
 
@@ -28233,6 +30512,17 @@ All are in the Interactions palette, and described there.
 - Every web page is saved with a rule that stops it running script or loading anything when it is opened, so it is a report and nothing more.
 
 The **Photo prompts notebook** starter builds its whole report this way, for upload to a Moodle assignment.
+
+### A picture or a PDF of a layer
+Pick **Picture of a layer (.png)** or **PDF of a layer (.pdf)** as the type and the node saves a layer as it is on screen now, or the whole page with no **Layer** chosen. A study plan's grid, a certificate, a finished drawing.
+
+- **Footer, left** and **Footer, right** put a line at the foot, such as \`context.displayName\` and \`today("d mmmm yyyy")\`.
+- A PDF is the size of the layer, or an **A4** page with the layer fitted in its margins.
+- Tick **Not in downloads** (in a layer's **Layer** section) on anything that means nothing on paper, like an info button or the Download button itself, and it's left out.
+- **File name** is a formula like any other: \`"Plan " + context.displayName + " " + today("dd-mm-yyyy")\`. Characters a file name can't hold, such as a colon or a slash, are replaced with a space.
+- These are saved straight away, without the tap a text file asks for. Text in them is a picture, so it can't be selected or searched, and a video or an embedded page shows as an empty box.
+
+**Picture of a layer** is the same picture as its own node. **Then** downloads it, or keeps it in a text variable: bind an image layer's picture to that variable to show it, and tick **Save as user data** on the variable to keep it for the person (pictures of up to about 1 MB).
 
 ## Try it
 **Preview** has a pretend microphone and camera, because the real ones need the page the project is shared in. It makes a made-up level and short tone for a recording, a swelling level and moving bands for live listening, and a sample picture. The **Microphone and camera** menu above the preview makes it fail the ways a real one does (denied, no device, blocked by the course page, the learner chose not to use them), so you can build and check the plain version. A small "Simulated" note shows while it records. Try the real devices from the **Link for StudyDesk** on the page you will use.
@@ -28298,7 +30588,7 @@ Off by default, so embeds that already exist keep working. Turn it on and attrib
     title: "Project settings",
     group: "Getting started",
     summary: "Start page, fit, page title, fonts, live collaboration, sandbox, reduced motion and Optimise output.",
-    keywords: "settings live collaboration start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider",
+    keywords: "settings stage shape 16:9 4:3 widescreen letterbox full screen phone sideways landscape portrait live collaboration start page fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider",
     body: `![The Project section of the Inspector, with Allowed data hosts filled in and the library and reduced motion boxes below it.](help/project-settings.png)
 
 The **Project** section holds the settings for the whole project, not one page. Click an empty part of the canvas, or a page's name, and it shows in the Inspector, below the page's own settings.
@@ -28310,8 +30600,9 @@ The **Project** section holds the settings for the whole project, not one page. 
 | Name | The project's name, as on the projects page |
 | Page title | The title of the browser tab for the exported page |
 | Description | A note about the project, kept in the file |
-| Fit | How the page scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
-| Page background | The colour around the page in the exported page |
+| Stage shape | **Free** (each page sets its own size, the default), **16:9, widescreen** or **4:3**. With a shape, the stage keeps it the way a game does: letterboxed in any window, a StudyDesk frame of that shape, a full screen button at its top right when it's in a frame or on a phone, and a phone held upright asked to turn on its side (or **Play this way**). Pages of another shape are letterboxed inside it; 1280 x 720 is the usual size for 16:9 |
+| Fit | How the page scales to the space it's given (with a **Stage shape**, always letterboxed): **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
+| Page background | The colour around the page in a share link, embed or downloaded page. See-through to start with, so an embed never shows a dark box while it loads and resizes |
 | Hide sideways scrollbar | Off unless you tick it. When the project plays inside a frame (the Link for StudyDesk, an embedded share link or file), the page never shows a horizontal scrollbar. Opened in its own tab it scrolls as usual. Press **Update** in Share after changing it |
 | Hide up-down scrollbar | On to begin with. The frame grows to fit the project, so a vertical scrollbar would only flicker on and off while it resizes. Left as it starts, it comes back if nothing sizes the frame (the project stays taller than the frame for a second), so nothing is out of reach. Ticked on purpose, it stays hidden; unticked, the page scrolls as usual. Opened in its own tab it always scrolls. Press **Update** in Share after changing it |
 | Live collaboration | Off unless you turn it on. On, people who share the project see each other's cursors and changes as they happen; off, nothing extra is sent and the project is saved one person at a time. See [Live editing and saving](live-editing#live-collaboration) |
@@ -28645,7 +30936,10 @@ The files are named after the project (and the page, for pictures, Lottie and vi
 ## About the single HTML file
 - Big pictures go in as their [optimised copies](export#optimised-pictures).
 - Every file is inside it, so a lesson offered in lighter versions still sends all of them in the first download. See [Download size](download-size#what-the-player-loads-and-when).
-- Google fonts are copied into the file, so opening it never calls Google. If a font can't be fetched when you export, a message says so and that font loads from Google instead.
+- Google fonts load from this server, the same place as the editor, so the file stays small and opening it never calls Google. Opened with no network, text shows in a standard font instead.
+
+## About the project package
+A **Project package** (\`${PACKAGE_EXTENSION}\`) carries a copy of every Google font the project draws with, so it plays with no network. Importing a package links each font from this server again whenever the server has it, and leaves the copy out, so the project doesn't carry the font twice. A font the server can't give keeps its copy. If a font can't be fetched when you export, a message says so, and opened online it still loads from the server.
 
 ## Video, GIF and frames
 **Export → Video, GIF or frames…** turns one timeline of the open page into moving pictures you can put in a slide deck, an email or a lecture recording. It plays the timeline once through, from the start, and draws every frame at its exact time: the result is smooth however slow or busy your computer is, and it is the same drawing as **PNG image**, so a frame looks like the canvas with the playhead there.
@@ -28712,7 +31006,7 @@ At the top of the dialog a line says whether there is anything to look at first:
 ## Share link
 **Share → Share…**, under **More ways to share**, publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it). Links are long and random so they can't be guessed. **Copy** copies the link and **Open** opens it in a new tab.
 
-The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google. A message tells you if a font couldn't be fetched, and that font loads from Google instead.
+The page loads the project's Google fonts from this server, the same place as the editor, so viewers' browsers never call Google and the page stays small (the fonts used to be copied into it, which made a page several times bigger).
 
 ### Updating, reverting and turning off
 The link is a snapshot of the project when you published it.
@@ -28783,7 +31077,14 @@ player.timeline('Intro').play();
 player.goTo('Checkout', 'fade');
 player.setTheme('Dark');   // or null to follow the viewer
 player.setData('products', [...]);
-\`\`\``
+\`\`\`
+
+## Testing it as a prototype
+A study page built for it can watch where people go and what they press, to see whether they find their way. Add \`?report=study\` to the share link (or the single HTML file's address), or post \`{ source: 'interactives-report', on: true }\` into the frame. The page around it then hears:
+- \`{ source: 'interactives-page', from, to, name }\` each time the page on show changes, with the pages' ids and the name you gave the new one (\`from\` is null for the first).
+- \`{ source: 'interactives-click', page, x, y, element }\` for every press, with \`x\` and \`y\` as shares (0 to 1) of the page's width and height, and \`element\` the id of the layer that does something when pressed, or null for a press on nothing that does anything.
+
+Without the flag nothing is sent, so learners never send any of it, and neither carries what anyone typed or any variable's value. From JavaScript it's \`player.setReporting(true)\` with \`studypage\` and \`studyclick\` events. A share link published before 20 Nov 2026 needs **Publish** again first.`
   },
   // ---------------------------------------------------------------- together
   {
@@ -29266,8 +31567,8 @@ A note is up to 2000 characters, a conversation holds 200 messages, and a projec
     summary: "Let an AI agent join your editing session to build, change and debug alongside you.",
     keywords: "ai agent claude mcp model context protocol assistant automation llm copilot url connect http",
     body: () => {
-      const page = typeof location !== "undefined" && /^https?:$/.test(location.protocol) ? location : null;
-      const base2 = page ? `${page.origin}${page.pathname.replace(/\/(index\.html)?$/, "")}` : "https://<your server>/interactives";
+      const page2 = typeof location !== "undefined" && /^https?:$/.test(location.protocol) ? location : null;
+      const base2 = page2 ? `${page2.origin}${page2.pathname.replace(/\/(index\.html)?$/, "")}` : "https://<your server>/interactives";
       const url = `${base2}/mcp?agent=Claude`;
       let sid = "";
       try {

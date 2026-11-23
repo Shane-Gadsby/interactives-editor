@@ -202,7 +202,7 @@ describe('Essentials on screen', () => {
     mount(createProject('T'));
     await act(async () => (host.querySelector('.more-panels') as HTMLElement).click());
     await act(async () => void ([...document.querySelectorAll<HTMLElement>('.ctx-menu .ctx-item')].find((i) => /Show all panels and tools/.test(i.textContent ?? ''))!.click()));
-    expect(bottom()).toHaveLength(11);
+    expect(bottom()).toHaveLength(12);
     expect(getDock().hidden).toBeUndefined();
     expect(host.querySelector('.more-panels')).toBeNull();
     expect([...host.querySelectorAll('.tool-group-head')].map((h) => h.textContent)).toEqual(['Shapes', 'Draw', 'Media', 'Data', 'Web', 'Rig']);

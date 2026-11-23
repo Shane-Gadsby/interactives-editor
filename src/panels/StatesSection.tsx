@@ -33,7 +33,7 @@ export function StatesSection({ node }: { node: SceneNode }) {
               label="When"
               title="What turns this look on"
               value={st.when}
-              options={(['hover', 'pressed', 'focus', 'disabled', 'expr'] as const).map((w) => ({ value: w, label: STATE_LABELS[w] }))}
+              options={(['hover', 'pressed', 'focus', 'disabled', 'expr', 'dragging', 'lifted', 'dropReady', 'dropOver', 'dropRefuse', 'checkFails'] as const).map((w) => ({ value: w, label: STATE_LABELS[w] }))}
               onChange={(w) => setStates((list) => void (list[i].when = w))}
             />
             <IconButton icon={<Icons.chevronUp />} title="Move up" disabled={i === 0} onClick={() => setStates((list) => void list.splice(i - 1, 0, list.splice(i, 1)[0]))} />
@@ -60,7 +60,7 @@ export function StatesSection({ node }: { node: SceneNode }) {
           <StateProps state={st} onChange={(props) => setStates((list) => void (list[i].props = props), `state-props-${st.id}`)} />
         </div>
       ))}
-      <Row k="Add state" words={['hover', 'pressed', 'focus', 'disabled', 'correct', 'wrong', 'selected', 'picked']}>
+      <Row k="Add state" words={['hover', 'pressed', 'focus', 'disabled', 'correct', 'wrong', 'selected', 'picked', 'dragged', 'drop', 'dragging', 'picked up', 'refuse']}>
         <button className="btn" onClick={() => setStates((list) => void list.push({ id: uid('st'), when: 'hover', props: {} }))}>
           Add a state
         </button>
@@ -78,6 +78,14 @@ const SLOTS: { prop: string; label: string; kind: 'colour' | 'number'; title: st
   { prop: 'scaleX', label: 'Scale W', kind: 'number', title: 'Width scale in this state, 1 is its own size' },
   { prop: 'scaleY', label: 'Scale H', kind: 'number', title: 'Height scale in this state, 1 is its own size' },
   { prop: 'cornerRadius', label: 'Radius', kind: 'number', title: 'Corner radius in this state' },
+  { prop: 'stroke.width', label: 'Line width', kind: 'number', title: 'How thick the line round it is in this state' },
+];
+
+/** A line's dash pattern, as people pick it. */
+const DASHES: { value: string; label: string; dash: number[] }[] = [
+  { value: 'solid', label: 'Solid', dash: [] },
+  { value: 'dashed', label: 'Dashed', dash: [6, 4] },
+  { value: 'dotted', label: 'Dotted', dash: [1, 3] },
 ];
 
 function StateProps({ state, onChange }: { state: LayerState; onChange: (props: Record<string, unknown>) => void }) {
@@ -103,6 +111,18 @@ function StateProps({ state, onChange }: { state: LayerState; onChange: (props: 
           </Row>
         ),
       )}
+      {props['stroke.dash'] !== undefined && (
+        <Row>
+          <SelectField
+            label="Line style"
+            title="Solid, dashed or dotted in this state"
+            value={DASHES.find((d) => JSON.stringify(d.dash) === JSON.stringify(props['stroke.dash']))?.value ?? 'dashed'}
+            options={DASHES.map((d) => ({ value: d.value, label: d.label }))}
+            onChange={(v) => put('stroke.dash', DASHES.find((d) => d.value === v)?.dash ?? [])}
+          />
+          <IconButton icon={<Icons.close />} title="Leave the line style alone in this state" onClick={() => put('stroke.dash', undefined)} />
+        </Row>
+      )}
       <SelectField
         label="Also change"
         title="Another property this state changes"
@@ -110,8 +130,9 @@ function StateProps({ state, onChange }: { state: LayerState; onChange: (props: 
         options={[
           { value: '', label: 'Choose…' },
           ...SLOTS.filter((sl) => sl.kind === 'number' && props[sl.prop] === undefined).map((sl) => ({ value: sl.prop, label: sl.label })),
+          ...(props['stroke.dash'] === undefined ? [{ value: 'stroke.dash', label: 'Line style' }] : []),
         ]}
-        onChange={(prop) => prop && put(prop, prop === 'opacity' ? 1 : prop.startsWith('scale') ? 1 : 0)}
+        onChange={(prop) => prop && put(prop, prop === 'stroke.dash' ? [6, 4] : prop === 'opacity' ? 1 : prop.startsWith('scale') ? 1 : prop === 'stroke.width' ? 2 : 0)}
       />
     </>
   );

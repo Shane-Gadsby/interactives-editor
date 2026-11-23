@@ -4,6 +4,7 @@
 import { clearGuidesCommand, guideCount, setGuidesLocked, universalCount } from './guides';
 import { parked } from './parked';
 import { openInsertComponentPicker } from './components';
+import { withLabel } from './input-label';
 import { QUESTION_KINDS, createNode, walk, type NodeType, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { prefs, setPrefs } from './prefs';
@@ -104,9 +105,10 @@ export const PANEL_NAMES: Record<PanelId, { label: string; words: string }> = {
   themes: { label: 'Themes', words: 'colours tokens' },
   usage: { label: 'Usage', words: 'unused broken references' },
   credits: { label: 'Attributions', words: 'credits sources' },
+  story: { label: 'Story', words: 'visual novel script dialogue characters cast branching scenario chapters' },
 };
 
-const BOTTOM_TABS: PanelId[] = ['timeline', 'logic', 'scripts', 'variables', 'data', 'usage', 'a11y', 'insights', 'interface', 'checklist', 'content', 'themes', 'credits'];
+const BOTTOM_TABS: PanelId[] = ['timeline', 'logic', 'scripts', 'variables', 'data', 'usage', 'a11y', 'insights', 'interface', 'checklist', 'content', 'themes', 'credits', 'story'];
 
 /** Show a panel (and bring its tab forward when it lives in the bottom tabs). */
 export function openPanel(id: PanelId): void {
@@ -142,11 +144,11 @@ export function goToPage(id: string): void {
 }
 
 /** A new layer in the middle of the open page, selected (text opens for typing). */
-export function addLayerHere(type: NodeType): string | null {
+export function addLayerHere(type: NodeType, extra: Partial<SceneNode> = {}): string | null {
   const s = store();
   const ab = s.artboard();
   if (!ab) return null;
-  const proto = createNode(type);
+  const proto = createNode(type, extra as never);
   const font = prefs().defaultFont.trim();
   const fontDefaults = font && (type === 'text' || type === 'button' || type === 'input' || type === 'link') ? { fontFamily: fontStack(font) } : {};
   const node = createNode(type, {
@@ -154,7 +156,13 @@ export function addLayerHere(type: NodeType): string | null {
     y: Math.round((ab.height - (type === 'text' ? 0 : proto.height)) / 2),
     ...fontDefaults,
     ...lookDefaults(s.get().project, type),
+    ...extra,
   } as never);
+  if (node.type === 'input') {
+    s.addNodes(withLabel(s.get().project, node), { artboardId: ab.id, select: false });
+    s.select([node.id], { artboardId: ab.id });
+    return node.id;
+  }
   s.addNodes([node], { artboardId: ab.id });
   if (node.type === 'text') s.set({ editingTextId: node.id });
   return node.id;
@@ -177,6 +185,19 @@ export function buildCommands(): Command[] {
 
   //---- Add
   for (const l of NEW_LAYERS) add({ id: `add:${l.type}`, title: `Add ${l.label.toLowerCase()}`, group: 'Add', words: `new insert create ${l.words}`, disabled: noPage, run: () => void addLayerHere(l.type) });
+  add({
+    id: 'add:qr',
+    title: 'Add QR code',
+    group: 'Add',
+    words: 'new insert create qr code barcode scan phone link poster',
+    disabled: noPage,
+    run: () => {
+      const ab2 = s.artboard();
+      if (!ab2) return;
+      const node = createNode('image', { name: 'QR code', width: 160, height: 160, x: Math.round((ab2.width - 160) / 2), y: Math.round((ab2.height - 160) / 2), fit: 'contain', qr: { text: 'https://', level: 'M' } } as never);
+      s.addNodes([node], { artboardId: ab2.id });
+    },
+  });
   add({ id: 'add:page', title: 'Add a page', group: 'Pages', words: 'new artboard screen slide', run: () => void s.addArtboard() });
 
   //---- Questions
@@ -210,6 +231,15 @@ export function buildCommands(): Command[] {
       },
     });
   }
+
+  add({
+    id: 'add:choice',
+    title: 'Add choice buttons',
+    group: 'Add',
+    words: 'radio segmented toggle options pick one choose mode select row',
+    disabled: noPage,
+    run: () => void addLayerHere('input', { inputType: 'choice', options: 'Yes\nNo', placeholder: '', width: 360, height: 44 } as Partial<SceneNode>),
+  });
 
   for (const k of [
     { id: 'accordion', title: 'Add an accordion', words: 'collapse expand sections disclosure faq' },

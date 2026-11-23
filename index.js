@@ -109,6 +109,11 @@ let ops = null,
 	media = null,
 	commentLib = null,
 	responses = null,
+	collected = null,
+	collectedRows = null,
+	setupRows = null,
+	tablesLib = null,
+	tableRows = null,
 	roomsLib = null,
 	courseLib = null,
 	sharedLimits = {},
@@ -1015,6 +1020,9 @@ const purgeProject = async (row) => {
 	await activityData.deleteMany({project: id})
 	sharedLiveEndProject(id)
 	await sharedRows.deleteMany({project: id})
+	await collectedRows.deleteMany({project: id})
+	await setupRows.deleteMany({project: id})
+	await tableRows.deleteMany({project: id})
 	await sharedHidden.deleteMany({project: id})
 	await commentRows.deleteMany({project: id})
 	await commentNotices.deleteMany({project: id})
@@ -2171,13 +2179,16 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 		shared = responses.declaredShared(html),
 		roomsDeclared = roomsLib.declaredRooms(html),
 		waitSession = declaredWait(html),
-		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(waitSession === null ? {} : {waitSession}), ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {}), ...(Object.keys(roomsDeclared).length ? {rooms: roomsDeclared} : {})}
+		named = collected.declaredNamed(html),
+		groupsAsked = collected.declaredGroups(html),
+		tablesDeclared = tablesLib.declaredTables(html),
+		share = {token, ...(named ? {responsesNamed: true} : {}), ...(groupsAsked.length ? {groups: groupsAsked} : {}), created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(waitSession === null ? {} : {waitSession}), ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {}), ...(Object.keys(roomsDeclared).length ? {rooms: roomsDeclared} : {}), ...(Object.keys(tablesDeclared).length ? {tables: tablesDeclared} : {})}
 
 	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
 	//An update keeps the page it replaces (one, not a history), so a bad publish can be undone in a click
 	let prevKept = false
 	if (doc.share?.token && await moveIfThere(shareFile(token), sharePrevFile(token))) {
-		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(typeof doc.share.waitSession === 'boolean' ? {waitSession: doc.share.waitSession} : {}), ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {})}
+		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(typeof doc.share.waitSession === 'boolean' ? {waitSession: doc.share.waitSession} : {}), ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {}), ...(doc.share.tables ? {tables: doc.share.tables} : {})}
 		prevKept = true
 	}
 	await fs.promises.writeFile(shareFile(token), prepared ? prepared.html : html)
@@ -2217,7 +2228,7 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 	await fs.promises.rename(sharePrevFile(token), shareFile(token))
 	await fs.promises.rename(swap, sharePrevFile(token))
 
-	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(typeof doc.share.waitSession === 'boolean' ? {waitSession: doc.share.waitSession} : {}), ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
+	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(typeof doc.share.waitSession === 'boolean' ? {waitSession: doc.share.waitSession} : {}), ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {}), ...(doc.share.rooms ? {rooms: doc.share.rooms} : {}), ...(doc.share.tables ? {tables: doc.share.tables} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
 		set = {share}, unset = {}
 
 	//The page that came back waits for the session, or doesn't, as it did when it was shared
@@ -2250,6 +2261,13 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 	}
 	else {
 		delete share.rooms
+	}
+	//And its shared tables
+	if (doc.share.previous.tables) {
+		share.tables = doc.share.previous.tables
+	}
+	else {
+		delete share.tables
 	}
 	//The answer keys swap with their pages
 	if (doc.previousMarking) set.marking = doc.previousMarking
@@ -3812,6 +3830,199 @@ router.post('/learn/:token/report', express.json({limit: '16kb'}), async (req, r
 	res.json({available: true, ok: true})
 })
 
+//Who is looking, for the project's context: whether this person owns it, helps make it or may change everything (a power user),
+//and which of the groups the project said it asks about they are in. Never the full list of groups, never anyone else's. An admin
+//showing the course as a student (presentation mode) is nobody special here
+router.get('/learn/:token/who', async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let me = whoIs(req),
+		access = Array.isArray(req.sessionData?.access) ? req.sessionData.access.map(String) : [],
+		presenting = access.includes('presentation-mode')
+
+	if (!me?.username || presenting || req.ltiLearner) {
+		return res.json({isOwner: false, isCollaborator: false, isPower: false, groups: []})
+	}
+
+	let isOwner = project.owner?.username === me.username,
+		isCollaborator = Array.isArray(project.collaborators) && project.collaborators.some((c) => c.username === me.username),
+		asked = Array.isArray(project.share?.groups) ? project.share.groups : []
+
+	res.json({isOwner, isCollaborator, isPower: isPower(req), groups: asked.filter((g) => access.includes(g))})
+})
+
+//Shared tables: rows people add, change and take away (a sign-up sheet, a board). The rules and limits are the ones the owner
+//declared when the project was shared, checked here, never what a browser says. Rows belong to a course, so each class has its own
+const tableAt = async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return null
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		res.json({available: false})
+		return null
+	}
+
+	let source = req.params.source,
+		decl = project.share?.tables?.[source]
+
+	if (!decl) {
+		res.status(404).json({error: 'That project has no such shared table (share it again after adding it)'})
+		return null
+	}
+
+	let me = whoIs(req),
+		access = Array.isArray(req.sessionData?.access) ? req.sessionData.access.map(String) : [],
+		staff = !access.includes('presentation-mode') && !req.ltiLearner && (req.sessionData?.user?.isStudent === false || project.owner?.username === me?.username || (Array.isArray(project.collaborators) && project.collaborators.some((c) => c.username === me?.username)) || isPower(req))
+
+	return {project, decl, source, person: {...who, staff}}
+}
+const tableRowsOf = (at) => tableRows.find({project: at.project._id, source: at.source, course: at.person.course}).sort({at: 1}).limit(tablesLib.LIMITS.maxRows).toArray()
+
+router.get('/learn/:token/table/:source', async (req, res) => {
+	let at = await tableAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	res.json({available: true, value: tablesLib.valueFor(at.decl, await tableRowsOf(at), at.person)})
+})
+
+router.post('/learn/:token/table/:source', express.json({limit: '16kb'}), async (req, res) => {
+	let at = await tableAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let {decl, person} = at,
+		op = req.body?.op,
+		answer = async (problem) => res.json({available: true, ok: !problem, value: tablesLib.valueFor(decl, await tableRowsOf(at), person, problem || '')})
+
+	if (!sharedLimits.table.hit(`${at.project._id}|${person.username}`)) {
+		return answer('busy')
+	}
+
+	let rows = await tableRowsOf(at)
+
+	if (op === 'add') {
+		let values = tablesLib.cleanValues(decl, req.body?.values)
+
+		if (!tablesLib.mayDo(decl, 'add', person)) return answer('not-allowed')
+		let over = tablesLib.overLimit(decl, rows, person, values)
+		if (over) return answer(over)
+		await tableRows.insertOne({_id: crypto.randomBytes(12).toString('hex'), project: at.project._id, source: at.source, course: person.course, username: person.username, name: person.name || '', values, at: new Date()})
+		return answer('')
+	}
+
+	let row = rows.find((r) => String(r._id) === String(req.body?.id ?? ''))
+
+	if (!row) {
+		return answer('no-such-row')
+	}
+
+	if (op === 'change') {
+		let values = {...row.values, ...tablesLib.cleanValues(decl, req.body?.values)}
+
+		if (!tablesLib.mayDo(decl, 'change', person, row)) return answer('not-allowed')
+		let over = tablesLib.overLimit(decl, rows, person, values, row._id)
+		if (over) return answer(over)
+		await tableRows.updateOne({_id: row._id}, {$set: {values, updated: new Date()}})
+		return answer('')
+	}
+	if (op === 'remove') {
+		if (!tablesLib.mayDo(decl, 'remove', person, row)) return answer('not-allowed')
+		await tableRows.deleteOne({_id: row._id})
+		return answer('')
+	}
+	res.status(400).json({error: 'No such thing to do'})
+})
+
+//Save setup: the values an app's editors chose for everyone (the tiles, the cards, a picture), per setup of the shared project.
+//Anyone the page knows can read them; only the owner, a collaborator, a power user or staff may write them. StudyDesk's editing
+//mode is the page's hint for showing the editing tools and is never trusted here
+const setupKey = (project, req) => ({project: project._id, setup: typeof (req.body?.setup ?? req.query.setup) === 'string' ? String(req.body?.setup ?? req.query.setup).slice(0, 40) : ''})
+
+router.get('/learn/:token/saved-setup', async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let row = await setupRows.findOne(setupKey(project, req))
+
+	res.json({available: true, values: row?.values ?? null})
+})
+
+router.post('/learn/:token/saved-setup', express.json({limit: '2500kb'}), async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let me = whoIs(req),
+		access = Array.isArray(req.sessionData?.access) ? req.sessionData.access.map(String) : [],
+		staff = req.sessionData?.user && req.sessionData.user.isStudent === false,
+		mayEdit = !!me?.username && !access.includes('presentation-mode') && !req.ltiLearner && (project.owner?.username === me.username || (Array.isArray(project.collaborators) && project.collaborators.some((c) => c.username === me.username)) || isPower(req) || staff)
+
+	if (!mayEdit) {
+		return res.json({available: true, ok: false, problem: 'not-allowed'})
+	}
+
+	let values = req.body?.values
+
+	if (!values || typeof values !== 'object' || Array.isArray(values) || JSON.stringify(values).length > 2000000) {
+		return res.status(400).json({error: 'Those values are not the right shape, or too big'})
+	}
+
+	await setupRows.updateOne(setupKey(project, req), {$set: {values, updated: new Date(), by: me.username}}, {upsert: true})
+	res.json({available: true, ok: true})
+})
+
+//Send a response: the values an app collects (a survey's answers, where a card was sorted), one row each, filed under the
+//person (their name when the shared page says so, otherwise a code that is the same for them every time and says nothing
+//about who they are), the time and the setup. Anyone the learner page knows can send; nobody can read them back here
+router.post('/learn/:token/responses', express.json({limit: '24kb'}), async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		return res.json({available: false})
+	}
+
+	let values = collected.cleanValues(req.body?.values)
+
+	if (values === null) {
+		return res.status(400).json({error: 'That response is empty, or too big to keep'})
+	}
+
+	if (!sharedLimits.respond.hit(`${project._id}|${who.username}`)) {
+		return res.status(429).json({available: true, ok: false, problem: 'busy'})
+	}
+
+	let named = !!project.share?.responsesNamed,
+		row = {_id: crypto.randomBytes(12).toString('hex'), project: project._id, set: collected.cleanSet(req.body?.set), at: new Date(), course: who.course, setup: typeof req.body?.setup === 'string' ? req.body.setup.slice(0, 60) : '', values, ...(named ? {username: who.username, name: who.name || ''} : {person: collected.personCode(project._id, who.username)})}
+
+	await collectedRows.insertOne(row)
+	res.json({available: true, ok: true})
+})
+
 //What the spelling guard found in the learner's browser (writing tools, answers that changed without typing, the exemption code
 //used), kept on their record for the teacher. Not marked on the server, so it works the same for server-marked projects
 router.post('/learn/:token/guard', express.json({limit: '4kb'}), async (req, res) => {
@@ -5203,10 +5414,10 @@ const learnerPage = (token, base, nonce, project, remix, sensors, mediaNonce, li
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ixia</title>
-<style>html,body{margin:0;height:100%;overflow:hidden;background:#111}iframe{border:0;display:block;width:100%;height:100%}#remix{position:fixed;right:12px;bottom:12px;z-index:2;display:none;font:600 13px/1 system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);text-decoration:none}#remix:hover,#remix:focus-visible{background:#2f49d0}#remix[aria-disabled=true]{opacity:.7;cursor:progress}#remix.err{background:#b3261e}</style>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:transparent}iframe{border:0;display:block;width:100%;height:100%}#remix{position:fixed;right:12px;bottom:12px;z-index:2;display:none;font:600 13px/1 system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);text-decoration:none}#remix:hover,#remix:focus-visible{background:#2f49d0}#remix[aria-disabled=true]{opacity:.7;cursor:progress}#remix.err{background:#b3261e}</style>
 </head>
 <body>
-<iframe id="project" src="${base}/s/${token}${frameHash(sensors ? `ixm=${mediaNonce}` : '', link)}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-downloads" allow="fullscreen; autoplay" title="Interactive"></iframe>
+<iframe id="project" src="${base}/s/${token}${frameHash(sensors ? `ixm=${mediaNonce}` : '', link)}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-downloads allow-modals" allow="fullscreen; autoplay; clipboard-write" title="Interactive"></iframe>
 ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into your own projects, to change as you like">Remix this</a>' : ''}
 <script src="/utilities.js"></script>
 <script nonce="${nonce}">
@@ -5291,7 +5502,8 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	//One request at a time, so a save and a report that leave together can't both try to make the learner's first record
 	var chain = Promise.resolve()
 	var diagQueue = [], diagTaken = 0, diagSettled = false, diagTimer = null, lastHeight = 0
-	var call = function (method, path, body) {
+	//quiet: a lookup the page can do without (who is looking), so its failing isn't reported as the page's own trouble
+	var call = function (method, path, body, quiet) {
 		var run = function () {
 			//worked out as it's sent, so a session that turned up late still goes with it
 			var headers = {'Content-Type': 'application/json'}
@@ -5299,7 +5511,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			else if (ltiSession) headers['X-LTI-Session'] = ltiSession
 			return fetch(base + '/learn/' + token + '/' + path, {method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body), keepalive: body !== undefined}).then(function (r) {
 				//Saving and reporting results is this page's own job, so when it fails that is worth knowing (the route and status, nothing else)
-				if (!r.ok && r.status >= 500) takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), status: r.status, fingerprint: 'learn-' + method.toLowerCase() + '-' + r.status})
+				if (!r.ok && r.status >= 500 && !quiet) takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), status: r.status, fingerprint: 'learn-' + method.toLowerCase() + '-' + r.status})
 				if (r.ok) return r.json()
 				//No session or the link turned off is nowhere to keep anything. The server turning it down (too much, the wrong shape) is
 				//refused, and anything else is the server failing, which a project has to be able to tell apart from no session, or it takes
@@ -5307,7 +5519,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 				if (r.status === 401 || r.status === 403 || r.status === 404) return {available: false}
 				return r.status === 400 || r.status === 413 ? {available: true, refused: true} : {available: true, failed: true}
 			}, function () {
-				takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), fingerprint: 'learn-' + method.toLowerCase() + '-network'})
+				if (!quiet) takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), fingerprint: 'learn-' + method.toLowerCase() + '-network'})
 				throw new Error('network')
 			})
 		}
@@ -5488,7 +5700,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	var contextFrom = ${records.contextFrom.toString()}
 	//The project's built-in context (course, first name, student or staff) is answered from the session once fetchActivity has
 	//one. Never the username, email or id, and it is not sent to analytics. A project that asks before then waits in the queue
-	var contextReady = false, contextData = null, contextAsks = []
+	var contextReady = false, whoReady = false, contextData = null, contextAsks = []
 	var answerContext = function (m) {
 		answer(m, {ok: true, available: !!contextData, data: contextData})
 	}
@@ -5576,7 +5788,35 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			settleDiags()
 			contextData = err || !data ? null : contextFrom(data.user, data.activity)
 			contextReady = true
-			while (contextAsks.length) answerContext(contextAsks.shift())
+			//a context request is answered once the server has said who this is to the project, too
+			var settleContext = function () {
+				whoReady = true
+				while (contextAsks.length) answerContext(contextAsks.shift())
+			}
+			if (!contextData) settleContext()
+			else {
+				//StudyDesk's editing mode, as si-manager's handshake keeps it for every page on this origin. A hint for showing an
+				//app's editing tools, never a key to anything: nothing on the server trusts it
+				var editing = false
+				try {
+					editing = JSON.parse(sessionStorage.getItem('isEditing') || 'false') === true
+				}
+				catch (e) {
+				}
+				contextData.isEditing = editing
+				//whether they own or help make the project, and the groups it asks about, from the server
+				call('GET', 'who', undefined, true).then(function (w) {
+					w = w || {}
+					contextData.isOwner = !!w.isOwner
+					contextData.isCollaborator = !!w.isCollaborator
+					contextData.groups = Array.isArray(w.groups) ? w.groups : []
+					contextData.canEdit = !!(w.isOwner || w.isCollaborator || w.isPower || (editing && contextData.isStaff))
+					settleContext()
+				}, function () {
+					contextData.canEdit = !!(editing && contextData.isStaff)
+					settleContext()
+				})
+			}
 			//after this function is through, so known is settled either way
 			setTimeout(settleAnalytics, 0)
 			//fetchActivity has the session, so the wait above is over whether or not its own look has come round yet
@@ -5589,12 +5829,23 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			if (queue.length && !timer) timer = setTimeout(flushRecords, 300)
 		})
 	}
-	else contextReady = true
+	else contextReady = whoReady = true
+	//and the study turning that on or off from outside, passed down to the project as it is
+	window.addEventListener('message', function (e) {
+		var d = e.data
+		if (window.parent !== window && e.source === window.parent && d && d.source === 'interactives-report' && frame.contentWindow) frame.contentWindow.postMessage({source: 'interactives-report', on: d.on !== false}, '*')
+	})
 	window.addEventListener('message', function takeMessage(e, late) {
 		if (e.source !== frame.contentWindow) return
 		var m = e.data
 		if (m && m.source === 'interactives-record') return takeRecord(m.record)
 		if (m && m.source === 'interactives-diag') return takeDiag(m.diag)
+		//A study testing the project as a prototype (Sightline) frames this page and hears page changes and presses. The player only
+		//sends them when the link says ?report=study or the study asks below, and only these two kinds go up, field by field
+		if (m && (m.source === 'interactives-page' || m.source === 'interactives-click')) {
+			if (window.parent !== window) window.parent.postMessage(m.source === 'interactives-page' ? {source: m.source, from: m.from, to: m.to, name: m.name} : {source: m.source, page: m.page, x: m.x, y: m.y, element: m.element}, '*')
+			return
+		}
 		//The player's height for its width, handed on to the page around this one the way every toolbox app does (setILARSize), so
 		//the embed code's iframe in StudyDesk tracks the project. The player's own message goes to the top window, where si-manager
 		//can't tell which iframe it came from, since it came out of two frames down. Only a sane number is passed on
@@ -5631,7 +5882,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		//A project set to wait for the session asks this and holds its start for the answer, which is only that the wait is over
 		if (m.op === 'session') answer(m, {ok: true, available: !!(findSession() || ltiSession)})
 		else if (m.op === 'context') {
-			if (contextReady) answerContext(m)
+			if (contextReady && whoReady) answerContext(m)
 			else {
 				if (m.acks && m.rid && !sessionSettled) held.push(m.rid)
 				contextAsks.push(m)
@@ -5714,6 +5965,31 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
 			}, failed)
 		}
+		else if (m.op === 'table-read' && typeof m.tableSource === 'string') {
+			call('GET', 'table/' + encodeURIComponent(m.tableSource)).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
+			}, failed)
+		}
+		else if (m.op === 'table-write' && typeof m.tableSource === 'string') {
+			call('POST', 'table/' + encodeURIComponent(m.tableSource), {op: m.tableOp, id: m.id, values: m.values}).then(function (j) {
+				answer(m, {ok: !!j.ok, available: !!j.available && !!j.value, data: j.value || null})
+			}, failed)
+		}
+		else if (m.op === 'setup-load') {
+			call('GET', 'saved-setup?setup=' + encodeURIComponent(m.setup || '')).then(function (j) {
+				answer(m, {ok: true, available: !!j.available, data: j.values || null})
+			}, failed)
+		}
+		else if (m.op === 'setup-save') {
+			call('POST', 'saved-setup', {setup: m.setup || '', values: m.values}).then(function (j) {
+				answer(m, {ok: !!j.ok, available: !!j.available, data: j.problem ? {problem: j.problem} : null})
+			}, failed)
+		}
+		else if (m.op === 'respond') {
+			call('POST', 'responses', {set: m.set, values: m.values, setup: m.setup}).then(function (j) {
+				answer(m, {ok: !!j.ok, available: !!j.available, data: j.problem ? {problem: j.problem} : null})
+			}, failed)
+		}
 		else if (m.op === 'mark') {
 			//A question marked on the server: the project sends the answer, the server marks it and says how it went
 			call('POST', 'check', {question: m.question, action: m.action, answer: m.answer}).then(function (j) {
@@ -5744,6 +6020,10 @@ ${sensors ? `<script type="module" nonce="${nonce}">
 import {startBridge} from ${JSON.stringify(`${base}/media-bridge.mjs`)}
 startBridge({frame: document.getElementById('project'), nonce: ${JSON.stringify(mediaNonce)}, declaration: ${scriptJson(sensors)}})
 </script>` : ''}
+<script type="module" nonce="${nonce}">
+import {startPlatformRelay} from ${JSON.stringify(`${base}/platform-relay.mjs`)}
+startPlatformRelay({frame: document.getElementById('project')})
+</script>
 </body>
 </html>
 `
@@ -5758,6 +6038,14 @@ const frameHash = (...parts) => {
 router.get('/media-bridge.mjs', cacheHeaders.document, (req, res) => {
 	res.type('text/javascript').sendFile(path.join(__dirname, 'shared', 'media-bridge.mjs'), {headers: {'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff'}})
 })
+
+//The video sites' relay: YouTube, Vimeo and Panopto players drawn over the project, which can't play them from its sandbox
+router.get('/platform-relay.mjs', cacheHeaders.document, (req, res) => {
+	res.type('text/javascript').sendFile(path.join(__dirname, 'shared', 'platform-relay.mjs'), {headers: {'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff'}})
+})
+
+//The only sites the relay draws (it builds their addresses itself), so the only frames this page may hold besides the project
+const PLATFORM_FRAMES = 'https://www.youtube-nocookie.com https://player.vimeo.com https://*.panopto.com https://*.panopto.eu'
 
 router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	let token = req.params.token
@@ -5782,7 +6070,7 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	let host = String(req.get('host') || ''),
 		sockets = Object.keys(project.share?.rooms || {}).length && /^[\w.:\[\]-]{1,200}$/.test(host) ? ` ws://${host} wss://${host}` : ''
 
-	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' 'self'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'${sockets}; media-src blob:; base-uri 'none'; form-action 'none'`)
+	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' 'self'; style-src 'unsafe-inline'; frame-src 'self' ${PLATFORM_FRAMES}; connect-src 'self'${sockets}; media-src blob:; base-uri 'none'; form-action 'none'`)
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('Referrer-Policy', 'no-referrer')
 	res.setHeader('X-Robots-Tag', 'noindex')
@@ -5873,6 +6161,67 @@ router.get('/api/projects/:id/results.csv', async (req, res) => {
 	res.set('Content-Disposition', `attachment; filename="${name} results.csv"`)
 	//A BOM so Excel reads the names as UTF-8
 	res.send('\ufeff' + learner.resultsCsv(rows))
+})
+
+//What Send a response collected, for the project's owner and collaborators: newest first, as rows (?set= one kind only)
+const collectedFor = async (doc, req) => {
+	let q = {project: doc._id}
+
+	if (typeof req.query.set === 'string' && req.query.set) q.set = collected.cleanSet(req.query.set)
+	return collectedRows.find(q, {projection: {_id: 0, project: 0}}).sort({at: -1}).limit(20000).toArray()
+}
+
+router.get('/api/projects/:id/responses', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let docs = await collectedFor(doc, req),
+		sets = await collectedRows.distinct('set', {project: doc._id})
+
+	res.json({sets, count: docs.length, truncated: docs.length >= 20000, named: !!doc.share?.responsesNamed, rows: docs.slice(0, 500), mayClear: ownsOrPower(req, doc)})
+})
+
+//A table to download: a row per response, or (?per=item) a row per record of the list a response holds, the card sort shape. ?format=json for the raw rows
+const collectedFile = (ext) => async (req, res) => {
+	req.params.ext = ext
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let docs = await collectedFor(doc, req),
+		name = String(doc.name || 'project').replace(/[^\w .-]+/g, '').trim().slice(0, 60) || 'project'
+
+	if (req.params.ext === 'json') {
+		res.set('Content-Type', 'application/json; charset=utf-8')
+		res.set('Content-Disposition', `attachment; filename="${name} responses.json"`)
+		return res.send(JSON.stringify(docs, null, 1))
+	}
+	if (req.params.ext !== 'csv') {
+		return res.status(404).json({error: 'No such download'})
+	}
+
+	res.set('Content-Type', 'text/csv; charset=utf-8')
+	res.set('Content-Disposition', `attachment; filename="${name} responses${req.query.per === 'item' ? ' by item' : ''}.csv"`)
+	res.send('\ufeff' + collected.csvOf(collected.tableOf(docs, req.query.per === 'item')))
+}
+router.get('/api/projects/:id/responses.csv', collectedFile('csv'))
+router.get('/api/projects/:id/responses.json', collectedFile('json'))
+
+router.delete('/api/projects/:id/responses', async (req, res) => {
+	let doc = await projectFor(req, res, {ownerOnly: true})
+
+	if (!doc) {
+		return
+	}
+
+	let r = await collectedRows.deleteMany({project: doc._id})
+
+	res.json({ok: true, deleted: r.deletedCount})
 })
 
 //Wiping every learner's record is the owner's call (or a power user's), not a collaborator's
@@ -6411,6 +6760,9 @@ client.connect()
 		sharedHidden = db.collection('shared-hidden')
 		roomMessages = db.collection('room-messages')
 		courseRows = analyticsDB.collection('interactives-course-collections')
+		collectedRows = db.collection('responses')
+		setupRows = db.collection('setup-values')
+		tableRows = db.collection('shared-tables')
 		ingest = analyticsDB.collection('ingest')
 		userLookup = analyticsDB.collection('user-lookup')
 		fs.mkdirSync(storageDir, {recursive: true})
@@ -6420,9 +6772,11 @@ client.connect()
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs'), import('./shared/course.mjs'), import('./shared/rooms.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs'), import('./shared/course.mjs'), import('./shared/rooms.mjs'), import('./shared/collected.mjs'), import('./shared/tables.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod, courseMod, roomsMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod, courseMod, roomsMod, collectedMod, tablesMod]) => {
+		collected = collectedMod
+		tablesLib = tablesMod
 		ops = opsMod
 		store = docstoreMod.docStore(docChunks)
 		library = libraryMod
@@ -6453,6 +6807,11 @@ client.connect()
 		//Course collections: per person, whatever the project
 		courseLimits.write = new commentsMod.Limiter(60, 60 * 1000)
 		courseLimits.read = new commentsMod.Limiter(180, 60 * 1000)
+
+		//Send a response: per person per project, an hour at a time
+		sharedLimits.respond = new commentsMod.Limiter(collectedMod.LIMITS.perHour, 60 * 60 * 1000)
+		//Shared tables: writes per person per project a minute
+		sharedLimits.table = new commentsMod.Limiter(30, 60 * 1000)
 		cacheHeaders.watchEpoch()
 
 		//The bin, now and every 6 hours

@@ -232,13 +232,14 @@ const MENUS: Record<string, Record<string, string>> = {
     'Clear this page’s guides': ALLOW('one choice of Clear all guides (it asks which)'),
     'Clear universal guides': ALLOW('one choice of Clear all guides (it asks which); the palette has its own command'),
   },
-  'panels/LeftPanel.tsx': { 'Make start page': 'page.start' },
+  'panels/LeftPanel.tsx': { 'Make start page': 'page.start', Caption: '!the text box label in a sound asset caption prompt, not a menu item' },
   'components/Dock.tsx': {
     ...Object.fromEntries(
       [
         ['Accessibility', 'a11y'],
         ['Assets', 'assets'],
         ['Attributions', 'credits'],
+        ['Story', 'story'],
         ['Checklist', 'checklist'],
         ['Comments', 'comments'],
         ['Data', 'data'],

@@ -2,7 +2,7 @@
 // the learner page, so StudyDesk, StaffDesk and the open site all treat it like any other ILAR. One shape for all three, since they
 // share the one ILAR host and the one si-manager script; only the host differs per environment and that comes from the address
 // the editor is on.
-import type { Project } from 'interactives-player';
+import { linkNameOk, type Project } from 'interactives-player';
 
 /** What the share record says the project uses of the learner's device (the page only allows what was declared when it was shared). */
 export interface EmbedSensors {
@@ -21,6 +21,8 @@ export interface EmbedOptions {
   aspect?: string;
   /** The item's own id, the way the Toolbox stamps `Date.now()` on every item it inserts. */
   cdtID: number | string;
+  /** Link values to open it with (`program: 'GCSC'` adds `&program=GCSC`), what the project reads as `link.program`. Empty ones are left off. */
+  link?: Record<string, string>;
 }
 
 // Same escaping the Toolbox uses for anything that lands in an attribute
@@ -34,14 +36,17 @@ export const embedTitle = (name: string, label = 'Interactive') => {
 };
 
 /**
- * The iframe's allow list. Fullscreen and autoplay as the learner page's own frame has them, plus the microphone and camera only when
+ * The iframe's allow list. Fullscreen, autoplay and writing to the clipboard (a Copy button) as the learner page's own frame has them, plus the microphone and camera only when
  * the shared project declared them: the learner page owns the devices, and a cross-origin frame is only let at them by its embedder.
  * Photos are a file picker and need nothing.
  */
-export const embedAllow = (sensors?: EmbedSensors | null) => ['autoplay', 'fullscreen', ...(sensors?.microphone ? ['microphone'] : []), ...(sensors?.camera ? ['camera'] : [])].join('; ');
+export const embedAllow = (sensors?: EmbedSensors | null) => ['autoplay', 'fullscreen', 'clipboard-write', ...(sensors?.microphone ? ['microphone'] : []), ...(sensors?.camera ? ['camera'] : [])].join('; ');
 
-/** The start artboard's shape, `width/height`, which is what the player sizes itself to. 16/9 when there is nothing sensible to go on. */
+/** The stage shape when the project fixes one, otherwise the start artboard's shape (`width/height`), which is what the player sizes itself to. 16/9 when there is nothing sensible to go on. */
 export const embedAspect = (project: Pick<Project, 'artboards' | 'settings'>) => {
+  // a fixed stage shape is the frame's shape, whatever the first page is
+  if (project.settings.stage === '16:9') return '16/9';
+  if (project.settings.stage === '4:3') return '4/3';
   const ab = project.artboards.find((a) => a.id === project.settings.startArtboardId) ?? project.artboards[0];
   const ok = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0;
   if (!ab || !ok(ab.width) || !ok(ab.height)) return '16/9';
@@ -57,6 +62,7 @@ export const embedCode = (o: EmbedOptions) => {
   const aspect = /^\d+\/\d+$/.test(o.aspect ?? '') ? o.aspect : '16/9';
   // Built by hand the way the Toolbox builds its src (encodeURIComponent, a bare &), so it reads the same as every other item's.
   // Everything after the path is encoded, and the path is a token of letters, digits, dashes and underscores
-  const src = `${o.url.split(/[?#]/)[0].replace(/["<>\s]/g, '')}?title=${encodeURIComponent(o.title)}&cdtID=${encodeURIComponent(`${o.cdtID}`)}`;
+  const link = Object.entries(o.link ?? {}).filter(([k, v]) => v !== '' && linkNameOk(k)).map(([k, v]) => `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('');
+  const src = `${o.url.split(/[?#]/)[0].replace(/["<>\s]/g, '')}?title=${encodeURIComponent(o.title)}&cdtID=${encodeURIComponent(`${o.cdtID}`)}${link}`;
   return `<iframe title="${embedTitle(o.title)}" src="${src}" data-cdt-id="${escapeAttr(o.cdtID)}" allow="${embedAllow(o.sensors)}" allowfullscreen style="border:0; width:100%; height:auto; aspect-ratio:${aspect}"></iframe>`;
 };

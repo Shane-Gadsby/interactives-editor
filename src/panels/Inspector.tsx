@@ -1,3 +1,8 @@
+import { ChecksSection } from './ChecksSection';
+import { SketchSection } from './SketchSection';
+import { ParticlesSection } from './ParticlesSection';
+import { PuzzleSection } from './PuzzleSection';
+import { ExamineSection } from './ExamineSection';
 import { variableOption } from '../lib/friendly-names';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { matches } from '../lib/keymap';
@@ -38,11 +43,14 @@ import {
   LINK_TARGETS,
   type LinkTarget,
   type Repeat,
+  type RepeatDrag,
   type Artboard,
   type GroupNode,
   type Blend,
   type ColorStop,
   type FitMode,
+  type StageShape,
+  platformVideo,
   type InputKind,
   type Paint,
   type Project,
@@ -116,7 +124,7 @@ import { ReadAloudSection } from './ReadAloudSection';
 import { VariantsSection } from './VariantsSection';
 import { MasterSection } from './MasterSection';
 import { ComponentPropsSection } from './ComponentPropsSection';
-import { SHADER_PRESETS, SHADER_PRESETS_BY_ID, EMBED_ALLOW, EMBED_ALLOW_DEFAULT, type EmbedAllowKey, type EmbedNode } from 'interactives-player';
+import { SHADER_PRESETS, SHADER_PRESETS_BY_ID, EMBED_ALLOW, EMBED_ALLOW_DEFAULT, latexToMathml, splitMaths, playableEmbed, srcFromEmbedCode, type EmbedAllowKey, type EmbedNode } from 'interactives-player';
 import { lookFor } from '../lib/themes';
 import { StatesSection } from './StatesSection';
 import { OverlayPageSection, OverlaySection } from './OverlaySection';
@@ -732,6 +740,12 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           onChange={(v) => setAb((a) => (v ? (a.hugWidth = true) : delete a.hugWidth))}
         />
         <CheckField
+          label="Editing page"
+          title="The app's own editor: it opens instead of the start page for the people who may edit the app (context.canEdit) while StudyDesk's editing mode is on, and nobody else can be sent to it. Put a Save setup button on it"
+          value={!!ab.editingPage}
+          onChange={(v) => setAb((a) => (v ? (a.editingPage = true) : delete a.editingPage))}
+        />
+        <CheckField
           label="Fit height to content"
           title="The page is as tall as its lowest showing layer, and keeps fitting as it plays: a list filling from data, a layer shown or hidden, text growing. An embed in StudyDesk grows and shrinks with it"
           value={!!ab.hugHeight}
@@ -836,6 +850,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <MasterSection ab={ab} project={project} />
       <TabOrderSection ab={ab} />
       <StepsSection ab={ab} project={project} />
+      <PuzzleSection ab={ab} project={project} />
       <BlendsSection ab={ab} project={project} />
       <JoysticksSection ab={ab} />
       <BonesArtboardSection ab={ab} />
@@ -846,9 +861,26 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
         <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
         <TextField label="Description" value={project.settings.description} multiline onChange={(v) => setProject((p) => (p.settings.description = v), 'project-desc')} />
+        <SelectField
+          label="Stage shape"
+          title="Keep the stage 16:9 or 4:3, the way a game does: letterboxed in any window, a StudyDesk frame that shape, a full screen button in frames and on phones, and phones held upright asked to turn. Free lets each page set its own size"
+          value={project.settings.stage ?? ''}
+          onChange={(v) => setProject((p) => (v ? (p.settings.stage = v as StageShape) : delete p.settings.stage))}
+          options={[
+            { value: '', label: 'Free (pages set it)' },
+            { value: '16:9', label: '16:9, widescreen' },
+            { value: '4:3', label: '4:3' },
+          ]}
+        />
+        {project.settings.stage && (() => {
+          const [w, h] = project.settings.stage === '4:3' ? [4, 3] : [16, 9];
+          const off = project.artboards.filter((a) => !a.overlay && Math.abs(a.width / a.height - w / h) > 0.01).length;
+          return off ? <div className="muted small">{off === 1 ? '1 page isn’t' : `${off} pages aren’t`} {project.settings.stage}, so {off === 1 ? 'it’s' : 'they’re'} letterboxed inside the stage. {project.settings.stage === '4:3' ? '1024 x 768' : '1280 x 720'} is the usual size.</div> : null;
+        })()}
         <SelectField<FitMode>
           label="Fit"
-          value={project.settings.fit}
+          title={project.settings.stage ? 'A fixed stage shape always letterboxes, so this only applies with Stage shape on Free' : undefined}
+          value={project.settings.stage ? 'contain' : project.settings.fit}
           onChange={(v) => setProject((p) => (p.settings.fit = v))}
           options={[
             { value: 'contain', label: 'Contain (letterbox)' },
@@ -870,6 +902,23 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           title="On to begin with: the frame grows to fit the project, so a vertical scrollbar would only flicker while it does. Left on from the start, it comes back if nothing sizes the frame. Share again (Update) after changing it."
           value={project.settings.hideScrollbarY !== false}
           onChange={(v) => setProject((p) => (p.settings.hideScrollbarY = v))}
+        />
+        <TextField
+          label="Groups it can check"
+          title="Suite groups (as si-admin keeps them, such as power-user) this project may ask about. context.groups says which of these the viewer is in, never any other group they belong to. Separate them with commas, and Update the share after changing them"
+          value={(project.settings.askGroups ?? []).join(', ')}
+          placeholder="e.g. power-user"
+          commitOnBlur
+          onChange={(v) => setProject((p) => {
+            const list = [...new Set(v.split(',').map((x) => x.trim()).filter((x) => /^[\w-]{1,40}$/.test(x)))].slice(0, 10);
+            p.settings.askGroups = list.length ? list : undefined;
+          })}
+        />
+        <CheckField
+          label="Responses with names"
+          title="Send a response keeps each person's name with what they sent. Off (the default), each person's responses are kept under a code that is the same for them every time and says nothing about who they are, which is what a survey or a card sort usually wants. Share again (Update) after changing it."
+          value={!!project.settings.responses?.named}
+          onChange={(v) => setProject((p) => (p.settings.responses = v ? { named: true } : undefined))}
         />
         <CheckField
           label="Live collaboration"
@@ -896,7 +945,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         )}
         <TextField
           label="Allowed data hosts"
-          title="Hosts that data may be loaded from, one per line, such as api.example.com or *.example.com. Leave empty to allow any http(s) host. Data sources, the Load data node and ix.loadData all follow it. Cookies are only sent to the page's own site."
+          title="Hosts that data may be loaded from, one per line, such as api.example.com or *.example.com. Leave empty to allow any http(s) host. Data sources, the Load data and Send to a web address nodes and ix.loadData all follow it. Cookies are only sent to the page's own site."
           value={(project.settings.dataAllowList ?? []).join('\n')}
           multiline
           placeholder={'api.example.com\n*.example.com'}
@@ -956,6 +1005,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <CaptionsSection project={project} />
       <ReadAloudSection project={project} />
       <ReportingSection project={project} />
+      <ChecksSection project={project} />
       <RecordsSection project={project} />
       <SensorsSection project={project} />
       <Section help="attributions" title="Credits" defaultOpen={false}>
@@ -1112,11 +1162,20 @@ export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: 
             onChange={(v) => set({ hugIgnore: v ? true : undefined })}
           />
         )}
+        <CheckField
+          label="Not in downloads"
+          title="Left out of a picture or a PDF the project saves of the page (Download a file, Picture of a layer): an info button, a Download button, anything that means nothing on paper"
+          value={!!n.noDownload}
+          onChange={(v) => set({ noDownload: v ? true : undefined })}
+        />
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={LAYER_BLEND_OPTIONS} onChange={(v) => set({ blendMode: v })} />
       </Section>
       {single && <DisclosureSection node={n} project={project} />}
       {single && <OverlaySection node={n} ab={ab} project={project} />}
       {single && <StatesSection node={n} />}
+      {single && n.type === 'rect' && <SketchSection node={n} project={project} />}
+      {single && n.type === 'rect' && <ParticlesSection node={n} project={project} />}
+      {single && <ExamineSection node={n} />}
       {single && n.type === 'frame' && n.question && <QuestionSection frame={n} ab={ab} project={project} />}
       {single && n.questionPart && <QuestionPartNote node={n} ab={ab} />}
       {!isConn && <LayoutItemSection nodes={nodes} ab={ab} />}
@@ -1555,6 +1614,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
   const set = useSetter(ids);
   const shown = useShown(n);
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
+  const hasStory = !!project.story;
   const videos = project.assets.filter((a) => assetKind(a.mime, a.name) === 'video');
   const sounds = project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio');
   const radius = 'cornerRadius' in n ? <Num node={n} ids={ids} prop="cornerRadius" label="Radius" min={0} /> : null;
@@ -1682,6 +1742,46 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onCommit={() => store().commit()}
           />
           <TextSelectionHint id={n.id} />
+          <SelectField
+            label="Show as code"
+            title="Shows the text as code: a fixed-width font, coloured by language, with line numbers and a Copy button if you want them"
+            value={n.code ? n.code.language : ''}
+            options={[{ value: '', label: 'No (ordinary text)' }, ...CODE_LANGUAGES]}
+            onChange={(v) => set({ code: v ? { ...(n.code ?? { lineNumbers: true, copyButton: true }), language: v } : null })}
+          />
+          {n.code && (
+            <Row>
+              <CheckField label="Line numbers" value={!!n.code.lineNumbers} onChange={(v) => set({ code: { ...n.code!, lineNumbers: v || undefined } })} />
+              <CheckField label="Copy button" title="A Copy button in the corner while it plays" value={!!n.code.copyButton} onChange={(v) => set({ code: { ...n.code!, copyButton: v || undefined } })} />
+              <SelectField<'light' | 'dark'> label="Colours" value={n.code.scheme ?? 'light'} options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} onChange={(v) => set({ code: { ...n.code!, scheme: v === 'light' ? undefined : v } })} />
+            </Row>
+          )}
+          <Row>
+            <CheckField
+              label="Count up"
+              title="Numbers in the text count up (or down) to their new value when it changes: a score, a total, a percentage. Still for anyone who asks for less motion"
+              value={!!n.countUp}
+              onChange={(v) => set({ countUp: v ? { ms: 800 } : null })}
+            />
+            {n.countUp && <NumberField label="Over" suffix="ms" min={100} step={100} value={n.countUp.ms} onChange={(v) => set({ countUp: { ms: Math.max(100, v) } })} />}
+          </Row>
+          {(n.storyMarkup || typeof n.reveal === 'number' || n.bindings?.reveal || hasStory) && (
+            <Row>
+              <CheckField
+                label="Story words"
+                title="Tags in the text are drawn as what they say: {shake}, {wave}, {b}, {i}, {big}, {small}, {colour red}. {pause} is taken out. The dialogue box's words have it on"
+                value={!!n.storyMarkup}
+                onChange={(v) => set({ storyMarkup: v || undefined })}
+              />
+            </Row>
+          )}
+          <CheckField
+            label="Formulas between $ signs"
+            title="Maths typed the LaTeX way: $\frac{a}{b}$ in a line, $$x^2 + y^2 = r^2$$ on a line of its own. It's drawn by the browser and read out by screen readers. \$ is a dollar sign"
+            value={!!n.maths}
+            onChange={(v) => set({ maths: v || undefined })}
+          />
+          {n.maths && nodes.length === 1 && <MathsPreview text={String(shown('text') ?? n.text)} />}
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           <SectionBlurb
             text={
@@ -1699,11 +1799,37 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
         <Section help="images-media#image-settings" title="Image">
           <SelectField
             label="Image"
-            value={n.assetId ?? ''}
-            onChange={withQuickAdd((v) => set({ assetId: v || null }), { asset: 'image' })}
-            options={[{ value: '', label: images.length ? 'Choose…' : 'No image' }, ...images.map((a) => ({ value: a.id, label: a.name })), addAssetOption('image')]}
+            value={n.qr ? '~qr' : n.assetId ?? ''}
+            onChange={withQuickAdd((v) => (v === '~qr' ? set({ assetId: null, qr: n.qr ?? { text: 'https://', level: 'M' }, fit: 'contain' }) : set({ assetId: v || null, qr: null })), { asset: 'image' })}
+            options={[{ value: '', label: images.length ? 'Choose…' : 'No image' }, ...images.map((a) => ({ value: a.id, label: a.name })), { value: '~qr', label: 'QR code from text' }, addAssetOption('image')]}
           />
           {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
+          {n.qr && (
+            <>
+              <TextField
+                label="QR code of"
+                title="The link or text the code carries. Put a value in braces, like https://example.com/?id={userId}, and in a list's copy {item.link}"
+                value={n.qr.text}
+                commitOnBlur
+                onChange={(v) => set({ qr: { ...n.qr!, text: v } })}
+              />
+              <SelectField
+                label="Error correction"
+                title="How much of the code can be covered or scuffed and still scan. Higher makes a busier code"
+                value={n.qr.level ?? 'M'}
+                options={[
+                  { value: 'L', label: 'Low (7%)' },
+                  { value: 'M', label: 'Medium (15%)' },
+                  { value: 'Q', label: 'High (25%)' },
+                  { value: 'H', label: 'Highest (30%)' },
+                ]}
+                onChange={(v) => set({ qr: { ...n.qr!, level: v as 'L' | 'M' | 'Q' | 'H' } })}
+              />
+              <ColorField label="Squares" tokens value={n.qr.dark ?? '#000000'} onChange={(c) => set({ qr: { ...n.qr!, dark: c } }, `qr-dark-${n.id}`)} onCommit={() => store().commit()} />
+              <ColorField label="Background" tokens value={n.qr.light ?? '#ffffff'} onChange={(c) => set({ qr: { ...n.qr!, light: c } }, `qr-light-${n.id}`)} onCommit={() => store().commit()} />
+              {n.qr.text.length > 1200 && <p className="hint">That much text makes a code too dense for most phone cameras. Keep a QR code to a link.</p>}
+            </>
+          )}
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
           {nodes.length === 1 && canCrop(n) && <CropFields node={n} />}
           {radius}
@@ -1781,10 +1907,10 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           <SelectField<InputKind>
             label="Type"
             value={n.inputType}
-            options={['text', 'number', 'email', 'password', 'textarea', 'checkbox', 'range', 'select']}
-            onChange={(v) => set({ inputType: v })}
+            options={[...(['text', 'number', 'email', 'password', 'textarea', 'checkbox', 'range', 'select'] as const).map((k) => ({ value: k, label: k })), { value: 'choice', label: 'choice buttons' }]}
+            onChange={(v) => set(v === 'choice' && !n.options?.trim() ? { inputType: v, options: 'Yes\nNo' } : { inputType: v })}
           />
-          {n.inputType !== 'checkbox' && n.inputType !== 'range' && n.inputType !== 'select' && <TextField label="Placeholder" value={n.placeholder} onChange={(v) => set({ placeholder: v })} />}
+          {n.inputType !== 'checkbox' && n.inputType !== 'range' && n.inputType !== 'select' && n.inputType !== 'choice' && <TextField label="Placeholder" value={n.placeholder} onChange={(v) => set({ placeholder: v })} />}
           <InputValue nodes={nodes} project={project} set={set} />
           {(n.inputType === 'number' || n.inputType === 'range') && (
             <Row>
@@ -1794,6 +1920,26 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             </Row>
           )}
           {n.inputType === 'select' && <TextField label="Options" value={n.options ?? ''} multiline placeholder="One per line" onChange={(v) => set({ options: v })} />}
+          {n.inputType === 'choice' && (
+            <>
+              {!n.optionsFrom?.trim() && <TextField label="Options" title="One a line: the value, or value|words on the button (FT|Full-time)" value={n.options ?? ''} multiline placeholder={'FT|Full-time\nPT|Part-time'} commitOnBlur onChange={(v) => set({ options: v })} />}
+              <ExprField label="Options from" title="Or the options from a formula: a list of text, or of {value, label} (and off, with a reason, to turn one off). The buttons follow the data" value={n.optionsFrom ?? ''} placeholder="The lines above" commitOnBlur onChange={(v) => set({ optionsFrom: v.trim() || undefined })} />
+              <ExprField
+                label="Off when"
+                title="A formula for each option, with option.value, option.label and option.index: true turns it off, a text turns it off with that text as the reason, shown under the buttons and read out when someone tries it"
+                value={n.optionOff ?? ''}
+                placeholder={"program == 'GCSC' && option.value == 'FT' ? 'GCSC is part-time only' : false"}
+                locals={['option']}
+                commitOnBlur
+                onChange={(v) => set({ optionOff: v.trim() || undefined })}
+              />
+              <Row>
+                <ColorField label="Chosen" title="The chosen button's fill. Empty: the palette's gold" value={n.chosenFill ?? ''} onChange={(v) => set({ chosenFill: v || undefined })} />
+                <ColorField label="Chosen text" title="The chosen button's text colour. Empty: dark" value={n.chosenColor ?? ''} onChange={(v) => set({ chosenColor: v || undefined })} />
+                <NumberField label="Gap" title="The space between the buttons, px" suffix="px" value={n.gap ?? 20} min={0} onChange={(v) => set({ gap: v === 20 ? undefined : Math.max(0, v) })} />
+              </Row>
+            </>
+          )}
           {(n.inputType === 'text' || n.inputType === 'textarea' || n.inputType === 'email') && (
             <>
               <CheckField label="No browser help" title="Turns off the spellcheck underline, autocorrect, automatic capitals and autofill in this box. For a spelling test, so the browser does not mark or fix the word" value={!!n.noAssist} onChange={(v) => set({ noAssist: v || undefined })} />
@@ -1828,7 +1974,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
         </Section>
       );
-    case 'embed':
+    case 'embed': {
+      const playsAs = n.mode === 'iframe' ? playableEmbed(String(shown('src') ?? n.src)).host : '';
       return (
         <Section help="web-elements" title="Embed">
           <SelectField
@@ -1841,10 +1988,25 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onChange={(v) => set({ mode: v })}
           />
           {n.mode === 'iframe' ? (
+            <>
             <div className="keyed">
-              <TextField label="URL" value={String(shown('src') ?? n.src)} commitOnBlur onChange={(v) => set({ src: v })} />
+              <TextField
+                label="URL"
+                value={String(shown('src') ?? n.src)}
+                commitOnBlur
+                onChange={(v) => {
+                  // A share link from a known site, or a site's embed code: keep the link (people can read it) and take the shape of what it plays
+                  const code = srcFromEmbedCode(v);
+                  const src = code ? code.src : v.trim();
+                  const play = playableEmbed(v);
+                  const aspect = play.host || code ? play.aspect : undefined;
+                  set(aspect && n.width > 0 ? { src, height: Math.round(n.width / aspect) } : { src });
+                }}
+              />
               <KeyButton node={n} ids={ids} prop="src" />
             </div>
+            {playsAs && <p className="hint">Plays as a {playsAs}{/youtube/i.test(playsAs) ? ", from YouTube's no-cookie address" : ''}.</p>}
+            </>
           ) : (
             nodes.length === 1 && (
               <PropRow k="HTML" words={['embed code', 'iframe', 'markup', 'source', 'code']}>
@@ -1860,9 +2022,21 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           <EmbedBorder nodes={nodes as EmbedNode[]} project={project} />
         </Section>
       );
+    }
     case 'video':
       return (
         <Section help="images-media#video" title="Video">
+          <TextField
+            label="Video site link"
+            title="Paste a YouTube, Vimeo or Panopto link, the address you'd share. The site's own player plays here, and the video nodes, bindings and events work on it as on a file (Panopto only plays). It plays in Preview, share links and StudyDesk"
+            value={n.platformLink ?? ''}
+            commitOnBlur
+            onChange={(v) => set({ platformLink: v.trim() || undefined })}
+          />
+          {n.platformLink && (() => {
+            const pv = platformVideo(n.platformLink);
+            return <div className="muted small">{pv ? `Plays the ${pv.label}${pv.controllable ? '' : ' (it plays, but Panopto can’t be told to play, pause or seek, or say what it’s doing)'}. The file below isn’t used while this is here.` : 'Not a YouTube, Vimeo or Panopto video link, so the file below plays.'}</div>;
+          })()}
           <SelectField
             label="Video"
             value={n.assetId ?? ''}
@@ -2353,6 +2527,8 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
               </div>
             </>
           )}
+          <RepeatDragFields rep={rep} project={project} onChange={(drag) => update({ drag })} />
+          <RepeatDataFields node={node} rep={rep} project={project} onChange={(patch) => update(patch)} />
           <SectionBlurb
             text={
               <>
@@ -2366,6 +2542,216 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
         </>
       )}
     </Section>
+  );
+}
+
+const CODE_LANGUAGES = [
+  { value: 'plain', label: 'Code, no colours' },
+  { value: 'js', label: 'JavaScript' },
+  { value: 'ts', label: 'TypeScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
+  { value: 'json', label: 'JSON' },
+  { value: 'sql', label: 'SQL' },
+  { value: 'java', label: 'Java' },
+  { value: 'c', label: 'C' },
+  { value: 'bash', label: 'Shell' },
+];
+
+/** Each formula in the text as it will look, as you type it. */
+function MathsPreview({ text }: { text: string }) {
+  const parts = splitMaths(text).filter((p) => p.tex !== undefined);
+  if (!parts.length) return <p className="hint">Put a formula between dollar signs, like $\frac{1}{2}$, to see it here.</p>;
+  return (
+    <div className="maths-preview" aria-label="How the formulas look">
+      {parts.map((p, i) => (
+        // our own converter's output: every piece of the source is escaped in it
+        <div key={i} className="maths-preview-row" dangerouslySetInnerHTML={{ __html: latexToMathml(p.tex!, !!p.display) }} />
+      ))}
+    </div>
+  );
+}
+
+/** Paging, the loading, empty and fault looks, and showing the list as a tree. */
+function RepeatDataFields({ node, rep, project, onChange }: { node: SceneNode & { children: SceneNode[] }; rep: Repeat; project: Project; onChange: (patch: Partial<Repeat>) => void }) {
+  const pg = rep.paging ?? null;
+  const t = rep.tree ?? null;
+  const listVars = project.variables.filter((v) => v.type === 'list');
+  /** Layers added inside the repeater (after its template) and named on it, in one undo step. */
+  const addInside = (make: (box: { w: number; h: number }) => SceneNode[], patch: (ids: string[]) => Partial<Repeat>) =>
+    store().update((d) => {
+      let host: (SceneNode & { children: SceneNode[]; repeat?: Repeat | null }) | null = null;
+      for (const ab of d.artboards) walk(ab.children as SceneNode[], (x) => void (x.id === node.id && (host = x as never)));
+      if (!host) return;
+      const h = host as SceneNode & { children: SceneNode[]; repeat?: Repeat | null };
+      const made = make({ w: h.width, h: h.height });
+      h.children.push(...made);
+      h.repeat = { ...(h.repeat as Repeat), ...patch(made.map((m) => m.id)) };
+    });
+  /**
+   * The buttons and the count, in a row after the copies. A frame becomes an auto layout column that grows with what it holds,
+   * so Load more pushes the row down instead of the copies running under it.
+   */
+  const addControls = () =>
+    store().update((d) => {
+      let host: (SceneNode & { children: SceneNode[]; repeat?: Repeat | null; layout?: AutoLayout | null }) | null = null;
+      for (const ab of d.artboards) walk(ab.children as SceneNode[], (x) => void (x.id === node.id && (host = x as never)));
+      if (!host) return;
+      const h = host as SceneNode & { children: SceneNode[]; repeat?: Repeat | null; layout?: AutoLayout | null };
+      const pages = pg?.mode === 'pages';
+      const parts = pages
+        ? [
+            createNode('button', { name: 'Previous', label: 'Previous', width: 100, height: 36 }),
+            createNode('text', { name: 'Where the list is', text: '{list.from} to {list.to} of {list.total}', width: 160, height: 20, align: 'center' }),
+            createNode('button', { name: 'Next', label: 'Next', width: 100, height: 36 }),
+          ]
+        : [createNode('button', { name: 'Load more', label: 'Load more', width: 140, height: 36 }), createNode('text', { name: 'How many are shown', text: 'Showing {list.shown} of {list.total}', width: 200, height: 20 })];
+      const tpl = h.children[0];
+      if (h.type === 'frame') {
+        const row = createNode('frame', { name: 'List controls', width: Math.max(200, h.width - (tpl?.x ?? 0) * 2), height: 40, layout: { ...defaultAutoLayout('row'), padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: 'center', hugHeight: true, ...(pages ? { justify: 'space-between' } : {}) }, children: parts } as never);
+        h.children.push(row);
+        h.layout ??= { ...defaultAutoLayout('column'), gap: h.repeat?.gap ?? 8, padding: { top: tpl?.y ?? 12, right: tpl?.x ?? 12, bottom: tpl?.y ?? 12, left: tpl?.x ?? 12 } };
+      } else {
+        parts.forEach((p, i) => Object.assign(p, { x: i * 150, y: h.height - 40 }));
+        h.children.push(...parts);
+      }
+      const ids = parts.map((p) => p.id);
+      h.repeat = { ...(h.repeat as Repeat), paging: { ...(pg ?? { size: 10, mode: 'more' }), ...(pages ? { previous: ids[0], next: ids[2] } : { more: ids[0] }) } };
+    });
+  const addStates = () =>
+    addInside(
+      ({ w, h }) => [
+        createNode('text', { name: 'Loading', text: 'Loading…', x: 0, y: Math.max(0, h / 2 - 10), width: w, height: 20, align: 'center' }),
+        createNode('text', { name: 'Nothing here', text: 'Nothing here yet.', x: 0, y: Math.max(0, h / 2 - 10), width: w, height: 20, align: 'center' }),
+        createNode('text', { name: 'Could not load', text: "This list couldn't be loaded. Try again in a moment.", x: 0, y: Math.max(0, h / 2 - 10), width: w, height: 40, align: 'center' }),
+      ],
+      (ids) => ({ states: { loading: ids[0], empty: ids[1], fault: ids[2] } }),
+    );
+  return (
+    <>
+      <Row>
+        <NumberField
+          label="At a time"
+          title="Show so many copies at a time, as pages or with Load more. 0 shows them all. The layers round the list can say where it's at with {list.total}, {list.shown}, {list.from}, {list.to}, {list.page} and {list.pages}"
+          value={pg?.size ?? 0}
+          min={0}
+          onChange={(v) => onChange({ paging: v > 0 ? { ...(pg ?? { mode: 'more' }), size: Math.round(v) } : null })}
+        />
+        {pg && (
+          <SelectField<'pages' | 'more'>
+            label="As"
+            value={pg.mode}
+            options={[
+              { value: 'more', label: 'Load more' },
+              { value: 'pages', label: 'Pages' },
+            ]}
+            onChange={(v) => onChange({ paging: { ...pg, mode: v } })}
+          />
+        )}
+      </Row>
+      {pg && !(pg.mode === 'pages' ? pg.next : pg.more) && (
+        <Row k="Add paging buttons" words={['load more', 'next', 'previous', 'count', 'pages']}>
+          <button className="btn" title="Adds the buttons inside the list, wired to it, with a line that says how many there are" onClick={addControls}>
+            {pg.mode === 'pages' ? 'Add Next, Previous and a count' : 'Add Load more and a count'}
+          </button>
+        </Row>
+      )}
+      {!rep.states && (
+        <Row k="Add loading, empty and fault looks" words={['loading', 'empty', 'error', 'fault', 'spinner', 'nothing']}>
+          <button className="btn" title="Adds three texts inside the list: shown while its data loads, when it is empty, and when its data could not be loaded" onClick={addStates}>
+            Add loading, empty and fault looks
+          </button>
+        </Row>
+      )}
+      <CheckField
+        label="Show as a tree"
+        title="Draws the list as an outline that folds: each item names its parent, and a click, Enter or the arrow keys open and close the branches"
+        value={!!t}
+        onChange={(v) => onChange({ tree: v ? { parentField: 'parent', indent: 20 } : null })}
+      />
+      {t && (
+        <>
+          <Row>
+            <TextField label="Parent field" title="The field holding the id of the item's parent. Empty for the top level" value={t.parentField} commitOnBlur onChange={(v) => onChange({ tree: { ...t, parentField: v.trim() || 'parent' } })} />
+            <TextField label="Id field" value={t.idField ?? 'id'} commitOnBlur onChange={(v) => onChange({ tree: { ...t, idField: v.trim() && v.trim() !== 'id' ? v.trim() : undefined } })} />
+            <NumberField label="Indent" suffix="px" value={t.indent ?? 20} min={0} onChange={(v) => onChange({ tree: { ...t, indent: v } })} />
+          </Row>
+          <CheckField label="Start with every branch open" value={!!t.startOpen} onChange={(v) => onChange({ tree: { ...t, startOpen: v || undefined } })} />
+          <SelectField
+            label="Open branches in"
+            title="A list variable that holds the ids of the open branches, to read or set them. None: the player keeps them"
+            value={t.openVariable ?? ''}
+            options={[{ value: '', label: 'Nowhere (the player keeps them)' }, ...listVars.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))]}
+            onChange={(v) => onChange({ tree: { ...t, openVariable: v || undefined } })}
+          />
+          <p className="hint">In the copies, <code>depth</code>, <code>hasChildren</code> and <code>isOpen</code> say where each one is, for a chevron that turns or a line that grows.</p>
+        </>
+      )}
+    </>
+  );
+}
+
+/** Dragging a repeater's copies: put in another order, taken into or out of other lists, and what a drop writes on the item. */
+function RepeatDragFields({ rep, project, onChange }: { rep: Repeat; project: Project; onChange: (d: RepeatDrag | null) => void }) {
+  const d = rep.drag ?? null;
+  const on = !!d && (!!d.reorder || !!d.tag || !!d.takesFrom?.length);
+  const put = (patch: Partial<RepeatDrag>) => {
+    const next: RepeatDrag = { ...(d ?? {}), ...patch };
+    for (const k of Object.keys(next) as (keyof RepeatDrag)[]) if (next[k] === undefined || next[k] === '' || (Array.isArray(next[k]) && !(next[k] as unknown[]).length)) delete next[k];
+    onChange(Object.keys(next).length ? next : null);
+  };
+  const listVars = project.variables.filter((v) => v.type === 'list');
+  const bare = /^[A-Za-z_$][\w$]*$/.test(rep.items.trim()) ? project.variables.find((v) => v.name === rep.items.trim() && v.type === 'list') : undefined;
+  return (
+    <>
+      <CheckField
+        label="Reorder by dragging"
+        title="People can drag a copy to another place in the list (Space, the arrow keys and Space from the keyboard). The list variable changes, so the new order is kept like any other value"
+        value={!!d?.reorder}
+        onChange={(v) => put({ reorder: v || undefined })}
+      />
+      <TextField
+        label="Takes items from"
+        title="The tags of other lists whose copies can be dragged into this one, separated by commas. Give those lists a Tag"
+        value={(d?.takesFrom ?? []).join(', ')}
+        placeholder="e.g. cards"
+        commitOnBlur
+        onChange={(v) => put({ takesFrom: [...new Set(v.split(',').map((t) => t.trim()).filter(Boolean))] })}
+      />
+      <TextField label="Tag" title="A word for this list, so another list can take its copies (Takes items from)" value={d?.tag ?? ''} placeholder="e.g. cards" commitOnBlur onChange={(v) => put({ tag: v.trim() || undefined })} />
+      {(on || !!d) && (
+        <>
+          <SelectField
+            label="Items are in"
+            title="The list variable a drop changes. Needed when Repeat for each is a formula (cards.filter(...)) rather than the variable itself"
+            value={d?.list ?? ''}
+            options={[{ value: '', label: bare ? `${bare.name} (what it repeats)` : 'Choose a list variable…' }, ...listVars.map((v) => ({ value: v.id, label: variableLabelAndName(v) }))]}
+            onChange={(v) => put({ list: v || undefined })}
+          />
+          {!d?.list && !bare && <p className="error small">Pick the list variable its items are in, or nothing can be moved.</p>}
+          <TextField
+            label="A drop writes field"
+            title="A field of the item that a drop into this list sets, such as group. Leave empty to only move it"
+            value={d?.writeField ?? ''}
+            placeholder="e.g. group"
+            commitOnBlur
+            onChange={(v) => put({ writeField: v.trim() || undefined })}
+          />
+          {d?.writeField && (
+            <ExprField
+              label="To"
+              title="What it writes: a formula with this list's own scope, so inside a list of groups outer.item.name is the group's name. Empty writes the list's layer name"
+              value={d.writeValue ?? ''}
+              placeholder="outer.item.name"
+              locals={['outer', 'list', 'item']}
+              commitOnBlur
+              onChange={(v) => put({ writeValue: v.trim() || undefined })}
+            />
+          )}
+        </>
+      )}
+    </>
   );
 }
 

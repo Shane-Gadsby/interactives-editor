@@ -4,7 +4,7 @@ import { hasScriptLayers } from './draw-templates';
 import { assetBytes, exportPackage } from './db';
 import { withOptimisedAssets } from './asset-variants';
 import { extOf, reportError, track } from './analytics';
-import { embeddedFontStyles, inHead } from './font-embed';
+import { embeddedFontStyles, inHead, withPackagedFonts } from './font-embed';
 import { fontsBase } from './fonts';
 import { store } from '../store/store';
 import { alertDialog } from '../components/dialogs';
@@ -42,8 +42,9 @@ export function withoutLinks(project: Project): Project {
 }
 
 /**
- * `embedFonts` is for files that leave the editor (a download, a share link): the Google fonts are fetched now and
- * written into the page, so it never calls Google when someone opens it. Previews skip it, they're online anyway.
+ * `embedFonts` writes the Google fonts into the page, fetched now. Nothing that ships uses it any more: a share, an
+ * embed and a download all link their fonts from this server's font route (`fontsBase`), and only a .ixp package carries
+ * its own copy (`downloadPackage`).
  * `onWarning` hears about any font that couldn't be fetched.
  * `optimise` is also for files that leave the editor: with the project's Optimise output setting on, big pictures go in as
  * their optimised copies (the originals stay in the project). Previews and the review page leave it off.
@@ -63,9 +64,10 @@ export async function standaloneHtml(
     fetched = e.bytes;
     if (e.failed.length) opts.onLinkedFailed?.(e.failed);
   }
-  const { sampleContext: _sample, sampleLink: _sampleLink, ...unsampled } = withoutLinks(whole);
+  const { sampleContext: _sample, sampleLink: _sampleLink, linkChoices: _linkChoices, ...unsampled } = withoutLinks(whole);
   void _sample;
   void _sampleLink;
+  void _linkChoices;
   // Where a picture was found in the catalogue is the author's business, not something a page for learners carries
   const unfound = unsampled.assets.some((a) => a.catalogue) ? { ...unsampled, assets: unsampled.assets.map(({ catalogue: _c, ...a }) => a) } : unsampled;
   const clean = withPublishedCredits(unfound as Project);
@@ -94,7 +96,8 @@ export const warnLinkedFailed = (file: string) => (failed: LinkedFailure[]) => {
 };
 
 export async function downloadStandalone(project: Project): Promise<void> {
-  const html = await failsAs('export', 'html', () => standaloneHtml(project, { embedFonts: true, optimise: true, onWarning: warnInEditor, embedLinked: true, onLinkedFailed: warnLinkedFailed('page') }));
+  //Fonts are linked from this server like any other page for learners; only a package carries its own
+  const html = await failsAs('export', 'html', () => standaloneHtml(project, { optimise: true, onWarning: warnInEditor, embedLinked: true, onLinkedFailed: warnLinkedFailed('page') }));
   download(new Blob([html], { type: 'text/html' }), `${fileSafe(project.name)}.html`);
 }
 
@@ -102,7 +105,9 @@ export async function downloadPackage(project: Project): Promise<void> {
   const blob = await failsAs('export', 'ixp', async () => {
     const e = await embedLinkedAssets(project);
     if (e.failed.length) warnLinkedFailed('package')(e.failed);
-    return exportPackage(withoutLinks(e.project), e.bytes);
+    // A package plays with no network, so it carries its Google fonts (importing it links them again where it can)
+    const packed = await withPackagedFonts(withoutLinks(e.project), e.bytes, fontsBase(), warnInEditor);
+    return exportPackage(packed, e.bytes);
   });
   download(blob, `${fileSafe(project.name)}${PACKAGE_EXTENSION}`);
 }

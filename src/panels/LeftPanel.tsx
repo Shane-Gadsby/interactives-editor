@@ -7,7 +7,7 @@ import { Icons, type IconName } from '../components/icons';
 import { IconButton } from '../components/ui';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { filterLayers, selectSameItems } from '../lib/layer-find';
-import { confirmDialog } from '../components/dialogs';
+import { confirmDialog, promptDialog } from '../components/dialogs';
 import { assetKind, assetUrls } from '../lib/assets';
 import { getVariantsVersion, onVariantsChange, savingsFor } from '../lib/asset-variants';
 import { optimiseSettings } from '../lib/image-optimise';
@@ -848,6 +848,25 @@ export function Assets() {
       { artboardId: ab.id },
     );
   };
+  //A sound's caption: what a reader with captions on sees when a story plays it ([sound], [music])
+  const editCaption = async (a: (typeof assets)[number]) => {
+    const text = await promptDialog({
+      title: `Caption for “${a.name}”`,
+      message: 'Readers who turn captions on see this while a story plays the sound. Say what it is (Door slams, Rain on the window), or a song\'s title. Leave it empty for none.',
+      label: 'Caption',
+      initial: a.caption ?? '',
+      placeholder: 'Door slams',
+      confirmLabel: 'Save',
+    });
+    if (text === null) return;
+    store().update((d) => {
+      const x = d.assets.find((y) => y.id === a.id);
+      if (!x) return;
+      if (text.trim()) x.caption = text.trim();
+      else delete x.caption;
+    });
+  };
+
   const replace = async (a: (typeof assets)[number]) => {
     const [file] = await pickFiles(acceptFor(a.mime, a.name), false);
     if (file) await replaceAssetFile(a.id, file);
@@ -968,6 +987,15 @@ export function Assets() {
                   Place
                 </button>
               )}
+              {kind === 'audio' && (
+                <button
+                  className="link-btn"
+                  title={a.caption ? `Caption: “${a.caption}”. Shown to readers with captions on when a story plays it` : `Add a caption for “${a.name}”: what readers with captions on see when a story plays it`}
+                  onClick={(e) => (e.stopPropagation(), void editCaption(a))}
+                >
+                  {a.caption ? 'Caption ✓' : 'Caption'}
+                </button>
+              )}
               <IconButton
                 icon={<Icons.credits width={13} />}
                 title={uncredited.has(a.id) || !creditsInUse ? `Add an attribution for “${a.name}” (who made it, the licence) in the Attributions tab` : `Open the attribution for “${a.name}” in the Attributions tab`}
@@ -994,6 +1022,7 @@ export function Assets() {
                     {kind} · {kb(a.size)}
                     {isUsed(a.id) ? '' : ' · unused'}
                     {uncredited.has(a.id) ? ' · no attribution' : ''}
+                    {kind === 'audio' && a.caption ? ` · “${a.caption}”` : ''}
                   </div>
                   {kind === 'image' && <CopiesNote project={s.project} asset={a} optimising={optimising} />}
                 </div>

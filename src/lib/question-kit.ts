@@ -1,7 +1,8 @@
 //The question kit's document side: "Add question" builds a frame of ordinary layers (prompt, an option layer repeated per
 //option, buttons, feedback), the variables the question keeps and the few interaction nodes that run it. After that the
 //question settings can be changed any time: syncQuestion brings the variables, the answer area and the graph in line with
-//them and never touches the look of layers it already made. Pure functions over a project draft (see store.update).
+//them and never touches the look of layers it already made (except a blank's box still on the input's built-in light colours,
+//which takes the theme's). Pure functions over a project draft (see store.update).
 import {
   CATALOG_BY_KIND,
   QUESTION_SUFFIXES,
@@ -12,6 +13,7 @@ import {
   defaultParams,
   isContainer,
   isMultiple,
+  isTokenRef,
   newQuestion,
   questionVars,
   renamePrefix,
@@ -25,6 +27,7 @@ import {
   type Converter,
   type ContainerNode,
   type FrameNode,
+  type InputNode,
   type LogicNode,
   type Project,
   type LookState,
@@ -323,6 +326,11 @@ function blankRow(q: Question, i: number, blankVar: string): SceneNode {
         name: 'Blank input',
         questionPart: 'blankInput',
         placeholder: 'Your answer',
+        //(the theme's colours, not the input's built-in light ones, so the box goes dark with Dark and High contrast)
+        fill: solid(L.background),
+        stroke: { paint: solid(L.border), width: 1 },
+        color: L.text,
+        cornerRadius: RADIUS.control,
         ariaLabel: q.blanks[i]?.label || 'Answer',
         ...(q.blanks[i]?.spelling && q.guard?.spellcheck !== false ? { noAssist: true } : {}),
         ...(q.blanks[i]?.spelling && q.guard && q.guard.paste !== false ? { noPaste: true } : {}),
@@ -1219,9 +1227,26 @@ function bindBlank(n: SceneNode, name: string): void {
   n.bindings = { ...n.bindings, value: name };
   n.bindingModes = { ...n.bindingModes, value: 'both' };
 }
+/**
+ * A blank's box made before it took the theme's colours still has the input's built-in light ones, so it stays white in
+ * Dark and High contrast. While they are still exactly those, they become the theme's. A colour picked by hand stays.
+ */
+function themeOldBlankInputs(container: FrameNode): void {
+  if (!isTokenRef(L.background)) return;
+  const plain = createNode('input') as InputNode;
+  const plainFill = plain.fill?.type === 'solid' ? plain.fill.color : null;
+  walk(container.children, (n) => {
+    if (n.type !== 'input' || partOf(n) !== 'blankInput') return;
+    if (n.fill?.type === 'solid' && n.fill.color === plainFill) n.fill = solid(L.background);
+    if (n.color === plain.color) n.color = L.text;
+    if (n.stroke?.paint.type === 'solid' && plain.stroke?.paint.type === 'solid' && n.stroke.paint.color === plain.stroke.paint.color) n.stroke = { ...n.stroke, paint: solid(L.border) };
+  });
+}
+
 function syncBlankRows(frame: FrameNode, q: Question): void {
   const container = partsOf(frame).blanks?.[0] as FrameNode | undefined;
   if (!container) return;
+  themeOldBlankInputs(container);
   const rows = container.children.filter((c) => partOf(c) === 'blankRow');
   const blankNames = q.blanks.map((_, i) => varName(q, `blank${i + 1}`));
   while (rows.length > q.blanks.length) {
