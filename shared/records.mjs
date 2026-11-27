@@ -566,7 +566,7 @@ export function contextFrom(user, activity) {
 		firstName: first,
 		displayName: full || [first, text(user.lastName, 100)].filter(Boolean).join(' '),
 		signedIn: true,
-		isStudent: user.isStudent === true,
-		isStaff: user.isStudent !== true
+		isStudent: user.isCourseStudent === true,
+		isStaff: user.isCourseStudent !== true
 	}
 }
