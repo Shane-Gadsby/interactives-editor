@@ -18477,11 +18477,19 @@ function behave(run2, ab, layer, says) {
     const gap = incomplete(RECIPE_BY_ID[d.recipe], d.answers, run2.p, ab);
     return gap ? { err: gap } : { d };
   };
-  const first2 = read2(says[0]);
+  let first2 = read2(says[0]);
+  let rest = says.slice(1);
+  if (!first2.d && rest.length) {
+    const joined = read2(`${says[0]}, ${rest[0]}`);
+    if (joined.d) {
+      first2 = joined;
+      rest = rest.slice(1);
+    }
+  }
   if (!first2.d) return lost(first2.err);
   const main = first2.d;
   const then = [...main.then];
-  for (const s of says.slice(1)) {
+  for (const s of rest) {
     const more = read2(s);
     if (!more.d) return lost(more.err);
     then.push({ recipe: more.d.recipe, answers: more.d.answers }, ...more.d.then);
@@ -24874,6 +24882,38 @@ See [Using this help](help) for the detail.
   ...BUILD_TOPICS,
   ...CONCEPT_TOPICS,
   {
+    id: "activity-designer",
+    title: "Ask Ixia",
+    group: "Getting started",
+    summary: "Describe what you want in plain words and Ixia builds it in your open project while you watch. One click undoes it.",
+    keywords: "ai chat assistant agent ixia ask help ideas build undo limit allowance usage unavailable question how do i antigravity",
+    body: `The round button with the Ixia bloom at the bottom right of the canvas opens **Ask Ixia**, a chat in a card above it. Tell it what you want and it builds it in your open project: pages, text, buttons, questions, what happens when something is clicked. Its changes appear on the canvas as it works, the way a colleague's do, and in a live session it shows as **Ixia (AI)**.
+
+**Things to ask:**
+
+- "Add a page called Results with a heading and a button back to the start."
+- "Make a multiple choice question about clouds with feedback for each answer."
+- "Check my project for problems and fix them."
+- "What would make a good activity for teaching the water cycle?" It answers and gives ideas without changing anything.
+
+Short, specific requests work best.
+
+**How it builds:** it uses the editor's own kit (the question builder, Describe it, your page's look and theme colours), so what it makes matches what you'd make by hand. It checks its work before it answers.
+
+**Free answers:** "How do I..." questions are answered from this help, with links to the best topics and an **Ask Ixia anyway** button. One behaviour on a selected layer, such as "when clicked go to the next page", is done on the spot with Describe it, and the panel says **Done without using the AI**. Neither uses any of Ixia's allowance.
+
+**While it works:** the panel says what it's doing ("Reading the project", "Building it in your project", "Checking my work"). **Stop** ends it after the step it's on. **New chat** starts afresh; closing the panel keeps the chat.
+
+**Undo:** before its first change Ixia saves a version called **Before Ixia**. **Undo what Ixia did** under its reply puts the project back as it was before that request, and you can always find that version in **Revision history**.
+
+**Good to know:**
+
+- The **Ask Ixia** button only shows while Ixia has usage left. It shares one allowance with a limit every few hours and every week, and when that runs out the button goes away by itself, even mid-chat, and comes back when the allowance refreshes. Your project and **Before Ixia** stay as they are.
+- Only someone who can edit a project can ask Ixia to change it, and everything it does is in the project's audit log. It reads the project's pages, layers, text and settings, never learners' answers or results. Your requests, and what it reads, go to Google's Gemini models through Antigravity to be answered.
+
+help:interactions help:question-kit`
+  },
+  {
     id: "projects",
     title: "Projects page",
     group: "Getting started",
@@ -27678,6 +27718,8 @@ The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the
 You do not have to find the right item in the list. Select the layer, press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type what you want in a plain sentence, such as **make this go to the results page**, **when clicked show the hint**, **play a sound when this is clicked**, **add 1 to score** or **after 5 seconds go to the next page**. The first row says what it understood. Press <kbd>Enter</kbd> and this same box opens already filled in: the thing to do, **It starts when**, and any **then also**, **only if** or **otherwise** you described. A note above the list says what it read from your words. Check it, change anything, and press **Add**.
 
 It matches fixed phrasings, not an AI service, and nothing you type leaves the editor. The names of your layers, pages, values, animations and sounds are looked up in the open project, in any case, with a plural or a small typo forgiven. Anything it could not find (a page called something you have not made) is listed in the note, and you choose it in the box. A part of the sentence it could not read is listed too and left out. If it cannot read the sentence at all, the palette says so and offers this box empty.
+
+**Ask Ixia** reads sentences the same way: one behaviour on a selected layer typed into its chat is done with Describe it, with no AI used. See [Ask Ixia](activity-designer).
 
 It works for most of the list: pages, showing and hiding, a layer's colour, text, opacity or size, animations, sounds and music, video, adding to or taking from a number, setting a text or a switch, putting values back, saying something to a screen reader, opening a link and starting over. For **It starts when** it knows **after 5 seconds**, **when the page opens**, **when hovered**, **when score reaches 10**, **when I press space**, **when dropped on the bin** and **when the video reaches 10 seconds**. Join steps with **then**, **and** or a comma, add **only if score is at least 3**, and give **otherwise** what to do when it is not true. It needs a layer to attach the behaviour to, so select one first, or name it: **when the Start button is clicked, show the hint**.
 

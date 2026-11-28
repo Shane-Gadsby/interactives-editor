@@ -1,0 +1,170 @@
+# Help pages
+
+- accessibility-checker.md: Accessibility checker
+- accessibility.md: Accessibility: roles and keyboard
+- accordions.md: Accordions and tabs
+- activity-designer.md: Ask Ixia
+- ai-agents.md: AI agents (MCP)
+- animatable-properties.md: Animatable properties
+- animation-presets.md: Animation presets
+- arrange.md: Align, arrange and combine
+- artboards.md: Pages (artboards)
+- assets.md: The Assets panel
+- attributions.md: Attributions and references
+- auto-layout.md: Auto layout
+- before-you-share.md: Before you share
+- bindings.md: Bindings
+- blends.md: Blends
+- bones.md: Bones and skinning
+- brand-kits.md: Brand kits and pre-branded templates
+- branded-starters.md: Branded starter packs
+- build-it.md: Build it: tutorials by kind of activity
+- canvas.md: Moving around the canvas
+- captions.md: Narration, captions and transcript
+- charts.md: Charts
+- checks.md: Checks
+- command-palette.md: The command palette
+- comments.md: Review comments
+- concept-a11y-names.md: Roles, names and focus order
+- concept-assets.md: Assets: one file, used in many places
+- concept-auto-layout.md: Auto layout: the frame places its children
+- concept-canvas-vs-preview.md: The canvas shows the start; Preview runs it
+- concept-components.md: Components: one page, placed many times
+- concept-coordinates.md: Positions are measured from the parent
+- concept-events-actions.md: Events, actions and the graph
+- concept-expressions.md: Formulas, and {braces} in text
+- concept-hit-testing.md: What gets clicked
+- concept-live-revisions.md: It saves as you go; revisions are the way back
+- concept-notes-comments.md: Sticky notes are for editors; comments are for reviewers
+- concept-only-if.md: Only if, Check a condition, and turning a flow off
+- concept-pages-masters.md: Pages, page masters and the start page
+- concept-reduced-motion.md: Reduced motion: it has to work without the movement
+- concept-repeaters.md: A repeater is one layer drawn many times
+- concept-responsive-variants.md: Responsive variants: one page, several widths
+- concept-results.md: Report result, and what StudyDesk sees
+- concept-seeds-random.md: Random, shuffle and seeds
+- concept-share-export.md: Share gives links, Export gives files
+- concept-themes-tokens.md: Theme colours and fixed colours
+- concept-timelines.md: Timelines, keyframes and recording
+- concept-user-data.md: What is remembered, for whom, and for how long
+- concept-variables-data-bindings.md: Variables, data sources and bindings
+- concepts.md: Concepts: the ideas behind the editor
+- connectors.md: Connectors
+- constraints.md: Constraints
+- course-collections.md: Course collections (passport stamps and badges)
+- course-context.md: Course and learner context
+- data-sources.md: Data sources
+- describe-what-you-see.md: Describe what you see
+- dialogs.md: Dialogs and confirmations
+- download-size.md: Download size and lite versions
+- drag-and-drop.md: Drag and drop
+- easing.md: Easing
+- embedding.md: Embedding and the player API
+- export.md: Exporting
+- expressions.md: Expressions
+- fill-in-starter.md: Fill in this starter
+- fill-stroke.md: Fill, stroke and effects
+- grid.md: The grid and snapping
+- groups-frames.md: Groups and frames
+- help.md: Using this help
+- icons.md: Icons
+- images-media.md: Images, video and audio
+- import.md: Importing Lottie, Rive (.riv and .rev), Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft, PowerPo
+- insights.md: Insights: what learners did
+- instances.md: Instances (components)
+- interaction-nodes.md: Interaction node reference
+- interactions.md: Interaction nodes (141). For a node's settings, outputs and what it gives, call read_reference("interactions",
+- interface.md: The editor at a glance
+- joysticks.md: Joysticks
+- layer-states.md: Layer states
+- layers-panel.md: Layers, hidden and locked layers
+- libraries.md: Libraries (shared components and styles)
+- links-cursors.md: Links and cursors
+- live-editing.md: Live editing and saving
+- media-catalogue.md: The Media Catalogue
+- moving-the-view.md: Moving the view
+- notes.md: Notes
+- overlays.md: Tooltips, modals, confirmations, prompts and toasts
+- page-master.md: Page masters
+- page-navigation.md: Page navigation
+- particles.md: Particles
+- paste-questions.md: Paste questions from Word or Excel
+- preferences.md: Preferences
+- progress-bars.md: Progress bars
+- project-settings.md: Project settings
+- projects.md: Projects page
+- properties-panel.md: The Properties panel and its search
+- public-interface.md: Public interface: inputs and outputs for developers
+- question-kit.md: Questions and quizzes
+- read-aloud.md: Read it to me
+- repeaters.md: Repeated lists
+- responsive.md: Responsive artboards
+- results.md: Results and progress
+- rooms.md: Rooms (a live chat for the class)
+- script-layers.md: Script layers
+- scripts.md: Scripts
+- sensors.md: Microphone, camera and photos
+- shader-layers.md: Shader layers
+- shape-morphing.md: Shape morphing and the Bend tool
+- shapes.md: Shapes and paths
+- shared-responses.md: Shared responses
+- shortcuts.md: Keyboard shortcuts
+- sketch-pads.md: Sketch pads
+- steps.md: Steps
+- story-dialogue.md: The story as nodes
+- story-game.md: Saves, settings and extras
+- story-puzzles.md: Puzzles in a story
+- story-rooms.md: Rooms, things you carry and a map
+- story-stage.md: The story stage and the cast
+- story.md: Writing a story
+- templates.md: Templates, examples and remix
+- text-modifiers.md: Text modifiers
+- text.md: Text
+- themes.md: Themes and colour tokens
+- timelines.md: Timelines and keyframes
+- troubleshooting.md: Troubleshooting and common questions
+- tutorial-accessible.md: Check and fix accessibility
+- tutorial-accordion.md: Accordion and tabs from data
+- tutorial-add-puzzle.md: Add a puzzle
+- tutorial-blanks.md: Fill in the blanks with typed answers
+- tutorial-bones.md: Rig a character with bones
+- tutorial-branching.md: A branching scenario
+- tutorial-brand.md: Use the UniSQ look and colour themes
+- tutorial-carousel.md: An image slider (carousel)
+- tutorial-compare.md: Before and after compare
+- tutorial-context.md: Personalise it for the course and the learner
+- tutorial-data-source.md: Content from a data file
+- tutorial-diagram.md: Mind maps and flowcharts from data
+- tutorial-drag-match.md: Drag and drop matching
+- tutorial-first-animation.md: Tutorial 1: Your first animation
+- tutorial-first-interaction.md: Tutorial 2: Your first interaction
+- tutorial-flipcards.md: Flip cards from a list
+- tutorial-import-design.md: Tutorial 4: Importing a design file
+- tutorial-journal.md: A reflection journal that remembers
+- tutorial-label.md: Label the diagram
+- tutorial-mcq.md: A multiple choice question with scoring and feedback
+- tutorial-memory.md: A memory card game
+- tutorial-microphone.md: Speaking practice with the microphone
+- tutorial-order.md: Put the steps in order
+- tutorial-personality.md: A "which one are you?" quiz
+- tutorial-presentation.md: A course presentation
+- tutorial-progress.md: Progress, badges and a page master
+- tutorial-publish.md: Tutorial 5: Publishing and sharing
+- tutorial-responsive.md: Make it work on a phone
+- tutorial-reveal.md: Click to reveal: image hotspots
+- tutorial-rive-drive.md: Drive an imported Rive or Lottie animation
+- tutorial-scene.md: An animated scene with speech bubbles
+- tutorial-script.md: When you need a script
+- tutorial-sort.md: Sort into groups
+- tutorial-sound.md: Sound effects and music across pages
+- tutorial-state-machine.md: Tutorial 3: A state machine with variables
+- tutorial-survey-chart.md: A poll with a live chart
+- tutorial-video-chapters.md: Interactive video with chapters and questions
+- tutorial-visual-novel.md: Your first visual novel
+- tutorial-whatif.md: A what-if explorer (sliders and formulas)
+- tutorial-wordgames.md: Word search and crossword from a word list
+- usage.md: Usage: what uses what
+- variables.md: Variables
+- web-elements.md: Web elements
+- welcome.md: Welcome to Ixia
+- what-is-recorded.md: What the editor records

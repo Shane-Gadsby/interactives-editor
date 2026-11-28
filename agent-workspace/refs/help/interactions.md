@@ -1,0 +1,149 @@
+Interaction nodes (141). For a node's settings, outputs and what it gives, call read_reference("interactions", node: "<kind>") (several: "event.drop, action.setVariable"), or category: "<category>" for a whole group.
+Settings that point at a layer, variable, script, timeline, blend, artboard or asset take its id or its exact name; the edit tool stores the id.
+
+## event
+- event.start: On start. Runs when the artboard is shown.
+- event.beforeLoad: Before activity loads. Runs once as the activity opens, before anything is shown.
+- event.activityLoad: On activity load. Runs once when the activity has loaded and is showing.
+- event.pointer: On pointer. Runs when a layer is clicked, pressed, hovered or dragged.
+- event.key: On key. Runs when a key is pressed or released.
+- event.focus: On focus. Runs when a layer gains or loses keyboard focus.
+- event.timer: On timer. Runs after a delay, and can repeat.
+- event.variable: On variable change. Runs when a variable changes value.
+- event.timelineEnd: On timeline end. Runs when a play-once timeline finishes.
+- event.timelineMarker: On timeline marker. Runs when a timeline plays past a marker.
+- event.videoCue: On video cue. Runs when a video layer's playback reaches one of its cue points.
+- event.step: On step. Runs when a step is chosen in a step-through artboard, or when its animation has finished.
+- event.message: On message. Runs when a message arrives from a script, a Send message node or the host page.
+- event.scroll: On scroll. Runs when a layer scrolls into or out of view, or while a frame scrolls.
+- event.dragStart: On drag start. Runs when a draggable layer is picked up.
+- event.dragMove: On drag move. Runs over and over while a draggable layer is held and moving.
+- event.dragOver: On drag over zone. Runs when a dragged layer moves over a drop zone, or off it.
+- event.drop: On drop. Runs when a draggable layer is let go.
+- event.dragRefused: On refused. Runs when a drop zone says no to a layer let go on it, with the reason why.
+- event.listDrop: On list drop. Runs when a copy of a list is dragged to another place in it or to another list.
+- event.dragEnd: On drag end. Runs when a draggable layer is let go anywhere, or the pick-up is cancelled.
+- event.media: On microphone or camera. Runs when something happens with a recording, the camera or a photo.
+- event.dataLoaded: On data loaded. Runs when a data source finishes loading or refreshing.
+- event.animationEnd: On animation clip end. Runs when a Frameling animation layer finishes a clip, or a looping clip comes round.
+- event.animationMarker: On animation marker. Runs when a playing Frameling animation reaches a marker placed in Frameling (a footstep, a hit).
+- event.overlayOpen: On overlay open. Runs on an overlay page (a tooltip, modal, confirmation, prompt or toast) as it opens, whoever opened it.
+- event.overlayClose: On overlay close. Runs on an overlay page as it closes, however it was closed.
+- event.storyEnd: On story end. Runs when the story reaches an -> end line, with the ending it named.
+- event.storyLine: On story line. Runs as each line of the story comes up, or only someone's lines.
+- event.storyChoice: On story choice. Runs when the reader picks one of the story's choices.
+- event.storyScene: On story scene. Runs when the story reaches a scene (a # line), or one scene by its title.
+- event.flow: Flow. Steps with a name that Call flow runs from anywhere on the page, so they are wired once.
+
+## action
+- action.timeline: Control timeline. Plays, pauses, stops, restarts, reverses or jumps a timeline.
+- action.blendPlay: Play blend. Starts a blend: its timelines play together, mixed by the weights of its number variables.
+- action.blendStop: Stop blend. Stops a blend.
+- action.setVariable: Set variable. Sets, adds to, toggles, steps through a range, resets or changes the list of a variable.
+- action.resetVariables: Reset variables. Puts the chosen variables back to their starting values.
+- action.setProperty: Set property. Changes a layer property instantly.
+- action.animate: Animate property. Animates a layer property to a value (a tween).
+- action.moveView: Move view. Pans and zooms the page to frame a layer, or back out to the whole page.
+- action.visibility: Show / hide. Shows, hides or toggles a layer.
+- action.artboard: Go to artboard. Switches to another artboard: one you pick, the next or previous page, or one an expression names.
+- action.url: Open URL. Opens a link in a new tab, this frame, the parent frame or the whole page.
+- action.reportResult: Report result. Sends the learner's result (score, pass or fail, completion) to where the page keeps it.
+- action.record: Record. Records that something happened, for Insights.
+- action.analytics: Send analytics. Sends a named event, with a few values, to the analytics the Toolbox keeps.
+- action.credits: Open credits. Opens the list of credits and references, as the Credits button does.
+- action.startOver: Start over. Begins again: variables reset, progress is cleared and the start artboard shows.
+- action.cursor: Set cursor. Changes the mouse cursor over a layer, or over the whole player.
+- action.saveUserData: Save user data. Saves the chosen variables for the person playing, so Load user data can restore them later.
+- action.loadUserData: Load user data. Restores the variables that Save user data last saved for the person playing.
+- action.loadData: Load data. Reloads a data source, optionally from a different URL.
+- action.sketchUndo: Undo a stroke. Takes back the last stroke or clear on a sketch pad.
+- action.sketchRedo: Redo a stroke. Puts back what Undo a stroke last took away on a sketch pad.
+- action.sketchClear: Clear a sketch pad. Rubs out everything drawn on a sketch pad, which Undo a stroke can bring back.
+- action.tableAdd: Add a row to a shared table. Adds a row to a shared table everyone sees: a name on a sign-up sheet, a card on a board.
+- action.tableChange: Change a row of a shared table. Changes some fields of one row of a shared table, if the table's rules let this person.
+- action.tableRemove: Take a row out of a shared table. Takes one row out of a shared table, if the table's rules let this person.
+- action.saveSetup: Save setup. Keeps the values of the variables marked Part of the setup for everyone who opens this setup.
+- action.respond: Send a response. Files what a person did as one row of your Responses table: answers, choices, where cards went.
+- action.sharedAdd: Add to shared responses. Adds an answer to a Shared responses data source, such as a word for a class cloud.
+- action.sharedWithdraw: Take back shared responses. Takes this person's own answers back out of a Shared responses data source.
+- action.roomSend: Send to room. Sends a message to a Room data source, for a chat or a question wall everyone in the class sees.
+- action.courseAdd: Add to course collection. Adds a stamp, or raises a counter, in a named collection that every interactive in the same course shares.
+- action.courseLoad: Load course collection. Fetches a named course collection into a list variable of its stamps and a number variable of how many.
+- action.courseCheck: Check course collection. Branches on whether a course collection has a stamp, or a counter that has reached a number.
+- action.clock: Countdown / clock. Runs a countdown (seconds left) or a clock (seconds gone) and writes it to a variable.
+- action.sound: Play sound. Plays an audio asset, once or on a loop, at a chosen volume and speed.
+- action.video: Control video. Plays, pauses, seeks, changes the speed of or steps a frame through a video layer.
+- action.stopSound: Stop sound. Stops sounds that Play sound started: all of them, or just one.
+- action.recordStart: Start recording. Starts recording from the learner's microphone or camera into a named recording.
+- action.listen: Listen live. Turns live listening on or off, so the microphone can drive numbers you use anywhere.
+- action.recordStop: Stop recording. Stops the recording and continues once it is ready to play.
+- action.recordPlay: Play recording. Plays a finished recording back.
+- action.recordDiscard: Discard recording. Throws a recording away so the learner can record again.
+- action.recordDownload: Download recording. Offers the learner a file of the recording to save on their device.
+- action.cameraPreview: Camera preview. Shows the learner's camera live in the place of a layer, or takes it down.
+- action.photo: Take or choose a photo. Gets a picture and puts it in an image asset, so every layer that uses the asset shows it.
+- action.saveFile: Download a file. Offers the learner a file to save: a report, a CSV, notes, or a picture or PDF of a layer.
+- action.picture: Picture of a layer. Makes a picture of a layer or the page as it is now, to download or keep in a variable.
+- action.copy: Copy to clipboard. Puts text on the clipboard, for a Copy button beside a code, a link or a result.
+- action.openFile: Open a file. Asks the person for a CSV, JSON or text file from their device and puts it in a variable.
+- action.fullscreen: Full screen. Fills the whole screen with the project, or comes back out.
+- action.print: Print. Opens the browser's print dialog for the page, where the person can also save it as a PDF.
+- action.sendData: Send to a web address. Sends a value to a web address as JSON, and keeps the answer.
+- action.sensorsOff: Offer: do not use my microphone or camera. Asks the learner whether to stop using their microphone and camera from now on.
+- action.script: Run script. Runs a custom JavaScript script.
+- action.code: Run code. Runs an inline JavaScript snippet with ix, event and variables in scope.
+- action.emit: Send message. Sends a named message to scripts, On message nodes and the host page.
+- action.steps: Go to step. Moves a step-through artboard to another step.
+- action.captions: Captions and sound. Changes the viewer's choices for captions, descriptions, the transcript and sound.
+- action.toast: Show toast. Shows a toast: a short message over a corner of the page that goes by itself.
+- action.celebrate: Celebrate. Throws a short burst of confetti or stars over the page, with words if you like.
+- action.storyStart: Start the story. Starts the story from the top (a New game button), or from a scene or chapter you name.
+- action.storyGoOn: Go on. Finishes the line that's typing, or goes on to the next one, and cuts a [wait] short.
+- action.storyPick: Pick choice. Picks one of the story's choices on show, counting from 1.
+- action.storyBack: Back to the story. From a page a [call ...] line went to: back to the story stage, carrying on after that line.
+- action.storyMode: Auto or Skip. Turns Auto (lines go on by themselves) or Skip (read lines fly past) on, off, or the other way.
+- action.storyRollBack: Go back a line. Takes the story back to an earlier line, undoing what happened since (values, choices, who was on stage).
+- action.storySave: Save the story. Saves where the story is, and every variable, in a slot on this device, or deletes a slot.
+- action.storyLoad: Load the story. Puts the story back where a save left it, with the variables as they were, and shows the stage.
+- action.storyPref: Story setting. Changes one of the reader's settings for the story, kept on their device.
+- action.storyGoTo: Go to a scene. Carries the story on from a scene or chapter you name, and shows the stage.
+- action.puzzleAnswer: Puzzle answer. Says the puzzle on this page was answered right or wrong, for the big moment and the score.
+- action.puzzleHint: Open a hint. Opens one of the puzzle's hints (paying hint coins the first time) and shows it, or puts it away.
+- action.puzzleMemo: Puzzle memo. Shows or hides the memo, a sketch pad over the puzzle for working things out.
+- action.puzzleLeave: Leave the puzzle. Back to the story from a puzzle, or to the page before when it was played from the index.
+- action.puzzleCoins: Hint coins. Gives the reader hint coins, or takes some away.
+- action.toastHide: Hide toast. Puts a toast away before its time is up, or one that stays until dismissed.
+- action.announce: Announce. Says something to screen readers through a live region.
+- action.speak: Read aloud. Says something aloud with a voice installed on the learner's own device.
+- action.questionCheck: Check answer. Checks the answer on a question and updates its answered, correct, attempts, score and feedback variables.
+- action.questionReset: Reset question. Puts a question back to the start: no answer, no hints, all tries back.
+- action.questionHint: Show hint. Shows the next hint of a question and tells screen readers.
+- action.questionChoose: Choose option. Selects an option of a choice question.
+- action.questionMove: Move item. Moves an item of an ordering question one place up or down.
+- action.questionDrop: Item dropped in a group. Says whether the item just dropped is in the group it belongs to, for a categorise question.
+- action.focus: Focus layer. Gives a layer keyboard focus, or takes focus away from whatever has it.
+- action.dragPlace: Put layer in drop zone. Moves a draggable layer into a drop zone as if it had been dropped there.
+- action.dragReset: Reset draggable. Sends a draggable layer back to where it started.
+- action.dragEnable: Allow dragging. Turns dragging on or off for a draggable layer, or a drop zone on or off.
+- action.setTheme: Set theme. Shows one of the project's themes by name, or follows the viewer's colour scheme again.
+- action.instanceInput: Set instance input. Sets a variable inside an instance layer's artboard, by name.
+- action.instanceTrigger: Fire instance trigger. Sends a message into an instance layer's artboard only.
+- action.delay: Wait. Pauses this flow for a time.
+- action.waitBlendIn: Wait for blend-in. Holds the flow while a timeline or blend is still blending in.
+- action.animationPlay: Play animation clip. Plays a clip of a Frameling animation layer, such as idle, wave or run.
+- action.animationStop: Stop animation. Stops a Frameling animation layer where it is, or back on its first frame.
+- action.animationFrame: Go to animation frame. Shows one frame of a Frameling animation layer's clip, then stops, plays on or leaves it.
+- action.waitTimeline: Wait for time in timeline. Holds the flow until a timeline has played to a point.
+- action.log: Log. Writes to the browser console, which is handy while building.
+- action.callFlow: Call flow. Runs a named Flow with the values you give it, and carries on when it has finished.
+- action.undo: Undo. Steps the variables marked Keeps history back to how they were before the last change.
+- action.redo: Redo. Puts back a change Undo took away.
+
+## logic
+- logic.if: If. Continues down "true" or "false" depending on a condition.
+- logic.switch: Toggle. Alternates between "a" and "b" each time it runs.
+- logic.random: Random. Continues down one of its outputs, picked at random.
+- logic.once: Once. Lets the flow through the first time only.
+- logic.forEach: For each item. Runs the Each item steps once for every item of a list, in order, then Done.
+- logic.repeat: Repeat. Runs the Again steps a number of times, or while something is true, then Done.
+- logic.sequence: Sequence. Runs "1", then "2", then "3" in order.

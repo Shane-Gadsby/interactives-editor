@@ -1,0 +1,145 @@
+# Interaction nodes, and the file each is in
+
+Settings that point at a layer, variable, script, timeline, blend, artboard or asset take its id or its exact name; the edit tool stores the id.
+
+- action.timeline — Control timeline (action): nodes/action-1.md
+- action.blendPlay — Play blend (action): nodes/action-1.md
+- action.blendStop — Stop blend (action): nodes/action-1.md
+- action.setVariable — Set variable (action): nodes/action-1.md
+- action.resetVariables — Reset variables (action): nodes/action-1.md
+- action.setProperty — Set property (action): nodes/action-1.md
+- action.animate — Animate property (action): nodes/action-1.md
+- action.moveView — Move view (action): nodes/action-1.md
+- action.visibility — Show / hide (action): nodes/action-1.md
+- action.artboard — Go to artboard (action): nodes/action-1.md
+- action.url — Open URL (action): nodes/action-1.md
+- action.reportResult — Report result (action): nodes/action-1.md
+- action.record — Record (action): nodes/action-1.md
+- action.analytics — Send analytics (action): nodes/action-1.md
+- action.credits — Open credits (action): nodes/action-1.md
+- action.startOver — Start over (action): nodes/action-1.md
+- action.cursor — Set cursor (action): nodes/action-1.md
+- action.saveUserData — Save user data (action): nodes/action-1.md
+- action.loadUserData — Load user data (action): nodes/action-1.md
+- action.loadData — Load data (action): nodes/action-1.md
+- action.sketchUndo — Undo a stroke (action): nodes/action-1.md
+- action.sketchRedo — Redo a stroke (action): nodes/action-2.md
+- action.sketchClear — Clear a sketch pad (action): nodes/action-2.md
+- action.tableAdd — Add a row to a shared table (action): nodes/action-2.md
+- action.tableChange — Change a row of a shared table (action): nodes/action-2.md
+- action.tableRemove — Take a row out of a shared table (action): nodes/action-2.md
+- action.saveSetup — Save setup (action): nodes/action-2.md
+- action.respond — Send a response (action): nodes/action-2.md
+- action.sharedAdd — Add to shared responses (action): nodes/action-2.md
+- action.sharedWithdraw — Take back shared responses (action): nodes/action-2.md
+- action.roomSend — Send to room (action): nodes/action-2.md
+- action.courseAdd — Add to course collection (action): nodes/action-2.md
+- action.courseLoad — Load course collection (action): nodes/action-2.md
+- action.courseCheck — Check course collection (action): nodes/action-2.md
+- action.clock — Countdown / clock (action): nodes/action-2.md
+- action.sound — Play sound (action): nodes/action-2.md
+- action.video — Control video (action): nodes/action-2.md
+- action.stopSound — Stop sound (action): nodes/action-2.md
+- action.recordStart — Start recording (action): nodes/action-3.md
+- action.listen — Listen live (action): nodes/action-3.md
+- action.recordStop — Stop recording (action): nodes/action-3.md
+- action.recordPlay — Play recording (action): nodes/action-3.md
+- action.recordDiscard — Discard recording (action): nodes/action-3.md
+- action.recordDownload — Download recording (action): nodes/action-3.md
+- action.cameraPreview — Camera preview (action): nodes/action-3.md
+- action.photo — Take or choose a photo (action): nodes/action-3.md
+- action.saveFile — Download a file (action): nodes/action-3.md
+- action.picture — Picture of a layer (action): nodes/action-3.md
+- action.copy — Copy to clipboard (action): nodes/action-3.md
+- action.openFile — Open a file (action): nodes/action-3.md
+- action.fullscreen — Full screen (action): nodes/action-3.md
+- action.print — Print (action): nodes/action-3.md
+- action.sendData — Send to a web address (action): nodes/action-3.md
+- action.sensorsOff — Offer: do not use my microphone or camera (action): nodes/action-3.md
+- action.script — Run script (action): nodes/action-3.md
+- action.code — Run code (action): nodes/action-3.md
+- action.emit — Send message (action): nodes/action-3.md
+- action.steps — Go to step (action): nodes/action-3.md
+- action.captions — Captions and sound (action): nodes/action-3.md
+- action.toast — Show toast (action): nodes/action-3.md
+- action.celebrate — Celebrate (action): nodes/action-4.md
+- action.storyStart — Start the story (action): nodes/action-4.md
+- action.storyGoOn — Go on (action): nodes/action-4.md
+- action.storyPick — Pick choice (action): nodes/action-4.md
+- action.storyBack — Back to the story (action): nodes/action-4.md
+- action.storyMode — Auto or Skip (action): nodes/action-4.md
+- action.storyRollBack — Go back a line (action): nodes/action-4.md
+- action.storySave — Save the story (action): nodes/action-4.md
+- action.storyLoad — Load the story (action): nodes/action-4.md
+- action.storyPref — Story setting (action): nodes/action-4.md
+- action.storyGoTo — Go to a scene (action): nodes/action-4.md
+- action.puzzleAnswer — Puzzle answer (action): nodes/action-4.md
+- action.puzzleHint — Open a hint (action): nodes/action-4.md
+- action.puzzleMemo — Puzzle memo (action): nodes/action-4.md
+- action.puzzleLeave — Leave the puzzle (action): nodes/action-4.md
+- action.puzzleCoins — Hint coins (action): nodes/action-4.md
+- action.toastHide — Hide toast (action): nodes/action-4.md
+- action.announce — Announce (action): nodes/action-4.md
+- action.speak — Read aloud (action): nodes/action-4.md
+- action.questionCheck — Check answer (action): nodes/action-4.md
+- action.questionReset — Reset question (action): nodes/action-4.md
+- action.questionHint — Show hint (action): nodes/action-4.md
+- action.questionChoose — Choose option (action): nodes/action-4.md
+- action.questionMove — Move item (action): nodes/action-4.md
+- action.questionDrop — Item dropped in a group (action): nodes/action-4.md
+- action.focus — Focus layer (action): nodes/action-4.md
+- action.dragPlace — Put layer in drop zone (action): nodes/action-4.md
+- action.dragReset — Reset draggable (action): nodes/action-5.md
+- action.dragEnable — Allow dragging (action): nodes/action-5.md
+- action.setTheme — Set theme (action): nodes/action-5.md
+- action.instanceInput — Set instance input (action): nodes/action-5.md
+- action.instanceTrigger — Fire instance trigger (action): nodes/action-5.md
+- action.delay — Wait (action): nodes/action-5.md
+- action.waitBlendIn — Wait for blend-in (action): nodes/action-5.md
+- action.animationPlay — Play animation clip (action): nodes/action-5.md
+- action.animationStop — Stop animation (action): nodes/action-5.md
+- action.animationFrame — Go to animation frame (action): nodes/action-5.md
+- action.waitTimeline — Wait for time in timeline (action): nodes/action-5.md
+- action.log — Log (action): nodes/action-5.md
+- action.callFlow — Call flow (action): nodes/action-5.md
+- action.undo — Undo (action): nodes/action-5.md
+- action.redo — Redo (action): nodes/action-5.md
+- event.start — On start (event): nodes/event-1.md
+- event.beforeLoad — Before activity loads (event): nodes/event-1.md
+- event.activityLoad — On activity load (event): nodes/event-1.md
+- event.pointer — On pointer (event): nodes/event-1.md
+- event.key — On key (event): nodes/event-1.md
+- event.focus — On focus (event): nodes/event-1.md
+- event.timer — On timer (event): nodes/event-1.md
+- event.variable — On variable change (event): nodes/event-1.md
+- event.timelineEnd — On timeline end (event): nodes/event-1.md
+- event.timelineMarker — On timeline marker (event): nodes/event-1.md
+- event.videoCue — On video cue (event): nodes/event-1.md
+- event.step — On step (event): nodes/event-1.md
+- event.message — On message (event): nodes/event-1.md
+- event.scroll — On scroll (event): nodes/event-1.md
+- event.dragStart — On drag start (event): nodes/event-1.md
+- event.dragMove — On drag move (event): nodes/event-1.md
+- event.dragOver — On drag over zone (event): nodes/event-1.md
+- event.drop — On drop (event): nodes/event-1.md
+- event.dragRefused — On refused (event): nodes/event-1.md
+- event.listDrop — On list drop (event): nodes/event-2.md
+- event.dragEnd — On drag end (event): nodes/event-2.md
+- event.media — On microphone or camera (event): nodes/event-2.md
+- event.dataLoaded — On data loaded (event): nodes/event-2.md
+- event.animationEnd — On animation clip end (event): nodes/event-2.md
+- event.animationMarker — On animation marker (event): nodes/event-2.md
+- event.overlayOpen — On overlay open (event): nodes/event-2.md
+- event.overlayClose — On overlay close (event): nodes/event-2.md
+- event.storyEnd — On story end (event): nodes/event-2.md
+- event.storyLine — On story line (event): nodes/event-2.md
+- event.storyChoice — On story choice (event): nodes/event-2.md
+- event.storyScene — On story scene (event): nodes/event-2.md
+- event.flow — Flow (event): nodes/event-2.md
+- logic.if — If (logic): nodes/logic.md
+- logic.switch — Toggle (logic): nodes/logic.md
+- logic.random — Random (logic): nodes/logic.md
+- logic.once — Once (logic): nodes/logic.md
+- logic.forEach — For each item (logic): nodes/logic.md
+- logic.repeat — Repeat (logic): nodes/logic.md
+- logic.sequence — Sequence (logic): nodes/logic.md

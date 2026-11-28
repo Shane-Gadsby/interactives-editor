@@ -50,8 +50,10 @@ export interface SessionInfo {
   power: boolean;
   /** May publish and mark brand kits (a power user, or in the server's brand group); also the brand lock override in the editor. */
   brand?: boolean;
-  /** The box has the Activity Designer (a Cogniti agent) set up, so the editor shows its button. */
+  /** Ask Ixia is set up on this box and has allowance left for this person right now, so the editor shows its button. */
   designer?: boolean;
+  /** Ask Ixia is set up but its allowance has run out: when the server expects it back. */
+  designerResetAt?: string | null;
 }
 
 /** A request the server answered with an error (status 0: it was never reached). */
@@ -162,6 +164,12 @@ export interface DesignerStatus {
   /** False on a box where there is one key for everyone (Gemini), so nobody is offered a token of their own. */
   ownTokens?: boolean;
   shared: { limit: number; left: number; resetsIn: number } | null;
+  /** Whether this box runs Ask Ixia at all (on is whether it's available right now). */
+  configured?: boolean;
+  /** Why it isn't available: off, allocation (the Antigravity allowance), daily, or hourly. */
+  reason?: string | null;
+  /** When it should be back. */
+  resetAt?: string | null;
 }
 export const designerStatus = () => call<DesignerStatus>('designer/status');
 /** Add their own Cogniti token. The server checks it with Cogniti once and keeps it encrypted; it is never sent back. `ends` is the day it runs out, if they know. */

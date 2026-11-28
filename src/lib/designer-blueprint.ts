@@ -535,11 +535,20 @@ function behave(run: Run, ab: Artboard, layer: SceneNode, says: string[]): boole
     const gap = incomplete(RECIPE_BY_ID[d.recipe], d.answers, run.p, ab);
     return gap ? { err: gap } : { d };
   };
-  const first = read(says[0]);
+  let first = read(says[0]);
+  let rest = says.slice(1);
+  // A trigger on its own as the first step ("when the page opens", then "hide X"): it means the two together
+  if (!first.d && rest.length) {
+    const joined = read(`${says[0]}, ${rest[0]}`);
+    if (joined.d) {
+      first = joined;
+      rest = rest.slice(1);
+    }
+  }
   if (!first.d) return lost(first.err!);
   const main = first.d;
   const then = [...main.then];
-  for (const s of says.slice(1)) {
+  for (const s of rest) {
     const more = read(s);
     if (!more.d) return lost(more.err!);
     then.push({ recipe: more.d.recipe, answers: more.d.answers }, ...more.d.then);

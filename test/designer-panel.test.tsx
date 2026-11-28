@@ -9,18 +9,24 @@ import { EditorStore, setCurrentStore } from '../src/store/store';
 const restoreRevision = vi.fn(async () => ({ rev: 5 }));
 const loadProjectRecord = vi.fn(async (..._a: unknown[]): Promise<unknown> => null);
 const resetDesigner = vi.fn(async () => ({ ok: true }));
+//what /api/session and /api/designer/status say, changed by the tests about the allowance running out
+const server: { session: Record<string, unknown>; status: Record<string, unknown> } = {
+  session: { user: null, power: false, designer: true },
+  status: { on: true, mine: null, shared: { limit: 6, left: 4, resetsIn: 600 } },
+};
 vi.mock('../src/lib/db', () => ({
   apiUrl: (p: string) => `http://x.test/interactives/api/${p}`,
   restoreRevision: (...a: unknown[]) => (restoreRevision as (...a: unknown[]) => unknown)(...a),
   resetDesigner: (...a: unknown[]) => (resetDesigner as (...a: unknown[]) => unknown)(...a),
-  session: async () => ({ user: null, power: false, designer: true }),
-  designerStatus: async () => ({ on: true, mine: null, shared: { limit: 6, left: 4, resetsIn: 600 } }),
+  session: async () => server.session,
+  designerStatus: async () => server.status,
   designerToken: async () => ({}),
   loadProjectRecord: (...a: unknown[]) => (loadProjectRecord as (...a: unknown[]) => unknown)(...a),
 }));
 
 import { DesignerChat, designerChat } from '../src/lib/designer';
 import { DesignerDock, DesignerPanel, showWhatChanged } from '../src/components/DesignerPanel';
+import { DesignerAvailability, designerAvailability, resetDesignerAvailability } from '../src/lib/designer-availability';
 
 //the client with no free answers and no open page, so what is asked goes to the server
 const mk = (f: unknown) => new DesignerChat(f as typeof fetch, () => null, () => '');
@@ -204,6 +210,9 @@ describe('the panel', () => {
     root = createRoot(host);
     restoreRevision.mockClear();
     resetDesigner.mockClear();
+    resetDesignerAvailability();
+    server.session = { user: null, power: false, designer: true };
+    server.status = { on: true, mine: null, shared: { limit: 6, left: 4, resetsIn: 600 } };
   });
   afterEach(() => {
     act(() => root.unmount());
@@ -391,5 +400,117 @@ describe('the panel', () => {
     expect(host.querySelector('.designer-msg.agent')?.textContent).toContain('Sure.');
     vi.unstubAllGlobals();
     designerChat().newChat();
+  });
+});
+
+describe('when the allowance runs out', () => {
+  let host: HTMLDivElement;
+  let root: Root;
+  let st: EditorStore;
+  beforeEach(() => {
+    const p = createProject('Panel');
+    p.id = 'proj1';
+    st = new EditorStore(p);
+    setCurrentStore(st);
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    resetDesignerAvailability();
+    server.session = { user: null, power: false, designer: true };
+    server.status = { on: true, mine: null, shared: null, ownTokens: false };
+  });
+  afterEach(() => {
+    act(() => root.unmount());
+    host.remove();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    designerChat().newChat();
+  });
+  const settle = () => act(async () => void (await new Promise((r) => setTimeout(r, 10))));
+  const fab = () => host.querySelector('.designer-fab') as HTMLButtonElement | null;
+
+  it('shows no button when the session says it is unavailable', async () => {
+    server.session = { user: null, power: false, designer: false, designerResetAt: new Date(Date.now() + 3600e3).toISOString() };
+    await act(async () => root.render(<DesignerDock />));
+    await settle();
+    expect(fab()).toBeNull();
+    expect(designerAvailability().state).toMatchObject({ available: false, initialized: true });
+  });
+
+  it('the button and chat go at once when a reply says it used the last, with a word about "Before Ixia"', async () => {
+    await act(async () => root.render(<DesignerDock />));
+    await settle();
+    await act(async () => fab()!.click());
+    expect(host.querySelector('.designer-panel')).toBeTruthy();
+    const toast = vi.spyOn(st, 'toast');
+    vi.stubGlobal('fetch', vi.fn(async () => streamed([lines({ type: 'changed', revision: 'rev1' }, { type: 'reply', text: 'Done.' }, { type: 'done', conversation: 'c', available: false, resetAt: new Date(Date.now() + 3600e3).toISOString() })])));
+    await act(async () => designerChat().send('Add a page', 'proj1'));
+    await settle();
+    expect(fab()).toBeNull();
+    expect(host.querySelector('.designer-panel')).toBeNull();
+    expect(toast).toHaveBeenCalledWith(expect.stringContaining('Before Ixia'), 'info');
+    vi.unstubAllGlobals();
+  });
+
+  it('goes when the server turns a request away as exhausted, and when a status check says so', async () => {
+    await act(async () => root.render(<DesignerDock />));
+    await settle();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'Ixia has used all it can for now.', kind: 'exhausted', available: false, resetAt: null }), { status: 429 })));
+    await act(async () => designerChat().send('Add a page', 'proj1'));
+    await settle();
+    expect(fab()).toBeNull();
+    vi.unstubAllGlobals();
+
+    //back, then a status check says it's gone again
+    await act(async () => designerAvailability().setAvailability(true));
+    expect(fab()).toBeTruthy();
+    server.status = { on: false, reason: 'allocation', resetAt: null, mine: null, shared: null };
+    await act(async () => designerChat().refreshStatus());
+    expect(fab()).toBeNull();
+  });
+
+  it('comes back by itself after the time the server gave, closed', async () => {
+    await act(async () => root.render(<DesignerDock />));
+    await settle();
+    await act(async () => fab()!.click());
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    await act(async () => designerAvailability().setAvailability(false, Date.now() + 60_000));
+    expect(fab()).toBeNull();
+    server.status = { on: true, mine: null, shared: null };
+    await act(async () => {
+      vi.advanceTimersByTime(60_000 + 31_000);
+    });
+    vi.useRealTimers();
+    await settle();
+    expect(fab()).toBeTruthy();
+    //it doesn't pop open on its own
+    expect((host.querySelector('.designer-panel') as HTMLElement | null)?.hidden ?? true).toBe(true);
+  });
+});
+
+describe('the availability store', () => {
+  it('checks again just after the reset time, and when the tab comes back, no more than every 2 minutes', async () => {
+    let now = 1_000_000;
+    const check = vi.fn(async () => ({ on: false, resetAt: null as string | null }));
+    const a = new DesignerAvailability(check, () => 5000, () => now);
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      a.subscribe(() => {});
+      a.setAvailability(false, now + 10_000);
+      vi.advanceTimersByTime(14_000);
+      expect(check).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(2_000);
+      expect(check).toHaveBeenCalledTimes(1);
+      now += 200_000;
+      window.dispatchEvent(new Event('focus'));
+      window.dispatchEvent(new Event('focus'));
+      expect(check).toHaveBeenCalledTimes(2);
+      now += 130_000;
+      window.dispatchEvent(new Event('focus'));
+      expect(check).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+      a.dispose();
+    }
   });
 });

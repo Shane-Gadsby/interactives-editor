@@ -79,7 +79,9 @@ describe("Ask Ixia's spending guards", () => {
     asked = 0;
     const refused = await ask('And another');
     expect(refused.status).toBe(429);
-    expect(refused.json).toMatchObject({ kind: 'wait', error: 'Ixia has done all it can for today. It will be back tomorrow.' });
+    expect(refused.json).toMatchObject({ kind: 'exhausted', available: false, error: 'Ixia has done all it can for today. It will be back tomorrow.' });
+    //and Ask Ixia is gone until tomorrow
+    expect(refused.json.resetAt).toBeTruthy();
     expect(asked).toBe(0);
     expect(h.db.audit.docs.some((d: any) => d.event === 'designer-budget')).toBe(true);
   });

@@ -277,3 +277,12 @@ describe('pages, pictures and raw changes', () => {
     expect((all(r.project, 'Text')[0] as unknown as { text: string }).text.length).toBe(2000);
   });
 });
+
+describe('a trigger written as its own step', () => {
+  it('goes with the step after it, so "when the page opens" then "hide X" works', () => {
+    const p = fixture();
+    const r = compileBlueprint(p, { pages: [{ name: 'Water cycle', elements: [{ type: 'text', name: 'Evaporation text', text: 'a' }, { type: 'text', name: 'Condensation text', text: 'b' }] }], behaviours: [{ on: 'Evaporation text', page: 'Water cycle', does: ['when the page opens', 'hide Condensation text'] }] } as Blueprint);
+    expect(r.problems).toEqual([]);
+    expect(page(r.project, 'Water cycle').logic.nodes.some((n) => n.kind === 'event.start')).toBe(true);
+  });
+});

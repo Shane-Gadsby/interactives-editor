@@ -1,0 +1,3 @@
+# Layer states (hover, pressed, focus, disabled, expression)
+
+states [{id, name?, when: hover|pressed|focus|disabled|expr, expr? (when expr), props {path: value}}] gives a layer the looks it takes on in a state, instead of a ternary in four or five bindings: props uses the same paths a binding does (fill.color, stroke.paint.color, color, opacity, scaleX, scaleY, cornerRadius), only what is listed changes, later states win over earlier ones, and a state beats a binding on the same property. The pointer states are the layer's own and only come on while it runs; an expr state shows on the canvas too.

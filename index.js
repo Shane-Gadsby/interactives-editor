@@ -493,6 +493,34 @@ router.get('/health', cacheHeaders.api, async (req, res) => {
 router.use(cacheHeaders.stampGate)
 
 //Every api route: never cached, staff session wanted (log only until SUITE_SESSION_ENFORCE=1)
+//Ask Ixia's tools for its Antigravity agent (designer-antigravity-mcp.mjs posts here). Above the /api session check
+//because the agent has no browser session: what it has instead is the one-turn token the chat request made, which says
+//whose request it is and which project, and is gone when the turn ends. Only from this box itself, never through
+//haproxy (which always adds X-Forwarded-For)
+let designerMcpGrants = new Map()
+router.post('/api/designer/_mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, res) => {
+	let from = req.socket?.remoteAddress || ''
+	if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(from) || req.get('x-forwarded-for') || req.get('forwarded')) {
+		return res.status(403).json({jsonrpc: '2.0', id: null, error: {code: -32000, message: 'Not from here'}})
+	}
+	let token = (String(req.get('authorization') || '').match(/^Bearer\s+(\S+)$/i) || [])[1],
+		grant = token && designerMcpGrants.get(token)
+	if (grant && grant.expires < Date.now()) {
+		designerMcpGrants.delete(token)
+		grant = null
+	}
+	if (!grant) return res.status(404).json({jsonrpc: '2.0', id: req.body?.id ?? null, error: {code: -32001, message: 'This turn has ended'}})
+
+	let reply = await designerAntigravity.mcpHandler(grant, {
+		tools: (await loadMCP()).TOOLS,
+		callTool: grant.callTool,
+		//callTool keeps to the same per minute limits as any agent
+		build: grant.build,
+	}, req.body)
+	if (!reply) return res.status(202).end()
+	res.json(reply)
+})
+
 router.use('/api', cacheHeaders.api, sessionCheck({staff: true, tool: 'interactives'}))
 
 //The Spelling test's synthesised voice: the word in, a wav out, for the author to save as a sound asset (voice.js)
@@ -637,7 +665,28 @@ const designerLoop = () => {
 	let g = designerGemini.settings()
 	return {...g, via: 'gemini', client: () => designerGemini.client(g)}
 }
-const designerOn = () => designer.settings().on || designerLoop().on
+//Or on Antigravity (designer-antigravity.js): the agy CLI signed in to one person's Antigravity account on this box, so
+//no key and no bill, only that account's allowance. INTERACTIVES_DESIGNER_BACKEND=antigravity (or
+//INTERACTIVES_ANTIGRAVITY=on) picks it, and it wins over everything above. Signing it in is a hands-on step whoever owns
+//that account does on the box itself (suite docs, Ask Ixia on Antigravity); the sign-in stays in storage/_agy-state
+const designerAntigravity = require('./designer-antigravity')
+const designerAg = () => designerAntigravity.settings(process.env, storageDir)
+const designerOn = () => designerAg().on || designer.settings().on || designerLoop().on
+
+//How much of the Antigravity account's allowance is left, looked at on boot, every 10 minutes and after each request.
+//When either window runs low Ask Ixia goes away for everyone until it refreshes, rather than people being turned away
+let agyQuota = null
+const agyMonitor = () => {
+	if (!designerAg().on) return null
+	if (!agyQuota) {
+		fs.mkdirSync(designerAg().appDataDir, {recursive: true, mode: 0o700})
+		agyQuota = designerAntigravity.createQuotaMonitor({
+			cfg: designerAg(),
+			onChange: (st) => audit({}, 'designer-allocation', null, {exhausted: st.exhausted, reason: st.reason || 'allocation', resetAt: st.resetAt ? new Date(st.resetAt) : null}),
+		}).start()
+	}
+	return agyQuota
+}
 
 //What Ask Ixia has cost today, everyone together, so a day can't run past its budget (INTERACTIVES_DESIGNER_DAILY_USD).
 //Kept in memory and added to as requests finish. The first ask of a day (or after a restart) adds up today's audit rows,
@@ -663,9 +712,66 @@ const designerSpentToday = async () => {
 	return designerSpend.usd
 }
 
+//Requests and tokens today, everyone together, for the Antigravity ceilings (INTERACTIVES_DESIGNER_DAILY_REQUESTS and
+//_TOKENS). Same idea as the spend: read from today's audit rows once, then added to as requests finish
+let designerCount = {day: '', requests: 0, tokens: 0}
+const designerUsageToday = async () => {
+	let start = new Date()
+	start.setHours(0, 0, 0, 0)
+	let day = start.toDateString()
+	if (designerCount.day !== day) {
+		designerCount = {day, requests: 0, tokens: 0}
+		try {
+			let rows = await auditLog.find({at: {$gte: start}, event: 'designer-run'}, {projection: {'detail.usage.input': 1, 'detail.usage.output': 1}}).toArray()
+			if (designerCount.day === day) {
+				designerCount.requests += rows.length
+				designerCount.tokens += rows.reduce((sum, r) => sum + (Number(r.detail?.usage?.input) || 0) + (Number(r.detail?.usage?.output) || 0), 0)
+			}
+		}
+		catch (err) {
+			console.warn(`${appName}: could not add up today's Ask Ixia requests`, err?.message)
+		}
+	}
+
+	return designerCount
+}
+
+const nextMidnight = () => {
+	let t = new Date()
+	t.setHours(24, 0, 0, 0)
+	return t.toISOString()
+}
+
+//Whether Ask Ixia is there for this person right now, and if not why and until when. configured is whether this box
+//runs it at all. Every place that shows Ask Ixia asks this, so it goes away the moment any ceiling is reached:
+//the Antigravity allowance, the day's money, requests or tokens, or this person's share of the hour
+const designerAvailability = async (req) => {
+	if (!designerOn()) return {configured: false, available: false, reason: 'off', resetAt: null}
+	let ag = designerAg(),
+		gem = designerLoop(),
+		out = (reason, resetAt) => ({configured: true, available: false, reason, resetAt: resetAt ? new Date(resetAt).toISOString() : null})
+	if (ag.on) {
+		let st = agyMonitor().status()
+		if (st.exhausted) return out('allocation', st.resetAt)
+		if (ag.dailyRequests || ag.dailyTokens) {
+			let used = await designerUsageToday()
+			if (ag.dailyRequests && used.requests >= ag.dailyRequests || ag.dailyTokens && used.tokens >= ag.dailyTokens) return out('daily', nextMidnight())
+		}
+	}
+	else if (gem.on && gem.dailyUsd && await designerSpentToday() >= gem.dailyUsd) return out('daily', nextMidnight())
+	//A person who has used their share of the hour doesn't see it either, until the oldest request stops counting. Not on
+	//Cogniti, where the panel is also the way to add a token of their own and get round the share
+	if ((ag.on || gem.on) && !/^(off|0|false|no)$/i.test(process.env.INTERACTIVES_DESIGNER_HIDE_ON_USER_QUOTA || '')) {
+		let s = sharedQuota().status(whoIs(req)?.username || 'guest')
+		if (s && s.left === 0) return out('hourly', Date.now() + s.resetsIn * 1000)
+	}
+	return {configured: true, available: true, reason: null, resetAt: null}
+}
+
 //Who the editor's talking to, for the projects list and the owner badge
-router.get('/api/session', (req, res) => {
-	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req), designer: designerOn()})
+router.get('/api/session', async (req, res) => {
+	let avail = await designerAvailability(req)
+	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req), designer: avail.available, ...(avail.configured && !avail.available && avail.resetAt ? {designerResetAt: avail.resetAt} : {})})
 })
 
 //The projects list, mine only (owned or invited to). ?all=1 gets everyone's, but only for power users (god mode),
@@ -6286,13 +6392,16 @@ const designerStatus = async (req) => {
 	let cfg = designer.settings(),
 		me = whoIs(req),
 		row = me?.username && designerTokens ? await designerTokens.findOne({_id: me.username}, {projection: {added: 1, ends: 1}}) : null
-	//On Gemini there's one key and no tokens of people's own, so everyone has a share
-	if (designerLoop().on) {
-		return {on: true, mine: null, ownTokens: false, shared: sharedQuota().status(me?.username || 'guest')}
+	let avail = await designerAvailability(req),
+		why = {configured: avail.configured, reason: avail.reason, resetAt: avail.resetAt}
+	//On Antigravity or Gemini there's one account and no tokens of people's own, so everyone has a share
+	if (designerAg().on || designerLoop().on) {
+		return {on: avail.available, ...why, mine: null, ownTokens: false, shared: sharedQuota().status(me?.username || 'guest')}
 	}
 
 	return {
-		on: cfg.on,
+		on: avail.available,
+		...why,
 		mine: row ? {connected: true, added: row.added, ends: row.ends || null} : null,
 		//only people on the shared token have a share to count
 		shared: row ? null : sharedQuota().status(me?.username || 'guest'),
@@ -6350,9 +6459,10 @@ router.delete('/api/designer/token', async (req, res) => {
 
 router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res) => {
 	let cfg = designer.settings(),
-		gem = designerLoop(),
+		ag = designerAg(),
+		gem = ag.on ? {on: false} : designerLoop(),
 		me = whoIs(req)
-	if (!cfg.on && !gem.on) return res.status(404).json({error: 'Ixia is switched off here'})
+	if (!cfg.on && !gem.on && !ag.on) return res.status(404).json({error: 'Ixia is switched off here'})
 	if (!me?.username && enforcing()) return res.status(401).json({error: 'Sign in to use Ixia'})
 
 	let id = req.body?.projectId,
@@ -6368,14 +6478,21 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	//Today's budget is spent: nobody is charged for more, and it says when it's back
 	if (gem.on && gem.dailyUsd && await designerSpentToday() >= gem.dailyUsd) {
 		audit(req, 'designer-budget', doc, {dailyUsd: gem.dailyUsd})
-		return res.status(429).json({error: 'Ixia has done all it can for today. It will be back tomorrow.', kind: 'wait'})
+		return res.status(429).json({error: 'Ixia has done all it can for today. It will be back tomorrow.', kind: 'exhausted', available: false, resetAt: nextMidnight()})
+	}
+	//The Antigravity allowance or one of the day's ceilings is used up: Ask Ixia is hidden, and this says so to a panel
+	//that hasn't caught up yet. The hour's share is checked further down, where it's taken
+	let avail = await designerAvailability(req)
+	if (!avail.available && avail.reason !== 'hourly') {
+		audit(req, 'designer-allocation', doc, {exhausted: true, reason: avail.reason, resetAt: avail.resetAt})
+		return res.status(429).json({error: avail.reason === 'daily' ? 'Ixia has done all it can for today. It will be back tomorrow.' : 'Ixia has used all it can for now. It will be back when its allowance refreshes.', kind: 'exhausted', available: false, resetAt: avail.resetAt})
 	}
 
 	let who = me?.username || 'guest'
 	if (designerRunning.has(who)) return res.status(409).json({error: 'Ixia is still working on your last request. Wait for it to finish.'})
 
 	//Their own token when they've added one; otherwise the shared one, and a fair share of it an hour
-	let own = gem.on ? null : await ownDesignerToken(me?.username),
+	let own = gem.on || ag.on ? null : await ownDesignerToken(me?.username),
 		shared = sharedQuota()
 	if (own) {
 		cfg = {...cfg, token: own, own: true}
@@ -6383,7 +6500,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	else if (!shared.take(who)) {
 		let s = shared.status(who),
 			mins = Math.max(1, Math.ceil(s.resetsIn / 60))
-		return res.status(429).json({error: `You have used your ${s.limit} shared Ixia requests for this hour. The next one comes back in about ${mins} ${mins === 1 ? 'minute' : 'minutes'}.${gem.on ? '' : ' You can use your own Cogniti allowance instead.'}`, kind: gem.on ? 'wait' : 'quota', quota: s})
+		return res.status(429).json({error: `You have used your ${s.limit} shared Ixia requests for this hour. The next one comes back in about ${mins} ${mins === 1 ? 'minute' : 'minutes'}.${gem.on || ag.on ? '' : ' You can use your own Cogniti allowance instead.'}`, kind: gem.on || ag.on ? 'wait' : 'quota', quota: s, ...(gem.on || ag.on ? {available: false, resetAt: new Date(Date.now() + s.resetsIn * 1000).toISOString()} : {})})
 	}
 
 	designerRunning.add(who)
@@ -6393,7 +6510,8 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	let ctl = new AbortController(),
 		emit = (e) => {
 			if (!res.writableEnded && !res.destroyed) res.write(JSON.stringify(e) + '\n')
-		}
+		},
+		grantToken = null
 	//A Cogniti message can sit quiet for a minute or more, and haproxy cuts a response that says nothing for its
 	//timeout server (25s on dev, 120s on test and prod). So a blank line every 10s keeps it open, and the panel skips
 	//blank lines. INTERACTIVES_DESIGNER_BEAT_MS changes the 10s (the test uses a short one)
@@ -6469,8 +6587,27 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 				state,
 			}
 
+		if (ag.on) {
+			//The tools agy can reach for this one turn: a token only this project answers to, gone when the turn ends
+			let revNow = async () => rooms.get(id)?.rev ?? (await projects.findOne({_id: id}, {projection: {rev: 1}}))?.rev ?? null,
+				before = await revNow()
+			grantToken = crypto.randomBytes(32).toString('base64url')
+			let grant = {projectId: id, req, ctx, emit, beforeEdit, restore: null, changed: false, known: null, build, callTool, expires: Date.now() + ag.timeoutMs + 60000}
+			designerMcpGrants.set(grantToken, grant)
+			grant.url = `http://127.0.0.1:${port}/${appName}/api/designer/_mcp`
+			grant.token = grantToken
+			let page = artboardId && state.agyConversationId ? (rooms.get(id)?.doc || await store.get(doc).then((t) => JSON.parse(t)).catch(() => null))?.artboards?.find?.((a) => a.id === artboardId) : null
+			input.artboardId = artboardId
+			input.artboardName = page?.name || ''
+			input.changedOutside = !!state.agyConversationId && state.lastRev != null && before !== state.lastRev
+			result = await designerAntigravity.run({cfg: ag, grant, context, emit, signal: ctl.signal}, input)
+			state.lastRev = await revNow()
+			if (result.exhausted) agyMonitor()?.markExhausted(result.resetAt)
+			//and a fresh look at what's left, now this one's used some
+			else agyMonitor()?.probe()
+		}
 		//Gemini runs the tools itself, step by step. Cogniti answers with one blueprint
-		result = gem.on
+		else result = gem.on
 			? await designerGemini.run({ai: gem.client(), tools: mcp.TOOLS, callTool, build, context, beforeEdit, emit, signal: ctl.signal, budget: gem.requestUsd || 0}, input)
 			: await designer.run({cogniti: designer.cogniti(cfg), spec: designer.buildSpec(mcp.rawReference()), context, build, beforeEdit, emit, signal: ctl.signal}, input)
 	}
@@ -6480,8 +6617,14 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	}
 	finally {
 		clearInterval(beat)
+		if (grantToken) designerMcpGrants.delete(grantToken)
 		if (mcp) mcp.closeContext(ctx)
 		designerRunning.delete(who)
+	}
+	if (ag.on) {
+		await designerUsageToday()
+		designerCount.requests++
+		designerCount.tokens += (result.usage?.input || 0) + (result.usage?.output || 0)
 	}
 
 	if (result.usage?.cost) {
@@ -6496,8 +6639,10 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	if (result.outcome === 'replied') state.used = Date.now()
 	else designerChats.delete(key)
 	//Who, which project, how it went. Never what was said
-	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own, model: gem.on ? gem.model : 'cogniti', ...(gem.on ? {via: gem.via} : {}), ...(result.usage?.input ? {usage: result.usage} : {})})
-	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null, quota: own ? null : shared.status(who), ...(result.usage?.input ? {usage: result.usage} : {})})
+	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own, model: ag.on ? ag.model || 'antigravity' : gem.on ? gem.model : 'cogniti', ...(ag.on ? {via: 'antigravity'} : gem.on ? {via: gem.via} : {}), ...(result.usage?.input ? {usage: result.usage} : {})})
+	//Whether there's any more to be had, so a panel that just used the last of it hides Ask Ixia straight away
+	let after = await designerAvailability(req)
+	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null, quota: own ? null : shared.status(who), ...(result.usage?.input ? {usage: result.usage} : {}), available: after.available, resetAt: after.resetAt})
 	res.end()
 })
 
@@ -6827,6 +6972,9 @@ client.connect()
 			}
 
 			console.log(`${appName} started on port: ${port} - Date: ${new Date()}`)
+
+			//Ask Ixia on Antigravity: a first look at the allowance, so the button is right from the first page load
+			agyMonitor()
 
 			//Not before we are answering, and not at all with INTERACTIVES_PRECOMPRESS=0. A restart finds the copies it
 			//made last time and only does the files that changed

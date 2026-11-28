@@ -73,6 +73,8 @@ export function DesignerAllowance() {
 
   if (!asked) return <p className="muted small">Checking…</p>;
   if (!status?.on) return <p className="muted small">The Activity Designer is not set up on this server, so there is nothing to connect.</p>;
+  //One account for everyone on this box (Antigravity, Gemini): there is no allowance of your own to add
+  if (status.ownTokens === false) return <p className="muted small">Ask Ixia on this server runs on one shared allowance, so there is nothing of your own to connect.</p>;
 
   if (status.mine) {
     const added = day(status.mine.added);

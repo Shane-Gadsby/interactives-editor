@@ -5,6 +5,7 @@
  * One chat per editor tab, kept while the panel is closed; New chat starts another.
  */
 import { apiUrl, designerStatus, resetDesigner, restoreRevision } from './db';
+import { designerAvailability } from './designer-availability';
 import { localAnswer, openArtboardId, type HelpAnswer, type LocalAnswer } from './designer-local';
 
 export interface ChatMessage {
@@ -62,6 +63,9 @@ interface Event {
   revision?: string | null;
   conversation?: string | null;
   quota?: Quota | null;
+  /** done and error: whether Ask Ixia has any allowance left after this request, and when it comes back if not. */
+  available?: boolean;
+  resetAt?: string | null;
 }
 
 let counter = 0;
@@ -88,6 +92,8 @@ export class DesignerChat {
    */
   onChanged: (() => void) | null = null;
   private sawChange = false;
+  /** The request used the last of the allowance: Ask Ixia goes once it has finished (undefined: it hasn't). */
+  private goneAfter: string | null | undefined = undefined;
 
   constructor(
     private fetcher: typeof fetch = (...a) => fetch(...a),
@@ -114,6 +120,7 @@ export class DesignerChat {
     try {
       const s = await designerStatus();
       this.set({ quota: s.mine ? null : s.shared, own: !!s.mine, ownTokens: s.ownTokens !== false });
+      designerAvailability().setAvailability(!!s.on, s.resetAt ?? null);
     } catch {
       /* the count is a nicety, the panel works without it */
     }
@@ -165,11 +172,17 @@ export class DesignerChat {
         signal: this.abort.signal,
       });
       if (!res.ok || !res.body) {
-        let body: { error?: string; kind?: string; quota?: Quota } = {};
+        let body: { error?: string; kind?: string; quota?: Quota; available?: boolean; resetAt?: string | null } = {};
         try {
           body = (await res.json()) as typeof body;
         } catch {
           /* not json */
+        }
+        //The allowance has run out: nothing was sent, and Ask Ixia goes away until it's back
+        if (body.available === false || body.kind === 'exhausted') {
+          this.fail(body.error || 'Ixia has used all it can for now.', true);
+          designerAvailability().setAvailability(false, body.resetAt ?? null);
+          return;
         }
         //Out of their share of the shared token: nothing was sent, and their own allowance is the way on
         if (body.kind === 'quota') {
@@ -213,6 +226,11 @@ export class DesignerChat {
       this.sawChange = false;
       const { steps, startedAt } = this.state;
       this.set({ working: false, status: '', steps: [], lastRun: steps.length ? { steps, seconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)) } : null });
+      if (this.goneAfter !== undefined) {
+        const at = this.goneAfter;
+        this.goneAfter = undefined;
+        designerAvailability().setAvailability(false, at);
+      }
     }
   }
 
@@ -237,10 +255,12 @@ export class DesignerChat {
       case 'error':
         //Cogniti's own hourly limit on the shared token: their own allowance gets round it
         this.add({ from: 'error', text: e.text || 'Something went wrong in Ixia.', allowance: e.kind === 'limit' && !this.state.own && this.state.ownTokens });
+        if (e.available === false) this.goneAfter = e.resetAt ?? null;
         return false;
       case 'done':
         this.conversation = e.conversation ?? null;
         if (e.quota !== undefined) this.set({ quota: e.quota });
+        if (e.available === false) this.goneAfter = e.resetAt ?? null;
         return true;
     }
     return false;

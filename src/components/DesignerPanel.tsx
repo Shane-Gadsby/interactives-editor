@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { loadProjectRecord, session } from '../lib/db';
 import { designerChat, type ChatState } from '../lib/designer';
+import { designerAvailability } from '../lib/designer-availability';
 import { Markdown } from '../help/markdown';
 import { openHelp } from '../help/Help';
 import { openPrefsSetting } from '../lib/prefs-window';
@@ -19,16 +20,28 @@ function savedWidth(): number {
   }
 }
 
-/** Whether this box has Ixia set up (the server holds its key). */
+/**
+ * Whether Ask Ixia is there right now: set up on this box, with allowance left. It turns false the moment the allowance
+ * runs out (a chat reply or a status check says so) and true again when it's back, so everything that shows Ask Ixia
+ * gates on this and nothing else.
+ */
 export function useDesignerOn(): boolean {
-  const [on, setOn] = useState(false);
+  const avail = designerAvailability();
+  const [on, setOn] = useState(avail.state.available);
   useEffect(() => {
     let live = true;
-    session()
-      .then((s) => live && setOn(s.designer === true))
-      .catch(() => undefined);
-    return () => void (live = false);
-  }, []);
+    const off = avail.subscribe((a) => live && setOn(a.available));
+    setOn(avail.state.available);
+    if (!avail.state.initialized) {
+      session()
+        .then((s) => live && avail.initFromSession(s))
+        .catch(() => undefined);
+    }
+    return () => {
+      live = false;
+      off();
+    };
+  }, [avail]);
   return on;
 }
 
@@ -100,6 +113,17 @@ export function DesignerDock() {
   const on = useDesignerOn();
   const [state, setState] = useState<'never' | 'open' | 'closed'>('never');
   const fab = useRef<HTMLButtonElement>(null);
+  const wasOn = useRef(on);
+  useEffect(() => {
+    if (wasOn.current && !on) {
+      //It went away (the allowance ran out). When it comes back the chat starts closed, not popping open on its own
+      setState((s) => (s === 'never' ? s : 'closed'));
+      if (designerChat().state.undo) {
+        store().toast('Ixia updated your project. Ask Ixia is unavailable until more usage is available; use Revision history ("Before Ixia") to undo if needed.', 'info');
+      }
+    }
+    wasOn.current = on;
+  }, [on]);
   if (!on) return null;
   const open = state === 'open';
   return (

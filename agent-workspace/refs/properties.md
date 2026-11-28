@@ -1,0 +1,123 @@
+# Animatable and bindable property paths
+
+The paths timelines, bindings, states and the Set/Animate property nodes take.
+
+- x (number): X
+- y (number): Y
+- width (number): Width
+- height (number): Height
+- rotation (number): Rotation
+- scaleX (number): Scale X
+- scaleY (number): Scale Y
+- opacity (number): Opacity
+- visible (boolean): Visible
+- cornerRadius (number): Corner radius
+- cornerRadii.0 (number): Corner radius top-left
+- cornerRadii.1 (number): Corner radius top-right
+- cornerRadii.2 (number): Corner radius bottom-right
+- cornerRadii.3 (number): Corner radius bottom-left
+- originX (number): Origin X (0-1)
+- originY (number): Origin Y (0-1)
+- fill.color (color): Fill colour
+- stroke.width (number): Stroke width
+- stroke.paint.color (color): Stroke colour
+- fill.opacity (number): Fill opacity
+- fill.feather (number): Fill feather
+- stroke.opacity (number): Stroke opacity
+- stroke.feather (number): Stroke feather
+- fills.0.color (color): Fill 2 colour
+- fills.0.opacity (number): Fill 2 opacity
+- fills.0.feather (number): Fill 2 feather
+- fills.0.offsetX (number): Fill 2 offset X
+- fills.0.offsetY (number): Fill 2 offset Y
+- strokes.0.width (number): Stroke 2 width
+- strokes.0.paint.color (color): Stroke 2 colour
+- strokes.0.opacity (number): Stroke 2 opacity
+- strokes.0.feather (number): Stroke 2 feather
+- strokes.0.trimStart (number): Stroke 2 trim start %
+- strokes.0.trimEnd (number): Stroke 2 trim end %
+- strokes.0.trimOffset (number): Stroke 2 trim offset %
+- fill.from.x (number): Fill gradient start X
+- fill.from.y (number): Fill gradient start Y
+- fill.to.x (number): Fill gradient end X
+- fill.to.y (number): Fill gradient end Y
+- fill.center.x (number): Fill gradient centre X
+- fill.center.y (number): Fill gradient centre Y
+- fill.radius (number): Fill gradient radius
+- stroke.paint.from.x (number): Stroke gradient start X
+- stroke.paint.from.y (number): Stroke gradient start Y
+- stroke.paint.to.x (number): Stroke gradient end X
+- stroke.paint.to.y (number): Stroke gradient end Y
+- stroke.paint.center.x (number): Stroke gradient centre X
+- stroke.paint.center.y (number): Stroke gradient centre Y
+- stroke.paint.radius (number): Stroke gradient radius
+- fills.0.from.x (number): Fill 2 gradient start X
+- fills.0.from.y (number): Fill 2 gradient start Y
+- fills.0.to.x (number): Fill 2 gradient end X
+- fills.0.to.y (number): Fill 2 gradient end Y
+- fills.0.center.x (number): Fill 2 gradient centre X
+- fills.0.center.y (number): Fill 2 gradient centre Y
+- fills.0.radius (number): Fill 2 gradient radius
+- strokes.0.paint.from.x (number): Stroke 2 gradient start X
+- strokes.0.paint.from.y (number): Stroke 2 gradient start Y
+- strokes.0.paint.to.x (number): Stroke 2 gradient end X
+- strokes.0.paint.to.y (number): Stroke 2 gradient end Y
+- strokes.0.paint.center.x (number): Stroke 2 gradient centre X
+- strokes.0.paint.center.y (number): Stroke 2 gradient centre Y
+- strokes.0.paint.radius (number): Stroke 2 gradient radius
+- color (color): Text colour
+- fontSize (number): Font size
+- letterSpacing (number): Letter spacing
+- fontWeight (number): Font weight
+- lineHeight (number): Line height
+- blur (number): Blur
+- brightness (number): Brightness
+- reveal (number): Letters shown
+- shadow.blur (number): Shadow blur
+- shadow.x (number): Shadow X
+- shadow.y (number): Shadow Y
+- shadow.color (color): Shadow colour
+- text (string): Text
+- innerRatio (number): Star inner ratio
+- barFill.color (color): Progress bar colour
+- cursor (string): Cursor
+- link.url (string): Link URL
+- label (string): Button label
+- assetId (string): Image / video asset
+- disabled (boolean): Disabled (button or input)
+- disabledOpacity (number): Disabled opacity
+- ariaLabel (string): Text alternative
+- sayAs (string): Say it like
+- ariaDescription (string): Accessible description
+- ariaChecked (boolean): Checked (checkbox role)
+- ariaExpanded (boolean): Expanded (button role)
+- ariaPressed (boolean): Pressed (button, toggle)
+- ariaCurrent (string): Current (true, or page, step, location)
+- src (string): Embed/video URL
+- stroke.trimStart (number): Trim start %
+- stroke.trimEnd (number): Trim end %
+- stroke.trimOffset (number): Trim offset %
+- solo.active (string): Solo: active child
+- drawOrder (list): Draw order (children)
+- constraints.0.distance (number): Follow path distance
+- constraints.0.strength (number): Constraint strength
+- modifiers.0.offset (number): Text modifier offset %
+- modifiers.0.start (number): Text modifier start %
+- modifiers.0.end (number): Text modifier end %
+- modifiers.0.strength (number): Text modifier strength %
+- modifiers.0.falloffStart (number): Text modifier falloff start %
+- modifiers.0.falloffEnd (number): Text modifier falloff end %
+- modifiers.0.x (number): Text modifier X
+- modifiers.0.y (number): Text modifier Y
+- modifiers.0.rotation (number): Text modifier rotation
+- modifiers.0.scale (number): Text modifier scale
+- modifiers.0.opacity (number): Text modifier opacity
+- modifiers.0.color (color): Text modifier colour
+- modifiers.0.letterSpacing (number): Text modifier letter spacing
+- modifiers.0.blur (number): Text modifier blur
+- frame (number): Frameling frame
+- speed (number): Frameling speed
+- playing (boolean): Frameling playing
+- clipName (string): Frameling clip
+On a progress layer only: value (number): Progress value; max (number): Progress maximum
+On a connector layer only: labelAt (number): Label position along the line (0 to 1); gap (number): Gap at the ends; from.offset (number): Start slide along its side; to.offset (number): End slide along its side

@@ -1,0 +1,8 @@
+{
+	"mcpServers": {
+		"ixia-chat": {
+			"command": "node",
+			"args": ["../../../../designer-antigravity-mcp.mjs"]
+		}
+	}
+}

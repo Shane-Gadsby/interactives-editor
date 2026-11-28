@@ -11,6 +11,9 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Ask Ixia is back': [['activity-designer', 'builds it in your open project'], ['activity-designer', 'Undo what Ixia did'], ['activity-designer', 'Before Ixia']],
+  'Free answers from Ask Ixia': [['activity-designer', 'Done without using the AI'], ['activity-designer', 'Ask Ixia anyway'], ['interactions', 'Ask Ixia']],
+  'Ask Ixia goes away when its usage runs out': [['activity-designer', 'only shows while Ixia has usage left']],
   'The story as nodes, and story events': [['story-dialogue', 'The Dialogue view'], ['story-dialogue', '+ Choice'], ['story-dialogue', 'On story choice']],
   'Sound captions in stories': [['story-game', 'Sound captions:']],
   'Choice buttons': [['web-elements', '### Choice buttons'], ['web-elements', 'Add choice buttons'], ['web-elements', 'GCSC is part-time only']],
