@@ -3,7 +3,7 @@ Adding files, the Assets panel, cropping a picture in its frame, and 9-slice sca
 
 Drop files on the canvas, paste them, or use the **Image** tool. SVG files become editable vector layers; other images become image layers. Video files become video layers; audio files are stored as assets for the **Play sound** action.
 
-Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. The **Media Catalogue** button in the tool bar's Media group finds a photo in the suite's library instead: see [The Media Catalogue](media-catalogue). Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
+Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. The **Photography Catalogue** button in the tool bar's Media group finds a photo in the suite's library instead: see [The Photography Catalogue](media-catalogue). Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
 
 ## Image settings
 **Fit** (cover, contain, stretch), corner radius, and:
@@ -45,7 +45,7 @@ The same crop, from the picture's settings, when you'd rather point than drag. U
 To show a different picture in the same place, right-click the picture and open **Swap picture**. It asks where the new one comes from:
 
 - **One already in this project…** opens the project's pictures as a grid. Click one. The one showing now is marked.
-- **From the Media Catalogue…** opens the photo library. Pick a photo and press **Insert**. It's linked, not copied, like any other catalogue photo.
+- **From the Photography Catalogue…** opens the photo library. Pick a photo and press **Insert**. It's linked, not copied, like any other catalogue photo.
 - **Upload a new one…** opens your computer's file picker. The picture is added to **Assets** and shown in the layer.
 
 The layer keeps its place, its size, its corners, and every interaction and keyframe on it. Only the **crop** goes, since it was framed for the old picture, and you're asked for a new description, because the old one described the old picture. One undo puts the old picture back.

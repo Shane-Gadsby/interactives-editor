@@ -74,10 +74,10 @@ export function MediaCatalogueModal({ onClose, onPick }: { onClose: () => void; 
   }, [onClose, onPick, origin]);
   return createPortal(
     <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal catalogue-modal" role="dialog" aria-modal="true" aria-label="Media Catalogue">
+      <div className="modal catalogue-modal" role="dialog" aria-modal="true" aria-label="Photography Catalogue">
         <header>
           <Icons.catalogue />
-          <strong>Media Catalogue</strong>
+          <strong>Photography Catalogue</strong>
           <HelpLink topic="media-catalogue" />
           <div className="spacer" />
           <IconButton icon={<Icons.close />} title="Close (Esc)" onClick={onClose} />
@@ -85,7 +85,7 @@ export function MediaCatalogueModal({ onClose, onPick }: { onClose: () => void; 
         <iframe
           ref={frame}
           className="catalogue-frame"
-          title="Media Catalogue"
+          title="Photography Catalogue"
           src={catalogueUrl(origin)}
           onLoad={() => {
             const raw = selectedCatalogue();

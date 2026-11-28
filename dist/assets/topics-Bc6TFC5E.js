@@ -1,4 +1,4 @@
-import{c6 as a,c7 as o,c8 as w,c9 as d,ca as x,cb as Y,cc as M,cd as F,ce as l,cf as n,cg as h,ch as K,ci as N,cj as f,ck as i,cl as A,cm as j,cn as v,co as y,cp as P,cq as p,cr as c,cs as S,ct as C,cu as g,cv as B,cw as T,cx as $,cy as z,cz as Q,cA as E,cB as I,cC as J,cD as X,cE as Z,bq as ee,ad as te,bA as ae,bj as oe,aj as O,b6 as se}from"./index-Z4Dhfo-r.js";const ne=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{c6 as a,c7 as o,c8 as w,c9 as d,ca as x,cb as Y,cc as M,cd as F,ce as l,cf as n,cg as h,ch as K,ci as N,cj as f,ck as i,cl as A,cm as j,cn as v,co as y,cp as P,cq as p,cr as c,cs as S,ct as C,cu as g,cv as B,cw as T,cx as $,cy as z,cz as Q,cA as E,cB as I,cC as J,cD as X,cE as Z,bq as ee,ad as te,bA as ae,bj as oe,aj as O,b6 as se}from"./index-CBuWB66U.js";const ne=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -312,7 +312,7 @@ You've built, animated, wired up, imported and published. Keep going with the to
 
 **Just want to look?** The finished one, with every problem fixed, is on the projects page: **Templates**, then under **Examples** find **Build it**, **Check and fix accessibility**. **Play** runs it and **Make my copy** gives you your own copy.
 
-You need a picture of Mars, or of anything at all: a file on your computer or one from the **Media Catalogue**.
+You need a picture of Mars, or of anything at all: a file on your computer or one from the **Photography Catalogue**.
 
 ## 1. Make the page, problems and all
 
@@ -4451,7 +4451,7 @@ From left to right:
 **Select** and **Hand** sit at the top. Below them the tools are in groups. Click a group's name to fold it or open it. The editor remembers which groups you keep open, and a folded group still shows the tool you're using.
 
 - **Shapes** (page, frame, rectangle, ellipse, polygon, star) and **Draw** (line, connector, pen, pencil, bend) start open.
-- **Media** (text, script layer, shader layer, video, image and the Media Catalogue), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded.
+- **Media** (text, script layer, shader layer, video, image and the Photography Catalogue), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded.
 
 Hover a tool to see its name and shortcut. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
@@ -4469,7 +4469,7 @@ The order is saved with you, never in the project, so it follows you between bro
 - **Comment** (<kbd>C</kbd>) pins a review note where you click. See [Review comments](comments).
 - **Note** (<kbd>S</kbd>) draws a sticky note for the people editing. Players never see it. An eye button next to it shows or hides notes. See [Notes](notes).
 - **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>) are lit gold while on. Right-click either for the grid size. See [The grid and snapping](grid).
-- The **Media Catalogue** button sits in the **Media** group with image and video. It opens the photo library in a window and puts the photo you choose on the page. It is an action rather than a tool, so it doesn't stay lit after you use it. See [The Media Catalogue](media-catalogue).
+- The **Photography Catalogue** button sits in the **Media** group with image and video. It opens the photo library in a window and puts the photo you choose on the page. It is an action rather than a tool, so it doesn't stay lit after you use it. See [The Photography Catalogue](media-catalogue).
 
 There is no Help button on the tool bar. **Help** is in the top bar, and right-clicking the tool bar has **Help for the tools**.
 
@@ -5463,7 +5463,7 @@ An icon arrives as a group named for it (*Bell icon*) holding two path layers, *
 
 The icons come with the editor and only load when you first open the tab. They are copies of the Toolbox's own icons, so if the Toolbox's icons change, the copies need refreshing by whoever maintains the editor.`},{id:"images-media",title:"Images, video and audio",group:"Design",summary:"Adding files, the Assets panel, cropping a picture in its frame, and 9-slice scaling for images.",keywords:"image picture photo svg video audio sound mp3 upload drop paste asset nine slice 9-slice n-slice crop reposition zoom focal point face frame",body:`Drop files on the canvas, paste them, or use the **Image** tool. SVG files become editable vector layers; other images become image layers. Video files become video layers; audio files are stored as assets for the **Play sound** action.
 
-Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. The **Media Catalogue** button in the tool bar's Media group finds a photo in the suite's library instead: see [The Media Catalogue](media-catalogue). Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
+Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. The **Photography Catalogue** button in the tool bar's Media group finds a photo in the suite's library instead: see [The Photography Catalogue](media-catalogue). Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
 
 ## Image settings
 **Fit** (cover, contain, stretch), corner radius, and:
@@ -5505,7 +5505,7 @@ The same crop, from the picture's settings, when you'd rather point than drag. U
 To show a different picture in the same place, right-click the picture and open **Swap picture**. It asks where the new one comes from:
 
 - **One already in this project…** opens the project's pictures as a grid. Click one. The one showing now is marked.
-- **From the Media Catalogue…** opens the photo library. Pick a photo and press **Insert**. It's linked, not copied, like any other catalogue photo.
+- **From the Photography Catalogue…** opens the photo library. Pick a photo and press **Insert**. It's linked, not copied, like any other catalogue photo.
 - **Upload a new one…** opens your computer's file picker. The picture is added to **Assets** and shown in the layer.
 
 The layer keeps its place, its size, its corners, and every interaction and keyframe on it. Only the **crop** goes, since it was framed for the old picture, and you're asked for a new description, because the old one described the old picture. One undo puts the old picture back.
@@ -5707,9 +5707,9 @@ Moving layers, resizing them, drawing new shapes (and artboards), moving artboar
 The arrow keys step to the next grid line in that direction (a layer that is off the grid goes to its nearest line first). <kbd>Shift</kbd> + arrow goes a stronger line at a time, or ten cells when stronger lines are off. <kbd>Ctrl</kbd> + arrow nudges by 1 px or 10 px as usual.
 
 ## What it doesn't do
-The grid is never in **Preview**, in exports, in share links or in pictures of the artboard: it is only on the editor's canvas. Spacing only measures when moving layers (not resizing or drawing), and the arrow keys only use the grid and whole pixels.`},{id:"media-catalogue",title:"The Media Catalogue",group:"Design",summary:"Put a photo from the suite's Media Catalogue on an artboard, and how it is saved and exported.",keywords:"media catalogue photo photography gallery library insert picture image studydesk",icon:"catalogue",body:`The **Media Catalogue** button, in the tool bar's **Media** group (open the group if it is folded) with the same icon as the catalogue button in StudyDesk's editor, opens the suite's photo library in a window over the editor. Search or browse, open a photo, and press **Insert**: the window closes and the photo is on the open artboard as an image layer, centred and scaled to fit (up to 600 px). Close the window without inserting with its **×**, <kbd>Esc</kbd> or the catalogue's own close button. If you open it with a picture layer that came from the catalogue selected, it opens where that photo was found.
+The grid is never in **Preview**, in exports, in share links or in pictures of the artboard: it is only on the editor's canvas. Spacing only measures when moving layers (not resizing or drawing), and the arrow keys only use the grid and whole pixels.`},{id:"media-catalogue",title:"The Photography Catalogue",group:"Design",summary:"Put a photo from the suite's Photography Catalogue on an artboard, and how it is saved and exported.",keywords:"media catalogue photography catalogue photo photography gallery library insert picture image studydesk",icon:"catalogue",body:`The **Photography Catalogue** button, in the tool bar's **Media** group (open the group if it is folded) with the same icon as the catalogue button in StudyDesk's editor, opens the suite's photo library in a window over the editor. Search or browse, open a photo, and press **Insert**: the window closes and the photo is on the open artboard as an image layer, centred and scaled to fit (up to 600 px). Close the window without inserting with its **×**, <kbd>Esc</kbd> or the catalogue's own close button. If you open it with a picture layer that came from the catalogue selected, it opens where that photo was found.
 
-Where the older **Photography catalogue** still answers at that address (StudyDesk's live site, until it moves to the Media Catalogue), the button opens that one instead, and it works the same way: open a photo and press its insert button. It doesn't remember where a photo was found, so it always opens at the start.
+Where the older photo gallery still answers at that address (StudyDesk's live site, until it moves to the new Photography Catalogue), the button opens that one instead, and it works the same way: open a photo and press its insert button. It doesn't remember where a photo was found, so it always opens at the start.
 
 ## How it is stored
 The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
@@ -5996,9 +5996,9 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - Buttons, inputs and links show only the text alternative and description. They already have the right role and keyboard behaviour.
 
 ## Describing a picture as you add it
-Add a picture or a video (dropped, pasted, from the **Image** tool or the **Media Catalogue**) and the top of its settings shows a small box: **What is this a picture of?**. A few words is enough. **Save** (or <kbd>Enter</kbd>) writes them as the layer's **Text alternative**, which a screen reader reads in place of the picture. **Decorative** marks a picture that only decorates the page, so a screen reader skips it. **Skip** (or <kbd>Escape</kbd>) puts the box away for that layer.
+Add a picture or a video (dropped, pasted, from the **Image** tool or the **Photography Catalogue**) and the top of its settings shows a small box: **What is this a picture of?**. A few words is enough. **Save** (or <kbd>Enter</kbd>) writes them as the layer's **Text alternative**, which a screen reader reads in place of the picture. **Decorative** marks a picture that only decorates the page, so a screen reader skips it. **Skip** (or <kbd>Escape</kbd>) puts the box away for that layer.
 
-The box never stops you doing anything else. Its example text comes from the file's name, or from the Media Catalogue's own description of the photo, and is never saved unless you type it. A picture you skip or answer is not asked about again, and the list of pictures still waiting is kept per project in your browser. The [Accessibility checker](accessibility-checker) still lists any picture with no description until it has one.
+The box never stops you doing anything else. Its example text comes from the file's name, or from the Photography Catalogue's own description of the photo, and is never saved unless you type it. A picture you skip or answer is not asked about again, and the list of pictures still waiting is kept per project in your browser. The [Accessibility checker](accessibility-checker) still lists any picture with no description until it has one.
 
 Turn the box off in [Preferences](preferences) (**Ask what a picture shows**) if you add many pictures at once and would rather describe them later from the checker.
 

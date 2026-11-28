@@ -36,9 +36,9 @@ beforeEach(() => {
 });
 
 describe('the menu', () => {
-  it('asks the three ways: one in the project, the Media Catalogue, or a new upload', () => {
+  it('asks the three ways: one in the project, the Photography Catalogue, or a new upload', () => {
     expect(SWAP_CHOICES.map((c) => c.from)).toEqual(['project', 'catalogue', 'upload']);
-    expect(SWAP_CHOICES.map((c) => c.label)).toEqual(['One already in this project…', 'From the Media Catalogue…', 'Upload a new one…']);
+    expect(SWAP_CHOICES.map((c) => c.label)).toEqual(['One already in this project…', 'From the Photography Catalogue…', 'Upload a new one…']);
     //and it is on an image layer's right-click menu
     const canvas = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'canvas', 'Canvas.tsx'), 'utf8');
     expect(canvas).toMatch(/one\.type === 'image' \? \[\{ label: 'Swap picture', items: SWAP_CHOICES/);
@@ -118,7 +118,7 @@ describe('picking one already in the project', () => {
     await act(async () => void swapPicture('pic', 'project'));
     expect(document.querySelector('.swap-grid')).toBeNull();
     expect(document.querySelector('.swap-modal')!.textContent).toContain('no other pictures yet');
-    expect([...document.querySelectorAll('.swap-actions button')].map((b) => b.textContent)).toEqual(['From the Media Catalogue…', 'Upload a new one…', 'Cancel']);
+    expect([...document.querySelectorAll('.swap-actions button')].map((b) => b.textContent)).toEqual(['From the Photography Catalogue…', 'Upload a new one…', 'Cancel']);
     await act(async () => root.unmount());
   });
 });

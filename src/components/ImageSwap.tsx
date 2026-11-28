@@ -15,7 +15,7 @@ export type SwapFrom = 'project' | 'catalogue' | 'upload';
 
 export const SWAP_CHOICES: { from: SwapFrom; label: string; title: string }[] = [
   { from: 'project', label: 'One already in this project…', title: "Pick from the pictures in this project's Assets" },
-  { from: 'catalogue', label: 'From the Media Catalogue…', title: 'Find a photo in the Media Catalogue. It is linked, not copied, so the project stays small' },
+  { from: 'catalogue', label: 'From the Photography Catalogue…', title: 'Find a photo in the Photography Catalogue. It is linked, not copied, so the project stays small' },
   { from: 'upload', label: 'Upload a new one…', title: 'Choose a picture from your computer. It is added to Assets and shown here' },
 ];
 
@@ -120,7 +120,7 @@ function ProjectPictures({ nodeId, onClose }: { nodeId: string; onClose: () => v
             </div>
           </>
         ) : (
-          <p className="hint">This project has no other pictures yet. Use the Media Catalogue or upload one.</p>
+          <p className="hint">This project has no other pictures yet. Use the Photography Catalogue or upload one.</p>
         )}
         <div className="swap-actions">
           <button
@@ -130,7 +130,7 @@ function ProjectPictures({ nodeId, onClose }: { nodeId: string; onClose: () => v
               void swapPicture(nodeId, 'catalogue');
             }}
           >
-            From the Media Catalogue…
+            From the Photography Catalogue…
           </button>
           <button
             className="btn"

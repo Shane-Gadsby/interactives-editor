@@ -1176,7 +1176,7 @@ export function Toolbar() {
     />
   );
   //an action, not a tool mode: it opens the modal and never stays lit
-  const catalogue = <IconButton key="catalogue" reorderKey="catalogue" icon={<Icons.catalogue />} title="Media Catalogue: find a photo and put it on the artboard as a picture" onClick={() => setCatalogueOpen(true)} />;
+  const catalogue = <IconButton key="catalogue" reorderKey="catalogue" icon={<Icons.catalogue />} title="Photography Catalogue: find a photo and put it on the artboard as a picture" onClick={() => setCatalogueOpen(true)} />;
   const bones = <IconButton key="bones" reorderKey="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={withKey(showBones ? 'Hide bones on the canvas' : 'Show bones on the canvas', 'toggle-bones')} onClick={() => store().set({ showBones: !showBones })} />;
   return (
     <nav

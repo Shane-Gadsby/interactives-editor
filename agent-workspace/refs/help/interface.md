@@ -21,7 +21,7 @@ From left to right:
 **Select** and **Hand** sit at the top. Below them the tools are in groups. Click a group's name to fold it or open it. The editor remembers which groups you keep open, and a folded group still shows the tool you're using.
 
 - **Shapes** (page, frame, rectangle, ellipse, polygon, star) and **Draw** (line, connector, pen, pencil, bend) start open.
-- **Media** (text, script layer, shader layer, video, image and the Media Catalogue), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded.
+- **Media** (text, script layer, shader layer, video, image and the Photography Catalogue), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded.
 
 Hover a tool to see its name and shortcut. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
@@ -39,7 +39,7 @@ The order is saved with you, never in the project, so it follows you between bro
 - **Comment** (<kbd>C</kbd>) pins a review note where you click. See [Review comments](comments).
 - **Note** (<kbd>S</kbd>) draws a sticky note for the people editing. Players never see it. An eye button next to it shows or hides notes. See [Notes](notes).
 - **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>) are lit gold while on. Right-click either for the grid size. See [The grid and snapping](grid).
-- The **Media Catalogue** button sits in the **Media** group with image and video. It opens the photo library in a window and puts the photo you choose on the page. It is an action rather than a tool, so it doesn't stay lit after you use it. See [The Media Catalogue](media-catalogue).
+- The **Photography Catalogue** button sits in the **Media** group with image and video. It opens the photo library in a window and puts the photo you choose on the page. It is an action rather than a tool, so it doesn't stay lit after you use it. See [The Photography Catalogue](media-catalogue).
 
 There is no Help button on the tool bar. **Help** is in the top bar, and right-clicking the tool bar has **Help for the tools**.
 

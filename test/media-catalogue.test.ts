@@ -148,9 +148,9 @@ describe('fetching linked pictures for an export', () => {
 
   it('words the failure for the person', () => {
     const m = failureMessage([{ asset: linked('a', 'beach.jpg'), reason: 'the catalogue answered 404' }], 'page');
-    expect(m.title).toBe("A Media Catalogue picture couldn't be added");
+    expect(m.title).toBe("A Photography Catalogue picture couldn't be added");
     expect(m.message).toContain('beach.jpg: the catalogue answered 404');
-    expect(failureMessage([{ asset: linked('a'), reason: 'x' }, { asset: linked('b'), reason: 'y' }], 'package').title).toBe("2 Media Catalogue pictures couldn't be added");
+    expect(failureMessage([{ asset: linked('a'), reason: 'x' }, { asset: linked('b'), reason: 'y' }], 'package').title).toBe("2 Photography Catalogue pictures couldn't be added");
   });
 
   it('withFetched prefers what was fetched, then the usual source', async () => {

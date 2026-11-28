@@ -203,7 +203,8 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Page masters': [['page-master', 'slots']],
   'Progress bars and charts': [['charts', 'donut']],
   'Grid': [['grid', 'Show grid']],
-  'Media Catalogue': [['media-catalogue', 'Media Catalogue']],
+  'Media Catalogue': [['media-catalogue', 'Photography Catalogue']],
+  'Photography Catalogue': [['media-catalogue', 'new Photography Catalogue']],
   'Questions and dragging': [['question-kit', 'extra terms']],
   'Pages and events': [['interactions', 'Only if']],
   'Accessibility': [['accessibility', 'Pressed']],
@@ -264,7 +265,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Dialogs that no layer opens': [['overlays', '## Opening one without a layer'], ['overlays', 'A layer **inside an overlay** can point at another overlay']],
   "Dialogs open where you're looking": [['overlays', 'middle of what the viewer can see']],
   'Tab into a tooltip': [['overlays', "keyboard reaches what's inside"]],
-  'Media Catalogue on the live StudyDesk site': [['media-catalogue', 'older **Photography catalogue**']],
+  'Media Catalogue on the live StudyDesk site': [['media-catalogue', 'older photo gallery']],
   'Share for review needs a sign in': [['comments', 'There is no guest option'], ['comments', 'Sign in with StudyDesk']],
 };
 

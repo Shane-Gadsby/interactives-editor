@@ -81,7 +81,7 @@
 - libraries.md: Libraries (shared components and styles)
 - links-cursors.md: Links and cursors
 - live-editing.md: Live editing and saving
-- media-catalogue.md: The Media Catalogue
+- media-catalogue.md: The Photography Catalogue
 - moving-the-view.md: Moving the view
 - notes.md: Notes
 - overlays.md: Tooltips, modals, confirmations, prompts and toasts

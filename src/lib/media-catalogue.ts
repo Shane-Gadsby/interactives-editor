@@ -192,7 +192,7 @@ export function withFetched(fetched: Map<string, Uint8Array>, inner: (asset: Ass
 export function failureMessage(failed: LinkedFailure[], file: string): { title: string; message: string } {
   const lines = failed.map((f) => `${f.asset.name}: ${f.reason}`);
   return {
-    title: failed.length === 1 ? "A Media Catalogue picture couldn't be added" : `${failed.length} Media Catalogue pictures couldn't be added`,
+    title: failed.length === 1 ? "A Photography Catalogue picture couldn't be added" : `${failed.length} Photography Catalogue pictures couldn't be added`,
     message: `The ${file} was made without ${failed.length === 1 ? 'this picture, so its layer shows nothing' : 'these pictures, so their layers show nothing'}, because ${failed.length === 1 ? 'it' : 'they'} couldn't be fetched to embed. Check you can reach the catalogue and export again.\n\n${lines.join('\n')}`,
   };
 }

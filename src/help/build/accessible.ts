@@ -16,7 +16,7 @@ export const tutorial: BuildTutorial = {
 
 **Just want to look?** The finished one, with every problem fixed, is on the projects page: **Templates**, then under **Examples** find **Build it**, **Check and fix accessibility**. **Play** runs it and **Make my copy** gives you your own copy.
 
-You need a picture of Mars, or of anything at all: a file on your computer or one from the **Media Catalogue**.
+You need a picture of Mars, or of anything at all: a file on your computer or one from the **Photography Catalogue**.
 
 ## 1. Make the page, problems and all
 

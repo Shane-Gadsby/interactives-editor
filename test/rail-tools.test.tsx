@@ -46,7 +46,7 @@ async function mount() {
   return s;
 }
 const buttons = () => [...document.querySelectorAll<HTMLButtonElement>('.toolbar .icon-btn')];
-const catalogue = () => buttons().filter((b) => b.title.startsWith('Media Catalogue'));
+const catalogue = () => buttons().filter((b) => b.title.startsWith('Photography Catalogue'));
 const media = () => [...document.querySelectorAll<HTMLButtonElement>('.tool-group-head')].find((b) => b.textContent === 'Media')!;
 
 describe('the tool rail', { timeout: 30000 }, () => {
@@ -57,7 +57,7 @@ describe('the tool rail', { timeout: 30000 }, () => {
     expect(document.querySelectorAll('.toolbar .icon-btn svg path[d^="M12 21a9 9 0 100-18"]').length).toBe(0);
   });
 
-  it('has the Media Catalogue once, inside the Media group, and not in the bottom cluster', async () => {
+  it('has the Photography Catalogue once, inside the Media group, and not in the bottom cluster', async () => {
     await mount();
     expect(catalogue().length).toBe(0);
     act(() => media().click());

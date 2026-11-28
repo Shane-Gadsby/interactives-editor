@@ -1,4 +1,4 @@
-//The Media Catalogue window: opens the catalogue asking it to answer its parent, believes only that frame, puts a linked image layer on the artboard
+//The Photography Catalogue window: opens the catalogue asking it to answer its parent, believes only that frame, puts a linked image layer on the artboard
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -43,10 +43,10 @@ afterEach(() => {
   host.remove();
 });
 
-describe('the Media Catalogue window', () => {
+describe('the Photography Catalogue window', () => {
   it('frames the catalogue asking it to answer its parent', () => {
     expect(open().getAttribute('src')).toBe(catalogueUrl(origin));
-    expect(document.body.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Media Catalogue');
+    expect(document.body.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Photography Catalogue');
   });
 
   it('an insert puts a linked image layer on the artboard, keeps where it was found, and closes', async () => {

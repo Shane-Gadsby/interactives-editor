@@ -18,9 +18,9 @@ Buttons, inputs and links are real controls, so keyboards and screen readers alr
 - Buttons, inputs and links show only the text alternative and description. They already have the right role and keyboard behaviour.
 
 ## Describing a picture as you add it
-Add a picture or a video (dropped, pasted, from the **Image** tool or the **Media Catalogue**) and the top of its settings shows a small box: **What is this a picture of?**. A few words is enough. **Save** (or <kbd>Enter</kbd>) writes them as the layer's **Text alternative**, which a screen reader reads in place of the picture. **Decorative** marks a picture that only decorates the page, so a screen reader skips it. **Skip** (or <kbd>Escape</kbd>) puts the box away for that layer.
+Add a picture or a video (dropped, pasted, from the **Image** tool or the **Photography Catalogue**) and the top of its settings shows a small box: **What is this a picture of?**. A few words is enough. **Save** (or <kbd>Enter</kbd>) writes them as the layer's **Text alternative**, which a screen reader reads in place of the picture. **Decorative** marks a picture that only decorates the page, so a screen reader skips it. **Skip** (or <kbd>Escape</kbd>) puts the box away for that layer.
 
-The box never stops you doing anything else. Its example text comes from the file's name, or from the Media Catalogue's own description of the photo, and is never saved unless you type it. A picture you skip or answer is not asked about again, and the list of pictures still waiting is kept per project in your browser. The [Accessibility checker](accessibility-checker) still lists any picture with no description until it has one.
+The box never stops you doing anything else. Its example text comes from the file's name, or from the Photography Catalogue's own description of the photo, and is never saved unless you type it. A picture you skip or answer is not asked about again, and the list of pictures still waiting is kept per project in your browser. The [Accessibility checker](accessibility-checker) still lists any picture with no description until it has one.
 
 Turn the box off in [Preferences](preferences) (**Ask what a picture shows**) if you add many pictures at once and would rather describe them later from the checker.
 
