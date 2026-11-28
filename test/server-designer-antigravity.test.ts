@@ -263,5 +263,9 @@ describe('when the allowance runs out', () => {
     expect(again.json).toMatchObject({ kind: 'exhausted', available: false });
     expect(runsOf()).toHaveLength(before);
     expect(audits('designer-allocation').length).toBeGreaterThanOrEqual(1);
+    //the audit row says why, without the request
+    const row = audits('designer-run').find((d: any) => d.detail.outcome === 'limit');
+    expect(row.detail.why).toContain('RESOURCE_EXHAUSTED');
+    expect(row.detail.why).not.toContain('Make it red');
   });
 });

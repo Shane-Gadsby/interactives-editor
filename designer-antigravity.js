@@ -54,6 +54,7 @@ const WORDS = {
 	unavailable: 'Ixia could not be reached. Try again in a minute.',
 	empty: "Ixia didn't send anything back. Try again.",
 	timeout: "That took longer than Ixia is allowed. Have a look at what's there, and ask me to carry on from here.",
+	stalled: "Ixia couldn't get an answer from its AI service just now. Try again in a minute, and if it keeps happening, tell the Toolbox team.",
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -122,7 +123,7 @@ const prompt = (input, around, state) => {
 	].filter(Boolean).join('\n\n')
 }
 
-//What went wrong, from agy's own words. Never logged: it can carry the person's
+//What went wrong, from agy's own words. Only ever logged through whyOf, which takes the person's words out
 const classify = (text) => {
 	let t = String(text || '')
 	if (/print.?timeout|timed? ?out|deadline exceeded/i.test(t)) return 'timeout'
@@ -130,6 +131,16 @@ const classify = (text) => {
 	if (/unauthenticated|not (signed|logged) in|sign in|log ?in required|credential|\b401\b|\b403\b/i.test(t)) return 'forbidden'
 	if (/safety|blocked|prohibited/i.test(t)) return 'blocked'
 	return 'unavailable'
+}
+
+//What agy said went wrong, for the audit row, so a box nobody can open a shell on still says why: its error and stderr,
+//with the person's request and the prompt taken out, and never the reply. Cut to 400 characters
+const whyOf = (err, result, ...secret) => {
+	let t = `${result?.error || ''} ${result?.finished_reason || ''} ${err || ''}`
+	for (let s of secret) {
+		for (let part of String(s || '').split('\n').map((x) => x.trim()).filter((x) => x.length > 3)) t = t.split(part).join('[...]')
+	}
+	return t.replace(/\s+/g, ' ').trim().slice(0, 400)
 }
 
 //A time agy says the limit comes back, when it says one
@@ -175,6 +186,7 @@ const run = async (deps, input) => {
 	if (signal?.aborted) return done('cancelled')
 
 	let text = prompt(input, around, state),
+		started = Date.now(),
 		child
 	try {
 		let [bin, rest] = command(cfg, args(cfg, text, state.agyConversationId, workspace))
@@ -283,15 +295,18 @@ const run = async (deps, input) => {
 			if (conversation) state.agyConversationId = conversation
 
 			if (cancelled) return resolve(done('cancelled'))
-			if (timedOut) return resolve(fail('timeout'))
+			if (timedOut) return resolve(fail('timeout', {why: `no answer after ${Math.round((Date.now() - started) / 1000)} s`}))
 			let ok = result && /^SUCCESS$/i.test(result.status || '') && code === 0
 			if (!ok) {
-				let words = `${err} ${result ? JSON.stringify(result).slice(0, 4000) : ''}`,
-					kind = classify(words)
-				//what kind and how it ended, never agy's own words (they can carry the person's)
-				console.warn(`interactives: agy run failed (${kind}, exit ${code}, ${result?.finished_reason || result?.status || 'no result'})`)
-				if (kind === 'limit') return resolve(fail('limit', {resetAt: resetFrom(words)}))
-				return resolve(fail(kind))
+				let words = `${err} ${result?.error || ''} ${result?.finished_reason || ''}`,
+					kind = classify(words),
+					why = whyOf(err, result, input.message, text)
+				//A timeout well before ours is agy giving up on something else (reaching the model, starting the tools),
+				//not the request taking too long, and saying "it took too long" there sends people the wrong way
+				if (kind === 'timeout' && Date.now() - started < cfg.timeoutMs * 0.9) kind = 'stalled'
+				console.warn(`interactives: agy run failed (${kind}, exit ${code}, after ${Math.round((Date.now() - started) / 1000)} s): ${why}`)
+				if (kind === 'limit') return resolve(fail('limit', {resetAt: resetFrom(words), why}))
+				return resolve(fail(kind, {why}))
 			}
 			reply = reply.trim()
 			if (!reply) return resolve(fail(result?.denied_actions?.length || /denied|permission/i.test(err) ? 'unavailable' : 'empty'))
@@ -525,4 +540,4 @@ const createQuotaMonitor = (deps) => {
 	}
 }
 
-module.exports = {command, settings, sessionSettings, args, scrubEnv, prompt, classify, resetFrom, run, toolList, shortEdit, mcpHandler, parseUsage, createQuotaMonitor, groupFor, WORDS, WORKSPACE, SERVER, MAX_RESULT}
+module.exports = {whyOf, command, settings, sessionSettings, args, scrubEnv, prompt, classify, resetFrom, run, toolList, shortEdit, mcpHandler, parseUsage, createQuotaMonitor, groupFor, WORDS, WORKSPACE, SERVER, MAX_RESULT}

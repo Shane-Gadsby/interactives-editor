@@ -6639,7 +6639,7 @@ router.post('/api/designer/chat', express.json({limit: '16kb'}), async (req, res
 	if (result.outcome === 'replied') state.used = Date.now()
 	else designerChats.delete(key)
 	//Who, which project, how it went. Never what was said
-	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own, model: ag.on ? ag.model || 'antigravity' : gem.on ? gem.model : 'cogniti', ...(ag.on ? {via: 'antigravity'} : gem.on ? {via: gem.via} : {}), ...(result.usage?.input ? {usage: result.usage} : {})})
+	audit(req, 'designer-run', doc, {rounds: result.rounds, outcome: result.outcome, changed: result.changed, own: !!own, model: ag.on ? ag.model || 'antigravity' : gem.on ? gem.model : 'cogniti', ...(ag.on ? {via: 'antigravity'} : gem.on ? {via: gem.via} : {}), ...(result.why ? {why: result.why} : {}), ...(result.usage?.input ? {usage: result.usage} : {})})
 	//Whether there's any more to be had, so a panel that just used the last of it hides Ask Ixia straight away
 	let after = await designerAvailability(req)
 	emit({type: 'done', conversation: result.outcome === 'replied' ? state.chatId : null, quota: own ? null : shared.status(who), ...(result.usage?.input ? {usage: result.usage} : {}), available: after.available, resetAt: after.resetAt})

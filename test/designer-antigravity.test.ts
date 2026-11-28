@@ -207,6 +207,23 @@ describe('the agy run', () => {
     for (const r of [limit, auth, crash]) expect(JSON.stringify(r.events)).not.toMatch(/RESOURCE_EXHAUSTED|panic|Run agy/);
   });
 
+  it('a timeout from agy well before ours is "could not get an answer", not "took too long", and says why for the audit', async () => {
+    const r = await drive([{ event: 'result', result: { status: 'ERROR', error: 'model call failed: context deadline exceeded while sending Make the title red' } }], { opts: { code: 1 } });
+    expect(r.result.outcome).toBe('stalled');
+    expect(r.events.at(-1)).toMatchObject({ type: 'error', kind: 'stalled', text: ag.WORDS.stalled });
+    expect(r.result.why).toContain('context deadline exceeded');
+    //never the person's words
+    expect(r.result.why).not.toContain('Make the title red');
+    expect(JSON.stringify(r.events)).not.toContain('deadline');
+  });
+
+  it('whyOf takes the request and prompt out, never carries the reply, and stays short', () => {
+    const why = ag.whyOf('stderr: failed to send\nsecret line one here', { error: 'boom: Add a page about birds', response: 'Sure, here is the reply' }, 'Add a page about birds', 'secret line one here');
+    expect(why).not.toMatch(/birds|secret line|Sure, here/);
+    expect(why).toContain('boom');
+    expect(ag.whyOf('x'.repeat(2000), null).length).toBe(400);
+  });
+
   it('classifies what agy says', () => {
     expect(ag.classify('429 Too Many Requests')).toBe('limit');
     expect(ag.classify('You have reached your usage limit')).toBe('limit');
